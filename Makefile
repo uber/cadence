@@ -72,7 +72,7 @@ $(foreach tsrc,$(THRIFTRW_SRCS),$(eval $(call \
 	$(shell echo $(tsrc) | tr A-Z a-z))),$(tsrc))))
 
 # Automatically gather all srcs
-ALL_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor -e common/types \
+ALL_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor \
 	-e ".*/\..*" \
 	-e ".*/_.*" \
 	-e ".*/mocks.*")

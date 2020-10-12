@@ -79,7 +79,7 @@ func (v *ChildWorkflowExecutionTimedOutEventAttributes) GetStartedEventId() (o i
 
 	return
 }
- */
+*/
 
 var structTemplate = template.Must(template.New("struct type").Parse(`
 type {{.Type.Name}} struct {

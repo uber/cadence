@@ -1,15 +1,15 @@
 // Copyright (c) 2017-2020 Uber Technologies Inc.
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -19,7 +19,6 @@
 // SOFTWARE.
 
 package types
-
 
 type AccessDeniedError struct {
 	Message string
@@ -32,10 +31,8 @@ func (v *AccessDeniedError) GetMessage() (o string) {
 	return
 }
 
-
-
 type ActivityTaskCancelRequestedEventAttributes struct {
-	ActivityId *string
+	ActivityId                   *string
 	DecisionTaskCompletedEventId *int64
 }
 
@@ -53,14 +50,12 @@ func (v *ActivityTaskCancelRequestedEventAttributes) GetDecisionTaskCompletedEve
 	return
 }
 
-
-
 type ActivityTaskCanceledEventAttributes struct {
-	Details []byte
+	Details                      []byte
 	LatestCancelRequestedEventId *int64
-	ScheduledEventId *int64
-	StartedEventId *int64
-	Identity *string
+	ScheduledEventId             *int64
+	StartedEventId               *int64
+	Identity                     *string
 }
 
 func (v *ActivityTaskCanceledEventAttributes) GetDetails() (o []byte) {
@@ -98,13 +93,11 @@ func (v *ActivityTaskCanceledEventAttributes) GetIdentity() (o string) {
 	return
 }
 
-
-
 type ActivityTaskCompletedEventAttributes struct {
-	Result []byte
+	Result           []byte
 	ScheduledEventId *int64
-	StartedEventId *int64
-	Identity *string
+	StartedEventId   *int64
+	Identity         *string
 }
 
 func (v *ActivityTaskCompletedEventAttributes) GetResult() (o []byte) {
@@ -135,14 +128,12 @@ func (v *ActivityTaskCompletedEventAttributes) GetIdentity() (o string) {
 	return
 }
 
-
-
 type ActivityTaskFailedEventAttributes struct {
-	Reason *string
-	Details []byte
+	Reason           *string
+	Details          []byte
 	ScheduledEventId *int64
-	StartedEventId *int64
-	Identity *string
+	StartedEventId   *int64
+	Identity         *string
 }
 
 func (v *ActivityTaskFailedEventAttributes) GetReason() (o string) {
@@ -180,21 +171,19 @@ func (v *ActivityTaskFailedEventAttributes) GetIdentity() (o string) {
 	return
 }
 
-
-
 type ActivityTaskScheduledEventAttributes struct {
-	ActivityId *string
-	ActivityType *ActivityType
-	Domain *string
-	TaskList *TaskList
-	Input []byte
+	ActivityId                    *string
+	ActivityType                  *ActivityType
+	Domain                        *string
+	TaskList                      *TaskList
+	Input                         []byte
 	ScheduleToCloseTimeoutSeconds *int32
 	ScheduleToStartTimeoutSeconds *int32
-	StartToCloseTimeoutSeconds *int32
-	HeartbeatTimeoutSeconds *int32
-	DecisionTaskCompletedEventId *int64
-	RetryPolicy *RetryPolicy
-	Header *Header
+	StartToCloseTimeoutSeconds    *int32
+	HeartbeatTimeoutSeconds       *int32
+	DecisionTaskCompletedEventId  *int64
+	RetryPolicy                   *RetryPolicy
+	Header                        *Header
 }
 
 func (v *ActivityTaskScheduledEventAttributes) GetActivityId() (o string) {
@@ -281,13 +270,13 @@ func (v *ActivityTaskScheduledEventAttributes) GetHeader() (o *Header) {
 	return
 }
 
-
-
 type ActivityTaskStartedEventAttributes struct {
-	ScheduledEventId *int64
-	Identity *string
-	RequestId *string
-	Attempt *int32
+	ScheduledEventId   *int64
+	Identity           *string
+	RequestId          *string
+	Attempt            *int32
+	LastFailureReason  *string
+	LastFailureDetails []byte
 }
 
 func (v *ActivityTaskStartedEventAttributes) GetScheduledEventId() (o int64) {
@@ -318,13 +307,27 @@ func (v *ActivityTaskStartedEventAttributes) GetAttempt() (o int32) {
 	return
 }
 
+func (v *ActivityTaskStartedEventAttributes) GetLastFailureReason() (o string) {
+	if v != nil && v.LastFailureReason != nil {
+		return *v.LastFailureReason
+	}
+	return
+}
 
+func (v *ActivityTaskStartedEventAttributes) GetLastFailureDetails() (o []byte) {
+	if v != nil && v.LastFailureDetails != nil {
+		return v.LastFailureDetails
+	}
+	return
+}
 
 type ActivityTaskTimedOutEventAttributes struct {
-	Details []byte
-	ScheduledEventId *int64
-	StartedEventId *int64
-	TimeoutType *TimeoutType
+	Details            []byte
+	ScheduledEventId   *int64
+	StartedEventId     *int64
+	TimeoutType        *TimeoutType
+	LastFailureReason  *string
+	LastFailureDetails []byte
 }
 
 func (v *ActivityTaskTimedOutEventAttributes) GetDetails() (o []byte) {
@@ -355,7 +358,19 @@ func (v *ActivityTaskTimedOutEventAttributes) GetTimeoutType() (o TimeoutType) {
 	return
 }
 
+func (v *ActivityTaskTimedOutEventAttributes) GetLastFailureReason() (o string) {
+	if v != nil && v.LastFailureReason != nil {
+		return *v.LastFailureReason
+	}
+	return
+}
 
+func (v *ActivityTaskTimedOutEventAttributes) GetLastFailureDetails() (o []byte) {
+	if v != nil && v.LastFailureDetails != nil {
+		return v.LastFailureDetails
+	}
+	return
+}
 
 type ActivityType struct {
 	Name *string
@@ -367,8 +382,6 @@ func (v *ActivityType) GetName() (o string) {
 	}
 	return
 }
-
-
 
 type ArchivalStatus int32
 
@@ -388,11 +401,9 @@ func (v *BadBinaries) GetBinaries() (o map[string]*BadBinaryInfo) {
 	return
 }
 
-
-
 type BadBinaryInfo struct {
-	Reason *string
-	Operator *string
+	Reason          *string
+	Operator        *string
 	CreatedTimeNano *int64
 }
 
@@ -417,8 +428,6 @@ func (v *BadBinaryInfo) GetCreatedTimeNano() (o int64) {
 	return
 }
 
-
-
 type BadRequestError struct {
 	Message string
 }
@@ -429,8 +438,6 @@ func (v *BadRequestError) GetMessage() (o string) {
 	}
 	return
 }
-
-
 
 type CancelExternalWorkflowExecutionFailedCause int32
 
@@ -449,13 +456,11 @@ func (v *CancelTimerDecisionAttributes) GetTimerId() (o string) {
 	return
 }
 
-
-
 type CancelTimerFailedEventAttributes struct {
-	TimerId *string
-	Cause *string
+	TimerId                      *string
+	Cause                        *string
 	DecisionTaskCompletedEventId *int64
-	Identity *string
+	Identity                     *string
 }
 
 func (v *CancelTimerFailedEventAttributes) GetTimerId() (o string) {
@@ -486,8 +491,6 @@ func (v *CancelTimerFailedEventAttributes) GetIdentity() (o string) {
 	return
 }
 
-
-
 type CancelWorkflowExecutionDecisionAttributes struct {
 	Details []byte
 }
@@ -498,8 +501,6 @@ func (v *CancelWorkflowExecutionDecisionAttributes) GetDetails() (o []byte) {
 	}
 	return
 }
-
-
 
 type CancellationAlreadyRequestedError struct {
 	Message string
@@ -512,23 +513,13 @@ func (v *CancellationAlreadyRequestedError) GetMessage() (o string) {
 	return
 }
 
-
-
-type ChildPolicy int32
-
-const (
-	ChildPolicyAbandon ChildPolicy = iota
-	ChildPolicyRequestCancel
-	ChildPolicyTerminate
-)
-
 type ChildWorkflowExecutionCanceledEventAttributes struct {
-	Details []byte
-	Domain *string
+	Details           []byte
+	Domain            *string
 	WorkflowExecution *WorkflowExecution
-	WorkflowType *WorkflowType
-	InitiatedEventId *int64
-	StartedEventId *int64
+	WorkflowType      *WorkflowType
+	InitiatedEventId  *int64
+	StartedEventId    *int64
 }
 
 func (v *ChildWorkflowExecutionCanceledEventAttributes) GetDetails() (o []byte) {
@@ -573,15 +564,13 @@ func (v *ChildWorkflowExecutionCanceledEventAttributes) GetStartedEventId() (o i
 	return
 }
 
-
-
 type ChildWorkflowExecutionCompletedEventAttributes struct {
-	Result []byte
-	Domain *string
+	Result            []byte
+	Domain            *string
 	WorkflowExecution *WorkflowExecution
-	WorkflowType *WorkflowType
-	InitiatedEventId *int64
-	StartedEventId *int64
+	WorkflowType      *WorkflowType
+	InitiatedEventId  *int64
+	StartedEventId    *int64
 }
 
 func (v *ChildWorkflowExecutionCompletedEventAttributes) GetResult() (o []byte) {
@@ -626,8 +615,6 @@ func (v *ChildWorkflowExecutionCompletedEventAttributes) GetStartedEventId() (o 
 	return
 }
 
-
-
 type ChildWorkflowExecutionFailedCause int32
 
 const (
@@ -635,13 +622,13 @@ const (
 )
 
 type ChildWorkflowExecutionFailedEventAttributes struct {
-	Reason *string
-	Details []byte
-	Domain *string
+	Reason            *string
+	Details           []byte
+	Domain            *string
 	WorkflowExecution *WorkflowExecution
-	WorkflowType *WorkflowType
-	InitiatedEventId *int64
-	StartedEventId *int64
+	WorkflowType      *WorkflowType
+	InitiatedEventId  *int64
+	StartedEventId    *int64
 }
 
 func (v *ChildWorkflowExecutionFailedEventAttributes) GetReason() (o string) {
@@ -693,14 +680,12 @@ func (v *ChildWorkflowExecutionFailedEventAttributes) GetStartedEventId() (o int
 	return
 }
 
-
-
 type ChildWorkflowExecutionStartedEventAttributes struct {
-	Domain *string
-	InitiatedEventId *int64
+	Domain            *string
+	InitiatedEventId  *int64
 	WorkflowExecution *WorkflowExecution
-	WorkflowType *WorkflowType
-	Header *Header
+	WorkflowType      *WorkflowType
+	Header            *Header
 }
 
 func (v *ChildWorkflowExecutionStartedEventAttributes) GetDomain() (o string) {
@@ -738,14 +723,12 @@ func (v *ChildWorkflowExecutionStartedEventAttributes) GetHeader() (o *Header) {
 	return
 }
 
-
-
 type ChildWorkflowExecutionTerminatedEventAttributes struct {
-	Domain *string
+	Domain            *string
 	WorkflowExecution *WorkflowExecution
-	WorkflowType *WorkflowType
-	InitiatedEventId *int64
-	StartedEventId *int64
+	WorkflowType      *WorkflowType
+	InitiatedEventId  *int64
+	StartedEventId    *int64
 }
 
 func (v *ChildWorkflowExecutionTerminatedEventAttributes) GetDomain() (o string) {
@@ -783,15 +766,13 @@ func (v *ChildWorkflowExecutionTerminatedEventAttributes) GetStartedEventId() (o
 	return
 }
 
-
-
 type ChildWorkflowExecutionTimedOutEventAttributes struct {
-	TimeoutType *TimeoutType
-	Domain *string
+	TimeoutType       *TimeoutType
+	Domain            *string
 	WorkflowExecution *WorkflowExecution
-	WorkflowType *WorkflowType
-	InitiatedEventId *int64
-	StartedEventId *int64
+	WorkflowType      *WorkflowType
+	InitiatedEventId  *int64
+	StartedEventId    *int64
 }
 
 func (v *ChildWorkflowExecutionTimedOutEventAttributes) GetTimeoutType() (o TimeoutType) {
@@ -836,11 +817,9 @@ func (v *ChildWorkflowExecutionTimedOutEventAttributes) GetStartedEventId() (o i
 	return
 }
 
-
-
 type ClientVersionNotSupportedError struct {
-	FeatureVersion string
-	ClientImpl string
+	FeatureVersion    string
+	ClientImpl        string
 	SupportedVersions string
 }
 
@@ -865,7 +844,27 @@ func (v *ClientVersionNotSupportedError) GetSupportedVersions() (o string) {
 	return
 }
 
+type CloseShardRequest struct {
+	ShardID *int32
+}
 
+func (v *CloseShardRequest) GetShardID() (o int32) {
+	if v != nil && v.ShardID != nil {
+		return *v.ShardID
+	}
+	return
+}
+
+type ClusterInfo struct {
+	SupportedClientVersions *SupportedClientVersions
+}
+
+func (v *ClusterInfo) GetSupportedClientVersions() (o *SupportedClientVersions) {
+	if v != nil && v.SupportedClientVersions != nil {
+		return v.SupportedClientVersions
+	}
+	return
+}
 
 type ClusterReplicationConfiguration struct {
 	ClusterName *string
@@ -878,8 +877,6 @@ func (v *ClusterReplicationConfiguration) GetClusterName() (o string) {
 	return
 }
 
-
-
 type CompleteWorkflowExecutionDecisionAttributes struct {
 	Result []byte
 }
@@ -891,8 +888,6 @@ func (v *CompleteWorkflowExecutionDecisionAttributes) GetResult() (o []byte) {
 	return
 }
 
-
-
 type ContinueAsNewInitiator int32
 
 const (
@@ -902,21 +897,21 @@ const (
 )
 
 type ContinueAsNewWorkflowExecutionDecisionAttributes struct {
-	WorkflowType *WorkflowType
-	TaskList *TaskList
-	Input []byte
+	WorkflowType                        *WorkflowType
+	TaskList                            *TaskList
+	Input                               []byte
 	ExecutionStartToCloseTimeoutSeconds *int32
-	TaskStartToCloseTimeoutSeconds *int32
-	BackoffStartIntervalInSeconds *int32
-	RetryPolicy *RetryPolicy
-	Initiator *ContinueAsNewInitiator
-	FailureReason *string
-	FailureDetails []byte
-	LastCompletionResult []byte
-	CronSchedule *string
-	Header *Header
-	Memo *Memo
-	SearchAttributes *SearchAttributes
+	TaskStartToCloseTimeoutSeconds      *int32
+	BackoffStartIntervalInSeconds       *int32
+	RetryPolicy                         *RetryPolicy
+	Initiator                           *ContinueAsNewInitiator
+	FailureReason                       *string
+	FailureDetails                      []byte
+	LastCompletionResult                []byte
+	CronSchedule                        *string
+	Header                              *Header
+	Memo                                *Memo
+	SearchAttributes                    *SearchAttributes
 }
 
 func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetWorkflowType() (o *WorkflowType) {
@@ -1024,11 +1019,9 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetSearchAttributes()
 	return
 }
 
-
-
 type CountWorkflowExecutionsRequest struct {
 	Domain *string
-	Query *string
+	Query  *string
 }
 
 func (v *CountWorkflowExecutionsRequest) GetDomain() (o string) {
@@ -1045,8 +1038,6 @@ func (v *CountWorkflowExecutionsRequest) GetQuery() (o string) {
 	return
 }
 
-
-
 type CountWorkflowExecutionsResponse struct {
 	Count *int64
 }
@@ -1058,11 +1049,28 @@ func (v *CountWorkflowExecutionsResponse) GetCount() (o int64) {
 	return
 }
 
+type CurrentBranchChangedError struct {
+	Message            string
+	CurrentBranchToken []byte
+}
 
+func (v *CurrentBranchChangedError) GetMessage() (o string) {
+	if v != nil {
+		return v.Message
+	}
+	return
+}
+
+func (v *CurrentBranchChangedError) GetCurrentBranchToken() (o []byte) {
+	if v != nil && v.CurrentBranchToken != nil {
+		return v.CurrentBranchToken
+	}
+	return
+}
 
 type DataBlob struct {
 	EncodingType *EncodingType
-	Data []byte
+	Data         []byte
 }
 
 func (v *DataBlob) GetEncodingType() (o EncodingType) {
@@ -1079,23 +1087,21 @@ func (v *DataBlob) GetData() (o []byte) {
 	return
 }
 
-
-
 type Decision struct {
-	DecisionType *DecisionType
-	ScheduleActivityTaskDecisionAttributes *ScheduleActivityTaskDecisionAttributes
-	StartTimerDecisionAttributes *StartTimerDecisionAttributes
-	CompleteWorkflowExecutionDecisionAttributes *CompleteWorkflowExecutionDecisionAttributes
-	FailWorkflowExecutionDecisionAttributes *FailWorkflowExecutionDecisionAttributes
-	RequestCancelActivityTaskDecisionAttributes *RequestCancelActivityTaskDecisionAttributes
-	CancelTimerDecisionAttributes *CancelTimerDecisionAttributes
-	CancelWorkflowExecutionDecisionAttributes *CancelWorkflowExecutionDecisionAttributes
+	DecisionType                                             *DecisionType
+	ScheduleActivityTaskDecisionAttributes                   *ScheduleActivityTaskDecisionAttributes
+	StartTimerDecisionAttributes                             *StartTimerDecisionAttributes
+	CompleteWorkflowExecutionDecisionAttributes              *CompleteWorkflowExecutionDecisionAttributes
+	FailWorkflowExecutionDecisionAttributes                  *FailWorkflowExecutionDecisionAttributes
+	RequestCancelActivityTaskDecisionAttributes              *RequestCancelActivityTaskDecisionAttributes
+	CancelTimerDecisionAttributes                            *CancelTimerDecisionAttributes
+	CancelWorkflowExecutionDecisionAttributes                *CancelWorkflowExecutionDecisionAttributes
 	RequestCancelExternalWorkflowExecutionDecisionAttributes *RequestCancelExternalWorkflowExecutionDecisionAttributes
-	RecordMarkerDecisionAttributes *RecordMarkerDecisionAttributes
-	ContinueAsNewWorkflowExecutionDecisionAttributes *ContinueAsNewWorkflowExecutionDecisionAttributes
-	StartChildWorkflowExecutionDecisionAttributes *StartChildWorkflowExecutionDecisionAttributes
-	SignalExternalWorkflowExecutionDecisionAttributes *SignalExternalWorkflowExecutionDecisionAttributes
-	UpsertWorkflowSearchAttributesDecisionAttributes *UpsertWorkflowSearchAttributesDecisionAttributes
+	RecordMarkerDecisionAttributes                           *RecordMarkerDecisionAttributes
+	ContinueAsNewWorkflowExecutionDecisionAttributes         *ContinueAsNewWorkflowExecutionDecisionAttributes
+	StartChildWorkflowExecutionDecisionAttributes            *StartChildWorkflowExecutionDecisionAttributes
+	SignalExternalWorkflowExecutionDecisionAttributes        *SignalExternalWorkflowExecutionDecisionAttributes
+	UpsertWorkflowSearchAttributesDecisionAttributes         *UpsertWorkflowSearchAttributesDecisionAttributes
 }
 
 func (v *Decision) GetDecisionType() (o DecisionType) {
@@ -1196,14 +1202,12 @@ func (v *Decision) GetUpsertWorkflowSearchAttributesDecisionAttributes() (o *Ups
 	return
 }
 
-
-
 type DecisionTaskCompletedEventAttributes struct {
 	ExecutionContext []byte
 	ScheduledEventId *int64
-	StartedEventId *int64
-	Identity *string
-	BinaryChecksum *string
+	StartedEventId   *int64
+	Identity         *string
+	BinaryChecksum   *string
 }
 
 func (v *DecisionTaskCompletedEventAttributes) GetExecutionContext() (o []byte) {
@@ -1241,8 +1245,6 @@ func (v *DecisionTaskCompletedEventAttributes) GetBinaryChecksum() (o string) {
 	return
 }
 
-
-
 type DecisionTaskFailedCause int32
 
 const (
@@ -1273,14 +1275,15 @@ const (
 
 type DecisionTaskFailedEventAttributes struct {
 	ScheduledEventId *int64
-	StartedEventId *int64
-	Cause *DecisionTaskFailedCause
-	Details []byte
-	Identity *string
-	Reason *string
-	BaseRunId *string
-	NewRunId *string
+	StartedEventId   *int64
+	Cause            *DecisionTaskFailedCause
+	Details          []byte
+	Identity         *string
+	Reason           *string
+	BaseRunId        *string
+	NewRunId         *string
 	ForkEventVersion *int64
+	BinaryChecksum   *string
 }
 
 func (v *DecisionTaskFailedEventAttributes) GetScheduledEventId() (o int64) {
@@ -1346,12 +1349,17 @@ func (v *DecisionTaskFailedEventAttributes) GetForkEventVersion() (o int64) {
 	return
 }
 
-
+func (v *DecisionTaskFailedEventAttributes) GetBinaryChecksum() (o string) {
+	if v != nil && v.BinaryChecksum != nil {
+		return *v.BinaryChecksum
+	}
+	return
+}
 
 type DecisionTaskScheduledEventAttributes struct {
-	TaskList *TaskList
+	TaskList                   *TaskList
 	StartToCloseTimeoutSeconds *int32
-	Attempt *int64
+	Attempt                    *int64
 }
 
 func (v *DecisionTaskScheduledEventAttributes) GetTaskList() (o *TaskList) {
@@ -1375,12 +1383,10 @@ func (v *DecisionTaskScheduledEventAttributes) GetAttempt() (o int64) {
 	return
 }
 
-
-
 type DecisionTaskStartedEventAttributes struct {
 	ScheduledEventId *int64
-	Identity *string
-	RequestId *string
+	Identity         *string
+	RequestId        *string
 }
 
 func (v *DecisionTaskStartedEventAttributes) GetScheduledEventId() (o int64) {
@@ -1404,12 +1410,10 @@ func (v *DecisionTaskStartedEventAttributes) GetRequestId() (o string) {
 	return
 }
 
-
-
 type DecisionTaskTimedOutEventAttributes struct {
 	ScheduledEventId *int64
-	StartedEventId *int64
-	TimeoutType *TimeoutType
+	StartedEventId   *int64
+	TimeoutType      *TimeoutType
 }
 
 func (v *DecisionTaskTimedOutEventAttributes) GetScheduledEventId() (o int64) {
@@ -1433,8 +1437,6 @@ func (v *DecisionTaskTimedOutEventAttributes) GetTimeoutType() (o TimeoutType) {
 	return
 }
 
-
-
 type DecisionType int32
 
 const (
@@ -1454,7 +1456,7 @@ const (
 )
 
 type DeprecateDomainRequest struct {
-	Name *string
+	Name          *string
 	SecurityToken *string
 }
 
@@ -1471,8 +1473,6 @@ func (v *DeprecateDomainRequest) GetSecurityToken() (o string) {
 	}
 	return
 }
-
-
 
 type DescribeDomainRequest struct {
 	Name *string
@@ -1493,14 +1493,12 @@ func (v *DescribeDomainRequest) GetUUID() (o string) {
 	return
 }
 
-
-
 type DescribeDomainResponse struct {
-	DomainInfo *DomainInfo
-	Configuration *DomainConfiguration
+	DomainInfo               *DomainInfo
+	Configuration            *DomainConfiguration
 	ReplicationConfiguration *DomainReplicationConfiguration
-	FailoverVersion *int64
-	IsGlobalDomain *bool
+	FailoverVersion          *int64
+	IsGlobalDomain           *bool
 }
 
 func (v *DescribeDomainResponse) GetDomainInfo() (o *DomainInfo) {
@@ -1538,11 +1536,9 @@ func (v *DescribeDomainResponse) GetIsGlobalDomain() (o bool) {
 	return
 }
 
-
-
 type DescribeHistoryHostRequest struct {
-	HostAddress *string
-	ShardIdForHost *int32
+	HostAddress      *string
+	ShardIdForHost   *int32
 	ExecutionForHost *WorkflowExecution
 }
 
@@ -1567,14 +1563,12 @@ func (v *DescribeHistoryHostRequest) GetExecutionForHost() (o *WorkflowExecution
 	return
 }
 
-
-
 type DescribeHistoryHostResponse struct {
-	NumberOfShards *int32
-	ShardIDs []int32
-	DomainCache *DomainCacheInfo
+	NumberOfShards        *int32
+	ShardIDs              []int32
+	DomainCache           *DomainCacheInfo
 	ShardControllerStatus *string
-	Address *string
+	Address               *string
 }
 
 func (v *DescribeHistoryHostResponse) GetNumberOfShards() (o int32) {
@@ -1612,12 +1606,48 @@ func (v *DescribeHistoryHostResponse) GetAddress() (o string) {
 	return
 }
 
+type DescribeQueueRequest struct {
+	ShardID     *int32
+	ClusterName *string
+	Type        *int32
+}
 
+func (v *DescribeQueueRequest) GetShardID() (o int32) {
+	if v != nil && v.ShardID != nil {
+		return *v.ShardID
+	}
+	return
+}
+
+func (v *DescribeQueueRequest) GetClusterName() (o string) {
+	if v != nil && v.ClusterName != nil {
+		return *v.ClusterName
+	}
+	return
+}
+
+func (v *DescribeQueueRequest) GetType() (o int32) {
+	if v != nil && v.Type != nil {
+		return *v.Type
+	}
+	return
+}
+
+type DescribeQueueResponse struct {
+	ProcessingQueueStates []string
+}
+
+func (v *DescribeQueueResponse) GetProcessingQueueStates() (o []string) {
+	if v != nil && v.ProcessingQueueStates != nil {
+		return v.ProcessingQueueStates
+	}
+	return
+}
 
 type DescribeTaskListRequest struct {
-	Domain *string
-	TaskList *TaskList
-	TaskListType *TaskListType
+	Domain                *string
+	TaskList              *TaskList
+	TaskListType          *TaskListType
 	IncludeTaskListStatus *bool
 }
 
@@ -1649,10 +1679,8 @@ func (v *DescribeTaskListRequest) GetIncludeTaskListStatus() (o bool) {
 	return
 }
 
-
-
 type DescribeTaskListResponse struct {
-	Pollers []*PollerInfo
+	Pollers        []*PollerInfo
 	TaskListStatus *TaskListStatus
 }
 
@@ -1670,10 +1698,8 @@ func (v *DescribeTaskListResponse) GetTaskListStatus() (o *TaskListStatus) {
 	return
 }
 
-
-
 type DescribeWorkflowExecutionRequest struct {
-	Domain *string
+	Domain    *string
 	Execution *WorkflowExecution
 }
 
@@ -1691,13 +1717,11 @@ func (v *DescribeWorkflowExecutionRequest) GetExecution() (o *WorkflowExecution)
 	return
 }
 
-
-
 type DescribeWorkflowExecutionResponse struct {
 	ExecutionConfiguration *WorkflowExecutionConfiguration
-	WorkflowExecutionInfo *WorkflowExecutionInfo
-	PendingActivities []*PendingActivityInfo
-	PendingChildren []*PendingChildExecutionInfo
+	WorkflowExecutionInfo  *WorkflowExecutionInfo
+	PendingActivities      []*PendingActivityInfo
+	PendingChildren        []*PendingChildExecutionInfo
 }
 
 func (v *DescribeWorkflowExecutionResponse) GetExecutionConfiguration() (o *WorkflowExecutionConfiguration) {
@@ -1728,8 +1752,6 @@ func (v *DescribeWorkflowExecutionResponse) GetPendingChildren() (o []*PendingCh
 	return
 }
 
-
-
 type DomainAlreadyExistsError struct {
 	Message string
 }
@@ -1741,10 +1763,8 @@ func (v *DomainAlreadyExistsError) GetMessage() (o string) {
 	return
 }
 
-
-
 type DomainCacheInfo struct {
-	NumOfItemsInCacheByID *int64
+	NumOfItemsInCacheByID   *int64
 	NumOfItemsInCacheByName *int64
 }
 
@@ -1762,16 +1782,14 @@ func (v *DomainCacheInfo) GetNumOfItemsInCacheByName() (o int64) {
 	return
 }
 
-
-
 type DomainConfiguration struct {
 	WorkflowExecutionRetentionPeriodInDays *int32
-	EmitMetric *bool
-	BadBinaries *BadBinaries
-	HistoryArchivalStatus *ArchivalStatus
-	HistoryArchivalURI *string
-	VisibilityArchivalStatus *ArchivalStatus
-	VisibilityArchivalURI *string
+	EmitMetric                             *bool
+	BadBinaries                            *BadBinaries
+	HistoryArchivalStatus                  *ArchivalStatus
+	HistoryArchivalURI                     *string
+	VisibilityArchivalStatus               *ArchivalStatus
+	VisibilityArchivalURI                  *string
 }
 
 func (v *DomainConfiguration) GetWorkflowExecutionRetentionPeriodInDays() (o int32) {
@@ -1823,15 +1841,13 @@ func (v *DomainConfiguration) GetVisibilityArchivalURI() (o string) {
 	return
 }
 
-
-
 type DomainInfo struct {
-	Name *string
-	Status *DomainStatus
+	Name        *string
+	Status      *DomainStatus
 	Description *string
-	OwnerEmail *string
-	Data map[string]string
-	UUID *string
+	OwnerEmail  *string
+	Data        map[string]string
+	UUID        *string
 }
 
 func (v *DomainInfo) GetName() (o string) {
@@ -1876,13 +1892,11 @@ func (v *DomainInfo) GetUUID() (o string) {
 	return
 }
 
-
-
 type DomainNotActiveError struct {
-	Message string
-	DomainName string
+	Message        string
+	DomainName     string
 	CurrentCluster string
-	ActiveCluster string
+	ActiveCluster  string
 }
 
 func (v *DomainNotActiveError) GetMessage() (o string) {
@@ -1913,11 +1927,9 @@ func (v *DomainNotActiveError) GetActiveCluster() (o string) {
 	return
 }
 
-
-
 type DomainReplicationConfiguration struct {
 	ActiveClusterName *string
-	Clusters []*ClusterReplicationConfiguration
+	Clusters          []*ClusterReplicationConfiguration
 }
 
 func (v *DomainReplicationConfiguration) GetActiveClusterName() (o string) {
@@ -1934,8 +1946,6 @@ func (v *DomainReplicationConfiguration) GetClusters() (o []*ClusterReplicationC
 	return
 }
 
-
-
 type DomainStatus int32
 
 const (
@@ -1947,11 +1957,14 @@ const (
 type EncodingType int32
 
 const (
-	EncodingTypeThriftRW EncodingType = iota
+	EncodingTypeJSON EncodingType = iota
+	EncodingTypeThriftRW
 )
 
 type EntityNotExistsError struct {
-	Message string
+	Message        string
+	CurrentCluster *string
+	ActiveCluster  *string
 }
 
 func (v *EntityNotExistsError) GetMessage() (o string) {
@@ -1961,7 +1974,19 @@ func (v *EntityNotExistsError) GetMessage() (o string) {
 	return
 }
 
+func (v *EntityNotExistsError) GetCurrentCluster() (o string) {
+	if v != nil && v.CurrentCluster != nil {
+		return *v.CurrentCluster
+	}
+	return
+}
 
+func (v *EntityNotExistsError) GetActiveCluster() (o string) {
+	if v != nil && v.ActiveCluster != nil {
+		return *v.ActiveCluster
+	}
+	return
+}
 
 type EventType int32
 
@@ -2011,8 +2036,8 @@ const (
 )
 
 type ExternalWorkflowExecutionCancelRequestedEventAttributes struct {
-	InitiatedEventId *int64
-	Domain *string
+	InitiatedEventId  *int64
+	Domain            *string
 	WorkflowExecution *WorkflowExecution
 }
 
@@ -2037,13 +2062,11 @@ func (v *ExternalWorkflowExecutionCancelRequestedEventAttributes) GetWorkflowExe
 	return
 }
 
-
-
 type ExternalWorkflowExecutionSignaledEventAttributes struct {
-	InitiatedEventId *int64
-	Domain *string
+	InitiatedEventId  *int64
+	Domain            *string
 	WorkflowExecution *WorkflowExecution
-	Control []byte
+	Control           []byte
 }
 
 func (v *ExternalWorkflowExecutionSignaledEventAttributes) GetInitiatedEventId() (o int64) {
@@ -2074,10 +2097,8 @@ func (v *ExternalWorkflowExecutionSignaledEventAttributes) GetControl() (o []byt
 	return
 }
 
-
-
 type FailWorkflowExecutionDecisionAttributes struct {
-	Reason *string
+	Reason  *string
 	Details []byte
 }
 
@@ -2095,8 +2116,6 @@ func (v *FailWorkflowExecutionDecisionAttributes) GetDetails() (o []byte) {
 	return
 }
 
-
-
 type GetSearchAttributesResponse struct {
 	Keys map[string]IndexedValueType
 }
@@ -2108,15 +2127,14 @@ func (v *GetSearchAttributesResponse) GetKeys() (o map[string]IndexedValueType) 
 	return
 }
 
-
-
 type GetWorkflowExecutionHistoryRequest struct {
-	Domain *string
-	Execution *WorkflowExecution
-	MaximumPageSize *int32
-	NextPageToken []byte
-	WaitForNewEvent *bool
+	Domain                 *string
+	Execution              *WorkflowExecution
+	MaximumPageSize        *int32
+	NextPageToken          []byte
+	WaitForNewEvent        *bool
 	HistoryEventFilterType *HistoryEventFilterType
+	SkipArchival           *bool
 }
 
 func (v *GetWorkflowExecutionHistoryRequest) GetDomain() (o string) {
@@ -2161,17 +2179,30 @@ func (v *GetWorkflowExecutionHistoryRequest) GetHistoryEventFilterType() (o Hist
 	return
 }
 
-
+func (v *GetWorkflowExecutionHistoryRequest) GetSkipArchival() (o bool) {
+	if v != nil && v.SkipArchival != nil {
+		return *v.SkipArchival
+	}
+	return
+}
 
 type GetWorkflowExecutionHistoryResponse struct {
-	History *History
+	History       *History
+	RawHistory    []*DataBlob
 	NextPageToken []byte
-	Archived *bool
+	Archived      *bool
 }
 
 func (v *GetWorkflowExecutionHistoryResponse) GetHistory() (o *History) {
 	if v != nil && v.History != nil {
 		return v.History
+	}
+	return
+}
+
+func (v *GetWorkflowExecutionHistoryResponse) GetRawHistory() (o []*DataBlob) {
+	if v != nil && v.RawHistory != nil {
+		return v.RawHistory
 	}
 	return
 }
@@ -2190,8 +2221,6 @@ func (v *GetWorkflowExecutionHistoryResponse) GetArchived() (o bool) {
 	return
 }
 
-
-
 type Header struct {
 	Fields map[string][]byte
 }
@@ -2202,8 +2231,6 @@ func (v *Header) GetFields() (o map[string][]byte) {
 	}
 	return
 }
-
-
 
 type History struct {
 	Events []*HistoryEvent
@@ -2216,11 +2243,9 @@ func (v *History) GetEvents() (o []*HistoryEvent) {
 	return
 }
 
-
-
 type HistoryBranch struct {
-	TreeID *string
-	BranchID *string
+	TreeID    *string
+	BranchID  *string
 	Ancestors []*HistoryBranchRange
 }
 
@@ -2245,12 +2270,10 @@ func (v *HistoryBranch) GetAncestors() (o []*HistoryBranchRange) {
 	return
 }
 
-
-
 type HistoryBranchRange struct {
-	BranchID *string
+	BranchID    *string
 	BeginNodeID *int64
-	EndNodeID *int64
+	EndNodeID   *int64
 }
 
 func (v *HistoryBranchRange) GetBranchID() (o string) {
@@ -2274,56 +2297,54 @@ func (v *HistoryBranchRange) GetEndNodeID() (o int64) {
 	return
 }
 
-
-
 type HistoryEvent struct {
-	EventId *int64
-	Timestamp *int64
-	EventType *EventType
-	Version *int64
-	TaskId *int64
-	WorkflowExecutionStartedEventAttributes *WorkflowExecutionStartedEventAttributes
-	WorkflowExecutionCompletedEventAttributes *WorkflowExecutionCompletedEventAttributes
-	WorkflowExecutionFailedEventAttributes *WorkflowExecutionFailedEventAttributes
-	WorkflowExecutionTimedOutEventAttributes *WorkflowExecutionTimedOutEventAttributes
-	DecisionTaskScheduledEventAttributes *DecisionTaskScheduledEventAttributes
-	DecisionTaskStartedEventAttributes *DecisionTaskStartedEventAttributes
-	DecisionTaskCompletedEventAttributes *DecisionTaskCompletedEventAttributes
-	DecisionTaskTimedOutEventAttributes *DecisionTaskTimedOutEventAttributes
-	DecisionTaskFailedEventAttributes *DecisionTaskFailedEventAttributes
-	ActivityTaskScheduledEventAttributes *ActivityTaskScheduledEventAttributes
-	ActivityTaskStartedEventAttributes *ActivityTaskStartedEventAttributes
-	ActivityTaskCompletedEventAttributes *ActivityTaskCompletedEventAttributes
-	ActivityTaskFailedEventAttributes *ActivityTaskFailedEventAttributes
-	ActivityTaskTimedOutEventAttributes *ActivityTaskTimedOutEventAttributes
-	TimerStartedEventAttributes *TimerStartedEventAttributes
-	TimerFiredEventAttributes *TimerFiredEventAttributes
-	ActivityTaskCancelRequestedEventAttributes *ActivityTaskCancelRequestedEventAttributes
-	RequestCancelActivityTaskFailedEventAttributes *RequestCancelActivityTaskFailedEventAttributes
-	ActivityTaskCanceledEventAttributes *ActivityTaskCanceledEventAttributes
-	TimerCanceledEventAttributes *TimerCanceledEventAttributes
-	CancelTimerFailedEventAttributes *CancelTimerFailedEventAttributes
-	MarkerRecordedEventAttributes *MarkerRecordedEventAttributes
-	WorkflowExecutionSignaledEventAttributes *WorkflowExecutionSignaledEventAttributes
-	WorkflowExecutionTerminatedEventAttributes *WorkflowExecutionTerminatedEventAttributes
-	WorkflowExecutionCancelRequestedEventAttributes *WorkflowExecutionCancelRequestedEventAttributes
-	WorkflowExecutionCanceledEventAttributes *WorkflowExecutionCanceledEventAttributes
+	EventId                                                        *int64
+	Timestamp                                                      *int64
+	EventType                                                      *EventType
+	Version                                                        *int64
+	TaskId                                                         *int64
+	WorkflowExecutionStartedEventAttributes                        *WorkflowExecutionStartedEventAttributes
+	WorkflowExecutionCompletedEventAttributes                      *WorkflowExecutionCompletedEventAttributes
+	WorkflowExecutionFailedEventAttributes                         *WorkflowExecutionFailedEventAttributes
+	WorkflowExecutionTimedOutEventAttributes                       *WorkflowExecutionTimedOutEventAttributes
+	DecisionTaskScheduledEventAttributes                           *DecisionTaskScheduledEventAttributes
+	DecisionTaskStartedEventAttributes                             *DecisionTaskStartedEventAttributes
+	DecisionTaskCompletedEventAttributes                           *DecisionTaskCompletedEventAttributes
+	DecisionTaskTimedOutEventAttributes                            *DecisionTaskTimedOutEventAttributes
+	DecisionTaskFailedEventAttributes                              *DecisionTaskFailedEventAttributes
+	ActivityTaskScheduledEventAttributes                           *ActivityTaskScheduledEventAttributes
+	ActivityTaskStartedEventAttributes                             *ActivityTaskStartedEventAttributes
+	ActivityTaskCompletedEventAttributes                           *ActivityTaskCompletedEventAttributes
+	ActivityTaskFailedEventAttributes                              *ActivityTaskFailedEventAttributes
+	ActivityTaskTimedOutEventAttributes                            *ActivityTaskTimedOutEventAttributes
+	TimerStartedEventAttributes                                    *TimerStartedEventAttributes
+	TimerFiredEventAttributes                                      *TimerFiredEventAttributes
+	ActivityTaskCancelRequestedEventAttributes                     *ActivityTaskCancelRequestedEventAttributes
+	RequestCancelActivityTaskFailedEventAttributes                 *RequestCancelActivityTaskFailedEventAttributes
+	ActivityTaskCanceledEventAttributes                            *ActivityTaskCanceledEventAttributes
+	TimerCanceledEventAttributes                                   *TimerCanceledEventAttributes
+	CancelTimerFailedEventAttributes                               *CancelTimerFailedEventAttributes
+	MarkerRecordedEventAttributes                                  *MarkerRecordedEventAttributes
+	WorkflowExecutionSignaledEventAttributes                       *WorkflowExecutionSignaledEventAttributes
+	WorkflowExecutionTerminatedEventAttributes                     *WorkflowExecutionTerminatedEventAttributes
+	WorkflowExecutionCancelRequestedEventAttributes                *WorkflowExecutionCancelRequestedEventAttributes
+	WorkflowExecutionCanceledEventAttributes                       *WorkflowExecutionCanceledEventAttributes
 	RequestCancelExternalWorkflowExecutionInitiatedEventAttributes *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes
-	RequestCancelExternalWorkflowExecutionFailedEventAttributes *RequestCancelExternalWorkflowExecutionFailedEventAttributes
-	ExternalWorkflowExecutionCancelRequestedEventAttributes *ExternalWorkflowExecutionCancelRequestedEventAttributes
-	WorkflowExecutionContinuedAsNewEventAttributes *WorkflowExecutionContinuedAsNewEventAttributes
-	StartChildWorkflowExecutionInitiatedEventAttributes *StartChildWorkflowExecutionInitiatedEventAttributes
-	StartChildWorkflowExecutionFailedEventAttributes *StartChildWorkflowExecutionFailedEventAttributes
-	ChildWorkflowExecutionStartedEventAttributes *ChildWorkflowExecutionStartedEventAttributes
-	ChildWorkflowExecutionCompletedEventAttributes *ChildWorkflowExecutionCompletedEventAttributes
-	ChildWorkflowExecutionFailedEventAttributes *ChildWorkflowExecutionFailedEventAttributes
-	ChildWorkflowExecutionCanceledEventAttributes *ChildWorkflowExecutionCanceledEventAttributes
-	ChildWorkflowExecutionTimedOutEventAttributes *ChildWorkflowExecutionTimedOutEventAttributes
-	ChildWorkflowExecutionTerminatedEventAttributes *ChildWorkflowExecutionTerminatedEventAttributes
-	SignalExternalWorkflowExecutionInitiatedEventAttributes *SignalExternalWorkflowExecutionInitiatedEventAttributes
-	SignalExternalWorkflowExecutionFailedEventAttributes *SignalExternalWorkflowExecutionFailedEventAttributes
-	ExternalWorkflowExecutionSignaledEventAttributes *ExternalWorkflowExecutionSignaledEventAttributes
-	UpsertWorkflowSearchAttributesEventAttributes *UpsertWorkflowSearchAttributesEventAttributes
+	RequestCancelExternalWorkflowExecutionFailedEventAttributes    *RequestCancelExternalWorkflowExecutionFailedEventAttributes
+	ExternalWorkflowExecutionCancelRequestedEventAttributes        *ExternalWorkflowExecutionCancelRequestedEventAttributes
+	WorkflowExecutionContinuedAsNewEventAttributes                 *WorkflowExecutionContinuedAsNewEventAttributes
+	StartChildWorkflowExecutionInitiatedEventAttributes            *StartChildWorkflowExecutionInitiatedEventAttributes
+	StartChildWorkflowExecutionFailedEventAttributes               *StartChildWorkflowExecutionFailedEventAttributes
+	ChildWorkflowExecutionStartedEventAttributes                   *ChildWorkflowExecutionStartedEventAttributes
+	ChildWorkflowExecutionCompletedEventAttributes                 *ChildWorkflowExecutionCompletedEventAttributes
+	ChildWorkflowExecutionFailedEventAttributes                    *ChildWorkflowExecutionFailedEventAttributes
+	ChildWorkflowExecutionCanceledEventAttributes                  *ChildWorkflowExecutionCanceledEventAttributes
+	ChildWorkflowExecutionTimedOutEventAttributes                  *ChildWorkflowExecutionTimedOutEventAttributes
+	ChildWorkflowExecutionTerminatedEventAttributes                *ChildWorkflowExecutionTerminatedEventAttributes
+	SignalExternalWorkflowExecutionInitiatedEventAttributes        *SignalExternalWorkflowExecutionInitiatedEventAttributes
+	SignalExternalWorkflowExecutionFailedEventAttributes           *SignalExternalWorkflowExecutionFailedEventAttributes
+	ExternalWorkflowExecutionSignaledEventAttributes               *ExternalWorkflowExecutionSignaledEventAttributes
+	UpsertWorkflowSearchAttributesEventAttributes                  *UpsertWorkflowSearchAttributesEventAttributes
 }
 
 func (v *HistoryEvent) GetEventId() (o int64) {
@@ -2655,8 +2676,6 @@ func (v *HistoryEvent) GetUpsertWorkflowSearchAttributesEventAttributes() (o *Up
 	return
 }
 
-
-
 type HistoryEventFilterType int32
 
 const (
@@ -2675,6 +2694,17 @@ const (
 	IndexedValueTypeString
 )
 
+type InternalDataInconsistencyError struct {
+	Message string
+}
+
+func (v *InternalDataInconsistencyError) GetMessage() (o string) {
+	if v != nil {
+		return v.Message
+	}
+	return
+}
+
 type InternalServiceError struct {
 	Message string
 }
@@ -2685,8 +2715,6 @@ func (v *InternalServiceError) GetMessage() (o string) {
 	}
 	return
 }
-
-
 
 type LimitExceededError struct {
 	Message string
@@ -2699,16 +2727,68 @@ func (v *LimitExceededError) GetMessage() (o string) {
 	return
 }
 
+type ListArchivedWorkflowExecutionsRequest struct {
+	Domain        *string
+	PageSize      *int32
+	NextPageToken []byte
+	Query         *string
+}
 
+func (v *ListArchivedWorkflowExecutionsRequest) GetDomain() (o string) {
+	if v != nil && v.Domain != nil {
+		return *v.Domain
+	}
+	return
+}
+
+func (v *ListArchivedWorkflowExecutionsRequest) GetPageSize() (o int32) {
+	if v != nil && v.PageSize != nil {
+		return *v.PageSize
+	}
+	return
+}
+
+func (v *ListArchivedWorkflowExecutionsRequest) GetNextPageToken() (o []byte) {
+	if v != nil && v.NextPageToken != nil {
+		return v.NextPageToken
+	}
+	return
+}
+
+func (v *ListArchivedWorkflowExecutionsRequest) GetQuery() (o string) {
+	if v != nil && v.Query != nil {
+		return *v.Query
+	}
+	return
+}
+
+type ListArchivedWorkflowExecutionsResponse struct {
+	Executions    []*WorkflowExecutionInfo
+	NextPageToken []byte
+}
+
+func (v *ListArchivedWorkflowExecutionsResponse) GetExecutions() (o []*WorkflowExecutionInfo) {
+	if v != nil && v.Executions != nil {
+		return v.Executions
+	}
+	return
+}
+
+func (v *ListArchivedWorkflowExecutionsResponse) GetNextPageToken() (o []byte) {
+	if v != nil && v.NextPageToken != nil {
+		return v.NextPageToken
+	}
+	return
+}
 
 type ListClosedWorkflowExecutionsRequest struct {
-	Domain *string
+	Domain          *string
 	MaximumPageSize *int32
-	NextPageToken []byte
+	NextPageToken   []byte
 	StartTimeFilter *StartTimeFilter
 	ExecutionFilter *WorkflowExecutionFilter
-	TypeFilter *WorkflowTypeFilter
-	StatusFilter *WorkflowExecutionCloseStatus
+	TypeFilter      *WorkflowTypeFilter
+	StatusFilter    *WorkflowExecutionCloseStatus
 }
 
 func (v *ListClosedWorkflowExecutionsRequest) GetDomain() (o string) {
@@ -2760,10 +2840,8 @@ func (v *ListClosedWorkflowExecutionsRequest) GetStatusFilter() (o WorkflowExecu
 	return
 }
 
-
-
 type ListClosedWorkflowExecutionsResponse struct {
-	Executions []*WorkflowExecutionInfo
+	Executions    []*WorkflowExecutionInfo
 	NextPageToken []byte
 }
 
@@ -2781,10 +2859,8 @@ func (v *ListClosedWorkflowExecutionsResponse) GetNextPageToken() (o []byte) {
 	return
 }
 
-
-
 type ListDomainsRequest struct {
-	PageSize *int32
+	PageSize      *int32
 	NextPageToken []byte
 }
 
@@ -2802,10 +2878,8 @@ func (v *ListDomainsRequest) GetNextPageToken() (o []byte) {
 	return
 }
 
-
-
 type ListDomainsResponse struct {
-	Domains []*DescribeDomainResponse
+	Domains       []*DescribeDomainResponse
 	NextPageToken []byte
 }
 
@@ -2823,15 +2897,13 @@ func (v *ListDomainsResponse) GetNextPageToken() (o []byte) {
 	return
 }
 
-
-
 type ListOpenWorkflowExecutionsRequest struct {
-	Domain *string
+	Domain          *string
 	MaximumPageSize *int32
-	NextPageToken []byte
+	NextPageToken   []byte
 	StartTimeFilter *StartTimeFilter
 	ExecutionFilter *WorkflowExecutionFilter
-	TypeFilter *WorkflowTypeFilter
+	TypeFilter      *WorkflowTypeFilter
 }
 
 func (v *ListOpenWorkflowExecutionsRequest) GetDomain() (o string) {
@@ -2876,10 +2948,8 @@ func (v *ListOpenWorkflowExecutionsRequest) GetTypeFilter() (o *WorkflowTypeFilt
 	return
 }
 
-
-
 type ListOpenWorkflowExecutionsResponse struct {
-	Executions []*WorkflowExecutionInfo
+	Executions    []*WorkflowExecutionInfo
 	NextPageToken []byte
 }
 
@@ -2897,13 +2967,49 @@ func (v *ListOpenWorkflowExecutionsResponse) GetNextPageToken() (o []byte) {
 	return
 }
 
+type ListTaskListPartitionsRequest struct {
+	Domain   *string
+	TaskList *TaskList
+}
 
+func (v *ListTaskListPartitionsRequest) GetDomain() (o string) {
+	if v != nil && v.Domain != nil {
+		return *v.Domain
+	}
+	return
+}
+
+func (v *ListTaskListPartitionsRequest) GetTaskList() (o *TaskList) {
+	if v != nil && v.TaskList != nil {
+		return v.TaskList
+	}
+	return
+}
+
+type ListTaskListPartitionsResponse struct {
+	ActivityTaskListPartitions []*TaskListPartitionMetadata
+	DecisionTaskListPartitions []*TaskListPartitionMetadata
+}
+
+func (v *ListTaskListPartitionsResponse) GetActivityTaskListPartitions() (o []*TaskListPartitionMetadata) {
+	if v != nil && v.ActivityTaskListPartitions != nil {
+		return v.ActivityTaskListPartitions
+	}
+	return
+}
+
+func (v *ListTaskListPartitionsResponse) GetDecisionTaskListPartitions() (o []*TaskListPartitionMetadata) {
+	if v != nil && v.DecisionTaskListPartitions != nil {
+		return v.DecisionTaskListPartitions
+	}
+	return
+}
 
 type ListWorkflowExecutionsRequest struct {
-	Domain *string
-	PageSize *int32
+	Domain        *string
+	PageSize      *int32
 	NextPageToken []byte
-	Query *string
+	Query         *string
 }
 
 func (v *ListWorkflowExecutionsRequest) GetDomain() (o string) {
@@ -2934,10 +3040,8 @@ func (v *ListWorkflowExecutionsRequest) GetQuery() (o string) {
 	return
 }
 
-
-
 type ListWorkflowExecutionsResponse struct {
-	Executions []*WorkflowExecutionInfo
+	Executions    []*WorkflowExecutionInfo
 	NextPageToken []byte
 }
 
@@ -2955,13 +3059,11 @@ func (v *ListWorkflowExecutionsResponse) GetNextPageToken() (o []byte) {
 	return
 }
 
-
-
 type MarkerRecordedEventAttributes struct {
-	MarkerName *string
-	Details []byte
+	MarkerName                   *string
+	Details                      []byte
 	DecisionTaskCompletedEventId *int64
-	Header *Header
+	Header                       *Header
 }
 
 func (v *MarkerRecordedEventAttributes) GetMarkerName() (o string) {
@@ -2992,8 +3094,6 @@ func (v *MarkerRecordedEventAttributes) GetHeader() (o *Header) {
 	return
 }
 
-
-
 type Memo struct {
 	Fields map[string][]byte
 }
@@ -3005,21 +3105,28 @@ func (v *Memo) GetFields() (o map[string][]byte) {
 	return
 }
 
+type ParentClosePolicy int32
 
+const (
+	ParentClosePolicyAbandon ParentClosePolicy = iota
+	ParentClosePolicyRequestCancel
+	ParentClosePolicyTerminate
+)
 
 type PendingActivityInfo struct {
-	ActivityID *string
-	ActivityType *ActivityType
-	State *PendingActivityState
-	HeartbeatDetails []byte
+	ActivityID             *string
+	ActivityType           *ActivityType
+	State                  *PendingActivityState
+	HeartbeatDetails       []byte
 	LastHeartbeatTimestamp *int64
-	LastStartedTimestamp *int64
-	Attempt *int32
-	MaximumAttempts *int32
-	ScheduledTimestamp *int64
-	ExpirationTimestamp *int64
-	LastFailureReason *string
-	LastWorkerIdentity *string
+	LastStartedTimestamp   *int64
+	Attempt                *int32
+	MaximumAttempts        *int32
+	ScheduledTimestamp     *int64
+	ExpirationTimestamp    *int64
+	LastFailureReason      *string
+	LastWorkerIdentity     *string
+	LastFailureDetails     []byte
 }
 
 func (v *PendingActivityInfo) GetActivityID() (o string) {
@@ -3106,7 +3213,12 @@ func (v *PendingActivityInfo) GetLastWorkerIdentity() (o string) {
 	return
 }
 
-
+func (v *PendingActivityInfo) GetLastFailureDetails() (o []byte) {
+	if v != nil && v.LastFailureDetails != nil {
+		return v.LastFailureDetails
+	}
+	return
+}
 
 type PendingActivityState int32
 
@@ -3117,10 +3229,11 @@ const (
 )
 
 type PendingChildExecutionInfo struct {
-	WorkflowID *string
-	RunID *string
-	WorkflowTypName *string
-	InitiatedID *int64
+	WorkflowID        *string
+	RunID             *string
+	WorkflowTypName   *string
+	InitiatedID       *int64
+	ParentClosePolicy *ParentClosePolicy
 }
 
 func (v *PendingChildExecutionInfo) GetWorkflowID() (o string) {
@@ -3151,12 +3264,17 @@ func (v *PendingChildExecutionInfo) GetInitiatedID() (o int64) {
 	return
 }
 
-
+func (v *PendingChildExecutionInfo) GetParentClosePolicy() (o ParentClosePolicy) {
+	if v != nil && v.ParentClosePolicy != nil {
+		return *v.ParentClosePolicy
+	}
+	return
+}
 
 type PollForActivityTaskRequest struct {
-	Domain *string
-	TaskList *TaskList
-	Identity *string
+	Domain           *string
+	TaskList         *TaskList
+	Identity         *string
 	TaskListMetadata *TaskListMetadata
 }
 
@@ -3188,25 +3306,23 @@ func (v *PollForActivityTaskRequest) GetTaskListMetadata() (o *TaskListMetadata)
 	return
 }
 
-
-
 type PollForActivityTaskResponse struct {
-	TaskToken []byte
-	WorkflowExecution *WorkflowExecution
-	ActivityId *string
-	ActivityType *ActivityType
-	Input []byte
-	ScheduledTimestamp *int64
-	ScheduleToCloseTimeoutSeconds *int32
-	StartedTimestamp *int64
-	StartToCloseTimeoutSeconds *int32
-	HeartbeatTimeoutSeconds *int32
-	Attempt *int32
+	TaskToken                       []byte
+	WorkflowExecution               *WorkflowExecution
+	ActivityId                      *string
+	ActivityType                    *ActivityType
+	Input                           []byte
+	ScheduledTimestamp              *int64
+	ScheduleToCloseTimeoutSeconds   *int32
+	StartedTimestamp                *int64
+	StartToCloseTimeoutSeconds      *int32
+	HeartbeatTimeoutSeconds         *int32
+	Attempt                         *int32
 	ScheduledTimestampOfThisAttempt *int64
-	HeartbeatDetails []byte
-	WorkflowType *WorkflowType
-	WorkflowDomain *string
-	Header *Header
+	HeartbeatDetails                []byte
+	WorkflowType                    *WorkflowType
+	WorkflowDomain                  *string
+	Header                          *Header
 }
 
 func (v *PollForActivityTaskResponse) GetTaskToken() (o []byte) {
@@ -3321,12 +3437,10 @@ func (v *PollForActivityTaskResponse) GetHeader() (o *Header) {
 	return
 }
 
-
-
 type PollForDecisionTaskRequest struct {
-	Domain *string
-	TaskList *TaskList
-	Identity *string
+	Domain         *string
+	TaskList       *TaskList
+	Identity       *string
 	BinaryChecksum *string
 }
 
@@ -3358,23 +3472,21 @@ func (v *PollForDecisionTaskRequest) GetBinaryChecksum() (o string) {
 	return
 }
 
-
-
 type PollForDecisionTaskResponse struct {
-	TaskToken []byte
-	WorkflowExecution *WorkflowExecution
-	WorkflowType *WorkflowType
-	PreviousStartedEventId *int64
-	StartedEventId *int64
-	Attempt *int64
-	BacklogCountHint *int64
-	History *History
-	NextPageToken []byte
-	Query *WorkflowQuery
+	TaskToken                 []byte
+	WorkflowExecution         *WorkflowExecution
+	WorkflowType              *WorkflowType
+	PreviousStartedEventId    *int64
+	StartedEventId            *int64
+	Attempt                   *int64
+	BacklogCountHint          *int64
+	History                   *History
+	NextPageToken             []byte
+	Query                     *WorkflowQuery
 	WorkflowExecutionTaskList *TaskList
-	ScheduledTimestamp *int64
-	StartedTimestamp *int64
-	Queries []*WorkflowQuery
+	ScheduledTimestamp        *int64
+	StartedTimestamp          *int64
+	Queries                   map[string]*WorkflowQuery
 }
 
 func (v *PollForDecisionTaskResponse) GetTaskToken() (o []byte) {
@@ -3468,19 +3580,17 @@ func (v *PollForDecisionTaskResponse) GetStartedTimestamp() (o int64) {
 	return
 }
 
-func (v *PollForDecisionTaskResponse) GetQueries() (o []*WorkflowQuery) {
+func (v *PollForDecisionTaskResponse) GetQueries() (o map[string]*WorkflowQuery) {
 	if v != nil && v.Queries != nil {
 		return v.Queries
 	}
 	return
 }
 
-
-
 type PollerInfo struct {
 	LastAccessTime *int64
-	Identity *string
-	RatePerSecond *float64
+	Identity       *string
+	RatePerSecond  *float64
 }
 
 func (v *PollerInfo) GetLastAccessTime() (o int64) {
@@ -3504,7 +3614,12 @@ func (v *PollerInfo) GetRatePerSecond() (o float64) {
 	return
 }
 
+type QueryConsistencyLevel int32
 
+const (
+	QueryConsistencyLevelEventual QueryConsistencyLevel = iota
+	QueryConsistencyLevelStrong
+)
 
 type QueryFailedError struct {
 	Message string
@@ -3517,7 +3632,23 @@ func (v *QueryFailedError) GetMessage() (o string) {
 	return
 }
 
+type QueryRejectCondition int32
 
+const (
+	QueryRejectConditionNotCompletedCleanly QueryRejectCondition = iota
+	QueryRejectConditionNotOpen
+)
+
+type QueryRejected struct {
+	CloseStatus *WorkflowExecutionCloseStatus
+}
+
+func (v *QueryRejected) GetCloseStatus() (o WorkflowExecutionCloseStatus) {
+	if v != nil && v.CloseStatus != nil {
+		return *v.CloseStatus
+	}
+	return
+}
 
 type QueryResultType int32
 
@@ -3534,9 +3665,11 @@ const (
 )
 
 type QueryWorkflowRequest struct {
-	Domain *string
-	Execution *WorkflowExecution
-	Query *WorkflowQuery
+	Domain                *string
+	Execution             *WorkflowExecution
+	Query                 *WorkflowQuery
+	QueryRejectCondition  *QueryRejectCondition
+	QueryConsistencyLevel *QueryConsistencyLevel
 }
 
 func (v *QueryWorkflowRequest) GetDomain() (o string) {
@@ -3560,10 +3693,23 @@ func (v *QueryWorkflowRequest) GetQuery() (o *WorkflowQuery) {
 	return
 }
 
+func (v *QueryWorkflowRequest) GetQueryRejectCondition() (o QueryRejectCondition) {
+	if v != nil && v.QueryRejectCondition != nil {
+		return *v.QueryRejectCondition
+	}
+	return
+}
 
+func (v *QueryWorkflowRequest) GetQueryConsistencyLevel() (o QueryConsistencyLevel) {
+	if v != nil && v.QueryConsistencyLevel != nil {
+		return *v.QueryConsistencyLevel
+	}
+	return
+}
 
 type QueryWorkflowResponse struct {
-	QueryResult []byte
+	QueryResult   []byte
+	QueryRejected *QueryRejected
 }
 
 func (v *QueryWorkflowResponse) GetQueryResult() (o []byte) {
@@ -3573,15 +3719,47 @@ func (v *QueryWorkflowResponse) GetQueryResult() (o []byte) {
 	return
 }
 
+func (v *QueryWorkflowResponse) GetQueryRejected() (o *QueryRejected) {
+	if v != nil && v.QueryRejected != nil {
+		return v.QueryRejected
+	}
+	return
+}
 
+type ReapplyEventsRequest struct {
+	DomainName        *string
+	WorkflowExecution *WorkflowExecution
+	Events            *DataBlob
+}
+
+func (v *ReapplyEventsRequest) GetDomainName() (o string) {
+	if v != nil && v.DomainName != nil {
+		return *v.DomainName
+	}
+	return
+}
+
+func (v *ReapplyEventsRequest) GetWorkflowExecution() (o *WorkflowExecution) {
+	if v != nil && v.WorkflowExecution != nil {
+		return v.WorkflowExecution
+	}
+	return
+}
+
+func (v *ReapplyEventsRequest) GetEvents() (o *DataBlob) {
+	if v != nil && v.Events != nil {
+		return v.Events
+	}
+	return
+}
 
 type RecordActivityTaskHeartbeatByIDRequest struct {
-	Domain *string
+	Domain     *string
 	WorkflowID *string
-	RunID *string
+	RunID      *string
 	ActivityID *string
-	Details []byte
-	Identity *string
+	Details    []byte
+	Identity   *string
 }
 
 func (v *RecordActivityTaskHeartbeatByIDRequest) GetDomain() (o string) {
@@ -3626,12 +3804,10 @@ func (v *RecordActivityTaskHeartbeatByIDRequest) GetIdentity() (o string) {
 	return
 }
 
-
-
 type RecordActivityTaskHeartbeatRequest struct {
 	TaskToken []byte
-	Details []byte
-	Identity *string
+	Details   []byte
+	Identity  *string
 }
 
 func (v *RecordActivityTaskHeartbeatRequest) GetTaskToken() (o []byte) {
@@ -3655,8 +3831,6 @@ func (v *RecordActivityTaskHeartbeatRequest) GetIdentity() (o string) {
 	return
 }
 
-
-
 type RecordActivityTaskHeartbeatResponse struct {
 	CancelRequested *bool
 }
@@ -3668,12 +3842,10 @@ func (v *RecordActivityTaskHeartbeatResponse) GetCancelRequested() (o bool) {
 	return
 }
 
-
-
 type RecordMarkerDecisionAttributes struct {
 	MarkerName *string
-	Details []byte
-	Header *Header
+	Details    []byte
+	Header     *Header
 }
 
 func (v *RecordMarkerDecisionAttributes) GetMarkerName() (o string) {
@@ -3697,23 +3869,40 @@ func (v *RecordMarkerDecisionAttributes) GetHeader() (o *Header) {
 	return
 }
 
+type RefreshWorkflowTasksRequest struct {
+	Domain    *string
+	Execution *WorkflowExecution
+}
 
+func (v *RefreshWorkflowTasksRequest) GetDomain() (o string) {
+	if v != nil && v.Domain != nil {
+		return *v.Domain
+	}
+	return
+}
+
+func (v *RefreshWorkflowTasksRequest) GetExecution() (o *WorkflowExecution) {
+	if v != nil && v.Execution != nil {
+		return v.Execution
+	}
+	return
+}
 
 type RegisterDomainRequest struct {
-	Name *string
-	Description *string
-	OwnerEmail *string
+	Name                                   *string
+	Description                            *string
+	OwnerEmail                             *string
 	WorkflowExecutionRetentionPeriodInDays *int32
-	EmitMetric *bool
-	Clusters []*ClusterReplicationConfiguration
-	ActiveClusterName *string
-	Data map[string]string
-	SecurityToken *string
-	IsGlobalDomain *bool
-	HistoryArchivalStatus *ArchivalStatus
-	HistoryArchivalURI *string
-	VisibilityArchivalStatus *ArchivalStatus
-	VisibilityArchivalURI *string
+	EmitMetric                             *bool
+	Clusters                               []*ClusterReplicationConfiguration
+	ActiveClusterName                      *string
+	Data                                   map[string]string
+	SecurityToken                          *string
+	IsGlobalDomain                         *bool
+	HistoryArchivalStatus                  *ArchivalStatus
+	HistoryArchivalURI                     *string
+	VisibilityArchivalStatus               *ArchivalStatus
+	VisibilityArchivalURI                  *string
 }
 
 func (v *RegisterDomainRequest) GetName() (o string) {
@@ -3814,28 +4003,51 @@ func (v *RegisterDomainRequest) GetVisibilityArchivalURI() (o string) {
 	return
 }
 
-
-
-type ReplicationInfo struct {
-	Version *int64
-	LastEventId *int64
+type RemoteSyncMatchedError struct {
+	Message string
 }
 
-func (v *ReplicationInfo) GetVersion() (o int64) {
-	if v != nil && v.Version != nil {
-		return *v.Version
+func (v *RemoteSyncMatchedError) GetMessage() (o string) {
+	if v != nil {
+		return v.Message
 	}
 	return
 }
 
-func (v *ReplicationInfo) GetLastEventId() (o int64) {
-	if v != nil && v.LastEventId != nil {
-		return *v.LastEventId
+type RemoveTaskRequest struct {
+	ShardID             *int32
+	Type                *int32
+	TaskID              *int64
+	VisibilityTimestamp *int64
+}
+
+func (v *RemoveTaskRequest) GetShardID() (o int32) {
+	if v != nil && v.ShardID != nil {
+		return *v.ShardID
 	}
 	return
 }
 
+func (v *RemoveTaskRequest) GetType() (o int32) {
+	if v != nil && v.Type != nil {
+		return *v.Type
+	}
+	return
+}
 
+func (v *RemoveTaskRequest) GetTaskID() (o int64) {
+	if v != nil && v.TaskID != nil {
+		return *v.TaskID
+	}
+	return
+}
+
+func (v *RemoveTaskRequest) GetVisibilityTimestamp() (o int64) {
+	if v != nil && v.VisibilityTimestamp != nil {
+		return *v.VisibilityTimestamp
+	}
+	return
+}
 
 type RequestCancelActivityTaskDecisionAttributes struct {
 	ActivityId *string
@@ -3848,11 +4060,9 @@ func (v *RequestCancelActivityTaskDecisionAttributes) GetActivityId() (o string)
 	return
 }
 
-
-
 type RequestCancelActivityTaskFailedEventAttributes struct {
-	ActivityId *string
-	Cause *string
+	ActivityId                   *string
+	Cause                        *string
 	DecisionTaskCompletedEventId *int64
 }
 
@@ -3877,13 +4087,11 @@ func (v *RequestCancelActivityTaskFailedEventAttributes) GetDecisionTaskComplete
 	return
 }
 
-
-
 type RequestCancelExternalWorkflowExecutionDecisionAttributes struct {
-	Domain *string
-	WorkflowId *string
-	RunId *string
-	Control []byte
+	Domain            *string
+	WorkflowId        *string
+	RunId             *string
+	Control           []byte
 	ChildWorkflowOnly *bool
 }
 
@@ -3922,15 +4130,13 @@ func (v *RequestCancelExternalWorkflowExecutionDecisionAttributes) GetChildWorkf
 	return
 }
 
-
-
 type RequestCancelExternalWorkflowExecutionFailedEventAttributes struct {
-	Cause *CancelExternalWorkflowExecutionFailedCause
+	Cause                        *CancelExternalWorkflowExecutionFailedCause
 	DecisionTaskCompletedEventId *int64
-	Domain *string
-	WorkflowExecution *WorkflowExecution
-	InitiatedEventId *int64
-	Control []byte
+	Domain                       *string
+	WorkflowExecution            *WorkflowExecution
+	InitiatedEventId             *int64
+	Control                      []byte
 }
 
 func (v *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GetCause() (o CancelExternalWorkflowExecutionFailedCause) {
@@ -3975,14 +4181,12 @@ func (v *RequestCancelExternalWorkflowExecutionFailedEventAttributes) GetControl
 	return
 }
 
-
-
 type RequestCancelExternalWorkflowExecutionInitiatedEventAttributes struct {
 	DecisionTaskCompletedEventId *int64
-	Domain *string
-	WorkflowExecution *WorkflowExecution
-	Control []byte
-	ChildWorkflowOnly *bool
+	Domain                       *string
+	WorkflowExecution            *WorkflowExecution
+	Control                      []byte
+	ChildWorkflowOnly            *bool
 }
 
 func (v *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) GetDecisionTaskCompletedEventId() (o int64) {
@@ -4020,13 +4224,11 @@ func (v *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) GetChil
 	return
 }
 
-
-
 type RequestCancelWorkflowExecutionRequest struct {
-	Domain *string
+	Domain            *string
 	WorkflowExecution *WorkflowExecution
-	Identity *string
-	RequestId *string
+	Identity          *string
+	RequestId         *string
 }
 
 func (v *RequestCancelWorkflowExecutionRequest) GetDomain() (o string) {
@@ -4057,15 +4259,13 @@ func (v *RequestCancelWorkflowExecutionRequest) GetRequestId() (o string) {
 	return
 }
 
-
-
 type ResetPointInfo struct {
-	BinaryChecksum *string
-	RunId *string
+	BinaryChecksum           *string
+	RunId                    *string
 	FirstDecisionCompletedId *int64
-	CreatedTimeNano *int64
-	ExpiringTimeNano *int64
-	Resettable *bool
+	CreatedTimeNano          *int64
+	ExpiringTimeNano         *int64
+	Resettable               *bool
 }
 
 func (v *ResetPointInfo) GetBinaryChecksum() (o string) {
@@ -4110,8 +4310,6 @@ func (v *ResetPointInfo) GetResettable() (o bool) {
 	return
 }
 
-
-
 type ResetPoints struct {
 	Points []*ResetPointInfo
 }
@@ -4123,10 +4321,35 @@ func (v *ResetPoints) GetPoints() (o []*ResetPointInfo) {
 	return
 }
 
+type ResetQueueRequest struct {
+	ShardID     *int32
+	ClusterName *string
+	Type        *int32
+}
 
+func (v *ResetQueueRequest) GetShardID() (o int32) {
+	if v != nil && v.ShardID != nil {
+		return *v.ShardID
+	}
+	return
+}
+
+func (v *ResetQueueRequest) GetClusterName() (o string) {
+	if v != nil && v.ClusterName != nil {
+		return *v.ClusterName
+	}
+	return
+}
+
+func (v *ResetQueueRequest) GetType() (o int32) {
+	if v != nil && v.Type != nil {
+		return *v.Type
+	}
+	return
+}
 
 type ResetStickyTaskListRequest struct {
-	Domain *string
+	Domain    *string
 	Execution *WorkflowExecution
 }
 
@@ -4144,19 +4367,15 @@ func (v *ResetStickyTaskListRequest) GetExecution() (o *WorkflowExecution) {
 	return
 }
 
-
-
 type ResetStickyTaskListResponse struct {
 }
 
-
-
 type ResetWorkflowExecutionRequest struct {
-	Domain *string
-	WorkflowExecution *WorkflowExecution
-	Reason *string
+	Domain                *string
+	WorkflowExecution     *WorkflowExecution
+	Reason                *string
 	DecisionFinishEventId *int64
-	RequestId *string
+	RequestId             *string
 }
 
 func (v *ResetWorkflowExecutionRequest) GetDomain() (o string) {
@@ -4194,8 +4413,6 @@ func (v *ResetWorkflowExecutionRequest) GetRequestId() (o string) {
 	return
 }
 
-
-
 type ResetWorkflowExecutionResponse struct {
 	RunId *string
 }
@@ -4207,15 +4424,13 @@ func (v *ResetWorkflowExecutionResponse) GetRunId() (o string) {
 	return
 }
 
-
-
 type RespondActivityTaskCanceledByIDRequest struct {
-	Domain *string
+	Domain     *string
 	WorkflowID *string
-	RunID *string
+	RunID      *string
 	ActivityID *string
-	Details []byte
-	Identity *string
+	Details    []byte
+	Identity   *string
 }
 
 func (v *RespondActivityTaskCanceledByIDRequest) GetDomain() (o string) {
@@ -4260,12 +4475,10 @@ func (v *RespondActivityTaskCanceledByIDRequest) GetIdentity() (o string) {
 	return
 }
 
-
-
 type RespondActivityTaskCanceledRequest struct {
 	TaskToken []byte
-	Details []byte
-	Identity *string
+	Details   []byte
+	Identity  *string
 }
 
 func (v *RespondActivityTaskCanceledRequest) GetTaskToken() (o []byte) {
@@ -4289,15 +4502,13 @@ func (v *RespondActivityTaskCanceledRequest) GetIdentity() (o string) {
 	return
 }
 
-
-
 type RespondActivityTaskCompletedByIDRequest struct {
-	Domain *string
+	Domain     *string
 	WorkflowID *string
-	RunID *string
+	RunID      *string
 	ActivityID *string
-	Result []byte
-	Identity *string
+	Result     []byte
+	Identity   *string
 }
 
 func (v *RespondActivityTaskCompletedByIDRequest) GetDomain() (o string) {
@@ -4342,12 +4553,10 @@ func (v *RespondActivityTaskCompletedByIDRequest) GetIdentity() (o string) {
 	return
 }
 
-
-
 type RespondActivityTaskCompletedRequest struct {
 	TaskToken []byte
-	Result []byte
-	Identity *string
+	Result    []byte
+	Identity  *string
 }
 
 func (v *RespondActivityTaskCompletedRequest) GetTaskToken() (o []byte) {
@@ -4371,16 +4580,14 @@ func (v *RespondActivityTaskCompletedRequest) GetIdentity() (o string) {
 	return
 }
 
-
-
 type RespondActivityTaskFailedByIDRequest struct {
-	Domain *string
+	Domain     *string
 	WorkflowID *string
-	RunID *string
+	RunID      *string
 	ActivityID *string
-	Reason *string
-	Details []byte
-	Identity *string
+	Reason     *string
+	Details    []byte
+	Identity   *string
 }
 
 func (v *RespondActivityTaskFailedByIDRequest) GetDomain() (o string) {
@@ -4432,13 +4639,11 @@ func (v *RespondActivityTaskFailedByIDRequest) GetIdentity() (o string) {
 	return
 }
 
-
-
 type RespondActivityTaskFailedRequest struct {
 	TaskToken []byte
-	Reason *string
-	Details []byte
-	Identity *string
+	Reason    *string
+	Details   []byte
+	Identity  *string
 }
 
 func (v *RespondActivityTaskFailedRequest) GetTaskToken() (o []byte) {
@@ -4469,18 +4674,16 @@ func (v *RespondActivityTaskFailedRequest) GetIdentity() (o string) {
 	return
 }
 
-
-
 type RespondDecisionTaskCompletedRequest struct {
-	TaskToken []byte
-	Decisions []*Decision
-	ExecutionContext []byte
-	Identity *string
-	StickyAttributes *StickyExecutionAttributes
-	ReturnNewDecisionTask *bool
+	TaskToken                  []byte
+	Decisions                  []*Decision
+	ExecutionContext           []byte
+	Identity                   *string
+	StickyAttributes           *StickyExecutionAttributes
+	ReturnNewDecisionTask      *bool
 	ForceCreateNewDecisionTask *bool
-	BinaryChecksum *string
-	QueryResults []*WorkflowQueryResult
+	BinaryChecksum             *string
+	QueryResults               map[string]*WorkflowQueryResult
 }
 
 func (v *RespondDecisionTaskCompletedRequest) GetTaskToken() (o []byte) {
@@ -4539,14 +4742,12 @@ func (v *RespondDecisionTaskCompletedRequest) GetBinaryChecksum() (o string) {
 	return
 }
 
-func (v *RespondDecisionTaskCompletedRequest) GetQueryResults() (o []*WorkflowQueryResult) {
+func (v *RespondDecisionTaskCompletedRequest) GetQueryResults() (o map[string]*WorkflowQueryResult) {
 	if v != nil && v.QueryResults != nil {
 		return v.QueryResults
 	}
 	return
 }
-
-
 
 type RespondDecisionTaskCompletedResponse struct {
 	DecisionTask *PollForDecisionTaskResponse
@@ -4559,13 +4760,12 @@ func (v *RespondDecisionTaskCompletedResponse) GetDecisionTask() (o *PollForDeci
 	return
 }
 
-
-
 type RespondDecisionTaskFailedRequest struct {
-	TaskToken []byte
-	Cause *DecisionTaskFailedCause
-	Details []byte
-	Identity *string
+	TaskToken      []byte
+	Cause          *DecisionTaskFailedCause
+	Details        []byte
+	Identity       *string
+	BinaryChecksum *string
 }
 
 func (v *RespondDecisionTaskFailedRequest) GetTaskToken() (o []byte) {
@@ -4596,13 +4796,19 @@ func (v *RespondDecisionTaskFailedRequest) GetIdentity() (o string) {
 	return
 }
 
-
+func (v *RespondDecisionTaskFailedRequest) GetBinaryChecksum() (o string) {
+	if v != nil && v.BinaryChecksum != nil {
+		return *v.BinaryChecksum
+	}
+	return
+}
 
 type RespondQueryTaskCompletedRequest struct {
-	TaskToken []byte
-	CompletedType *QueryTaskCompletedType
-	QueryResult []byte
-	ErrorMessage *string
+	TaskToken         []byte
+	CompletedType     *QueryTaskCompletedType
+	QueryResult       []byte
+	ErrorMessage      *string
+	WorkerVersionInfo *WorkerVersionInfo
 }
 
 func (v *RespondQueryTaskCompletedRequest) GetTaskToken() (o []byte) {
@@ -4633,14 +4839,19 @@ func (v *RespondQueryTaskCompletedRequest) GetErrorMessage() (o string) {
 	return
 }
 
-
+func (v *RespondQueryTaskCompletedRequest) GetWorkerVersionInfo() (o *WorkerVersionInfo) {
+	if v != nil && v.WorkerVersionInfo != nil {
+		return v.WorkerVersionInfo
+	}
+	return
+}
 
 type RetryPolicy struct {
-	InitialIntervalInSeconds *int32
-	BackoffCoefficient *float64
-	MaximumIntervalInSeconds *int32
-	MaximumAttempts *int32
-	NonRetriableErrorReasons []string
+	InitialIntervalInSeconds    *int32
+	BackoffCoefficient          *float64
+	MaximumIntervalInSeconds    *int32
+	MaximumAttempts             *int32
+	NonRetriableErrorReasons    []string
 	ExpirationIntervalInSeconds *int32
 }
 
@@ -4686,65 +4897,85 @@ func (v *RetryPolicy) GetExpirationIntervalInSeconds() (o int32) {
 	return
 }
 
-
-
-type RetryTaskError struct {
-	Message string
-	DomainId *string
-	WorkflowId *string
-	RunId *string
-	NextEventId *int64
+type RetryTaskV2Error struct {
+	Message           string
+	DomainId          *string
+	WorkflowId        *string
+	RunId             *string
+	StartEventId      *int64
+	StartEventVersion *int64
+	EndEventId        *int64
+	EndEventVersion   *int64
 }
 
-func (v *RetryTaskError) GetMessage() (o string) {
+func (v *RetryTaskV2Error) GetMessage() (o string) {
 	if v != nil {
 		return v.Message
 	}
 	return
 }
 
-func (v *RetryTaskError) GetDomainId() (o string) {
+func (v *RetryTaskV2Error) GetDomainId() (o string) {
 	if v != nil && v.DomainId != nil {
 		return *v.DomainId
 	}
 	return
 }
 
-func (v *RetryTaskError) GetWorkflowId() (o string) {
+func (v *RetryTaskV2Error) GetWorkflowId() (o string) {
 	if v != nil && v.WorkflowId != nil {
 		return *v.WorkflowId
 	}
 	return
 }
 
-func (v *RetryTaskError) GetRunId() (o string) {
+func (v *RetryTaskV2Error) GetRunId() (o string) {
 	if v != nil && v.RunId != nil {
 		return *v.RunId
 	}
 	return
 }
 
-func (v *RetryTaskError) GetNextEventId() (o int64) {
-	if v != nil && v.NextEventId != nil {
-		return *v.NextEventId
+func (v *RetryTaskV2Error) GetStartEventId() (o int64) {
+	if v != nil && v.StartEventId != nil {
+		return *v.StartEventId
 	}
 	return
 }
 
+func (v *RetryTaskV2Error) GetStartEventVersion() (o int64) {
+	if v != nil && v.StartEventVersion != nil {
+		return *v.StartEventVersion
+	}
+	return
+}
 
+func (v *RetryTaskV2Error) GetEndEventId() (o int64) {
+	if v != nil && v.EndEventId != nil {
+		return *v.EndEventId
+	}
+	return
+}
+
+func (v *RetryTaskV2Error) GetEndEventVersion() (o int64) {
+	if v != nil && v.EndEventVersion != nil {
+		return *v.EndEventVersion
+	}
+	return
+}
 
 type ScheduleActivityTaskDecisionAttributes struct {
-	ActivityId *string
-	ActivityType *ActivityType
-	Domain *string
-	TaskList *TaskList
-	Input []byte
+	ActivityId                    *string
+	ActivityType                  *ActivityType
+	Domain                        *string
+	TaskList                      *TaskList
+	Input                         []byte
 	ScheduleToCloseTimeoutSeconds *int32
 	ScheduleToStartTimeoutSeconds *int32
-	StartToCloseTimeoutSeconds *int32
-	HeartbeatTimeoutSeconds *int32
-	RetryPolicy *RetryPolicy
-	Header *Header
+	StartToCloseTimeoutSeconds    *int32
+	HeartbeatTimeoutSeconds       *int32
+	RetryPolicy                   *RetryPolicy
+	Header                        *Header
 }
 
 func (v *ScheduleActivityTaskDecisionAttributes) GetActivityId() (o string) {
@@ -4824,8 +5055,6 @@ func (v *ScheduleActivityTaskDecisionAttributes) GetHeader() (o *Header) {
 	return
 }
 
-
-
 type SearchAttributes struct {
 	IndexedFields map[string][]byte
 }
@@ -4836,8 +5065,6 @@ func (v *SearchAttributes) GetIndexedFields() (o map[string][]byte) {
 	}
 	return
 }
-
-
 
 type ServiceBusyError struct {
 	Message string
@@ -4850,14 +5077,12 @@ func (v *ServiceBusyError) GetMessage() (o string) {
 	return
 }
 
-
-
 type SignalExternalWorkflowExecutionDecisionAttributes struct {
-	Domain *string
-	Execution *WorkflowExecution
-	SignalName *string
-	Input []byte
-	Control []byte
+	Domain            *string
+	Execution         *WorkflowExecution
+	SignalName        *string
+	Input             []byte
+	Control           []byte
 	ChildWorkflowOnly *bool
 }
 
@@ -4903,8 +5128,6 @@ func (v *SignalExternalWorkflowExecutionDecisionAttributes) GetChildWorkflowOnly
 	return
 }
 
-
-
 type SignalExternalWorkflowExecutionFailedCause int32
 
 const (
@@ -4912,12 +5135,12 @@ const (
 )
 
 type SignalExternalWorkflowExecutionFailedEventAttributes struct {
-	Cause *SignalExternalWorkflowExecutionFailedCause
+	Cause                        *SignalExternalWorkflowExecutionFailedCause
 	DecisionTaskCompletedEventId *int64
-	Domain *string
-	WorkflowExecution *WorkflowExecution
-	InitiatedEventId *int64
-	Control []byte
+	Domain                       *string
+	WorkflowExecution            *WorkflowExecution
+	InitiatedEventId             *int64
+	Control                      []byte
 }
 
 func (v *SignalExternalWorkflowExecutionFailedEventAttributes) GetCause() (o SignalExternalWorkflowExecutionFailedCause) {
@@ -4962,16 +5185,14 @@ func (v *SignalExternalWorkflowExecutionFailedEventAttributes) GetControl() (o [
 	return
 }
 
-
-
 type SignalExternalWorkflowExecutionInitiatedEventAttributes struct {
 	DecisionTaskCompletedEventId *int64
-	Domain *string
-	WorkflowExecution *WorkflowExecution
-	SignalName *string
-	Input []byte
-	Control []byte
-	ChildWorkflowOnly *bool
+	Domain                       *string
+	WorkflowExecution            *WorkflowExecution
+	SignalName                   *string
+	Input                        []byte
+	Control                      []byte
+	ChildWorkflowOnly            *bool
 }
 
 func (v *SignalExternalWorkflowExecutionInitiatedEventAttributes) GetDecisionTaskCompletedEventId() (o int64) {
@@ -5023,27 +5244,25 @@ func (v *SignalExternalWorkflowExecutionInitiatedEventAttributes) GetChildWorkfl
 	return
 }
 
-
-
 type SignalWithStartWorkflowExecutionRequest struct {
-	Domain *string
-	WorkflowId *string
-	WorkflowType *WorkflowType
-	TaskList *TaskList
-	Input []byte
+	Domain                              *string
+	WorkflowId                          *string
+	WorkflowType                        *WorkflowType
+	TaskList                            *TaskList
+	Input                               []byte
 	ExecutionStartToCloseTimeoutSeconds *int32
-	TaskStartToCloseTimeoutSeconds *int32
-	Identity *string
-	RequestId *string
-	WorkflowIdReusePolicy *WorkflowIdReusePolicy
-	SignalName *string
-	SignalInput []byte
-	Control []byte
-	RetryPolicy *RetryPolicy
-	CronSchedule *string
-	Memo *Memo
-	SearchAttributes *SearchAttributes
-	Header *Header
+	TaskStartToCloseTimeoutSeconds      *int32
+	Identity                            *string
+	RequestId                           *string
+	WorkflowIdReusePolicy               *WorkflowIdReusePolicy
+	SignalName                          *string
+	SignalInput                         []byte
+	Control                             []byte
+	RetryPolicy                         *RetryPolicy
+	CronSchedule                        *string
+	Memo                                *Memo
+	SearchAttributes                    *SearchAttributes
+	Header                              *Header
 }
 
 func (v *SignalWithStartWorkflowExecutionRequest) GetDomain() (o string) {
@@ -5172,16 +5391,14 @@ func (v *SignalWithStartWorkflowExecutionRequest) GetHeader() (o *Header) {
 	return
 }
 
-
-
 type SignalWorkflowExecutionRequest struct {
-	Domain *string
+	Domain            *string
 	WorkflowExecution *WorkflowExecution
-	SignalName *string
-	Input []byte
-	Identity *string
-	RequestId *string
-	Control []byte
+	SignalName        *string
+	Input             []byte
+	Identity          *string
+	RequestId         *string
+	Control           []byte
 }
 
 func (v *SignalWorkflowExecutionRequest) GetDomain() (o string) {
@@ -5233,24 +5450,22 @@ func (v *SignalWorkflowExecutionRequest) GetControl() (o []byte) {
 	return
 }
 
-
-
 type StartChildWorkflowExecutionDecisionAttributes struct {
-	Domain *string
-	WorkflowId *string
-	WorkflowType *WorkflowType
-	TaskList *TaskList
-	Input []byte
+	Domain                              *string
+	WorkflowId                          *string
+	WorkflowType                        *WorkflowType
+	TaskList                            *TaskList
+	Input                               []byte
 	ExecutionStartToCloseTimeoutSeconds *int32
-	TaskStartToCloseTimeoutSeconds *int32
-	ChildPolicy *ChildPolicy
-	Control []byte
-	WorkflowIdReusePolicy *WorkflowIdReusePolicy
-	RetryPolicy *RetryPolicy
-	CronSchedule *string
-	Header *Header
-	Memo *Memo
-	SearchAttributes *SearchAttributes
+	TaskStartToCloseTimeoutSeconds      *int32
+	ParentClosePolicy                   *ParentClosePolicy
+	Control                             []byte
+	WorkflowIdReusePolicy               *WorkflowIdReusePolicy
+	RetryPolicy                         *RetryPolicy
+	CronSchedule                        *string
+	Header                              *Header
+	Memo                                *Memo
+	SearchAttributes                    *SearchAttributes
 }
 
 func (v *StartChildWorkflowExecutionDecisionAttributes) GetDomain() (o string) {
@@ -5302,9 +5517,9 @@ func (v *StartChildWorkflowExecutionDecisionAttributes) GetTaskStartToCloseTimeo
 	return
 }
 
-func (v *StartChildWorkflowExecutionDecisionAttributes) GetChildPolicy() (o ChildPolicy) {
-	if v != nil && v.ChildPolicy != nil {
-		return *v.ChildPolicy
+func (v *StartChildWorkflowExecutionDecisionAttributes) GetParentClosePolicy() (o ParentClosePolicy) {
+	if v != nil && v.ParentClosePolicy != nil {
+		return *v.ParentClosePolicy
 	}
 	return
 }
@@ -5358,15 +5573,13 @@ func (v *StartChildWorkflowExecutionDecisionAttributes) GetSearchAttributes() (o
 	return
 }
 
-
-
 type StartChildWorkflowExecutionFailedEventAttributes struct {
-	Domain *string
-	WorkflowId *string
-	WorkflowType *WorkflowType
-	Cause *ChildWorkflowExecutionFailedCause
-	Control []byte
-	InitiatedEventId *int64
+	Domain                       *string
+	WorkflowId                   *string
+	WorkflowType                 *WorkflowType
+	Cause                        *ChildWorkflowExecutionFailedCause
+	Control                      []byte
+	InitiatedEventId             *int64
 	DecisionTaskCompletedEventId *int64
 }
 
@@ -5419,25 +5632,23 @@ func (v *StartChildWorkflowExecutionFailedEventAttributes) GetDecisionTaskComple
 	return
 }
 
-
-
 type StartChildWorkflowExecutionInitiatedEventAttributes struct {
-	Domain *string
-	WorkflowId *string
-	WorkflowType *WorkflowType
-	TaskList *TaskList
-	Input []byte
+	Domain                              *string
+	WorkflowId                          *string
+	WorkflowType                        *WorkflowType
+	TaskList                            *TaskList
+	Input                               []byte
 	ExecutionStartToCloseTimeoutSeconds *int32
-	TaskStartToCloseTimeoutSeconds *int32
-	ChildPolicy *ChildPolicy
-	Control []byte
-	DecisionTaskCompletedEventId *int64
-	WorkflowIdReusePolicy *WorkflowIdReusePolicy
-	RetryPolicy *RetryPolicy
-	CronSchedule *string
-	Header *Header
-	Memo *Memo
-	SearchAttributes *SearchAttributes
+	TaskStartToCloseTimeoutSeconds      *int32
+	ParentClosePolicy                   *ParentClosePolicy
+	Control                             []byte
+	DecisionTaskCompletedEventId        *int64
+	WorkflowIdReusePolicy               *WorkflowIdReusePolicy
+	RetryPolicy                         *RetryPolicy
+	CronSchedule                        *string
+	Header                              *Header
+	Memo                                *Memo
+	SearchAttributes                    *SearchAttributes
 }
 
 func (v *StartChildWorkflowExecutionInitiatedEventAttributes) GetDomain() (o string) {
@@ -5489,9 +5700,9 @@ func (v *StartChildWorkflowExecutionInitiatedEventAttributes) GetTaskStartToClos
 	return
 }
 
-func (v *StartChildWorkflowExecutionInitiatedEventAttributes) GetChildPolicy() (o ChildPolicy) {
-	if v != nil && v.ChildPolicy != nil {
-		return *v.ChildPolicy
+func (v *StartChildWorkflowExecutionInitiatedEventAttributes) GetParentClosePolicy() (o ParentClosePolicy) {
+	if v != nil && v.ParentClosePolicy != nil {
+		return *v.ParentClosePolicy
 	}
 	return
 }
@@ -5552,11 +5763,9 @@ func (v *StartChildWorkflowExecutionInitiatedEventAttributes) GetSearchAttribute
 	return
 }
 
-
-
 type StartTimeFilter struct {
 	EarliestTime *int64
-	LatestTime *int64
+	LatestTime   *int64
 }
 
 func (v *StartTimeFilter) GetEarliestTime() (o int64) {
@@ -5573,10 +5782,8 @@ func (v *StartTimeFilter) GetLatestTime() (o int64) {
 	return
 }
 
-
-
 type StartTimerDecisionAttributes struct {
-	TimerId *string
+	TimerId                   *string
 	StartToFireTimeoutSeconds *int64
 }
 
@@ -5594,25 +5801,22 @@ func (v *StartTimerDecisionAttributes) GetStartToFireTimeoutSeconds() (o int64) 
 	return
 }
 
-
-
 type StartWorkflowExecutionRequest struct {
-	Domain *string
-	WorkflowId *string
-	WorkflowType *WorkflowType
-	TaskList *TaskList
-	Input []byte
+	Domain                              *string
+	WorkflowId                          *string
+	WorkflowType                        *WorkflowType
+	TaskList                            *TaskList
+	Input                               []byte
 	ExecutionStartToCloseTimeoutSeconds *int32
-	TaskStartToCloseTimeoutSeconds *int32
-	Identity *string
-	RequestId *string
-	WorkflowIdReusePolicy *WorkflowIdReusePolicy
-	ChildPolicy *ChildPolicy
-	RetryPolicy *RetryPolicy
-	CronSchedule *string
-	Memo *Memo
-	SearchAttributes *SearchAttributes
-	Header *Header
+	TaskStartToCloseTimeoutSeconds      *int32
+	Identity                            *string
+	RequestId                           *string
+	WorkflowIdReusePolicy               *WorkflowIdReusePolicy
+	RetryPolicy                         *RetryPolicy
+	CronSchedule                        *string
+	Memo                                *Memo
+	SearchAttributes                    *SearchAttributes
+	Header                              *Header
 }
 
 func (v *StartWorkflowExecutionRequest) GetDomain() (o string) {
@@ -5685,13 +5889,6 @@ func (v *StartWorkflowExecutionRequest) GetWorkflowIdReusePolicy() (o WorkflowId
 	return
 }
 
-func (v *StartWorkflowExecutionRequest) GetChildPolicy() (o ChildPolicy) {
-	if v != nil && v.ChildPolicy != nil {
-		return *v.ChildPolicy
-	}
-	return
-}
-
 func (v *StartWorkflowExecutionRequest) GetRetryPolicy() (o *RetryPolicy) {
 	if v != nil && v.RetryPolicy != nil {
 		return v.RetryPolicy
@@ -5727,8 +5924,6 @@ func (v *StartWorkflowExecutionRequest) GetHeader() (o *Header) {
 	return
 }
 
-
-
 type StartWorkflowExecutionResponse struct {
 	RunId *string
 }
@@ -5740,10 +5935,8 @@ func (v *StartWorkflowExecutionResponse) GetRunId() (o string) {
 	return
 }
 
-
-
 type StickyExecutionAttributes struct {
-	WorkerTaskList *TaskList
+	WorkerTaskList                *TaskList
 	ScheduleToStartTimeoutSeconds *int32
 }
 
@@ -5761,11 +5954,28 @@ func (v *StickyExecutionAttributes) GetScheduleToStartTimeoutSeconds() (o int32)
 	return
 }
 
+type SupportedClientVersions struct {
+	GoSdk   *string
+	JavaSdk *string
+}
 
+func (v *SupportedClientVersions) GetGoSdk() (o string) {
+	if v != nil && v.GoSdk != nil {
+		return *v.GoSdk
+	}
+	return
+}
+
+func (v *SupportedClientVersions) GetJavaSdk() (o string) {
+	if v != nil && v.JavaSdk != nil {
+		return *v.JavaSdk
+	}
+	return
+}
 
 type TaskIDBlock struct {
 	StartID *int64
-	EndID *int64
+	EndID   *int64
 }
 
 func (v *TaskIDBlock) GetStartID() (o int64) {
@@ -5781,8 +5991,6 @@ func (v *TaskIDBlock) GetEndID() (o int64) {
 	}
 	return
 }
-
-
 
 type TaskList struct {
 	Name *string
@@ -5803,8 +6011,6 @@ func (v *TaskList) GetKind() (o TaskListKind) {
 	return
 }
 
-
-
 type TaskListKind int32
 
 const (
@@ -5823,14 +6029,31 @@ func (v *TaskListMetadata) GetMaxTasksPerSecond() (o float64) {
 	return
 }
 
+type TaskListPartitionMetadata struct {
+	Key           *string
+	OwnerHostName *string
+}
 
+func (v *TaskListPartitionMetadata) GetKey() (o string) {
+	if v != nil && v.Key != nil {
+		return *v.Key
+	}
+	return
+}
+
+func (v *TaskListPartitionMetadata) GetOwnerHostName() (o string) {
+	if v != nil && v.OwnerHostName != nil {
+		return *v.OwnerHostName
+	}
+	return
+}
 
 type TaskListStatus struct {
 	BacklogCountHint *int64
-	ReadLevel *int64
-	AckLevel *int64
-	RatePerSecond *float64
-	TaskIDBlock *TaskIDBlock
+	ReadLevel        *int64
+	AckLevel         *int64
+	RatePerSecond    *float64
+	TaskIDBlock      *TaskIDBlock
 }
 
 func (v *TaskListStatus) GetBacklogCountHint() (o int64) {
@@ -5868,8 +6091,6 @@ func (v *TaskListStatus) GetTaskIDBlock() (o *TaskIDBlock) {
 	return
 }
 
-
-
 type TaskListType int32
 
 const (
@@ -5878,11 +6099,11 @@ const (
 )
 
 type TerminateWorkflowExecutionRequest struct {
-	Domain *string
+	Domain            *string
 	WorkflowExecution *WorkflowExecution
-	Reason *string
-	Details []byte
-	Identity *string
+	Reason            *string
+	Details           []byte
+	Identity          *string
 }
 
 func (v *TerminateWorkflowExecutionRequest) GetDomain() (o string) {
@@ -5920,8 +6141,6 @@ func (v *TerminateWorkflowExecutionRequest) GetIdentity() (o string) {
 	return
 }
 
-
-
 type TimeoutType int32
 
 const (
@@ -5932,10 +6151,10 @@ const (
 )
 
 type TimerCanceledEventAttributes struct {
-	TimerId *string
-	StartedEventId *int64
+	TimerId                      *string
+	StartedEventId               *int64
 	DecisionTaskCompletedEventId *int64
-	Identity *string
+	Identity                     *string
 }
 
 func (v *TimerCanceledEventAttributes) GetTimerId() (o string) {
@@ -5966,10 +6185,8 @@ func (v *TimerCanceledEventAttributes) GetIdentity() (o string) {
 	return
 }
 
-
-
 type TimerFiredEventAttributes struct {
-	TimerId *string
+	TimerId        *string
 	StartedEventId *int64
 }
 
@@ -5987,11 +6204,9 @@ func (v *TimerFiredEventAttributes) GetStartedEventId() (o int64) {
 	return
 }
 
-
-
 type TimerStartedEventAttributes struct {
-	TimerId *string
-	StartToFireTimeoutSeconds *int64
+	TimerId                      *string
+	StartToFireTimeoutSeconds    *int64
 	DecisionTaskCompletedEventId *int64
 }
 
@@ -6016,11 +6231,9 @@ func (v *TimerStartedEventAttributes) GetDecisionTaskCompletedEventId() (o int64
 	return
 }
 
-
-
 type TransientDecisionInfo struct {
 	ScheduledEvent *HistoryEvent
-	StartedEvent *HistoryEvent
+	StartedEvent   *HistoryEvent
 }
 
 func (v *TransientDecisionInfo) GetScheduledEvent() (o *HistoryEvent) {
@@ -6037,12 +6250,10 @@ func (v *TransientDecisionInfo) GetStartedEvent() (o *HistoryEvent) {
 	return
 }
 
-
-
 type UpdateDomainInfo struct {
 	Description *string
-	OwnerEmail *string
-	Data map[string]string
+	OwnerEmail  *string
+	Data        map[string]string
 }
 
 func (v *UpdateDomainInfo) GetDescription() (o string) {
@@ -6066,15 +6277,14 @@ func (v *UpdateDomainInfo) GetData() (o map[string]string) {
 	return
 }
 
-
-
 type UpdateDomainRequest struct {
-	Name *string
-	UpdatedInfo *UpdateDomainInfo
-	Configuration *DomainConfiguration
+	Name                     *string
+	UpdatedInfo              *UpdateDomainInfo
+	Configuration            *DomainConfiguration
 	ReplicationConfiguration *DomainReplicationConfiguration
-	SecurityToken *string
-	DeleteBadBinary *string
+	SecurityToken            *string
+	DeleteBadBinary          *string
+	FailoverTimeoutInSeconds *int32
 }
 
 func (v *UpdateDomainRequest) GetName() (o string) {
@@ -6119,14 +6329,19 @@ func (v *UpdateDomainRequest) GetDeleteBadBinary() (o string) {
 	return
 }
 
-
+func (v *UpdateDomainRequest) GetFailoverTimeoutInSeconds() (o int32) {
+	if v != nil && v.FailoverTimeoutInSeconds != nil {
+		return *v.FailoverTimeoutInSeconds
+	}
+	return
+}
 
 type UpdateDomainResponse struct {
-	DomainInfo *DomainInfo
-	Configuration *DomainConfiguration
+	DomainInfo               *DomainInfo
+	Configuration            *DomainConfiguration
 	ReplicationConfiguration *DomainReplicationConfiguration
-	FailoverVersion *int64
-	IsGlobalDomain *bool
+	FailoverVersion          *int64
+	IsGlobalDomain           *bool
 }
 
 func (v *UpdateDomainResponse) GetDomainInfo() (o *DomainInfo) {
@@ -6164,8 +6379,6 @@ func (v *UpdateDomainResponse) GetIsGlobalDomain() (o bool) {
 	return
 }
 
-
-
 type UpsertWorkflowSearchAttributesDecisionAttributes struct {
 	SearchAttributes *SearchAttributes
 }
@@ -6177,11 +6390,9 @@ func (v *UpsertWorkflowSearchAttributesDecisionAttributes) GetSearchAttributes()
 	return
 }
 
-
-
 type UpsertWorkflowSearchAttributesEventAttributes struct {
 	DecisionTaskCompletedEventId *int64
-	SearchAttributes *SearchAttributes
+	SearchAttributes             *SearchAttributes
 }
 
 func (v *UpsertWorkflowSearchAttributesEventAttributes) GetDecisionTaskCompletedEventId() (o int64) {
@@ -6198,11 +6409,85 @@ func (v *UpsertWorkflowSearchAttributesEventAttributes) GetSearchAttributes() (o
 	return
 }
 
+type VersionHistories struct {
+	CurrentVersionHistoryIndex *int32
+	Histories                  []*VersionHistory
+}
 
+func (v *VersionHistories) GetCurrentVersionHistoryIndex() (o int32) {
+	if v != nil && v.CurrentVersionHistoryIndex != nil {
+		return *v.CurrentVersionHistoryIndex
+	}
+	return
+}
+
+func (v *VersionHistories) GetHistories() (o []*VersionHistory) {
+	if v != nil && v.Histories != nil {
+		return v.Histories
+	}
+	return
+}
+
+type VersionHistory struct {
+	BranchToken []byte
+	Items       []*VersionHistoryItem
+}
+
+func (v *VersionHistory) GetBranchToken() (o []byte) {
+	if v != nil && v.BranchToken != nil {
+		return v.BranchToken
+	}
+	return
+}
+
+func (v *VersionHistory) GetItems() (o []*VersionHistoryItem) {
+	if v != nil && v.Items != nil {
+		return v.Items
+	}
+	return
+}
+
+type VersionHistoryItem struct {
+	EventID *int64
+	Version *int64
+}
+
+func (v *VersionHistoryItem) GetEventID() (o int64) {
+	if v != nil && v.EventID != nil {
+		return *v.EventID
+	}
+	return
+}
+
+func (v *VersionHistoryItem) GetVersion() (o int64) {
+	if v != nil && v.Version != nil {
+		return *v.Version
+	}
+	return
+}
+
+type WorkerVersionInfo struct {
+	Impl           *string
+	FeatureVersion *string
+}
+
+func (v *WorkerVersionInfo) GetImpl() (o string) {
+	if v != nil && v.Impl != nil {
+		return *v.Impl
+	}
+	return
+}
+
+func (v *WorkerVersionInfo) GetFeatureVersion() (o string) {
+	if v != nil && v.FeatureVersion != nil {
+		return *v.FeatureVersion
+	}
+	return
+}
 
 type WorkflowExecution struct {
 	WorkflowId *string
-	RunId *string
+	RunId      *string
 }
 
 func (v *WorkflowExecution) GetWorkflowId() (o string) {
@@ -6219,12 +6504,10 @@ func (v *WorkflowExecution) GetRunId() (o string) {
 	return
 }
 
-
-
 type WorkflowExecutionAlreadyStartedError struct {
-	Message *string
+	Message        *string
 	StartRequestId *string
-	RunId *string
+	RunId          *string
 }
 
 func (v *WorkflowExecutionAlreadyStartedError) GetMessage() (o string) {
@@ -6248,13 +6531,11 @@ func (v *WorkflowExecutionAlreadyStartedError) GetRunId() (o string) {
 	return
 }
 
-
-
 type WorkflowExecutionCancelRequestedEventAttributes struct {
-	Cause *string
-	ExternalInitiatedEventId *int64
+	Cause                     *string
+	ExternalInitiatedEventId  *int64
 	ExternalWorkflowExecution *WorkflowExecution
-	Identity *string
+	Identity                  *string
 }
 
 func (v *WorkflowExecutionCancelRequestedEventAttributes) GetCause() (o string) {
@@ -6285,11 +6566,9 @@ func (v *WorkflowExecutionCancelRequestedEventAttributes) GetIdentity() (o strin
 	return
 }
 
-
-
 type WorkflowExecutionCanceledEventAttributes struct {
 	DecisionTaskCompletedEventId *int64
-	Details []byte
+	Details                      []byte
 }
 
 func (v *WorkflowExecutionCanceledEventAttributes) GetDecisionTaskCompletedEventId() (o int64) {
@@ -6306,8 +6585,6 @@ func (v *WorkflowExecutionCanceledEventAttributes) GetDetails() (o []byte) {
 	return
 }
 
-
-
 type WorkflowExecutionCloseStatus int32
 
 const (
@@ -6320,7 +6597,7 @@ const (
 )
 
 type WorkflowExecutionCompletedEventAttributes struct {
-	Result []byte
+	Result                       []byte
 	DecisionTaskCompletedEventId *int64
 }
 
@@ -6338,13 +6615,10 @@ func (v *WorkflowExecutionCompletedEventAttributes) GetDecisionTaskCompletedEven
 	return
 }
 
-
-
 type WorkflowExecutionConfiguration struct {
-	TaskList *TaskList
+	TaskList                            *TaskList
 	ExecutionStartToCloseTimeoutSeconds *int32
-	TaskStartToCloseTimeoutSeconds *int32
-	ChildPolicy *ChildPolicy
+	TaskStartToCloseTimeoutSeconds      *int32
 }
 
 func (v *WorkflowExecutionConfiguration) GetTaskList() (o *TaskList) {
@@ -6368,31 +6642,22 @@ func (v *WorkflowExecutionConfiguration) GetTaskStartToCloseTimeoutSeconds() (o 
 	return
 }
 
-func (v *WorkflowExecutionConfiguration) GetChildPolicy() (o ChildPolicy) {
-	if v != nil && v.ChildPolicy != nil {
-		return *v.ChildPolicy
-	}
-	return
-}
-
-
-
 type WorkflowExecutionContinuedAsNewEventAttributes struct {
-	NewExecutionRunId *string
-	WorkflowType *WorkflowType
-	TaskList *TaskList
-	Input []byte
+	NewExecutionRunId                   *string
+	WorkflowType                        *WorkflowType
+	TaskList                            *TaskList
+	Input                               []byte
 	ExecutionStartToCloseTimeoutSeconds *int32
-	TaskStartToCloseTimeoutSeconds *int32
-	DecisionTaskCompletedEventId *int64
-	BackoffStartIntervalInSeconds *int32
-	Initiator *ContinueAsNewInitiator
-	FailureReason *string
-	FailureDetails []byte
-	LastCompletionResult []byte
-	Header *Header
-	Memo *Memo
-	SearchAttributes *SearchAttributes
+	TaskStartToCloseTimeoutSeconds      *int32
+	DecisionTaskCompletedEventId        *int64
+	BackoffStartIntervalInSeconds       *int32
+	Initiator                           *ContinueAsNewInitiator
+	FailureReason                       *string
+	FailureDetails                      []byte
+	LastCompletionResult                []byte
+	Header                              *Header
+	Memo                                *Memo
+	SearchAttributes                    *SearchAttributes
 }
 
 func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetNewExecutionRunId() (o string) {
@@ -6500,11 +6765,9 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetSearchAttributes() (
 	return
 }
 
-
-
 type WorkflowExecutionFailedEventAttributes struct {
-	Reason *string
-	Details []byte
+	Reason                       *string
+	Details                      []byte
 	DecisionTaskCompletedEventId *int64
 }
 
@@ -6529,10 +6792,9 @@ func (v *WorkflowExecutionFailedEventAttributes) GetDecisionTaskCompletedEventId
 	return
 }
 
-
-
 type WorkflowExecutionFilter struct {
 	WorkflowId *string
+	RunId      *string
 }
 
 func (v *WorkflowExecutionFilter) GetWorkflowId() (o string) {
@@ -6542,21 +6804,27 @@ func (v *WorkflowExecutionFilter) GetWorkflowId() (o string) {
 	return
 }
 
-
+func (v *WorkflowExecutionFilter) GetRunId() (o string) {
+	if v != nil && v.RunId != nil {
+		return *v.RunId
+	}
+	return
+}
 
 type WorkflowExecutionInfo struct {
-	Execution *WorkflowExecution
-	Type *WorkflowType
-	StartTime *int64
-	CloseTime *int64
-	CloseStatus *WorkflowExecutionCloseStatus
-	HistoryLength *int64
-	ParentDomainId *string
-	ParentExecution *WorkflowExecution
-	ExecutionTime *int64
-	Memo *Memo
+	Execution        *WorkflowExecution
+	Type             *WorkflowType
+	StartTime        *int64
+	CloseTime        *int64
+	CloseStatus      *WorkflowExecutionCloseStatus
+	HistoryLength    *int64
+	ParentDomainId   *string
+	ParentExecution  *WorkflowExecution
+	ExecutionTime    *int64
+	Memo             *Memo
 	SearchAttributes *SearchAttributes
-	AutoResetPoints *ResetPoints
+	AutoResetPoints  *ResetPoints
+	TaskList         *string
 }
 
 func (v *WorkflowExecutionInfo) GetExecution() (o *WorkflowExecution) {
@@ -6643,12 +6911,17 @@ func (v *WorkflowExecutionInfo) GetAutoResetPoints() (o *ResetPoints) {
 	return
 }
 
-
+func (v *WorkflowExecutionInfo) GetTaskList() (o string) {
+	if v != nil && v.TaskList != nil {
+		return *v.TaskList
+	}
+	return
+}
 
 type WorkflowExecutionSignaledEventAttributes struct {
 	SignalName *string
-	Input []byte
-	Identity *string
+	Input      []byte
+	Identity   *string
 }
 
 func (v *WorkflowExecutionSignaledEventAttributes) GetSignalName() (o string) {
@@ -6672,35 +6945,32 @@ func (v *WorkflowExecutionSignaledEventAttributes) GetIdentity() (o string) {
 	return
 }
 
-
-
 type WorkflowExecutionStartedEventAttributes struct {
-	WorkflowType *WorkflowType
-	ParentWorkflowDomain *string
-	ParentWorkflowExecution *WorkflowExecution
-	ParentInitiatedEventId *int64
-	TaskList *TaskList
-	Input []byte
+	WorkflowType                        *WorkflowType
+	ParentWorkflowDomain                *string
+	ParentWorkflowExecution             *WorkflowExecution
+	ParentInitiatedEventId              *int64
+	TaskList                            *TaskList
+	Input                               []byte
 	ExecutionStartToCloseTimeoutSeconds *int32
-	TaskStartToCloseTimeoutSeconds *int32
-	ChildPolicy *ChildPolicy
-	ContinuedExecutionRunId *string
-	Initiator *ContinueAsNewInitiator
-	ContinuedFailureReason *string
-	ContinuedFailureDetails []byte
-	LastCompletionResult []byte
-	OriginalExecutionRunId *string
-	Identity *string
-	FirstExecutionRunId *string
-	RetryPolicy *RetryPolicy
-	Attempt *int32
-	ExpirationTimestamp *int64
-	CronSchedule *string
-	FirstDecisionTaskBackoffSeconds *int32
-	Memo *Memo
-	SearchAttributes *SearchAttributes
-	PrevAutoResetPoints *ResetPoints
-	Header *Header
+	TaskStartToCloseTimeoutSeconds      *int32
+	ContinuedExecutionRunId             *string
+	Initiator                           *ContinueAsNewInitiator
+	ContinuedFailureReason              *string
+	ContinuedFailureDetails             []byte
+	LastCompletionResult                []byte
+	OriginalExecutionRunId              *string
+	Identity                            *string
+	FirstExecutionRunId                 *string
+	RetryPolicy                         *RetryPolicy
+	Attempt                             *int32
+	ExpirationTimestamp                 *int64
+	CronSchedule                        *string
+	FirstDecisionTaskBackoffSeconds     *int32
+	Memo                                *Memo
+	SearchAttributes                    *SearchAttributes
+	PrevAutoResetPoints                 *ResetPoints
+	Header                              *Header
 }
 
 func (v *WorkflowExecutionStartedEventAttributes) GetWorkflowType() (o *WorkflowType) {
@@ -6755,13 +7025,6 @@ func (v *WorkflowExecutionStartedEventAttributes) GetExecutionStartToCloseTimeou
 func (v *WorkflowExecutionStartedEventAttributes) GetTaskStartToCloseTimeoutSeconds() (o int32) {
 	if v != nil && v.TaskStartToCloseTimeoutSeconds != nil {
 		return *v.TaskStartToCloseTimeoutSeconds
-	}
-	return
-}
-
-func (v *WorkflowExecutionStartedEventAttributes) GetChildPolicy() (o ChildPolicy) {
-	if v != nil && v.ChildPolicy != nil {
-		return *v.ChildPolicy
 	}
 	return
 }
@@ -6885,11 +7148,9 @@ func (v *WorkflowExecutionStartedEventAttributes) GetHeader() (o *Header) {
 	return
 }
 
-
-
 type WorkflowExecutionTerminatedEventAttributes struct {
-	Reason *string
-	Details []byte
+	Reason   *string
+	Details  []byte
 	Identity *string
 }
 
@@ -6914,8 +7175,6 @@ func (v *WorkflowExecutionTerminatedEventAttributes) GetIdentity() (o string) {
 	return
 }
 
-
-
 type WorkflowExecutionTimedOutEventAttributes struct {
 	TimeoutType *TimeoutType
 }
@@ -6927,14 +7186,13 @@ func (v *WorkflowExecutionTimedOutEventAttributes) GetTimeoutType() (o TimeoutTy
 	return
 }
 
-
-
 type WorkflowIdReusePolicy int32
 
 const (
 	WorkflowIdReusePolicyAllowDuplicate WorkflowIdReusePolicy = iota
 	WorkflowIdReusePolicyAllowDuplicateFailedOnly
 	WorkflowIdReusePolicyRejectDuplicate
+	WorkflowIdReusePolicyTerminateIfRunning
 )
 
 type WorkflowQuery struct {
@@ -6956,13 +7214,10 @@ func (v *WorkflowQuery) GetQueryArgs() (o []byte) {
 	return
 }
 
-
-
 type WorkflowQueryResult struct {
-	ResultType *QueryResultType
-	Answer []byte
-	ErrorReason *string
-	ErrorDetails []byte
+	ResultType   *QueryResultType
+	Answer       []byte
+	ErrorMessage *string
 }
 
 func (v *WorkflowQueryResult) GetResultType() (o QueryResultType) {
@@ -6979,21 +7234,12 @@ func (v *WorkflowQueryResult) GetAnswer() (o []byte) {
 	return
 }
 
-func (v *WorkflowQueryResult) GetErrorReason() (o string) {
-	if v != nil && v.ErrorReason != nil {
-		return *v.ErrorReason
+func (v *WorkflowQueryResult) GetErrorMessage() (o string) {
+	if v != nil && v.ErrorMessage != nil {
+		return *v.ErrorMessage
 	}
 	return
 }
-
-func (v *WorkflowQueryResult) GetErrorDetails() (o []byte) {
-	if v != nil && v.ErrorDetails != nil {
-		return v.ErrorDetails
-	}
-	return
-}
-
-
 
 type WorkflowType struct {
 	Name *string
@@ -7006,8 +7252,6 @@ func (v *WorkflowType) GetName() (o string) {
 	return
 }
 
-
-
 type WorkflowTypeFilter struct {
 	Name *string
 }
@@ -7018,5 +7262,3 @@ func (v *WorkflowTypeFilter) GetName() (o string) {
 	}
 	return
 }
-
-
