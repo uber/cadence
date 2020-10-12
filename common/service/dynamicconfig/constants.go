@@ -261,6 +261,9 @@ var keys = map[Key]string{
 	ReplicationTaskFetcherServiceBusyWait:                 "history.ReplicationTaskFetcherServiceBusyWait",
 	ReplicationTaskProcessorErrorRetryWait:                "history.ReplicationTaskProcessorErrorRetryWait",
 	ReplicationTaskProcessorErrorRetryMaxAttempts:         "history.ReplicationTaskProcessorErrorRetryMaxAttempts",
+	ReplicationTaskProcessorErrorSecondRetryWait:          "history.ReplicationTaskProcessorErrorSecondRetryWait",
+	ReplicationTaskProcessorErrorSecondRetryMaxWait:       "history.ReplicationTaskProcessorErrorSecondRetryMaxWait",
+	ReplicationTaskProcessorErrorSecondRetryExpiration:    "history.ReplicationTaskProcessorErrorSecondRetryExpiration",
 	ReplicationTaskProcessorNoTaskInitialWait:             "history.ReplicationTaskProcessorNoTaskInitialWait",
 	ReplicationTaskProcessorCleanupInterval:               "history.ReplicationTaskProcessorCleanupInterval",
 	ReplicationTaskProcessorCleanupJitterCoefficient:      "history.ReplicationTaskProcessorCleanupJitterCoefficient",
@@ -280,6 +283,7 @@ var keys = map[Key]string{
 	NotifyFailoverMarkerInterval:                          "history.NotifyFailoverMarkerInterval",
 	NotifyFailoverMarkerTimerJitterCoefficient:            "history.NotifyFailoverMarkerTimerJitterCoefficient",
 	EnableDropStuckTaskByDomainID:                         "history.DropStuckTaskByDomain",
+	EnableActivityLocalDispatchByDomain:                   "history.enableActivityLocalDispatchByDomain",
 
 	WorkerPersistenceMaxQPS:                                  "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                            "worker.persistenceGlobalMaxQPS",
@@ -863,6 +867,12 @@ const (
 	ReplicationTaskProcessorErrorRetryWait
 	// ReplicationTaskProcessorErrorRetryMaxAttempts is the max retry attempts for applying replication tasks
 	ReplicationTaskProcessorErrorRetryMaxAttempts
+	// ReplicationTaskProcessorErrorSecondRetryWait is the initial retry wait for the second phase retry
+	ReplicationTaskProcessorErrorSecondRetryWait
+	// ReplicationTaskProcessorErrorSecondRetryMaxWait is the max wait time for the second phase retry
+	ReplicationTaskProcessorErrorSecondRetryMaxWait
+	// ReplicationTaskProcessorErrorSecondRetryExpiration is the expiration duration for the second phase retry
+	ReplicationTaskProcessorErrorSecondRetryExpiration
 	// ReplicationTaskProcessorNoTaskInitialWait is the wait time when not ask is returned
 	ReplicationTaskProcessorNoTaskInitialWait
 	// ReplicationTaskProcessorCleanupInterval determines how frequently the cleanup replication queue
@@ -904,6 +914,9 @@ const (
 
 	// lastKeyForTest must be the last one in this const group for testing purpose
 	lastKeyForTest
+
+	// EnableActivityLocalDispatchByDomain allows worker to dispatch activity tasks through local tunnel after decisions are made. This is an performance optimization to skip activity scheduling efforts.
+	EnableActivityLocalDispatchByDomain
 )
 
 // Filter represents a filter on the dynamic config key
