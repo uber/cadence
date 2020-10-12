@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
@@ -265,15 +266,21 @@ func initializeDomainHandler(
 	archivalMetadata archiver.ArchivalMetadata,
 	archiverProvider provider.ArchiverProvider,
 ) domain.Handler {
+
+	domainConfig := domain.Config{
+		MinRetentionDays:  dynamicconfig.GetIntPropertyFn(domain.MinRetentionDays),
+		MaxBadBinaryCount: dynamicconfig.GetIntPropertyFilteredByDomain(domain.MaxBadBinaries),
+		FailoverCoolDown:  dynamicconfig.GetDurationPropertyFnFilteredByDomain(domain.FailoverCoolDown),
+	}
 	return domain.NewHandler(
-		domain.MinRetentionDays,
-		dynamicconfig.GetIntPropertyFilteredByDomain(domain.MaxBadBinaries),
+		domainConfig,
 		logger,
 		metadataMgr,
 		clusterMetadata,
 		initializeDomainReplicator(logger),
 		archivalMetadata,
 		archiverProvider,
+		clock.NewRealTimeSource(),
 	)
 }
 

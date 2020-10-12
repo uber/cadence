@@ -415,8 +415,9 @@ CREATE TABLE domains_by_name_v2 (
   config_version                bigint, -- indicating the version of domain config, excluding the failover / change of active cluster name
   failover_version              bigint, -- indicating the version of active domain only, used for domain failover
   failover_notification_version bigint, -- indicating the last change related to domain failover
-  previous_failover_version     bigint,
+  previous_failover_version     bigint, -- indicating the previouse failover version for graceful failover
   failover_end_time             bigint, -- indicating domain failover state
+  last_updated_time             bigint, -- indicating the domain last update timestamp
   notification_version          bigint,
   PRIMARY KEY (domains_partition, name)
 )  WITH COMPACTION = {

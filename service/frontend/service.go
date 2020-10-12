@@ -42,6 +42,7 @@ import (
 // Config represents configuration for cadence-frontend service
 type Config struct {
 	NumHistoryShards                int
+	domainConfig                    domain.Config
 	PersistenceMaxQPS               dynamicconfig.IntPropertyFn
 	PersistenceGlobalMaxQPS         dynamicconfig.IntPropertyFn
 	VisibilityMaxPageSize           dynamicconfig.IntPropertyFnWithDomainFilter
@@ -58,14 +59,11 @@ type Config struct {
 	MaxIDLengthLimit                dynamicconfig.IntPropertyFn
 	MaxIDLengthWarnLimit            dynamicconfig.IntPropertyFn
 	EnableClientVersionCheck        dynamicconfig.BoolPropertyFn
-	MinRetentionDays                dynamicconfig.IntPropertyFn
 	DisallowQuery                   dynamicconfig.BoolPropertyFnWithDomainFilter
 	ShutdownDrainDuration           dynamicconfig.DurationPropertyFn
 
 	// Persistence settings
 	HistoryMgrNumConns dynamicconfig.IntPropertyFn
-
-	MaxBadBinaries dynamicconfig.IntPropertyFnWithDomainFilter
 
 	// security protection settings
 	EnableAdminProtection         dynamicconfig.BoolPropertyFn
@@ -116,7 +114,6 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		MaxIDLengthLimit:                            dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
 		MaxIDLengthWarnLimit:                        dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit, 150),
 		HistoryMgrNumConns:                          dc.GetIntProperty(dynamicconfig.FrontendHistoryMgrNumConns, 10),
-		MaxBadBinaries:                              dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries, domain.MaxBadBinaries),
 		EnableAdminProtection:                       dc.GetBoolProperty(dynamicconfig.EnableAdminProtection, false),
 		AdminOperationToken:                         dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
 		DisableListVisibilityByFilter:               dc.GetBoolPropertyFilteredByDomain(dynamicconfig.DisableListVisibilityByFilter, false),
@@ -133,10 +130,14 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		SearchAttributesNumberOfKeysLimit:           dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesNumberOfKeysLimit, 100),
 		SearchAttributesSizeOfValueLimit:            dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesSizeOfValueLimit, 2*1024),
 		SearchAttributesTotalSizeLimit:              dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesTotalSizeLimit, 40*1024),
-		MinRetentionDays:                            dc.GetIntProperty(dynamicconfig.MinRetentionDays, domain.MinRetentionDays),
 		VisibilityArchivalQueryMaxPageSize:          dc.GetIntProperty(dynamicconfig.VisibilityArchivalQueryMaxPageSize, 10000),
 		DisallowQuery:                               dc.GetBoolPropertyFilteredByDomain(dynamicconfig.DisallowQuery, false),
 		SendRawWorkflowHistory:                      dc.GetBoolPropertyFilteredByDomain(dynamicconfig.SendRawWorkflowHistory, sendRawWorkflowHistory),
+		domainConfig: domain.Config{
+			MaxBadBinaryCount: dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries, domain.MaxBadBinaries),
+			MinRetentionDays:  dc.GetIntProperty(dynamicconfig.MinRetentionDays, domain.MinRetentionDays),
+			FailoverCoolDown:  dc.GetDurationPropertyFilteredByDomain(dynamicconfig.FrontendFailoverCoolDown, domain.FailoverCoolDown),
+		},
 	}
 }
 
