@@ -429,7 +429,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(
 		&failoverEndTime,
 		&notificationVersion,
 	)
-	fmt.Println("Get domain complete", err, info.ID)
+	fmt.Println("Get domain complete", err, info.Name, request.Name, info.ID)
 	if err != nil {
 		return nil, handleError(request.Name, request.ID, err)
 	}
