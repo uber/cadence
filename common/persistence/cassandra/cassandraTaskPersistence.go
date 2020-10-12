@@ -44,6 +44,115 @@ type (
 	}
 )
 
+const (
+	// Row types for table tasks
+	rowTypeTask = iota
+	rowTypeTaskList
+)
+
+const (
+	taskListTaskID = -12345
+	initialRangeID = 1 // Id of the first range of a new task list
+)
+
+const (
+	templateTaskListType = `{` +
+		`domain_id: ?, ` +
+		`name: ?, ` +
+		`type: ?, ` +
+		`ack_level: ?, ` +
+		`kind: ?, ` +
+		`last_updated: ? ` +
+		`}`
+
+	templateTaskType = `{` +
+		`domain_id: ?, ` +
+		`workflow_id: ?, ` +
+		`run_id: ?, ` +
+		`schedule_id: ?,` +
+		`created_time: ? ` +
+		`}`
+
+	templateCreateTaskQuery = `INSERT INTO tasks (` +
+		`domain_id, task_list_name, task_list_type, type, task_id, task) ` +
+		`VALUES(?, ?, ?, ?, ?, ` + templateTaskType + `)`
+
+	templateCreateTaskWithTTLQuery = `INSERT INTO tasks (` +
+		`domain_id, task_list_name, task_list_type, type, task_id, task) ` +
+		`VALUES(?, ?, ?, ?, ?, ` + templateTaskType + `) USING TTL ?`
+
+	templateGetTasksQuery = `SELECT task_id, task ` +
+		`FROM tasks ` +
+		`WHERE domain_id = ? ` +
+		`and task_list_name = ? ` +
+		`and task_list_type = ? ` +
+		`and type = ? ` +
+		`and task_id > ? ` +
+		`and task_id <= ?`
+
+	templateCompleteTaskQuery = `DELETE FROM tasks ` +
+		`WHERE domain_id = ? ` +
+		`and task_list_name = ? ` +
+		`and task_list_type = ? ` +
+		`and type = ? ` +
+		`and task_id = ?`
+
+	templateCompleteTasksLessThanQuery = `DELETE FROM tasks ` +
+		`WHERE domain_id = ? ` +
+		`AND task_list_name = ? ` +
+		`AND task_list_type = ? ` +
+		`AND type = ? ` +
+		`AND task_id <= ? `
+
+	templateGetTaskList = `SELECT ` +
+		`range_id, ` +
+		`task_list ` +
+		`FROM tasks ` +
+		`WHERE domain_id = ? ` +
+		`and task_list_name = ? ` +
+		`and task_list_type = ? ` +
+		`and type = ? ` +
+		`and task_id = ?`
+
+	templateInsertTaskListQuery = `INSERT INTO tasks (` +
+		`domain_id, ` +
+		`task_list_name, ` +
+		`task_list_type, ` +
+		`type, ` +
+		`task_id, ` +
+		`range_id, ` +
+		`task_list ` +
+		`) VALUES (?, ?, ?, ?, ?, ?, ` + templateTaskListType + `) IF NOT EXISTS`
+
+	templateUpdateTaskListQuery = `UPDATE tasks SET ` +
+		`range_id = ?, ` +
+		`task_list = ` + templateTaskListType + " " +
+		`WHERE domain_id = ? ` +
+		`and task_list_name = ? ` +
+		`and task_list_type = ? ` +
+		`and type = ? ` +
+		`and task_id = ? ` +
+		`IF range_id = ?`
+
+	templateUpdateTaskListQueryWithTTL = `INSERT INTO tasks (` +
+		`domain_id, ` +
+		`task_list_name, ` +
+		`task_list_type, ` +
+		`type, ` +
+		`task_id, ` +
+		`range_id, ` +
+		`task_list ` +
+		`) VALUES (?, ?, ?, ?, ?, ?, ` + templateTaskListType + `) USING TTL ?`
+
+	templateDeleteTaskListQuery = `DELETE FROM tasks ` +
+		`WHERE domain_id = ? ` +
+		`AND task_list_name = ? ` +
+		`AND task_list_type = ? ` +
+		`AND type = ? ` +
+		`AND task_id = ? ` +
+		`IF range_id = ?`
+)
+
 var _ p.TaskStore = (*cassandraTaskPersistence)(nil)
 
 // newTaskPersistence is used to create an instance of TaskManager implementation

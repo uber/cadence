@@ -86,39 +86,6 @@ const (
 )
 
 const (
-	// Row types for table tasks
-	rowTypeTask = iota
-	rowTypeTaskList
-)
-
-const (
-	taskListTaskID = -12345
-	initialRangeID = 1 // Id of the first range of a new task list
-)
-
-const (
-	templateShardType = `{` +
-		`shard_id: ?, ` +
-		`owner: ?, ` +
-		`range_id: ?, ` +
-		`stolen_since_renew: ?, ` +
-		`updated_at: ?, ` +
-		`replication_ack_level: ?, ` +
-		`transfer_ack_level: ?, ` +
-		`timer_ack_level: ?, ` +
-		`cluster_transfer_ack_level: ?, ` +
-		`cluster_timer_ack_level: ?, ` +
-		`transfer_processing_queue_states: ?, ` +
-		`transfer_processing_queue_states_encoding: ?, ` +
-		`timer_processing_queue_states: ?, ` +
-		`timer_processing_queue_states_encoding: ?, ` +
-		`domain_notification_version: ?, ` +
-		`cluster_replication_level: ?, ` +
-		`replication_dlq_ack_level: ?, ` +
-		`pending_failover_markers: ?, ` +
-		`pending_failover_markers_encoding: ? ` +
-		`}`
-
 	templateWorkflowExecutionType = `{` +
 		`domain_id: ?, ` +
 		`workflow_id: ?, ` +
@@ -312,53 +279,11 @@ const (
 		`control: ?` +
 		`}`
 
-	templateTaskListType = `{` +
-		`domain_id: ?, ` +
-		`name: ?, ` +
-		`type: ?, ` +
-		`ack_level: ?, ` +
-		`kind: ?, ` +
-		`last_updated: ? ` +
-		`}`
-
-	templateTaskType = `{` +
-		`domain_id: ?, ` +
-		`workflow_id: ?, ` +
-		`run_id: ?, ` +
-		`schedule_id: ?,` +
-		`created_time: ? ` +
-		`}`
-
 	templateChecksumType = `{` +
 		`version: ?, ` +
 		`flavor: ?, ` +
 		`value: ? ` +
 		`}`
-
-	templateCreateShardQuery = `INSERT INTO executions (` +
-		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, shard, range_id)` +
-		`VALUES(?, ?, ?, ?, ?, ?, ?, ` + templateShardType + `, ?) IF NOT EXISTS`
-
-	templateGetShardQuery = `SELECT shard ` +
-		`FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ?`
-
-	templateUpdateShardQuery = `UPDATE executions ` +
-		`SET shard = ` + templateShardType + `, range_id = ? ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ? ` +
-		`IF range_id = ?`
 
 	templateUpdateCurrentWorkflowExecutionQuery = `UPDATE executions USING TTL 0 ` +
 		`SET current_run_id = ?,
@@ -386,11 +311,6 @@ workflow_state = ? ` +
 	templateCreateWorkflowExecutionQuery = `INSERT INTO executions (` +
 		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visibility_ts, task_id, checksum) ` +
 		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?, ?, ` + templateChecksumType + `) IF NOT EXISTS `
-
-	templateCreateWorkflowExecutionWithReplicationQuery = `INSERT INTO executions (` +
-		`shard_id, domain_id, workflow_id, run_id, type, execution, replication_state, next_event_id, visibility_ts, task_id, checksum) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ` + templateReplicationStateType +
-		`, ?, ?, ?, ` + templateChecksumType + `) IF NOT EXISTS `
 
 	templateCreateWorkflowExecutionWithVersionHistoriesQuery = `INSERT INTO executions (` +
 		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visibility_ts, task_id, version_histories, version_histories_encoding, checksum) ` +
@@ -474,20 +394,6 @@ workflow_state = ? ` +
 
 	templateUpdateWorkflowExecutionQuery = `UPDATE executions ` +
 		`SET execution = ` + templateWorkflowExecutionType +
-		`, next_event_id = ? ` +
-		`, checksum = ` + templateChecksumType +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ? ` +
-		`IF next_event_id = ? `
-
-	templateUpdateWorkflowExecutionWithReplicationQuery = `UPDATE executions ` +
-		`SET execution = ` + templateWorkflowExecutionType +
-		`, replication_state = ` + templateReplicationStateType +
 		`, next_event_id = ? ` +
 		`, checksum = ` + templateChecksumType +
 		`WHERE shard_id = ? ` +
@@ -814,85 +720,6 @@ workflow_state = ? ` +
 		`and run_id = ?` +
 		`and visibility_ts >= ? ` +
 		`and visibility_ts < ?`
-
-	templateCreateTaskQuery = `INSERT INTO tasks (` +
-		`domain_id, task_list_name, task_list_type, type, task_id, task) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateTaskType + `)`
-
-	templateCreateTaskWithTTLQuery = `INSERT INTO tasks (` +
-		`domain_id, task_list_name, task_list_type, type, task_id, task) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateTaskType + `) USING TTL ?`
-
-	templateGetTasksQuery = `SELECT task_id, task ` +
-		`FROM tasks ` +
-		`WHERE domain_id = ? ` +
-		`and task_list_name = ? ` +
-		`and task_list_type = ? ` +
-		`and type = ? ` +
-		`and task_id > ? ` +
-		`and task_id <= ?`
-
-	templateCompleteTaskQuery = `DELETE FROM tasks ` +
-		`WHERE domain_id = ? ` +
-		`and task_list_name = ? ` +
-		`and task_list_type = ? ` +
-		`and type = ? ` +
-		`and task_id = ?`
-
-	templateCompleteTasksLessThanQuery = `DELETE FROM tasks ` +
-		`WHERE domain_id = ? ` +
-		`AND task_list_name = ? ` +
-		`AND task_list_type = ? ` +
-		`AND type = ? ` +
-		`AND task_id <= ? `
-
-	templateGetTaskList = `SELECT ` +
-		`range_id, ` +
-		`task_list ` +
-		`FROM tasks ` +
-		`WHERE domain_id = ? ` +
-		`and task_list_name = ? ` +
-		`and task_list_type = ? ` +
-		`and type = ? ` +
-		`and task_id = ?`
-
-	templateInsertTaskListQuery = `INSERT INTO tasks (` +
-		`domain_id, ` +
-		`task_list_name, ` +
-		`task_list_type, ` +
-		`type, ` +
-		`task_id, ` +
-		`range_id, ` +
-		`task_list ` +
-		`) VALUES (?, ?, ?, ?, ?, ?, ` + templateTaskListType + `) IF NOT EXISTS`
-
-	templateUpdateTaskListQuery = `UPDATE tasks SET ` +
-		`range_id = ?, ` +
-		`task_list = ` + templateTaskListType + " " +
-		`WHERE domain_id = ? ` +
-		`and task_list_name = ? ` +
-		`and task_list_type = ? ` +
-		`and type = ? ` +
-		`and task_id = ? ` +
-		`IF range_id = ?`
-
-	templateUpdateTaskListQueryWithTTL = `INSERT INTO tasks (` +
-		`domain_id, ` +
-		`task_list_name, ` +
-		`task_list_type, ` +
-		`type, ` +
-		`task_id, ` +
-		`range_id, ` +
-		`task_list ` +
-		`) VALUES (?, ?, ?, ?, ?, ?, ` + templateTaskListType + `) USING TTL ?`
-
-	templateDeleteTaskListQuery = `DELETE FROM tasks ` +
-		`WHERE domain_id = ? ` +
-		`AND task_list_name = ? ` +
-		`AND task_list_type = ? ` +
-		`AND type = ? ` +
-		`AND task_id = ? ` +
-		`IF range_id = ?`
 )
 
 var (
