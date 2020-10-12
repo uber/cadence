@@ -503,15 +503,16 @@ func (d *handlerImpl) UpdateDomain(
 
 	if configurationChanged || activeClusterChanged {
 		now := d.timeSource.Now()
+		// Check the failover cool down time
+		if lastUpdatedTime.Add(d.config.FailoverCoolDown(info.Name)).After(now) {
+			return nil, errFailoverTooFrequent
+		}
+
 		// set the versions
 		if configurationChanged {
 			configVersion++
 		}
 		if activeClusterChanged && isGlobalDomain {
-			// Check the failover cool down time
-			if lastUpdatedTime.Add(d.config.FailoverCoolDown(info.Name)).After(now) {
-				return nil, errFailoverTooFrequent
-			}
 			// Force failover cleans graceful failover state
 			if !updateRequest.IsSetFailoverTimeoutInSeconds() {
 				// force failover cleanup graceful failover state
