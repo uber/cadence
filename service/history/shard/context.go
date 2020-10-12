@@ -172,6 +172,7 @@ const (
 	logWarnTransferLevelDiff = 3000000 // 3 million
 	logWarnTimerLevelDiff    = time.Duration(30 * time.Minute)
 	historySizeLogThreshold  = 10 * 1024 * 1024
+	minContextTimeout        = 1 * time.Second
 )
 
 func (s *contextImpl) GetShardID() int {
@@ -595,6 +596,10 @@ func (s *contextImpl) CreateWorkflowExecution(
 	ctx context.Context,
 	request *persistence.CreateWorkflowExecutionRequest,
 ) (*persistence.CreateWorkflowExecutionResponse, error) {
+	ctx, cancel := s.ensureMinContextTimeout(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
 
 	domainID := request.NewWorkflowSnapshot.ExecutionInfo.DomainID
 	workflowID := request.NewWorkflowSnapshot.ExecutionInfo.WorkflowID
@@ -622,11 +627,9 @@ func (s *contextImpl) CreateWorkflowExecution(
 	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
 Create_Loop:
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
+	for attempt := 0; attempt < conditionalRetryCount && ctx.Err() == nil; attempt++ {
 		currentRangeID := s.getRangeID()
 		request.RangeID = currentRangeID
-
-		// if context is done return error
 
 		response, err := s.executionManager.CreateWorkflowExecution(ctx, request)
 		if err != nil {
@@ -692,6 +695,10 @@ func (s *contextImpl) UpdateWorkflowExecution(
 	ctx context.Context,
 	request *persistence.UpdateWorkflowExecutionRequest,
 ) (*persistence.UpdateWorkflowExecutionResponse, error) {
+	ctx, cancel := s.ensureMinContextTimeout(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
 
 	domainID := request.UpdateWorkflowMutation.ExecutionInfo.DomainID
 	workflowID := request.UpdateWorkflowMutation.ExecutionInfo.WorkflowID
@@ -732,11 +739,9 @@ func (s *contextImpl) UpdateWorkflowExecution(
 	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
 Update_Loop:
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
+	for attempt := 0; attempt < conditionalRetryCount && ctx.Err() == nil; attempt++ {
 		currentRangeID := s.getRangeID()
 		request.RangeID = currentRangeID
-
-		// TODO: if ctx is done, return
 
 		resp, err := s.executionManager.UpdateWorkflowExecution(ctx, request)
 		if err != nil {
@@ -795,6 +800,10 @@ func (s *contextImpl) ConflictResolveWorkflowExecution(
 	ctx context.Context,
 	request *persistence.ConflictResolveWorkflowExecutionRequest,
 ) error {
+	ctx, cancel := s.ensureMinContextTimeout(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
 
 	domainID := request.ResetWorkflowSnapshot.ExecutionInfo.DomainID
 	workflowID := request.ResetWorkflowSnapshot.ExecutionInfo.WorkflowID
@@ -847,7 +856,7 @@ func (s *contextImpl) ConflictResolveWorkflowExecution(
 	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
 Conflict_Resolve_Loop:
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
+	for attempt := 0; attempt < conditionalRetryCount && ctx.Err() == nil; attempt++ {
 		currentRangeID := s.getRangeID()
 		request.RangeID = currentRangeID
 		err := s.executionManager.ConflictResolveWorkflowExecution(ctx, request)
@@ -901,6 +910,17 @@ Conflict_Resolve_Loop:
 	}
 
 	return errMaxAttemptsExceeded
+}
+
+func (s *contextImpl) ensureMinContextTimeout(
+	parent context.Context,
+) (context.Context, context.CancelFunc) {
+	deadline, ok := parent.Deadline()
+	if !ok || deadline.Sub(s.GetTimeSource().Now()) >= minContextTimeout {
+		return parent, nil
+	}
+
+	return context.WithTimeout(context.Background(), minContextTimeout)
 }
 
 func (s *contextImpl) AppendHistoryV2Events(
@@ -1326,7 +1346,7 @@ func (s *contextImpl) ReplicateFailoverMarkers(
 
 	var err error
 Retry_Loop:
-	for attempt := int32(0); attempt < conditionalRetryCount; attempt++ {
+	for attempt := int32(0); attempt < conditionalRetryCount && ctx.Err() == nil; attempt++ {
 		err = s.executionManager.CreateFailoverMarkerTasks(
 			ctx,
 			&persistence.CreateFailoverMarkersRequest{
