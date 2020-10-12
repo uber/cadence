@@ -36,8 +36,6 @@ const (
 	defaultMaximumInterval    = 10 * time.Second
 	defaultExpirationInterval = time.Minute
 	defaultMaximumAttempts    = noMaximumAttempts
-
-	defaultFirstPhaseMaximumAttempts = 3
 )
 
 type (
@@ -67,12 +65,13 @@ type (
 		maximumAttempts    int
 	}
 
-	// TwoPhaseRetryPolicy implements a policy that first use one policy to get next delay,
-	// and once expired use the second policy for the following retry.
+	// MultiPhasesRetryPolicy implements a policy that first use one policy to get next delay,
+	// and once expired use the next policy for the following retry.
 	// It can achieve fast retries in first phase then slowly retires in second phase.
-	TwoPhaseRetryPolicy struct {
-		firstPolicy  RetryPolicy
-		secondPolicy RetryPolicy
+	// The supported retry policy is ExponentialRetryPolicy.
+	// To have the correct next delay, set the maximumAttempts in the non-final policy.
+	MultiPhasesRetryPolicy struct {
+		policies []*ExponentialRetryPolicy
 	}
 
 	systemClock struct{}
@@ -101,23 +100,16 @@ func NewExponentialRetryPolicy(initialInterval time.Duration) *ExponentialRetryP
 	return p
 }
 
-// NewTwoPhaseRetryPolicy creates TwoPhaseRetryPolicy
-func NewTwoPhaseRetryPolicy() *TwoPhaseRetryPolicy {
-	firstPolicy := &ExponentialRetryPolicy{
-		initialInterval:    50 * time.Millisecond,
-		backoffCoefficient: defaultBackoffCoefficient,
-		maximumAttempts:    defaultFirstPhaseMaximumAttempts,
+// NewMultiPhasesRetryPolicy creates MultiPhasesRetryPolicy
+func NewMultiPhasesRetryPolicy(policies ...*ExponentialRetryPolicy) *MultiPhasesRetryPolicy {
+
+	for i := 0; i < len(policies)-1; i++ {
+		if policies[i].maximumAttempts == noMaximumAttempts {
+			panic("Non final retry policy in MultiPhasesRetryPolicy need to set maximum attempts")
+		}
 	}
-	secondPolicy := &ExponentialRetryPolicy{
-		initialInterval:    2 * time.Second,
-		backoffCoefficient: defaultBackoffCoefficient,
-		maximumInterval:    128 * time.Second,
-		expirationInterval: 5 * time.Minute,
-		maximumAttempts:    defaultMaximumAttempts,
-	}
-	return &TwoPhaseRetryPolicy{
-		firstPolicy:  firstPolicy,
-		secondPolicy: secondPolicy,
+	return &MultiPhasesRetryPolicy{
+		policies: policies,
 	}
 }
 
@@ -211,12 +203,16 @@ func (p *ExponentialRetryPolicy) ComputeNextDelay(elapsedTime time.Duration, num
 }
 
 // ComputeNextDelay returns the next delay interval.
-func (tp *TwoPhaseRetryPolicy) ComputeNextDelay(elapsedTime time.Duration, numAttempts int) time.Duration {
-	nextInterval := tp.firstPolicy.ComputeNextDelay(elapsedTime, numAttempts)
-	if nextInterval == done {
-		nextInterval = tp.secondPolicy.ComputeNextDelay(elapsedTime, numAttempts-defaultFirstPhaseMaximumAttempts)
+func (tp MultiPhasesRetryPolicy) ComputeNextDelay(elapsedTime time.Duration, numAttempts int) time.Duration {
+	previousStageRetryCount := 0
+	for _, policy := range tp.policies {
+		nextInterval := policy.ComputeNextDelay(elapsedTime, numAttempts-previousStageRetryCount)
+		if nextInterval != done {
+			return nextInterval
+		}
+		previousStageRetryCount += policy.maximumAttempts
 	}
-	return nextInterval
+	return done
 }
 
 // Now returns the current time using the system clock
