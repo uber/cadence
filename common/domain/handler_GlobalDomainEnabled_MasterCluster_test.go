@@ -923,8 +923,8 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateDomain_Co
 	s.Equal(isGlobalDomain, resp.GetIsGlobalDomain())
 
 	_, err = s.handler.UpdateDomain(context.Background(), &shared.UpdateDomainRequest{
-		Name:                     common.StringPtr(domainName),
-		UpdatedInfo:              &shared.UpdateDomainInfo{
+		Name: common.StringPtr(domainName),
+		UpdatedInfo: &shared.UpdateDomainInfo{
 			Description: common.StringPtr("test1"),
 		},
 	})
