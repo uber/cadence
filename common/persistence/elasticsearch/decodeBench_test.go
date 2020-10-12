@@ -58,7 +58,7 @@ func BenchmarkJSONDecodeToType(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var source *visibilityRecord
 		json.Unmarshal(*bytes, &source)
-		record := &p.VisibilityWorkflowExecutionInfo{
+		record := &p.InternalVisibilityWorkflowExecutionInfo{
 			WorkflowID:    source.WorkflowID,
 			RunID:         source.RunID,
 			TypeName:      source.WorkflowType,
@@ -87,7 +87,7 @@ func BenchmarkJSONDecodeToMap(b *testing.B) {
 		closeStatus, _ := source[definition.CloseStatus].(json.Number).Int64()
 		historyLen, _ := source[definition.HistoryLength].(json.Number).Int64()
 
-		record := &p.VisibilityWorkflowExecutionInfo{
+		record := &p.InternalVisibilityWorkflowExecutionInfo{
 			WorkflowID:    source[definition.WorkflowID].(string),
 			RunID:         source[definition.RunID].(string),
 			TypeName:      source[definition.WorkflowType].(string),

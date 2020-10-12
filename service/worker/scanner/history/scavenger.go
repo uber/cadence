@@ -123,7 +123,7 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 	}
 
 	for {
-		resp, err := s.db.GetAllHistoryTreeBranches(context.TODO(), &p.GetAllHistoryTreeBranchesRequest{
+		resp, err := s.db.GetAllHistoryTreeBranches(ctx, &p.GetAllHistoryTreeBranchesRequest{
 			PageSize:      pageSize,
 			NextPageToken: s.hbd.NextPageToken,
 		})
@@ -251,7 +251,7 @@ func (s *Scavenger) startTaskProcessor(
 						continue
 					}
 
-					err = s.db.DeleteHistoryBranch(context.TODO(), &p.DeleteHistoryBranchRequest{
+					err = s.db.DeleteHistoryBranch(ctx, &p.DeleteHistoryBranchRequest{
 						BranchToken: branchToken,
 						// This is a required argument but it is not needed for Cassandra.
 						// Since this scanner is only for Cassandra,

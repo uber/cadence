@@ -23,6 +23,7 @@
 package invariant
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -156,6 +157,6 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 		execManager.On("IsWorkflowExecutionExists", mock.Anything, mock.Anything).Return(tc.getConcreteResp, tc.getConcreteErr)
 		execManager.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(tc.getCurrentResp, tc.getCurrentErr)
 		o := NewConcreteExecutionExists(persistence.NewPersistenceRetryer(execManager, nil, c.CreatePersistenceRetryPolicy()))
-		s.Equal(tc.expectedResult, o.Check(tc.execution))
+		s.Equal(tc.expectedResult, o.Check(context.Background(), tc.execution))
 	}
 }

@@ -23,7 +23,6 @@
 package cli
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -258,12 +257,19 @@ func (cl *cassandraLoader) Load() []*persistence.TimerTaskInfo {
 		resp := &persistence.GetTimerIndexTasksResponse{}
 
 		op := func() error {
+			ctx, cancel := newContext(cl.ctx)
+			defer cancel()
+
 			var err error
-			resp, err = ratelimitedClient.GetTimerIndexTasks(context.TODO(), &req)
+			resp, err = ratelimitedClient.GetTimerIndexTasks(ctx, &req)
 			return err
 		}
 
-		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), common.IsPersistenceTransientError)
+		isRetryable := func(err error) bool {
+			return common.IsPersistenceTransientError(err) || common.IsContextTimeoutError(err)
+		}
+
+		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), isRetryable)
 
 		if err != nil {
 			ErrorAndExit("cannot get timer tasks for shard", err)

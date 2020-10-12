@@ -23,8 +23,7 @@
 package ndc
 
 import (
-	context "context"
-	ctx "context"
+	"context"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -45,7 +44,7 @@ type (
 	// WorkflowResetter handles workflow reset for NDC
 	WorkflowResetter interface {
 		ResetWorkflow(
-			ctx ctx.Context,
+			ctx context.Context,
 			now time.Time,
 			baseLastEventID int64,
 			baseLastEventVersion int64,
@@ -100,7 +99,7 @@ func NewWorkflowResetter(
 }
 
 func (r *workflowResetterImpl) ResetWorkflow(
-	ctx ctx.Context,
+	ctx context.Context,
 	now time.Time,
 	baseLastEventID int64,
 	baseLastEventVersion int64,
@@ -152,7 +151,7 @@ func (r *workflowResetterImpl) ResetWorkflow(
 }
 
 func (r *workflowResetterImpl) getBaseBranchToken(
-	ctx ctx.Context,
+	ctx context.Context,
 	baseLastEventID int64,
 	baseLastEventVersion int64,
 	incomingFirstEventID int64,
@@ -200,7 +199,7 @@ func (r *workflowResetterImpl) getBaseBranchToken(
 }
 
 func (r *workflowResetterImpl) getResetBranchToken(
-	ctx ctx.Context,
+	ctx context.Context,
 	baseBranchToken []byte,
 	baseLastEventID int64,
 ) ([]byte, error) {
@@ -208,7 +207,7 @@ func (r *workflowResetterImpl) getResetBranchToken(
 	// fork a new history branch
 	shardID := r.shard.GetShardID()
 	resp, err := r.historyV2Manager.ForkHistoryBranch(
-		context.TODO(),
+		ctx,
 		&persistence.ForkHistoryBranchRequest{
 			ForkBranchToken: baseBranchToken,
 			ForkNodeID:      baseLastEventID + 1,

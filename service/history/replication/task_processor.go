@@ -261,7 +261,7 @@ func (p *taskProcessorImpl) cleanupAckedReplicationTasks() error {
 		time.Duration(p.shard.GetTransferMaxReadLevel()-minAckLevel),
 	)
 	return p.shard.GetExecutionManager().RangeCompleteReplicationTask(
-		context.TODO(),
+		context.Background(),
 		&persistence.RangeCompleteReplicationTaskRequest{
 			InclusiveEndTaskID: minAckLevel,
 		},
@@ -454,7 +454,7 @@ func (p *taskProcessorImpl) putReplicationTaskToDLQ(replicationTask *r.Replicati
 	)
 	// The following is guaranteed to success or retry forever until processor is shutdown.
 	return backoff.Retry(func() error {
-		err := p.shard.GetExecutionManager().PutReplicationTaskToDLQ(context.TODO(), request)
+		err := p.shard.GetExecutionManager().PutReplicationTaskToDLQ(context.Background(), request)
 		if err != nil {
 			p.logger.Error("Failed to put replication task to DLQ.", tag.Error(err))
 			p.metricsClient.IncCounter(metrics.ReplicationTaskFetcherScope, metrics.ReplicationDLQFailed)
@@ -525,7 +525,7 @@ func (p *taskProcessorImpl) emitDLQSizeMetricsLoop() {
 	for {
 		select {
 		case <-timer.C:
-			resp, err := p.shard.GetExecutionManager().GetReplicationDLQSize(context.TODO(), staticRequest)
+			resp, err := p.shard.GetExecutionManager().GetReplicationDLQSize(context.Background(), staticRequest)
 			timer.Reset(backoff.JitDuration(
 				dlqMetricsEmitTimerInterval,
 				dlqMetricsEmitTimerCoefficient,

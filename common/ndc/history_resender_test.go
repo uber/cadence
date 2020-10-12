@@ -385,17 +385,17 @@ func (s *historyResenderSuite) TestCurrentExecutionCheck() {
 			State:      persistence.WorkflowStateRunning,
 		},
 	}
-	invariantMock.EXPECT().Check(execution1).Return(invariant.CheckResult{
+	invariantMock.EXPECT().Check(gomock.Any(), execution1).Return(invariant.CheckResult{
 		CheckResultType: invariant.CheckResultTypeCorrupted,
 	}).Times(1)
-	invariantMock.EXPECT().Check(execution2).Return(invariant.CheckResult{
+	invariantMock.EXPECT().Check(gomock.Any(), execution2).Return(invariant.CheckResult{
 		CheckResultType: invariant.CheckResultTypeHealthy,
 	}).Times(1)
-	invariantMock.EXPECT().Fix(gomock.Any()).Return(invariant.FixResult{}).Times(1)
+	invariantMock.EXPECT().Fix(gomock.Any(), gomock.Any()).Return(invariant.FixResult{}).Times(1)
 
-	skipTask := s.rereplicator.fixCurrentExecution(domainID, workflowID1, runID)
+	skipTask := s.rereplicator.fixCurrentExecution(context.Background(), domainID, workflowID1, runID)
 	s.False(skipTask)
-	skipTask = s.rereplicator.fixCurrentExecution(domainID, workflowID2, runID)
+	skipTask = s.rereplicator.fixCurrentExecution(context.Background(), domainID, workflowID2, runID)
 	s.True(skipTask)
 }
 

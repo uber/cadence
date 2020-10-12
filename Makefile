@@ -319,3 +319,8 @@ start-cdc-other: bins
 
 start-canary: bins
 	./cadence-canary start
+
+gen-internal-types:
+	go run common/types/generator/main.go
+
+internal-types: gen-internal-types fmt copyright

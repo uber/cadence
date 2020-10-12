@@ -219,7 +219,7 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(
 
 func (m *sqlExecutionManager) GetWorkflowExecution(
 	ctx context.Context,
-	request *p.GetWorkflowExecutionRequest,
+	request *p.InternalGetWorkflowExecutionRequest,
 ) (*p.InternalGetWorkflowExecutionResponse, error) {
 
 	domainID := sqlplugin.MustParseUUID(request.DomainID)
@@ -946,7 +946,7 @@ func (m *sqlExecutionManager) RangeCompleteTransferTask(
 func (m *sqlExecutionManager) GetReplicationTasks(
 	ctx context.Context,
 	request *p.GetReplicationTasksRequest,
-) (*p.GetReplicationTasksResponse, error) {
+) (*p.InternalGetReplicationTasksResponse, error) {
 
 	readLevel, maxReadLevelInclusive, err := getReadLevels(request)
 	if err != nil {
@@ -966,7 +966,7 @@ func (m *sqlExecutionManager) GetReplicationTasks(
 	case nil:
 		return m.populateGetReplicationTasksResponse(rows, request.MaxReadLevel)
 	case sql.ErrNoRows:
-		return &p.GetReplicationTasksResponse{}, nil
+		return &p.InternalGetReplicationTasksResponse{}, nil
 	default:
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("GetReplicationTasks operation failed. Select failed: %v", err),
@@ -990,19 +990,19 @@ func getReadLevels(request *p.GetReplicationTasksRequest) (readLevel int64, maxR
 func (m *sqlExecutionManager) populateGetReplicationTasksResponse(
 	rows []sqlplugin.ReplicationTasksRow,
 	requestMaxReadLevel int64,
-) (*p.GetReplicationTasksResponse, error) {
+) (*p.InternalGetReplicationTasksResponse, error) {
 	if len(rows) == 0 {
-		return &p.GetReplicationTasksResponse{}, nil
+		return &p.InternalGetReplicationTasksResponse{}, nil
 	}
 
-	var tasks = make([]*p.ReplicationTaskInfo, len(rows))
+	var tasks = make([]*p.InternalReplicationTaskInfo, len(rows))
 	for i, row := range rows {
 		info, err := m.parser.ReplicationTaskInfoFromBlob(row.Data, row.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
 
-		tasks[i] = &p.ReplicationTaskInfo{
+		tasks[i] = &p.InternalReplicationTaskInfo{
 			TaskID:            row.TaskID,
 			DomainID:          sqlplugin.UUID(info.DomainID).String(),
 			WorkflowID:        info.GetWorkflowID(),
@@ -1022,7 +1022,7 @@ func (m *sqlExecutionManager) populateGetReplicationTasksResponse(
 	if lastTaskID < requestMaxReadLevel {
 		nextPageToken = serializePageToken(lastTaskID)
 	}
-	return &p.GetReplicationTasksResponse{
+	return &p.InternalGetReplicationTasksResponse{
 		Tasks:         tasks,
 		NextPageToken: nextPageToken,
 	}, nil
@@ -1063,7 +1063,7 @@ func (m *sqlExecutionManager) RangeCompleteReplicationTask(
 func (m *sqlExecutionManager) GetReplicationTasksFromDLQ(
 	ctx context.Context,
 	request *p.GetReplicationTasksFromDLQRequest,
-) (*p.GetReplicationTasksFromDLQResponse, error) {
+) (*p.InternalGetReplicationTasksFromDLQResponse, error) {
 
 	readLevel, maxReadLevelInclusive, err := getReadLevels(&request.GetReplicationTasksRequest)
 	if err != nil {
@@ -1085,7 +1085,7 @@ func (m *sqlExecutionManager) GetReplicationTasksFromDLQ(
 	case nil:
 		return m.populateGetReplicationTasksResponse(rows, request.MaxReadLevel)
 	case sql.ErrNoRows:
-		return &p.GetReplicationTasksResponse{}, nil
+		return &p.InternalGetReplicationTasksResponse{}, nil
 	default:
 		return nil, &workflow.InternalServiceError{
 			Message: fmt.Sprintf("GetReplicationTasks operation failed. Select failed: %v", err),
@@ -1307,7 +1307,7 @@ func (m *sqlExecutionManager) RangeCompleteTimerTask(
 
 func (m *sqlExecutionManager) PutReplicationTaskToDLQ(
 	ctx context.Context,
-	request *p.PutReplicationTaskToDLQRequest,
+	request *p.InternalPutReplicationTaskToDLQRequest,
 ) error {
 	replicationTask := request.TaskInfo
 	blob, err := m.parser.ReplicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{

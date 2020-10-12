@@ -231,8 +231,9 @@ func scanShard(
 	iterator := params.ScanType.ToIterator()
 
 	scanner := shard.NewScanner(
+		activityCtx,
 		shardID,
-		iterator(pr, params.ExecutionsPageSize),
+		iterator(activityCtx, pr, params.ExecutionsPageSize),
 		resources.GetBlobstoreClient(),
 		params.BlobstoreFlushThreshold,
 		invariant.NewInvariantManager(ivs),
@@ -416,9 +417,10 @@ func fixShard(
 	}
 
 	fixer := shard.NewFixer(
+		activityCtx,
 		shardID,
 		invariant.NewInvariantManager(ivs),
-		store.NewBlobstoreIterator(resources.GetBlobstoreClient(), corruptedKeys, params.ScanType.ToBlobstoreEntity()),
+		store.NewBlobstoreIterator(activityCtx, resources.GetBlobstoreClient(), corruptedKeys, params.ScanType.ToBlobstoreEntity()),
 		resources.GetBlobstoreClient(),
 		params.ResolvedFixerWorkflowConfig.BlobstoreFlushThreshold,
 		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },

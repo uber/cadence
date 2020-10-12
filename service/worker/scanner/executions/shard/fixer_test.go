@@ -93,7 +93,7 @@ func (s *FixerSuite) TestFix_Failure_NonFirstError() {
 		return nil, fmt.Errorf("iterator got error on: %v", iteratorCallNumber)
 	}).Times(5)
 	mockInvariantManager := invariant.NewMockManager(s.controller)
-	mockInvariantManager.EXPECT().RunFixes(gomock.Any()).Return(invariant.ManagerFixResult{
+	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), gomock.Any()).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeFixed,
 	}).Times(4)
 	fixedWriter := store.NewMockExecutionWriter(s.controller)
@@ -126,7 +126,7 @@ func (s *FixerSuite) TestFix_Failure_SkippedWriterError() {
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
 	mockItr.EXPECT().Next().Return(&store.ScanOutputEntity{}, nil).Times(1)
 	mockInvariantManager := invariant.NewMockManager(s.controller)
-	mockInvariantManager.EXPECT().RunFixes(gomock.Any()).Return(invariant.ManagerFixResult{
+	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), gomock.Any()).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeSkipped,
 	}).Times(1)
 	skippedWriter := store.NewMockExecutionWriter(s.controller)
@@ -158,7 +158,7 @@ func (s *FixerSuite) TestFix_Failure_FailedWriterError() {
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
 	mockItr.EXPECT().Next().Return(&store.ScanOutputEntity{}, nil).Times(1)
 	mockInvariantManager := invariant.NewMockManager(s.controller)
-	mockInvariantManager.EXPECT().RunFixes(gomock.Any()).Return(invariant.ManagerFixResult{
+	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), gomock.Any()).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeFailed,
 	}).Times(1)
 	failedWriter := store.NewMockExecutionWriter(s.controller)
@@ -190,7 +190,7 @@ func (s *FixerSuite) TestFix_Failure_FixedWriterError() {
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
 	mockItr.EXPECT().Next().Return(&store.ScanOutputEntity{}, nil).Times(1)
 	mockInvariantManager := invariant.NewMockManager(s.controller)
-	mockInvariantManager.EXPECT().RunFixes(gomock.Any()).Return(invariant.ManagerFixResult{
+	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), gomock.Any()).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeFixed,
 	}).Times(1)
 	fixedWriter := store.NewMockExecutionWriter(s.controller)
@@ -341,7 +341,7 @@ func (s *FixerSuite) TestFix_Success() {
 		}
 	}).Times(10)
 	mockInvariantManager := invariant.NewMockManager(s.controller)
-	mockInvariantManager.EXPECT().RunFixes(entity.Execution{
+	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), entity.Execution{
 		DomainID: "skipped",
 	}).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeSkipped,
@@ -359,7 +359,7 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(4)
-	mockInvariantManager.EXPECT().RunFixes(entity.Execution{
+	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), entity.Execution{
 		DomainID: "history_missing",
 	}).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeFixed,
@@ -371,7 +371,7 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(2)
-	mockInvariantManager.EXPECT().RunFixes(entity.Execution{
+	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), entity.Execution{
 		DomainID: "first_history_event",
 	}).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeFixed,
@@ -386,7 +386,7 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(1)
-	mockInvariantManager.EXPECT().RunFixes(entity.Execution{
+	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), entity.Execution{
 		DomainID: "orphan_execution",
 		State:    persistence.WorkflowStateCreated,
 	}).Return(invariant.ManagerFixResult{
@@ -406,7 +406,7 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(1)
-	mockInvariantManager.EXPECT().RunFixes(entity.Execution{
+	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), entity.Execution{
 		DomainID: "failed",
 	}).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeFailed,

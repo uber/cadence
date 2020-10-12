@@ -23,6 +23,7 @@
 package store
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -64,7 +65,7 @@ func (s *WriterIteratorSuite) SetupTest() {
 
 func (s *WriterIteratorSuite) TestWriterIterator() {
 	pr := persistence.NewPersistenceRetryer(getMockExecutionManager(10, 10), nil, common.CreatePersistenceRetryPolicy())
-	pItr := fetcher.ConcreteExecutionIterator(pr, executionPageSize)
+	pItr := fetcher.ConcreteExecutionIterator(context.Background(), pr, executionPageSize)
 
 	uuid := "uuid"
 	extension := Extension("test")
@@ -97,7 +98,7 @@ func (s *WriterIteratorSuite) TestWriterIterator() {
 	s.Equal(0, flushedKeys.MinPage)
 	s.Equal(9, flushedKeys.MaxPage)
 	s.Equal(Extension("test"), flushedKeys.Extension)
-	blobstoreItr := NewBlobstoreIterator(blobstore, *flushedKeys, &entity.ConcreteExecution{})
+	blobstoreItr := NewBlobstoreIterator(context.Background(), blobstore, *flushedKeys, &entity.ConcreteExecution{})
 	i := 0
 	s.True(blobstoreItr.HasNext())
 	for blobstoreItr.HasNext() {

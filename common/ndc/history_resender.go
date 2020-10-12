@@ -168,6 +168,7 @@ func (n *HistoryResenderImpl) SendSingleWorkflowHistory(
 			// Case 1: the workflow pass the retention period
 			// Case 2: the workflow is corrupted
 			if skipTask := n.fixCurrentExecution(
+				ctx,
 				domainID,
 				workflowID,
 				runID,
@@ -305,6 +306,7 @@ func (n *HistoryResenderImpl) getHistory(
 }
 
 func (n *HistoryResenderImpl) fixCurrentExecution(
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 	runID string,
@@ -320,7 +322,7 @@ func (n *HistoryResenderImpl) fixCurrentExecution(
 			State:      persistence.WorkflowStateRunning,
 		},
 	}
-	res := n.currentExecutionCheck.Check(execution)
+	res := n.currentExecutionCheck.Check(ctx, execution)
 	switch res.CheckResultType {
 	case invariant.CheckResultTypeCorrupted:
 		n.logger.Error(
@@ -329,7 +331,7 @@ func (n *HistoryResenderImpl) fixCurrentExecution(
 			tag.WorkflowID(workflowID),
 			tag.WorkflowRunID(runID),
 		)
-		n.currentExecutionCheck.Fix(execution)
+		n.currentExecutionCheck.Fix(ctx, execution)
 		return false
 	case invariant.CheckResultTypeFailed:
 		return false

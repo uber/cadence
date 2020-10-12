@@ -25,6 +25,8 @@ package executions
 //go:generate enumer -type=ScanType
 
 import (
+	"context"
+
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
@@ -47,7 +49,7 @@ type (
 	InvariantFactory func(retryer persistence.Retryer) invariant.Invariant
 
 	//ExecutionFetcher represents a function which returns specific execution entity
-	ExecutionFetcher func(retryer persistence.Retryer, request fetcher.ExecutionRequest) (entity.Entity, error)
+	ExecutionFetcher func(ctx context.Context, retryer persistence.Retryer, request fetcher.ExecutionRequest) (entity.Entity, error)
 )
 
 // ToBlobstoreEntity picks struct depending on scanner type.
@@ -62,7 +64,7 @@ func (st ScanType) ToBlobstoreEntity() entity.Entity {
 }
 
 // ToIterator selects appropriate iterator. It will panic if scan type is unknown.
-func (st ScanType) ToIterator() func(retryer persistence.Retryer, pageSize int) pagination.Iterator {
+func (st ScanType) ToIterator() func(ctx context.Context, retryer persistence.Retryer, pageSize int) pagination.Iterator {
 	switch st {
 	case ConcreteExecutionType:
 		return fetcher.ConcreteExecutionIterator
