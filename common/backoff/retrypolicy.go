@@ -102,6 +102,12 @@ func NewExponentialRetryPolicy(initialInterval time.Duration) *ExponentialRetryP
 
 // NewMultiPhasesRetryPolicy creates MultiPhasesRetryPolicy
 func NewMultiPhasesRetryPolicy(policies ...*ExponentialRetryPolicy) *MultiPhasesRetryPolicy {
+
+	for i := 0; i < len(policies)-1; i++ {
+		if policies[i].maximumAttempts == noMaximumAttempts {
+			panic("Non final retry policy in MultiPhasesRetryPolicy need to set maximum attempts")
+		}
+	}
 	return &MultiPhasesRetryPolicy{
 		policies: policies,
 	}
