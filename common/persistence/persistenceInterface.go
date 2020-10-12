@@ -745,7 +745,7 @@ type (
 		HistoryArchivalURI       string
 		VisibilityArchivalStatus types.ArchivalStatus
 		VisibilityArchivalURI    string
-		BadBinaries              *DataBlob
+		BadBinaries              types.BadBinaries
 	}
 
 	// InternalCreateDomainRequest is used to create the domain
