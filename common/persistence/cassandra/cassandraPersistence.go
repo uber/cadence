@@ -32,9 +32,23 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
-	"github.com/uber/cadence/common/service/config"
 )
+
+type (
+	cassandraStore struct {
+		session *gocql.Session
+		logger  log.Logger
+	}
+
+	// Implements ExecutionManager
+	cassandraPersistence struct {
+		cassandraStore
+		shardID            int
+		currentClusterName string
+	}
+)
+
+var _ p.ExecutionStore = (*cassandraPersistence)(nil)
 
 // Guidelines for creating new special UUID constants
 // Each UUID should be of the form: E0000000-R000-f000-f000-00000000000x
@@ -88,39 +102,6 @@ const (
 )
 
 const (
-	// Row types for table tasks
-	rowTypeTask = iota
-	rowTypeTaskList
-)
-
-const (
-	taskListTaskID = -12345
-	initialRangeID = 1 // Id of the first range of a new task list
-)
-
-const (
-	templateShardType = `{` +
-		`shard_id: ?, ` +
-		`owner: ?, ` +
-		`range_id: ?, ` +
-		`stolen_since_renew: ?, ` +
-		`updated_at: ?, ` +
-		`replication_ack_level: ?, ` +
-		`transfer_ack_level: ?, ` +
-		`timer_ack_level: ?, ` +
-		`cluster_transfer_ack_level: ?, ` +
-		`cluster_timer_ack_level: ?, ` +
-		`transfer_processing_queue_states: ?, ` +
-		`transfer_processing_queue_states_encoding: ?, ` +
-		`timer_processing_queue_states: ?, ` +
-		`timer_processing_queue_states_encoding: ?, ` +
-		`domain_notification_version: ?, ` +
-		`cluster_replication_level: ?, ` +
-		`replication_dlq_ack_level: ?, ` +
-		`pending_failover_markers: ?, ` +
-		`pending_failover_markers_encoding: ? ` +
-		`}`
-
 	templateWorkflowExecutionType = `{` +
 		`domain_id: ?, ` +
 		`workflow_id: ?, ` +
@@ -314,53 +295,11 @@ const (
 		`control: ?` +
 		`}`
 
-	templateTaskListType = `{` +
-		`domain_id: ?, ` +
-		`name: ?, ` +
-		`type: ?, ` +
-		`ack_level: ?, ` +
-		`kind: ?, ` +
-		`last_updated: ? ` +
-		`}`
-
-	templateTaskType = `{` +
-		`domain_id: ?, ` +
-		`workflow_id: ?, ` +
-		`run_id: ?, ` +
-		`schedule_id: ?,` +
-		`created_time: ? ` +
-		`}`
-
 	templateChecksumType = `{` +
 		`version: ?, ` +
 		`flavor: ?, ` +
 		`value: ? ` +
 		`}`
-
-	templateCreateShardQuery = `INSERT INTO executions (` +
-		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, shard, range_id)` +
-		`VALUES(?, ?, ?, ?, ?, ?, ?, ` + templateShardType + `, ?) IF NOT EXISTS`
-
-	templateGetShardQuery = `SELECT shard ` +
-		`FROM executions ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ?`
-
-	templateUpdateShardQuery = `UPDATE executions ` +
-		`SET shard = ` + templateShardType + `, range_id = ? ` +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ? ` +
-		`IF range_id = ?`
 
 	templateUpdateCurrentWorkflowExecutionQuery = `UPDATE executions USING TTL 0 ` +
 		`SET current_run_id = ?,
@@ -388,11 +327,6 @@ workflow_state = ? ` +
 	templateCreateWorkflowExecutionQuery = `INSERT INTO executions (` +
 		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visibility_ts, task_id, checksum) ` +
 		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?, ?, ` + templateChecksumType + `) IF NOT EXISTS `
-
-	templateCreateWorkflowExecutionWithReplicationQuery = `INSERT INTO executions (` +
-		`shard_id, domain_id, workflow_id, run_id, type, execution, replication_state, next_event_id, visibility_ts, task_id, checksum) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ` + templateReplicationStateType +
-		`, ?, ?, ?, ` + templateChecksumType + `) IF NOT EXISTS `
 
 	templateCreateWorkflowExecutionWithVersionHistoriesQuery = `INSERT INTO executions (` +
 		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visibility_ts, task_id, version_histories, version_histories_encoding, checksum) ` +
@@ -476,20 +410,6 @@ workflow_state = ? ` +
 
 	templateUpdateWorkflowExecutionQuery = `UPDATE executions ` +
 		`SET execution = ` + templateWorkflowExecutionType +
-		`, next_event_id = ? ` +
-		`, checksum = ` + templateChecksumType +
-		`WHERE shard_id = ? ` +
-		`and type = ? ` +
-		`and domain_id = ? ` +
-		`and workflow_id = ? ` +
-		`and run_id = ? ` +
-		`and visibility_ts = ? ` +
-		`and task_id = ? ` +
-		`IF next_event_id = ? `
-
-	templateUpdateWorkflowExecutionWithReplicationQuery = `UPDATE executions ` +
-		`SET execution = ` + templateWorkflowExecutionType +
-		`, replication_state = ` + templateReplicationStateType +
 		`, next_event_id = ? ` +
 		`, checksum = ` + templateChecksumType +
 		`WHERE shard_id = ? ` +
@@ -816,159 +736,12 @@ workflow_state = ? ` +
 		`and run_id = ?` +
 		`and visibility_ts >= ? ` +
 		`and visibility_ts < ?`
-
-	templateCreateTaskQuery = `INSERT INTO tasks (` +
-		`domain_id, task_list_name, task_list_type, type, task_id, task) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateTaskType + `)`
-
-	templateCreateTaskWithTTLQuery = `INSERT INTO tasks (` +
-		`domain_id, task_list_name, task_list_type, type, task_id, task) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateTaskType + `) USING TTL ?`
-
-	templateGetTasksQuery = `SELECT task_id, task ` +
-		`FROM tasks ` +
-		`WHERE domain_id = ? ` +
-		`and task_list_name = ? ` +
-		`and task_list_type = ? ` +
-		`and type = ? ` +
-		`and task_id > ? ` +
-		`and task_id <= ?`
-
-	templateCompleteTaskQuery = `DELETE FROM tasks ` +
-		`WHERE domain_id = ? ` +
-		`and task_list_name = ? ` +
-		`and task_list_type = ? ` +
-		`and type = ? ` +
-		`and task_id = ?`
-
-	templateCompleteTasksLessThanQuery = `DELETE FROM tasks ` +
-		`WHERE domain_id = ? ` +
-		`AND task_list_name = ? ` +
-		`AND task_list_type = ? ` +
-		`AND type = ? ` +
-		`AND task_id <= ? `
-
-	templateGetTaskList = `SELECT ` +
-		`range_id, ` +
-		`task_list ` +
-		`FROM tasks ` +
-		`WHERE domain_id = ? ` +
-		`and task_list_name = ? ` +
-		`and task_list_type = ? ` +
-		`and type = ? ` +
-		`and task_id = ?`
-
-	templateInsertTaskListQuery = `INSERT INTO tasks (` +
-		`domain_id, ` +
-		`task_list_name, ` +
-		`task_list_type, ` +
-		`type, ` +
-		`task_id, ` +
-		`range_id, ` +
-		`task_list ` +
-		`) VALUES (?, ?, ?, ?, ?, ?, ` + templateTaskListType + `) IF NOT EXISTS`
-
-	templateUpdateTaskListQuery = `UPDATE tasks SET ` +
-		`range_id = ?, ` +
-		`task_list = ` + templateTaskListType + " " +
-		`WHERE domain_id = ? ` +
-		`and task_list_name = ? ` +
-		`and task_list_type = ? ` +
-		`and type = ? ` +
-		`and task_id = ? ` +
-		`IF range_id = ?`
-
-	templateUpdateTaskListQueryWithTTL = `INSERT INTO tasks (` +
-		`domain_id, ` +
-		`task_list_name, ` +
-		`task_list_type, ` +
-		`type, ` +
-		`task_id, ` +
-		`range_id, ` +
-		`task_list ` +
-		`) VALUES (?, ?, ?, ?, ?, ?, ` + templateTaskListType + `) USING TTL ?`
-
-	templateDeleteTaskListQuery = `DELETE FROM tasks ` +
-		`WHERE domain_id = ? ` +
-		`AND task_list_name = ? ` +
-		`AND task_list_type = ? ` +
-		`AND type = ? ` +
-		`AND task_id = ? ` +
-		`IF range_id = ?`
 )
 
 var (
 	defaultDateTime            = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
 	defaultVisibilityTimestamp = p.UnixNanoToDBTimestamp(defaultDateTime.UnixNano())
 )
-
-type (
-	cassandraStore struct {
-		session *gocql.Session
-		logger  log.Logger
-	}
-
-	// Implements ExecutionManager, ShardManager and TaskManager
-	cassandraPersistence struct {
-		cassandraStore
-		shardID            int
-		currentClusterName string
-	}
-)
-
-var _ p.ExecutionStore = (*cassandraPersistence)(nil)
-
-// newShardPersistence is used to create an instance of ShardManager implementation
-func newShardPersistence(cfg config.Cassandra, clusterName string, logger log.Logger) (p.ShardStore, error) {
-	cluster := cassandra.NewCassandraCluster(cfg)
-	cluster.ProtoVersion = cassandraProtoVersion
-	cluster.Consistency = gocql.LocalQuorum
-	cluster.SerialConsistency = gocql.LocalSerial
-	cluster.Timeout = defaultSessionTimeout
-
-	session, err := cluster.CreateSession()
-	if err != nil {
-		return nil, err
-	}
-
-	return &cassandraPersistence{
-		cassandraStore:     cassandraStore{session: session, logger: logger},
-		shardID:            -1,
-		currentClusterName: clusterName,
-	}, nil
-}
-
-// NewShardPersistence is used to create an instance of ShardManager implementation
-func NewShardPersistence(session *gocql.Session, clusterName string, logger log.Logger) p.ShardStore {
-	return &cassandraPersistence{
-		cassandraStore:     cassandraStore{session: session, logger: logger},
-		shardID:            -1,
-		currentClusterName: clusterName,
-	}
-}
-
-// NewWorkflowExecutionPersistence is used to create an instance of workflowExecutionManager implementation
-func NewWorkflowExecutionPersistence(
-	shardID int,
-	session *gocql.Session,
-	logger log.Logger,
-) (p.ExecutionStore, error) {
-	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: shardID}, nil
-}
-
-// newTaskPersistence is used to create an instance of TaskManager implementation
-func newTaskPersistence(cfg config.Cassandra, logger log.Logger) (p.TaskStore, error) {
-	cluster := cassandra.NewCassandraCluster(cfg)
-	cluster.ProtoVersion = cassandraProtoVersion
-	cluster.Consistency = gocql.LocalQuorum
-	cluster.SerialConsistency = gocql.LocalSerial
-	cluster.Timeout = defaultSessionTimeout
-	session, err := cluster.CreateSession()
-	if err != nil {
-		return nil, err
-	}
-	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: -1}, nil
-}
 
 func (d *cassandraStore) GetName() string {
 	return cassandraPersistenceName
@@ -981,175 +754,17 @@ func (d *cassandraStore) Close() {
 	}
 }
 
+// NewWorkflowExecutionPersistence is used to create an instance of workflowExecutionManager implementation
+func NewWorkflowExecutionPersistence(
+	shardID int,
+	session *gocql.Session,
+	logger log.Logger,
+) (p.ExecutionStore, error) {
+	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: shardID}, nil
+}
+
 func (d *cassandraPersistence) GetShardID() int {
 	return d.shardID
-}
-
-func (d *cassandraPersistence) CreateShard(
-	_ context.Context,
-	request *p.InternalCreateShardRequest,
-) error {
-	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
-	shardInfo := request.ShardInfo
-	markerData, markerEncoding := p.FromDataBlob(shardInfo.PendingFailoverMarkers)
-	transferPQS, transferPQSEncoding := p.FromDataBlob(shardInfo.TransferProcessingQueueStates)
-	timerPQS, timerPQSEncoding := p.FromDataBlob(shardInfo.TimerProcessingQueueStates)
-	query := d.session.Query(templateCreateShardQuery,
-		shardInfo.ShardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
-		shardInfo.ShardID,
-		shardInfo.Owner,
-		shardInfo.RangeID,
-		shardInfo.StolenSinceRenew,
-		cqlNowTimestamp,
-		shardInfo.ReplicationAckLevel,
-		shardInfo.TransferAckLevel,
-		shardInfo.TimerAckLevel,
-		shardInfo.ClusterTransferAckLevel,
-		shardInfo.ClusterTimerAckLevel,
-		transferPQS,
-		transferPQSEncoding,
-		timerPQS,
-		timerPQSEncoding,
-		shardInfo.DomainNotificationVersion,
-		shardInfo.ClusterReplicationLevel,
-		shardInfo.ReplicationDLQAckLevel,
-		markerData,
-		markerEncoding,
-		shardInfo.RangeID)
-
-	previous := make(map[string]interface{})
-	applied, err := query.MapScanCAS(previous)
-	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("CreateShard operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CreateShard operation failed. Error: %v", err),
-		}
-	}
-
-	if !applied {
-		shard := previous["shard"].(map[string]interface{})
-		return &p.ShardAlreadyExistError{
-			Msg: fmt.Sprintf("Shard already exists in executions table.  ShardId: %v, RangeId: %v",
-				shard["shard_id"], shard["range_id"]),
-		}
-	}
-
-	return nil
-}
-
-func (d *cassandraPersistence) GetShard(
-	_ context.Context,
-	request *p.InternalGetShardRequest,
-) (*p.InternalGetShardResponse, error) {
-	shardID := request.ShardID
-	query := d.session.Query(templateGetShardQuery,
-		shardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID)
-
-	result := make(map[string]interface{})
-	if err := query.MapScan(result); err != nil {
-		if err == gocql.ErrNotFound {
-			return nil, &workflow.EntityNotExistsError{
-				Message: fmt.Sprintf("Shard not found.  ShardId: %v", shardID),
-			}
-		} else if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("GetShard operation failed. Error: %v", err),
-			}
-		}
-
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetShard operation failed. Error: %v", err),
-		}
-	}
-
-	info := createShardInfo(d.currentClusterName, result["shard"].(map[string]interface{}))
-
-	return &p.InternalGetShardResponse{ShardInfo: info}, nil
-}
-
-func (d *cassandraPersistence) UpdateShard(
-	_ context.Context,
-	request *p.InternalUpdateShardRequest,
-) error {
-	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
-	shardInfo := request.ShardInfo
-	markerData, markerEncoding := p.FromDataBlob(shardInfo.PendingFailoverMarkers)
-	transferPQS, transferPQSEncoding := p.FromDataBlob(shardInfo.TransferProcessingQueueStates)
-	timerPQS, timerPQSEncoding := p.FromDataBlob(shardInfo.TimerProcessingQueueStates)
-
-	query := d.session.Query(templateUpdateShardQuery,
-		shardInfo.ShardID,
-		shardInfo.Owner,
-		shardInfo.RangeID,
-		shardInfo.StolenSinceRenew,
-		cqlNowTimestamp,
-		shardInfo.ReplicationAckLevel,
-		shardInfo.TransferAckLevel,
-		shardInfo.TimerAckLevel,
-		shardInfo.ClusterTransferAckLevel,
-		shardInfo.ClusterTimerAckLevel,
-		transferPQS,
-		transferPQSEncoding,
-		timerPQS,
-		timerPQSEncoding,
-		shardInfo.DomainNotificationVersion,
-		shardInfo.ClusterReplicationLevel,
-		shardInfo.ReplicationDLQAckLevel,
-		markerData,
-		markerEncoding,
-		shardInfo.RangeID,
-		shardInfo.ShardID,
-		rowTypeShard,
-		rowTypeShardDomainID,
-		rowTypeShardWorkflowID,
-		rowTypeShardRunID,
-		defaultVisibilityTimestamp,
-		rowTypeShardTaskID,
-		request.PreviousRangeID)
-
-	previous := make(map[string]interface{})
-	applied, err := query.MapScanCAS(previous)
-	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("UpdateShard operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateShard operation failed. Error: %v", err),
-		}
-	}
-
-	if !applied {
-		var columns []string
-		for k, v := range previous {
-			columns = append(columns, fmt.Sprintf("%s=%v", k, v))
-		}
-
-		return &p.ShardOwnershipLostError{
-			ShardID: d.shardID,
-			Msg: fmt.Sprintf("Failed to update shard.  previous_range_id: %v, columns: (%v)",
-				request.PreviousRangeID, strings.Join(columns, ",")),
-		}
-	}
-
-	return nil
 }
 
 func (d *cassandraPersistence) CreateWorkflowExecution(
@@ -2469,424 +2084,6 @@ func (d *cassandraPersistence) RangeCompleteTimerTask(
 	}
 
 	return nil
-}
-
-// From TaskManager interface
-func (d *cassandraPersistence) LeaseTaskList(
-	_ context.Context,
-	request *p.LeaseTaskListRequest,
-) (*p.LeaseTaskListResponse, error) {
-	if len(request.TaskList) == 0 {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("LeaseTaskList requires non empty task list"),
-		}
-	}
-	now := time.Now()
-	query := d.session.Query(templateGetTaskList,
-		request.DomainID,
-		request.TaskList,
-		request.TaskType,
-		rowTypeTaskList,
-		taskListTaskID,
-	)
-	var rangeID, ackLevel int64
-	var tlDB map[string]interface{}
-	err := query.Scan(&rangeID, &tlDB)
-	if err != nil {
-		if err == gocql.ErrNotFound { // First time task list is used
-			query = d.session.Query(templateInsertTaskListQuery,
-				request.DomainID,
-				request.TaskList,
-				request.TaskType,
-				rowTypeTaskList,
-				taskListTaskID,
-				initialRangeID,
-				request.DomainID,
-				request.TaskList,
-				request.TaskType,
-				0,
-				request.TaskListKind,
-				now,
-			)
-		} else if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("LeaseTaskList operation failed. TaskList: %v, TaskType: %v, Error: %v",
-					request.TaskList, request.TaskType, err),
-			}
-		} else {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("LeaseTaskList operation failed. TaskList: %v, TaskType: %v, Error: %v",
-					request.TaskList, request.TaskType, err),
-			}
-		}
-	} else {
-		// if request.RangeID is > 0, we are trying to renew an already existing
-		// lease on the task list. If request.RangeID=0, we are trying to steal
-		// the tasklist from its current owner
-		if request.RangeID > 0 && request.RangeID != rangeID {
-			return nil, &p.ConditionFailedError{
-				Msg: fmt.Sprintf("leaseTaskList:renew failed: taskList:%v, taskListType:%v, haveRangeID:%v, gotRangeID:%v",
-					request.TaskList, request.TaskType, request.RangeID, rangeID),
-			}
-		}
-		ackLevel = tlDB["ack_level"].(int64)
-		taskListKind := tlDB["kind"].(int)
-		query = d.session.Query(templateUpdateTaskListQuery,
-			rangeID+1,
-			request.DomainID,
-			&request.TaskList,
-			request.TaskType,
-			ackLevel,
-			taskListKind,
-			now,
-			request.DomainID,
-			&request.TaskList,
-			request.TaskType,
-			rowTypeTaskList,
-			taskListTaskID,
-			rangeID,
-		)
-	}
-	previous := make(map[string]interface{})
-	applied, err := query.MapScanCAS(previous)
-	if err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("LeaseTaskList operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("LeaseTaskList operation failed. Error : %v", err),
-		}
-	}
-	if !applied {
-		previousRangeID := previous["range_id"]
-		return nil, &p.ConditionFailedError{
-			Msg: fmt.Sprintf("leaseTaskList: taskList:%v, taskListType:%v, haveRangeID:%v, gotRangeID:%v",
-				request.TaskList, request.TaskType, rangeID, previousRangeID),
-		}
-	}
-	tli := &p.TaskListInfo{
-		DomainID:    request.DomainID,
-		Name:        request.TaskList,
-		TaskType:    request.TaskType,
-		RangeID:     rangeID + 1,
-		AckLevel:    ackLevel,
-		Kind:        request.TaskListKind,
-		LastUpdated: now,
-	}
-	return &p.LeaseTaskListResponse{TaskListInfo: tli}, nil
-}
-
-// From TaskManager interface
-func (d *cassandraPersistence) UpdateTaskList(
-	_ context.Context,
-	request *p.UpdateTaskListRequest,
-) (*p.UpdateTaskListResponse, error) {
-	tli := request.TaskListInfo
-
-	if tli.Kind == p.TaskListKindSticky { // if task_list is sticky, then update with TTL
-		query := d.session.Query(templateUpdateTaskListQueryWithTTL,
-			tli.DomainID,
-			&tli.Name,
-			tli.TaskType,
-			rowTypeTaskList,
-			taskListTaskID,
-			tli.RangeID,
-			tli.DomainID,
-			&tli.Name,
-			tli.TaskType,
-			tli.AckLevel,
-			tli.Kind,
-			time.Now(),
-			stickyTaskListTTL,
-		)
-		err := query.Exec()
-		if err != nil {
-			if isThrottlingError(err) {
-				return nil, &workflow.ServiceBusyError{
-					Message: fmt.Sprintf("UpdateTaskList operation failed. Error: %v", err),
-				}
-			}
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("UpdateTaskList operation failed. Error: %v", err),
-			}
-		}
-		return &p.UpdateTaskListResponse{}, nil
-	}
-
-	query := d.session.Query(templateUpdateTaskListQuery,
-		tli.RangeID,
-		tli.DomainID,
-		&tli.Name,
-		tli.TaskType,
-		tli.AckLevel,
-		tli.Kind,
-		time.Now(),
-		tli.DomainID,
-		&tli.Name,
-		tli.TaskType,
-		rowTypeTaskList,
-		taskListTaskID,
-		tli.RangeID,
-	)
-
-	previous := make(map[string]interface{})
-	applied, err := query.MapScanCAS(previous)
-	if err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("UpdateTaskList operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateTaskList operation failed. Error: %v", err),
-		}
-	}
-
-	if !applied {
-		var columns []string
-		for k, v := range previous {
-			columns = append(columns, fmt.Sprintf("%s=%v", k, v))
-		}
-
-		return nil, &p.ConditionFailedError{
-			Msg: fmt.Sprintf("Failed to update task list. name: %v, type: %v, rangeID: %v, columns: (%v)",
-				tli.Name, tli.TaskType, tli.RangeID, strings.Join(columns, ",")),
-		}
-	}
-
-	return &p.UpdateTaskListResponse{}, nil
-}
-
-func (d *cassandraPersistence) ListTaskList(
-	_ context.Context,
-	request *p.ListTaskListRequest,
-) (*p.ListTaskListResponse, error) {
-	return nil, &workflow.InternalServiceError{
-		Message: fmt.Sprintf("unsupported operation"),
-	}
-}
-
-func (d *cassandraPersistence) DeleteTaskList(
-	_ context.Context,
-	request *p.DeleteTaskListRequest,
-) error {
-	query := d.session.Query(templateDeleteTaskListQuery,
-		request.DomainID, request.TaskListName, request.TaskListType, rowTypeTaskList, taskListTaskID, request.RangeID)
-	previous := make(map[string]interface{})
-	applied, err := query.MapScanCAS(previous)
-	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("DeleteTaskList operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("DeleteTaskList operation failed. Error: %v", err),
-		}
-	}
-	if !applied {
-		return &p.ConditionFailedError{
-			Msg: fmt.Sprintf("DeleteTaskList operation failed: expected_range_id=%v but found %+v", request.RangeID, previous),
-		}
-	}
-	return nil
-}
-
-// From TaskManager interface
-func (d *cassandraPersistence) CreateTasks(
-	_ context.Context,
-	request *p.InternalCreateTasksRequest,
-) (*p.CreateTasksResponse, error) {
-	batch := d.session.NewBatch(gocql.LoggedBatch)
-	domainID := request.TaskListInfo.DomainID
-	taskList := request.TaskListInfo.Name
-	taskListType := request.TaskListInfo.TaskType
-	taskListKind := request.TaskListInfo.Kind
-	ackLevel := request.TaskListInfo.AckLevel
-	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
-
-	for _, task := range request.Tasks {
-		scheduleID := task.Data.ScheduleID
-		ttl := int64(task.Data.ScheduleToStartTimeout)
-		if ttl <= 0 {
-			batch.Query(templateCreateTaskQuery,
-				domainID,
-				taskList,
-				taskListType,
-				rowTypeTask,
-				task.TaskID,
-				domainID,
-				task.Execution.GetWorkflowId(),
-				task.Execution.GetRunId(),
-				scheduleID,
-				cqlNowTimestamp)
-		} else {
-			if ttl > maxCassandraTTL {
-				ttl = maxCassandraTTL
-			}
-			batch.Query(templateCreateTaskWithTTLQuery,
-				domainID,
-				taskList,
-				taskListType,
-				rowTypeTask,
-				task.TaskID,
-				domainID,
-				task.Execution.GetWorkflowId(),
-				task.Execution.GetRunId(),
-				scheduleID,
-				cqlNowTimestamp,
-				ttl)
-		}
-	}
-
-	// The following query is used to ensure that range_id didn't change
-	batch.Query(templateUpdateTaskListQuery,
-		request.TaskListInfo.RangeID,
-		domainID,
-		taskList,
-		taskListType,
-		ackLevel,
-		taskListKind,
-		time.Now(),
-		domainID,
-		taskList,
-		taskListType,
-		rowTypeTaskList,
-		taskListTaskID,
-		request.TaskListInfo.RangeID,
-	)
-
-	previous := make(map[string]interface{})
-	applied, _, err := d.session.MapExecuteBatchCAS(batch, previous)
-	if err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("CreateTasks operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CreateTasks operation failed. Error : %v", err),
-		}
-	}
-	if !applied {
-		rangeID := previous["range_id"]
-		return nil, &p.ConditionFailedError{
-			Msg: fmt.Sprintf("Failed to create task. TaskList: %v, taskListType: %v, rangeID: %v, db rangeID: %v",
-				taskList, taskListType, request.TaskListInfo.RangeID, rangeID),
-		}
-	}
-
-	return &p.CreateTasksResponse{}, nil
-}
-
-// From TaskManager interface
-func (d *cassandraPersistence) GetTasks(
-	_ context.Context,
-	request *p.GetTasksRequest,
-) (*p.InternalGetTasksResponse, error) {
-	if request.MaxReadLevel == nil {
-		return nil, &workflow.InternalServiceError{
-			Message: "getTasks: both readLevel and maxReadLevel MUST be specified for cassandra persistence",
-		}
-	}
-	if request.ReadLevel > *request.MaxReadLevel {
-		return &p.InternalGetTasksResponse{}, nil
-	}
-
-	// Reading tasklist tasks need to be quorum level consistent, otherwise we could loose task
-	query := d.session.Query(templateGetTasksQuery,
-		request.DomainID,
-		request.TaskList,
-		request.TaskType,
-		rowTypeTask,
-		request.ReadLevel,
-		*request.MaxReadLevel,
-	).PageSize(request.BatchSize)
-
-	iter := query.Iter()
-	if iter == nil {
-		return nil, &workflow.InternalServiceError{
-			Message: "GetTasks operation failed.  Not able to create query iterator.",
-		}
-	}
-
-	response := &p.InternalGetTasksResponse{}
-	task := make(map[string]interface{})
-PopulateTasks:
-	for iter.MapScan(task) {
-		taskID, ok := task["task_id"]
-		if !ok { // no tasks, but static column record returned
-			continue
-		}
-		t := createTaskInfo(task["task"].(map[string]interface{}))
-		t.TaskID = taskID.(int64)
-		response.Tasks = append(response.Tasks, t)
-		if len(response.Tasks) == request.BatchSize {
-			break PopulateTasks
-		}
-		task = make(map[string]interface{}) // Reinitialize map as initialized fails on unmarshalling
-	}
-
-	if err := iter.Close(); err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetTasks operation failed. Error: %v", err),
-		}
-	}
-
-	return response, nil
-}
-
-// From TaskManager interface
-func (d *cassandraPersistence) CompleteTask(
-	_ context.Context,
-	request *p.CompleteTaskRequest,
-) error {
-	tli := request.TaskList
-	query := d.session.Query(templateCompleteTaskQuery,
-		tli.DomainID,
-		tli.Name,
-		tli.TaskType,
-		rowTypeTask,
-		request.TaskID)
-
-	err := query.Exec()
-	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("CompleteTask operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CompleteTask operation failed. Error: %v", err),
-		}
-	}
-
-	return nil
-}
-
-// CompleteTasksLessThan deletes all tasks less than or equal to the given task id. This API ignores the
-// Limit request parameter i.e. either all tasks leq the task_id will be deleted or an error will
-// be returned to the caller
-func (d *cassandraPersistence) CompleteTasksLessThan(
-	_ context.Context,
-	request *p.CompleteTasksLessThanRequest,
-) (int, error) {
-	query := d.session.Query(templateCompleteTasksLessThanQuery,
-		request.DomainID, request.TaskListName, request.TaskType, rowTypeTask, request.TaskID)
-	err := query.Exec()
-	if err != nil {
-		if isThrottlingError(err) {
-			return 0, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("CompleteTasksLessThan operation failed. Error: %v", err),
-			}
-		}
-		return 0, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CompleteTasksLessThan operation failed. Error: %v", err),
-		}
-	}
-	return p.UnknownNumRowsAffected, nil
 }
 
 func (d *cassandraPersistence) GetTimerIndexTasks(

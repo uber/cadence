@@ -126,13 +126,14 @@ func (mr *MockMutableStateMockRecorder) AddActivityTaskFailedEvent(arg0, arg1, a
 }
 
 // AddActivityTaskScheduledEvent mocks base method
-func (m *MockMutableState) AddActivityTaskScheduledEvent(arg0 int64, arg1 *shared.ScheduleActivityTaskDecisionAttributes) (*shared.HistoryEvent, *persistence.ActivityInfo, error) {
+func (m *MockMutableState) AddActivityTaskScheduledEvent(arg0 int64, arg1 *shared.ScheduleActivityTaskDecisionAttributes) (*shared.HistoryEvent, *persistence.ActivityInfo, *shared.ActivityLocalDispatchInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddActivityTaskScheduledEvent", arg0, arg1)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
 	ret1, _ := ret[1].(*persistence.ActivityInfo)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret2, _ := ret[2].(*shared.ActivityLocalDispatchInfo)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
 }
 
 // AddActivityTaskScheduledEvent indicates an expected call of AddActivityTaskScheduledEvent

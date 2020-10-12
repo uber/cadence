@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
@@ -64,6 +65,7 @@ func (s *domainReplicationTaskExecutorSuite) SetupTest() {
 	logger := loggerimpl.NewLogger(zapLogger)
 	s.domainReplicator = NewReplicationTaskExecutor(
 		s.MetadataManager,
+		clock.NewRealTimeSource(),
 		logger,
 	).(*domainReplicationTaskExecutorImpl)
 }

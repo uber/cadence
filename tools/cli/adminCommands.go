@@ -402,7 +402,7 @@ func AdminDescribeShard(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 	session := connectToCassandra(c)
-	shardStore := cassp.NewShardPersistence(session, "current-cluster", loggerimpl.NewNopLogger())
+	shardStore := cassp.NewShardPersistenceFromSession(session, "current-cluster", loggerimpl.NewNopLogger())
 	shardManager := persistence.NewShardManager(shardStore)
 
 	getShardReq := &persistence.GetShardRequest{ShardID: sid}
@@ -422,7 +422,7 @@ func AdminSetShardRangeID(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 	session := connectToCassandra(c)
-	shardStore := cassp.NewShardPersistence(session, "current-cluster", loggerimpl.NewNopLogger())
+	shardStore := cassp.NewShardPersistenceFromSession(session, "current-cluster", loggerimpl.NewNopLogger())
 	shardManager := persistence.NewShardManager(shardStore)
 
 	getShardResp, err := shardManager.GetShard(ctx, &persistence.GetShardRequest{ShardID: sid})
