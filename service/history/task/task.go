@@ -318,6 +318,12 @@ func (t *taskBase) HandleErr(
 		return err
 	}
 
+	// this is a transient error during graceful failover
+	if err == ErrTaskPendingActive {
+		t.scope.IncCounter(metrics.TaskPendingActiveCounterPerDomain)
+		return err
+	}
+
 	if err == ErrTaskDiscarded {
 		t.scope.IncCounter(metrics.TaskDiscardedPerDomain)
 		err = nil
