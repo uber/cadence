@@ -22,6 +22,7 @@ package persistence
 
 import (
 	"context"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types/mapper/thrift"
@@ -173,7 +174,7 @@ func (m *metadataManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalD
 	if c == nil {
 		return InternalDomainConfig{}, nil
 	}
-	if c.BadBinaries == nil {
+	if c.BadBinaries.Binaries == nil {
 		c.BadBinaries.Binaries = map[string]*shared.BadBinaryInfo{}
 	}
 	return InternalDomainConfig{
