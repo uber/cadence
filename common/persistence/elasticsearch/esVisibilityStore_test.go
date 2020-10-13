@@ -73,7 +73,7 @@ var (
 	testRunID        = "1601da05-4db9-4eeb-89e4-da99481bdfc9"
 	testCloseStatus  = 1
 
-	testRequest = &p.ListWorkflowExecutionsRequest{
+	testRequest = &p.InternalListWorkflowExecutionsRequest{
 		DomainUUID:        testDomainID,
 		Domain:            testDomain,
 		PageSize:          testPageSize,
@@ -283,9 +283,9 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
 		return true
 	})).Return(testSearchResult, nil).Once()
 
-	request := &p.ListWorkflowExecutionsByTypeRequest{
-		ListWorkflowExecutionsRequest: *testRequest,
-		WorkflowTypeName:              testWorkflowType,
+	request := &p.InternalListWorkflowExecutionsByTypeRequest{
+		InternalListWorkflowExecutionsRequest: *testRequest,
+		WorkflowTypeName:                      testWorkflowType,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -310,9 +310,9 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
 		return true
 	})).Return(testSearchResult, nil).Once()
 
-	request := &p.ListWorkflowExecutionsByTypeRequest{
-		ListWorkflowExecutionsRequest: *testRequest,
-		WorkflowTypeName:              testWorkflowType,
+	request := &p.InternalListWorkflowExecutionsByTypeRequest{
+		InternalListWorkflowExecutionsRequest: *testRequest,
+		WorkflowTypeName:                      testWorkflowType,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -337,9 +337,9 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByWorkflowID() {
 		return true
 	})).Return(testSearchResult, nil).Once()
 
-	request := &p.ListWorkflowExecutionsByWorkflowIDRequest{
-		ListWorkflowExecutionsRequest: *testRequest,
-		WorkflowID:                    testWorkflowID,
+	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{
+		InternalListWorkflowExecutionsRequest: *testRequest,
+		WorkflowID:                            testWorkflowID,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -364,9 +364,9 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByWorkflowID() {
 		return true
 	})).Return(testSearchResult, nil).Once()
 
-	request := &p.ListWorkflowExecutionsByWorkflowIDRequest{
-		ListWorkflowExecutionsRequest: *testRequest,
-		WorkflowID:                    testWorkflowID,
+	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{
+		InternalListWorkflowExecutionsRequest: *testRequest,
+		WorkflowID:                            testWorkflowID,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -391,9 +391,9 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
 		return true
 	})).Return(testSearchResult, nil).Once()
 
-	request := &p.ListClosedWorkflowExecutionsByStatusRequest{
-		ListWorkflowExecutionsRequest: *testRequest,
-		Status:                        workflow.WorkflowExecutionCloseStatus(testCloseStatus),
+	request := &p.InternalListClosedWorkflowExecutionsByStatusRequest{
+		InternalListWorkflowExecutionsRequest: *testRequest,
+		Status:                                workflow.WorkflowExecutionCloseStatus(testCloseStatus),
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -418,7 +418,7 @@ func (s *ESVisibilitySuite) TestGetClosedWorkflowExecution() {
 		s.True(strings.Contains(fmt.Sprintf("%v", source), filterByRunID))
 		return true
 	})).Return(testSearchResult, nil).Once()
-	request := &p.GetClosedWorkflowExecutionRequest{
+	request := &p.InternalGetClosedWorkflowExecutionRequest{
 		DomainUUID: testDomainID,
 		Execution: workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(testWorkflowID),
@@ -448,7 +448,7 @@ func (s *ESVisibilitySuite) TestGetClosedWorkflowExecution_NoRunID() {
 		s.False(strings.Contains(fmt.Sprintf("%v", source), filterByRunID))
 		return true
 	})).Return(testSearchResult, nil).Once()
-	request := &p.GetClosedWorkflowExecutionRequest{
+	request := &p.InternalGetClosedWorkflowExecutionRequest{
 		DomainUUID: testDomainID,
 		Execution: workflow.WorkflowExecution{
 			WorkflowId: common.StringPtr(testWorkflowID),
@@ -504,7 +504,7 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 		Sorter:   []elastic.Sorter{elastic.NewFieldSort(es.StartTime).Desc(), tieBreakerSorter},
 	}
 	s.mockESClient.On("Search", mock.Anything, params).Return(nil, nil).Once()
-	_, err := s.visibilityStore.getSearchResult(request, token, nil, isOpen)
+	_, err := s.visibilityStore.getSearchResult(context.Background(), request, token, nil, isOpen)
 	s.NoError(err)
 
 	// test request latestTime overflow
@@ -519,7 +519,7 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 		Sorter:   []elastic.Sorter{elastic.NewFieldSort(es.StartTime).Desc(), tieBreakerSorter},
 	}
 	s.mockESClient.On("Search", mock.Anything, param1).Return(nil, nil).Once()
-	_, err = s.visibilityStore.getSearchResult(request, token, nil, isOpen)
+	_, err = s.visibilityStore.getSearchResult(context.Background(), request, token, nil, isOpen)
 	s.NoError(err)
 	request.LatestStartTime = testLatestTime // revert
 
@@ -530,7 +530,7 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 	params.Query = boolQuery
 	params.Sorter = []elastic.Sorter{elastic.NewFieldSort(es.CloseTime).Desc(), tieBreakerSorter}
 	s.mockESClient.On("Search", mock.Anything, params).Return(nil, nil).Once()
-	_, err = s.visibilityStore.getSearchResult(request, token, nil, isOpen)
+	_, err = s.visibilityStore.getSearchResult(context.Background(), request, token, nil, isOpen)
 	s.NoError(err)
 
 	// test for additional matchQuery
@@ -538,7 +538,7 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 	boolQuery = elastic.NewBoolQuery().Must(matchDomainQuery).Filter(rangeQuery).Must(matchQuery).Must(existClosedStatusQuery)
 	params.Query = boolQuery
 	s.mockESClient.On("Search", mock.Anything, params).Return(nil, nil).Once()
-	_, err = s.visibilityStore.getSearchResult(request, token, matchQuery, isOpen)
+	_, err = s.visibilityStore.getSearchResult(context.Background(), request, token, matchQuery, isOpen)
 	s.NoError(err)
 
 	// test for search after
@@ -550,7 +550,7 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 	params.From = 0
 	params.SearchAfter = []interface{}{token.SortValue, token.TieBreaker}
 	s.mockESClient.On("Search", mock.Anything, params).Return(nil, nil).Once()
-	_, err = s.visibilityStore.getSearchResult(request, token, matchQuery, isOpen)
+	_, err = s.visibilityStore.getSearchResult(context.Background(), request, token, matchQuery, isOpen)
 	s.NoError(err)
 }
 

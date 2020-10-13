@@ -24,6 +24,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/uber/cadence/common/types/mapper/thrift"
+
 	"github.com/gocql/gocql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -81,8 +83,8 @@ const (
 		`WHERE id = ?`
 
 	templateCreateDomainByNameQueryWithinBatchV2 = `INSERT INTO domains_by_name_v2 (` +
-		`domains_partition, name, domain, config, replication_config, is_global_domain, config_version, failover_version, failover_notification_version, previous_failover_version, failover_end_time, notification_version) ` +
-		`VALUES(?, ?, ` + templateDomainInfoType + `, ` + templateDomainConfigType + `, ` + templateDomainReplicationConfigType + `, ?, ?, ?, ?, ?, ?, ?) IF NOT EXISTS`
+		`domains_partition, name, domain, config, replication_config, is_global_domain, config_version, failover_version, failover_notification_version, previous_failover_version, failover_end_time, last_updated_time, notification_version) ` +
+		`VALUES(?, ?, ` + templateDomainInfoType + `, ` + templateDomainConfigType + `, ` + templateDomainReplicationConfigType + `, ?, ?, ?, ?, ?, ?, ?, ?) IF NOT EXISTS`
 
 	templateGetDomainByNameQueryV2 = `SELECT domain.id, domain.name, domain.status, domain.description, ` +
 		`domain.owner_email, domain.data, config.retention, config.emit_metric, ` +
@@ -97,6 +99,7 @@ const (
 		`failover_notification_version, ` +
 		`previous_failover_version, ` +
 		`failover_end_time, ` +
+		`last_updated_time, ` +
 		`notification_version ` +
 		`FROM domains_by_name_v2 ` +
 		`WHERE domains_partition = ? ` +
@@ -111,6 +114,7 @@ const (
 		`failover_notification_version = ? , ` +
 		`previous_failover_version = ? , ` +
 		`failover_end_time = ?,` +
+		`last_updated_time = ?,` +
 		`notification_version = ? ` +
 		`WHERE domains_partition = ? ` +
 		`and name = ?`
@@ -152,6 +156,7 @@ type (
 	cassandraMetadataPersistenceV2 struct {
 		cassandraStore
 		currentClusterName string
+		serializer         p.PayloadSerializer
 	}
 )
 
@@ -171,6 +176,7 @@ func newMetadataPersistenceV2(cfg config.Cassandra, currentClusterName string, l
 	return &cassandraMetadataPersistenceV2{
 		cassandraStore:     cassandraStore{session: session, logger: logger},
 		currentClusterName: currentClusterName,
+		serializer:         p.NewPayloadSerializer(),
 	}, nil
 }
 
@@ -215,6 +221,12 @@ func (m *cassandraMetadataPersistenceV2) CreateDomainInV2Table(
 	if err != nil {
 		return nil, err
 	}
+	serializedBadBinaries, err := m.serializer.SerializeBadBinaries(
+		thrift.FromBadBinaries(&request.Config.BadBinaries),
+		common.EncodingTypeThriftRW)
+	if err != nil {
+		return nil, err
+	}
 
 	batch := m.session.NewBatch(gocql.LoggedBatch)
 	batch.Query(templateCreateDomainByNameQueryWithinBatchV2,
@@ -234,8 +246,8 @@ func (m *cassandraMetadataPersistenceV2) CreateDomainInV2Table(
 		request.Config.HistoryArchivalURI,
 		request.Config.VisibilityArchivalStatus,
 		request.Config.VisibilityArchivalURI,
-		request.Config.BadBinaries.Data,
-		string(request.Config.BadBinaries.GetEncoding()),
+		serializedBadBinaries.Data,
+		string(serializedBadBinaries.GetEncoding()),
 		request.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(request.ReplicationConfig.Clusters),
 		request.IsGlobalDomain,
@@ -244,6 +256,7 @@ func (m *cassandraMetadataPersistenceV2) CreateDomainInV2Table(
 		p.InitialFailoverNotificationVersion,
 		common.InitialPreviousFailoverVersion,
 		emptyFailoverEndTime,
+		request.LastUpdatedTime,
 		metadata.NotificationVersion,
 	)
 	m.updateMetadataBatch(batch, metadata.NotificationVersion)
@@ -292,6 +305,12 @@ func (m *cassandraMetadataPersistenceV2) UpdateDomain(
 	if request.FailoverEndTime != nil {
 		failoverEndTime = *request.FailoverEndTime
 	}
+	serializedBadBinaries, err := m.serializer.SerializeBadBinaries(
+		thrift.FromBadBinaries(&request.Config.BadBinaries),
+		common.EncodingTypeThriftRW)
+	if err != nil {
+		return err
+	}
 
 	batch := m.session.NewBatch(gocql.LoggedBatch)
 	batch.Query(templateUpdateDomainByNameQueryWithinBatchV2,
@@ -309,8 +328,8 @@ func (m *cassandraMetadataPersistenceV2) UpdateDomain(
 		request.Config.HistoryArchivalURI,
 		request.Config.VisibilityArchivalStatus,
 		request.Config.VisibilityArchivalURI,
-		request.Config.BadBinaries.Data,
-		string(request.Config.BadBinaries.GetEncoding()),
+		serializedBadBinaries.Data,
+		string(serializedBadBinaries.GetEncoding()),
 		request.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(request.ReplicationConfig.Clusters),
 		request.ConfigVersion,
@@ -318,6 +337,7 @@ func (m *cassandraMetadataPersistenceV2) UpdateDomain(
 		request.FailoverNotificationVersion,
 		request.PreviousFailoverVersion,
 		failoverEndTime,
+		request.LastUpdatedTime,
 		request.NotificationVersion,
 		constDomainPartition,
 		request.Info.Name,
@@ -363,6 +383,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(
 	var failoverEndTime int64
 	var configVersion int64
 	var isGlobalDomain bool
+	var lastUpdatedTime int64
 
 	if len(request.ID) > 0 && len(request.Name) > 0 {
 		return nil, &workflow.BadRequestError{
@@ -427,6 +448,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(
 		&failoverNotificationVersion,
 		&previousFailoverVersion,
 		&failoverEndTime,
+		&lastUpdatedTime,
 		&notificationVersion,
 	)
 
@@ -437,7 +459,12 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(
 	if info.Data == nil {
 		info.Data = map[string]string{}
 	}
-	config.BadBinaries = p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding))
+	badBinaries, err := m.serializer.DeserializeBadBinaries(p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding)))
+	if err != nil {
+		return nil, handleError(request.Name, request.ID, err)
+	}
+
+	config.BadBinaries = *thrift.ToBadBinaries(badBinaries)
 	replicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, replicationConfig.ActiveClusterName)
 	replicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 	replicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)
@@ -458,6 +485,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(
 		FailoverNotificationVersion: failoverNotificationVersion,
 		PreviousFailoverVersion:     previousFailoverVersion,
 		FailoverEndTime:             responseFailoverEndTime,
+		LastUpdatedTime:             lastUpdatedTime,
 		NotificationVersion:         notificationVersion,
 	}, nil
 }
@@ -520,7 +548,11 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(
 			if domain.Info.Data == nil {
 				domain.Info.Data = map[string]string{}
 			}
-			domain.Config.BadBinaries = p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding))
+			badBinaries, err := m.serializer.DeserializeBadBinaries(p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding)))
+			if err != nil {
+				return nil, err
+			}
+			domain.Config.BadBinaries = *thrift.ToBadBinaries(badBinaries)
 			badBinariesData = []byte("")
 			badBinariesDataEncoding = ""
 			domain.ReplicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, domain.ReplicationConfig.ActiveClusterName)
@@ -575,7 +607,7 @@ func (m *cassandraMetadataPersistenceV2) DeleteDomainByName(
 ) error {
 	var ID string
 	query := m.session.Query(templateGetDomainByNameQueryV2, constDomainPartition, request.Name)
-	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		if err == gocql.ErrNotFound {
 			return nil

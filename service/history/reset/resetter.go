@@ -149,6 +149,7 @@ func (r *workflowResetterImpl) ResetWorkflow(
 	defer resetWorkflow.GetReleaseFn()(retError)
 
 	return r.persistToDB(
+		ctx,
 		currentWorkflowTerminated,
 		currentWorkflow,
 		resetWorkflow,
@@ -258,6 +259,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 }
 
 func (r *workflowResetterImpl) persistToDB(
+	ctx context.Context,
 	currentWorkflowTerminated bool,
 	currentWorkflow execution.Workflow,
 	resetWorkflow execution.Workflow,
@@ -265,6 +267,7 @@ func (r *workflowResetterImpl) persistToDB(
 
 	if currentWorkflowTerminated {
 		return currentWorkflow.GetContext().UpdateWorkflowExecutionWithNewAsActive(
+			ctx,
 			r.shard.GetTimeSource().Now(),
 			resetWorkflow.GetContext(),
 			resetWorkflow.GetMutableState(),
@@ -291,12 +294,13 @@ func (r *workflowResetterImpl) persistToDB(
 			Message: "there should be EXACTLY one batch of events for reset",
 		}
 	}
-	resetHistorySize, err := resetWorkflow.GetContext().PersistNonFirstWorkflowEvents(resetWorkflowEventsSeq[0])
+	resetHistorySize, err := resetWorkflow.GetContext().PersistNonFirstWorkflowEvents(ctx, resetWorkflowEventsSeq[0])
 	if err != nil {
 		return err
 	}
 
 	return resetWorkflow.GetContext().CreateWorkflowExecution(
+		ctx,
 		resetWorkflowSnapshot,
 		resetHistorySize,
 		now,
@@ -319,6 +323,7 @@ func (r *workflowResetterImpl) replayResetWorkflow(
 ) (execution.Workflow, error) {
 
 	resetBranchToken, err := r.forkAndGenerateBranchToken(
+		ctx,
 		domainID,
 		workflowID,
 		baseBranchToken,
@@ -406,6 +411,7 @@ func (r *workflowResetterImpl) failInflightActivity(
 }
 
 func (r *workflowResetterImpl) forkAndGenerateBranchToken(
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 	forkBranchToken []byte,
@@ -414,7 +420,7 @@ func (r *workflowResetterImpl) forkAndGenerateBranchToken(
 ) ([]byte, error) {
 	// fork a new history branch
 	shardID := r.shard.GetShardID()
-	resp, err := r.historyV2Mgr.ForkHistoryBranch(context.TODO(), &persistence.ForkHistoryBranchRequest{
+	resp, err := r.historyV2Mgr.ForkHistoryBranch(ctx, &persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: forkBranchToken,
 		ForkNodeID:      forkNodeID,
 		Info:            persistence.BuildHistoryGarbageCleanupInfo(domainID, workflowID, resetRunID),
@@ -461,6 +467,7 @@ func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 
 	// first special handling the remaining events for base workflow
 	if nextRunID, err = r.reapplyWorkflowEvents(
+		ctx,
 		resetMutableState,
 		baseRebuildNextEventID,
 		baseNextEventID,
@@ -483,7 +490,7 @@ func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 		}
 		defer func() { release(retError) }()
 
-		mutableState, err := context.LoadWorkflowExecution()
+		mutableState, err := context.LoadWorkflowExecution(ctx)
 		if err != nil {
 			// no matter what error happen, we need to retry
 			return 0, nil, err
@@ -505,6 +512,7 @@ func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 		}
 
 		if nextRunID, err = r.reapplyWorkflowEvents(
+			ctx,
 			resetMutableState,
 			common.FirstEventID,
 			nextWorkflowNextEventID,
@@ -517,6 +525,7 @@ func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
 }
 
 func (r *workflowResetterImpl) reapplyWorkflowEvents(
+	ctx context.Context,
 	mutableState execution.MutableState,
 	firstEventID int64,
 	nextEventID int64,
@@ -528,6 +537,7 @@ func (r *workflowResetterImpl) reapplyWorkflowEvents(
 	//  after the above change, this API do not have to return the continue as new run ID
 
 	iter := collection.NewPagingIterator(r.getPaginationFn(
+		ctx,
 		firstEventID,
 		nextEventID,
 		branchToken,
@@ -580,6 +590,7 @@ func (r *workflowResetterImpl) reapplyEvents(
 }
 
 func (r *workflowResetterImpl) getPaginationFn(
+	ctx context.Context,
 	firstEventID int64,
 	nextEventID int64,
 	branchToken []byte,
@@ -588,7 +599,7 @@ func (r *workflowResetterImpl) getPaginationFn(
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 
 		_, historyBatches, token, _, err := persistence.PaginateHistory(
-			context.TODO(),
+			ctx,
 			r.historyV2Mgr,
 			true,
 			branchToken,

@@ -2052,11 +2052,11 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskFailedEvent() error {
 func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	decisionCompletedEventID int64,
 	attributes *workflow.ScheduleActivityTaskDecisionAttributes,
-) (*workflow.HistoryEvent, *persistence.ActivityInfo, error) {
+) (*workflow.HistoryEvent, *persistence.ActivityInfo, *workflow.ActivityLocalDispatchInfo, error) {
 
 	opTag := tag.WorkflowActionActivityTaskScheduled
 	if err := e.checkMutability(opTag); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	_, ok := e.GetActivityByActivityID(attributes.GetActivityId())
@@ -2064,7 +2064,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction)
-		return nil, nil, e.createCallerError(opTag)
+		return nil, nil, nil, e.createCallerError(opTag)
 	}
 
 	event := e.hBuilder.AddActivityTaskScheduledEvent(decisionCompletedEventID, attributes)
@@ -2079,14 +2079,19 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	)
 
 	ai, err := e.ReplicateActivityTaskScheduledEvent(decisionCompletedEventID, event)
+	if e.config.EnableActivityLocalDispatchByDomain(e.domainEntry.GetInfo().Name) &&
+		common.BoolDefault(attributes.RequestLocalDispatch) {
+		return event, ai, &workflow.ActivityLocalDispatchInfo{ActivityId: common.StringPtr(ai.ActivityID)}, nil
+	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateActivityTransferTasks(
 		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return event, ai, err
+
+	return event, ai, nil, err
 }
 
 func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(

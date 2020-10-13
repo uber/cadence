@@ -482,7 +482,7 @@ func (t *timerQueueProcessorBase) getTimerTasks(
 	var response *persistence.GetTimerIndexTasksResponse
 	retryCount := t.shard.GetConfig().TimerProcessorGetFailureRetryCount()
 	for attempt := 0; attempt < retryCount; attempt++ {
-		response, err = t.shard.GetExecutionManager().GetTimerIndexTasks(context.TODO(), request)
+		response, err = t.shard.GetExecutionManager().GetTimerIndexTasks(context.Background(), request)
 		if err == nil {
 			return response.Timers, response.NextPageToken, nil
 		}

@@ -374,7 +374,7 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 		BeginNodeID: common.Int64Ptr(beginNodeID),
 	})
 
-	rsp, err := m.GetHistoryTree(ctx, &p.GetHistoryTreeRequest{
+	rsp, err := m.GetHistoryTree(ctx, &p.InternalGetHistoryTreeRequest{
 		TreeID:  treeID,
 		ShardID: common.IntPtr(request.ShardID),
 	})
@@ -449,8 +449,8 @@ func (m *sqlHistoryV2Manager) GetAllHistoryTreeBranches(
 // GetHistoryTree returns all branch information of a tree
 func (m *sqlHistoryV2Manager) GetHistoryTree(
 	ctx context.Context,
-	request *p.GetHistoryTreeRequest,
-) (*p.GetHistoryTreeResponse, error) {
+	request *p.InternalGetHistoryTreeRequest,
+) (*p.InternalGetHistoryTreeResponse, error) {
 
 	treeID := sqlplugin.MustParseUUID(request.TreeID)
 	branches := make([]*shared.HistoryBranch, 0)
@@ -461,7 +461,7 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(
 	}
 	rows, err := m.db.SelectFromHistoryTree(ctx, treeFilter)
 	if err == sql.ErrNoRows || (err == nil && len(rows) == 0) {
-		return &p.GetHistoryTreeResponse{}, nil
+		return &p.InternalGetHistoryTreeResponse{}, nil
 	}
 	for _, row := range rows {
 		treeInfo, err := m.parser.HistoryTreeInfoFromBlob(row.Data, row.DataEncoding)
@@ -476,7 +476,7 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(
 		branches = append(branches, br)
 	}
 
-	return &p.GetHistoryTreeResponse{
+	return &p.InternalGetHistoryTreeResponse{
 		Branches: branches,
 	}, nil
 }

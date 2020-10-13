@@ -47,8 +47,12 @@ func NewConcreteExecutionExists(
 }
 
 func (c *concreteExecutionExists) Check(
+	ctx context.Context,
 	execution interface{},
 ) CheckResult {
+	if checkResult := validateCheckContext(ctx, c.Name()); checkResult != nil {
+		return *checkResult
+	}
 
 	currentExecution, ok := execution.(*entity.CurrentExecution)
 	if !ok {
@@ -62,13 +66,13 @@ func (c *concreteExecutionExists) Check(
 	if len(currentExecution.CurrentRunID) == 0 {
 		// set the current run id
 		var runIDCheckResult *CheckResult
-		currentExecution, runIDCheckResult = c.validateCurrentRunID(currentExecution)
+		currentExecution, runIDCheckResult = c.validateCurrentRunID(ctx, currentExecution)
 		if runIDCheckResult != nil {
 			return *runIDCheckResult
 		}
 	}
 
-	concreteExecResp, concreteExecErr := c.pr.IsWorkflowExecutionExists(context.TODO(), &persistence.IsWorkflowExecutionExistsRequest{
+	concreteExecResp, concreteExecErr := c.pr.IsWorkflowExecutionExists(ctx, &persistence.IsWorkflowExecutionExistsRequest{
 		DomainID:   currentExecution.DomainID,
 		WorkflowID: currentExecution.WorkflowID,
 		RunID:      currentExecution.CurrentRunID,
@@ -83,7 +87,7 @@ func (c *concreteExecutionExists) Check(
 	}
 	if !concreteExecResp.Exists {
 		//verify if the current execution exists
-		_, checkResult := c.validateCurrentRunID(currentExecution)
+		_, checkResult := c.validateCurrentRunID(ctx, currentExecution)
 		if checkResult != nil {
 			return *checkResult
 		}
@@ -102,14 +106,18 @@ func (c *concreteExecutionExists) Check(
 }
 
 func (c *concreteExecutionExists) Fix(
+	ctx context.Context,
 	execution interface{},
 ) FixResult {
+	if fixResult := validateFixContext(ctx, c.Name()); fixResult != nil {
+		return *fixResult
+	}
 
 	currentExecution, _ := execution.(*entity.CurrentExecution)
 	var runIDCheckResult *CheckResult
 	if len(currentExecution.CurrentRunID) == 0 {
 		// this is to set the current run ID prior to the check and fix operations
-		currentExecution, runIDCheckResult = c.validateCurrentRunID(currentExecution)
+		currentExecution, runIDCheckResult = c.validateCurrentRunID(ctx, currentExecution)
 		if runIDCheckResult != nil {
 			return FixResult{
 				FixResultType: FixResultTypeSkipped,
@@ -118,17 +126,18 @@ func (c *concreteExecutionExists) Fix(
 			}
 		}
 	}
-	fixResult, checkResult := checkBeforeFix(c, currentExecution)
+	fixResult, checkResult := checkBeforeFix(ctx, c, currentExecution)
 	if fixResult != nil {
 		return *fixResult
 	}
-	if err := c.pr.DeleteCurrentWorkflowExecution(context.TODO(), &persistence.DeleteCurrentWorkflowExecutionRequest{
+	if err := c.pr.DeleteCurrentWorkflowExecution(ctx, &persistence.DeleteCurrentWorkflowExecutionRequest{
 		DomainID:   currentExecution.DomainID,
 		WorkflowID: currentExecution.WorkflowID,
 		RunID:      currentExecution.CurrentRunID,
 	}); err != nil {
 		return FixResult{
 			FixResultType: FixResultTypeFailed,
+			InvariantName: c.Name(),
 			Info:          "failed to delete current workflow execution",
 			InfoDetails:   err.Error(),
 		}
@@ -145,10 +154,11 @@ func (c *concreteExecutionExists) Name() Name {
 }
 
 func (c *concreteExecutionExists) validateCurrentRunID(
+	ctx context.Context,
 	currentExecution *entity.CurrentExecution,
 ) (*entity.CurrentExecution, *CheckResult) {
 
-	resp, err := c.pr.GetCurrentExecution(context.TODO(), &persistence.GetCurrentExecutionRequest{
+	resp, err := c.pr.GetCurrentExecution(ctx, &persistence.GetCurrentExecutionRequest{
 		DomainID:   currentExecution.DomainID,
 		WorkflowID: currentExecution.WorkflowID,
 	})

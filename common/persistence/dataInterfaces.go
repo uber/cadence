@@ -1220,6 +1220,7 @@ type (
 		IsGlobalDomain    bool
 		ConfigVersion     int64
 		FailoverVersion   int64
+		LastUpdatedTime   int64
 	}
 
 	// CreateDomainResponse is the response for CreateDomain
@@ -1244,6 +1245,7 @@ type (
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
+		LastUpdatedTime             int64
 		NotificationVersion         int64
 	}
 
@@ -1257,6 +1259,7 @@ type (
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
+		LastUpdatedTime             int64
 		NotificationVersion         int64
 	}
 
@@ -1579,15 +1582,6 @@ type (
 		CreateTasks(ctx context.Context, request *CreateTasksRequest) (*CreateTasksResponse, error)
 		GetTasks(ctx context.Context, request *GetTasksRequest) (*GetTasksResponse, error)
 		CompleteTask(ctx context.Context, request *CompleteTaskRequest) error
-		// CompleteTasksLessThan completes tasks less than or equal to the given task id
-		// This API takes a limit parameter which specifies the count of maxRows that
-		// can be deleted. This parameter may be ignored by the underlying storage, but
-		// its mandatory to specify it. On success this method returns the number of rows
-		// actually deleted. If the underlying storage doesn't support "limit", all rows
-		// less than or equal to taskID will be deleted.
-		// On success, this method returns:
-		//  - number of rows actually deleted, if limit is honored
-		//  - UnknownNumRowsDeleted, when all rows below value are deleted
 		CompleteTasksLessThan(ctx context.Context, request *CompleteTasksLessThanRequest) (int, error)
 	}
 
@@ -1631,6 +1625,29 @@ type (
 		DeleteDomainByName(ctx context.Context, request *DeleteDomainByNameRequest) error
 		ListDomains(ctx context.Context, request *ListDomainsRequest) (*ListDomainsResponse, error)
 		GetMetadata(ctx context.Context) (*GetMetadataResponse, error)
+	}
+
+	// QueueManager is used to manage queue store
+	QueueManager interface {
+		Closeable
+		EnqueueMessage(ctx context.Context, messagePayload []byte) error
+		ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) ([]*QueueMessage, error)
+		DeleteMessagesBefore(ctx context.Context, messageID int64) error
+		UpdateAckLevel(ctx context.Context, messageID int64, clusterName string) error
+		GetAckLevels(ctx context.Context) (map[string]int64, error)
+		EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) (int64, error)
+		ReadMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*QueueMessage, []byte, error)
+		DeleteMessageFromDLQ(ctx context.Context, messageID int64) error
+		RangeDeleteMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64) error
+		UpdateDLQAckLevel(ctx context.Context, messageID int64, clusterName string) error
+		GetDLQAckLevels(ctx context.Context) (map[string]int64, error)
+	}
+
+	// QueueMessage is the message that stores in the queue
+	QueueMessage struct {
+		ID        int64     `json:"message_id"`
+		QueueType QueueType `json:"queue_type"`
+		Payload   []byte    `json:"message_payload"`
 	}
 )
 

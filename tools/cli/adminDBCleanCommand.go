@@ -146,5 +146,8 @@ func fixExecution(
 		ivs = append(ivs, fn(pr))
 	}
 
-	return invariant.NewInvariantManager(ivs).RunFixes(execution.Execution)
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	return invariant.NewInvariantManager(ivs).RunFixes(ctx, execution.Execution)
 }

@@ -139,11 +139,12 @@ func (s *workflowResetterSuite) TestPersistToDB_CurrentTerminated() {
 
 	currentContext.EXPECT().UpdateWorkflowExecutionWithNewAsActive(
 		gomock.Any(),
+		gomock.Any(),
 		resetContext,
 		resetMutableState,
 	).Return(nil).Times(1)
 
-	err := s.workflowResetter.persistToDB(currentWorkflowTerminated, currentWorkflow, resetWorkflow)
+	err := s.workflowResetter.persistToDB(context.Background(), currentWorkflowTerminated, currentWorkflow, resetWorkflow)
 	s.NoError(err)
 	// persistToDB function is not charged of releasing locks
 	s.False(currentReleaseCalled)
@@ -192,8 +193,9 @@ func (s *workflowResetterSuite) TestPersistToDB_CurrentNotTerminated() {
 		gomock.Any(),
 		execution.TransactionPolicyActive,
 	).Return(resetSnapshot, resetEventsSeq, nil).Times(1)
-	resetContext.EXPECT().PersistNonFirstWorkflowEvents(resetEventsSeq[0]).Return(resetEventsSize, nil).Times(1)
+	resetContext.EXPECT().PersistNonFirstWorkflowEvents(gomock.Any(), resetEventsSeq[0]).Return(resetEventsSize, nil).Times(1)
 	resetContext.EXPECT().CreateWorkflowExecution(
+		gomock.Any(),
 		resetSnapshot,
 		resetEventsSize,
 		gomock.Any(),
@@ -202,7 +204,7 @@ func (s *workflowResetterSuite) TestPersistToDB_CurrentNotTerminated() {
 		currentLastWriteVersion,
 	).Return(nil).Times(1)
 
-	err := s.workflowResetter.persistToDB(currentWorkflowTerminated, currentWorkflow, resetWorkflow)
+	err := s.workflowResetter.persistToDB(context.Background(), currentWorkflowTerminated, currentWorkflow, resetWorkflow)
 	s.NoError(err)
 	// persistToDB function is not charged of releasing locks
 	s.False(currentReleaseCalled)
@@ -314,7 +316,7 @@ func (s *workflowResetterSuite) TestGenerateBranchToken() {
 	}).Return(&persistence.ForkHistoryBranchResponse{NewBranchToken: resetBranchToken}, nil).Times(1)
 
 	newBranchToken, err := s.workflowResetter.forkAndGenerateBranchToken(
-		s.domainID, s.workflowID, baseBranchToken, baseNodeID, s.resetRunID,
+		context.Background(), s.domainID, s.workflowID, baseBranchToken, baseNodeID, s.resetRunID,
 	)
 	s.NoError(err)
 	s.Equal(resetBranchToken, newBranchToken)
@@ -447,7 +449,7 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 	resetContext.EXPECT().Lock(gomock.Any()).Return(nil).Times(1)
 	resetContext.EXPECT().Unlock().Times(1)
 	resetMutableState := execution.NewMockMutableState(s.controller)
-	resetContext.EXPECT().LoadWorkflowExecution().Return(resetMutableState, nil).Times(1)
+	resetContext.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(resetMutableState, nil).Times(1)
 	resetMutableState.EXPECT().GetNextEventID().Return(newNextEventID).AnyTimes()
 	resetMutableState.EXPECT().GetCurrentBranchToken().Return(newBranchToken, nil).AnyTimes()
 	resetContextCacheKey := definition.NewWorkflowIdentifier(s.domainID, s.workflowID, newRunID)
@@ -517,6 +519,7 @@ func (s *workflowResetterSuite) TestReapplyWorkflowEvents() {
 	mutableState := execution.NewMockMutableState(s.controller)
 
 	nextRunID, err := s.workflowResetter.reapplyWorkflowEvents(
+		context.Background(),
 		mutableState,
 		firstEventID,
 		nextEventID,
@@ -625,7 +628,7 @@ func (s *workflowResetterSuite) TestPagination() {
 		Size:          67890,
 	}, nil).Once()
 
-	paginationFn := s.workflowResetter.getPaginationFn(firstEventID, nextEventID, branchToken)
+	paginationFn := s.workflowResetter.getPaginationFn(context.Background(), firstEventID, nextEventID, branchToken)
 	iter := collection.NewPagingIterator(paginationFn)
 
 	result := []*shared.History{}

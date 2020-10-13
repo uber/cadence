@@ -224,7 +224,7 @@ func loadHistoryIterator(ctx context.Context, request *archiver.ArchiveHistoryRe
 		if featureCatalog.ProgressManager.HasProgress(ctx) {
 			err := featureCatalog.ProgressManager.LoadProgress(ctx, progress)
 			if err == nil {
-				historyIterator, err := archiver.NewHistoryIteratorFromState(request, historyManager, targetHistoryBlobSize, progress.IteratorState)
+				historyIterator, err := archiver.NewHistoryIteratorFromState(ctx, request, historyManager, targetHistoryBlobSize, progress.IteratorState)
 				if err == nil {
 					return historyIterator
 				}
@@ -235,7 +235,7 @@ func loadHistoryIterator(ctx context.Context, request *archiver.ArchiveHistoryRe
 			progress.uploadedSize = 0
 		}
 	}
-	return archiver.NewHistoryIterator(request, historyManager, targetHistoryBlobSize)
+	return archiver.NewHistoryIterator(ctx, request, historyManager, targetHistoryBlobSize)
 }
 
 func saveHistoryIteratorState(ctx context.Context, featureCatalog *archiver.ArchiveFeatureCatalog, historyIterator archiver.HistoryIterator, progress *uploadProgress) {
@@ -352,11 +352,11 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 		return err
 	}
 	for err != nil {
-		if !common.IsPersistenceTransientError(err) {
-			return nil, err
-		}
 		if contextExpired(ctx) {
 			return nil, archiver.ErrContextTimeout
+		}
+		if !common.IsPersistenceTransientError(err) {
+			return nil, err
 		}
 		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), common.IsPersistenceTransientError)
 	}

@@ -23,6 +23,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os/user"
 	"time"
 
 	"go.uber.org/cadence/.gen/go/shared"
@@ -36,9 +37,9 @@ import (
 
 const (
 	defaultAbortReason                    = "Failover aborted through admin CLI"
-	defaultBatchFailoverSize              = 10
-	defaultBatchFailoverWaitTimeInSeconds = 10
-	defaultFailoverTimeoutInSeconds       = 600
+	defaultBatchFailoverSize              = 20
+	defaultBatchFailoverWaitTimeInSeconds = 30
+	defaultFailoverTimeoutInSeconds       = 1200
 )
 
 type startParams struct {
@@ -69,6 +70,9 @@ func failoverStart(c *cli.Context, params *startParams) {
 		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
 		TaskList:                     failovermanager.TaskListName,
 		ExecutionStartToCloseTimeout: workflowTimeout,
+		Memo: map[string]interface{}{
+			common.MemoKeyForOperator: getOperator(),
+		},
 	}
 	foParams := failovermanager.FailoverParams{
 		TargetCluster:                  targetCluster,
@@ -168,10 +172,15 @@ func AdminFailoverQuery(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("Failed to describe workflow", err)
 	}
-	if descResp.WorkflowExecutionInfo.CloseStatus.Equals(shared.WorkflowExecutionCloseStatusTerminated) {
+	if isWorkflowTerminated(descResp) {
 		result.State = failovermanager.WorkflowAborted
 	}
 	prettyPrintJSONObject(result)
+}
+
+func isWorkflowTerminated(descResp *shared.DescribeWorkflowExecutionResponse) bool {
+	return descResp.WorkflowExecutionInfo.CloseStatus != nil &&
+		descResp.WorkflowExecutionInfo.CloseStatus.Equals(shared.WorkflowExecutionCloseStatusTerminated)
 }
 
 // AdminFailoverAbort abort a failover workflow
@@ -248,6 +257,7 @@ func isWorkflowRunning(queryResult *failovermanager.QueryResult) bool {
 // AdminFailoverList list failover runs
 func AdminFailoverList(c *cli.Context) {
 	c.Set(FlagWorkflowID, failovermanager.WorkflowID)
+	c.GlobalSet(FlagDomain, common.SystemLocalDomainName)
 	ListWorkflow(c)
 }
 
@@ -261,4 +271,13 @@ func getRunID(c *cli.Context) string {
 		return c.String(FlagRunID)
 	}
 	return ""
+}
+
+func getOperator() string {
+	user, err := user.Current()
+	if err != nil {
+		ErrorAndExit("Unable to get operator info", err)
+	}
+
+	return fmt.Sprintf("%s (username: %s)", user.Name, user.Username)
 }

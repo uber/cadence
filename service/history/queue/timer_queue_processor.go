@@ -413,7 +413,7 @@ func (t *timerQueueProcessor) completeTimer() error {
 
 	t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.TaskBatchCompleteCounter)
 
-	if err := t.shard.GetExecutionManager().RangeCompleteTimerTask(context.TODO(), &persistence.RangeCompleteTimerTaskRequest{
+	if err := t.shard.GetExecutionManager().RangeCompleteTimerTask(context.Background(), &persistence.RangeCompleteTimerTaskRequest{
 		InclusiveBeginTimestamp: t.ackLevel,
 		ExclusiveEndTimestamp:   newAckLevelTimestamp,
 	}); err != nil {

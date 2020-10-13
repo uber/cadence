@@ -66,6 +66,8 @@ const (
 	DomainCacheRefreshFailureRetryInterval = 1 * time.Second
 	domainCacheRefreshPageSize             = 200
 
+	domainCachePersistenceTimeout = 3 * time.Second
+
 	domainCacheInitialized int32 = 0
 	domainCacheStarted     int32 = 1
 	domainCacheStopped     int32 = 2
@@ -425,7 +427,9 @@ func (c *domainCache) refreshDomainsLocked() error {
 
 	// first load the metadata record, then load domains
 	// this can guarantee that domains in the cache are not updated more than metadata record
-	metadata, err := c.metadataMgr.GetMetadata(context.TODO())
+	ctx, cancel := context.WithTimeout(context.Background(), domainCachePersistenceTimeout)
+	defer cancel()
+	metadata, err := c.metadataMgr.GetMetadata(ctx)
 	if err != nil {
 		return err
 	}
@@ -436,8 +440,10 @@ func (c *domainCache) refreshDomainsLocked() error {
 	continuePage := true
 
 	for continuePage {
+		ctx, cancel := context.WithTimeout(context.Background(), domainCachePersistenceTimeout)
 		request.NextPageToken = token
-		response, err := c.metadataMgr.ListDomains(context.TODO(), request)
+		response, err := c.metadataMgr.ListDomains(ctx, request)
+		cancel()
 		if err != nil {
 			return err
 		}
@@ -511,8 +517,10 @@ func (c *domainCache) checkDomainExists(
 	name string,
 	id string,
 ) error {
+	ctx, cancel := context.WithTimeout(context.Background(), domainCachePersistenceTimeout)
+	defer cancel()
 
-	_, err := c.metadataMgr.GetDomain(context.TODO(), &persistence.GetDomainRequest{Name: name, ID: id})
+	_, err := c.metadataMgr.GetDomain(ctx, &persistence.GetDomainRequest{Name: name, ID: id})
 	return err
 }
 
