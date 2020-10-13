@@ -31,6 +31,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 )
 
 const licence = `// Copyright (c) 2017-2020 Uber Technologies Inc.
@@ -55,11 +56,25 @@ const licence = `// Copyright (c) 2017-2020 Uber Technologies Inc.
 
 `
 
-var typesHeader = template.Must(template.New("struct type").Parse(licence + `package types
+func internalName(name string) string {
+	if index := strings.Index(name, "Id"); index > 0 {
+		nextWordIndex := index + len("Id")
+		if nextWordIndex >= len(name) || unicode.IsUpper([]rune(name)[nextWordIndex]) {
+			return strings.Replace(name, "Id", "ID", 1)
+		}
+	}
+	return name
+}
+
+var funcMap = template.FuncMap{
+	"internal": internalName,
+}
+
+var typesHeader = template.Must(template.New("struct type").Funcs(funcMap).Parse(licence + `package types
 
 `))
 
-var mapperHeader = template.Must(template.New("struct type").Parse(licence + `package thrift
+var mapperHeader = template.Must(template.New("struct type").Funcs(funcMap).Parse(licence + `package thrift
 
 import (
 	"github.com/uber/cadence/common/types"
@@ -69,113 +84,116 @@ import (
 )
 `))
 
-var structTemplate = template.Must(template.New("struct type").Parse(`
-type {{.Type.Name}} struct {
-{{range .Fields}}	{{.Name}} {{if .Type.IsMap}}map[string]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer}}*{{end}}{{.Type.Name}}
+var structTemplate = template.Must(template.New("struct type").Funcs(funcMap).Parse(`
+// {{internal .Type.Name}} is an internal type (TBD...)
+type {{internal .Type.Name}} struct {
+{{range .Fields}}	{{internal .Name}} {{if .Type.IsMap}}map[string]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer}}*{{end}}{{internal .Type.Name}}
 {{end}}}
 `))
 
-var enumTemplate = template.Must(template.New("enum type").Parse(`
-type {{.Type.Name}} int32
+var enumTemplate = template.Must(template.New("enum type").Funcs(funcMap).Parse(`
+// {{internal .Type.Name}} is an internal type (TBD...)
+type {{internal .Type.Name}} int32
 
 const ({{range $i, $v := .Values}}
-	{{.}}{{if eq $i 0}} {{$.Type.Name}} = iota{{end}}{{end}}
+	// {{internal .}} is an option for {{internal $.Type.Name}}
+	{{internal .}}{{if eq $i 0}} {{internal $.Type.Name}} = iota{{end}}{{end}}
 )
 `))
 
-var structMapperTemplate = template.Must(template.New("struct mapper").Parse(`
-// From{{.Type.Name}} converts internal {{.Type.Name}} type to thrift
-func From{{.Type.Name}}(t *types.{{.Type.Name}}) *{{.Type.ThriftPackage}}.{{.Type.Name}} {
+var structMapperTemplate = template.Must(template.New("struct mapper").Funcs(funcMap).Parse(`
+// From{{internal .Type.Name}} converts internal {{.Type.Name}} type to thrift
+func From{{internal .Type.Name}}(t *types.{{.Type.Name}}) *{{.Type.ThriftPackage}}.{{.Type.Name}} {
 	if t == nil {
 		return nil
 	}
 	return &{{.Type.ThriftPackage}}.{{.Type.Name}}{
-{{range .Fields}}		{{.Name}}: {{if .Type.IsPrimitive}}t.{{.Name}}{{else}}From{{.Type.Name}}{{if .Type.IsArray}}Array{{end}}{{if .Type.IsMap}}Map{{end}}(t.{{.Name}}){{end}},
+{{range .Fields}}		{{.Name}}: {{if .Type.IsPrimitive}}t.{{internal .Name}}{{else}}From{{internal .Type.Name}}{{if .Type.IsArray}}Array{{end}}{{if .Type.IsMap}}Map{{end}}(t.{{internal .Name}}){{end}},
 {{end}}	}
 }
 
-// To{{.Type.Name}} converts thrift {{.Type.Name}} type to internal
-func To{{.Type.Name}}(t *{{.Type.ThriftPackage}}.{{.Type.Name}}) *types.{{.Type.Name}} {
+// To{{internal .Type.Name}} converts thrift {{.Type.Name}} type to internal
+func To{{internal .Type.Name}}(t *{{.Type.ThriftPackage}}.{{.Type.Name}}) *types.{{.Type.Name}} {
 	if t == nil {
 		return nil
 	}
 	return &types.{{.Type.Name}}{
-{{range .Fields}}		{{.Name}}: {{if .Type.IsPrimitive}}t.{{.Name}}{{else}}To{{.Type.Name}}{{if .Type.IsArray}}Array{{end}}{{if .Type.IsMap}}Map{{end}}(t.{{.Name}}){{end}},
+{{range .Fields}}		{{internal .Name}}: {{if .Type.IsPrimitive}}t.{{.Name}}{{else}}To{{internal .Type.Name}}{{if .Type.IsArray}}Array{{end}}{{if .Type.IsMap}}Map{{end}}(t.{{.Name}}){{end}},
 {{end}}	}
 }
 `))
 
-var arrayMapperTemplate = template.Must(template.New("array mapper").Parse(`
-// From{{.Type.Name}}Array converts internal {{.Type.Name}} type array to thrift
-func From{{.Type.Name}}Array(t []*types.{{.Type.Name}}) []*{{.Type.ThriftPackage}}.{{.Type.Name}} {
+var arrayMapperTemplate = template.Must(template.New("array mapper").Funcs(funcMap).Parse(`
+// From{{internal .Type.Name}}Array converts internal {{internal .Type.Name}} type array to thrift
+func From{{internal .Type.Name}}Array(t []*types.{{internal .Type.Name}}) []*{{.Type.ThriftPackage}}.{{.Type.Name}} {
 	if t == nil {
 		return nil
 	}
 	v := make([]*{{.Type.ThriftPackage}}.{{.Type.Name}}, len(t))
 	for i := range t {
-		v[i] = {{if .Type.IsPrimitive}}t[i]{{.Name}}{{else}}From{{.Type.Name}}(t[i]){{end}}
+		v[i] = {{if .Type.IsPrimitive}}t[i]{{.Name}}{{else}}From{{internal .Type.Name}}(t[i]){{end}}
 	}
 	return v
 }
 
-// To{{.Type.Name}}Array converts thrift {{.Type.Name}} type array to internal
-func To{{.Type.Name}}Array(t []*{{.Type.ThriftPackage}}.{{.Type.Name}}) []*types.{{.Type.Name}} {
+// To{{internal .Type.Name}}Array converts thrift {{.Type.Name}} type array to internal
+func To{{internal .Type.Name}}Array(t []*{{.Type.ThriftPackage}}.{{.Type.Name}}) []*types.{{internal .Type.Name}} {
 	if t == nil {
 		return nil
 	}
-	v := make([]*types.{{.Type.Name}}, len(t))
+	v := make([]*types.{{internal .Type.Name}}, len(t))
 	for i := range t {
-		v[i] = {{if .Type.IsPrimitive}}t[i]{{.Name}}{{else}}To{{.Type.Name}}(t[i]){{end}}
+		v[i] = {{if .Type.IsPrimitive}}t[i]{{.Name}}{{else}}To{{internal .Type.Name}}(t[i]){{end}}
 	}
 	return v
 }
 `))
 
-var mapMapperTemplate = template.Must(template.New("map mapper").Parse(`
-// From{{.Type.Name}}Map converts internal {{.Type.Name}} type map to thrift
-func From{{.Type.Name}}Map(t map[string]{{if .Type.IsPointer}}*{{end}}types.{{.Type.Name}}) map[string]{{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPackage}}.{{.Type.Name}} {
+var mapMapperTemplate = template.Must(template.New("map mapper").Funcs(funcMap).Parse(`
+// From{{internal .Type.Name}}Map converts internal {{internal .Type.Name}} type map to thrift
+func From{{internal .Type.Name}}Map(t map[string]{{if .Type.IsPointer}}*{{end}}types.{{internal .Type.Name}}) map[string]{{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPackage}}.{{.Type.Name}} {
 	if t == nil {
 		return nil
 	}
 	v := make(map[string]{{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPackage}}.{{.Type.Name}}, len(t))
 	for key := range t {
-		v[key] = {{if .Type.IsPrimitive}}t[key]{{else}}From{{.Type.Name}}(t[key]){{end}}
+		v[key] = {{if .Type.IsPrimitive}}t[key]{{else}}From{{internal .Type.Name}}(t[key]){{end}}
 	}
 	return v
 }
 
-// To{{.Type.Name}}Map converts thrift {{.Type.Name}} type map to internal
-func To{{.Type.Name}}Map(t map[string]{{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPackage}}.{{.Type.Name}}) map[string]{{if .Type.IsPointer}}*{{end}}types.{{.Type.Name}} {
+// To{{internal .Type.Name}}Map converts thrift {{.Type.Name}} type map to internal
+func To{{internal .Type.Name}}Map(t map[string]{{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPackage}}.{{.Type.Name}}) map[string]{{if .Type.IsPointer}}*{{end}}types.{{internal .Type.Name}} {
 	if t == nil {
 		return nil
 	}
-	v := make(map[string]{{if .Type.IsPointer}}*{{end}}types.{{.Type.Name}}, len(t))
+	v := make(map[string]{{if .Type.IsPointer}}*{{end}}types.{{internal .Type.Name}}, len(t))
 	for key := range t {
-		v[key] = {{if .Type.IsPrimitive}}t[key]{{else}}To{{.Type.Name}}(t[key]){{end}}
+		v[key] = {{if .Type.IsPrimitive}}t[key]{{else}}To{{internal .Type.Name}}(t[key]){{end}}
 	}
 	return v
 }
 `))
 
-var enumMapperTemplate = template.Must(template.New("enum mapper").Parse(`
-// From{{.Type.Name}} converts internal {{.Type.Name}} type to thrift
-func From{{.Type.Name}}(t {{if .Type.IsPointer}}*{{end}}types.{{.Type.Name}}) {{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPackage}}.{{.Type.Name}} {
+var enumMapperTemplate = template.Must(template.New("enum mapper").Funcs(funcMap).Parse(`
+// From{{internal .Type.Name}} converts internal {{internal .Type.Name}} type to thrift
+func From{{internal .Type.Name}}(t {{if .Type.IsPointer}}*{{end}}types.{{internal .Type.Name}}) {{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPackage}}.{{.Type.Name}} {
 	{{if .Type.IsPointer}}if t == nil {
 		return nil
 	}{{end}}
 	switch {{if .Type.IsPointer}}*{{end}}t { {{range .Values}}
-		case types.{{.}}: {{if $.Type.IsPointer}}v := {{$.Type.ThriftPackage}}.{{.}}; return &v{{else}}return {{$.Type.ThriftPackage}}.{{.}}{{end}}{{end}}
+		case types.{{internal .}}: {{if $.Type.IsPointer}}v := {{$.Type.ThriftPackage}}.{{.}}; return &v{{else}}return {{$.Type.ThriftPackage}}.{{.}}{{end}}{{end}}
 	}
 	panic("unexpected enum value")
 }
 
-// To{{.Type.Name}} converts thrift {{.Type.Name}} type to internal
-func To{{.Type.Name}}(t {{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPackage}}.{{.Type.Name}}) {{if .Type.IsPointer}}*{{end}}types.{{.Type.Name}} {
+// To{{internal .Type.Name}} converts thrift {{.Type.Name}} type to internal
+func To{{internal .Type.Name}}(t {{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPackage}}.{{.Type.Name}}) {{if .Type.IsPointer}}*{{end}}types.{{internal .Type.Name}} {
 	{{if .Type.IsPointer}}if t == nil {
 		return nil
 	}{{end}}
 	switch {{if .Type.IsPointer}}*{{end}}t { {{range .Values}}
-		case {{$.Type.ThriftPackage}}.{{.}}: {{if $.Type.IsPointer}}v := types.{{.}}; return &v{{else}}return types.{{.}}{{end}}{{end}}
+		case {{$.Type.ThriftPackage}}.{{.}}: {{if $.Type.IsPointer}}v := types.{{internal .}}; return &v{{else}}return types.{{internal .}}{{end}}{{end}}
 	}
 	panic("unexpected enum value")
 }
@@ -187,8 +205,8 @@ var requiredMapMappers = map[string]struct{}{}
 type (
 	// Renderer can render internal type and its mappings
 	Renderer interface {
-		RenderType(w io.Writer)
-		RenderMapper(w io.Writer)
+		renderType(w io.Writer)
+		renderMapper(w io.Writer)
 	}
 
 	// Type describes a type
@@ -202,7 +220,7 @@ type (
 		IsPointer         bool
 	}
 
-	// Fields describe a field within a struct
+	// Field describe a field within a struct
 	Field struct {
 		Name string
 		Type Type
@@ -220,44 +238,44 @@ type (
 	Map struct {
 		Type
 	}
-	// Map describes Enum type
+	// Enum describes Enum type
 	Enum struct {
 		Type   Type
 		Values []string
 	}
 )
 
-func (s *Struct) RenderType(w io.Writer) {
+func (s *Struct) renderType(w io.Writer) {
 	err := structTemplate.Execute(w, s)
 	if err != nil {
 		panic(err)
 	}
 }
-func (s *Struct) RenderMapper(w io.Writer) {
+func (s *Struct) renderMapper(w io.Writer) {
 	err := structMapperTemplate.Execute(w, s)
 	if err != nil {
 		panic(err)
 	}
 }
-func (a *Array) RenderMapper(w io.Writer) {
+func (a *Array) renderMapper(w io.Writer) {
 	err := arrayMapperTemplate.Execute(w, a)
 	if err != nil {
 		panic(err)
 	}
 }
-func (m *Map) RenderMapper(w io.Writer) {
+func (m *Map) renderMapper(w io.Writer) {
 	err := mapMapperTemplate.Execute(w, m)
 	if err != nil {
 		panic(err)
 	}
 }
-func (e *Enum) RenderType(w io.Writer) {
+func (e *Enum) renderType(w io.Writer) {
 	err := enumTemplate.Execute(w, e)
 	if err != nil {
 		panic(err)
 	}
 }
-func (e *Enum) RenderMapper(w io.Writer) {
+func (e *Enum) renderMapper(w io.Writer) {
 	err := enumMapperTemplate.Execute(w, e)
 	if err != nil {
 		panic(err)
@@ -288,9 +306,8 @@ func newType(fullName string) Type {
 		pos = strings.LastIndexByte(pkg, '/')
 		short := pkg[pos+1:]
 		return Type{pkg, short, name, false, isArray, isMap, isPointer}
-	} else {
-		return Type{"", "", fullName, true, isArray, isMap, isPointer}
 	}
+	return Type{"", "", fullName, true, isArray, isMap, isPointer}
 }
 
 func newStruct(obj types.Object) *Struct {
@@ -384,6 +401,7 @@ func createRenderer(obj types.Object) Renderer {
 	return nil
 }
 
+// Package describes a trift package to convert to internal types
 type Package struct {
 	ThriftPackage string
 	TypesFile     string
@@ -417,15 +435,15 @@ func main() {
 				continue
 			}
 			if r := createRenderer(obj); r != nil {
-				r.RenderType(typesFile)
-				r.RenderMapper(mapperFile)
+				r.renderType(typesFile)
+				r.renderMapper(mapperFile)
 			}
 		}
 		for m := range requiredArrayMappers {
-			newArray(m).RenderMapper(mapperFile)
+			newArray(m).renderMapper(mapperFile)
 		}
 		for m := range requiredMapMappers {
-			newMap(m).RenderMapper(mapperFile)
+			newMap(m).renderMapper(mapperFile)
 		}
 
 		typesFile.Close()
