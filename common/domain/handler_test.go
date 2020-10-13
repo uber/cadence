@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
@@ -59,7 +60,7 @@ type (
 		archivalMetadata     archiver.ArchivalMetadata
 		mockArchiverProvider *provider.MockArchiverProvider
 
-		handler *HandlerImpl
+		handler *handlerImpl
 	}
 )
 
@@ -102,16 +103,21 @@ func (s *domainHandlerCommonSuite) SetupTest() {
 		&config.ArchivalDomainDefaults{},
 	)
 	s.mockArchiverProvider = &provider.MockArchiverProvider{}
+	domainConfig := Config{
+		MinRetentionDays:  dc.GetIntPropertyFn(s.minRetentionDays),
+		MaxBadBinaryCount: dc.GetIntPropertyFilteredByDomain(s.maxBadBinaryCount),
+		FailoverCoolDown:  dc.GetDurationPropertyFnFilteredByDomain(0 * time.Second),
+	}
 	s.handler = NewHandler(
-		s.minRetentionDays,
-		dc.GetIntPropertyFilteredByDomain(s.maxBadBinaryCount),
+		domainConfig,
 		logger,
 		s.metadataMgr,
 		s.ClusterMetadata,
 		s.mockDomainReplicator,
 		s.archivalMetadata,
 		s.mockArchiverProvider,
-	)
+		clock.NewRealTimeSource(),
+	).(*handlerImpl)
 }
 
 func (s *domainHandlerCommonSuite) TearDownTest() {

@@ -34,11 +34,16 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+)
+
+var (
+	errFailoverTooFrequent = &shared.ServiceBusyError{Message: "The domain failovers too frequent."}
 )
 
 type (
@@ -66,46 +71,55 @@ type (
 		) (*shared.UpdateDomainResponse, error)
 	}
 
-	// HandlerImpl is the domain operation handler implementation
-	HandlerImpl struct {
-		maxBadBinaryCount   dynamicconfig.IntPropertyFnWithDomainFilter
-		logger              log.Logger
+	// handlerImpl is the domain operation handler implementation
+	handlerImpl struct {
 		metadataMgr         persistence.MetadataManager
 		clusterMetadata     cluster.Metadata
 		domainReplicator    Replicator
 		domainAttrValidator *AttrValidatorImpl
 		archivalMetadata    archiver.ArchivalMetadata
 		archiverProvider    provider.ArchiverProvider
+		timeSource          clock.TimeSource
+		config              Config
+		logger              log.Logger
+	}
+
+	// Config is the domain config for domain handler
+	Config struct {
+		MinRetentionDays  dynamicconfig.IntPropertyFn
+		MaxBadBinaryCount dynamicconfig.IntPropertyFnWithDomainFilter
+		FailoverCoolDown  dynamicconfig.DurationPropertyFnWithDomainFilter
 	}
 )
 
-var _ Handler = (*HandlerImpl)(nil)
+var _ Handler = (*handlerImpl)(nil)
 
 // NewHandler create a new domain handler
 func NewHandler(
-	minRetentionDays int,
-	maxBadBinaryCount dynamicconfig.IntPropertyFnWithDomainFilter,
+	config Config,
 	logger log.Logger,
 	metadataMgr persistence.MetadataManager,
 	clusterMetadata cluster.Metadata,
 	domainReplicator Replicator,
 	archivalMetadata archiver.ArchivalMetadata,
 	archiverProvider provider.ArchiverProvider,
-) *HandlerImpl {
-	return &HandlerImpl{
-		maxBadBinaryCount:   maxBadBinaryCount,
+	timeSource clock.TimeSource,
+) Handler {
+	return &handlerImpl{
 		logger:              logger,
 		metadataMgr:         metadataMgr,
 		clusterMetadata:     clusterMetadata,
 		domainReplicator:    domainReplicator,
-		domainAttrValidator: newAttrValidator(clusterMetadata, int32(minRetentionDays)),
+		domainAttrValidator: newAttrValidator(clusterMetadata, int32(config.MinRetentionDays())),
 		archivalMetadata:    archivalMetadata,
 		archiverProvider:    archiverProvider,
+		timeSource:          timeSource,
+		config:              config,
 	}
 }
 
 // RegisterDomain register a new domain
-func (d *HandlerImpl) RegisterDomain(
+func (d *handlerImpl) RegisterDomain(
 	ctx context.Context,
 	registerRequest *shared.RegisterDomainRequest,
 ) error {
@@ -243,6 +257,7 @@ func (d *HandlerImpl) RegisterDomain(
 		IsGlobalDomain:    isGlobalDomain,
 		ConfigVersion:     0,
 		FailoverVersion:   failoverVersion,
+		LastUpdatedTime:   d.timeSource.Now().UnixNano(),
 	}
 
 	domainResponse, err := d.metadataMgr.CreateDomain(ctx, domainRequest)
@@ -276,7 +291,7 @@ func (d *HandlerImpl) RegisterDomain(
 }
 
 // ListDomains list all domains
-func (d *HandlerImpl) ListDomains(
+func (d *handlerImpl) ListDomains(
 	ctx context.Context,
 	listRequest *shared.ListDomainsRequest,
 ) (*shared.ListDomainsResponse, error) {
@@ -314,7 +329,7 @@ func (d *HandlerImpl) ListDomains(
 }
 
 // DescribeDomain describe the domain
-func (d *HandlerImpl) DescribeDomain(
+func (d *handlerImpl) DescribeDomain(
 	ctx context.Context,
 	describeRequest *shared.DescribeDomainRequest,
 ) (*shared.DescribeDomainResponse, error) {
@@ -338,7 +353,7 @@ func (d *HandlerImpl) DescribeDomain(
 }
 
 // UpdateDomain update the domain
-func (d *HandlerImpl) UpdateDomain(
+func (d *handlerImpl) UpdateDomain(
 	ctx context.Context,
 	updateRequest *shared.UpdateDomainRequest,
 ) (*shared.UpdateDomainResponse, error) {
@@ -367,6 +382,7 @@ func (d *HandlerImpl) UpdateDomain(
 	gracefulFailoverEndTime := getResponse.FailoverEndTime
 	currentActiveCluster := replicationConfig.ActiveClusterName
 	previousFailoverVersion := getResponse.PreviousFailoverVersion
+	lastUpdatedTime := time.Unix(0, getResponse.LastUpdatedTime)
 
 	// whether history archival config changed
 	historyArchivalConfigChanged := false
@@ -453,7 +469,7 @@ func (d *HandlerImpl) UpdateDomain(
 		if gracefulFailoverEndTime != nil {
 			return nil, errOngoingGracefulFailover
 		}
-		endTime := time.Now().UTC().Add(time.Duration(updateRequest.GetFailoverTimeoutInSeconds()) * time.Second).UnixNano()
+		endTime := d.timeSource.Now().Add(time.Duration(updateRequest.GetFailoverTimeoutInSeconds()) * time.Second).UnixNano()
 		gracefulFailoverEndTime = &endTime
 		previousFailoverVersion = failoverVersion
 	}
@@ -486,11 +502,16 @@ func (d *HandlerImpl) UpdateDomain(
 	}
 
 	if configurationChanged || activeClusterChanged {
+		now := d.timeSource.Now()
+		// Check the failover cool down time
+		if lastUpdatedTime.Add(d.config.FailoverCoolDown(info.Name)).After(now) {
+			return nil, errFailoverTooFrequent
+		}
+
 		// set the versions
 		if configurationChanged {
 			configVersion++
 		}
-
 		if activeClusterChanged && isGlobalDomain {
 			// Force failover cleans graceful failover state
 			if !updateRequest.IsSetFailoverTimeoutInSeconds() {
@@ -504,7 +525,7 @@ func (d *HandlerImpl) UpdateDomain(
 			)
 			failoverNotificationVersion = notificationVersion
 		}
-
+		lastUpdatedTime = now
 		updateReq := &persistence.UpdateDomainRequest{
 			Info:                        info,
 			Config:                      config,
@@ -514,6 +535,7 @@ func (d *HandlerImpl) UpdateDomain(
 			FailoverNotificationVersion: failoverNotificationVersion,
 			FailoverEndTime:             gracefulFailoverEndTime,
 			PreviousFailoverVersion:     previousFailoverVersion,
+			LastUpdatedTime:             lastUpdatedTime.UnixNano(),
 			NotificationVersion:         notificationVersion,
 		}
 		err = d.metadataMgr.UpdateDomain(ctx, updateReq)
@@ -552,7 +574,7 @@ func (d *HandlerImpl) UpdateDomain(
 }
 
 // DeprecateDomain deprecates a domain
-func (d *HandlerImpl) DeprecateDomain(
+func (d *handlerImpl) DeprecateDomain(
 	ctx context.Context,
 	deprecateRequest *shared.DeprecateDomainRequest,
 ) error {
@@ -595,7 +617,7 @@ func (d *HandlerImpl) DeprecateDomain(
 	return nil
 }
 
-func (d *HandlerImpl) createResponse(
+func (d *handlerImpl) createResponse(
 	info *persistence.DomainInfo,
 	config *persistence.DomainConfig,
 	replicationConfig *persistence.DomainReplicationConfig,
@@ -635,7 +657,7 @@ func (d *HandlerImpl) createResponse(
 	return infoResult, configResult, replicationConfigResult
 }
 
-func (d *HandlerImpl) mergeBadBinaries(
+func (d *handlerImpl) mergeBadBinaries(
 	old map[string]*shared.BadBinaryInfo,
 	new map[string]*shared.BadBinaryInfo,
 	createTimeNano int64,
@@ -653,7 +675,7 @@ func (d *HandlerImpl) mergeBadBinaries(
 	}
 }
 
-func (d *HandlerImpl) mergeDomainData(
+func (d *handlerImpl) mergeDomainData(
 	old map[string]string,
 	new map[string]string,
 ) map[string]string {
@@ -667,7 +689,7 @@ func (d *HandlerImpl) mergeDomainData(
 	return old
 }
 
-func (d *HandlerImpl) toArchivalRegisterEvent(
+func (d *handlerImpl) toArchivalRegisterEvent(
 	status *shared.ArchivalStatus,
 	URI string,
 	defaultStatus shared.ArchivalStatus,
@@ -688,7 +710,7 @@ func (d *HandlerImpl) toArchivalRegisterEvent(
 	return event, nil
 }
 
-func (d *HandlerImpl) toArchivalUpdateEvent(
+func (d *handlerImpl) toArchivalUpdateEvent(
 	status *shared.ArchivalStatus,
 	URI string,
 	defaultURI string,
@@ -705,7 +727,7 @@ func (d *HandlerImpl) toArchivalUpdateEvent(
 	return event, nil
 }
 
-func (d *HandlerImpl) validateHistoryArchivalURI(URIString string) error {
+func (d *handlerImpl) validateHistoryArchivalURI(URIString string) error {
 	URI, err := archiver.NewURI(URIString)
 	if err != nil {
 		return err
@@ -719,7 +741,7 @@ func (d *HandlerImpl) validateHistoryArchivalURI(URIString string) error {
 	return archiver.ValidateURI(URI)
 }
 
-func (d *HandlerImpl) validateVisibilityArchivalURI(URIString string) error {
+func (d *handlerImpl) validateVisibilityArchivalURI(URIString string) error {
 	URI, err := archiver.NewURI(URIString)
 	if err != nil {
 		return err
@@ -733,7 +755,7 @@ func (d *HandlerImpl) validateVisibilityArchivalURI(URIString string) error {
 	return archiver.ValidateURI(URI)
 }
 
-func (d *HandlerImpl) getHistoryArchivalState(
+func (d *handlerImpl) getHistoryArchivalState(
 	config *persistence.DomainConfig,
 	requestedConfig *shared.DomainConfiguration,
 ) (*ArchivalState, bool, error) {
@@ -758,7 +780,7 @@ func (d *HandlerImpl) getHistoryArchivalState(
 	return currentHistoryArchivalState, false, nil
 }
 
-func (d *HandlerImpl) getVisibilityArchivalState(
+func (d *handlerImpl) getVisibilityArchivalState(
 	config *persistence.DomainConfig,
 	requestedConfig *shared.DomainConfiguration,
 ) (*ArchivalState, bool, error) {
@@ -781,7 +803,7 @@ func (d *HandlerImpl) getVisibilityArchivalState(
 	return currentVisibilityArchivalState, false, nil
 }
 
-func (d *HandlerImpl) updateDomainInfo(
+func (d *handlerImpl) updateDomainInfo(
 	updatedDomainInfo *shared.UpdateDomainInfo,
 	currentDomainInfo *persistence.DomainInfo,
 ) (*persistence.DomainInfo, bool) {
@@ -805,7 +827,7 @@ func (d *HandlerImpl) updateDomainInfo(
 	return currentDomainInfo, isDomainUpdated
 }
 
-func (d *HandlerImpl) updateDomainConfiguration(
+func (d *handlerImpl) updateDomainConfiguration(
 	domainName string,
 	config *persistence.DomainConfig,
 	domainConfig *shared.DomainConfiguration,
@@ -822,7 +844,7 @@ func (d *HandlerImpl) updateDomainConfiguration(
 			config.Retention = domainConfig.GetWorkflowExecutionRetentionPeriodInDays()
 		}
 		if domainConfig.BadBinaries != nil {
-			maxLength := d.maxBadBinaryCount(domainName)
+			maxLength := d.config.MaxBadBinaryCount(domainName)
 			// only do merging
 			config.BadBinaries = d.mergeBadBinaries(config.BadBinaries.Binaries, domainConfig.BadBinaries.Binaries, time.Now().UnixNano())
 			if len(config.BadBinaries.Binaries) > maxLength {
@@ -835,7 +857,7 @@ func (d *HandlerImpl) updateDomainConfiguration(
 	return config, isConfigChanged, nil
 }
 
-func (d *HandlerImpl) updateDeleteBadBinary(
+func (d *handlerImpl) updateDeleteBadBinary(
 	config *persistence.DomainConfig,
 	deleteBadBinary *string,
 ) (*persistence.DomainConfig, bool, error) {
@@ -853,7 +875,7 @@ func (d *HandlerImpl) updateDeleteBadBinary(
 	return config, false, nil
 }
 
-func (d *HandlerImpl) updateReplicationConfig(
+func (d *handlerImpl) updateReplicationConfig(
 	config *persistence.DomainReplicationConfig,
 	replicationConfig *shared.DomainReplicationConfiguration,
 ) (*persistence.DomainReplicationConfig, bool, bool, error) {
