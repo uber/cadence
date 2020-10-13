@@ -25,12 +25,10 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/uber/cadence/common/types/mapper/thrift"
-
-	"github.com/uber/cadence/common/types"
-
 	"github.com/uber/cadence/common/persistence/serialization"
-
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
+	
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"

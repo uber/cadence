@@ -22,7 +22,7 @@ package persistence
 
 import (
 	"context"
-
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
@@ -56,7 +56,7 @@ func (m *metadataManagerImpl) CreateDomain(
 	ctx context.Context,
 	request *CreateDomainRequest,
 ) (*CreateDomainResponse, error) {
-	dc, err := m.serializeDomainConfig(request.Config)
+	dc, err := m.toInternalDomainConfig(request.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (m *metadataManagerImpl) GetDomain(
 		return nil, err
 	}
 
-	dc, err := m.deserializeDomainConfig(resp.Config)
+	dc, err := m.fromInternalDomainConfig(resp.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (m *metadataManagerImpl) UpdateDomain(
 	ctx context.Context,
 	request *UpdateDomainRequest,
 ) error {
-	dc, err := m.serializeDomainConfig(request.Config)
+	dc, err := m.toInternalDomainConfig(request.Config)
 	if err != nil {
 		return err
 	}
@@ -143,7 +143,7 @@ func (m *metadataManagerImpl) ListDomains(
 	}
 	domains := make([]*GetDomainResponse, 0, len(resp.Domains))
 	for _, d := range resp.Domains {
-		dc, err := m.deserializeDomainConfig(d.Config)
+		dc, err := m.fromInternalDomainConfig(d.Config)
 		if err != nil {
 			return nil, err
 		}
@@ -166,9 +166,12 @@ func (m *metadataManagerImpl) ListDomains(
 	}, nil
 }
 
-func (m *metadataManagerImpl) serializeDomainConfig(c *DomainConfig) (InternalDomainConfig, error) {
+func (m *metadataManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalDomainConfig, error) {
 	if c == nil {
 		return InternalDomainConfig{}, nil
+	}
+	if c.BadBinaries == nil {
+		c.BadBinaries.Binaries = map[string]*shared.BadBinaryInfo{}
 	}
 	return InternalDomainConfig{
 		Retention:                c.Retention,
@@ -181,7 +184,7 @@ func (m *metadataManagerImpl) serializeDomainConfig(c *DomainConfig) (InternalDo
 	}, nil
 }
 
-func (m *metadataManagerImpl) deserializeDomainConfig(ic *InternalDomainConfig) (DomainConfig, error) {
+func (m *metadataManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig) (DomainConfig, error) {
 	if ic == nil {
 		return DomainConfig{}, nil
 	}
