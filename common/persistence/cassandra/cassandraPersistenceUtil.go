@@ -24,9 +24,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/common/types"
-
 	"github.com/gocql/gocql"
+	"github.com/uber/cadence/common/types"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
