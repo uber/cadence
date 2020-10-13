@@ -48,12 +48,11 @@ import (
 )
 
 const (
-	dropSyncShardTaskTimeThreshold   = 10 * time.Minute
-	replicationTimeout               = 30 * time.Second
-	taskErrorRetryBackoffCoefficient = 1.2
-	dlqErrorRetryWait                = time.Second
-	dlqMetricsEmitTimerInterval      = 5 * time.Minute
-	dlqMetricsEmitTimerCoefficient   = 0.05
+	dropSyncShardTaskTimeThreshold = 10 * time.Minute
+	replicationTimeout             = 30 * time.Second
+	dlqErrorRetryWait              = time.Second
+	dlqMetricsEmitTimerInterval    = 5 * time.Minute
+	dlqMetricsEmitTimerCoefficient = 0.05
 )
 
 var (
@@ -112,9 +111,12 @@ func NewTaskProcessor(
 	taskExecutor TaskExecutor,
 ) TaskProcessor {
 	shardID := shard.GetShardID()
-	taskRetryPolicy := backoff.NewExponentialRetryPolicy(config.ReplicationTaskProcessorErrorRetryWait(shardID))
-	taskRetryPolicy.SetBackoffCoefficient(taskErrorRetryBackoffCoefficient)
-	taskRetryPolicy.SetMaximumAttempts(config.ReplicationTaskProcessorErrorRetryMaxAttempts(shardID))
+	firstRetryPolicy := backoff.NewExponentialRetryPolicy(config.ReplicationTaskProcessorErrorRetryWait(shardID))
+	firstRetryPolicy.SetMaximumAttempts(config.ReplicationTaskProcessorErrorRetryMaxAttempts(shardID))
+	secondRetryPolicy := backoff.NewExponentialRetryPolicy(config.ReplicationTaskProcessorErrorSecondRetryWait(shardID))
+	secondRetryPolicy.SetMaximumInterval(config.ReplicationTaskProcessorErrorSecondRetryMaxWait(shardID))
+	secondRetryPolicy.SetExpirationInterval(config.ReplicationTaskProcessorErrorSecondRetryExpiration(shardID))
+	taskRetryPolicy := backoff.NewMultiPhasesRetryPolicy(firstRetryPolicy, secondRetryPolicy)
 
 	dlqRetryPolicy := backoff.NewExponentialRetryPolicy(dlqErrorRetryWait)
 	dlqRetryPolicy.SetExpirationInterval(backoff.NoInterval)

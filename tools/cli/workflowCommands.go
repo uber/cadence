@@ -151,6 +151,28 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 			ErrorAndExit("Failed to export history data file.", err)
 		}
 	}
+
+	// finally append activities with retry
+	frontendClient := cFactory.ServerFrontendClient(c)
+	domain := getRequiredGlobalOption(c, FlagDomain)
+	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &shared.DescribeWorkflowExecutionRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+			RunId:      common.StringPtr(rid),
+		},
+	})
+	if err != nil {
+		ErrorAndExit("Describe workflow execution failed, cannot get information of pending activities", err)
+	}
+
+	descOutput := convertDescribeWorkflowExecutionResponse(resp, frontendClient, c)
+	if len(descOutput.PendingActivities) > 0 {
+		fmt.Println("============Pending activities============")
+		prettyPrintJSONObject(descOutput.PendingActivities)
+		fmt.Println("NOTE: ActivityStartedEvent with retry policy will be written into history when the activity is finished.")
+	}
+
 }
 
 // StartWorkflow starts a new workflow execution

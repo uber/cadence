@@ -860,9 +860,9 @@ func (m *sqlExecutionManager) ListCurrentExecutions(
 
 func (m *sqlExecutionManager) IsWorkflowExecutionExists(
 	_ context.Context,
-	request *p.IsWorkflowExecutionExistsRequest,
+	_ *p.IsWorkflowExecutionExistsRequest,
 ) (*p.IsWorkflowExecutionExistsResponse, error) {
-	panic("not implemented yet")
+	return nil, &workflow.InternalServiceError{Message: "Not yet implemented"}
 }
 
 func (m *sqlExecutionManager) ListConcreteExecutions(

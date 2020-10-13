@@ -102,6 +102,7 @@ func NewAdminHandler(
 
 	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
 		resource.GetMetadataManager(),
+		resource.GetTimeSource(),
 		resource.GetLogger(),
 	)
 	return &AdminHandler{
