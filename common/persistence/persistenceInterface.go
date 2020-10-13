@@ -185,7 +185,7 @@ type (
 		GetDLQAckLevels(ctx context.Context) (map[string]int64, error)
 	}
 
-	// QueueMessage is the message that stores in the queue
+	// InternalQueueMessage is the message that stores in the queue
 	InternalQueueMessage struct {
 		ID        int64     `json:"message_id"`
 		QueueType QueueType `json:"queue_type"`
@@ -754,6 +754,7 @@ type (
 		IsGlobalDomain    bool
 		ConfigVersion     int64
 		FailoverVersion   int64
+		LastUpdatedTime   int64
 	}
 
 	// InternalGetDomainResponse is the response for GetDomain
@@ -767,6 +768,7 @@ type (
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
+		LastUpdatedTime             int64
 		NotificationVersion         int64
 	}
 
@@ -780,6 +782,7 @@ type (
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
 		FailoverEndTime             *int64
+		LastUpdatedTime             int64
 		NotificationVersion         int64
 	}
 

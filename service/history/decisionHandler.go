@@ -370,8 +370,8 @@ Update_History_Loop:
 			failMessage                 string
 			activityNotStartedCancelled bool
 			continueAsNewBuilder        execution.MutableState
-
-			hasUnhandledEvents bool
+			hasUnhandledEvents          bool
+			decisionResults             []*decisionResult
 		)
 		hasUnhandledEvents = msBuilder.HasBufferedEvents()
 
@@ -423,7 +423,7 @@ Update_History_Loop:
 				handler.config,
 			)
 
-			if err := decisionTaskHandler.handleDecisions(
+			if decisionResults, err = decisionTaskHandler.handleDecisions(
 				request.ExecutionContext,
 				request.Decisions,
 			); err != nil {
@@ -571,6 +571,14 @@ Update_History_Loop:
 		}
 
 		resp = &h.RespondDecisionTaskCompletedResponse{}
+		activitiesToDispatchLocally := make(map[string]*workflow.ActivityLocalDispatchInfo)
+		for _, dr := range decisionResults {
+			if dr.activityDispatchInfo != nil {
+				activitiesToDispatchLocally[*dr.activityDispatchInfo.ActivityId] = dr.activityDispatchInfo
+			}
+		}
+		resp.ActivitiesToDispatchLocally = activitiesToDispatchLocally
+
 		if request.GetReturnNewDecisionTask() && createNewDecisionTask {
 			decision, _ := msBuilder.GetDecisionInfo(newDecisionTaskScheduledID)
 			resp.StartedResponse, err = handler.createRecordDecisionTaskStartedResponse(domainID, msBuilder, decision, request.GetIdentity())

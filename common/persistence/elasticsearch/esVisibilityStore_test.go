@@ -285,7 +285,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
 
 	request := &p.InternalListWorkflowExecutionsByTypeRequest{
 		InternalListWorkflowExecutionsRequest: *testRequest,
-		WorkflowTypeName:              testWorkflowType,
+		WorkflowTypeName:                      testWorkflowType,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -312,7 +312,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
 
 	request := &p.InternalListWorkflowExecutionsByTypeRequest{
 		InternalListWorkflowExecutionsRequest: *testRequest,
-		WorkflowTypeName:              testWorkflowType,
+		WorkflowTypeName:                      testWorkflowType,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -339,7 +339,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByWorkflowID() {
 
 	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{
 		InternalListWorkflowExecutionsRequest: *testRequest,
-		WorkflowID:                    testWorkflowID,
+		WorkflowID:                            testWorkflowID,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -366,7 +366,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByWorkflowID() {
 
 	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{
 		InternalListWorkflowExecutionsRequest: *testRequest,
-		WorkflowID:                    testWorkflowID,
+		WorkflowID:                            testWorkflowID,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -393,7 +393,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
 
 	request := &p.InternalListClosedWorkflowExecutionsByStatusRequest{
 		InternalListWorkflowExecutionsRequest: *testRequest,
-		Status:                        workflow.WorkflowExecutionCloseStatus(testCloseStatus),
+		Status:                                workflow.WorkflowExecutionCloseStatus(testCloseStatus),
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -504,7 +504,7 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 		Sorter:   []elastic.Sorter{elastic.NewFieldSort(es.StartTime).Desc(), tieBreakerSorter},
 	}
 	s.mockESClient.On("Search", mock.Anything, params).Return(nil, nil).Once()
-	_, err := s.visibilityStore.getSearchResult(request, token, nil, isOpen)
+	_, err := s.visibilityStore.getSearchResult(context.Background(), request, token, nil, isOpen)
 	s.NoError(err)
 
 	// test request latestTime overflow
@@ -519,7 +519,7 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 		Sorter:   []elastic.Sorter{elastic.NewFieldSort(es.StartTime).Desc(), tieBreakerSorter},
 	}
 	s.mockESClient.On("Search", mock.Anything, param1).Return(nil, nil).Once()
-	_, err = s.visibilityStore.getSearchResult(request, token, nil, isOpen)
+	_, err = s.visibilityStore.getSearchResult(context.Background(), request, token, nil, isOpen)
 	s.NoError(err)
 	request.LatestStartTime = testLatestTime // revert
 
@@ -530,7 +530,7 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 	params.Query = boolQuery
 	params.Sorter = []elastic.Sorter{elastic.NewFieldSort(es.CloseTime).Desc(), tieBreakerSorter}
 	s.mockESClient.On("Search", mock.Anything, params).Return(nil, nil).Once()
-	_, err = s.visibilityStore.getSearchResult(request, token, nil, isOpen)
+	_, err = s.visibilityStore.getSearchResult(context.Background(), request, token, nil, isOpen)
 	s.NoError(err)
 
 	// test for additional matchQuery
@@ -538,7 +538,7 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 	boolQuery = elastic.NewBoolQuery().Must(matchDomainQuery).Filter(rangeQuery).Must(matchQuery).Must(existClosedStatusQuery)
 	params.Query = boolQuery
 	s.mockESClient.On("Search", mock.Anything, params).Return(nil, nil).Once()
-	_, err = s.visibilityStore.getSearchResult(request, token, matchQuery, isOpen)
+	_, err = s.visibilityStore.getSearchResult(context.Background(), request, token, matchQuery, isOpen)
 	s.NoError(err)
 
 	// test for search after
@@ -550,7 +550,7 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 	params.From = 0
 	params.SearchAfter = []interface{}{token.SortValue, token.TieBreaker}
 	s.mockESClient.On("Search", mock.Anything, params).Return(nil, nil).Once()
-	_, err = s.visibilityStore.getSearchResult(request, token, matchQuery, isOpen)
+	_, err = s.visibilityStore.getSearchResult(context.Background(), request, token, matchQuery, isOpen)
 	s.NoError(err)
 }
 
