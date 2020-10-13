@@ -202,7 +202,7 @@ type (
 		IsPointer         bool
 	}
 
-	// Fields describe a field within a struct
+	// Field describe a field within a struct
 	Field struct {
 		Name string
 		Type Type
@@ -220,7 +220,7 @@ type (
 	Map struct {
 		Type
 	}
-	// Map describes Enum type
+	// Enum describes Enum type
 	Enum struct {
 		Type   Type
 		Values []string
@@ -288,9 +288,8 @@ func newType(fullName string) Type {
 		pos = strings.LastIndexByte(pkg, '/')
 		short := pkg[pos+1:]
 		return Type{pkg, short, name, false, isArray, isMap, isPointer}
-	} else {
-		return Type{"", "", fullName, true, isArray, isMap, isPointer}
 	}
+	return Type{"", "", fullName, true, isArray, isMap, isPointer}
 }
 
 func newStruct(obj types.Object) *Struct {

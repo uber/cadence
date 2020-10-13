@@ -28,6 +28,7 @@
 package execution
 
 import (
+	context "context"
 	reflect "reflect"
 	time "time"
 
@@ -58,15 +59,15 @@ func (m *MockMutableStateTaskRefresher) EXPECT() *MockMutableStateTaskRefresherM
 }
 
 // RefreshTasks mocks base method
-func (m *MockMutableStateTaskRefresher) RefreshTasks(now time.Time, mutableState MutableState) error {
+func (m *MockMutableStateTaskRefresher) RefreshTasks(ctx context.Context, now time.Time, mutableState MutableState) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RefreshTasks", now, mutableState)
+	ret := m.ctrl.Call(m, "RefreshTasks", ctx, now, mutableState)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RefreshTasks indicates an expected call of RefreshTasks
-func (mr *MockMutableStateTaskRefresherMockRecorder) RefreshTasks(now, mutableState interface{}) *gomock.Call {
+func (mr *MockMutableStateTaskRefresherMockRecorder) RefreshTasks(ctx, now, mutableState interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshTasks", reflect.TypeOf((*MockMutableStateTaskRefresher)(nil).RefreshTasks), now, mutableState)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshTasks", reflect.TypeOf((*MockMutableStateTaskRefresher)(nil).RefreshTasks), ctx, now, mutableState)
 }

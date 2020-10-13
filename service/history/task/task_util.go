@@ -343,6 +343,7 @@ func retryWorkflow(
 	}
 
 	_, newMutableState, err := mutableState.AddContinueAsNewEvent(
+		context.TODO(),
 		eventBatchFirstEventID,
 		common.EmptyEventID,
 		parentDomainName,

@@ -362,7 +362,7 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 	task *persistence.TimerTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
+	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskDefaultTimeout,
@@ -372,7 +372,7 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 	}
 	defer func() { release(retError) }()
 
-	mutableState, err := loadMutableStateForTimerTask(context, task, t.metricsClient, t.logger)
+	mutableState, err := loadMutableStateForTimerTask(wfContext, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
 	}
@@ -411,7 +411,7 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 		//  previously, DomainID in activity info is not used, so need to get
 		//  schedule event from DB checking whether activity to be scheduled
 		//  belongs to this domain
-		scheduledEvent, err := mutableState.GetActivityScheduledEvent(scheduledID)
+		scheduledEvent, err := mutableState.GetActivityScheduledEvent(context.TODO(), scheduledID)
 		if err != nil {
 			return err
 		}
@@ -482,7 +482,7 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 	continueAsNewInitiator := workflow.ContinueAsNewInitiatorRetryPolicy
 	if backoffInterval == backoff.NoBackoff {
 		// check if a cron backoff is needed
-		backoffInterval, err = mutableState.GetCronBackoffDuration()
+		backoffInterval, err = mutableState.GetCronBackoffDuration(context.TODO())
 		if err != nil {
 			return err
 		}
@@ -499,7 +499,7 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 	}
 
 	// workflow timeout, but a retry or cron is needed, so we do continue as new to retry or cron
-	startEvent, err := mutableState.GetStartEvent()
+	startEvent, err := mutableState.GetStartEvent(context.TODO())
 	if err != nil {
 		return err
 	}

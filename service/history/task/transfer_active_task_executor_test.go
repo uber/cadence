@@ -21,6 +21,7 @@
 package task
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -2124,7 +2125,7 @@ func (s *transferActiveTaskExecutorSuite) createChildWorkflowExecutionRequest(
 	ci *persistence.ChildExecutionInfo,
 ) *history.StartWorkflowExecutionRequest {
 
-	event, err := mutableState.GetChildExecutionInitiatedEvent(task.ScheduleID)
+	event, err := mutableState.GetChildExecutionInitiatedEvent(context.Background(), task.ScheduleID)
 	s.NoError(err)
 	attributes := event.StartChildWorkflowExecutionInitiatedEventAttributes
 	workflowExecution := workflow.WorkflowExecution{
