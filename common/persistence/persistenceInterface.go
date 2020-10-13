@@ -185,7 +185,7 @@ type (
 		GetDLQAckLevels(ctx context.Context) (map[string]int64, error)
 	}
 
-	// QueueMessage is the message that stores in the queue
+	// InternalQueueMessage is the message that stores in the queue
 	InternalQueueMessage struct {
 		ID        int64     `json:"message_id"`
 		QueueType QueueType `json:"queue_type"`
