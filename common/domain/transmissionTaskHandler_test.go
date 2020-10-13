@@ -21,6 +21,7 @@
 package domain
 
 import (
+	"context"
 	"testing"
 
 	"github.com/pborman/uuid"
@@ -85,7 +86,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_Is
 	clusterStandby := "some random standby cluster name"
 	configVersion := int64(0)
 	failoverVersion := int64(59)
-	previousFailoverVerison := int64(55)
+	previousFailoverVersion := int64(55)
 	clusters := []*p.ClusterReplicationConfig{
 		{
 			ClusterName: clusterActive,
@@ -146,18 +147,19 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_Is
 			},
 			ConfigVersion:           common.Int64Ptr(configVersion),
 			FailoverVersion:         common.Int64Ptr(failoverVersion),
-			PreviousFailoverVersion: common.Int64Ptr(previousFailoverVerison),
+			PreviousFailoverVersion: common.Int64Ptr(previousFailoverVersion),
 		},
 	}).Return(nil).Once()
 
 	err := s.domainReplicator.HandleTransmissionTask(
+		context.Background(),
 		domainOperation,
 		info,
 		config,
 		replicationConfig,
 		configVersion,
 		failoverVersion,
-		previousFailoverVerison,
+		previousFailoverVersion,
 		isGlobalDomain,
 	)
 	s.Nil(err)
@@ -179,7 +181,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_No
 	clusterStandby := "some random standby cluster name"
 	configVersion := int64(0)
 	failoverVersion := int64(59)
-	previousFailoverVerison := int64(55)
+	previousFailoverVersion := int64(55)
 	clusters := []*p.ClusterReplicationConfig{
 		{
 			ClusterName: clusterActive,
@@ -214,13 +216,14 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_No
 	isGlobalDomain := false
 
 	err := s.domainReplicator.HandleTransmissionTask(
+		context.Background(),
 		domainOperation,
 		info,
 		config,
 		replicationConfig,
 		configVersion,
 		failoverVersion,
-		previousFailoverVerison,
+		previousFailoverVersion,
 		isGlobalDomain,
 	)
 	s.Nil(err)
@@ -244,7 +247,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_IsGl
 	clusterStandby := "some random standby cluster name"
 	configVersion := int64(0)
 	failoverVersion := int64(59)
-	previousFailoverVerison := int64(55)
+	previousFailoverVersion := int64(55)
 	clusters := []*p.ClusterReplicationConfig{
 		{
 			ClusterName: clusterActive,
@@ -305,18 +308,19 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_IsGl
 			},
 			ConfigVersion:           common.Int64Ptr(configVersion),
 			FailoverVersion:         common.Int64Ptr(failoverVersion),
-			PreviousFailoverVersion: common.Int64Ptr(previousFailoverVerison),
+			PreviousFailoverVersion: common.Int64Ptr(previousFailoverVersion),
 		},
 	}).Return(nil).Once()
 
 	err := s.domainReplicator.HandleTransmissionTask(
+		context.Background(),
 		domainOperation,
 		info,
 		config,
 		replicationConfig,
 		configVersion,
 		failoverVersion,
-		previousFailoverVerison,
+		previousFailoverVersion,
 		isGlobalDomain,
 	)
 	s.Nil(err)
@@ -338,7 +342,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_NotG
 	clusterStandby := "some random standby cluster name"
 	configVersion := int64(0)
 	failoverVersion := int64(59)
-	previousFailoverVerison := int64(55)
+	previousFailoverVersion := int64(55)
 	clusters := []*p.ClusterReplicationConfig{
 		{
 			ClusterName: clusterActive,
@@ -372,13 +376,14 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_NotG
 	isGlobalDomain := false
 
 	err := s.domainReplicator.HandleTransmissionTask(
+		context.Background(),
 		domainOperation,
 		info,
 		config,
 		replicationConfig,
 		configVersion,
 		failoverVersion,
-		previousFailoverVerison,
+		previousFailoverVersion,
 		isGlobalDomain,
 	)
 	s.Nil(err)

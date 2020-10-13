@@ -23,6 +23,7 @@
 package shard
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/pborman/uuid"
@@ -34,6 +35,7 @@ import (
 
 type (
 	fixer struct {
+		ctx              context.Context
 		shardID          int
 		itr              store.ScanOutputIterator
 		skippedWriter    store.ExecutionWriter
@@ -46,6 +48,7 @@ type (
 
 // NewFixer constructs a new fixer
 func NewFixer(
+	ctx context.Context,
 	shardID int,
 	manager invariant.Manager,
 	iterator store.ScanOutputIterator,
@@ -56,6 +59,7 @@ func NewFixer(
 	id := uuid.New()
 
 	return &fixer{
+		ctx:              ctx,
 		shardID:          shardID,
 		itr:              iterator,
 		skippedWriter:    store.NewBlobstoreWriter(id, store.SkippedExtension, blobstoreClient, blobstoreFlushThreshold),
@@ -81,7 +85,7 @@ func (f *fixer) Fix() FixReport {
 			}
 			return result
 		}
-		fixResult := f.invariantManager.RunFixes(soe.Execution)
+		fixResult := f.invariantManager.RunFixes(f.ctx, soe.Execution)
 		result.Stats.ExecutionCount++
 		foe := store.FixOutputEntity{
 			Execution: soe.Execution,

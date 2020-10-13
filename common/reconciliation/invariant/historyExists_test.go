@@ -23,6 +23,7 @@
 package invariant
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -134,7 +135,7 @@ func (s *HistoryExistsSuite) TestCheck() {
 		execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getExecResp, tc.getExecErr)
 		historyManager.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(tc.getHistoryResp, tc.getHistoryErr)
 		i := NewHistoryExists(persistence.NewPersistenceRetryer(execManager, historyManager, c2.CreatePersistenceRetryPolicy()))
-		result := i.Check(getOpenConcreteExecution())
+		result := i.Check(context.Background(), getOpenConcreteExecution())
 		s.Equal(tc.expectedResult, result)
 	}
 }

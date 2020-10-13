@@ -23,6 +23,7 @@
 package invariant
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -86,7 +87,7 @@ func (s *UtilSuite) TestDeleteExecution() {
 			execManager.On("DeleteCurrentWorkflowExecution", mock.Anything, mock.Anything).Return(tc.deleteCurrentErr).Once()
 		}
 		pr := persistence.NewPersistenceRetryer(execManager, nil, common.CreatePersistenceRetryPolicy())
-		result := DeleteExecution(&entity.ConcreteExecution{}, pr)
+		result := DeleteExecution(context.Background(), &entity.ConcreteExecution{}, pr)
 		s.Equal(tc.expectedFixResult, result)
 	}
 }
@@ -140,7 +141,7 @@ func (s *UtilSuite) TestExecutionStillOpen() {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getExecResp, tc.getExecErr)
 		pr := persistence.NewPersistenceRetryer(execManager, nil, common.CreatePersistenceRetryPolicy())
-		open, err := ExecutionStillOpen(&entity.Execution{}, pr)
+		open, err := ExecutionStillOpen(context.Background(), &entity.Execution{}, pr)
 		if tc.expectError {
 			s.Error(err)
 		} else {
@@ -185,7 +186,7 @@ func (s *UtilSuite) TestExecutionStillExists() {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getExecResp, tc.getExecErr)
 		pr := persistence.NewPersistenceRetryer(execManager, nil, common.CreatePersistenceRetryPolicy())
-		exists, err := ExecutionStillExists(&entity.Execution{}, pr)
+		exists, err := ExecutionStillExists(context.Background(), &entity.Execution{}, pr)
 		if tc.expectError {
 			s.Error(err)
 		} else {

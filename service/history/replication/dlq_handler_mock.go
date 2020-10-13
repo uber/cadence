@@ -76,17 +76,17 @@ func (mr *MockDLQHandlerMockRecorder) ReadMessages(ctx, sourceCluster, lastMessa
 }
 
 // PurgeMessages mocks base method
-func (m *MockDLQHandler) PurgeMessages(sourceCluster string, lastMessageID int64) error {
+func (m *MockDLQHandler) PurgeMessages(ctx context.Context, sourceCluster string, lastMessageID int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PurgeMessages", sourceCluster, lastMessageID)
+	ret := m.ctrl.Call(m, "PurgeMessages", ctx, sourceCluster, lastMessageID)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PurgeMessages indicates an expected call of PurgeMessages
-func (mr *MockDLQHandlerMockRecorder) PurgeMessages(sourceCluster, lastMessageID interface{}) *gomock.Call {
+func (mr *MockDLQHandlerMockRecorder) PurgeMessages(ctx, sourceCluster, lastMessageID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PurgeMessages", reflect.TypeOf((*MockDLQHandler)(nil).PurgeMessages), sourceCluster, lastMessageID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PurgeMessages", reflect.TypeOf((*MockDLQHandler)(nil).PurgeMessages), ctx, sourceCluster, lastMessageID)
 }
 
 // MergeMessages mocks base method

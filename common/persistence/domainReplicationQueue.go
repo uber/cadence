@@ -293,10 +293,8 @@ func (q *domainReplicationQueueImpl) DeleteMessageFromDLQ(
 	return q.queue.DeleteMessageFromDLQ(ctx, messageID)
 }
 
-func (q *domainReplicationQueueImpl) purgeAckedMessages(
-	ctx context.Context,
-) error {
-	ackLevelByCluster, err := q.GetAckLevels(ctx)
+func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
+	ackLevelByCluster, err := q.GetAckLevels(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to purge messages: %v", err)
 	}
@@ -312,7 +310,7 @@ func (q *domainReplicationQueueImpl) purgeAckedMessages(
 		}
 	}
 
-	err = q.queue.DeleteMessagesBefore(ctx, minAckLevel)
+	err = q.queue.DeleteMessagesBefore(context.Background(), minAckLevel)
 	if err != nil {
 		return fmt.Errorf("failed to purge messages: %v", err)
 	}
@@ -333,7 +331,7 @@ func (q *domainReplicationQueueImpl) purgeProcessor() {
 			return
 		case <-ticker.C:
 			if q.ackLevelUpdated {
-				err := q.purgeAckedMessages(context.TODO())
+				err := q.purgeAckedMessages()
 				if err != nil {
 					q.logger.Warn("Failed to purge acked domain replication messages.", tag.Error(err))
 				} else {

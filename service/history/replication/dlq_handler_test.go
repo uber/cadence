@@ -162,7 +162,7 @@ func (s *dlqHandlerSuite) TestPurgeMessages_OK() {
 			InclusiveEndTaskID:   lastMessageID,
 		}).Return(nil).Times(1)
 
-	err := s.messageHandler.PurgeMessages(sourceCluster, lastMessageID)
+	err := s.messageHandler.PurgeMessages(context.Background(), sourceCluster, lastMessageID)
 	s.NoError(err)
 }
 

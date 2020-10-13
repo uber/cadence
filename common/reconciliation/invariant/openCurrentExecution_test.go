@@ -23,6 +23,7 @@
 package invariant
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -174,6 +175,6 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 		execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getConcreteResp, tc.getConcreteErr)
 		execManager.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(tc.getCurrentResp, tc.getCurrentErr)
 		o := NewOpenCurrentExecution(persistence.NewPersistenceRetryer(execManager, nil, c2.CreatePersistenceRetryPolicy()))
-		s.Equal(tc.expectedResult, o.Check(tc.execution))
+		s.Equal(tc.expectedResult, o.Check(context.Background(), tc.execution))
 	}
 }

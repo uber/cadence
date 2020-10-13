@@ -719,16 +719,16 @@ func (h *Handler) RemoveTask(
 
 	switch taskType := common.TaskType(request.GetType()); taskType {
 	case common.TaskTypeTransfer:
-		return executionMgr.CompleteTransferTask(context.TODO(), &persistence.CompleteTransferTaskRequest{
+		return executionMgr.CompleteTransferTask(ctx, &persistence.CompleteTransferTaskRequest{
 			TaskID: request.GetTaskID(),
 		})
 	case common.TaskTypeTimer:
-		return executionMgr.CompleteTimerTask(context.TODO(), &persistence.CompleteTimerTaskRequest{
+		return executionMgr.CompleteTimerTask(ctx, &persistence.CompleteTimerTaskRequest{
 			VisibilityTimestamp: time.Unix(0, request.GetVisibilityTimestamp()),
 			TaskID:              request.GetTaskID(),
 		})
 	case common.TaskTypeReplication:
-		return executionMgr.CompleteReplicationTask(context.TODO(), &persistence.CompleteReplicationTaskRequest{
+		return executionMgr.CompleteReplicationTask(ctx, &persistence.CompleteReplicationTaskRequest{
 			TaskID: request.GetTaskID(),
 		})
 	default:

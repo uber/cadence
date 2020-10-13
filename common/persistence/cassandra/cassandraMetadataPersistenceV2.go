@@ -83,8 +83,8 @@ const (
 		`WHERE id = ?`
 
 	templateCreateDomainByNameQueryWithinBatchV2 = `INSERT INTO domains_by_name_v2 (` +
-		`domains_partition, name, domain, config, replication_config, is_global_domain, config_version, failover_version, failover_notification_version, previous_failover_version, failover_end_time, notification_version) ` +
-		`VALUES(?, ?, ` + templateDomainInfoType + `, ` + templateDomainConfigType + `, ` + templateDomainReplicationConfigType + `, ?, ?, ?, ?, ?, ?, ?) IF NOT EXISTS`
+		`domains_partition, name, domain, config, replication_config, is_global_domain, config_version, failover_version, failover_notification_version, previous_failover_version, failover_end_time, last_updated_time, notification_version) ` +
+		`VALUES(?, ?, ` + templateDomainInfoType + `, ` + templateDomainConfigType + `, ` + templateDomainReplicationConfigType + `, ?, ?, ?, ?, ?, ?, ?, ?) IF NOT EXISTS`
 
 	templateGetDomainByNameQueryV2 = `SELECT domain.id, domain.name, domain.status, domain.description, ` +
 		`domain.owner_email, domain.data, config.retention, config.emit_metric, ` +
@@ -99,6 +99,7 @@ const (
 		`failover_notification_version, ` +
 		`previous_failover_version, ` +
 		`failover_end_time, ` +
+		`last_updated_time, ` +
 		`notification_version ` +
 		`FROM domains_by_name_v2 ` +
 		`WHERE domains_partition = ? ` +
@@ -113,6 +114,7 @@ const (
 		`failover_notification_version = ? , ` +
 		`previous_failover_version = ? , ` +
 		`failover_end_time = ?,` +
+		`last_updated_time = ?,` +
 		`notification_version = ? ` +
 		`WHERE domains_partition = ? ` +
 		`and name = ?`
@@ -254,6 +256,7 @@ func (m *cassandraMetadataPersistenceV2) CreateDomainInV2Table(
 		p.InitialFailoverNotificationVersion,
 		common.InitialPreviousFailoverVersion,
 		emptyFailoverEndTime,
+		request.LastUpdatedTime,
 		metadata.NotificationVersion,
 	)
 	m.updateMetadataBatch(batch, metadata.NotificationVersion)
@@ -334,6 +337,7 @@ func (m *cassandraMetadataPersistenceV2) UpdateDomain(
 		request.FailoverNotificationVersion,
 		request.PreviousFailoverVersion,
 		failoverEndTime,
+		request.LastUpdatedTime,
 		request.NotificationVersion,
 		constDomainPartition,
 		request.Info.Name,
@@ -379,6 +383,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(
 	var failoverEndTime int64
 	var configVersion int64
 	var isGlobalDomain bool
+	var lastUpdatedTime int64
 
 	if len(request.ID) > 0 && len(request.Name) > 0 {
 		return nil, &workflow.BadRequestError{
@@ -443,6 +448,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(
 		&failoverNotificationVersion,
 		&previousFailoverVersion,
 		&failoverEndTime,
+		&lastUpdatedTime,
 		&notificationVersion,
 	)
 
@@ -479,6 +485,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(
 		FailoverNotificationVersion: failoverNotificationVersion,
 		PreviousFailoverVersion:     previousFailoverVersion,
 		FailoverEndTime:             responseFailoverEndTime,
+		LastUpdatedTime:             lastUpdatedTime,
 		NotificationVersion:         notificationVersion,
 	}, nil
 }
@@ -600,7 +607,7 @@ func (m *cassandraMetadataPersistenceV2) DeleteDomainByName(
 ) error {
 	var ID string
 	query := m.session.Query(templateGetDomainByNameQueryV2, constDomainPartition, request.Name)
-	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		if err == gocql.ErrNotFound {
 			return nil
