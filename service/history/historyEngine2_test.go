@@ -635,7 +635,7 @@ func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 	// this enables us to set query registry on it
 	ctx, release, err := s.historyEngine.executionCache.GetOrCreateWorkflowExecutionForBackground(constants.TestDomainID, workflowExecution)
 	s.NoError(err)
-	loadedMS, err := ctx.LoadWorkflowExecution()
+	loadedMS, err := ctx.LoadWorkflowExecution(context.Background())
 	s.NoError(err)
 	qr := query.NewRegistry()
 	id1, _ := qr.BufferQuery(&workflow.WorkflowQuery{})

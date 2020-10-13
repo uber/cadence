@@ -207,7 +207,7 @@ func (s *branchManagerSuite) TestFlushBufferedEvents() {
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(lastWriteVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
-	s.mockContext.EXPECT().UpdateWorkflowExecutionAsActive(gomock.Any()).Return(nil).Times(1)
+	s.mockContext.EXPECT().UpdateWorkflowExecutionAsActive(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 
 	ctx := ctx.Background()
 

@@ -21,6 +21,7 @@
 package task
 
 import (
+	"context"
 	"fmt"
 
 	m "github.com/uber/cadence/.gen/go/matching"
@@ -447,7 +448,7 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 	task *persistence.TimerTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
+	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskDefaultTimeout,
@@ -457,7 +458,7 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 	}
 	defer func() { release(retError) }()
 
-	mutableState, err := loadMutableStateForTimerTask(context, task, t.metricsClient, t.logger)
+	mutableState, err := loadMutableStateForTimerTask(wfContext, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
 	}
@@ -494,7 +495,7 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 
 		// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict than reload
 		// the history and try the operation again.
-		return t.updateWorkflowExecution(context, mutableState, false)
+		return t.updateWorkflowExecution(wfContext, mutableState, false)
 	}
 
 	// workflow timeout, but a retry or cron is needed, so we do continue as new to retry or cron
@@ -530,7 +531,8 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 	}
 
 	newExecutionInfo := newMutableState.GetExecutionInfo()
-	return context.UpdateWorkflowExecutionWithNewAsActive(
+	return wfContext.UpdateWorkflowExecutionWithNewAsActive(
+		context.TODO(),
 		t.shard.GetTimeSource().Now(),
 		execution.NewContext(
 			newExecutionInfo.DomainID,
@@ -555,7 +557,7 @@ func (t *timerActiveTaskExecutor) getTimerSequence(
 }
 
 func (t *timerActiveTaskExecutor) updateWorkflowExecution(
-	context execution.Context,
+	wfContext execution.Context,
 	mutableState execution.MutableState,
 	scheduleNewDecision bool,
 ) error {
@@ -570,7 +572,7 @@ func (t *timerActiveTaskExecutor) updateWorkflowExecution(
 	}
 
 	now := t.shard.GetTimeSource().Now()
-	err = context.UpdateWorkflowExecutionAsActive(now)
+	err = wfContext.UpdateWorkflowExecutionAsActive(context.TODO(), now)
 	if err != nil {
 		// if is shard ownership error, the shard context will stop the entire history engine
 		// we don't need to explicitly stop the queue processor here
