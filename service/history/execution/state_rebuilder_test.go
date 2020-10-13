@@ -21,7 +21,7 @@
 package execution
 
 import (
-	ctx "context"
+	"context"
 	"testing"
 	"time"
 
@@ -209,7 +209,7 @@ func (s *stateRebuilderSuite) TestPagination() {
 		Size:          67890,
 	}, nil).Once()
 
-	paginationFn := s.nDCStateRebuilder.getPaginationFn(workflowIdentifier, firstEventID, nextEventID, branchToken)
+	paginationFn := s.nDCStateRebuilder.getPaginationFn(context.Background(), workflowIdentifier, firstEventID, nextEventID, branchToken)
 	iter := collection.NewPagingIterator(paginationFn)
 
 	result := []*shared.History{}
@@ -307,7 +307,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 	s.mockTaskRefresher.EXPECT().RefreshTasks(now, gomock.Any()).Return(nil).Times(1)
 
 	rebuildMutableState, rebuiltHistorySize, err := s.nDCStateRebuilder.Rebuild(
-		ctx.Background(),
+		context.Background(),
 		now,
 		definition.NewWorkflowIdentifier(s.domainID, s.workflowID, s.runID),
 		branchToken,

@@ -209,7 +209,7 @@ func (c *taskListManagerImpl) Stop() {
 }
 
 // AddTask adds a task to the task list. This method will first attempt a synchronous
-// match with a poller. When there are no pollers or if ratelimit is exceeded, task will
+// match with a poller. When there are no pollers or if rate limit is exceeded, task will
 // be written to database and later asynchronously matched with a poller
 func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams) (bool, error) {
 	c.startWG.Wait()

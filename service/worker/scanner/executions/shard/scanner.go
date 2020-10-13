@@ -23,6 +23,7 @@
 package shard
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/pborman/uuid"
@@ -35,6 +36,7 @@ import (
 
 type (
 	scanner struct {
+		ctx              context.Context
 		shardID          int
 		itr              pagination.Iterator
 		failedWriter     store.ExecutionWriter
@@ -46,6 +48,7 @@ type (
 
 // NewScanner constructs a new scanner
 func NewScanner(
+	ctx context.Context,
 	shardID int,
 	iterator pagination.Iterator,
 	blobstoreClient blobstore.Client,
@@ -56,6 +59,7 @@ func NewScanner(
 	id := uuid.New()
 
 	return &scanner{
+		ctx:              ctx,
 		shardID:          shardID,
 		itr:              iterator,
 		failedWriter:     store.NewBlobstoreWriter(id, store.FailedExtension, blobstoreClient, blobstoreFlushThreshold),
@@ -84,7 +88,7 @@ func (s *scanner) Scan() ScanReport {
 			}
 			return result
 		}
-		checkResult := s.invariantManager.RunChecks(exec)
+		checkResult := s.invariantManager.RunChecks(s.ctx, exec)
 		result.Stats.ExecutionsCount++
 		switch checkResult.CheckResultType {
 		case invariant.CheckResultTypeHealthy:

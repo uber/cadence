@@ -124,7 +124,7 @@ func (s *taskAckManagerSuite) TestGetPaginationFunc() {
 	var branchToken []byte
 	shardID := 0
 	historyCount := 0
-	pagingFunc := s.ackManager.getPaginationFunc(firstEventID, nextEventID, branchToken, shardID, &historyCount)
+	pagingFunc := s.ackManager.getPaginationFunc(context.Background(), firstEventID, nextEventID, branchToken, shardID, &historyCount)
 
 	pageToken := []byte{1}
 	event := &workflow.HistoryEvent{
@@ -159,7 +159,7 @@ func (s *taskAckManagerSuite) TestGetAllHistory_OK() {
 		LastFirstEventID: 1,
 	}, nil)
 
-	history, err := s.ackManager.getAllHistory(firstEventID, nextEventID, branchToken)
+	history, err := s.ackManager.getAllHistory(context.Background(), firstEventID, nextEventID, branchToken)
 	s.NoError(err)
 	s.Len(history.GetEvents(), 1)
 	s.Equal(event, history.GetEvents()[0])
@@ -171,7 +171,7 @@ func (s *taskAckManagerSuite) TestGetAllHistory_Error() {
 	var branchToken []byte
 	s.mockHistoryMgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(nil, errors.New("test"))
 
-	history, err := s.ackManager.getAllHistory(firstEventID, nextEventID, branchToken)
+	history, err := s.ackManager.getAllHistory(context.Background(), firstEventID, nextEventID, branchToken)
 	s.Error(err)
 	s.Nil(history)
 }
@@ -185,7 +185,7 @@ func (s *taskAckManagerSuite) TestReadTasksWithBatchSize_OK() {
 		NextPageToken: []byte{1},
 	}, nil)
 
-	taskInfo, hasMore, err := s.ackManager.readTasksWithBatchSize(0, 1)
+	taskInfo, hasMore, err := s.ackManager.readTasksWithBatchSize(context.Background(), 0, 1)
 	s.NoError(err)
 	s.True(hasMore)
 	s.Len(taskInfo, 1)
@@ -195,7 +195,7 @@ func (s *taskAckManagerSuite) TestReadTasksWithBatchSize_OK() {
 func (s *taskAckManagerSuite) TestReadTasksWithBatchSize_Error() {
 	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything, mock.Anything).Return(nil, errors.New("test"))
 
-	taskInfo, hasMore, err := s.ackManager.readTasksWithBatchSize(0, 1)
+	taskInfo, hasMore, err := s.ackManager.readTasksWithBatchSize(context.Background(), 0, 1)
 	s.Error(err)
 	s.False(hasMore)
 	s.Len(taskInfo, 0)
@@ -324,7 +324,7 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_OK() {
 			},
 			Size: 1,
 		}, nil)
-	_, err := s.ackManager.getEventsBlob(branchToken, firstEventID, nextEventID)
+	_, err := s.ackManager.getEventsBlob(context.Background(), branchToken, firstEventID, nextEventID)
 	s.NoError(err)
 }
 
@@ -338,7 +338,7 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_Errors() {
 			HistoryEventBlobs: []*persistence.DataBlob{},
 			Size:              0,
 		}, nil)
-	_, err := s.ackManager.getEventsBlob(branchToken, firstEventID, nextEventID)
+	_, err := s.ackManager.getEventsBlob(context.Background(), branchToken, firstEventID, nextEventID)
 	s.Error(err)
 
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
@@ -355,11 +355,11 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_Errors() {
 			},
 			Size: 2,
 		}, nil)
-	_, err = s.ackManager.getEventsBlob(branchToken, firstEventID, nextEventID)
+	_, err = s.ackManager.getEventsBlob(context.Background(), branchToken, firstEventID, nextEventID)
 	s.Error(err)
 
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(nil, errors.New("test"))
-	_, err = s.ackManager.getEventsBlob(branchToken, firstEventID, nextEventID)
+	_, err = s.ackManager.getEventsBlob(context.Background(), branchToken, firstEventID, nextEventID)
 	s.Error(err)
 }
 

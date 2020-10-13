@@ -34,12 +34,20 @@ import (
 )
 
 // ConcreteExecutionIterator is used to retrieve Concrete executions.
-func ConcreteExecutionIterator(retryer persistence.Retryer, pageSize int) pagination.Iterator {
-	return pagination.NewIterator(nil, getConcreteExecutions(retryer, pageSize, codec.NewThriftRWEncoder()))
+func ConcreteExecutionIterator(
+	ctx context.Context,
+	retryer persistence.Retryer,
+	pageSize int,
+) pagination.Iterator {
+	return pagination.NewIterator(ctx, nil, getConcreteExecutions(retryer, pageSize, codec.NewThriftRWEncoder()))
 }
 
 // ConcreteExecution returns a single ConcreteExecution from persistence
-func ConcreteExecution(retryer persistence.Retryer, request ExecutionRequest) (entity.Entity, error) {
+func ConcreteExecution(
+	ctx context.Context,
+	retryer persistence.Retryer,
+	request ExecutionRequest,
+) (entity.Entity, error) {
 
 	req := persistence.GetWorkflowExecutionRequest{
 		DomainID: request.DomainID,
@@ -48,7 +56,7 @@ func ConcreteExecution(retryer persistence.Retryer, request ExecutionRequest) (e
 			RunId:      common.StringPtr(request.RunID),
 		},
 	}
-	e, err := retryer.GetWorkflowExecution(context.TODO(), &req)
+	e, err := retryer.GetWorkflowExecution(ctx, &req)
 	if err != nil {
 		return nil, err
 	}
@@ -74,14 +82,14 @@ func getConcreteExecutions(
 	pageSize int,
 	encoder *codec.ThriftRWEncoder,
 ) pagination.FetchFn {
-	return func(token pagination.PageToken) (pagination.Page, error) {
+	return func(ctx context.Context, token pagination.PageToken) (pagination.Page, error) {
 		req := &persistence.ListConcreteExecutionsRequest{
 			PageSize: pageSize,
 		}
 		if token != nil {
 			req.PageToken = token.([]byte)
 		}
-		resp, err := pr.ListConcreteExecutions(context.TODO(), req)
+		resp, err := pr.ListConcreteExecutions(ctx, req)
 		if err != nil {
 			return pagination.Page{}, err
 		}

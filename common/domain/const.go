@@ -20,10 +20,15 @@
 
 package domain
 
+import "time"
+
 const (
 	// MinRetentionDays is the minimal retention days for any domain
 	MinRetentionDays = 1
 
 	// MaxBadBinaries is the maximal number of bad client binaries stored in a domain
 	MaxBadBinaries = 10
+
+	// FailoverCoolDown is the duration between two failovers
+	FailoverCoolDown = 1 * time.Minute
 )

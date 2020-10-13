@@ -186,7 +186,7 @@ func TaskListScavengerActivity(
 ) error {
 
 	ctx := activityCtx.Value(scannerContextKey).(scannerContext)
-	scavenger := tasklist.NewScavenger(ctx.GetTaskManager(), ctx.GetMetricsClient(), ctx.GetLogger())
+	scavenger := tasklist.NewScavenger(activityCtx, ctx.GetTaskManager(), ctx.GetMetricsClient(), ctx.GetLogger())
 	ctx.GetLogger().Info("Starting task list scavenger")
 	scavenger.Start()
 	for scavenger.Alive() {

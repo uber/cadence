@@ -138,7 +138,7 @@ func (h *historyArchiver) Archive(
 
 	historyIterator := h.historyIterator
 	if historyIterator == nil { // will only be set by testing code
-		historyIterator = archiver.NewHistoryIterator(request, h.container.HistoryV2Manager, targetHistoryBlobSize)
+		historyIterator = archiver.NewHistoryIterator(ctx, request, h.container.HistoryV2Manager, targetHistoryBlobSize)
 	}
 
 	historyBatches := []*shared.History{}
@@ -287,11 +287,11 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 		return err
 	}
 	for err != nil {
-		if !common.IsPersistenceTransientError(err) {
-			return nil, err
-		}
 		if contextExpired(ctx) {
 			return nil, archiver.ErrContextTimeout
+		}
+		if !common.IsPersistenceTransientError(err) {
+			return nil, err
 		}
 		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), common.IsPersistenceTransientError)
 	}

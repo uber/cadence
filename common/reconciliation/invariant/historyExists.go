@@ -50,7 +50,14 @@ func NewHistoryExists(
 	}
 }
 
-func (h *historyExists) Check(execution interface{}) CheckResult {
+func (h *historyExists) Check(
+	ctx context.Context,
+	execution interface{},
+) CheckResult {
+	if checkResult := validateCheckContext(ctx, h.Name()); checkResult != nil {
+		return *checkResult
+	}
+
 	concreteExecution, ok := execution.(*entity.ConcreteExecution)
 	if !ok {
 		return CheckResult{
@@ -67,8 +74,8 @@ func (h *historyExists) Check(execution interface{}) CheckResult {
 		NextPageToken: nil,
 		ShardID:       c.IntPtr(concreteExecution.ShardID),
 	}
-	readHistoryBranchResp, readHistoryBranchErr := h.pr.ReadHistoryBranch(context.TODO(), readHistoryBranchReq)
-	stillExists, existsCheckError := ExecutionStillExists(&concreteExecution.Execution, h.pr)
+	readHistoryBranchResp, readHistoryBranchErr := h.pr.ReadHistoryBranch(ctx, readHistoryBranchReq)
+	stillExists, existsCheckError := ExecutionStillExists(ctx, &concreteExecution.Execution, h.pr)
 	if existsCheckError != nil {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
@@ -115,12 +122,19 @@ func (h *historyExists) Check(execution interface{}) CheckResult {
 	}
 }
 
-func (h *historyExists) Fix(execution interface{}) FixResult {
-	fixResult, checkResult := checkBeforeFix(h, execution)
+func (h *historyExists) Fix(
+	ctx context.Context,
+	execution interface{},
+) FixResult {
+	if fixResult := validateFixContext(ctx, h.Name()); fixResult != nil {
+		return *fixResult
+	}
+
+	fixResult, checkResult := checkBeforeFix(ctx, h, execution)
 	if fixResult != nil {
 		return *fixResult
 	}
-	fixResult = DeleteExecution(&execution, h.pr)
+	fixResult = DeleteExecution(ctx, &execution, h.pr)
 	fixResult.CheckResult = *checkResult
 	fixResult.InvariantName = h.Name()
 	return *fixResult
@@ -133,6 +147,7 @@ func (h *historyExists) Name() Name {
 // ExecutionStillExists returns true if execution still exists in persistence, false otherwise.
 // Returns error on failure to confirm.
 func ExecutionStillExists(
+	ctx context.Context,
 	exec *entity.Execution,
 	pr persistence.Retryer,
 ) (bool, error) {
@@ -143,7 +158,7 @@ func ExecutionStillExists(
 			RunId:      &exec.RunID,
 		},
 	}
-	_, err := pr.GetWorkflowExecution(context.TODO(), req)
+	_, err := pr.GetWorkflowExecution(ctx, req)
 	if err == nil {
 		return true, nil
 	}

@@ -31,17 +31,25 @@ import (
 )
 
 // CurrentExecutionIterator is used to retrieve Concrete executions.
-func CurrentExecutionIterator(retryer persistence.Retryer, pageSize int) pagination.Iterator {
-	return pagination.NewIterator(nil, getCurrentExecution(retryer, pageSize))
+func CurrentExecutionIterator(
+	ctx context.Context,
+	retryer persistence.Retryer,
+	pageSize int,
+) pagination.Iterator {
+	return pagination.NewIterator(ctx, nil, getCurrentExecution(retryer, pageSize))
 }
 
 // CurrentExecution returns a single execution
-func CurrentExecution(retryer persistence.Retryer, request ExecutionRequest) (entity.Entity, error) {
+func CurrentExecution(
+	ctx context.Context,
+	retryer persistence.Retryer,
+	request ExecutionRequest,
+) (entity.Entity, error) {
 	req := persistence.GetCurrentExecutionRequest{
 		DomainID:   request.DomainID,
 		WorkflowID: request.WorkflowID,
 	}
-	e, err := retryer.GetCurrentExecution(context.TODO(), &req)
+	e, err := retryer.GetCurrentExecution(ctx, &req)
 	if err != nil {
 		return nil, err
 	}
@@ -62,14 +70,14 @@ func getCurrentExecution(
 	pr persistence.Retryer,
 	pageSize int,
 ) pagination.FetchFn {
-	return func(token pagination.PageToken) (pagination.Page, error) {
+	return func(ctx context.Context, token pagination.PageToken) (pagination.Page, error) {
 		req := &persistence.ListCurrentExecutionsRequest{
 			PageSize: pageSize,
 		}
 		if token != nil {
 			req.PageToken = token.([]byte)
 		}
-		resp, err := pr.ListCurrentExecutions(context.TODO(), req)
+		resp, err := pr.ListCurrentExecutions(ctx, req)
 		if err != nil {
 			return pagination.Page{}, err
 		}

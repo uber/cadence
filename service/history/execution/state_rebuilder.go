@@ -111,6 +111,7 @@ func (r *stateRebuilderImpl) Rebuild(
 ) (MutableState, int64, error) {
 
 	iter := collection.NewPagingIterator(r.getPaginationFn(
+		ctx,
 		baseWorkflowIdentifier,
 		common.FirstEventID,
 		baseLastEventID+1,
@@ -228,6 +229,7 @@ func (r *stateRebuilderImpl) applyEvents(
 }
 
 func (r *stateRebuilderImpl) getPaginationFn(
+	ctx context.Context,
 	workflowIdentifier definition.WorkflowIdentifier,
 	firstEventID int64,
 	nextEventID int64,
@@ -237,7 +239,7 @@ func (r *stateRebuilderImpl) getPaginationFn(
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 
 		_, historyBatches, token, size, err := persistence.PaginateHistory(
-			context.TODO(),
+			ctx,
 			r.historyV2Mgr,
 			true,
 			branchToken,

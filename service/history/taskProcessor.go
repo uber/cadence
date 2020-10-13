@@ -39,6 +39,14 @@ import (
 	"github.com/uber/cadence/service/history/task"
 )
 
+const (
+	firstPhaseRetryInitialDelay  = 50 * time.Millisecond
+	firstPhaseRetryCount         = 3
+	secondPhaseRetryInitialDelay = 2 * time.Second
+	secondPhaseRetryMaxDelay     = 128 * time.Second
+	secondPhaseRetryExpiration   = 5 * time.Minute
+)
+
 type (
 	taskProcessorOptions struct {
 		queueSize   int
@@ -105,7 +113,11 @@ func newTaskProcessor(
 	for index := 0; index < options.workerCount; index++ {
 		workerNotificationChans = append(workerNotificationChans, make(chan struct{}, 1))
 	}
-
+	firstPolicy := backoff.NewExponentialRetryPolicy(firstPhaseRetryInitialDelay)
+	firstPolicy.SetMaximumAttempts(firstPhaseRetryCount)
+	secondPolicy := backoff.NewExponentialRetryPolicy(secondPhaseRetryInitialDelay)
+	secondPolicy.SetMaximumInterval(secondPhaseRetryMaxDelay)
+	secondPolicy.SetExpirationInterval(secondPhaseRetryExpiration)
 	base := &taskProcessor{
 		shard:                   shard,
 		shutdownCh:              make(chan struct{}),
@@ -116,7 +128,7 @@ func newTaskProcessor(
 		domainMetricsScopeCache: shard.GetService().GetDomainMetricsScopeCache(),
 		timeSource:              shard.GetTimeSource(),
 		workerNotificationChans: workerNotificationChans,
-		retryPolicy:             backoff.NewTwoPhaseRetryPolicy(),
+		retryPolicy:             backoff.NewMultiPhasesRetryPolicy(firstPolicy, secondPolicy),
 		numOfWorker:             options.workerCount,
 	}
 

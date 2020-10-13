@@ -45,7 +45,12 @@ type (
 		taskTables    map[string]*mockTaskTable
 		taskMgr       *mocks.TaskManager
 		scvgr         *Scavenger
+		scvgrCancelFn context.CancelFunc
 	}
+)
+
+const (
+	scavengerTestTimeout = 10 * time.Second
 )
 
 var errTest = errors.New("transient error")
@@ -63,7 +68,10 @@ func (s *ScavengerTestSuite) SetupTest() {
 		s.Require().NoError(err)
 	}
 	logger := loggerimpl.NewLogger(zapLogger)
-	s.scvgr = NewScavenger(s.taskMgr, metrics.NewClient(tally.NoopScope, metrics.Worker), logger)
+
+	scvgrCtx, scvgrCancelFn := context.WithTimeout(context.Background(), scavengerTestTimeout)
+	s.scvgr = NewScavenger(scvgrCtx, s.taskMgr, metrics.NewClient(tally.NoopScope, metrics.Worker), logger)
+	s.scvgrCancelFn = scvgrCancelFn
 	maxTasksPerJob = 4
 	executorPollInterval = time.Millisecond * 50
 }
@@ -169,7 +177,7 @@ func (s *ScavengerTestSuite) TestAllExpiredTasksWithErrors() {
 
 func (s *ScavengerTestSuite) runScavenger() {
 	s.scvgr.Start()
-	timer := time.NewTimer(10 * time.Second)
+	timer := time.NewTimer(scavengerTestTimeout)
 	select {
 	case <-s.scvgr.stopC:
 		timer.Stop()

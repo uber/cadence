@@ -97,7 +97,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(
 	ctx context.Context,
 	request *persistence.InternalCreateDomainRequest,
 ) (*persistence.CreateDomainResponse, error) {
-	metadata, err := m.GetMetadata(context.TODO())
+	metadata, err := m.GetMetadata(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -139,6 +139,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(
 		NotificationVersion:         common.Int64Ptr(metadata.NotificationVersion),
 		FailoverNotificationVersion: common.Int64Ptr(persistence.InitialFailoverNotificationVersion),
 		PreviousFailoverVersion:     common.Int64Ptr(common.InitialPreviousFailoverVersion),
+		LastUpdatedTime:             common.Int64Ptr(request.LastUpdatedTime),
 		BadBinaries:                 badBinaries,
 		BadBinariesEncoding:         badBinariesEncoding,
 	}
@@ -280,6 +281,7 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 		FailoverNotificationVersion: domainInfo.GetFailoverNotificationVersion(),
 		PreviousFailoverVersion:     domainInfo.GetPreviousFailoverVersion(),
 		FailoverEndTime:             failoverEndTime,
+		LastUpdatedTime:             domainInfo.GetLastUpdatedTime(),
 	}, nil
 }
 
@@ -332,6 +334,7 @@ func (m *sqlMetadataManagerV2) UpdateDomain(
 		FailoverNotificationVersion: common.Int64Ptr(request.FailoverNotificationVersion),
 		PreviousFailoverVersion:     common.Int64Ptr(request.PreviousFailoverVersion),
 		FailoverEndTime:             failoverEndTime,
+		LastUpdatedTime:             common.Int64Ptr(request.LastUpdatedTime),
 		BadBinaries:                 badBinaries,
 		BadBinariesEncoding:         badBinariesEncoding,
 	}

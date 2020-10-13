@@ -54,7 +54,6 @@ type (
 		*require.Assertions
 		controller *gomock.Controller
 
-		currentCluster     string
 		mockShard          *shard.TestContext
 		mockEngine         *engine.MockEngine
 		config             *config.Config
@@ -85,10 +84,7 @@ func (s *taskExecutorSuite) TearDownSuite() {
 
 func (s *taskExecutorSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
-
-	s.currentCluster = "test"
 	s.config = config.NewForTest()
-
 	s.controller = gomock.NewController(s.T())
 	s.mockShard = shard.NewTestContext(
 		s.controller,
@@ -115,7 +111,6 @@ func (s *taskExecutorSuite) SetupTest() {
 	s.clusterMetadata.EXPECT().GetCurrentClusterName().Return("active").AnyTimes()
 
 	s.taskHandler = NewTaskExecutor(
-		s.currentCluster,
 		s.mockShard,
 		s.mockDomainCache,
 		s.nDCHistoryResender,
