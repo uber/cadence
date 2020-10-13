@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/gocql/gocql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -2031,7 +2033,7 @@ func createChildExecutionInfo(
 		case "workflow_type_name":
 			info.WorkflowTypeName = v.(string)
 		case "parent_close_policy":
-			info.ParentClosePolicy = workflow.ParentClosePolicy(v.(int))
+			info.ParentClosePolicy = types.ParentClosePolicy(v.(int))
 		}
 	}
 	info.InitiatedEvent = p.NewDataBlob(initiatedData, encoding)

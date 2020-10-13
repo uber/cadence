@@ -223,8 +223,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 ) (*p.InternalGetWorkflowExecutionResponse, error) {
 
 	domainID := sqlplugin.MustParseUUID(request.DomainID)
-	runID := sqlplugin.MustParseUUID(*request.Execution.RunId)
-	wfID := *request.Execution.WorkflowId
+	runID := sqlplugin.MustParseUUID(*request.Execution.RunID)
+	wfID := *request.Execution.WorkflowID
 	execution, err := m.db.SelectFromExecutions(ctx, &sqlplugin.ExecutionsFilter{
 		ShardID: m.shardID, DomainID: domainID, WorkflowID: wfID, RunID: runID})
 
@@ -233,8 +233,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 			return nil, &workflow.EntityNotExistsError{
 				Message: fmt.Sprintf(
 					"Workflow execution not found.  WorkflowId: %v, RunId: %v",
-					request.Execution.GetWorkflowId(),
-					request.Execution.GetRunId(),
+					*request.Execution.WorkflowID,
+					*request.Execution.RunID,
 				),
 			}
 		}

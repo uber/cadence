@@ -23,6 +23,8 @@ package persistence
 import (
 	"context"
 
+	"github.com/uber/cadence/common/types/mapper/thrift"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -70,7 +72,7 @@ func (m *executionManagerImpl) GetWorkflowExecution(
 
 	internalRequest := &InternalGetWorkflowExecutionRequest{
 		DomainID:  request.DomainID,
-		Execution: request.Execution,
+		Execution: *thrift.ToWorkflowExecution(&request.Execution),
 	}
 	response, err := m.persistence.GetWorkflowExecution(ctx, internalRequest)
 	if err != nil {
@@ -231,7 +233,7 @@ func (m *executionManagerImpl) DeserializeChildExecutionInfos(
 			CreateRequestID:       v.CreateRequestID,
 			DomainName:            v.DomainName,
 			WorkflowTypeName:      v.WorkflowTypeName,
-			ParentClosePolicy:     v.ParentClosePolicy,
+			ParentClosePolicy:     *thrift.FromParentClosePolicy(&v.ParentClosePolicy),
 		}
 
 		// Needed for backward compatibility reason.
@@ -364,7 +366,7 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(
 			StartedRunID:          v.StartedRunID,
 			DomainName:            v.DomainName,
 			WorkflowTypeName:      v.WorkflowTypeName,
-			ParentClosePolicy:     v.ParentClosePolicy,
+			ParentClosePolicy:     *thrift.ToParentClosePolicy(&v.ParentClosePolicy),
 		}
 		newInfos = append(newInfos, i)
 	}

@@ -957,8 +957,8 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 		d.shardID,
 		rowTypeExecution,
 		request.DomainID,
-		*execution.WorkflowId,
-		*execution.RunId,
+		*execution.WorkflowID,
+		*execution.RunID,
 		defaultVisibilityTimestamp,
 		rowTypeExecutionTaskID)
 
@@ -967,7 +967,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 		if err == gocql.ErrNotFound {
 			return nil, &workflow.EntityNotExistsError{
 				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
-					*execution.WorkflowId, *execution.RunId),
+					*execution.WorkflowID, *execution.RunID),
 			}
 		} else if isThrottlingError(err) {
 			return nil, &workflow.ServiceBusyError{
