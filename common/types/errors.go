@@ -91,12 +91,12 @@ func (err RemoteSyncMatchedError) Error() string {
 func (err RetryTaskV2Error) Error() string {
 	return fmt.Sprintf("RetryTaskV2Error{Message: %v, DomainId: %v, WorkflowId: %v, RunId: %v, StartEventId: %v, StartEventVersion: %v, EndEventId: %v, EndEventVersion: %v}",
 		err.Message,
-		err.DomainId,
-		err.WorkflowId,
-		err.RunId,
-		err.StartEventId,
+		err.DomainID,
+		err.WorkflowID,
+		err.RunID,
+		err.StartEventID,
 		err.StartEventVersion,
-		err.EndEventId,
+		err.EndEventID,
 		err.EndEventVersion,
 	)
 }
@@ -108,7 +108,7 @@ func (err ServiceBusyError) Error() string {
 func (err WorkflowExecutionAlreadyStartedError) Error() string {
 	return fmt.Sprintf("WorkflowExecutionAlreadyStartedError{Message: %v, StartRequestId: %v, RunId: %v}",
 		err.Message,
-		err.StartRequestId,
-		err.RunId,
+		err.StartRequestID,
+		err.RunID,
 	)
 }
