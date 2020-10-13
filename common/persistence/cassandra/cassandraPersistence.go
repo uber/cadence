@@ -31,6 +31,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
@@ -1103,6 +1104,8 @@ func (d *cassandraPersistence) GetShard(
 		// 1. if we return shardInfoRangeID, then later shard CAS operation will fail
 		// 2. if we still return rangeID, CAS will work but rangeID will move backward which
 		// result in lost tasks, corrupted workflow history, etc.
+
+		d.logger.Warn("Corrupted shard rangeID", tag.ShardID(shardID), tag.ShardRangeID(shardInfoRangeID), tag.PreviousShardRangeID(rangeID))
 		if err := d.updateRangeID(context.TODO(), shardID, shardInfoRangeID, rangeID); err != nil {
 			return nil, err
 		}
