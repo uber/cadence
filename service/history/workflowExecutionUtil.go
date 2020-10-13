@@ -21,13 +21,15 @@
 package history
 
 import (
+	"context"
+
 	"github.com/uber/cadence/service/history/execution"
 )
 
 type workflowContext interface {
 	getContext() execution.Context
 	getMutableState() execution.MutableState
-	reloadMutableState() (execution.MutableState, error)
+	reloadMutableState(ctx context.Context) (execution.MutableState, error)
 	getReleaseFn() execution.ReleaseFunc
 	getWorkflowID() string
 	getRunID() string
@@ -63,8 +65,8 @@ func (w *workflowContextImpl) getMutableState() execution.MutableState {
 	return w.mutableState
 }
 
-func (w *workflowContextImpl) reloadMutableState() (execution.MutableState, error) {
-	mutableState, err := w.getContext().LoadWorkflowExecution()
+func (w *workflowContextImpl) reloadMutableState(ctx context.Context) (execution.MutableState, error) {
+	mutableState, err := w.getContext().LoadWorkflowExecution(ctx)
 	if err != nil {
 		return nil, err
 	}
