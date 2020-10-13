@@ -24,8 +24,8 @@ import (
 	"context"
 
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -57,7 +57,7 @@ func (m *metadataManagerImpl) CreateDomain(
 	ctx context.Context,
 	request *CreateDomainRequest,
 ) (*CreateDomainResponse, error) {
-	dc, err := m.serializeDomainConfig(request.Config)
+	dc, err := m.toInternalDomainConfig(request.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (m *metadataManagerImpl) GetDomain(
 		return nil, err
 	}
 
-	dc, err := m.deserializeDomainConfig(resp.Config)
+	dc, err := m.fromInternalDomainConfig(resp.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func (m *metadataManagerImpl) UpdateDomain(
 	ctx context.Context,
 	request *UpdateDomainRequest,
 ) error {
-	dc, err := m.serializeDomainConfig(request.Config)
+	dc, err := m.toInternalDomainConfig(request.Config)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (m *metadataManagerImpl) ListDomains(
 	}
 	domains := make([]*GetDomainResponse, 0, len(resp.Domains))
 	for _, d := range resp.Domains {
-		dc, err := m.deserializeDomainConfig(d.Config)
+		dc, err := m.fromInternalDomainConfig(d.Config)
 		if err != nil {
 			return nil, err
 		}
@@ -170,47 +170,36 @@ func (m *metadataManagerImpl) ListDomains(
 	}, nil
 }
 
-func (m *metadataManagerImpl) serializeDomainConfig(c *DomainConfig) (InternalDomainConfig, error) {
+func (m *metadataManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalDomainConfig, error) {
 	if c == nil {
 		return InternalDomainConfig{}, nil
 	}
 	if c.BadBinaries.Binaries == nil {
 		c.BadBinaries.Binaries = map[string]*shared.BadBinaryInfo{}
 	}
-	badBinaries, err := m.serializer.SerializeBadBinaries(&c.BadBinaries, common.EncodingTypeThriftRW)
-	if err != nil {
-		return InternalDomainConfig{}, err
-	}
 	return InternalDomainConfig{
 		Retention:                c.Retention,
 		EmitMetric:               c.EmitMetric,
-		HistoryArchivalStatus:    c.HistoryArchivalStatus,
+		HistoryArchivalStatus:    *thrift.ToArchivalStatus(&c.HistoryArchivalStatus),
 		HistoryArchivalURI:       c.HistoryArchivalURI,
-		VisibilityArchivalStatus: c.VisibilityArchivalStatus,
+		VisibilityArchivalStatus: *thrift.ToArchivalStatus(&c.VisibilityArchivalStatus),
 		VisibilityArchivalURI:    c.VisibilityArchivalURI,
-		BadBinaries:              badBinaries,
+		BadBinaries:              *thrift.ToBadBinaries(&c.BadBinaries),
 	}, nil
 }
 
-func (m *metadataManagerImpl) deserializeDomainConfig(ic *InternalDomainConfig) (DomainConfig, error) {
+func (m *metadataManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig) (DomainConfig, error) {
 	if ic == nil {
 		return DomainConfig{}, nil
-	}
-	badBinaries, err := m.serializer.DeserializeBadBinaries(ic.BadBinaries)
-	if err != nil {
-		return DomainConfig{}, err
-	}
-	if badBinaries.Binaries == nil {
-		badBinaries.Binaries = map[string]*shared.BadBinaryInfo{}
 	}
 	return DomainConfig{
 		Retention:                ic.Retention,
 		EmitMetric:               ic.EmitMetric,
-		HistoryArchivalStatus:    ic.HistoryArchivalStatus,
+		HistoryArchivalStatus:    *thrift.FromArchivalStatus(&ic.HistoryArchivalStatus),
 		HistoryArchivalURI:       ic.HistoryArchivalURI,
-		VisibilityArchivalStatus: ic.VisibilityArchivalStatus,
+		VisibilityArchivalStatus: *thrift.FromArchivalStatus(&ic.VisibilityArchivalStatus),
 		VisibilityArchivalURI:    ic.VisibilityArchivalURI,
-		BadBinaries:              *badBinaries,
+		BadBinaries:              *thrift.FromBadBinaries(&ic.BadBinaries),
 	}, nil
 }
 
