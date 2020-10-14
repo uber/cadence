@@ -48,7 +48,7 @@ const (
 	///////////////// Open Executions /////////////////
 	openExecutionsColumnsForSelect = " workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, task_list "
 
-	openExecutionsColumnsForInsert = "(domain_id, domain_partition, "+ openExecutionsColumnsForSelect +")"
+	openExecutionsColumnsForInsert = "(domain_id, domain_partition, " + openExecutionsColumnsForSelect + ")"
 
 	templateCreateWorkflowExecutionStartedWithTTL = `INSERT INTO open_executions ` +
 		openExecutionsColumnsForInsert +
@@ -64,14 +64,14 @@ const (
 		`AND start_time = ? ` +
 		`AND run_id = ?`
 
-	templateGetOpenWorkflowExecutions = `SELECT `+ openExecutionsColumnsForSelect +
+	templateGetOpenWorkflowExecutions = `SELECT ` + openExecutionsColumnsForSelect +
 		`FROM open_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition IN (?) ` +
 		`AND start_time >= ? ` +
 		`AND start_time <= ? `
 
-	templateGetOpenWorkflowExecutionsByType = `SELECT `+ openExecutionsColumnsForSelect +
+	templateGetOpenWorkflowExecutionsByType = `SELECT ` + openExecutionsColumnsForSelect +
 		`FROM open_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -79,7 +79,7 @@ const (
 		`AND start_time <= ? ` +
 		`AND workflow_type_name = ? `
 
-	templateGetOpenWorkflowExecutionsByID = `SELECT `+ openExecutionsColumnsForSelect +
+	templateGetOpenWorkflowExecutionsByID = `SELECT ` + openExecutionsColumnsForSelect +
 		`FROM open_executions ` +
 		`WHERE domain_id = ? ` +
 		`AND domain_partition = ? ` +
@@ -90,7 +90,7 @@ const (
 	///////////////// Closed Executions /////////////////
 	closedExecutionColumnsForSelect = " workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding, task_list "
 
-	closedExecutionColumnsForInsert = "(domain_id, domain_partition, "+ closedExecutionColumnsForSelect +")"
+	closedExecutionColumnsForInsert = "(domain_id, domain_partition, " + closedExecutionColumnsForSelect + ")"
 
 	templateCreateWorkflowExecutionClosedWithTTL = `INSERT INTO closed_executions ` +
 		closedExecutionColumnsForInsert +
@@ -180,7 +180,7 @@ const (
 
 type (
 	cassandraVisibilityPersistence struct {
-		listClosedOrderingByCloseTime bool
+		sortByCloseTime bool
 		cassandraStore
 		lowConslevel gocql.Consistency
 	}
@@ -204,9 +204,9 @@ func newVisibilityPersistence(
 	}
 
 	return &cassandraVisibilityPersistence{
-		cassandraStore:                cassandraStore{session: session, logger: logger},
-		lowConslevel:                  gocql.One,
-		listClosedOrderingByCloseTime: listClosedOrderingByCloseTime,
+		cassandraStore:  cassandraStore{session: session, logger: logger},
+		lowConslevel:    gocql.One,
+		sortByCloseTime: listClosedOrderingByCloseTime,
 	}, nil
 }
 
@@ -439,7 +439,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutions(
 	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	if v.listClosedOrderingByCloseTime {
+	if v.sortByCloseTime {
 		return v.listClosedWorkflowExecutionsOrderByClosedTime(ctx, request)
 	}
 	query := v.session.Query(templateGetClosedWorkflowExecutions,
@@ -527,7 +527,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByType(
 	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsByTypeRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	if v.listClosedOrderingByCloseTime {
+	if v.sortByCloseTime {
 		return v.listClosedWorkflowExecutionsByTypeOrderByClosedTime(ctx, request)
 	}
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByType,
@@ -616,7 +616,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByWorkflowI
 	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsByWorkflowIDRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	if v.listClosedOrderingByCloseTime {
+	if v.sortByCloseTime {
 		return v.listClosedWorkflowExecutionsByWorkflowIDOrderByClosedTime(ctx, request)
 	}
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByID,
@@ -662,7 +662,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByStatus(
 	ctx context.Context,
 	request *p.InternalListClosedWorkflowExecutionsByStatusRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	if v.listClosedOrderingByCloseTime {
+	if v.sortByCloseTime {
 		return v.listClosedWorkflowExecutionsByStatusOrderByClosedTime(ctx, request)
 	}
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByStatus,

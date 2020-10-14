@@ -76,9 +76,9 @@ type (
 		// NewExecutionStore returns an execution store for given shardID
 		NewExecutionStore(shardID int) (p.ExecutionStore, error)
 		// NewVisibilityStore returns a new visibility store,
-		// TODO We temporarily using listClosedExecutionsOrderingByCloseTime to determine whether or not ListByCloseExecutions should
+		// TODO We temporarily using sortByCloseTime to determine whether or not ListClosedWorkflowExecutions should
 		// be ordering by CloseTime. This will be removed when implementing https://github.com/uber/cadence/issues/3621
-		NewVisibilityStore(listClosedOrderingByCloseTime bool) (p.VisibilityStore, error)
+		NewVisibilityStore(sortByCloseTime bool) (p.VisibilityStore, error)
 		NewQueue(queueType p.QueueType) (p.Queue, error)
 	}
 
