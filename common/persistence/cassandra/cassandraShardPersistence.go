@@ -30,6 +30,7 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
@@ -62,7 +63,7 @@ const (
 		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, shard, range_id)` +
 		`VALUES(?, ?, ?, ?, ?, ?, ?, ` + templateShardType + `, ?) IF NOT EXISTS`
 
-	templateGetShardQuery = `SELECT shard ` +
+	templateGetShardQuery = `SELECT shard, range_id ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
@@ -74,6 +75,17 @@ const (
 
 	templateUpdateShardQuery = `UPDATE executions ` +
 		`SET shard = ` + templateShardType + `, range_id = ? ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and domain_id = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and visibility_ts = ? ` +
+		`and task_id = ? ` +
+		`IF range_id = ?`
+
+	templateUpdateRangeIDQuery = `UPDATE executions ` +
+		`SET range_id = ? ` +
 		`WHERE shard_id = ? ` +
 		`and type = ? ` +
 		`and domain_id = ? ` +
@@ -218,9 +230,77 @@ func (d *cassandraShardPersistence) GetShard(
 		}
 	}
 
-	info := createShardInfo(d.currentClusterName, result["shard"].(map[string]interface{}))
+	// check if rangeID column and rangeID field in shard column matches, if not we need to pick the larger
+	// rangeID.
+	//
+	// If shardInfoRangeID < rangeID, we don't need to do anything here as createShardInfo will ignore
+	// shardInfoRangeID and return rangeID instead. Later when updating the shard, CAS can still succeed
+	// as the value from rangeID columns is returned, shardInfoRangeID will also be updated to the correct value.
+	rangeID := result["range_id"].(int64)
+	shard := result["shard"].(map[string]interface{})
+	shardInfoRangeID := shard["range_id"].(int64)
+	if shardInfoRangeID > rangeID {
+		// In this case we need to fix the rangeID column before returning the result as:
+		// 1. if we return shardInfoRangeID, then later shard CAS operation will fail
+		// 2. if we still return rangeID, CAS will work but rangeID will move backward which
+		// result in lost tasks, corrupted workflow history, etc.
+
+		d.logger.Warn("Corrupted shard rangeID", tag.ShardID(shardID), tag.ShardRangeID(shardInfoRangeID), tag.PreviousShardRangeID(rangeID))
+		if err := d.updateRangeID(context.TODO(), shardID, shardInfoRangeID, rangeID); err != nil {
+			return nil, err
+		}
+	}
+
+	info := createShardInfo(d.currentClusterName, rangeID, shard)
 
 	return &p.InternalGetShardResponse{ShardInfo: info}, nil
+}
+
+func (d *cassandraShardPersistence) updateRangeID(
+	_ context.Context,
+	shardID int,
+	rangeID int64,
+	previousRangeID int64,
+) error {
+	query := d.session.Query(templateUpdateRangeIDQuery,
+		rangeID,
+		shardID,
+		rowTypeShard,
+		rowTypeShardDomainID,
+		rowTypeShardWorkflowID,
+		rowTypeShardRunID,
+		defaultVisibilityTimestamp,
+		rowTypeShardTaskID,
+		previousRangeID,
+	)
+
+	previous := make(map[string]interface{})
+	applied, err := query.MapScanCAS(previous)
+	if err != nil {
+		if isThrottlingError(err) {
+			return &workflow.ServiceBusyError{
+				Message: fmt.Sprintf("UpdateRangeID operation failed. Error: %v", err),
+			}
+		}
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("UpdateRangeID operation failed. Error: %v", err),
+		}
+	}
+
+	if !applied {
+		var columns []string
+		for k, v := range previous {
+			columns = append(columns, fmt.Sprintf("%s=%v", k, v))
+		}
+
+		return &p.ShardOwnershipLostError{
+			ShardID: d.shardID,
+			Msg: fmt.Sprintf("Failed to update shard rangeID.  previous_range_id: %v, columns: (%v)",
+				previousRangeID, strings.Join(columns, ",")),
+		}
+	}
+
+	return nil
 }
 
 func (d *cassandraShardPersistence) UpdateShard(
