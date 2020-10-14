@@ -39,9 +39,12 @@ import (
 )
 
 const (
-	taskDefaultTimeout = 3 * time.Second
-	secondsInDay       = int32(24 * time.Hour / time.Second)
-	defaultDomainName  = "defaultDomainName"
+	taskDefaultTimeout             = 3 * time.Second
+	taskGetExecutionContextTimeout = 500 * time.Millisecond
+	taskRPCCallTimeout             = 2 * time.Second
+
+	secondsInDay      = int32(24 * time.Hour / time.Second)
+	defaultDomainName = "defaultDomainName"
 )
 
 type (
@@ -83,7 +86,7 @@ func (t *transferTaskExecutorBase) pushActivity(
 	activityScheduleToStartTimeout int32,
 ) error {
 
-	ctx, cancel := context.WithTimeout(ctx, taskDefaultTimeout)
+	ctx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 	defer cancel()
 
 	if task.TaskType != persistence.TransferTaskTypeActivityTask {
@@ -112,7 +115,7 @@ func (t *transferTaskExecutorBase) pushDecision(
 	decisionScheduleToStartTimeout int32,
 ) error {
 
-	ctx, cancel := context.WithTimeout(ctx, taskDefaultTimeout)
+	ctx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 	defer cancel()
 
 	if task.TaskType != persistence.TransferTaskTypeDecisionTask {
