@@ -28,11 +28,11 @@ import (
 	"runtime"
 
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
-	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/service/config"
-  
+	"github.com/uber/cadence/environment"
+
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
 )
@@ -161,7 +161,7 @@ func GetTestClusterOption() *pt.TestBaseOptions {
 	}
 
 	if os.Getenv("POSTGRES_PASSWORD") != "" {
-		testUser = os.Getenv("POSTGRES_PASSWORD")
+		testPassword = os.Getenv("POSTGRES_PASSWORD")
 	}
 
 	return &pt.TestBaseOptions{

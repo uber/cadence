@@ -28,38 +28,6 @@ import (
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 )
 
-
-const (
-	testSchemaDir = "schema/postgres"
-)
-
-func getTestClusterOption() *pt.TestBaseOptions {
-	testUser := "postgres"
-	testPassword := "cadence"
-
-	if runtime.GOOS == "darwin" {
-		testUser = os.Getenv("USER")
-		testPassword = ""
-	}
-
-	if os.Getenv("POSTGRES_USER") != "" {
-		testUser = os.Getenv("POSTGRES_USER")
-	}
-
-	if os.Getenv("POSTGRES_PASSWORD") != "" {
-		testPassword = os.Getenv("POSTGRES_PASSWORD")
-	}
-
-	return &pt.TestBaseOptions{
-		SQLDBPluginName: PluginName,
-		DBUsername:      testUser,
-		DBPassword:      testPassword,
-		DBHost:          environment.GetPostgresAddress(),
-		DBPort:          environment.GetPostgresPort(),
-		SchemaDir:       testSchemaDir,
-	}
-}
-
 func TestSQLHistoryV2PersistenceSuite(t *testing.T) {
 	s := new(pt.HistoryV2PersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
