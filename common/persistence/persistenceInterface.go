@@ -628,9 +628,9 @@ type (
 		StartTime        time.Time
 		ExecutionTime    time.Time
 		CloseTime        time.Time
-		Status           *workflow.WorkflowExecutionCloseStatus
+		Status           *types.WorkflowExecutionCloseStatus
 		HistoryLength    int64
-		Memo             *DataBlob
+		Memo             *types.Memo
 		TaskList         string
 		SearchAttributes map[string]interface{}
 	}
@@ -647,13 +647,13 @@ type (
 	InternalGetClosedWorkflowExecutionRequest struct {
 		DomainUUID string
 		Domain     string // domain name is not persisted, but used as config filter key
-		Execution  workflow.WorkflowExecution
+		Execution  types.WorkflowExecution
 	}
 
 	// InternalListClosedWorkflowExecutionsByStatusRequest is used to list executions that have specific close status
 	InternalListClosedWorkflowExecutionsByStatusRequest struct {
 		InternalListWorkflowExecutionsRequest
-		Status workflow.WorkflowExecutionCloseStatus
+		Status types.WorkflowExecutionCloseStatus
 	}
 
 	// InternalListWorkflowExecutionsByWorkflowIDRequest is used to list executions that have specific WorkflowID in a domain
@@ -683,7 +683,7 @@ type (
 		ExecutionTimestamp int64
 		WorkflowTimeout    int64
 		TaskID             int64
-		Memo               *DataBlob
+		Memo               *types.Memo
 		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
@@ -697,11 +697,11 @@ type (
 		StartTimestamp     int64
 		ExecutionTimestamp int64
 		TaskID             int64
-		Memo               *DataBlob
+		Memo               *types.Memo
 		TaskList           string
 		SearchAttributes   map[string][]byte
 		CloseTimestamp     int64
-		Status             workflow.WorkflowExecutionCloseStatus
+		Status             types.WorkflowExecutionCloseStatus
 		HistoryLength      int64
 		RetentionSeconds   int64
 	}
@@ -716,7 +716,7 @@ type (
 		ExecutionTimestamp int64
 		WorkflowTimeout    int64
 		TaskID             int64
-		Memo               *DataBlob
+		Memo               *types.Memo
 		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
