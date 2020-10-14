@@ -346,16 +346,6 @@ type (
 		HistorySize int64
 	}
 
-	// ReplicationState represents mutable state information for global domains.
-	// This information is used by replication protocol when applying events from remote clusters
-	ReplicationState struct {
-		CurrentVersion      int64
-		StartVersion        int64
-		LastWriteVersion    int64
-		LastWriteEventID    int64
-		LastReplicationInfo map[string]*ReplicationInfo
-	}
-
 	// CurrentWorkflowExecution describes a current execution record
 	CurrentWorkflowExecution struct {
 		DomainID     string
