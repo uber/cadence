@@ -33,7 +33,6 @@ import (
 	"github.com/uber/cadence/.gen/go/health"
 	hist "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyserviceserver"
-	"github.com/uber/cadence/.gen/go/replicator"
 	r "github.com/uber/cadence/.gen/go/replicator"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -64,15 +63,15 @@ type (
 		DescribeMutableState(context.Context, *hist.DescribeMutableStateRequest) (*hist.DescribeMutableStateResponse, error)
 		DescribeQueue(context.Context, *gen.DescribeQueueRequest) (*gen.DescribeQueueResponse, error)
 		DescribeWorkflowExecution(context.Context, *hist.DescribeWorkflowExecutionRequest) (*gen.DescribeWorkflowExecutionResponse, error)
-		GetDLQReplicationMessages(context.Context, *replicator.GetDLQReplicationMessagesRequest) (*replicator.GetDLQReplicationMessagesResponse, error)
+		GetDLQReplicationMessages(context.Context, *r.GetDLQReplicationMessagesRequest) (*r.GetDLQReplicationMessagesResponse, error)
 		GetMutableState(context.Context, *hist.GetMutableStateRequest) (*hist.GetMutableStateResponse, error)
-		GetReplicationMessages(context.Context, *replicator.GetReplicationMessagesRequest) (*replicator.GetReplicationMessagesResponse, error)
-		MergeDLQMessages(context.Context, *replicator.MergeDLQMessagesRequest) (*replicator.MergeDLQMessagesResponse, error)
+		GetReplicationMessages(context.Context, *r.GetReplicationMessagesRequest) (*r.GetReplicationMessagesResponse, error)
+		MergeDLQMessages(context.Context, *r.MergeDLQMessagesRequest) (*r.MergeDLQMessagesResponse, error)
 		NotifyFailoverMarkers(context.Context, *hist.NotifyFailoverMarkersRequest) error
 		PollMutableState(context.Context, *hist.PollMutableStateRequest) (*hist.PollMutableStateResponse, error)
-		PurgeDLQMessages(context.Context, *replicator.PurgeDLQMessagesRequest) error
+		PurgeDLQMessages(context.Context, *r.PurgeDLQMessagesRequest) error
 		QueryWorkflow(context.Context, *hist.QueryWorkflowRequest) (*hist.QueryWorkflowResponse, error)
-		ReadDLQMessages(context.Context, *replicator.ReadDLQMessagesRequest) (*replicator.ReadDLQMessagesResponse, error)
+		ReadDLQMessages(context.Context, *r.ReadDLQMessagesRequest) (*r.ReadDLQMessagesResponse, error)
 		ReapplyEvents(context.Context, *hist.ReapplyEventsRequest) error
 		RecordActivityTaskHeartbeat(context.Context, *hist.RecordActivityTaskHeartbeatRequest) (*gen.RecordActivityTaskHeartbeatResponse, error)
 		RecordActivityTaskStarted(context.Context, *hist.RecordActivityTaskStartedRequest) (*hist.RecordActivityTaskStartedResponse, error)
