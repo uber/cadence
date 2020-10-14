@@ -28,6 +28,7 @@
 package events
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -59,18 +60,18 @@ func (m *MockCache) EXPECT() *MockCacheMockRecorder {
 }
 
 // GetEvent mocks base method
-func (m *MockCache) GetEvent(shardID int, domainID, workflowID, runID string, firstEventID, eventID int64, branchToken []byte) (*shared.HistoryEvent, error) {
+func (m *MockCache) GetEvent(ctx context.Context, shardID int, domainID, workflowID, runID string, firstEventID, eventID int64, branchToken []byte) (*shared.HistoryEvent, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEvent", shardID, domainID, workflowID, runID, firstEventID, eventID, branchToken)
+	ret := m.ctrl.Call(m, "GetEvent", ctx, shardID, domainID, workflowID, runID, firstEventID, eventID, branchToken)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetEvent indicates an expected call of GetEvent
-func (mr *MockCacheMockRecorder) GetEvent(shardID, domainID, workflowID, runID, firstEventID, eventID, branchToken interface{}) *gomock.Call {
+func (mr *MockCacheMockRecorder) GetEvent(ctx, shardID, domainID, workflowID, runID, firstEventID, eventID, branchToken interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvent", reflect.TypeOf((*MockCache)(nil).GetEvent), shardID, domainID, workflowID, runID, firstEventID, eventID, branchToken)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvent", reflect.TypeOf((*MockCache)(nil).GetEvent), ctx, shardID, domainID, workflowID, runID, firstEventID, eventID, branchToken)
 }
 
 // PutEvent mocks base method
