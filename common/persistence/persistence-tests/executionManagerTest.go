@@ -3924,12 +3924,6 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		DecisionTimeout:             0,
 		AutoResetPoints:             &gen.ResetPoints{},
 	}
-	resetReplicationState := &p.ReplicationState{
-		CurrentVersion:      int64(8789),
-		StartVersion:        int64(8780),
-		LastWriteVersion:    int64(-24),
-		LastReplicationInfo: map[string]*p.ReplicationInfo{},
-	}
 
 	resetReq := &p.ConflictResolveWorkflowExecutionRequest{
 		RangeID: s.ShardInfo.RangeID,
@@ -3976,7 +3970,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 	s.Equal(resetExecutionInfo.CreateRequestID, currentRecord.StartRequestID)
 	s.Equal(resetExecutionInfo.State, currentRecord.State)
 	s.Equal(resetExecutionInfo.CloseStatus, currentRecord.CloseStatus)
-	s.Equal(resetReplicationState.LastWriteVersion, currentRecord.LastWriteVersion)
+	s.Equal(int64(-24), currentRecord.LastWriteVersion)
 
 	state, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecutionReset)
 	s.NoError(err)
@@ -4088,12 +4082,6 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 	newWorkflowExecutionInfo.RunID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2"
 	newWorkflowExecutionInfo.State = p.WorkflowStateRunning
 	newWorkflowExecutionInfo.CloseStatus = p.WorkflowCloseStatusNone
-	newWorkflowExecutionState := &p.ReplicationState{
-		CurrentVersion:      int64(8989),
-		StartVersion:        int64(8980),
-		LastWriteVersion:    int64(-24),
-		LastReplicationInfo: map[string]*p.ReplicationInfo{},
-	}
 
 	resetReq := &p.ConflictResolveWorkflowExecutionRequest{
 		RangeID: s.ShardInfo.RangeID,
@@ -4151,7 +4139,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 	s.Equal(newWorkflowExecutionInfo.CreateRequestID, currentRecord.StartRequestID)
 	s.Equal(newWorkflowExecutionInfo.State, currentRecord.State)
 	s.Equal(newWorkflowExecutionInfo.CloseStatus, currentRecord.CloseStatus)
-	s.Equal(newWorkflowExecutionState.LastWriteVersion, currentRecord.LastWriteVersion)
+	s.Equal(int64(-24), currentRecord.LastWriteVersion)
 
 	state, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecutionReset)
 	s.NoError(err)
@@ -4235,12 +4223,6 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		DecisionTimeout:             0,
 		AutoResetPoints:             &gen.ResetPoints{},
 	}
-	resetReplicationState := &p.ReplicationState{
-		CurrentVersion:      int64(8789),
-		StartVersion:        int64(8780),
-		LastWriteVersion:    int64(-24),
-		LastReplicationInfo: map[string]*p.ReplicationInfo{},
-	}
 
 	resetReq := &p.ConflictResolveWorkflowExecutionRequest{
 		RangeID: s.ShardInfo.RangeID,
@@ -4276,7 +4258,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 	s.Equal(resetExecutionInfo.CreateRequestID, currentRecord.StartRequestID)
 	s.Equal(resetExecutionInfo.State, currentRecord.State)
 	s.Equal(resetExecutionInfo.CloseStatus, currentRecord.CloseStatus)
-	s.Equal(resetReplicationState.LastWriteVersion, currentRecord.LastWriteVersion)
+	s.Equal(int64(-24), currentRecord.LastWriteVersion)
 
 	state, err := s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecutionReset)
 	s.NoError(err)
@@ -4348,12 +4330,6 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 	newWorkflowExecutionInfo.RunID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2"
 	newWorkflowExecutionInfo.State = p.WorkflowStateRunning
 	newWorkflowExecutionInfo.CloseStatus = p.WorkflowCloseStatusNone
-	newWorkflowExecutionState := &p.ReplicationState{
-		CurrentVersion:      int64(8989),
-		StartVersion:        int64(8980),
-		LastWriteVersion:    int64(-24),
-		LastReplicationInfo: map[string]*p.ReplicationInfo{},
-	}
 
 	resetReq := &p.ConflictResolveWorkflowExecutionRequest{
 		RangeID: s.ShardInfo.RangeID,
@@ -4400,7 +4376,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 	s.Equal(newWorkflowExecutionInfo.CreateRequestID, currentRecord.StartRequestID)
 	s.Equal(newWorkflowExecutionInfo.State, currentRecord.State)
 	s.Equal(newWorkflowExecutionInfo.CloseStatus, currentRecord.CloseStatus)
-	s.Equal(newWorkflowExecutionState.LastWriteVersion, currentRecord.LastWriteVersion)
+	s.Equal(int64(-24), currentRecord.LastWriteVersion)
 
 	state, err := s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecutionReset)
 	s.NoError(err)
