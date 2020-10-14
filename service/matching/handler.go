@@ -40,6 +40,8 @@ import (
 var _ matchingserviceserver.Interface = (*HandlerImpl)(nil)
 
 type (
+	//go:generate mockgen -copyright_file=../../LICENSE -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package matching github.com/uber/cadence/service/matching Handler
+
 	// Handler interface for matching service
 	Handler interface {
 		Health(context.Context) (*health.HealthStatus, error)
