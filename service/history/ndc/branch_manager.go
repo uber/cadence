@@ -178,6 +178,7 @@ func (r *branchManagerImpl) flushBufferedEvents(
 	}
 	// the workflow must be updated as active, to send out replication tasks
 	if err := targetWorkflow.GetContext().UpdateWorkflowExecutionAsActive(
+		ctx,
 		r.shard.GetTimeSource().Now(),
 	); err != nil {
 		return 0, nil, err

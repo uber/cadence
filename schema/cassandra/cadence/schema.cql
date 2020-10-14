@@ -3,7 +3,7 @@ CREATE TYPE shard (
   owner                             text, -- Host identifier processing the shard
   -- Range identifier used for generating ack ids for tasks within shard.
   -- Also used for optimistic concurrency and all writes to a shard are conditional on this value.
-  range_id                          bigint,
+  range_id                          bigint, -- TO BE DEPRECATED, IN FAVOR OF range_id column in executions table
   -- This field keeps track of number of times owner for a shard changes before updating range_id or ack_levels
   stolen_since_renew                int,
   updated_at                        timestamp,

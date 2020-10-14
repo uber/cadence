@@ -1581,7 +1581,8 @@ func updateBufferedEvents(
 
 func createShardInfo(
 	currentCluster string,
-	result map[string]interface{},
+	rangeID int64,
+	shard map[string]interface{},
 ) *p.InternalShardInfo {
 
 	var pendingFailoverMarkersRawData []byte
@@ -1591,14 +1592,13 @@ func createShardInfo(
 	var timerProcessingQueueStatesRawData []byte
 	var timerProcessingQueueStatesEncoding string
 	info := &p.InternalShardInfo{}
-	for k, v := range result {
+	info.RangeID = rangeID
+	for k, v := range shard {
 		switch k {
 		case "shard_id":
 			info.ShardID = v.(int)
 		case "owner":
 			info.Owner = v.(string)
-		case "range_id":
-			info.RangeID = v.(int64)
 		case "stolen_since_renew":
 			info.StolenSinceRenew = v.(int)
 		case "updated_at":

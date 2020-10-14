@@ -174,7 +174,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowClosed() {
 
 	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
 	context := execution.NewMockContext(s.controller)
-	context.EXPECT().LoadWorkflowExecution().Return(s.mockMutableState, nil).Times(1)
+	context.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(s.mockMutableState, nil).Times(1)
 	context.EXPECT().Lock(gomock.Any()).Return(nil)
 	context.EXPECT().Unlock().Times(1)
 	context.EXPECT().Clear().AnyTimes()
@@ -228,7 +228,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 
 	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
 	context := execution.NewMockContext(s.controller)
-	context.EXPECT().LoadWorkflowExecution().Return(s.mockMutableState, nil).Times(1)
+	context.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(s.mockMutableState, nil).Times(1)
 	context.EXPECT().Lock(gomock.Any()).Return(nil)
 	context.EXPECT().Unlock().Times(1)
 	context.EXPECT().Clear().AnyTimes()
@@ -284,7 +284,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 
 	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
 	context := execution.NewMockContext(s.controller)
-	context.EXPECT().LoadWorkflowExecution().Return(s.mockMutableState, nil).Times(1)
+	context.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(s.mockMutableState, nil).Times(1)
 	context.EXPECT().Lock(gomock.Any()).Return(nil)
 	context.EXPECT().Unlock().Times(1)
 	context.EXPECT().Clear().AnyTimes()
@@ -346,7 +346,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingVers
 	}
 	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
 	context := execution.NewMockContext(s.controller)
-	context.EXPECT().LoadWorkflowExecution().Return(s.mockMutableState, nil).Times(1)
+	context.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(s.mockMutableState, nil).Times(1)
 	context.EXPECT().Lock(gomock.Any()).Return(nil)
 	context.EXPECT().Unlock().Times(1)
 	context.EXPECT().Clear().AnyTimes()
@@ -425,7 +425,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_DifferentVersionHistories_Inc
 	}
 	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
 	context := execution.NewMockContext(s.controller)
-	context.EXPECT().LoadWorkflowExecution().Return(s.mockMutableState, nil).Times(1)
+	context.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(s.mockMutableState, nil).Times(1)
 	context.EXPECT().Lock(gomock.Any()).Return(nil)
 	context.EXPECT().Unlock().Times(1)
 	context.EXPECT().Clear().AnyTimes()
@@ -515,7 +515,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingSche
 	}
 	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
 	context := execution.NewMockContext(s.controller)
-	context.EXPECT().LoadWorkflowExecution().Return(s.mockMutableState, nil).Times(1)
+	context.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(s.mockMutableState, nil).Times(1)
 	context.EXPECT().Lock(gomock.Any()).Return(nil)
 	context.EXPECT().Unlock().Times(1)
 	context.EXPECT().Clear().AnyTimes()
@@ -601,7 +601,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_SameSchedule
 	}
 	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
 	context := execution.NewMockContext(s.controller)
-	context.EXPECT().LoadWorkflowExecution().Return(s.mockMutableState, nil).Times(1)
+	context.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(s.mockMutableState, nil).Times(1)
 	context.EXPECT().Lock(gomock.Any()).Return(nil)
 	context.EXPECT().Unlock().Times(1)
 	context.EXPECT().Clear().AnyTimes()
@@ -674,7 +674,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_LocalVersion
 	}
 	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
 	context := execution.NewMockContext(s.controller)
-	context.EXPECT().LoadWorkflowExecution().Return(s.mockMutableState, nil).Times(1)
+	context.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(s.mockMutableState, nil).Times(1)
 	context.EXPECT().Lock(gomock.Any()).Return(nil)
 	context.EXPECT().Unlock().Times(1)
 	context.EXPECT().Clear().AnyTimes()
@@ -748,7 +748,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 
 	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
 	context := execution.NewMockContext(s.controller)
-	context.EXPECT().LoadWorkflowExecution().Return(s.mockMutableState, nil).Times(1)
+	context.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(s.mockMutableState, nil).Times(1)
 	context.EXPECT().Lock(gomock.Any()).Return(nil)
 	context.EXPECT().Unlock().Times(1)
 	context.EXPECT().Clear().AnyTimes()
@@ -805,7 +805,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivity
 
 	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
 	context := execution.NewMockContext(s.controller)
-	context.EXPECT().LoadWorkflowExecution().Return(s.mockMutableState, nil).Times(1)
+	context.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(s.mockMutableState, nil).Times(1)
 	context.EXPECT().Lock(gomock.Any()).Return(nil)
 	context.EXPECT().Unlock().Times(1)
 	context.EXPECT().Clear().AnyTimes()
@@ -869,7 +869,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 
 	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
 	context := execution.NewMockContext(s.controller)
-	context.EXPECT().LoadWorkflowExecution().Return(s.mockMutableState, nil).Times(1)
+	context.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(s.mockMutableState, nil).Times(1)
 	context.EXPECT().Lock(gomock.Any()).Return(nil)
 	context.EXPECT().Unlock().Times(1)
 	context.EXPECT().Clear().Times(1)
@@ -946,7 +946,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 
 	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
 	context := execution.NewMockContext(s.controller)
-	context.EXPECT().LoadWorkflowExecution().Return(s.mockMutableState, nil).Times(1)
+	context.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(s.mockMutableState, nil).Times(1)
 	context.EXPECT().Lock(gomock.Any()).Return(nil)
 	context.EXPECT().Unlock().Times(1)
 	context.EXPECT().Clear().Times(1)
@@ -1023,7 +1023,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_Larger
 
 	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
 	context := execution.NewMockContext(s.controller)
-	context.EXPECT().LoadWorkflowExecution().Return(s.mockMutableState, nil).Times(1)
+	context.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(s.mockMutableState, nil).Times(1)
 	context.EXPECT().Lock(gomock.Any()).Return(nil)
 	context.EXPECT().Unlock().Times(1)
 	context.EXPECT().Clear().Times(1)
@@ -1100,7 +1100,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning() {
 
 	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
 	context := execution.NewMockContext(s.controller)
-	context.EXPECT().LoadWorkflowExecution().Return(s.mockMutableState, nil).Times(1)
+	context.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(s.mockMutableState, nil).Times(1)
 	context.EXPECT().Lock(gomock.Any()).Return(nil)
 	context.EXPECT().Unlock().Times(1)
 	_, err := s.executionCache.PutIfNotExist(key, context)
@@ -1155,6 +1155,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning() {
 	s.mockMutableState.EXPECT().AddTimerTasks(gomock.Any()).Times(1)
 	now := time.Unix(0, request.GetLastHeartbeatTime())
 	context.EXPECT().UpdateWorkflowExecutionWithNew(
+		gomock.Any(),
 		now,
 		persistence.UpdateWorkflowModeUpdateCurrent,
 		nil,
@@ -1188,7 +1189,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_ZombieWorkflo
 
 	key := definition.NewWorkflowIdentifier(domainID, workflowID, runID)
 	context := execution.NewMockContext(s.controller)
-	context.EXPECT().LoadWorkflowExecution().Return(s.mockMutableState, nil).Times(1)
+	context.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(s.mockMutableState, nil).Times(1)
 	context.EXPECT().Lock(gomock.Any()).Return(nil)
 	context.EXPECT().Unlock().Times(1)
 	_, err := s.executionCache.PutIfNotExist(key, context)
@@ -1243,6 +1244,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_ZombieWorkflo
 	s.mockMutableState.EXPECT().AddTimerTasks(gomock.Any()).Times(1)
 	now := time.Unix(0, request.GetLastHeartbeatTime())
 	context.EXPECT().UpdateWorkflowExecutionWithNew(
+		gomock.Any(),
 		now,
 		persistence.UpdateWorkflowModeBypassCurrent,
 		nil,
