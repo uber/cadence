@@ -32,9 +32,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/uber/cadence/common/types/mapper/thrift"
-
+	
 	"github.com/cch123/elasticsql"
 	"github.com/olivere/elastic"
 	"github.com/valyala/fastjson"
@@ -49,6 +47,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
