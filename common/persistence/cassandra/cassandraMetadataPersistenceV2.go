@@ -24,8 +24,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/uber/cadence/common/types/mapper/thrift"
-
 	"github.com/gocql/gocql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -156,7 +154,6 @@ type (
 	cassandraMetadataPersistenceV2 struct {
 		cassandraStore
 		currentClusterName string
-		serializer         p.PayloadSerializer
 	}
 )
 
@@ -176,7 +173,6 @@ func newMetadataPersistenceV2(cfg config.Cassandra, currentClusterName string, l
 	return &cassandraMetadataPersistenceV2{
 		cassandraStore:     cassandraStore{session: session, logger: logger},
 		currentClusterName: currentClusterName,
-		serializer:         p.NewPayloadSerializer(),
 	}, nil
 }
 
@@ -221,12 +217,6 @@ func (m *cassandraMetadataPersistenceV2) CreateDomainInV2Table(
 	if err != nil {
 		return nil, err
 	}
-	serializedBadBinaries, err := m.serializer.SerializeBadBinaries(
-		thrift.FromBadBinaries(&request.Config.BadBinaries),
-		common.EncodingTypeThriftRW)
-	if err != nil {
-		return nil, err
-	}
 
 	batch := m.session.NewBatch(gocql.LoggedBatch)
 	batch.Query(templateCreateDomainByNameQueryWithinBatchV2,
@@ -246,8 +236,8 @@ func (m *cassandraMetadataPersistenceV2) CreateDomainInV2Table(
 		request.Config.HistoryArchivalURI,
 		request.Config.VisibilityArchivalStatus,
 		request.Config.VisibilityArchivalURI,
-		serializedBadBinaries.Data,
-		string(serializedBadBinaries.GetEncoding()),
+		request.Config.BadBinaries.Data,
+		string(request.Config.BadBinaries.GetEncoding()),
 		request.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(request.ReplicationConfig.Clusters),
 		request.IsGlobalDomain,
@@ -305,12 +295,6 @@ func (m *cassandraMetadataPersistenceV2) UpdateDomain(
 	if request.FailoverEndTime != nil {
 		failoverEndTime = *request.FailoverEndTime
 	}
-	serializedBadBinaries, err := m.serializer.SerializeBadBinaries(
-		thrift.FromBadBinaries(&request.Config.BadBinaries),
-		common.EncodingTypeThriftRW)
-	if err != nil {
-		return err
-	}
 
 	batch := m.session.NewBatch(gocql.LoggedBatch)
 	batch.Query(templateUpdateDomainByNameQueryWithinBatchV2,
@@ -328,8 +312,8 @@ func (m *cassandraMetadataPersistenceV2) UpdateDomain(
 		request.Config.HistoryArchivalURI,
 		request.Config.VisibilityArchivalStatus,
 		request.Config.VisibilityArchivalURI,
-		serializedBadBinaries.Data,
-		string(serializedBadBinaries.GetEncoding()),
+		request.Config.BadBinaries.Data,
+		string(request.Config.BadBinaries.GetEncoding()),
 		request.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(request.ReplicationConfig.Clusters),
 		request.ConfigVersion,
@@ -459,12 +443,7 @@ func (m *cassandraMetadataPersistenceV2) GetDomain(
 	if info.Data == nil {
 		info.Data = map[string]string{}
 	}
-	badBinaries, err := m.serializer.DeserializeBadBinaries(p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding)))
-	if err != nil {
-		return nil, handleError(request.Name, request.ID, err)
-	}
-
-	config.BadBinaries = *thrift.ToBadBinaries(badBinaries)
+	config.BadBinaries = p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding))
 	replicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, replicationConfig.ActiveClusterName)
 	replicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 	replicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, replicationConfig.Clusters)
@@ -548,11 +527,7 @@ func (m *cassandraMetadataPersistenceV2) ListDomains(
 			if domain.Info.Data == nil {
 				domain.Info.Data = map[string]string{}
 			}
-			badBinaries, err := m.serializer.DeserializeBadBinaries(p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding)))
-			if err != nil {
-				return nil, err
-			}
-			domain.Config.BadBinaries = *thrift.ToBadBinaries(badBinaries)
+			domain.Config.BadBinaries = p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding))
 			badBinariesData = []byte("")
 			badBinariesDataEncoding = ""
 			domain.ReplicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, domain.ReplicationConfig.ActiveClusterName)

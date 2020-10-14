@@ -25,8 +25,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/common/types"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
@@ -738,14 +736,14 @@ type (
 	InternalDomainConfig struct {
 		// NOTE: this retention is in days, not in seconds
 		Retention                int32
-		EmitMetric               bool                 // deprecated
-		ArchivalBucket           string               // deprecated
-		ArchivalStatus           types.ArchivalStatus // deprecated
-		HistoryArchivalStatus    types.ArchivalStatus
+		EmitMetric               bool                    // deprecated
+		ArchivalBucket           string                  // deprecated
+		ArchivalStatus           workflow.ArchivalStatus // deprecated
+		HistoryArchivalStatus    workflow.ArchivalStatus
 		HistoryArchivalURI       string
-		VisibilityArchivalStatus types.ArchivalStatus
+		VisibilityArchivalStatus workflow.ArchivalStatus
 		VisibilityArchivalURI    string
-		BadBinaries              types.BadBinaries
+		BadBinaries              *DataBlob
 	}
 
 	// InternalCreateDomainRequest is used to create the domain
