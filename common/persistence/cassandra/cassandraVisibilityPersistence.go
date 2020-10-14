@@ -210,9 +210,9 @@ func newVisibilityPersistence(
 
 	return &cassandraVisibilityPersistence{
 		sortByCloseTime: listClosedOrderingByCloseTime,
-		cassandraStore: cassandraStore{session: session, logger: logger},
-		lowConslevel:   gocql.One,
-		serializer:     p.NewPayloadSerializer(),
+		cassandraStore:  cassandraStore{session: session, logger: logger},
+		lowConslevel:    gocql.One,
+		serializer:      p.NewPayloadSerializer(),
 	}, nil
 }
 
@@ -762,6 +762,19 @@ func (v *cassandraVisibilityPersistence) DeleteWorkflowExecution(
 	return nil
 }
 
+func (v *cassandraVisibilityPersistence) ListWorkflowExecutions(
+	ctx context.Context,
+	request *p.ListWorkflowExecutionsByQueryRequest,
+) (*p.InternalListWorkflowExecutionsResponse, error) {
+	return nil, p.NewOperationNotSupportErrorForVis()
+}
+
+func (v *cassandraVisibilityPersistence) ScanWorkflowExecutions(
+	ctx context.Context,
+	request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+	return nil, p.NewOperationNotSupportErrorForVis()
+}
+
 func (v *cassandraVisibilityPersistence) CountWorkflowExecutions(
 	ctx context.Context,
 	request *p.CountWorkflowExecutionsRequest,
@@ -788,10 +801,10 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsOrderByClos
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
 	}
 
 	nextPageToken := iter.PageState()
@@ -831,10 +844,10 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByTypeOrder
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
 	}
 
 	nextPageToken := iter.PageState()
@@ -874,10 +887,10 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByWorkflowI
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
 	}
 
 	nextPageToken := iter.PageState()
@@ -917,10 +930,10 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByStatusOrd
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
 	}
 
 	nextPageToken := iter.PageState()
