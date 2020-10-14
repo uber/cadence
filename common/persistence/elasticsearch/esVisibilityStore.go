@@ -32,7 +32,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	
+
 	"github.com/cch123/elasticsql"
 	"github.com/olivere/elastic"
 	"github.com/valyala/fastjson"
