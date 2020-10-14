@@ -89,6 +89,13 @@ var structTemplate = template.Must(template.New("struct type").Funcs(funcMap).Pa
 type {{internal .Type.Name}} struct {
 {{range .Fields}}	{{internal .Name}} {{if .Type.IsMap}}map[string]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer}}*{{end}}{{internal .Type.Name}}
 {{end}}}
+{{range .Fields}}func (v *{{internal $.Type.Name}}) Get{{internal .Name}}() (o {{if .Type.IsMap}}map[string]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer | and (not .Type.IsPrimitive) | and (not .Type.IsEnum)}}*{{end}}{{internal .Type.Name}}) {
+	if v != nil{{if .Type.IsMap | or .Type.IsArray | or .Type.IsPointer}} && v.{{internal .Name}} != nil{{end}} {
+		return {{if .Type.IsPointer | and (or .Type.IsPrimitive .Type.IsEnum)}}*{{end}}v.{{internal .Name}}
+	}
+	return
+}
+{{end}}
 `))
 
 var enumTemplate = template.Must(template.New("enum type").Funcs(funcMap).Parse(`
@@ -201,6 +208,7 @@ func To{{internal .Type.Name}}(t {{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPac
 
 var requiredArrayMappers = map[string]struct{}{}
 var requiredMapMappers = map[string]struct{}{}
+var enumTypes = map[string]struct{}{}
 
 type (
 	// Renderer can render internal type and its mappings
@@ -218,6 +226,7 @@ type (
 		IsArray           bool
 		IsMap             bool
 		IsPointer         bool
+		IsEnum            bool
 	}
 
 	// Field describe a field within a struct
@@ -305,9 +314,10 @@ func newType(fullName string) Type {
 		name := fullName[pos+1:]
 		pos = strings.LastIndexByte(pkg, '/')
 		short := pkg[pos+1:]
-		return Type{pkg, short, name, false, isArray, isMap, isPointer}
+		_, isEnum := enumTypes[name]
+		return Type{pkg, short, name, false, isArray, isMap, isPointer, isEnum}
 	}
-	return Type{"", "", fullName, true, isArray, isMap, isPointer}
+	return Type{"", "", fullName, true, isArray, isMap, isPointer, false}
 }
 
 func newStruct(obj types.Object) *Struct {
@@ -427,6 +437,20 @@ func main() {
 		pkg, err := importer.Default().Import(p.ThriftPackage)
 		if err != nil {
 			panic(err)
+		}
+
+		for _, name := range pkg.Scope().Names() {
+			obj := pkg.Scope().Lookup(name)
+			if !obj.Exported() {
+				continue
+			}
+
+			switch obj.Type().Underlying().(type) {
+			case *types.Basic:
+				if !isEnumValue(obj, obj.Type()) {
+					enumTypes[obj.Name()] = struct{}{}
+				}
+			}
 		}
 
 		for _, name := range pkg.Scope().Names() {
