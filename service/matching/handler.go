@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/.gen/go/health"
-	"github.com/uber/cadence/.gen/go/health/metaserver"
 	m "github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceserver"
 	gen "github.com/uber/cadence/.gen/go/shared"
@@ -98,12 +97,6 @@ func NewHandler(
 	// prevent us from trying to serve requests before matching engine is started and ready
 	handler.startWG.Add(1)
 	return handler
-}
-
-// RegisterHandler register this handler, must be called before Start()
-func (h *HandlerImpl) RegisterHandler() {
-	h.Resource.GetDispatcher().Register(matchingserviceserver.New(h))
-	h.Resource.GetDispatcher().Register(metaserver.New(h))
 }
 
 // Start starts the handler

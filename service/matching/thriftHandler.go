@@ -23,8 +23,12 @@ package matching
 import (
 	"context"
 
+	"go.uber.org/yarpc"
+
 	"github.com/uber/cadence/.gen/go/health"
+	"github.com/uber/cadence/.gen/go/health/metaserver"
 	m "github.com/uber/cadence/.gen/go/matching"
+	"github.com/uber/cadence/.gen/go/matching/matchingserviceserver"
 	s "github.com/uber/cadence/.gen/go/shared"
 )
 
@@ -36,6 +40,12 @@ type ThriftHandler struct {
 // NewThriftHandler creates Thrift handler on top of underlying handler
 func NewThriftHandler(h Handler) ThriftHandler {
 	return ThriftHandler{h}
+}
+
+// RegisterHandler register this handler to YARPC dispatcher
+func (t ThriftHandler) RegisterHandler(dispatcher *yarpc.Dispatcher) {
+	dispatcher.Register(matchingserviceserver.New(t))
+	dispatcher.Register(metaserver.New(t))
 }
 
 // Health forwards request to the underlying handler

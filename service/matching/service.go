@@ -90,7 +90,9 @@ func (s *Service) Start() {
 	logger.Info("matching starting")
 
 	s.handler = NewHandler(s, s.config)
-	s.handler.RegisterHandler()
+
+	thriftHandler := NewThriftHandler(s.handler)
+	thriftHandler.RegisterHandler(s.GetDispatcher())
 
 	// must start base service first
 	s.Resource.Start()
