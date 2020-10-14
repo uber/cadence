@@ -35,11 +35,11 @@ import (
 
 // ThriftHandler wrap underlying handler and handles Thrift related type conversions
 type ThriftHandler struct {
-	h *Handler
+	h Handler
 }
 
 // NewThriftHandler creates Thrift handler on top of underlying handler
-func NewThriftHandler(h *Handler) ThriftHandler {
+func NewThriftHandler(h Handler) ThriftHandler {
 	return ThriftHandler{h}
 }
 

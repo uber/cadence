@@ -42,7 +42,7 @@ type Service struct {
 	resource.Resource
 
 	status  int32
-	handler *Handler
+	handler *HandlerImpl
 	stopC   chan struct{}
 	params  *service.BootstrapParams
 	config  *config.Config
