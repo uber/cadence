@@ -31,7 +31,6 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/.gen/go/health"
-	"github.com/uber/cadence/.gen/go/health/metaserver"
 	hist "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyserviceserver"
 	"github.com/uber/cadence/.gen/go/replicator"
@@ -154,12 +153,6 @@ func NewHandler(
 	// prevent us from trying to serve requests before shard controller is started and ready
 	handler.startWG.Add(1)
 	return handler
-}
-
-// RegisterHandler register this handler, must be called before Start()
-func (h *HandlerImpl) RegisterHandler() {
-	h.GetDispatcher().Register(historyserviceserver.New(h))
-	h.GetDispatcher().Register(metaserver.New(h))
 }
 
 // Start starts the handler

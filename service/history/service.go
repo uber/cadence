@@ -123,7 +123,9 @@ func (s *Service) Start() {
 	logger.Info("history starting")
 
 	s.handler = NewHandler(s.Resource, s.config)
-	s.handler.RegisterHandler()
+
+	thriftHandler := NewThriftHandler(s.handler)
+	thriftHandler.RegisterHandler(s.GetDispatcher())
 
 	// must start resource first
 	s.Resource.Start()
