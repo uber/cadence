@@ -152,11 +152,6 @@ func NewAdminHandler(
 	}
 }
 
-// RegisterHandler register this handler, must be called before Start()
-func (adh *AdminHandlerImpl) RegisterHandler() {
-	adh.GetDispatcher().Register(adminserviceserver.New(adh))
-}
-
 // Start starts the handler
 func (adh *AdminHandlerImpl) Start() {
 

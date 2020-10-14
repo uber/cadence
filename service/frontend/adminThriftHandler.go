@@ -23,7 +23,10 @@ package frontend
 import (
 	"context"
 
+	"go.uber.org/yarpc"
+
 	"github.com/uber/cadence/.gen/go/admin"
+	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 )
@@ -38,13 +41,18 @@ func NewAdminThriftHandler(h AdminHandler) AdminThriftHandler {
 	return AdminThriftHandler{h}
 }
 
+// RegisterHandler register this handler to YARPC dispatcher
+func (t AdminThriftHandler) RegisterHandler(dispatcher *yarpc.Dispatcher) {
+	dispatcher.Register(adminserviceserver.New(t))
+}
+
 // AddSearchAttribute forwards request to the underlying handler
 func (t AdminThriftHandler) AddSearchAttribute(ctx context.Context, request *admin.AddSearchAttributeRequest) (err error) {
 	return t.h.AddSearchAttribute(ctx, request)
 }
 
 // CloseShard forwards request to the underlying handler
-func (t AdminThriftHandler) CloseShard(ctx context.Context, request *shared.CloseShardRequest) (err error)  {
+func (t AdminThriftHandler) CloseShard(ctx context.Context, request *shared.CloseShardRequest) (err error) {
 	return t.h.CloseShard(ctx, request)
 }
 
