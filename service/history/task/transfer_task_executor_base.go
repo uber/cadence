@@ -78,11 +78,12 @@ func newTransferTaskExecutorBase(
 }
 
 func (t *transferTaskExecutorBase) pushActivity(
+	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 	activityScheduleToStartTimeout int32,
 ) error {
 
-	ctx, cancel := context.WithTimeout(context.Background(), taskDefaultTimeout)
+	ctx, cancel := context.WithTimeout(ctx, taskDefaultTimeout)
 	defer cancel()
 
 	if task.TaskType != persistence.TransferTaskTypeActivityTask {
@@ -105,12 +106,13 @@ func (t *transferTaskExecutorBase) pushActivity(
 }
 
 func (t *transferTaskExecutorBase) pushDecision(
+	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 	tasklist *workflow.TaskList,
 	decisionScheduleToStartTimeout int32,
 ) error {
 
-	ctx, cancel := context.WithTimeout(context.Background(), taskDefaultTimeout)
+	ctx, cancel := context.WithTimeout(ctx, taskDefaultTimeout)
 	defer cancel()
 
 	if task.TaskType != persistence.TransferTaskTypeDecisionTask {
@@ -131,6 +133,7 @@ func (t *transferTaskExecutorBase) pushDecision(
 }
 
 func (t *transferTaskExecutorBase) recordWorkflowStarted(
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 	runID string,
@@ -176,10 +179,11 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		SearchAttributes:   searchAttributes,
 	}
 
-	return t.visibilityMgr.RecordWorkflowExecutionStarted(context.TODO(), request)
+	return t.visibilityMgr.RecordWorkflowExecutionStarted(ctx, request)
 }
 
 func (t *transferTaskExecutorBase) upsertWorkflowExecution(
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 	runID string,
@@ -220,10 +224,11 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 		SearchAttributes:   searchAttributes,
 	}
 
-	return t.visibilityMgr.UpsertWorkflowExecution(context.TODO(), request)
+	return t.visibilityMgr.UpsertWorkflowExecution(ctx, request)
 }
 
 func (t *transferTaskExecutorBase) recordWorkflowClosed(
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 	runID string,
@@ -266,7 +271,7 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 	}
 
 	if recordWorkflowClose {
-		if err := t.visibilityMgr.RecordWorkflowExecutionClosed(context.TODO(), &persistence.RecordWorkflowExecutionClosedRequest{
+		if err := t.visibilityMgr.RecordWorkflowExecutionClosed(ctx, &persistence.RecordWorkflowExecutionClosedRequest{
 			DomainUUID: domainID,
 			Domain:     domain,
 			Execution: workflow.WorkflowExecution{
@@ -290,9 +295,9 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 	}
 
 	if archiveVisibility {
-		ctx, cancel := context.WithTimeout(context.Background(), t.config.TransferProcessorVisibilityArchivalTimeLimit())
+		archiveCtx, cancel := context.WithTimeout(ctx, t.config.TransferProcessorVisibilityArchivalTimeLimit())
 		defer cancel()
-		_, err := t.archiverClient.Archive(ctx, &archiver.ClientRequest{
+		_, err := t.archiverClient.Archive(archiveCtx, &archiver.ClientRequest{
 			ArchiveRequest: &archiver.ArchiveRequest{
 				DomainID:           domainID,
 				DomainName:         domain,
