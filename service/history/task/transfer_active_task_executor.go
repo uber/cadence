@@ -1112,12 +1112,12 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionFailed(
 }
 
 func (t *transferActiveTaskExecutor) updateWorkflowExecution(
-	context execution.Context,
+	wfContext execution.Context,
 	createDecisionTask bool,
 	action func(builder execution.MutableState) error,
 ) error {
 
-	mutableState, err := context.LoadWorkflowExecution()
+	mutableState, err := wfContext.LoadWorkflowExecution(context.TODO())
 	if err != nil {
 		return err
 	}
@@ -1134,7 +1134,7 @@ func (t *transferActiveTaskExecutor) updateWorkflowExecution(
 		}
 	}
 
-	return context.UpdateWorkflowExecutionAsActive(t.shard.GetTimeSource().Now())
+	return wfContext.UpdateWorkflowExecutionAsActive(context.TODO(), t.shard.GetTimeSource().Now())
 }
 
 func (t *transferActiveTaskExecutor) requestCancelExternalExecutionWithRetry(

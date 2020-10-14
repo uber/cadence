@@ -693,7 +693,7 @@ func (s *engineSuite) TestQueryWorkflow_ConsistentQueryBufferFull() {
 	// buffer query so that when history.QueryWorkflow is called buffer is already full
 	ctx, release, err := s.mockHistoryEngine.executionCache.GetOrCreateWorkflowExecutionForBackground(constants.TestDomainID, workflowExecution)
 	s.NoError(err)
-	loadedMS, err := ctx.LoadWorkflowExecution()
+	loadedMS, err := ctx.LoadWorkflowExecution(context.Background())
 	s.NoError(err)
 	qr := query.NewRegistry()
 	qr.BufferQuery(&workflow.WorkflowQuery{})
@@ -4417,7 +4417,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	// this enables us to set query registry on it
 	ctx, release, err := s.mockHistoryEngine.executionCache.GetOrCreateWorkflowExecutionForBackground(constants.TestDomainID, we)
 	s.NoError(err)
-	loadedMS, err := ctx.LoadWorkflowExecution()
+	loadedMS, err := ctx.LoadWorkflowExecution(context.Background())
 	s.NoError(err)
 	qr := query.NewRegistry()
 	id1, _ := qr.BufferQuery(&workflow.WorkflowQuery{})
@@ -4564,7 +4564,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	// this enables us to set query registry on it
 	ctx, release, err := s.mockHistoryEngine.executionCache.GetOrCreateWorkflowExecutionForBackground(constants.TestDomainID, we)
 	s.NoError(err)
-	loadedMS, err := ctx.LoadWorkflowExecution()
+	loadedMS, err := ctx.LoadWorkflowExecution(context.Background())
 	s.NoError(err)
 	qr := query.NewRegistry()
 	qr.BufferQuery(&workflow.WorkflowQuery{})

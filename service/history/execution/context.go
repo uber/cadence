@@ -58,9 +58,9 @@ type (
 
 		GetWorkflowExecution() MutableState
 		SetWorkflowExecution(mutableState MutableState)
-		LoadWorkflowExecution() (MutableState, error)
-		LoadWorkflowExecutionForReplication(incomingVersion int64) (MutableState, error)
-		LoadExecutionStats() (*persistence.ExecutionStats, error)
+		LoadWorkflowExecution(ctx context.Context) (MutableState, error)
+		LoadWorkflowExecutionForReplication(ctx context.Context, incomingVersion int64) (MutableState, error)
+		LoadExecutionStats(ctx context.Context) (*persistence.ExecutionStats, error)
 		Clear()
 
 		Lock(ctx context.Context) error
@@ -74,13 +74,16 @@ type (
 		) error
 
 		PersistFirstWorkflowEvents(
+			ctx context.Context,
 			workflowEvents *persistence.WorkflowEvents,
 		) (int64, error)
 		PersistNonFirstWorkflowEvents(
+			ctx context.Context,
 			workflowEvents *persistence.WorkflowEvents,
 		) (int64, error)
 
 		CreateWorkflowExecution(
+			ctx context.Context,
 			newWorkflow *persistence.WorkflowSnapshot,
 			historySize int64,
 			now time.Time,
@@ -89,6 +92,7 @@ type (
 			prevLastWriteVersion int64,
 		) error
 		ConflictResolveWorkflowExecution(
+			ctx context.Context,
 			now time.Time,
 			conflictResolveMode persistence.ConflictResolveWorkflowMode,
 			resetMutableState MutableState,
@@ -99,22 +103,27 @@ type (
 			currentTransactionPolicy *TransactionPolicy,
 		) error
 		UpdateWorkflowExecutionAsActive(
+			ctx context.Context,
 			now time.Time,
 		) error
 		UpdateWorkflowExecutionWithNewAsActive(
+			ctx context.Context,
 			now time.Time,
 			newContext Context,
 			newMutableState MutableState,
 		) error
 		UpdateWorkflowExecutionAsPassive(
+			ctx context.Context,
 			now time.Time,
 		) error
 		UpdateWorkflowExecutionWithNewAsPassive(
+			ctx context.Context,
 			now time.Time,
 			newContext Context,
 			newMutableState MutableState,
 		) error
 		UpdateWorkflowExecutionWithNew(
+			ctx context.Context,
 			now time.Time,
 			updateMode persistence.UpdateWorkflowMode,
 			newContext Context,
@@ -209,8 +218,10 @@ func (c *contextImpl) SetHistorySize(size int64) {
 	c.stats.HistorySize = size
 }
 
-func (c *contextImpl) LoadExecutionStats() (*persistence.ExecutionStats, error) {
-	_, err := c.LoadWorkflowExecution()
+func (c *contextImpl) LoadExecutionStats(
+	ctx context.Context,
+) (*persistence.ExecutionStats, error) {
+	_, err := c.LoadWorkflowExecution(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -218,6 +229,7 @@ func (c *contextImpl) LoadExecutionStats() (*persistence.ExecutionStats, error) 
 }
 
 func (c *contextImpl) LoadWorkflowExecutionForReplication(
+	ctx context.Context,
 	incomingVersion int64,
 ) (MutableState, error) {
 
@@ -227,7 +239,7 @@ func (c *contextImpl) LoadWorkflowExecutionForReplication(
 	}
 
 	if c.mutableState == nil {
-		response, err := c.getWorkflowExecutionWithRetry(&persistence.GetWorkflowExecutionRequest{
+		response, err := c.getWorkflowExecutionWithRetry(ctx, &persistence.GetWorkflowExecutionRequest{
 			DomainID:  c.domainID,
 			Execution: c.workflowExecution,
 		})
@@ -275,6 +287,7 @@ func (c *contextImpl) LoadWorkflowExecutionForReplication(
 		}
 
 		if err = c.UpdateWorkflowExecutionAsActive(
+			ctx,
 			c.shard.GetTimeSource().Now(),
 		); err != nil {
 			return nil, err
@@ -303,7 +316,9 @@ func (c *contextImpl) SetWorkflowExecution(mutableState MutableState) {
 	c.mutableState = mutableState
 }
 
-func (c *contextImpl) LoadWorkflowExecution() (MutableState, error) {
+func (c *contextImpl) LoadWorkflowExecution(
+	ctx context.Context,
+) (MutableState, error) {
 
 	domainEntry, err := c.shard.GetDomainCache().GetDomainByID(c.domainID)
 	if err != nil {
@@ -311,7 +326,7 @@ func (c *contextImpl) LoadWorkflowExecution() (MutableState, error) {
 	}
 
 	if c.mutableState == nil {
-		response, err := c.getWorkflowExecutionWithRetry(&persistence.GetWorkflowExecutionRequest{
+		response, err := c.getWorkflowExecutionWithRetry(ctx, &persistence.GetWorkflowExecutionRequest{
 			DomainID:  c.domainID,
 			Execution: c.workflowExecution,
 		})
@@ -348,6 +363,7 @@ func (c *contextImpl) LoadWorkflowExecution() (MutableState, error) {
 	}
 
 	if err = c.UpdateWorkflowExecutionAsActive(
+		ctx,
 		c.shard.GetTimeSource().Now(),
 	); err != nil {
 		return nil, err
@@ -367,6 +383,7 @@ func (c *contextImpl) LoadWorkflowExecution() (MutableState, error) {
 }
 
 func (c *contextImpl) CreateWorkflowExecution(
+	ctx context.Context,
 	newWorkflow *persistence.WorkflowSnapshot,
 	historySize int64,
 	now time.Time,
@@ -396,7 +413,7 @@ func (c *contextImpl) CreateWorkflowExecution(
 		HistorySize: historySize,
 	}
 
-	_, err := c.createWorkflowExecutionWithRetry(createRequest)
+	_, err := c.createWorkflowExecutionWithRetry(ctx, createRequest)
 	if err != nil {
 		return err
 	}
@@ -410,6 +427,7 @@ func (c *contextImpl) CreateWorkflowExecution(
 }
 
 func (c *contextImpl) ConflictResolveWorkflowExecution(
+	ctx context.Context,
 	now time.Time,
 	conflictResolveMode persistence.ConflictResolveWorkflowMode,
 	resetMutableState MutableState,
@@ -435,7 +453,7 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 	}
 	resetHistorySize := c.GetHistorySize()
 	for _, workflowEvents := range resetWorkflowEventsSeq {
-		eventsSize, err := c.PersistNonFirstWorkflowEvents(workflowEvents)
+		eventsSize, err := c.PersistNonFirstWorkflowEvents(ctx, workflowEvents)
 		if err != nil {
 			return err
 		}
@@ -465,7 +483,7 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		}
 		newWorkflowSizeSize := newContext.GetHistorySize()
 		startEvents := newWorkflowEventsSeq[0]
-		eventsSize, err := c.PersistFirstWorkflowEvents(startEvents)
+		eventsSize, err := c.PersistFirstWorkflowEvents(ctx, startEvents)
 		if err != nil {
 			return err
 		}
@@ -495,7 +513,7 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		}
 		currentWorkflowSize := currentContext.GetHistorySize()
 		for _, workflowEvents := range currentWorkflowEventsSeq {
-			eventsSize, err := c.PersistNonFirstWorkflowEvents(workflowEvents)
+			eventsSize, err := c.PersistNonFirstWorkflowEvents(ctx, workflowEvents)
 			if err != nil {
 				return err
 			}
@@ -516,7 +534,7 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		return err
 	}
 
-	if err := c.shard.ConflictResolveWorkflowExecution(&persistence.ConflictResolveWorkflowExecutionRequest{
+	if err := c.shard.ConflictResolveWorkflowExecution(ctx, &persistence.ConflictResolveWorkflowExecutionRequest{
 		// RangeID , this is set by shard context
 		Mode:                    conflictResolveMode,
 		ResetWorkflowSnapshot:   *resetWorkflow,
@@ -568,10 +586,12 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 }
 
 func (c *contextImpl) UpdateWorkflowExecutionAsActive(
+	ctx context.Context,
 	now time.Time,
 ) error {
 
 	return c.UpdateWorkflowExecutionWithNew(
+		ctx,
 		now,
 		persistence.UpdateWorkflowModeUpdateCurrent,
 		nil,
@@ -582,12 +602,14 @@ func (c *contextImpl) UpdateWorkflowExecutionAsActive(
 }
 
 func (c *contextImpl) UpdateWorkflowExecutionWithNewAsActive(
+	ctx context.Context,
 	now time.Time,
 	newContext Context,
 	newMutableState MutableState,
 ) error {
 
 	return c.UpdateWorkflowExecutionWithNew(
+		ctx,
 		now,
 		persistence.UpdateWorkflowModeUpdateCurrent,
 		newContext,
@@ -598,10 +620,12 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNewAsActive(
 }
 
 func (c *contextImpl) UpdateWorkflowExecutionAsPassive(
+	ctx context.Context,
 	now time.Time,
 ) error {
 
 	return c.UpdateWorkflowExecutionWithNew(
+		ctx,
 		now,
 		persistence.UpdateWorkflowModeUpdateCurrent,
 		nil,
@@ -612,12 +636,14 @@ func (c *contextImpl) UpdateWorkflowExecutionAsPassive(
 }
 
 func (c *contextImpl) UpdateWorkflowExecutionWithNewAsPassive(
+	ctx context.Context,
 	now time.Time,
 	newContext Context,
 	newMutableState MutableState,
 ) error {
 
 	return c.UpdateWorkflowExecutionWithNew(
+		ctx,
 		now,
 		persistence.UpdateWorkflowModeUpdateCurrent,
 		newContext,
@@ -628,6 +654,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNewAsPassive(
 }
 
 func (c *contextImpl) UpdateWorkflowExecutionWithNew(
+	ctx context.Context,
 	now time.Time,
 	updateMode persistence.UpdateWorkflowMode,
 	newContext Context,
@@ -652,7 +679,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 
 	currentWorkflowSize := c.GetHistorySize()
 	for _, workflowEvents := range currentWorkflowEventsSeq {
-		eventsSize, err := c.PersistNonFirstWorkflowEvents(workflowEvents)
+		eventsSize, err := c.PersistNonFirstWorkflowEvents(ctx, workflowEvents)
 		if err != nil {
 			return err
 		}
@@ -682,7 +709,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		}
 		newWorkflowSizeSize := newContext.GetHistorySize()
 		startEvents := newWorkflowEventsSeq[0]
-		eventsSize, err := c.PersistFirstWorkflowEvents(startEvents)
+		eventsSize, err := c.PersistFirstWorkflowEvents(ctx, startEvents)
 		if err != nil {
 			return err
 		}
@@ -709,7 +736,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		return err
 	}
 
-	resp, err := c.updateWorkflowExecutionWithRetry(&persistence.UpdateWorkflowExecutionRequest{
+	resp, err := c.updateWorkflowExecutionWithRetry(ctx, &persistence.UpdateWorkflowExecutionRequest{
 		// RangeID , this is set by shard context
 		Mode:                   updateMode,
 		UpdateWorkflowMutation: *currentWorkflow,
@@ -838,6 +865,7 @@ func (c *contextImpl) mergeContinueAsNewReplicationTasks(
 }
 
 func (c *contextImpl) PersistFirstWorkflowEvents(
+	ctx context.Context,
 	workflowEvents *persistence.WorkflowEvents,
 ) (int64, error) {
 
@@ -858,6 +886,7 @@ func (c *contextImpl) PersistFirstWorkflowEvents(
 	events := workflowEvents.Events
 
 	size, err := c.appendHistoryV2EventsWithRetry(
+		ctx,
 		domainID,
 		execution,
 		&persistence.AppendHistoryNodesRequest{
@@ -872,6 +901,7 @@ func (c *contextImpl) PersistFirstWorkflowEvents(
 }
 
 func (c *contextImpl) PersistNonFirstWorkflowEvents(
+	ctx context.Context,
 	workflowEvents *persistence.WorkflowEvents,
 ) (int64, error) {
 
@@ -888,6 +918,7 @@ func (c *contextImpl) PersistNonFirstWorkflowEvents(
 	events := workflowEvents.Events
 
 	size, err := c.appendHistoryV2EventsWithRetry(
+		ctx,
 		domainID,
 		execution,
 		&persistence.AppendHistoryNodesRequest{
@@ -901,6 +932,7 @@ func (c *contextImpl) PersistNonFirstWorkflowEvents(
 }
 
 func (c *contextImpl) appendHistoryV2EventsWithRetry(
+	ctx context.Context,
 	domainID string,
 	execution workflow.WorkflowExecution,
 	request *persistence.AppendHistoryNodesRequest,
@@ -909,7 +941,7 @@ func (c *contextImpl) appendHistoryV2EventsWithRetry(
 	resp := 0
 	op := func() error {
 		var err error
-		resp, err = c.shard.AppendHistoryV2Events(request, domainID, execution)
+		resp, err = c.shard.AppendHistoryV2Events(ctx, request, domainID, execution)
 		return err
 	}
 
@@ -922,13 +954,14 @@ func (c *contextImpl) appendHistoryV2EventsWithRetry(
 }
 
 func (c *contextImpl) createWorkflowExecutionWithRetry(
+	ctx context.Context,
 	request *persistence.CreateWorkflowExecutionRequest,
 ) (*persistence.CreateWorkflowExecutionResponse, error) {
 
 	var resp *persistence.CreateWorkflowExecutionResponse
 	op := func() error {
 		var err error
-		resp, err = c.shard.CreateWorkflowExecution(request)
+		resp, err = c.shard.CreateWorkflowExecution(ctx, request)
 		return err
 	}
 
@@ -958,13 +991,14 @@ func (c *contextImpl) createWorkflowExecutionWithRetry(
 }
 
 func (c *contextImpl) getWorkflowExecutionWithRetry(
+	ctx context.Context,
 	request *persistence.GetWorkflowExecutionRequest,
 ) (*persistence.GetWorkflowExecutionResponse, error) {
 
 	var resp *persistence.GetWorkflowExecutionResponse
 	op := func() error {
 		var err error
-		resp, err = c.executionManager.GetWorkflowExecution(context.TODO(), request)
+		resp, err = c.executionManager.GetWorkflowExecution(ctx, request)
 
 		return err
 	}
@@ -994,13 +1028,14 @@ func (c *contextImpl) getWorkflowExecutionWithRetry(
 }
 
 func (c *contextImpl) updateWorkflowExecutionWithRetry(
+	ctx context.Context,
 	request *persistence.UpdateWorkflowExecutionRequest,
 ) (*persistence.UpdateWorkflowExecutionResponse, error) {
 
 	var resp *persistence.UpdateWorkflowExecutionResponse
 	op := func() error {
 		var err error
-		resp, err = c.shard.UpdateWorkflowExecution(request)
+		resp, err = c.shard.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
 

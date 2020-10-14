@@ -261,7 +261,7 @@ func (t *taskAckManagerImpl) processReplication(
 	}
 	defer func() { release(retError) }()
 
-	msBuilder, err := context.LoadWorkflowExecution()
+	msBuilder, err := context.LoadWorkflowExecution(ctx)
 	switch err.(type) {
 	case nil:
 		if !processTaskIfClosed && !msBuilder.IsWorkflowExecutionRunning() {
@@ -353,7 +353,7 @@ func (t *taskAckManagerImpl) isNewRunNDCEnabled(
 	}
 	defer func() { release(retError) }()
 
-	mutableState, err := context.LoadWorkflowExecution()
+	mutableState, err := context.LoadWorkflowExecution(ctx)
 	if err != nil {
 		return false, err
 	}
