@@ -2532,12 +2532,12 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 	}
 
 	baseReq := persistence.ListWorkflowExecutionsRequest{
-		DomainUUID:        domainID,
-		Domain:            domain,
-		PageSize:          int(listRequest.GetMaximumPageSize()),
-		NextPageToken:     listRequest.NextPageToken,
-		EarliestStartTime: listRequest.StartTimeFilter.GetEarliestTime(),
-		LatestStartTime:   listRequest.StartTimeFilter.GetLatestTime(),
+		DomainUUID:    domainID,
+		Domain:        domain,
+		PageSize:      int(listRequest.GetMaximumPageSize()),
+		NextPageToken: listRequest.NextPageToken,
+		EarliestTime:  listRequest.StartTimeFilter.GetEarliestTime(),
+		LatestTime:    listRequest.StartTimeFilter.GetLatestTime(),
 	}
 
 	var persistenceResp *persistence.ListWorkflowExecutionsResponse
@@ -2749,12 +2749,12 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 	}
 
 	baseReq := persistence.ListWorkflowExecutionsRequest{
-		DomainUUID:        domainID,
-		Domain:            domain,
-		PageSize:          int(listRequest.GetMaximumPageSize()),
-		NextPageToken:     listRequest.NextPageToken,
-		EarliestStartTime: listRequest.StartTimeFilter.GetEarliestTime(),
-		LatestStartTime:   listRequest.StartTimeFilter.GetLatestTime(),
+		DomainUUID:    domainID,
+		Domain:        domain,
+		PageSize:      int(listRequest.GetMaximumPageSize()),
+		NextPageToken: listRequest.NextPageToken,
+		EarliestTime:  listRequest.StartTimeFilter.GetEarliestTime(),
+		LatestTime:    listRequest.StartTimeFilter.GetLatestTime(),
 	}
 
 	var persistenceResp *persistence.ListWorkflowExecutionsResponse
@@ -2863,7 +2863,7 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
-	req := &persistence.ListWorkflowExecutionsRequestV2{
+	req := &persistence.ListWorkflowExecutionsByQueryRequest{
 		DomainUUID:    domainID,
 		Domain:        domain,
 		PageSize:      int(listRequest.GetPageSize()),
@@ -2930,7 +2930,7 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
-	req := &persistence.ListWorkflowExecutionsRequestV2{
+	req := &persistence.ListWorkflowExecutionsByQueryRequest{
 		DomainUUID:    domainID,
 		Domain:        domain,
 		PageSize:      int(listRequest.GetPageSize()),

@@ -280,14 +280,14 @@ func (p *visibilitySamplingClient) DeleteWorkflowExecution(
 
 func (p *visibilitySamplingClient) ListWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsRequestV2,
+	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	return p.persistence.ListWorkflowExecutions(ctx, request)
 }
 
 func (p *visibilitySamplingClient) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsRequestV2,
+	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	return p.persistence.ScanWorkflowExecutions(ctx, request)
 }
