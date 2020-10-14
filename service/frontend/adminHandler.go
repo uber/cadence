@@ -62,6 +62,8 @@ var (
 	errMaxMessageIDNotSet = &gen.BadRequestError{Message: "Max messageID is not set."}
 )
 
+//go:generate mockgen -copyright_file=../../LICENSE -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package frontend github.com/uber/cadence/service/frontend AdminHandler
+
 type (
 	// AdminHandler interface for admin service
 	AdminHandler interface {
