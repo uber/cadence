@@ -411,7 +411,8 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *r.ReplicationTask
 }
 
 func (p *taskProcessorImpl) processTaskOnce(replicationTask *r.ReplicationTask) error {
-	startTime := time.Now()
+	ts := p.shard.GetTimeSource()
+	startTime := ts.Now()
 	scope, err := p.taskExecutor.execute(
 		replicationTask,
 		false)
@@ -419,13 +420,17 @@ func (p *taskProcessorImpl) processTaskOnce(replicationTask *r.ReplicationTask) 
 	if err != nil {
 		p.updateFailureMetric(scope, err)
 	} else {
-		p.logger.Debug("Successfully applied replication task.", tag.TaskID(replicationTask.GetSourceTaskId()))
-		p.metricsClient.Scope(
-			metrics.ReplicationTaskFetcherScope,
-			metrics.TargetClusterTag(p.sourceCluster),
-		).IncCounter(metrics.ReplicationTasksApplied)
-		p.metricsClient.Scope(metrics.ReplicationTaskFetcherScope).
-			RecordTimer(metrics.TaskProcessingLatency, time.Now().Sub(startTime))
+		now := ts.Now()
+		mScope := p.metricsClient.Scope(scope, metrics.TargetClusterTag(p.sourceCluster))
+		// emit the number of replication tasks
+		mScope.IncCounter(metrics.ReplicationTasksApplied)
+		// emit single task processing latency
+		mScope.RecordTimer(metrics.TaskProcessingLatency, now.Sub(startTime))
+		// emit latency from task generated to task received
+		mScope.RecordTimer(
+			metrics.ReplicationTaskLatency,
+			now.Sub(time.Unix(0, replicationTask.GetCreationTime())),
+		)
 	}
 
 	return err
