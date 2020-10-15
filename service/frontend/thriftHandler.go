@@ -24,8 +24,11 @@ package frontend
 
 import (
 	"context"
+	"go.uber.org/yarpc"
 
+	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/.gen/go/health"
+	"github.com/uber/cadence/.gen/go/health/metaserver"
 	"github.com/uber/cadence/.gen/go/shared"
 )
 
@@ -37,6 +40,11 @@ type ThriftHandler struct {
 // NewThriftHandler creates Thrift handler on top of underlying handler
 func NewThriftHandler(h Handler) ThriftHandler {
 	return ThriftHandler{h}
+}
+
+func (t ThriftHandler) register(dispatcher *yarpc.Dispatcher) {
+	dispatcher.Register(workflowserviceserver.New(t))
+	dispatcher.Register(metaserver.New(t))
 }
 
 // Health forwards request to the underlying handler
