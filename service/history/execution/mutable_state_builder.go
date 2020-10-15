@@ -4219,11 +4219,11 @@ func (e *mutableStateBuilder) eventsToReplicationTask(
 
 	// the visibility timestamp will be set in shard context
 	replicationTask := &persistence.HistoryReplicationTask{
-		FirstEventID:        firstEvent.GetEventId(),
-		NextEventID:         lastEvent.GetEventId() + 1,
-		Version:             firstEvent.GetVersion(),
-		BranchToken:         currentBranchToken,
-		NewRunBranchToken:   nil,
+		FirstEventID:      firstEvent.GetEventId(),
+		NextEventID:       lastEvent.GetEventId() + 1,
+		Version:           firstEvent.GetVersion(),
+		BranchToken:       currentBranchToken,
+		NewRunBranchToken: nil,
 	}
 
 	return []persistence.Task{replicationTask}, nil
