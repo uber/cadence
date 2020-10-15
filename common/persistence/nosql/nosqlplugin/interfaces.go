@@ -23,6 +23,8 @@ package nosqlplugin
 import (
 	"context"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -134,7 +136,7 @@ type (
 	// QueueMessageRow defines the row struct for queue message
 	DomainRow struct {
 		Info                        *persistence.DomainInfo
-		Config                      *persistence.InternalDomainConfig
+		Config                      *NoSQLInternalDomainConfig
 		ReplicationConfig           *persistence.DomainReplicationConfig
 		ConfigVersion               int64
 		FailoverVersion             int64
@@ -142,7 +144,21 @@ type (
 		PreviousFailoverVersion     int64
 		FailoverEndTime             int64
 		NotificationVersion         int64
+		LastUpdatedTime             int64
 		IsGlobalDomain              bool
+	}
+
+	NoSQLInternalDomainConfig struct {
+		// NOTE: this retention is in days, not in seconds
+		Retention                int32
+		EmitMetric               bool                 // deprecated
+		ArchivalBucket           string               // deprecated
+		ArchivalStatus           types.ArchivalStatus // deprecated
+		HistoryArchivalStatus    types.ArchivalStatus
+		HistoryArchivalURI       string
+		VisibilityArchivalStatus types.ArchivalStatus
+		VisibilityArchivalURI    string
+		BadBinaries              *persistence.DataBlob
 	}
 
 	// SelectMessagesBetweenRequest is a request struct for SelectMessagesBetween

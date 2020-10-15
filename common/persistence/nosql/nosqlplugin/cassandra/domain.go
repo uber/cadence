@@ -23,7 +23,9 @@ package cassandra
 import (
 	"context"
 	"fmt"
+
 	"github.com/gocql/gocql"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
@@ -76,8 +78,8 @@ const (
 		`WHERE id = ?`
 
 	templateCreateDomainByNameQueryWithinBatchV2 = `INSERT INTO domains_by_name_v2 (` +
-		`domains_partition, name, domain, config, replication_config, is_global_domain, config_version, failover_version, failover_notification_version, previous_failover_version, failover_end_time, notification_version) ` +
-		`VALUES(?, ?, ` + templateDomainInfoType + `, ` + templateDomainConfigType + `, ` + templateDomainReplicationConfigType + `, ?, ?, ?, ?, ?, ?, ?) IF NOT EXISTS`
+		`domains_partition, name, domain, config, replication_config, is_global_domain, config_version, failover_version, failover_notification_version, previous_failover_version, failover_end_time, last_updated_time, notification_version) ` +
+		`VALUES(?, ?, ` + templateDomainInfoType + `, ` + templateDomainConfigType + `, ` + templateDomainReplicationConfigType + `, ?, ?, ?, ?, ?, ?, ?, ?) IF NOT EXISTS`
 
 	templateGetDomainByNameQueryV2 = `SELECT domain.id, domain.name, domain.status, domain.description, ` +
 		`domain.owner_email, domain.data, config.retention, config.emit_metric, ` +
@@ -92,6 +94,7 @@ const (
 		`failover_notification_version, ` +
 		`previous_failover_version, ` +
 		`failover_end_time, ` +
+		`last_updated_time, ` +
 		`notification_version ` +
 		`FROM domains_by_name_v2 ` +
 		`WHERE domains_partition = ? ` +
@@ -106,6 +109,7 @@ const (
 		`failover_notification_version = ? , ` +
 		`previous_failover_version = ? , ` +
 		`failover_end_time = ?,` +
+		`last_updated_time = ?,` +
 		`notification_version = ? ` +
 		`WHERE domains_partition = ? ` +
 		`and name = ?`
@@ -138,6 +142,7 @@ const (
 		`failover_notification_version, ` +
 		`previous_failover_version, ` +
 		`failover_end_time, ` +
+		`last_updated_time, ` +
 		`notification_version ` +
 		`FROM domains_by_name_v2 ` +
 		`WHERE domains_partition = ? `
@@ -179,7 +184,7 @@ func (db *cdb) InsertDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		row.Config.VisibilityArchivalStatus,
 		row.Config.VisibilityArchivalURI,
 		row.Config.BadBinaries.Data,
-		string(row.Config.BadBinaries.GetEncoding()),
+		string(row.Config.BadBinaries.Encoding),
 		row.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(row.ReplicationConfig.Clusters),
 		row.IsGlobalDomain,
@@ -188,6 +193,7 @@ func (db *cdb) InsertDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		p.InitialFailoverNotificationVersion,
 		common.InitialPreviousFailoverVersion,
 		row.FailoverEndTime,
+		row.LastUpdatedTime,
 		metadataNotificationVersion,
 	)
 	db.updateMetadataBatch(ctx, batch, metadataNotificationVersion)
@@ -257,7 +263,7 @@ func (db *cdb) UpdateDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		row.Config.VisibilityArchivalStatus,
 		row.Config.VisibilityArchivalURI,
 		row.Config.BadBinaries.Data,
-		string(row.Config.BadBinaries.GetEncoding()),
+		string(row.Config.BadBinaries.Encoding),
 		row.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(row.ReplicationConfig.Clusters),
 		row.ConfigVersion,
@@ -265,6 +271,7 @@ func (db *cdb) UpdateDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		row.FailoverNotificationVersion,
 		row.PreviousFailoverVersion,
 		row.FailoverEndTime,
+		row.LastUpdatedTime,
 		row.NotificationVersion,
 		constDomainPartition,
 		row.Info.Name,
@@ -307,7 +314,7 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 	}
 
 	info := &p.DomainInfo{}
-	config := &p.InternalDomainConfig{}
+	config := &nosqlplugin.NoSQLInternalDomainConfig{}
 	replicationConfig := &p.DomainReplicationConfig{}
 
 	// because of encoding/types, we can't directly read from config struct
@@ -321,6 +328,7 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 	var failoverVersion int64
 	var previousFailoverVersion int64
 	var failoverEndTime int64
+	var lastUpdatedTime int64
 	var configVersion int64
 	var isGlobalDomain bool
 
@@ -350,6 +358,7 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 		&failoverNotificationVersion,
 		&previousFailoverVersion,
 		&failoverEndTime,
+		&lastUpdatedTime,
 		&notificationVersion,
 	)
 
@@ -388,7 +397,7 @@ func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []b
 	var name string
 	domain := &nosqlplugin.DomainRow{
 		Info:              &p.DomainInfo{},
-		Config:            &p.InternalDomainConfig{},
+		Config:            &nosqlplugin.NoSQLInternalDomainConfig{},
 		ReplicationConfig: &p.DomainReplicationConfig{},
 	}
 	var replicationClusters []map[string]interface{}
@@ -421,22 +430,13 @@ func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []b
 		&domain.FailoverNotificationVersion,
 		&domain.PreviousFailoverVersion,
 		&domain.FailoverEndTime,
+		&domain.LastUpdatedTime,
 		&domain.NotificationVersion,
 	) {
 		if name != domainMetadataRecordName {
 			// do not include the metadata record
-			//if domain.Info.Data == nil {
-			//	domain.Info.Data = map[string]string{}
-			//}
 			domain.Config.BadBinaries = p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding))
-			//domain.ReplicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, domain.ReplicationConfig.ActiveClusterName)
 			domain.ReplicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
-			//domain.ReplicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, domain.ReplicationConfig.Clusters)
-
-			//if failoverEndTime > emptyFailoverEndTime {
-			//	domainFailoverEndTime := failoverEndTime
-			//	domain.FailoverEndTime = common.Int64Ptr(domainFailoverEndTime)
-			//}
 			rows = append(rows, domain)
 		}
 		replicationClusters = []map[string]interface{}{}
@@ -444,7 +444,7 @@ func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []b
 		badBinariesDataEncoding = ""
 		domain = &nosqlplugin.DomainRow{
 			Info:              &p.DomainInfo{},
-			Config:            &p.InternalDomainConfig{},
+			Config:            &nosqlplugin.NoSQLInternalDomainConfig{},
 			ReplicationConfig: &p.DomainReplicationConfig{},
 		}
 	}
@@ -476,7 +476,7 @@ func (db *cdb) DeleteDomain(ctx context.Context, domainID *string, domainName *s
 	} else {
 		var ID string
 		query := db.session.Query(templateGetDomainByNameQueryV2, constDomainPartition, *domainName).WithContext(ctx)
-		err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		err := query.Scan(&ID, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 		if err != nil {
 			if err == gocql.ErrNotFound {
 				return nil

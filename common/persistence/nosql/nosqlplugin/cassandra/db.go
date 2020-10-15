@@ -22,6 +22,7 @@ package cassandra
 
 import (
 	"errors"
+
 	"github.com/uber/cadence/common/log"
 
 	"github.com/gocql/gocql"
