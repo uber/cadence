@@ -41,8 +41,7 @@ func NewAdminThriftHandler(h AdminHandler) AdminThriftHandler {
 	return AdminThriftHandler{h}
 }
 
-// RegisterHandler register this handler to YARPC dispatcher
-func (t AdminThriftHandler) RegisterHandler(dispatcher *yarpc.Dispatcher) {
+func (t AdminThriftHandler) register(dispatcher *yarpc.Dispatcher) {
 	dispatcher.Register(adminserviceserver.New(t))
 }
 

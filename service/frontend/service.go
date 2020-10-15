@@ -251,7 +251,7 @@ func (s *Service) Start() {
 	s.adminHandler = NewAdminHandler(s, s.params, s.config)
 
 	adminThriftHandler := NewAdminThriftHandler(s.adminHandler)
-	adminThriftHandler.RegisterHandler(s.GetDispatcher())
+	adminThriftHandler.register(s.GetDispatcher())
 
 	// must start resource first
 	s.Resource.Start()
