@@ -4241,7 +4241,6 @@ func (e *mutableStateBuilder) syncActivityToReplicationTask(
 	return convertSyncActivityInfos(
 		e.pendingActivityInfoIDs,
 		e.syncActivityTasks,
-		e.shard.GetTimeSource().Now(),
 	)
 }
 
