@@ -36,7 +36,7 @@ import (
 	"github.com/uber/cadence/common/resource"
 )
 
-var _ matchingserviceserver.Interface = (*HandlerImpl)(nil)
+var _ matchingserviceserver.Interface = (*handlerImpl)(nil)
 
 type (
 	//go:generate mockgen -copyright_file=../../LICENSE -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package matching github.com/uber/cadence/service/matching Handler
@@ -55,8 +55,8 @@ type (
 		RespondQueryTaskCompleted(context.Context, *m.RespondQueryTaskCompletedRequest) error
 	}
 
-	// HandlerImpl is an implementation for matching service independent of wire protocol
-	HandlerImpl struct {
+	// handlerImpl is an implementation for matching service independent of wire protocol
+	handlerImpl struct {
 		resource.Resource
 
 		engine        Engine
@@ -75,8 +75,8 @@ var (
 func NewHandler(
 	resource resource.Resource,
 	config *Config,
-) *HandlerImpl {
-	handler := &HandlerImpl{
+) *handlerImpl {
+	handler := &handlerImpl{
 		Resource:      resource,
 		config:        config,
 		metricsClient: resource.GetMetricsClient(),
@@ -100,24 +100,24 @@ func NewHandler(
 }
 
 // Start starts the handler
-func (h *HandlerImpl) Start() {
+func (h *handlerImpl) Start() {
 	h.startWG.Done()
 }
 
 // Stop stops the handler
-func (h *HandlerImpl) Stop() {
+func (h *handlerImpl) Stop() {
 	h.engine.Stop()
 }
 
 // Health is for health check
-func (h *HandlerImpl) Health(ctx context.Context) (*health.HealthStatus, error) {
+func (h *handlerImpl) Health(ctx context.Context) (*health.HealthStatus, error) {
 	h.startWG.Wait()
 	h.GetLogger().Debug("Matching service health check endpoint reached.")
 	hs := &health.HealthStatus{Ok: true, Msg: common.StringPtr("matching good")}
 	return hs, nil
 }
 
-func (h *HandlerImpl) newHandlerContext(
+func (h *handlerImpl) newHandlerContext(
 	ctx context.Context,
 	domainID string,
 	taskList *gen.TaskList,
@@ -133,7 +133,7 @@ func (h *HandlerImpl) newHandlerContext(
 }
 
 // AddActivityTask - adds an activity task.
-func (h *HandlerImpl) AddActivityTask(
+func (h *handlerImpl) AddActivityTask(
 	ctx context.Context,
 	request *m.AddActivityTaskRequest,
 ) (retError error) {
@@ -166,7 +166,7 @@ func (h *HandlerImpl) AddActivityTask(
 }
 
 // AddDecisionTask - adds a decision task.
-func (h *HandlerImpl) AddDecisionTask(
+func (h *handlerImpl) AddDecisionTask(
 	ctx context.Context,
 	request *m.AddDecisionTaskRequest,
 ) (retError error) {
@@ -198,7 +198,7 @@ func (h *HandlerImpl) AddDecisionTask(
 }
 
 // PollForActivityTask - long poll for an activity task.
-func (h *HandlerImpl) PollForActivityTask(
+func (h *handlerImpl) PollForActivityTask(
 	ctx context.Context,
 	request *m.PollForActivityTaskRequest,
 ) (resp *gen.PollForActivityTaskResponse, retError error) {
@@ -234,7 +234,7 @@ func (h *HandlerImpl) PollForActivityTask(
 }
 
 // PollForDecisionTask - long poll for a decision task.
-func (h *HandlerImpl) PollForDecisionTask(
+func (h *handlerImpl) PollForDecisionTask(
 	ctx context.Context,
 	request *m.PollForDecisionTaskRequest,
 ) (resp *m.PollForDecisionTaskResponse, retError error) {
@@ -270,7 +270,7 @@ func (h *HandlerImpl) PollForDecisionTask(
 }
 
 // QueryWorkflow queries a given workflow synchronously and return the query result.
-func (h *HandlerImpl) QueryWorkflow(
+func (h *handlerImpl) QueryWorkflow(
 	ctx context.Context,
 	request *m.QueryWorkflowRequest,
 ) (resp *gen.QueryWorkflowResponse, retError error) {
@@ -298,7 +298,7 @@ func (h *HandlerImpl) QueryWorkflow(
 }
 
 // RespondQueryTaskCompleted responds a query task completed
-func (h *HandlerImpl) RespondQueryTaskCompleted(
+func (h *handlerImpl) RespondQueryTaskCompleted(
 	ctx context.Context,
 	request *m.RespondQueryTaskCompletedRequest,
 ) (retError error) {
@@ -321,7 +321,7 @@ func (h *HandlerImpl) RespondQueryTaskCompleted(
 }
 
 // CancelOutstandingPoll is used to cancel outstanding pollers
-func (h *HandlerImpl) CancelOutstandingPoll(ctx context.Context,
+func (h *handlerImpl) CancelOutstandingPoll(ctx context.Context,
 	request *m.CancelOutstandingPollRequest) (retError error) {
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	hCtx := h.newHandlerContext(
@@ -344,7 +344,7 @@ func (h *HandlerImpl) CancelOutstandingPoll(ctx context.Context,
 // DescribeTaskList returns information about the target tasklist, right now this API returns the
 // pollers which polled this tasklist in last few minutes. If includeTaskListStatus field is true,
 // it will also return status of tasklist's ackManager (readLevel, ackLevel, backlogCountHint and taskIDBlock).
-func (h *HandlerImpl) DescribeTaskList(
+func (h *handlerImpl) DescribeTaskList(
 	ctx context.Context,
 	request *m.DescribeTaskListRequest,
 ) (resp *gen.DescribeTaskListResponse, retError error) {
@@ -368,7 +368,7 @@ func (h *HandlerImpl) DescribeTaskList(
 }
 
 // ListTaskListPartitions returns information about partitions for a taskList
-func (h *HandlerImpl) ListTaskListPartitions(
+func (h *handlerImpl) ListTaskListPartitions(
 	ctx context.Context,
 	request *m.ListTaskListPartitionsRequest,
 ) (resp *gen.ListTaskListPartitionsResponse, retError error) {
@@ -392,7 +392,7 @@ func (h *HandlerImpl) ListTaskListPartitions(
 	return response, hCtx.handleErr(err)
 }
 
-func (h *HandlerImpl) domainName(id string) string {
+func (h *handlerImpl) domainName(id string) string {
 	entry, err := h.GetDomainCache().GetDomainByID(id)
 	if err != nil {
 		return ""
