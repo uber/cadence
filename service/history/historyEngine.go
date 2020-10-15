@@ -1218,11 +1218,16 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	sw := scope.StartTimer(metrics.DirectQueryDispatchLatency)
 	defer sw.Stop()
 
+	de, err := e.shard.GetDomainCache().GetDomainByID(domainID)
+	if err != nil {
+		return nil, err
+	}
 	supportsStickyQuery := e.clientChecker.SupportsStickyQuery(msResp.GetClientImpl(), msResp.GetClientFeatureVersion()) == nil
 	if msResp.GetIsStickyTaskListEnabled() &&
 		len(msResp.GetStickyTaskList().GetName()) != 0 &&
 		supportsStickyQuery &&
-		e.config.EnableStickyQuery(queryRequest.GetDomain()) {
+		e.config.EnableStickyQuery(queryRequest.GetDomain()) &&
+		de.IsDomainActive() {
 
 		stickyMatchingRequest := &m.QueryWorkflowRequest{
 			DomainUUID:   common.StringPtr(domainID),
