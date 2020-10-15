@@ -379,6 +379,7 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 		PreviousFailoverVersion:     previousFailoverVersion,
 		NotificationVersion:         notificationVersion,
 		FailoverEndTime:             failoverEndTime,
+		LastUpdatedTime:             lastUpdatedTime,
 		IsGlobalDomain:              isGlobalDomain,
 	}, nil
 }

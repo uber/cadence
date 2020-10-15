@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	emptyFailoverEndTime     = int64(0)
+	emptyFailoverEndTime = int64(0)
 )
 
 type (
