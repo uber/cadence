@@ -465,8 +465,8 @@ func (t *taskAckManagerImpl) generateFailoverMarkerTask(
 		FailoverMarkerAttributes: &replicator.FailoverMarkerAttributes{
 			DomainID:        common.StringPtr(taskInfo.GetDomainID()),
 			FailoverVersion: common.Int64Ptr(taskInfo.GetVersion()),
-			CreationTime:    common.Int64Ptr(taskInfo.CreationTime),
 		},
+		CreationTime: common.Int64Ptr(taskInfo.CreationTime),
 	}
 }
 
@@ -525,6 +525,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 					LastFailureDetails: activityInfo.LastFailureDetails,
 					VersionHistory:     versionHistory,
 				},
+				CreationTime: common.Int64Ptr(taskInfo.CreationTime),
 			}, nil
 		},
 	)
@@ -592,6 +593,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 					Events:              eventsBlob,
 					NewRunEvents:        newRunEventsBlob,
 				},
+				CreationTime: common.Int64Ptr(task.CreationTime),
 			}
 			return replicationTask, nil
 		},

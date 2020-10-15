@@ -1002,6 +1002,10 @@ const (
 	ReplicationDLQStatsScope
 	// FailoverMarkerScope is scope used by all metrics emitted related to failover marker
 	FailoverMarkerScope
+	// HistoryReplicationV2TaskScope is the scope used by history task replication processing
+	HistoryReplicationV2TaskScope
+	// SyncActivityTaskScope is the scope used by sync activity information processing
+	SyncActivityTaskScope
 
 	NumHistoryScopes
 )
@@ -1038,10 +1042,6 @@ const (
 	ReplicatorScope = iota + NumCommonScopes
 	// DomainReplicationTaskScope is the scope used by domain task replication processing
 	DomainReplicationTaskScope
-	// HistoryReplicationV2TaskScope is the scope used by history task replication processing
-	HistoryReplicationV2TaskScope
-	// SyncActivityTaskScope is the scope used by sync activity information processing
-	SyncActivityTaskScope
 	// ESProcessorScope is scope used by all metric emitted by esProcessor
 	ESProcessorScope
 	// IndexProcessorScope is scope used by all metric emitted by index processor
@@ -1517,6 +1517,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ReplicationTaskCleanupScope:                            {operation: "ReplicationTaskCleanup"},
 		ReplicationDLQStatsScope:                               {operation: "ReplicationDLQStats"},
 		FailoverMarkerScope:                                    {operation: "FailoverMarker"},
+		HistoryReplicationV2TaskScope:                          {operation: "HistoryReplicationV2Task"},
+		SyncActivityTaskScope:                                  {operation: "SyncActivityTask"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -1535,8 +1537,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	Worker: {
 		ReplicatorScope:                        {operation: "Replicator"},
 		DomainReplicationTaskScope:             {operation: "DomainReplicationTask"},
-		HistoryReplicationV2TaskScope:          {operation: "HistoryReplicationV2Task"},
-		SyncActivityTaskScope:                  {operation: "SyncActivityTask"},
 		ESProcessorScope:                       {operation: "ESProcessor"},
 		IndexProcessorScope:                    {operation: "IndexProcessor"},
 		ArchiverDeleteHistoryActivityScope:     {operation: "ArchiverDeleteHistoryActivity"},
@@ -1883,6 +1883,7 @@ const (
 	DecisionStartToCloseTimeoutOverrideCount
 	ReplicationTaskCleanupCount
 	ReplicationTaskCleanupFailure
+	ReplicationTaskLatency
 	MutableStateChecksumMismatch
 	MutableStateChecksumInvalidated
 	GracefulFailoverLatency
@@ -2352,6 +2353,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DecisionStartToCloseTimeoutOverrideCount:          {metricName: "decision_start_to_close_timeout_overrides", metricType: Counter},
 		ReplicationTaskCleanupCount:                       {metricName: "replication_task_cleanup_count", metricType: Counter},
 		ReplicationTaskCleanupFailure:                     {metricName: "replication_task_cleanup_failed", metricType: Counter},
+		ReplicationTaskLatency:                            {metricName: "replication_task_latency", metricType: Timer},
 		MutableStateChecksumMismatch:                      {metricName: "mutable_state_checksum_mismatch", metricType: Counter},
 		MutableStateChecksumInvalidated:                   {metricName: "mutable_state_checksum_invalidated", metricType: Counter},
 		GracefulFailoverLatency:                           {metricName: "graceful_failover_latency", metricType: Timer},
