@@ -4218,11 +4218,12 @@ func (e *mutableStateBuilder) eventsToReplicationTask(
 	}
 
 	replicationTask := &persistence.HistoryReplicationTask{
-		FirstEventID:      firstEvent.GetEventId(),
-		NextEventID:       lastEvent.GetEventId() + 1,
-		Version:           firstEvent.GetVersion(),
-		BranchToken:       currentBranchToken,
-		NewRunBranchToken: nil,
+		FirstEventID:        firstEvent.GetEventId(),
+		NextEventID:         lastEvent.GetEventId() + 1,
+		Version:             firstEvent.GetVersion(),
+		BranchToken:         currentBranchToken,
+		NewRunBranchToken:   nil,
+		VisibilityTimestamp: e.shard.GetTimeSource().Now(),
 	}
 
 	return []persistence.Task{replicationTask}, nil
@@ -4240,6 +4241,7 @@ func (e *mutableStateBuilder) syncActivityToReplicationTask(
 	return convertSyncActivityInfos(
 		e.pendingActivityInfoIDs,
 		e.syncActivityTasks,
+		e.shard.GetTimeSource().Now(),
 	)
 }
 
