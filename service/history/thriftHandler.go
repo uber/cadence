@@ -43,8 +43,7 @@ func NewThriftHandler(h Handler) ThriftHandler {
 	return ThriftHandler{h}
 }
 
-// RegisterHandler register this handler to YARPC dispatcher
-func (t ThriftHandler) RegisterHandler(dispatcher *yarpc.Dispatcher) {
+func (t ThriftHandler) register(dispatcher *yarpc.Dispatcher) {
 	dispatcher.Register(historyserviceserver.New(&t))
 	dispatcher.Register(metaserver.New(&t))
 }
