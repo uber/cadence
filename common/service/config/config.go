@@ -155,7 +155,7 @@ type (
 		ElasticSearch *elasticsearch.Config `yaml:"elasticsearch"`
 	}
 
-	// VisibilityConfig is config for visibility sampling
+	// VisibilityConfig is config for visibility
 	VisibilityConfig struct {
 		// EnableSampling for visibility
 		EnableSampling dynamicconfig.BoolPropertyFn `yaml:"-" json:"-"`

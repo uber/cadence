@@ -40,6 +40,7 @@ type (
 	// Cache caches workflow history event
 	Cache interface {
 		GetEvent(
+			ctx context.Context,
 			shardID int,
 			domainID string,
 			workflowID string,
@@ -172,6 +173,7 @@ func newEventKey(
 }
 
 func (e *cacheImpl) GetEvent(
+	ctx context.Context,
 	shardID int,
 	domainID string,
 	workflowID string,
@@ -194,7 +196,7 @@ func (e *cacheImpl) GetEvent(
 
 	e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheMissCounter)
 
-	event, err := e.getHistoryEventFromStore(firstEventID, eventID, branchToken, shardID)
+	event, err := e.getHistoryEventFromStore(ctx, firstEventID, eventID, branchToken, shardID)
 	if err != nil {
 		e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheFailures)
 		e.logger.Error("EventsCache unable to retrieve event from store",
@@ -225,6 +227,7 @@ func (e *cacheImpl) PutEvent(
 }
 
 func (e *cacheImpl) getHistoryEventFromStore(
+	ctx context.Context,
 	firstEventID,
 	eventID int64,
 	branchToken []byte,
@@ -236,7 +239,7 @@ func (e *cacheImpl) getHistoryEventFromStore(
 
 	var historyEvents []*shared.HistoryEvent
 
-	response, err := e.historyManager.ReadHistoryBranch(context.TODO(), &persistence.ReadHistoryBranchRequest{
+	response, err := e.historyManager.ReadHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    eventID + 1,

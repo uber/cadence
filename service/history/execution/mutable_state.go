@@ -23,6 +23,7 @@
 package execution
 
 import (
+	"context"
 	"time"
 
 	h "github.com/uber/cadence/.gen/go/history"
@@ -72,7 +73,7 @@ type (
 		AddChildWorkflowExecutionTerminatedEvent(int64, *workflow.WorkflowExecution, *workflow.WorkflowExecutionTerminatedEventAttributes) (*workflow.HistoryEvent, error)
 		AddChildWorkflowExecutionTimedOutEvent(int64, *workflow.WorkflowExecution, *workflow.WorkflowExecutionTimedOutEventAttributes) (*workflow.HistoryEvent, error)
 		AddCompletedWorkflowEvent(int64, *workflow.CompleteWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, error)
-		AddContinueAsNewEvent(int64, int64, string, *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, MutableState, error)
+		AddContinueAsNewEvent(context.Context, int64, int64, string, *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, MutableState, error)
 		AddDecisionTaskCompletedEvent(int64, int64, *workflow.RespondDecisionTaskCompletedRequest, int) (*workflow.HistoryEvent, error)
 		AddDecisionTaskFailedEvent(scheduleEventID int64, startedEventID int64, cause workflow.DecisionTaskFailedCause, details []byte, identity, reason, binChecksum, baseRunID, newRunID string, forkEventVersion int64) (*workflow.HistoryEvent, error)
 		AddDecisionTaskScheduleToStartTimeoutEvent(int64) (*workflow.HistoryEvent, error)
@@ -116,13 +117,13 @@ type (
 		FlushBufferedEvents() error
 		GetActivityByActivityID(string) (*persistence.ActivityInfo, bool)
 		GetActivityInfo(int64) (*persistence.ActivityInfo, bool)
-		GetActivityScheduledEvent(int64) (*workflow.HistoryEvent, error)
+		GetActivityScheduledEvent(context.Context, int64) (*workflow.HistoryEvent, error)
 		GetChildExecutionInfo(int64) (*persistence.ChildExecutionInfo, bool)
-		GetChildExecutionInitiatedEvent(int64) (*workflow.HistoryEvent, error)
-		GetCompletionEvent() (*workflow.HistoryEvent, error)
+		GetChildExecutionInitiatedEvent(context.Context, int64) (*workflow.HistoryEvent, error)
+		GetCompletionEvent(context.Context) (*workflow.HistoryEvent, error)
 		GetDecisionInfo(int64) (*DecisionInfo, bool)
 		GetDomainEntry() *cache.DomainCacheEntry
-		GetStartEvent() (*workflow.HistoryEvent, error)
+		GetStartEvent(context.Context) (*workflow.HistoryEvent, error)
 		GetCurrentBranchToken() ([]byte, error)
 		GetVersionHistories() *persistence.VersionHistories
 		GetCurrentVersion() int64
@@ -141,7 +142,7 @@ type (
 		GetPendingSignalExternalInfos() map[int64]*persistence.SignalInfo
 		GetRequestCancelInfo(int64) (*persistence.RequestCancelInfo, bool)
 		GetRetryBackoffDuration(errReason string) time.Duration
-		GetCronBackoffDuration() (time.Duration, error)
+		GetCronBackoffDuration(context.Context) (time.Duration, error)
 		GetSignalInfo(int64) (*persistence.SignalInfo, bool)
 		GetStartVersion() (int64, error)
 		GetUserTimerInfoByEventID(int64) (*persistence.TimerInfo, bool)

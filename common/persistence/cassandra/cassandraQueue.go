@@ -54,7 +54,7 @@ func newQueue(
 	queueType persistence.QueueType,
 ) (persistence.Queue, error) {
 	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
-	db, err := cassandra.NewCassandraDB(cfg)
+	db, err := cassandra.NewCassandraDB(cfg, logger)
 	if err != nil {
 		return nil, err
 	}
