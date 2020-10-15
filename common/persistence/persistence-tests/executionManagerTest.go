@@ -1733,6 +1733,7 @@ func (s *ExecutionManagerSuite) TestCleanupCorruptedWorkflow() {
 			ExecutionStats: info0.ExecutionStats,
 			Condition:      info0.ExecutionInfo.NextEventID,
 			Checksum:       testWorkflowChecksum,
+			VersionHistories: info0.VersionHistories,
 		},
 		RangeID: s.ShardInfo.RangeID,
 		Mode:    p.UpdateWorkflowModeBypassCurrent,
