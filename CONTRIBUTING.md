@@ -131,9 +131,15 @@ Examples:
 - [Make sync activity retry multiple times before fetch history from remote](https://github.com/uber/cadence/pull/1379)
 - [Enable archival config per domain](https://github.com/uber/cadence/pull/1351)
 
-#### Licence headers
+#### Code Format and Licence headers checking
 
-This project is Open Source Software, and requires a header at the beginning of
+The project has strict rule about Golang format. You have to run 
+```bash
+make fmt
+```
+to re-format your code. Otherwise the CI(buildkite) test will fail.
+
+Also, this project is Open Source Software, and requires a header at the beginning of
 all new source files you are adding. To verify that all files contain the header execute:
 
 ```bash
