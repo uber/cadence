@@ -176,7 +176,7 @@ func (r *stateRebuilderImpl) Rebuild(
 	}
 
 	// refresh tasks to be generated
-	if err := r.taskRefresher.RefreshTasks(now, rebuiltMutableState); err != nil {
+	if err := r.taskRefresher.RefreshTasks(ctx, now, rebuiltMutableState); err != nil {
 		return nil, 0, err
 	}
 

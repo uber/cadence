@@ -128,7 +128,7 @@ func (handler *decisionHandlerImpl) handleDecisionTaskScheduled(
 				}, nil
 			}
 
-			startEvent, err := mutableState.GetStartEvent()
+			startEvent, err := mutableState.GetStartEvent(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -424,6 +424,7 @@ Update_History_Loop:
 			)
 
 			if decisionResults, err = decisionTaskHandler.handleDecisions(
+				ctx,
 				request.ExecutionContext,
 				request.Decisions,
 			); err != nil {

@@ -21,6 +21,7 @@
 package execution
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -894,6 +895,7 @@ func (e *mutableStateBuilder) SetQueryRegistry(queryRegistry query.Registry) {
 }
 
 func (e *mutableStateBuilder) GetActivityScheduledEvent(
+	ctx context.Context,
 	scheduleEventID int64,
 ) (*workflow.HistoryEvent, error) {
 
@@ -912,6 +914,7 @@ func (e *mutableStateBuilder) GetActivityScheduledEvent(
 		return nil, err
 	}
 	scheduledEvent, err := e.eventsCache.GetEvent(
+		ctx,
 		e.shard.GetShardID(),
 		e.executionInfo.DomainID,
 		e.executionInfo.WorkflowID,
@@ -962,6 +965,7 @@ func (e *mutableStateBuilder) GetChildExecutionInfo(
 // GetChildExecutionInitiatedEvent reads out the ChildExecutionInitiatedEvent from mutable state for in-progress child
 // executions
 func (e *mutableStateBuilder) GetChildExecutionInitiatedEvent(
+	ctx context.Context,
 	initiatedEventID int64,
 ) (*workflow.HistoryEvent, error) {
 
@@ -980,6 +984,7 @@ func (e *mutableStateBuilder) GetChildExecutionInitiatedEvent(
 		return nil, err
 	}
 	initiatedEvent, err := e.eventsCache.GetEvent(
+		ctx,
 		e.shard.GetShardID(),
 		e.executionInfo.DomainID,
 		e.executionInfo.WorkflowID,
@@ -1028,7 +1033,9 @@ func (e *mutableStateBuilder) GetRetryBackoffDuration(
 	)
 }
 
-func (e *mutableStateBuilder) GetCronBackoffDuration() (time.Duration, error) {
+func (e *mutableStateBuilder) GetCronBackoffDuration(
+	ctx context.Context,
+) (time.Duration, error) {
 	info := e.executionInfo
 	if len(info.CronSchedule) == 0 {
 		return backoff.NoBackoff, nil
@@ -1036,7 +1043,7 @@ func (e *mutableStateBuilder) GetCronBackoffDuration() (time.Duration, error) {
 	// TODO: decide if we can add execution time in execution info.
 	executionTime := e.executionInfo.StartTimestamp
 	// This only call when doing ContinueAsNew. At this point, the workflow should have a start event
-	workflowStartEvent, err := e.GetStartEvent()
+	workflowStartEvent, err := e.GetStartEvent(ctx)
 	if err != nil {
 		e.logError("unable to find workflow start event", tag.ErrorTypeInvalidHistoryAction)
 		return backoff.NoBackoff, err
@@ -1057,7 +1064,9 @@ func (e *mutableStateBuilder) GetSignalInfo(
 }
 
 // GetCompletionEvent retrieves the workflow completion event from mutable state
-func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, error) {
+func (e *mutableStateBuilder) GetCompletionEvent(
+	ctx context.Context,
+) (*workflow.HistoryEvent, error) {
 	if e.executionInfo.State != persistence.WorkflowStateCompleted {
 		return nil, ErrMissingWorkflowCompletionEvent
 	}
@@ -1081,6 +1090,7 @@ func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, erro
 	completionEventID := e.executionInfo.NextEventID - 1
 	firstEventID := e.executionInfo.CompletionEventBatchID
 	completionEvent, err := e.eventsCache.GetEvent(
+		ctx,
 		e.shard.GetShardID(),
 		e.executionInfo.DomainID,
 		e.executionInfo.WorkflowID,
@@ -1100,7 +1110,9 @@ func (e *mutableStateBuilder) GetCompletionEvent() (*workflow.HistoryEvent, erro
 }
 
 // GetStartEvent retrieves the workflow start event from mutable state
-func (e *mutableStateBuilder) GetStartEvent() (*workflow.HistoryEvent, error) {
+func (e *mutableStateBuilder) GetStartEvent(
+	ctx context.Context,
+) (*workflow.HistoryEvent, error) {
 
 	currentBranchToken, err := e.GetCurrentBranchToken()
 	if err != nil {
@@ -1108,6 +1120,7 @@ func (e *mutableStateBuilder) GetStartEvent() (*workflow.HistoryEvent, error) {
 	}
 
 	startEvent, err := e.eventsCache.GetEvent(
+		ctx,
 		e.shard.GetShardID(),
 		e.executionInfo.DomainID,
 		e.executionInfo.WorkflowID,
@@ -3226,6 +3239,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionSignaled(
 }
 
 func (e *mutableStateBuilder) AddContinueAsNewEvent(
+	ctx context.Context,
 	firstEventID int64,
 	decisionCompletedEventID int64,
 	parentDomainName string,
@@ -3259,7 +3273,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	}
 
 	continueAsNewEvent := e.hBuilder.AddContinuedAsNewEvent(decisionCompletedEventID, newRunID, attributes)
-	currentStartEvent, err := e.GetStartEvent()
+	currentStartEvent, err := e.GetStartEvent(ctx)
 	if err != nil {
 		return nil, nil, err
 	}

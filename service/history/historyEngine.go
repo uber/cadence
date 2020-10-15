@@ -1496,7 +1496,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	// TODO: we need to consider adding execution time to mutable state
 	// For now execution time will be calculated based on start time and cron schedule/retry policy
 	// each time DescribeWorkflowExecution is called.
-	startEvent, err := mutableState.GetStartEvent()
+	startEvent, err := mutableState.GetStartEvent(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1514,7 +1514,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 		// for closed workflow
 		closeStatus := persistence.ToThriftWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 		result.WorkflowExecutionInfo.CloseStatus = &closeStatus
-		completionEvent, err := mutableState.GetCompletionEvent()
+		completionEvent, err := mutableState.GetCompletionEvent(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -1539,7 +1539,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 				p.HeartbeatDetails = ai.Details
 			}
 			// TODO: move to mutable state instead of loading it from event
-			scheduledEvent, err := mutableState.GetActivityScheduledEvent(ai.ScheduleID)
+			scheduledEvent, err := mutableState.GetActivityScheduledEvent(ctx, ai.ScheduleID)
 			if err != nil {
 				return nil, err
 			}
@@ -1630,7 +1630,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 				return ErrActivityTaskNotFound
 			}
 
-			scheduledEvent, err := mutableState.GetActivityScheduledEvent(scheduleID)
+			scheduledEvent, err := mutableState.GetActivityScheduledEvent(ctx, scheduleID)
 			if err != nil {
 				return err
 			}
@@ -3286,7 +3286,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 
 	now := e.shard.GetTimeSource().Now()
 
-	err = mutableStateTaskRefresher.RefreshTasks(now, mutableState)
+	err = mutableStateTaskRefresher.RefreshTasks(ctx, now, mutableState)
 	if err != nil {
 		return err
 	}

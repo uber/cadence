@@ -21,6 +21,7 @@
 package task
 
 import (
+	"context"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -204,14 +205,14 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 ) error {
 
 	processTaskIfClosed := true
-	actionFn := func(context execution.Context, mutableState execution.MutableState) (interface{}, error) {
+	actionFn := func(wfContext execution.Context, mutableState execution.MutableState) (interface{}, error) {
 
 		if mutableState.IsWorkflowExecutionRunning() {
 			// this can happen if workflow is reset.
 			return nil, nil
 		}
 
-		completionEvent, err := mutableState.GetCompletionEvent()
+		completionEvent, err := mutableState.GetCompletionEvent(context.TODO())
 		if err != nil {
 			return nil, err
 		}
@@ -222,7 +223,7 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 		workflowCloseTimestamp := wfCloseTime
 		workflowCloseStatus := persistence.ToThriftWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 		workflowHistoryLength := mutableState.GetNextEventID() - 1
-		startEvent, err := mutableState.GetStartEvent()
+		startEvent, err := mutableState.GetStartEvent(context.TODO())
 		if err != nil {
 			return nil, err
 		}
@@ -428,7 +429,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 	executionInfo := mutableState.GetExecutionInfo()
 	workflowTimeout := executionInfo.WorkflowTimeout
 	wfTypeName := executionInfo.WorkflowTypeName
-	startEvent, err := mutableState.GetStartEvent()
+	startEvent, err := mutableState.GetStartEvent(context.TODO())
 	if err != nil {
 		return err
 	}

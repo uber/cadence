@@ -22,7 +22,6 @@ package task
 
 import (
 	"context"
-	ctx "context"
 	"errors"
 	"fmt"
 
@@ -143,7 +142,7 @@ func (t *transferActiveTaskExecutor) processActivityTask(
 	task *persistence.TransferTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
+	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskDefaultTimeout,
@@ -153,7 +152,7 @@ func (t *transferActiveTaskExecutor) processActivityTask(
 	}
 	defer func() { release(retError) }()
 
-	mutableState, err := loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
+	mutableState, err := loadMutableStateForTransferTask(wfContext, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
 	}
@@ -182,7 +181,7 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 	task *persistence.TransferTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
+	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskDefaultTimeout,
@@ -192,7 +191,7 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 	}
 	defer func() { release(retError) }()
 
-	mutableState, err := loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
+	mutableState, err := loadMutableStateForTransferTask(wfContext, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
 	}
@@ -239,7 +238,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	task *persistence.TransferTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
+	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskDefaultTimeout,
@@ -249,7 +248,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	}
 	defer func() { release(retError) }()
 
-	mutableState, err := loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
+	mutableState, err := loadMutableStateForTransferTask(wfContext, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
 	}
@@ -268,7 +267,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 
 	executionInfo := mutableState.GetExecutionInfo()
 	replyToParentWorkflow := mutableState.HasParentExecution() && executionInfo.CloseStatus != persistence.WorkflowCloseStatusContinuedAsNew
-	completionEvent, err := mutableState.GetCompletionEvent()
+	completionEvent, err := mutableState.GetCompletionEvent(context.TODO())
 	if err != nil {
 		return err
 	}
@@ -284,7 +283,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	workflowCloseStatus := persistence.ToThriftWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 	workflowHistoryLength := mutableState.GetNextEventID() - 1
 
-	startEvent, err := mutableState.GetStartEvent()
+	startEvent, err := mutableState.GetStartEvent(context.TODO())
 	if err != nil {
 		return err
 	}
@@ -319,7 +318,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 
 	// Communicate the result to parent execution if this is Child Workflow execution
 	if replyToParentWorkflow {
-		ctx, cancel := ctx.WithTimeout(ctx.Background(), taskDefaultTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), taskDefaultTimeout)
 		defer cancel()
 		err = t.historyClient.RecordChildExecutionCompleted(ctx, &h.RecordChildExecutionCompletedRequest{
 			DomainUUID: common.StringPtr(parentDomainID),
@@ -353,7 +352,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 	task *persistence.TransferTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
+	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskDefaultTimeout,
@@ -363,7 +362,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 	}
 	defer func() { release(retError) }()
 
-	mutableState, err := loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
+	mutableState, err := loadMutableStateForTransferTask(wfContext, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
 	}
@@ -390,7 +389,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 	// handle workflow cancel itself
 	if task.DomainID == task.TargetDomainID && task.WorkflowID == task.TargetWorkflowID {
 		// it does not matter if the run ID is a mismatch
-		err = t.requestCancelExternalExecutionFailed(task, context, targetDomain, task.TargetWorkflowID, task.TargetRunID)
+		err = t.requestCancelExternalExecutionFailed(task, wfContext, targetDomain, task.TargetWorkflowID, task.TargetRunID)
 		if _, ok := err.(*workflow.EntityNotExistsError); ok {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 			return nil
@@ -413,7 +412,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 		}
 		return t.requestCancelExternalExecutionFailed(
 			task,
-			context,
+			wfContext,
 			targetDomain,
 			task.TargetWorkflowID,
 			task.TargetRunID,
@@ -429,7 +428,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 	// Record ExternalWorkflowExecutionCancelRequested in source execution
 	return t.requestCancelExternalExecutionCompleted(
 		task,
-		context,
+		wfContext,
 		targetDomain,
 		task.TargetWorkflowID,
 		task.TargetRunID,
@@ -440,7 +439,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 	task *persistence.TransferTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
+	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskDefaultTimeout,
@@ -450,7 +449,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 	}
 	defer func() { release(retError) }()
 
-	mutableState, err := loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
+	mutableState, err := loadMutableStateForTransferTask(wfContext, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
 	}
@@ -482,7 +481,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		// it does not matter if the run ID is a mismatch
 		return t.signalExternalExecutionFailed(
 			task,
-			context,
+			wfContext,
 			targetDomain,
 			task.TargetWorkflowID,
 			task.TargetRunID,
@@ -505,7 +504,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		}
 		return t.signalExternalExecutionFailed(
 			task,
-			context,
+			wfContext,
 			targetDomain,
 			task.TargetWorkflowID,
 			task.TargetRunID,
@@ -521,7 +520,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 
 	err = t.signalExternalExecutionCompleted(
 		task,
-		context,
+		wfContext,
 		targetDomain,
 		task.TargetWorkflowID,
 		task.TargetRunID,
@@ -535,7 +534,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 	// the rest of logic is making RPC call, which takes time.
 	release(retError)
 	// remove signalRequestedID from target workflow, after Signal detail is removed from source workflow
-	ctx, cancel := ctx.WithTimeout(ctx.Background(), taskDefaultTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), taskDefaultTimeout)
 	defer cancel()
 	return t.historyClient.RemoveSignalMutableState(ctx, &h.RemoveSignalMutableStateRequest{
 		DomainUUID: common.StringPtr(task.TargetDomainID),
@@ -551,7 +550,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	task *persistence.TransferTaskInfo,
 ) (retError error) {
 
-	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
+	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskDefaultTimeout,
@@ -561,7 +560,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	}
 	defer func() { release(retError) }()
 
-	mutableState, err := loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
+	mutableState, err := loadMutableStateForTransferTask(wfContext, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
 	}
@@ -603,7 +602,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		return err
 	}
 
-	initiatedEvent, err := mutableState.GetChildExecutionInitiatedEvent(initiatedEventID)
+	initiatedEvent, err := mutableState.GetChildExecutionInitiatedEvent(context.TODO(), initiatedEventID)
 	if err != nil {
 		return err
 	}
@@ -632,7 +631,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		// event and complete transfer task by setting the err = nil
 		switch err.(type) {
 		case *workflow.WorkflowExecutionAlreadyStartedError:
-			err = t.recordStartChildExecutionFailed(task, context, attributes)
+			err = t.recordStartChildExecutionFailed(task, wfContext, attributes)
 		}
 		return err
 	}
@@ -641,7 +640,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		*attributes.WorkflowId, childRunID))
 
 	// Child execution is successfully started, record ChildExecutionStartedEvent in parent execution
-	err = t.recordChildExecutionStarted(task, context, attributes, childRunID)
+	err = t.recordChildExecutionStarted(task, wfContext, attributes, childRunID)
 
 	if err != nil {
 		return err
@@ -672,7 +671,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	recordStart bool,
 ) (retError error) {
 
-	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
+	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskDefaultTimeout,
@@ -682,7 +681,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	}
 	defer func() { release(retError) }()
 
-	mutableState, err := loadMutableStateForTransferTask(context, task, t.metricsClient, t.logger)
+	mutableState, err := loadMutableStateForTransferTask(wfContext, task, t.metricsClient, t.logger)
 	if err != nil {
 		return err
 	}
@@ -706,7 +705,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	executionInfo := mutableState.GetExecutionInfo()
 	workflowTimeout := executionInfo.WorkflowTimeout
 	wfTypeName := executionInfo.WorkflowTypeName
-	startEvent, err := mutableState.GetStartEvent()
+	startEvent, err := mutableState.GetStartEvent(context.TODO())
 	if err != nil {
 		return err
 	}
@@ -936,7 +935,7 @@ func (t *transferActiveTaskExecutor) createFirstDecisionTask(
 	execution *workflow.WorkflowExecution,
 ) error {
 
-	ctx, cancel := ctx.WithTimeout(ctx.Background(), taskDefaultTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), taskDefaultTimeout)
 	defer cancel()
 	err := t.historyClient.ScheduleDecisionTask(ctx, &h.ScheduleDecisionTaskRequest{
 		DomainUUID:        common.StringPtr(domainID),
@@ -1163,7 +1162,7 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionWithRetry(
 		ChildWorkflowOnly: common.BoolPtr(task.TargetChildWorkflowOnly),
 	}
 
-	ctx, cancel := ctx.WithTimeout(ctx.Background(), taskDefaultTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), taskDefaultTimeout)
 	defer cancel()
 	op := func() error {
 		return t.historyClient.RequestCancelWorkflowExecution(ctx, request)
@@ -1208,7 +1207,7 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionWithRetry(
 		ChildWorkflowOnly: common.BoolPtr(task.TargetChildWorkflowOnly),
 	}
 
-	ctx, cancel := ctx.WithTimeout(ctx.Background(), taskDefaultTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), taskDefaultTimeout)
 	defer cancel()
 	op := func() error {
 		return t.historyClient.SignalWorkflowExecution(ctx, request)
@@ -1263,7 +1262,7 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 		),
 	}
 
-	ctx, cancel := ctx.WithTimeout(ctx.Background(), taskDefaultTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), taskDefaultTimeout)
 	defer cancel()
 	var response *workflow.StartWorkflowExecutionResponse
 	var err error
@@ -1292,7 +1291,7 @@ func (t *transferActiveTaskExecutor) resetWorkflow(
 ) error {
 
 	var err error
-	ctx, cancel := ctx.WithTimeout(ctx.Background(), taskDefaultTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), taskDefaultTimeout)
 	defer cancel()
 
 	domainID := task.DomainID
@@ -1415,7 +1414,7 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 	childInfo *persistence.ChildExecutionInfo,
 ) error {
 
-	ctx, cancel := ctx.WithTimeout(ctx.Background(), taskDefaultTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), taskDefaultTimeout)
 	defer cancel()
 
 	switch childInfo.ParentClosePolicy {

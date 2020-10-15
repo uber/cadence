@@ -21,6 +21,7 @@
 package history
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/pborman/uuid"
@@ -109,6 +110,7 @@ func newDecisionTaskHandler(
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisions(
+	ctx context.Context,
 	executionContext []byte,
 	decisions []*workflow.Decision,
 ) ([]*decisionResult, error) {
@@ -122,7 +124,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisions(
 	var results []*decisionResult
 	for _, decision := range decisions {
 
-		result, err := handler.handleDecisionWithResult(decision)
+		result, err := handler.handleDecisionWithResult(ctx, decision)
 		if err != nil || handler.stopProcessing {
 			return nil, err
 		} else if result != nil {
@@ -134,53 +136,59 @@ func (handler *decisionTaskHandlerImpl) handleDecisions(
 	return results, nil
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecisionWithResult(decision *workflow.Decision) (*decisionResult, error) {
+func (handler *decisionTaskHandlerImpl) handleDecisionWithResult(
+	ctx context.Context,
+	decision *workflow.Decision,
+) (*decisionResult, error) {
 	switch decision.GetDecisionType() {
 	case workflow.DecisionTypeScheduleActivityTask:
-		return handler.handleDecisionScheduleActivity(decision.ScheduleActivityTaskDecisionAttributes)
+		return handler.handleDecisionScheduleActivity(ctx, decision.ScheduleActivityTaskDecisionAttributes)
 	default:
-		return nil, handler.handleDecision(decision)
+		return nil, handler.handleDecision(ctx, decision)
 	}
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecision(decision *workflow.Decision) error {
+func (handler *decisionTaskHandlerImpl) handleDecision(
+	ctx context.Context,
+	decision *workflow.Decision,
+) error {
 	switch decision.GetDecisionType() {
 
 	case workflow.DecisionTypeCompleteWorkflowExecution:
-		return handler.handleDecisionCompleteWorkflow(decision.CompleteWorkflowExecutionDecisionAttributes)
+		return handler.handleDecisionCompleteWorkflow(ctx, decision.CompleteWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeFailWorkflowExecution:
-		return handler.handleDecisionFailWorkflow(decision.FailWorkflowExecutionDecisionAttributes)
+		return handler.handleDecisionFailWorkflow(ctx, decision.FailWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeCancelWorkflowExecution:
-		return handler.handleDecisionCancelWorkflow(decision.CancelWorkflowExecutionDecisionAttributes)
+		return handler.handleDecisionCancelWorkflow(ctx, decision.CancelWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeStartTimer:
-		return handler.handleDecisionStartTimer(decision.StartTimerDecisionAttributes)
+		return handler.handleDecisionStartTimer(ctx, decision.StartTimerDecisionAttributes)
 
 	case workflow.DecisionTypeRequestCancelActivityTask:
-		return handler.handleDecisionRequestCancelActivity(decision.RequestCancelActivityTaskDecisionAttributes)
+		return handler.handleDecisionRequestCancelActivity(ctx, decision.RequestCancelActivityTaskDecisionAttributes)
 
 	case workflow.DecisionTypeCancelTimer:
-		return handler.handleDecisionCancelTimer(decision.CancelTimerDecisionAttributes)
+		return handler.handleDecisionCancelTimer(ctx, decision.CancelTimerDecisionAttributes)
 
 	case workflow.DecisionTypeRecordMarker:
-		return handler.handleDecisionRecordMarker(decision.RecordMarkerDecisionAttributes)
+		return handler.handleDecisionRecordMarker(ctx, decision.RecordMarkerDecisionAttributes)
 
 	case workflow.DecisionTypeRequestCancelExternalWorkflowExecution:
-		return handler.handleDecisionRequestCancelExternalWorkflow(decision.RequestCancelExternalWorkflowExecutionDecisionAttributes)
+		return handler.handleDecisionRequestCancelExternalWorkflow(ctx, decision.RequestCancelExternalWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeSignalExternalWorkflowExecution:
-		return handler.handleDecisionSignalExternalWorkflow(decision.SignalExternalWorkflowExecutionDecisionAttributes)
+		return handler.handleDecisionSignalExternalWorkflow(ctx, decision.SignalExternalWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeContinueAsNewWorkflowExecution:
-		return handler.handleDecisionContinueAsNewWorkflow(decision.ContinueAsNewWorkflowExecutionDecisionAttributes)
+		return handler.handleDecisionContinueAsNewWorkflow(ctx, decision.ContinueAsNewWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeStartChildWorkflowExecution:
-		return handler.handleDecisionStartChildWorkflow(decision.StartChildWorkflowExecutionDecisionAttributes)
+		return handler.handleDecisionStartChildWorkflow(ctx, decision.StartChildWorkflowExecutionDecisionAttributes)
 
 	case workflow.DecisionTypeUpsertWorkflowSearchAttributes:
-		return handler.handleDecisionUpsertWorkflowSearchAttributes(decision.UpsertWorkflowSearchAttributesDecisionAttributes)
+		return handler.handleDecisionUpsertWorkflowSearchAttributes(ctx, decision.UpsertWorkflowSearchAttributesDecisionAttributes)
 
 	default:
 		return &workflow.BadRequestError{Message: fmt.Sprintf("Unknown decision type: %v", decision.GetDecisionType())}
@@ -188,6 +196,7 @@ func (handler *decisionTaskHandlerImpl) handleDecision(decision *workflow.Decisi
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
+	ctx context.Context,
 	attr *workflow.ScheduleActivityTaskDecisionAttributes,
 ) (*decisionResult, error) {
 
@@ -253,6 +262,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelActivity(
+	ctx context.Context,
 	attr *workflow.RequestCancelActivityTaskDecisionAttributes,
 ) error {
 
@@ -307,6 +317,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelActivity(
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionStartTimer(
+	ctx context.Context,
 	attr *workflow.StartTimerDecisionAttributes,
 ) error {
 
@@ -338,6 +349,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionStartTimer(
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionCompleteWorkflow(
+	ctx context.Context,
 	attr *workflow.CompleteWorkflowExecutionDecisionAttributes,
 ) error {
 
@@ -384,7 +396,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionCompleteWorkflow(
 	}
 
 	// check if this is a cron workflow
-	cronBackoff, err := handler.mutableState.GetCronBackoffDuration()
+	cronBackoff, err := handler.mutableState.GetCronBackoffDuration(ctx)
 	if err != nil {
 		handler.stopProcessing = true
 		return err
@@ -398,12 +410,13 @@ func (handler *decisionTaskHandlerImpl) handleDecisionCompleteWorkflow(
 	}
 
 	// this is a cron workflow
-	startEvent, err := handler.mutableState.GetStartEvent()
+	startEvent, err := handler.mutableState.GetStartEvent(ctx)
 	if err != nil {
 		return err
 	}
 	startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
 	return handler.retryCronContinueAsNew(
+		ctx,
 		startAttributes,
 		int32(cronBackoff.Seconds()),
 		workflow.ContinueAsNewInitiatorCronSchedule.Ptr(),
@@ -414,6 +427,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionCompleteWorkflow(
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionFailWorkflow(
+	ctx context.Context,
 	attr *workflow.FailWorkflowExecutionDecisionAttributes,
 ) error {
 
@@ -465,7 +479,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionFailWorkflow(
 	// first check the backoff retry
 	if backoffInterval == backoff.NoBackoff {
 		// if no backoff retry, set the backoffInterval using cron schedule
-		backoffInterval, err = handler.mutableState.GetCronBackoffDuration()
+		backoffInterval, err = handler.mutableState.GetCronBackoffDuration(ctx)
 		if err != nil {
 			handler.stopProcessing = true
 			return err
@@ -482,12 +496,13 @@ func (handler *decisionTaskHandlerImpl) handleDecisionFailWorkflow(
 	}
 
 	// this is a cron / backoff workflow
-	startEvent, err := handler.mutableState.GetStartEvent()
+	startEvent, err := handler.mutableState.GetStartEvent(ctx)
 	if err != nil {
 		return err
 	}
 	startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
 	return handler.retryCronContinueAsNew(
+		ctx,
 		startAttributes,
 		int32(backoffInterval.Seconds()),
 		continueAsNewInitiator.Ptr(),
@@ -498,6 +513,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionFailWorkflow(
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionCancelTimer(
+	ctx context.Context,
 	attr *workflow.CancelTimerDecisionAttributes,
 ) error {
 
@@ -540,6 +556,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionCancelTimer(
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionCancelWorkflow(
+	ctx context.Context,
 	attr *workflow.CancelWorkflowExecutionDecisionAttributes,
 ) error {
 
@@ -578,6 +595,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionCancelWorkflow(
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelExternalWorkflow(
+	ctx context.Context,
 	attr *workflow.RequestCancelExternalWorkflowExecutionDecisionAttributes,
 ) error {
 
@@ -620,6 +638,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelExternalWorkf
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionRecordMarker(
+	ctx context.Context,
 	attr *workflow.RecordMarkerDecisionAttributes,
 ) error {
 
@@ -652,6 +671,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionRecordMarker(
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionContinueAsNewWorkflow(
+	ctx context.Context,
 	attr *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes,
 ) error {
 
@@ -714,6 +734,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionContinueAsNewWorkflow(
 	}
 
 	_, newStateBuilder, err := handler.mutableState.AddContinueAsNewEvent(
+		ctx,
 		handler.decisionTaskCompletedID,
 		handler.decisionTaskCompletedID,
 		parentDomainName,
@@ -728,6 +749,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionContinueAsNewWorkflow(
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionStartChildWorkflow(
+	ctx context.Context,
 	attr *workflow.StartChildWorkflowExecutionDecisionAttributes,
 ) error {
 
@@ -796,6 +818,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionStartChildWorkflow(
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionSignalExternalWorkflow(
+	ctx context.Context,
 	attr *workflow.SignalExternalWorkflowExecutionDecisionAttributes,
 ) error {
 
@@ -848,6 +871,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionSignalExternalWorkflow(
 }
 
 func (handler *decisionTaskHandlerImpl) handleDecisionUpsertWorkflowSearchAttributes(
+	ctx context.Context,
 	attr *workflow.UpsertWorkflowSearchAttributesDecisionAttributes,
 ) error {
 
@@ -908,6 +932,7 @@ func convertSearchAttributesToByteArray(fields map[string][]byte) []byte {
 }
 
 func (handler *decisionTaskHandlerImpl) retryCronContinueAsNew(
+	ctx context.Context,
 	attr *workflow.WorkflowExecutionStartedEventAttributes,
 	backoffInterval int32,
 	continueAsNewIter *workflow.ContinueAsNewInitiator,
@@ -935,6 +960,7 @@ func (handler *decisionTaskHandlerImpl) retryCronContinueAsNew(
 	}
 
 	_, newStateBuilder, err := handler.mutableState.AddContinueAsNewEvent(
+		ctx,
 		handler.decisionTaskCompletedID,
 		handler.decisionTaskCompletedID,
 		attr.GetParentWorkflowDomain(),
