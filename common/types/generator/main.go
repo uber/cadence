@@ -89,7 +89,9 @@ var structTemplate = template.Must(template.New("struct type").Funcs(funcMap).Pa
 type {{internal .Type.Name}} struct {
 {{range .Fields}}	{{internal .Name}} {{if .Type.IsMap}}map[string]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer}}*{{end}}{{internal .Type.Name}}
 {{end}}}
-{{range .Fields}}func (v *{{internal $.Type.Name}}) Get{{internal .Name}}() (o {{if .Type.IsMap}}map[string]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer | and (not .Type.IsPrimitive) | and (not .Type.IsEnum)}}*{{end}}{{internal .Type.Name}}) {
+{{range .Fields}}
+// Get{{internal .Name}} is an internal getter (TBD...)
+func (v *{{internal $.Type.Name}}) Get{{internal .Name}}() (o {{if .Type.IsMap}}map[string]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer | and (not .Type.IsPrimitive) | and (not .Type.IsEnum)}}*{{end}}{{internal .Type.Name}}) {
 	if v != nil{{if .Type.IsMap | or .Type.IsArray | or .Type.IsPointer}} && v.{{internal .Name}} != nil{{end}} {
 		return {{if .Type.IsPointer | and (or .Type.IsPrimitive .Type.IsEnum)}}*{{end}}v.{{internal .Name}}
 	}
