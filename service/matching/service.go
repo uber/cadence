@@ -92,7 +92,7 @@ func (s *Service) Start() {
 	s.handler = NewHandler(s, s.config)
 
 	thriftHandler := NewThriftHandler(s.handler)
-	thriftHandler.RegisterHandler(s.GetDispatcher())
+	thriftHandler.register(s.GetDispatcher())
 
 	// must start base service first
 	s.Resource.Start()
