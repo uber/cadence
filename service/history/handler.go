@@ -53,7 +53,7 @@ import (
 )
 
 type (
-	//go:generate mockgen -copyright_file=../../LICENSE -package $GOPACKAGE -source $GOFILE -destination MockHandler.go -package history github.com/uber/cadence/service/history Handler
+	//go:generate mockgen -copyright_file=../../LICENSE -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package history github.com/uber/cadence/service/history Handler
 
 	// Handler interface for history service
 	Handler interface {
