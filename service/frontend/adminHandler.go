@@ -52,7 +52,7 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
-var _ adminserviceserver.Interface = (*AdminHandlerImpl)(nil)
+var _ adminserviceserver.Interface = (*adminHandlerImpl)(nil)
 
 const (
 	endMessageID int64 = 1<<63 - 1
@@ -87,8 +87,8 @@ type (
 		ResetQueue(context.Context, *gen.ResetQueueRequest) error
 	}
 
-	// AdminHandlerImpl is an implementation for admin service independent of wire protocol
-	AdminHandlerImpl struct {
+	// adminHandlerImpl is an implementation for admin service independent of wire protocol
+	adminHandlerImpl struct {
 		resource.Resource
 
 		numberOfHistoryShards int
@@ -122,14 +122,14 @@ func NewAdminHandler(
 	resource resource.Resource,
 	params *service.BootstrapParams,
 	config *Config,
-) *AdminHandlerImpl {
+) *adminHandlerImpl {
 
 	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
 		resource.GetMetadataManager(),
 		resource.GetTimeSource(),
 		resource.GetLogger(),
 	)
-	return &AdminHandlerImpl{
+	return &adminHandlerImpl{
 		Resource:              resource,
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
 		params:                params,
@@ -153,7 +153,7 @@ func NewAdminHandler(
 }
 
 // Start starts the handler
-func (adh *AdminHandlerImpl) Start() {
+func (adh *adminHandlerImpl) Start() {
 
 	adh.Resource.GetDomainReplicationQueue().Start()
 	if adh.config.EnableGracefulFailover() {
@@ -162,14 +162,14 @@ func (adh *AdminHandlerImpl) Start() {
 }
 
 // Stop stops the handler
-func (adh *AdminHandlerImpl) Stop() {
+func (adh *adminHandlerImpl) Stop() {
 	// Calling stop if the queue does not start is ok
 	adh.Resource.GetDomainReplicationQueue().Stop()
 	adh.domainFailoverWatcher.Stop()
 }
 
 // AddSearchAttribute add search attribute to whitelist
-func (adh *AdminHandlerImpl) AddSearchAttribute(
+func (adh *adminHandlerImpl) AddSearchAttribute(
 	ctx context.Context,
 	request *admin.AddSearchAttributeRequest,
 ) (retError error) {
@@ -236,7 +236,7 @@ func (adh *AdminHandlerImpl) AddSearchAttribute(
 }
 
 // DescribeWorkflowExecution returns information about the specified workflow execution.
-func (adh *AdminHandlerImpl) DescribeWorkflowExecution(
+func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	ctx context.Context,
 	request *admin.DescribeWorkflowExecutionRequest,
 ) (resp *admin.DescribeWorkflowExecutionResponse, retError error) {
@@ -281,7 +281,7 @@ func (adh *AdminHandlerImpl) DescribeWorkflowExecution(
 }
 
 // RemoveTask returns information about the internal states of a history host
-func (adh *AdminHandlerImpl) RemoveTask(
+func (adh *adminHandlerImpl) RemoveTask(
 	ctx context.Context,
 	request *gen.RemoveTaskRequest,
 ) (retError error) {
@@ -298,7 +298,7 @@ func (adh *AdminHandlerImpl) RemoveTask(
 }
 
 // CloseShard returns information about the internal states of a history host
-func (adh *AdminHandlerImpl) CloseShard(
+func (adh *adminHandlerImpl) CloseShard(
 	ctx context.Context,
 	request *gen.CloseShardRequest,
 ) (retError error) {
@@ -315,7 +315,7 @@ func (adh *AdminHandlerImpl) CloseShard(
 }
 
 // ResetQueue resets processing queue states
-func (adh *AdminHandlerImpl) ResetQueue(
+func (adh *adminHandlerImpl) ResetQueue(
 	ctx context.Context,
 	request *gen.ResetQueueRequest,
 ) (retError error) {
@@ -336,7 +336,7 @@ func (adh *AdminHandlerImpl) ResetQueue(
 }
 
 // DescribeQueue describes processing queue states
-func (adh *AdminHandlerImpl) DescribeQueue(
+func (adh *adminHandlerImpl) DescribeQueue(
 	ctx context.Context,
 	request *gen.DescribeQueueRequest,
 ) (resp *gen.DescribeQueueResponse, retError error) {
@@ -357,7 +357,7 @@ func (adh *AdminHandlerImpl) DescribeQueue(
 }
 
 // DescribeHistoryHost returns information about the internal states of a history host
-func (adh *AdminHandlerImpl) DescribeHistoryHost(
+func (adh *adminHandlerImpl) DescribeHistoryHost(
 	ctx context.Context,
 	request *gen.DescribeHistoryHostRequest,
 ) (resp *gen.DescribeHistoryHostResponse, retError error) {
@@ -381,7 +381,7 @@ func (adh *AdminHandlerImpl) DescribeHistoryHost(
 }
 
 // GetWorkflowExecutionRawHistoryV2 - retrieves the history of workflow execution
-func (adh *AdminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
+func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 	ctx context.Context,
 	request *admin.GetWorkflowExecutionRawHistoryV2Request,
 ) (resp *admin.GetWorkflowExecutionRawHistoryV2Response, retError error) {
@@ -516,7 +516,7 @@ func (adh *AdminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 }
 
 // DescribeCluster return information about cadence deployment
-func (adh *AdminHandlerImpl) DescribeCluster(
+func (adh *adminHandlerImpl) DescribeCluster(
 	ctx context.Context,
 ) (resp *admin.DescribeClusterResponse, retError error) {
 
@@ -575,7 +575,7 @@ func (adh *AdminHandlerImpl) DescribeCluster(
 }
 
 // GetReplicationMessages returns new replication tasks since the read level provided in the token.
-func (adh *AdminHandlerImpl) GetReplicationMessages(
+func (adh *adminHandlerImpl) GetReplicationMessages(
 	ctx context.Context,
 	request *replicator.GetReplicationMessagesRequest,
 ) (resp *replicator.GetReplicationMessagesResponse, err error) {
@@ -599,7 +599,7 @@ func (adh *AdminHandlerImpl) GetReplicationMessages(
 }
 
 // GetDomainReplicationMessages returns new domain replication tasks since last retrieved task ID.
-func (adh *AdminHandlerImpl) GetDomainReplicationMessages(
+func (adh *adminHandlerImpl) GetDomainReplicationMessages(
 	ctx context.Context,
 	request *replicator.GetDomainReplicationMessagesRequest,
 ) (resp *replicator.GetDomainReplicationMessagesResponse, err error) {
@@ -662,7 +662,7 @@ func (adh *AdminHandlerImpl) GetDomainReplicationMessages(
 }
 
 // GetDLQReplicationMessages returns new replication tasks based on the dlq info.
-func (adh *AdminHandlerImpl) GetDLQReplicationMessages(
+func (adh *adminHandlerImpl) GetDLQReplicationMessages(
 	ctx context.Context,
 	request *replicator.GetDLQReplicationMessagesRequest,
 ) (resp *replicator.GetDLQReplicationMessagesResponse, err error) {
@@ -686,7 +686,7 @@ func (adh *AdminHandlerImpl) GetDLQReplicationMessages(
 }
 
 // ReapplyEvents applies stale events to the current workflow and the current run
-func (adh *AdminHandlerImpl) ReapplyEvents(
+func (adh *adminHandlerImpl) ReapplyEvents(
 	ctx context.Context,
 	request *gen.ReapplyEventsRequest,
 ) (err error) {
@@ -726,7 +726,7 @@ func (adh *AdminHandlerImpl) ReapplyEvents(
 }
 
 // ReadDLQMessages reads messages from DLQ
-func (adh *AdminHandlerImpl) ReadDLQMessages(
+func (adh *adminHandlerImpl) ReadDLQMessages(
 	ctx context.Context,
 	request *replicator.ReadDLQMessagesRequest,
 ) (resp *replicator.ReadDLQMessagesResponse, err error) {
@@ -787,7 +787,7 @@ func (adh *AdminHandlerImpl) ReadDLQMessages(
 }
 
 // PurgeDLQMessages purge messages from DLQ
-func (adh *AdminHandlerImpl) PurgeDLQMessages(
+func (adh *adminHandlerImpl) PurgeDLQMessages(
 	ctx context.Context,
 	request *replicator.PurgeDLQMessagesRequest,
 ) (err error) {
@@ -836,7 +836,7 @@ func (adh *AdminHandlerImpl) PurgeDLQMessages(
 }
 
 // MergeDLQMessages merges DLQ messages
-func (adh *AdminHandlerImpl) MergeDLQMessages(
+func (adh *adminHandlerImpl) MergeDLQMessages(
 	ctx context.Context,
 	request *replicator.MergeDLQMessagesRequest,
 ) (resp *replicator.MergeDLQMessagesResponse, err error) {
@@ -893,7 +893,7 @@ func (adh *AdminHandlerImpl) MergeDLQMessages(
 }
 
 // RefreshWorkflowTasks re-generates the workflow tasks
-func (adh *AdminHandlerImpl) RefreshWorkflowTasks(
+func (adh *adminHandlerImpl) RefreshWorkflowTasks(
 	ctx context.Context,
 	request *gen.RefreshWorkflowTasksRequest,
 ) (err error) {
@@ -923,7 +923,7 @@ func (adh *AdminHandlerImpl) RefreshWorkflowTasks(
 }
 
 // ResendReplicationTasks requests replication task from remote cluster
-func (adh *AdminHandlerImpl) ResendReplicationTasks(
+func (adh *adminHandlerImpl) ResendReplicationTasks(
 	ctx context.Context,
 	request *admin.ResendReplicationTasksRequest,
 ) (err error) {
@@ -956,7 +956,7 @@ func (adh *AdminHandlerImpl) ResendReplicationTasks(
 	)
 }
 
-func (adh *AdminHandlerImpl) validateGetWorkflowExecutionRawHistoryV2Request(
+func (adh *adminHandlerImpl) validateGetWorkflowExecutionRawHistoryV2Request(
 	request *admin.GetWorkflowExecutionRawHistoryV2Request,
 ) error {
 
@@ -995,14 +995,14 @@ func (adh *AdminHandlerImpl) validateGetWorkflowExecutionRawHistoryV2Request(
 	return nil
 }
 
-func (adh *AdminHandlerImpl) validateConfigForAdvanceVisibility() error {
+func (adh *adminHandlerImpl) validateConfigForAdvanceVisibility() error {
 	if adh.params.ESConfig == nil || adh.params.ESClient == nil {
 		return errors.New("ES related config not found")
 	}
 	return nil
 }
 
-func (adh *AdminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
+func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 	request *admin.GetWorkflowExecutionRawHistoryV2Request,
 	versionHistories *persistence.VersionHistories,
 ) (*persistence.VersionHistory, error) {
@@ -1082,7 +1082,7 @@ func (adh *AdminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 	return targetBranch, nil
 }
 
-func (adh *AdminHandlerImpl) generatePaginationToken(
+func (adh *adminHandlerImpl) generatePaginationToken(
 	request *admin.GetWorkflowExecutionRawHistoryV2Request,
 	versionHistories *persistence.VersionHistories,
 ) *getWorkflowRawHistoryV2Token {
@@ -1101,7 +1101,7 @@ func (adh *AdminHandlerImpl) generatePaginationToken(
 	}
 }
 
-func (adh *AdminHandlerImpl) validatePaginationToken(
+func (adh *adminHandlerImpl) validatePaginationToken(
 	request *admin.GetWorkflowExecutionRawHistoryV2Request,
 	token *getWorkflowRawHistoryV2Token,
 ) error {
@@ -1120,14 +1120,14 @@ func (adh *AdminHandlerImpl) validatePaginationToken(
 }
 
 // startRequestProfile initiates recording of request metrics
-func (adh *AdminHandlerImpl) startRequestProfile(scope int) (metrics.Scope, metrics.Stopwatch) {
+func (adh *adminHandlerImpl) startRequestProfile(scope int) (metrics.Scope, metrics.Stopwatch) {
 	metricsScope := adh.GetMetricsClient().Scope(scope)
 	sw := metricsScope.StartTimer(metrics.CadenceLatency)
 	metricsScope.IncCounter(metrics.CadenceRequests)
 	return metricsScope, sw
 }
 
-func (adh *AdminHandlerImpl) error(err error, scope metrics.Scope) error {
+func (adh *adminHandlerImpl) error(err error, scope metrics.Scope) error {
 	switch err.(type) {
 	case *gen.InternalServiceError:
 		adh.GetLogger().Error("Internal service error", tag.Error(err))
