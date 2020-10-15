@@ -4754,6 +4754,7 @@ type ReplicationTask struct {
 	SyncActivityTaskAttributes    *SyncActivityTaskAttributes    `json:"syncActivityTaskAttributes,omitempty"`
 	HistoryTaskV2Attributes       *HistoryTaskV2Attributes       `json:"historyTaskV2Attributes,omitempty"`
 	FailoverMarkerAttributes      *FailoverMarkerAttributes      `json:"failoverMarkerAttributes,omitempty"`
+	CreationTime                  *int64                         `json:"creationTime,omitempty"`
 }
 
 // ToWire translates a ReplicationTask struct into a Thrift-level intermediate
@@ -4773,7 +4774,7 @@ type ReplicationTask struct {
 //   }
 func (v *ReplicationTask) ToWire() (wire.Value, error) {
 	var (
-		fields [7]wire.Field
+		fields [8]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -4833,6 +4834,14 @@ func (v *ReplicationTask) ToWire() (wire.Value, error) {
 			return w, err
 		}
 		fields[i] = wire.Field{ID: 80, Value: w}
+		i++
+	}
+	if v.CreationTime != nil {
+		w, err = wire.NewValueI64(*(v.CreationTime)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 90, Value: w}
 		i++
 	}
 
@@ -4951,6 +4960,16 @@ func (v *ReplicationTask) FromWire(w wire.Value) error {
 				}
 
 			}
+		case 90:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.CreationTime = &x
+				if err != nil {
+					return err
+				}
+
+			}
 		}
 	}
 
@@ -4964,7 +4983,7 @@ func (v *ReplicationTask) String() string {
 		return "<nil>"
 	}
 
-	var fields [7]string
+	var fields [8]string
 	i := 0
 	if v.TaskType != nil {
 		fields[i] = fmt.Sprintf("TaskType: %v", *(v.TaskType))
@@ -4992,6 +5011,10 @@ func (v *ReplicationTask) String() string {
 	}
 	if v.FailoverMarkerAttributes != nil {
 		fields[i] = fmt.Sprintf("FailoverMarkerAttributes: %v", v.FailoverMarkerAttributes)
+		i++
+	}
+	if v.CreationTime != nil {
+		fields[i] = fmt.Sprintf("CreationTime: %v", *(v.CreationTime))
 		i++
 	}
 
@@ -5039,6 +5062,9 @@ func (v *ReplicationTask) Equals(rhs *ReplicationTask) bool {
 	if !((v.FailoverMarkerAttributes == nil && rhs.FailoverMarkerAttributes == nil) || (v.FailoverMarkerAttributes != nil && rhs.FailoverMarkerAttributes != nil && v.FailoverMarkerAttributes.Equals(rhs.FailoverMarkerAttributes))) {
 		return false
 	}
+	if !_I64_EqualsPtr(v.CreationTime, rhs.CreationTime) {
+		return false
+	}
 
 	return true
 }
@@ -5069,6 +5095,9 @@ func (v *ReplicationTask) MarshalLogObject(enc zapcore.ObjectEncoder) (err error
 	}
 	if v.FailoverMarkerAttributes != nil {
 		err = multierr.Append(err, enc.AddObject("failoverMarkerAttributes", v.FailoverMarkerAttributes))
+	}
+	if v.CreationTime != nil {
+		enc.AddInt64("creationTime", *v.CreationTime)
 	}
 	return err
 }
@@ -5176,6 +5205,21 @@ func (v *ReplicationTask) GetFailoverMarkerAttributes() (o *FailoverMarkerAttrib
 // IsSetFailoverMarkerAttributes returns true if FailoverMarkerAttributes is not nil.
 func (v *ReplicationTask) IsSetFailoverMarkerAttributes() bool {
 	return v != nil && v.FailoverMarkerAttributes != nil
+}
+
+// GetCreationTime returns the value of CreationTime if it is set or its
+// zero value if it is unset.
+func (v *ReplicationTask) GetCreationTime() (o int64) {
+	if v != nil && v.CreationTime != nil {
+		return *v.CreationTime
+	}
+
+	return
+}
+
+// IsSetCreationTime returns true if CreationTime is not nil.
+func (v *ReplicationTask) IsSetCreationTime() bool {
+	return v != nil && v.CreationTime != nil
 }
 
 type ReplicationTaskInfo struct {
@@ -7263,11 +7307,11 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "replicator",
 	Package:  "github.com/uber/cadence/.gen/go/replicator",
 	FilePath: "replicator.thrift",
-	SHA1:     "c42f466651c7eef6f40ed0edccbd95e88c361f83",
+	SHA1:     "9c6bbb8179645840bd7593da553c2489c372b3bb",
 	Includes: []*thriftreflect.ThriftModule{
 		shared.ThriftModule,
 	},
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.replicator\n\ninclude \"shared.thrift\"\n\nenum ReplicationTaskType {\n  Domain\n  History\n  SyncShardStatus\n  SyncActivity\n  HistoryMetadata\n  HistoryV2\n  FailoverMarker\n}\n\nenum DomainOperation {\n  Create\n  Update\n}\n\nstruct DomainTaskAttributes {\n  05: optional DomainOperation domainOperation\n  10: optional string id\n  20: optional shared.DomainInfo info\n  30: optional shared.DomainConfiguration config\n  40: optional shared.DomainReplicationConfiguration replicationConfig\n  50: optional i64 (js.type = \"Long\") configVersion\n  60: optional i64 (js.type = \"Long\") failoverVersion\n  70: optional i64 (js.type = \"Long\") previousFailoverVersion\n}\n\nstruct SyncShardStatusTaskAttributes {\n  10: optional string sourceCluster\n  20: optional i64 (js.type = \"Long\") shardId\n  30: optional i64 (js.type = \"Long\") timestamp\n}\n\nstruct SyncActivityTaskAttributes {\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") version\n  50: optional i64 (js.type = \"Long\") scheduledId\n  60: optional i64 (js.type = \"Long\") scheduledTime\n  70: optional i64 (js.type = \"Long\") startedId\n  80: optional i64 (js.type = \"Long\") startedTime\n  90: optional i64 (js.type = \"Long\") lastHeartbeatTime\n  100: optional binary details\n  110: optional i32 attempt\n  120: optional string lastFailureReason\n  130: optional string lastWorkerIdentity\n  140: optional binary lastFailureDetails\n  150: optional shared.VersionHistory versionHistory\n}\n\nstruct HistoryTaskV2Attributes {\n  05: optional i64 (js.type = \"Long\") taskId\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional list<shared.VersionHistoryItem> versionHistoryItems\n  50: optional shared.DataBlob events\n  // new run events does not need version history since there is no prior events\n  70: optional shared.DataBlob newRunEvents\n}\n\nstruct FailoverMarkerAttributes{\n\t10: optional string domainID\n\t20: optional i64 (js.type = \"Long\") failoverVersion\n\t30: optional i64 (js.type = \"Long\") creationTime\n}\n\nstruct FailoverMarkers{\n\t10: optional list<FailoverMarkerAttributes> failoverMarkers\n}\n\nstruct ReplicationTask {\n  10: optional ReplicationTaskType taskType\n  11: optional i64 (js.type = \"Long\") sourceTaskId\n  20: optional DomainTaskAttributes domainTaskAttributes\n  40: optional SyncShardStatusTaskAttributes syncShardStatusTaskAttributes\n  50: optional SyncActivityTaskAttributes syncActivityTaskAttributes\n  70: optional HistoryTaskV2Attributes historyTaskV2Attributes\n  80: optional FailoverMarkerAttributes failoverMarkerAttributes\n}\n\nstruct ReplicationToken {\n  10: optional i32 shardID\n  // lastRetrivedMessageId is where the next fetch should begin with\n  20: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  // lastProcessedMessageId is the last messageId that is processed on the passive side.\n  // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.\n  30: optional i64 (js.type = \"Long\") lastProcessedMessageId\n}\n\nstruct SyncShardStatus {\n    10: optional i64 (js.type = \"Long\") timestamp\n}\n\nstruct ReplicationMessages {\n  10: optional list<ReplicationTask> replicationTasks\n  // This can be different than the last taskId in the above list, because sender can decide to skip tasks (e.g. for completed workflows).\n  20: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  30: optional bool hasMore // Hint for flow control\n  40: optional SyncShardStatus syncShardStatus\n}\n\nstruct ReplicationTaskInfo {\n  10: optional string domainID\n  20: optional string workflowID\n  30: optional string runID\n  40: optional i16 taskType\n  50: optional i64 (js.type = \"Long\") taskID\n  60: optional i64 (js.type = \"Long\") version\n  70: optional i64 (js.type = \"Long\") firstEventID\n  80: optional i64 (js.type = \"Long\") nextEventID\n  90: optional i64 (js.type = \"Long\") scheduledID\n}\n\nstruct GetReplicationMessagesRequest {\n  10: optional list<ReplicationToken> tokens\n  20: optional string clusterName\n}\n\nstruct GetReplicationMessagesResponse {\n  10: optional map<i32, ReplicationMessages> messagesByShard\n}\n\nstruct GetDomainReplicationMessagesRequest {\n  // lastRetrievedMessageId is where the next fetch should begin with\n  10: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  // lastProcessedMessageId is the last messageId that is processed on the passive side.\n  // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.\n  20: optional i64 (js.type = \"Long\") lastProcessedMessageId\n  // clusterName is the name of the pulling cluster\n  30: optional string clusterName\n}\n\nstruct GetDomainReplicationMessagesResponse {\n  10: optional ReplicationMessages messages\n}\n\nstruct GetDLQReplicationMessagesRequest {\n  10: optional list<ReplicationTaskInfo> taskInfos\n}\n\nstruct GetDLQReplicationMessagesResponse {\n  10: optional list<ReplicationTask> replicationTasks\n}\n\nenum DLQType {\n  Replication,\n  Domain,\n}\n\nstruct ReadDLQMessagesRequest{\n  10: optional DLQType type\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct ReadDLQMessagesResponse{\n  10: optional DLQType type\n  20: optional list<ReplicationTask> replicationTasks\n  30: optional binary nextPageToken\n}\n\nstruct PurgeDLQMessagesRequest{\n  10: optional DLQType type\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n}\n\nstruct MergeDLQMessagesRequest{\n  10: optional DLQType type\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct MergeDLQMessagesResponse{\n  10: optional binary nextPageToken\n}\n"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.replicator\n\ninclude \"shared.thrift\"\n\nenum ReplicationTaskType {\n  Domain\n  History\n  SyncShardStatus\n  SyncActivity\n  HistoryMetadata\n  HistoryV2\n  FailoverMarker\n}\n\nenum DomainOperation {\n  Create\n  Update\n}\n\nstruct DomainTaskAttributes {\n  05: optional DomainOperation domainOperation\n  10: optional string id\n  20: optional shared.DomainInfo info\n  30: optional shared.DomainConfiguration config\n  40: optional shared.DomainReplicationConfiguration replicationConfig\n  50: optional i64 (js.type = \"Long\") configVersion\n  60: optional i64 (js.type = \"Long\") failoverVersion\n  70: optional i64 (js.type = \"Long\") previousFailoverVersion\n}\n\nstruct SyncShardStatusTaskAttributes {\n  10: optional string sourceCluster\n  20: optional i64 (js.type = \"Long\") shardId\n  30: optional i64 (js.type = \"Long\") timestamp\n}\n\nstruct SyncActivityTaskAttributes {\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional i64 (js.type = \"Long\") version\n  50: optional i64 (js.type = \"Long\") scheduledId\n  60: optional i64 (js.type = \"Long\") scheduledTime\n  70: optional i64 (js.type = \"Long\") startedId\n  80: optional i64 (js.type = \"Long\") startedTime\n  90: optional i64 (js.type = \"Long\") lastHeartbeatTime\n  100: optional binary details\n  110: optional i32 attempt\n  120: optional string lastFailureReason\n  130: optional string lastWorkerIdentity\n  140: optional binary lastFailureDetails\n  150: optional shared.VersionHistory versionHistory\n}\n\nstruct HistoryTaskV2Attributes {\n  05: optional i64 (js.type = \"Long\") taskId\n  10: optional string domainId\n  20: optional string workflowId\n  30: optional string runId\n  40: optional list<shared.VersionHistoryItem> versionHistoryItems\n  50: optional shared.DataBlob events\n  // new run events does not need version history since there is no prior events\n  70: optional shared.DataBlob newRunEvents\n}\n\nstruct FailoverMarkerAttributes{\n\t10: optional string domainID\n\t20: optional i64 (js.type = \"Long\") failoverVersion\n\t// TODO: remove this filed and use the creationTime in ReplicationTask\n\t30: optional i64 (js.type = \"Long\") creationTime\n}\n\nstruct FailoverMarkers{\n\t10: optional list<FailoverMarkerAttributes> failoverMarkers\n}\n\nstruct ReplicationTask {\n  10: optional ReplicationTaskType taskType\n  11: optional i64 (js.type = \"Long\") sourceTaskId\n  20: optional DomainTaskAttributes domainTaskAttributes\n  40: optional SyncShardStatusTaskAttributes syncShardStatusTaskAttributes\n  50: optional SyncActivityTaskAttributes syncActivityTaskAttributes\n  70: optional HistoryTaskV2Attributes historyTaskV2Attributes\n  80: optional FailoverMarkerAttributes failoverMarkerAttributes\n  90: optional i64 (js.type = \"Long\") creationTime\n}\n\nstruct ReplicationToken {\n  10: optional i32 shardID\n  // lastRetrivedMessageId is where the next fetch should begin with\n  20: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  // lastProcessedMessageId is the last messageId that is processed on the passive side.\n  // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.\n  30: optional i64 (js.type = \"Long\") lastProcessedMessageId\n}\n\nstruct SyncShardStatus {\n    10: optional i64 (js.type = \"Long\") timestamp\n}\n\nstruct ReplicationMessages {\n  10: optional list<ReplicationTask> replicationTasks\n  // This can be different than the last taskId in the above list, because sender can decide to skip tasks (e.g. for completed workflows).\n  20: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  30: optional bool hasMore // Hint for flow control\n  40: optional SyncShardStatus syncShardStatus\n}\n\nstruct ReplicationTaskInfo {\n  10: optional string domainID\n  20: optional string workflowID\n  30: optional string runID\n  40: optional i16 taskType\n  50: optional i64 (js.type = \"Long\") taskID\n  60: optional i64 (js.type = \"Long\") version\n  70: optional i64 (js.type = \"Long\") firstEventID\n  80: optional i64 (js.type = \"Long\") nextEventID\n  90: optional i64 (js.type = \"Long\") scheduledID\n}\n\nstruct GetReplicationMessagesRequest {\n  10: optional list<ReplicationToken> tokens\n  20: optional string clusterName\n}\n\nstruct GetReplicationMessagesResponse {\n  10: optional map<i32, ReplicationMessages> messagesByShard\n}\n\nstruct GetDomainReplicationMessagesRequest {\n  // lastRetrievedMessageId is where the next fetch should begin with\n  10: optional i64 (js.type = \"Long\") lastRetrievedMessageId\n  // lastProcessedMessageId is the last messageId that is processed on the passive side.\n  // This can be different than lastRetrievedMessageId if passive side supports prefetching messages.\n  20: optional i64 (js.type = \"Long\") lastProcessedMessageId\n  // clusterName is the name of the pulling cluster\n  30: optional string clusterName\n}\n\nstruct GetDomainReplicationMessagesResponse {\n  10: optional ReplicationMessages messages\n}\n\nstruct GetDLQReplicationMessagesRequest {\n  10: optional list<ReplicationTaskInfo> taskInfos\n}\n\nstruct GetDLQReplicationMessagesResponse {\n  10: optional list<ReplicationTask> replicationTasks\n}\n\nenum DLQType {\n  Replication,\n  Domain,\n}\n\nstruct ReadDLQMessagesRequest{\n  10: optional DLQType type\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct ReadDLQMessagesResponse{\n  10: optional DLQType type\n  20: optional list<ReplicationTask> replicationTasks\n  30: optional binary nextPageToken\n}\n\nstruct PurgeDLQMessagesRequest{\n  10: optional DLQType type\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n}\n\nstruct MergeDLQMessagesRequest{\n  10: optional DLQType type\n  20: optional i32 shardID\n  30: optional string sourceCluster\n  40: optional i64 (js.type = \"Long\") inclusiveEndMessageID\n  50: optional i32 maximumPageSize\n  60: optional binary nextPageToken\n}\n\nstruct MergeDLQMessagesResponse{\n  10: optional binary nextPageToken\n}\n"

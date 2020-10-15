@@ -85,14 +85,16 @@ func convertDeleteActivityInfos(
 func convertSyncActivityInfos(
 	activityInfos map[int64]*persistence.ActivityInfo,
 	inputs map[int64]struct{},
+	now time.Time,
 ) []persistence.Task {
 	outputs := make([]persistence.Task, 0, len(inputs))
 	for item := range inputs {
 		activityInfo, ok := activityInfos[item]
 		if ok {
 			outputs = append(outputs, &persistence.SyncActivityTask{
-				Version:     activityInfo.Version,
-				ScheduledID: activityInfo.ScheduleID,
+				Version:             activityInfo.Version,
+				ScheduledID:         activityInfo.ScheduleID,
+				VisibilityTimestamp: now,
 			})
 		}
 	}
