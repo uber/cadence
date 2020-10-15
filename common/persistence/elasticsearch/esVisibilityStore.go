@@ -196,7 +196,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutions(
 
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		startTime := rec.StartTime.UnixNano()
-		return request.EarliestStartTime <= startTime && startTime <= request.LatestStartTime
+		return request.EarliestTime <= startTime && startTime <= request.LatestTime
 	}
 
 	return v.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.PageSize, isRecordValid)
@@ -222,7 +222,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutions(
 
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		closeTime := rec.CloseTime.UnixNano()
-		return request.EarliestStartTime <= closeTime && closeTime <= request.LatestStartTime
+		return request.EarliestTime <= closeTime && closeTime <= request.LatestTime
 	}
 
 	return v.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.PageSize, isRecordValid)
@@ -249,7 +249,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByType(
 
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		startTime := rec.StartTime.UnixNano()
-		return request.EarliestStartTime <= startTime && startTime <= request.LatestStartTime
+		return request.EarliestTime <= startTime && startTime <= request.LatestTime
 	}
 
 	return v.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.PageSize, isRecordValid)
@@ -276,7 +276,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByType(
 
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		closeTime := rec.CloseTime.UnixNano()
-		return request.EarliestStartTime <= closeTime && closeTime <= request.LatestStartTime
+		return request.EarliestTime <= closeTime && closeTime <= request.LatestTime
 	}
 
 	return v.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.PageSize, isRecordValid)
@@ -303,7 +303,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		startTime := rec.StartTime.UnixNano()
-		return request.EarliestStartTime <= startTime && startTime <= request.LatestStartTime
+		return request.EarliestTime <= startTime && startTime <= request.LatestTime
 	}
 
 	return v.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.PageSize, isRecordValid)
@@ -330,7 +330,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		closeTime := rec.CloseTime.UnixNano()
-		return request.EarliestStartTime <= closeTime && closeTime <= request.LatestStartTime
+		return request.EarliestTime <= closeTime && closeTime <= request.LatestTime
 	}
 
 	return v.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.PageSize, isRecordValid)
@@ -357,7 +357,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		closeTime := rec.CloseTime.UnixNano()
-		return request.EarliestStartTime <= closeTime && closeTime <= request.LatestStartTime
+		return request.EarliestTime <= closeTime && closeTime <= request.LatestTime
 	}
 
 	return v.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.PageSize, isRecordValid)
@@ -415,7 +415,7 @@ func (v *esVisibilityStore) DeleteWorkflowExecution(
 
 func (v *esVisibilityStore) ListWorkflowExecutions(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsRequestV2,
+	request *p.ListWorkflowExecutionsByQueryRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	checkPageSize(request)
@@ -442,7 +442,7 @@ func (v *esVisibilityStore) ListWorkflowExecutions(
 
 func (v *esVisibilityStore) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsRequestV2,
+	request *p.ListWorkflowExecutionsByQueryRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	checkPageSize(request)
@@ -529,7 +529,7 @@ var (
 	}
 )
 
-func getESQueryDSLForScan(request *p.ListWorkflowExecutionsRequestV2) (string, error) {
+func getESQueryDSLForScan(request *p.ListWorkflowExecutionsByQueryRequest) (string, error) {
 	sql := getSQLFromListRequest(request)
 	dsl, err := getCustomizedDSLFromSQL(sql, request.DomainUUID)
 	if err != nil {
@@ -556,7 +556,7 @@ func getESQueryDSLForCount(request *p.CountWorkflowExecutionsRequest) (string, e
 	return dsl.String(), nil
 }
 
-func (v *esVisibilityStore) getESQueryDSL(request *p.ListWorkflowExecutionsRequestV2, token *esVisibilityPageToken) (string, error) {
+func (v *esVisibilityStore) getESQueryDSL(request *p.ListWorkflowExecutionsByQueryRequest, token *esVisibilityPageToken) (string, error) {
 	sql := getSQLFromListRequest(request)
 	dsl, err := getCustomizedDSLFromSQL(sql, request.DomainUUID)
 	if err != nil {
@@ -583,7 +583,7 @@ func (v *esVisibilityStore) getESQueryDSL(request *p.ListWorkflowExecutionsReque
 	return dslStr, nil
 }
 
-func getSQLFromListRequest(request *p.ListWorkflowExecutionsRequestV2) string {
+func getSQLFromListRequest(request *p.ListWorkflowExecutionsByQueryRequest) string {
 	var sql string
 	query := strings.TrimSpace(request.Query)
 	if query == "" {
@@ -785,14 +785,14 @@ func (v *esVisibilityStore) getSearchResult(
 	// ElasticSearch v6 is unable to precisely compare time, have to manually add resolution 1ms to time range.
 	// Also has to use string instead of int64 to avoid data conversion issue,
 	// 9223372036854775807 to 9223372036854776000 (long overflow)
-	if request.LatestStartTime > math.MaxInt64-oneMilliSecondInNano { // prevent latestTime overflow
-		request.LatestStartTime = math.MaxInt64 - oneMilliSecondInNano
+	if request.LatestTime > math.MaxInt64-oneMilliSecondInNano { // prevent latestTime overflow
+		request.LatestTime = math.MaxInt64 - oneMilliSecondInNano
 	}
-	if request.EarliestStartTime < math.MinInt64+oneMilliSecondInNano { // prevent earliestTime overflow
-		request.EarliestStartTime = math.MinInt64 + oneMilliSecondInNano
+	if request.EarliestTime < math.MinInt64+oneMilliSecondInNano { // prevent earliestTime overflow
+		request.EarliestTime = math.MinInt64 + oneMilliSecondInNano
 	}
-	earliestTimeStr := strconv.FormatInt(request.EarliestStartTime-oneMilliSecondInNano, 10)
-	latestTimeStr := strconv.FormatInt(request.LatestStartTime+oneMilliSecondInNano, 10)
+	earliestTimeStr := strconv.FormatInt(request.EarliestTime-oneMilliSecondInNano, 10)
+	latestTimeStr := strconv.FormatInt(request.LatestTime+oneMilliSecondInNano, 10)
 	rangeQuery = rangeQuery.
 		Gte(earliestTimeStr).
 		Lte(latestTimeStr)
@@ -1024,7 +1024,7 @@ func getVisibilityMessageForDeletion(domainID, workflowID, runID string, docVers
 	return msg
 }
 
-func checkPageSize(request *p.ListWorkflowExecutionsRequestV2) {
+func checkPageSize(request *p.ListWorkflowExecutionsByQueryRequest) {
 	if request.PageSize == 0 {
 		request.PageSize = 1000
 	}

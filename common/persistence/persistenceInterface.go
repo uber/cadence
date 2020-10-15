@@ -166,8 +166,8 @@ type (
 		ListClosedWorkflowExecutionsByStatus(ctx context.Context, request *InternalListClosedWorkflowExecutionsByStatusRequest) (*InternalListWorkflowExecutionsResponse, error)
 		GetClosedWorkflowExecution(ctx context.Context, request *InternalGetClosedWorkflowExecutionRequest) (*InternalGetClosedWorkflowExecutionResponse, error)
 		DeleteWorkflowExecution(ctx context.Context, request *VisibilityDeleteWorkflowExecutionRequest) error
-		ListWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
-		ScanWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
+		ListWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsByQueryRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ScanWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsByQueryRequest) (*InternalListWorkflowExecutionsResponse, error)
 		CountWorkflowExecutions(ctx context.Context, request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
 	}
 
@@ -723,10 +723,12 @@ type (
 
 	// InternalListWorkflowExecutionsRequest is used to list executions in a domain
 	InternalListWorkflowExecutionsRequest struct {
-		DomainUUID        string
-		Domain            string // domain name is not persisted, but used as config filter key
-		EarliestStartTime int64
-		LatestStartTime   int64
+		DomainUUID string
+		Domain     string // domain name is not persisted, but used as config filter key
+		// The earliest end of the time range
+		EarliestTime int64
+		// The latest end of the time range
+		LatestTime int64
 		// Maximum number of workflow executions per page
 		PageSize int
 		// Token to continue reading next page of workflow executions.
