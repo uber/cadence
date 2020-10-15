@@ -148,7 +148,7 @@ type (
 		IsGlobalDomain              bool
 	}
 
-	// NoSQLInternalDomainConfig defines the struct for domainConfig
+	// NoSQLInternalDomainConfig defines the struct for the domainConfig
 	NoSQLInternalDomainConfig struct {
 		// NOTE: this retention is in days, not in seconds
 		Retention                int32
