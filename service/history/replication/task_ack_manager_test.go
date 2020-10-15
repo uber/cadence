@@ -537,7 +537,7 @@ func (s *taskAckManagerSuite) TestGenerateFailoverMarkerTask() {
 	s.Equal(replicator.ReplicationTaskTypeFailoverMarker, task.GetTaskType())
 	s.Equal(domainID, task.GetFailoverMarkerAttributes().GetDomainID())
 	s.Equal(int64(2), task.GetFailoverMarkerAttributes().GetFailoverVersion())
-	s.Equal(int64(3), task.GetFailoverMarkerAttributes().GetCreationTime())
+	s.Equal(int64(3), task.GetCreationTime())
 }
 
 func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_OK() {

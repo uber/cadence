@@ -90,6 +90,7 @@ func convertSyncActivityInfos(
 	for item := range inputs {
 		activityInfo, ok := activityInfos[item]
 		if ok {
+			// the visibility timestamp will be set in shard context
 			outputs = append(outputs, &persistence.SyncActivityTask{
 				Version:     activityInfo.Version,
 				ScheduledID: activityInfo.ScheduleID,

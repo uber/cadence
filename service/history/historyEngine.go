@@ -480,10 +480,10 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 					domainActiveCluster != e.currentClusterName &&
 					previousFailoverVersion != common.InitialPreviousFailoverVersion &&
 					e.clusterMetadata.ClusterNameForFailoverVersion(previousFailoverVersion) == e.currentClusterName {
+					// the visibility timestamp will be set in shard context
 					failoverMarkerTasks = append(failoverMarkerTasks, &persistence.FailoverMarkerTask{
-						VisibilityTimestamp: e.timeSource.Now(),
-						Version:             nextDomain.GetFailoverVersion(),
-						DomainID:            nextDomain.GetInfo().ID,
+						Version:  nextDomain.GetFailoverVersion(),
+						DomainID: nextDomain.GetInfo().ID,
 					})
 				}
 			}
