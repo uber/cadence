@@ -315,13 +315,9 @@ workflow_state = ? ` +
 		`shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id, current_run_id, execution, workflow_last_write_version, workflow_state) ` +
 		`VALUES(?, ?, ?, ?, ?, ?, ?, ?, {run_id: ?, create_request_id: ?, state: ?, close_status: ?}, ?, ?) IF NOT EXISTS USING TTL 0 `
 
-	templateCreateWorkflowExecutionQuery = `INSERT INTO executions (` +
-		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visibility_ts, task_id, checksum) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?, ?, ` + templateChecksumType + `) IF NOT EXISTS `
-
 	templateCreateWorkflowExecutionWithVersionHistoriesQuery = `INSERT INTO executions (` +
-		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visibility_ts, task_id, version_histories, version_histories_encoding, checksum) ` +
-		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?, ?, ?, ?, ` + templateChecksumType + `) IF NOT EXISTS `
+		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visibility_ts, task_id, version_histories, version_histories_encoding, checksum, workflow_last_write_version, workflow_state) ` +
+		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?, ?, ?, ?, ` + templateChecksumType + `, ?, ?) IF NOT EXISTS `
 
 	templateCreateTransferTaskQuery = `INSERT INTO executions (` +
 		`shard_id, type, domain_id, workflow_id, run_id, transfer, visibility_ts, task_id) ` +

@@ -312,9 +312,21 @@ func (s *TestBase) UpdateShard(ctx context.Context, updatedInfo *p.ShardInfo, pr
 }
 
 // CreateWorkflowExecutionWithBranchToken test util function
-func (s *TestBase) CreateWorkflowExecutionWithBranchToken(ctx context.Context, domainID string, workflowExecution workflow.WorkflowExecution, taskList,
-	wType string, wTimeout int32, decisionTimeout int32, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
-	decisionScheduleID int64, branchToken []byte, timerTasks []p.Task) (*p.CreateWorkflowExecutionResponse, error) {
+func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
+	ctx context.Context,
+	domainID string,
+	workflowExecution workflow.WorkflowExecution,
+	taskList string,
+	wType string,
+	wTimeout int32,
+	decisionTimeout int32,
+	executionContext []byte,
+	nextEventID int64,
+	lastProcessedEventID int64,
+	decisionScheduleID int64,
+	branchToken []byte,
+	timerTasks []p.Task,
+) (*p.CreateWorkflowExecutionResponse, error) {
 	response, err := s.ExecutionManager.CreateWorkflowExecution(ctx, &p.CreateWorkflowExecutionRequest{
 		NewWorkflowSnapshot: p.WorkflowSnapshot{
 			ExecutionInfo: &p.WorkflowExecutionInfo{
