@@ -21,6 +21,7 @@
 package task
 
 import (
+	"context"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -32,13 +33,14 @@ import (
 )
 
 type (
-	standbyActionFn     func(execution.Context, execution.MutableState) (interface{}, error)
-	standbyPostActionFn func(Info, interface{}, log.Logger) error
+	standbyActionFn     func(context.Context, execution.Context, execution.MutableState) (interface{}, error)
+	standbyPostActionFn func(context.Context, Info, interface{}, log.Logger) error
 
 	standbyCurrentTimeFn func() time.Time
 )
 
 func standbyTaskPostActionNoOp(
+	ctx context.Context,
 	taskInfo Info,
 	postActionInfo interface{},
 	logger log.Logger,
@@ -53,6 +55,7 @@ func standbyTaskPostActionNoOp(
 }
 
 func standbyTransferTaskPostActionTaskDiscarded(
+	ctx context.Context,
 	taskInfo Info,
 	postActionInfo interface{},
 	logger log.Logger,
@@ -76,6 +79,7 @@ func standbyTransferTaskPostActionTaskDiscarded(
 }
 
 func standbyTimerTaskPostActionTaskDiscarded(
+	ctx context.Context,
 	taskInfo Info,
 	postActionInfo interface{},
 	logger log.Logger,
