@@ -240,7 +240,7 @@ func (p *visibilityMetricsClient) GetClosedWorkflowExecution(
 
 func (p *visibilityMetricsClient) ListWorkflowExecutions(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsRequestV2,
+	request *p.ListWorkflowExecutionsByQueryRequest,
 ) (*p.ListWorkflowExecutionsResponse, error) {
 	p.metricClient.IncCounter(metrics.ElasticsearchListWorkflowExecutionsScope, metrics.ElasticsearchRequests)
 
@@ -257,7 +257,7 @@ func (p *visibilityMetricsClient) ListWorkflowExecutions(
 
 func (p *visibilityMetricsClient) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *p.ListWorkflowExecutionsRequestV2,
+	request *p.ListWorkflowExecutionsByQueryRequest,
 ) (*p.ListWorkflowExecutionsResponse, error) {
 	p.metricClient.IncCounter(metrics.ElasticsearchScanWorkflowExecutionsScope, metrics.ElasticsearchRequests)
 

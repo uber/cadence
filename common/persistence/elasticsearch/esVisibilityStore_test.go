@@ -74,11 +74,11 @@ var (
 	testCloseStatus  = 1
 
 	testRequest = &p.InternalListWorkflowExecutionsRequest{
-		DomainUUID:        testDomainID,
-		Domain:            testDomain,
-		PageSize:          testPageSize,
-		EarliestStartTime: testEarliestTime,
-		LatestStartTime:   testLatestTime,
+		DomainUUID:   testDomainID,
+		Domain:       testDomain,
+		PageSize:     testPageSize,
+		EarliestTime: testEarliestTime,
+		LatestTime:   testLatestTime,
 	}
 	testSearchResult = &elastic.SearchResult{
 		Hits: &elastic.SearchHits{},
@@ -489,8 +489,8 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 	existClosedStatusQuery := elastic.NewExistsQuery(es.CloseStatus)
 	tieBreakerSorter := elastic.NewFieldSort(es.RunID).Desc()
 
-	earliestTime := strconv.FormatInt(request.EarliestStartTime-oneMilliSecondInNano, 10)
-	latestTime := strconv.FormatInt(request.LatestStartTime+oneMilliSecondInNano, 10)
+	earliestTime := strconv.FormatInt(request.EarliestTime-oneMilliSecondInNano, 10)
+	latestTime := strconv.FormatInt(request.LatestTime+oneMilliSecondInNano, 10)
 
 	// test for open
 	isOpen := true
@@ -508,8 +508,8 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 	s.NoError(err)
 
 	// test request latestTime overflow
-	request.LatestStartTime = math.MaxInt64
-	rangeQuery1 := elastic.NewRangeQuery(es.StartTime).Gte(earliestTime).Lte(strconv.FormatInt(request.LatestStartTime, 10))
+	request.LatestTime = math.MaxInt64
+	rangeQuery1 := elastic.NewRangeQuery(es.StartTime).Gte(earliestTime).Lte(strconv.FormatInt(request.LatestTime, 10))
 	boolQuery1 := elastic.NewBoolQuery().Must(matchDomainQuery).Filter(rangeQuery1).MustNot(existClosedStatusQuery)
 	param1 := &es.SearchParameters{
 		Index:    testIndex,
@@ -521,7 +521,7 @@ func (s *ESVisibilitySuite) TestGetSearchResult() {
 	s.mockESClient.On("Search", mock.Anything, param1).Return(nil, nil).Once()
 	_, err = s.visibilityStore.getSearchResult(context.Background(), request, token, nil, isOpen)
 	s.NoError(err)
-	request.LatestStartTime = testLatestTime // revert
+	request.LatestTime = testLatestTime // revert
 
 	// test for closed
 	isOpen = false
@@ -727,7 +727,7 @@ func (s *ESVisibilitySuite) TestShouldSearchAfter() {
 
 //nolint
 func (s *ESVisibilitySuite) TestGetESQueryDSL() {
-	request := &p.ListWorkflowExecutionsRequestV2{
+	request := &p.ListWorkflowExecutionsByQueryRequest{
 		DomainUUID: testDomainID,
 		PageSize:   10,
 	}
@@ -830,7 +830,7 @@ func (s *ESVisibilitySuite) TestGetESQueryDSL() {
 }
 
 func (s *ESVisibilitySuite) TestGetESQueryDSLForScan() {
-	request := &p.ListWorkflowExecutionsRequestV2{
+	request := &p.ListWorkflowExecutionsByQueryRequest{
 		DomainUUID: testDomainID,
 		PageSize:   10,
 	}
@@ -899,7 +899,7 @@ func (s *ESVisibilitySuite) TestListWorkflowExecutions() {
 		return true
 	})).Return(testSearchResult, nil).Once()
 
-	request := &p.ListWorkflowExecutionsRequestV2{
+	request := &p.ListWorkflowExecutionsByQueryRequest{
 		DomainUUID: testDomainID,
 		Domain:     testDomain,
 		PageSize:   10,
@@ -934,7 +934,7 @@ func (s *ESVisibilitySuite) TestScanWorkflowExecutions() {
 		return true
 	})).Return(testSearchResult, nil, nil).Once()
 
-	request := &p.ListWorkflowExecutionsRequestV2{
+	request := &p.ListWorkflowExecutionsByQueryRequest{
 		DomainUUID: testDomainID,
 		Domain:     testDomain,
 		PageSize:   10,

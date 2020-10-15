@@ -259,7 +259,7 @@ func (v *visibilityManagerImpl) DeleteWorkflowExecution(
 
 func (v *visibilityManagerImpl) ListWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsRequestV2,
+	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	internalResp, err := v.persistence.ListWorkflowExecutions(ctx, request)
 	if err != nil {
@@ -270,7 +270,7 @@ func (v *visibilityManagerImpl) ListWorkflowExecutions(
 
 func (v *visibilityManagerImpl) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsRequestV2,
+	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	internalResp, err := v.persistence.ScanWorkflowExecutions(ctx, request)
 	if err != nil {
@@ -398,12 +398,12 @@ func (v *visibilityManagerImpl) fromInternalListWorkflowExecutionsRequest(intern
 		return nil
 	}
 	return &ListWorkflowExecutionsRequest{
-		DomainUUID:        internalReq.DomainUUID,
-		Domain:            internalReq.Domain,
-		EarliestStartTime: internalReq.EarliestStartTime,
-		LatestStartTime:   internalReq.LatestStartTime,
-		PageSize:          internalReq.PageSize,
-		NextPageToken:     internalReq.NextPageToken,
+		DomainUUID:    internalReq.DomainUUID,
+		Domain:        internalReq.Domain,
+		EarliestTime:  internalReq.EarliestTime,
+		LatestTime:    internalReq.LatestTime,
+		PageSize:      internalReq.PageSize,
+		NextPageToken: internalReq.NextPageToken,
 	}
 }
 
@@ -412,11 +412,11 @@ func (v *visibilityManagerImpl) toInternalListWorkflowExecutionsRequest(req *Lis
 		return nil
 	}
 	return &InternalListWorkflowExecutionsRequest{
-		DomainUUID:        req.DomainUUID,
-		Domain:            req.Domain,
-		EarliestStartTime: req.EarliestStartTime,
-		LatestStartTime:   req.LatestStartTime,
-		PageSize:          req.PageSize,
-		NextPageToken:     req.NextPageToken,
+		DomainUUID:    req.DomainUUID,
+		Domain:        req.Domain,
+		EarliestTime:  req.EarliestTime,
+		LatestTime:    req.LatestTime,
+		PageSize:      req.PageSize,
+		NextPageToken: req.NextPageToken,
 	}
 }

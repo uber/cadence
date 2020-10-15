@@ -49,7 +49,7 @@ func NewHistoryV2PersistenceFromSession(
 	logger log.Logger,
 ) p.HistoryStore {
 	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
-	db := cassandra.NewCassandraDBFromSession(session)
+	db := cassandra.NewCassandraDBFromSession(session, logger)
 
 	return &nosqlHistoryManager{db: db, logger: logger}
 }
@@ -61,7 +61,7 @@ func newHistoryV2Persistence(
 ) (p.HistoryStore, error) {
 
 	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
-	db, err := cassandra.NewCassandraDB(cfg)
+	db, err := cassandra.NewCassandraDB(cfg, logger)
 	if err != nil {
 		return nil, err
 	}
