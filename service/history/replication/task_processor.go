@@ -421,18 +421,13 @@ func (p *taskProcessorImpl) processTaskOnce(replicationTask *r.ReplicationTask) 
 		p.updateFailureMetric(scope, err)
 	} else {
 		now := ts.Now()
+		mScope := p.metricsClient.Scope(scope, metrics.TargetClusterTag(p.sourceCluster))
 		// emit the number of replication tasks
-		p.metricsClient.Scope(
-			scope,
-			metrics.TargetClusterTag(p.sourceCluster),
-		).IncCounter(metrics.ReplicationTasksApplied)
+		mScope.IncCounter(metrics.ReplicationTasksApplied)
 		// emit single task processing latency
-		p.metricsClient.Scope(scope).RecordTimer(metrics.TaskProcessingLatency, now.Sub(startTime))
+		mScope.RecordTimer(metrics.TaskProcessingLatency, now.Sub(startTime))
 		// emit latency from task generated to task received
-		p.metricsClient.Scope(
-			scope,
-			metrics.TargetClusterTag(p.sourceCluster),
-		).RecordTimer(
+		mScope.RecordTimer(
 			metrics.ReplicationTaskLatency,
 			now.Sub(time.Unix(0, replicationTask.GetCreationTime())),
 		)
