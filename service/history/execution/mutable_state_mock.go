@@ -28,6 +28,7 @@
 package execution
 
 import (
+	context "context"
 	reflect "reflect"
 	time "time"
 
@@ -293,9 +294,9 @@ func (mr *MockMutableStateMockRecorder) AddCompletedWorkflowEvent(arg0, arg1 int
 }
 
 // AddContinueAsNewEvent mocks base method
-func (m *MockMutableState) AddContinueAsNewEvent(arg0, arg1 int64, arg2 string, arg3 *shared.ContinueAsNewWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, MutableState, error) {
+func (m *MockMutableState) AddContinueAsNewEvent(arg0 context.Context, arg1, arg2 int64, arg3 string, arg4 *shared.ContinueAsNewWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, MutableState, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddContinueAsNewEvent", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "AddContinueAsNewEvent", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
 	ret1, _ := ret[1].(MutableState)
 	ret2, _ := ret[2].(error)
@@ -303,9 +304,9 @@ func (m *MockMutableState) AddContinueAsNewEvent(arg0, arg1 int64, arg2 string, 
 }
 
 // AddContinueAsNewEvent indicates an expected call of AddContinueAsNewEvent
-func (mr *MockMutableStateMockRecorder) AddContinueAsNewEvent(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockMutableStateMockRecorder) AddContinueAsNewEvent(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddContinueAsNewEvent", reflect.TypeOf((*MockMutableState)(nil).AddContinueAsNewEvent), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddContinueAsNewEvent", reflect.TypeOf((*MockMutableState)(nil).AddContinueAsNewEvent), arg0, arg1, arg2, arg3, arg4)
 }
 
 // AddDecisionTaskCompletedEvent mocks base method
@@ -938,18 +939,18 @@ func (mr *MockMutableStateMockRecorder) GetActivityInfo(arg0 interface{}) *gomoc
 }
 
 // GetActivityScheduledEvent mocks base method
-func (m *MockMutableState) GetActivityScheduledEvent(arg0 int64) (*shared.HistoryEvent, error) {
+func (m *MockMutableState) GetActivityScheduledEvent(arg0 context.Context, arg1 int64) (*shared.HistoryEvent, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetActivityScheduledEvent", arg0)
+	ret := m.ctrl.Call(m, "GetActivityScheduledEvent", arg0, arg1)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetActivityScheduledEvent indicates an expected call of GetActivityScheduledEvent
-func (mr *MockMutableStateMockRecorder) GetActivityScheduledEvent(arg0 interface{}) *gomock.Call {
+func (mr *MockMutableStateMockRecorder) GetActivityScheduledEvent(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActivityScheduledEvent", reflect.TypeOf((*MockMutableState)(nil).GetActivityScheduledEvent), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActivityScheduledEvent", reflect.TypeOf((*MockMutableState)(nil).GetActivityScheduledEvent), arg0, arg1)
 }
 
 // GetChildExecutionInfo mocks base method
@@ -968,33 +969,33 @@ func (mr *MockMutableStateMockRecorder) GetChildExecutionInfo(arg0 interface{}) 
 }
 
 // GetChildExecutionInitiatedEvent mocks base method
-func (m *MockMutableState) GetChildExecutionInitiatedEvent(arg0 int64) (*shared.HistoryEvent, error) {
+func (m *MockMutableState) GetChildExecutionInitiatedEvent(arg0 context.Context, arg1 int64) (*shared.HistoryEvent, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetChildExecutionInitiatedEvent", arg0)
+	ret := m.ctrl.Call(m, "GetChildExecutionInitiatedEvent", arg0, arg1)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetChildExecutionInitiatedEvent indicates an expected call of GetChildExecutionInitiatedEvent
-func (mr *MockMutableStateMockRecorder) GetChildExecutionInitiatedEvent(arg0 interface{}) *gomock.Call {
+func (mr *MockMutableStateMockRecorder) GetChildExecutionInitiatedEvent(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChildExecutionInitiatedEvent", reflect.TypeOf((*MockMutableState)(nil).GetChildExecutionInitiatedEvent), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChildExecutionInitiatedEvent", reflect.TypeOf((*MockMutableState)(nil).GetChildExecutionInitiatedEvent), arg0, arg1)
 }
 
 // GetCompletionEvent mocks base method
-func (m *MockMutableState) GetCompletionEvent() (*shared.HistoryEvent, error) {
+func (m *MockMutableState) GetCompletionEvent(arg0 context.Context) (*shared.HistoryEvent, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCompletionEvent")
+	ret := m.ctrl.Call(m, "GetCompletionEvent", arg0)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetCompletionEvent indicates an expected call of GetCompletionEvent
-func (mr *MockMutableStateMockRecorder) GetCompletionEvent() *gomock.Call {
+func (mr *MockMutableStateMockRecorder) GetCompletionEvent(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCompletionEvent", reflect.TypeOf((*MockMutableState)(nil).GetCompletionEvent))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCompletionEvent", reflect.TypeOf((*MockMutableState)(nil).GetCompletionEvent), arg0)
 }
 
 // GetDecisionInfo mocks base method
@@ -1027,18 +1028,18 @@ func (mr *MockMutableStateMockRecorder) GetDomainEntry() *gomock.Call {
 }
 
 // GetStartEvent mocks base method
-func (m *MockMutableState) GetStartEvent() (*shared.HistoryEvent, error) {
+func (m *MockMutableState) GetStartEvent(arg0 context.Context) (*shared.HistoryEvent, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetStartEvent")
+	ret := m.ctrl.Call(m, "GetStartEvent", arg0)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetStartEvent indicates an expected call of GetStartEvent
-func (mr *MockMutableStateMockRecorder) GetStartEvent() *gomock.Call {
+func (mr *MockMutableStateMockRecorder) GetStartEvent(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStartEvent", reflect.TypeOf((*MockMutableState)(nil).GetStartEvent))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStartEvent", reflect.TypeOf((*MockMutableState)(nil).GetStartEvent), arg0)
 }
 
 // GetCurrentBranchToken mocks base method
@@ -1299,18 +1300,18 @@ func (mr *MockMutableStateMockRecorder) GetRetryBackoffDuration(errReason interf
 }
 
 // GetCronBackoffDuration mocks base method
-func (m *MockMutableState) GetCronBackoffDuration() (time.Duration, error) {
+func (m *MockMutableState) GetCronBackoffDuration(arg0 context.Context) (time.Duration, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCronBackoffDuration")
+	ret := m.ctrl.Call(m, "GetCronBackoffDuration", arg0)
 	ret0, _ := ret[0].(time.Duration)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetCronBackoffDuration indicates an expected call of GetCronBackoffDuration
-func (mr *MockMutableStateMockRecorder) GetCronBackoffDuration() *gomock.Call {
+func (mr *MockMutableStateMockRecorder) GetCronBackoffDuration(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCronBackoffDuration", reflect.TypeOf((*MockMutableState)(nil).GetCronBackoffDuration))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCronBackoffDuration", reflect.TypeOf((*MockMutableState)(nil).GetCronBackoffDuration), arg0)
 }
 
 // GetSignalInfo mocks base method

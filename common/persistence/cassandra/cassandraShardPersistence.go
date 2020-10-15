@@ -230,15 +230,12 @@ func (d *cassandraShardPersistence) GetShard(
 		}
 	}
 
-	// check if rangeID column and rangeID field in shard column matches, if not we need to pick the larger
-	// rangeID.
-	//
-	// If shardInfoRangeID < rangeID, we don't need to do anything here as createShardInfo will ignore
-	// shardInfoRangeID and return rangeID instead. Later when updating the shard, CAS can still succeed
-	// as the value from rangeID columns is returned, shardInfoRangeID will also be updated to the correct value.
 	rangeID := result["range_id"].(int64)
 	shard := result["shard"].(map[string]interface{})
 	shardInfoRangeID := shard["range_id"].(int64)
+
+	// check if rangeID column and rangeID field in shard column matches, if not we need to pick the larger
+	// rangeID.
 	if shardInfoRangeID > rangeID {
 		// In this case we need to fix the rangeID column before returning the result as:
 		// 1. if we return shardInfoRangeID, then later shard CAS operation will fail
@@ -249,6 +246,17 @@ func (d *cassandraShardPersistence) GetShard(
 		if err := d.updateRangeID(context.TODO(), shardID, shardInfoRangeID, rangeID); err != nil {
 			return nil, err
 		}
+
+		// now we know rangeID column has the same value as shardInfoRangeID
+		rangeID = shardInfoRangeID
+	} else {
+		// no-op
+		//
+		// If shardInfoRangeID = rangeID, no corruption, so no action needed.
+		//
+		// If shardInfoRangeID < rangeID, we also don't need to do anything here as createShardInfo will ignore
+		// shardInfoRangeID and return rangeID instead. Later when updating the shard, CAS can still succeed
+		// as the value from rangeID columns is returned, shardInfoRangeID will also be updated to the correct value.
 	}
 
 	info := createShardInfo(d.currentClusterName, rangeID, shard)

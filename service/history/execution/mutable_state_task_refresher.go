@@ -23,6 +23,7 @@
 package execution
 
 import (
+	"context"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -40,7 +41,7 @@ var emptyTasks = []persistence.Task{}
 type (
 	// MutableStateTaskRefresher refreshes workflow transfer and timer tasks
 	MutableStateTaskRefresher interface {
-		RefreshTasks(now time.Time, mutableState MutableState) error
+		RefreshTasks(ctx context.Context, now time.Time, mutableState MutableState) error
 	}
 
 	mutableStateTaskRefresherImpl struct {
@@ -71,6 +72,7 @@ func NewMutableStateTaskRefresher(
 }
 
 func (r *mutableStateTaskRefresherImpl) RefreshTasks(
+	ctx context.Context,
 	now time.Time,
 	mutableState MutableState,
 ) error {
@@ -82,6 +84,7 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 	)
 
 	if err := r.refreshTasksForWorkflowStart(
+		ctx,
 		now,
 		mutableState,
 		taskGenerator,
@@ -90,6 +93,7 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 	}
 
 	if err := r.refreshTasksForWorkflowClose(
+		ctx,
 		now,
 		mutableState,
 		taskGenerator,
@@ -98,6 +102,7 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 	}
 
 	if err := r.refreshTasksForRecordWorkflowStarted(
+		ctx,
 		now,
 		mutableState,
 		taskGenerator,
@@ -106,6 +111,7 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 	}
 
 	if err := r.refreshTasksForDecision(
+		ctx,
 		now,
 		mutableState,
 		taskGenerator,
@@ -114,6 +120,7 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 	}
 
 	if err := r.refreshTasksForActivity(
+		ctx,
 		now,
 		mutableState,
 		taskGenerator,
@@ -122,6 +129,7 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 	}
 
 	if err := r.refreshTasksForTimer(
+		ctx,
 		now,
 		mutableState,
 		taskGenerator,
@@ -130,6 +138,7 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 	}
 
 	if err := r.refreshTasksForChildWorkflow(
+		ctx,
 		now,
 		mutableState,
 		taskGenerator,
@@ -138,6 +147,7 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 	}
 
 	if err := r.refreshTasksForRequestCancelExternalWorkflow(
+		ctx,
 		now,
 		mutableState,
 		taskGenerator,
@@ -146,6 +156,7 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 	}
 
 	if err := r.refreshTasksForSignalExternalWorkflow(
+		ctx,
 		now,
 		mutableState,
 		taskGenerator,
@@ -155,6 +166,7 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 
 	if r.config.AdvancedVisibilityWritingMode() != common.AdvancedVisibilityWritingModeOff {
 		if err := r.refreshTasksForWorkflowSearchAttr(
+			ctx,
 			now,
 			mutableState,
 			taskGenerator,
@@ -167,12 +179,13 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 }
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowStart(
+	ctx context.Context,
 	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
 ) error {
 
-	startEvent, err := mutableState.GetStartEvent()
+	startEvent, err := mutableState.GetStartEvent(ctx)
 	if err != nil {
 		return err
 	}
@@ -198,6 +211,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowStart(
 }
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowClose(
+	ctx context.Context,
 	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
@@ -215,12 +229,13 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowClose(
 }
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForRecordWorkflowStarted(
+	ctx context.Context,
 	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
 ) error {
 
-	startEvent, err := mutableState.GetStartEvent()
+	startEvent, err := mutableState.GetStartEvent(ctx)
 	if err != nil {
 		return err
 	}
@@ -238,6 +253,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForRecordWorkflowStarted(
 }
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForDecision(
+	ctx context.Context,
 	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
@@ -269,6 +285,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForDecision(
 }
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForActivity(
+	ctx context.Context,
 	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
@@ -299,6 +316,7 @@ Loop:
 		}
 
 		scheduleEvent, err := r.eventsCache.GetEvent(
+			ctx,
 			r.shardID,
 			executionInfo.DomainID,
 			executionInfo.WorkflowID,
@@ -330,6 +348,7 @@ Loop:
 }
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForTimer(
+	ctx context.Context,
 	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
@@ -360,6 +379,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForTimer(
 }
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForChildWorkflow(
+	ctx context.Context,
 	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
@@ -380,6 +400,7 @@ Loop:
 		}
 
 		scheduleEvent, err := r.eventsCache.GetEvent(
+			ctx,
 			r.shardID,
 			executionInfo.DomainID,
 			executionInfo.WorkflowID,
@@ -404,6 +425,7 @@ Loop:
 }
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForRequestCancelExternalWorkflow(
+	ctx context.Context,
 	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
@@ -419,6 +441,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForRequestCancelExternalWork
 
 	for _, requestCancelInfo := range pendingRequestCancelInfos {
 		initiateEvent, err := r.eventsCache.GetEvent(
+			ctx,
 			r.shardID,
 			executionInfo.DomainID,
 			executionInfo.WorkflowID,
@@ -443,6 +466,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForRequestCancelExternalWork
 }
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForSignalExternalWorkflow(
+	ctx context.Context,
 	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,
@@ -458,6 +482,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForSignalExternalWorkflow(
 
 	for _, signalInfo := range pendingSignalInfos {
 		initiateEvent, err := r.eventsCache.GetEvent(
+			ctx,
 			r.shardID,
 			executionInfo.DomainID,
 			executionInfo.WorkflowID,
@@ -482,6 +507,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForSignalExternalWorkflow(
 }
 
 func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowSearchAttr(
+	ctx context.Context,
 	now time.Time,
 	mutableState MutableState,
 	taskGenerator MutableStateTaskGenerator,

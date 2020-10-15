@@ -327,6 +327,7 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 	branchToken []byte,
 	timerTasks []p.Task,
 ) (*p.CreateWorkflowExecutionResponse, error) {
+
 	versionHistory := p.NewVersionHistory(branchToken, []*p.VersionHistoryItem{
 		{decisionScheduleID, common.EmptyVersion},
 	})
