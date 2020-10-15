@@ -327,6 +327,10 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 	branchToken []byte,
 	timerTasks []p.Task,
 ) (*p.CreateWorkflowExecutionResponse, error) {
+	versionHistory := p.NewVersionHistory(branchToken, []*p.VersionHistoryItem{
+		{decisionScheduleID, common.EmptyVersion},
+	})
+	verisonHistories := p.NewVersionHistories(versionHistory)
 	response, err := s.ExecutionManager.CreateWorkflowExecution(ctx, &p.CreateWorkflowExecutionRequest{
 		NewWorkflowSnapshot: p.WorkflowSnapshot{
 			ExecutionInfo: &p.WorkflowExecutionInfo{
@@ -361,6 +365,7 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 			},
 			TimerTasks: timerTasks,
 			Checksum:   testWorkflowChecksum,
+			VersionHistories: verisonHistories,
 		},
 		RangeID: s.ShardInfo.RangeID,
 	})
@@ -422,6 +427,10 @@ func (s *TestBase) CreateWorkflowExecutionWithReplication(
 		TaskList:   taskList,
 		ScheduleID: decisionScheduleID,
 	})
+	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
+		{decisionScheduleID, common.EmptyVersion},
+	})
+	verisonHistories := p.NewVersionHistories(versionHistory)
 	response, err := s.ExecutionManager.CreateWorkflowExecution(ctx, &p.CreateWorkflowExecutionRequest{
 		NewWorkflowSnapshot: p.WorkflowSnapshot{
 			ExecutionInfo: &p.WorkflowExecutionInfo{
@@ -446,6 +455,7 @@ func (s *TestBase) CreateWorkflowExecutionWithReplication(
 			TransferTasks:    transferTasks,
 			ReplicationTasks: replicationTasks,
 			Checksum:         testWorkflowChecksum,
+			VersionHistories: verisonHistories,
 		},
 		RangeID: s.ShardInfo.RangeID,
 	})
@@ -512,6 +522,10 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 	parentDomainID string, parentExecution workflow.WorkflowExecution, initiatedID int64, taskList, wType string,
 	wTimeout int32, decisionTimeout int32, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
 	decisionScheduleID int64, timerTasks []p.Task) (*p.CreateWorkflowExecutionResponse, error) {
+	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
+		{decisionScheduleID, common.EmptyVersion},
+	})
+	verisonHistories := p.NewVersionHistories(versionHistory)
 	response, err := s.ExecutionManager.CreateWorkflowExecution(ctx, &p.CreateWorkflowExecutionRequest{
 		NewWorkflowSnapshot: p.WorkflowSnapshot{
 			ExecutionInfo: &p.WorkflowExecutionInfo{
@@ -547,6 +561,7 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 				},
 			},
 			TimerTasks: timerTasks,
+			VersionHistories: verisonHistories,
 		},
 		RangeID: s.ShardInfo.RangeID,
 	})
@@ -612,6 +627,10 @@ func (s *TestBase) ContinueAsNewExecution(
 		TaskList:   updatedInfo.TaskList,
 		ScheduleID: int64(decisionScheduleID),
 	}
+	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
+		{decisionScheduleID, common.EmptyVersion},
+	})
+	verisonHistories := p.NewVersionHistories(versionHistory)
 
 	req := &p.UpdateWorkflowExecutionRequest{
 		UpdateWorkflowMutation: p.WorkflowMutation{
@@ -649,6 +668,7 @@ func (s *TestBase) ContinueAsNewExecution(
 			ExecutionStats: updatedStats,
 			TransferTasks:  nil,
 			TimerTasks:     nil,
+			VersionHistories: verisonHistories,
 		},
 		RangeID:  s.ShardInfo.RangeID,
 		Encoding: pickRandomEncoding(),
@@ -1199,6 +1219,11 @@ func (s *TestBase) ResetWorkflowExecution(
 	forkRunNextEventID int64,
 ) error {
 
+	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
+		{info.LastProcessedEvent, common.EmptyVersion},
+	})
+	verisonHistories := p.NewVersionHistories(versionHistory)
+
 	req := &p.ResetWorkflowExecutionRequest{
 		RangeID: s.ShardInfo.RangeID,
 
@@ -1224,6 +1249,7 @@ func (s *TestBase) ResetWorkflowExecution(
 			TransferTasks:    trasTasks,
 			ReplicationTasks: replTasks,
 			TimerTasks:       timerTasks,
+			VersionHistories: verisonHistories,
 		},
 		Encoding: pickRandomEncoding(),
 	}

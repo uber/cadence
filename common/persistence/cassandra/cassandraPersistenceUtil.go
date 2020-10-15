@@ -390,8 +390,11 @@ func createExecution(
 	// TODO we should set the start time and last update time on business logic layer
 	executionInfo.StartTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
 	executionInfo.LastUpdatedTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
-
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
+
+	if versionHistories == nil {
+		return &workflow.InternalDataInconsistencyError{Message: "encounter empty version histories in createExecution"}
+	}
 	versionHistoriesData, versionHistoriesEncoding := p.FromDataBlob(versionHistories)
 	batch.Query(templateCreateWorkflowExecutionWithVersionHistoriesQuery,
 		shardID,

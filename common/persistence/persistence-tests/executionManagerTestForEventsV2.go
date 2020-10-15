@@ -108,7 +108,11 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 	}
 
 	csum := s.newRandomChecksum()
-
+	decisionScheduleID := int64(2)
+	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
+		{decisionScheduleID, common.EmptyVersion},
+	})
+	verisonHistories := p.NewVersionHistories(versionHistory)
 	_, err0 := s.ExecutionManager.CreateWorkflowExecution(ctx, &p.CreateWorkflowExecutionRequest{
 		NewWorkflowSnapshot: p.WorkflowSnapshot{
 			ExecutionInfo: &p.WorkflowExecutionInfo{
@@ -125,7 +129,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 				CloseStatus:                 p.WorkflowCloseStatusNone,
 				NextEventID:                 3,
 				LastProcessedEvent:          0,
-				DecisionScheduleID:          2,
+				DecisionScheduleID:          decisionScheduleID,
 				DecisionStartedID:           common.EmptyEventID,
 				DecisionTimeout:             1,
 				BranchToken:                 []byte("branchToken1"),
@@ -142,6 +146,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 			},
 			TimerTasks: nil,
 			Checksum:   csum,
+			VersionHistories: verisonHistories,
 		},
 		RangeID: s.ShardInfo.RangeID,
 	})
@@ -305,8 +310,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 		WorkflowId: common.StringPtr("continue-as-new-workflow-test"),
 		RunId:      common.StringPtr("551c88d2-d9e6-404f-8131-9eec14f36643"),
 	}
-
-	_, err0 := s.CreateWorkflowExecution(ctx, domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
+	decisionScheduleID := int64(2)
+	_, err0 := s.CreateWorkflowExecution(ctx, domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, decisionScheduleID, nil)
 	s.NoError(err0)
 
 	state0, err1 := s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
@@ -318,6 +323,10 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 	updatedInfo.CloseStatus = p.WorkflowCloseStatusCompleted
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
+	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
+		{decisionScheduleID, common.EmptyVersion},
+	})
+	verisonHistories := p.NewVersionHistories(versionHistory)
 
 	newWorkflowExecution := gen.WorkflowExecution{
 		WorkflowId: common.StringPtr("continue-as-new-workflow-test"),
@@ -366,6 +375,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 			ExecutionStats: &p.ExecutionStats{},
 			TransferTasks:  nil,
 			TimerTasks:     nil,
+			VersionHistories: verisonHistories,
 		},
 		RangeID:  s.ShardInfo.RangeID,
 		Encoding: pickRandomEncoding(),
@@ -432,6 +442,10 @@ func (s *ExecutionManagerSuiteForEventsV2) createWorkflowExecution(
 		TaskList:   taskList,
 		ScheduleID: decisionScheduleID,
 	})
+	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
+		{decisionScheduleID, common.EmptyVersion},
+	})
+	verisonHistories := p.NewVersionHistories(versionHistory)
 	response, err := s.ExecutionManager.CreateWorkflowExecution(ctx, &p.CreateWorkflowExecutionRequest{
 		NewWorkflowSnapshot: p.WorkflowSnapshot{
 			ExecutionInfo: &p.WorkflowExecutionInfo{
@@ -457,6 +471,7 @@ func (s *ExecutionManagerSuiteForEventsV2) createWorkflowExecution(
 			TransferTasks:    transferTasks,
 			ReplicationTasks: replicationTasks,
 			Checksum:         testWorkflowChecksum,
+			VersionHistories: verisonHistories,
 		},
 		RangeID: s.ShardInfo.RangeID,
 	})
