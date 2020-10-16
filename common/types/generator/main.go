@@ -87,11 +87,11 @@ import (
 var structTemplate = template.Must(template.New("struct type").Funcs(funcMap).Parse(`
 // {{internal .Type.Name}} is an internal type (TBD...)
 type {{internal .Type.Name}} struct {
-{{range .Fields}}	{{internal .Name}} {{if .Type.IsMap}}map[string]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer}}*{{end}}{{internal .Type.Name}}
+{{range .Fields}}	{{internal .Name}} {{if .Type.IsMap}}map[{{.Type.MapKeyType}}]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer}}*{{end}}{{internal .Type.Name}}
 {{end}}}
 {{range .Fields}}
 // Get{{internal .Name}} is an internal getter (TBD...)
-func (v *{{internal $.Type.Name}}) Get{{internal .Name}}() (o {{if .Type.IsMap}}map[string]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer | and (not .Type.IsPrimitive) | and (not .Type.IsEnum)}}*{{end}}{{internal .Type.Name}}) {
+func (v *{{internal $.Type.Name}}) Get{{internal .Name}}() (o {{if .Type.IsMap}}map[{{.Type.MapKeyType}}]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer | and (not .Type.IsPrimitive) | and (not .Type.IsEnum)}}*{{end}}{{internal .Type.Name}}) {
 	if v != nil{{if .Type.IsMap | or .Type.IsArray | or .Type.IsPointer}} && v.{{internal .Name}} != nil{{end}} {
 		return {{if .Type.IsPointer | and (or .Type.IsPrimitive .Type.IsEnum)}}*{{end}}v.{{internal .Name}}
 	}
@@ -160,11 +160,11 @@ func To{{internal .Type.Name}}Array(t []*{{.Type.ThriftPackage}}.{{.Type.Name}})
 
 var mapMapperTemplate = template.Must(template.New("map mapper").Funcs(funcMap).Parse(`
 // From{{internal .Type.Name}}Map converts internal {{internal .Type.Name}} type map to thrift
-func From{{internal .Type.Name}}Map(t map[string]{{if .Type.IsPointer}}*{{end}}types.{{internal .Type.Name}}) map[string]{{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPackage}}.{{.Type.Name}} {
+func From{{internal .Type.Name}}Map(t map[{{.Type.MapKeyType}}]{{if .Type.IsPointer}}*{{end}}types.{{internal .Type.Name}}) map[{{.Type.MapKeyType}}]{{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPackage}}.{{.Type.Name}} {
 	if t == nil {
 		return nil
 	}
-	v := make(map[string]{{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPackage}}.{{.Type.Name}}, len(t))
+	v := make(map[{{.Type.MapKeyType}}]{{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPackage}}.{{.Type.Name}}, len(t))
 	for key := range t {
 		v[key] = {{if .Type.IsPrimitive}}t[key]{{else}}From{{internal .Type.Name}}(t[key]){{end}}
 	}
@@ -172,11 +172,11 @@ func From{{internal .Type.Name}}Map(t map[string]{{if .Type.IsPointer}}*{{end}}t
 }
 
 // To{{internal .Type.Name}}Map converts thrift {{.Type.Name}} type map to internal
-func To{{internal .Type.Name}}Map(t map[string]{{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPackage}}.{{.Type.Name}}) map[string]{{if .Type.IsPointer}}*{{end}}types.{{internal .Type.Name}} {
+func To{{internal .Type.Name}}Map(t map[{{.Type.MapKeyType}}]{{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPackage}}.{{.Type.Name}}) map[{{.Type.MapKeyType}}]{{if .Type.IsPointer}}*{{end}}types.{{internal .Type.Name}} {
 	if t == nil {
 		return nil
 	}
-	v := make(map[string]{{if .Type.IsPointer}}*{{end}}types.{{internal .Type.Name}}, len(t))
+	v := make(map[{{.Type.MapKeyType}}]{{if .Type.IsPointer}}*{{end}}types.{{internal .Type.Name}}, len(t))
 	for key := range t {
 		v[key] = {{if .Type.IsPrimitive}}t[key]{{else}}To{{internal .Type.Name}}(t[key]){{end}}
 	}
@@ -208,10 +208,6 @@ func To{{internal .Type.Name}}(t {{if .Type.IsPointer}}*{{end}}{{.Type.ThriftPac
 }
 `))
 
-var requiredArrayMappers = map[string]struct{}{}
-var requiredMapMappers = map[string]struct{}{}
-var enumTypes = map[string]struct{}{}
-
 type (
 	// Renderer can render internal type and its mappings
 	Renderer interface {
@@ -229,6 +225,7 @@ type (
 		IsMap             bool
 		IsPointer         bool
 		IsEnum            bool
+		MapKeyType        string
 	}
 
 	// Field describe a field within a struct
@@ -294,10 +291,14 @@ func (e *Enum) renderMapper(w io.Writer) {
 }
 
 // fullName example: []*github.com/uber/cadence/.gen/go/shared.VersionHistoryItem
-func newType(fullName string) Type {
+func newType(fullName string, enumTypes map[string]struct{}) Type {
 	isMap := false
-	if strings.HasPrefix(fullName, "map[string]") {
-		fullName = strings.TrimPrefix(fullName, "map[string]")
+	mapKeyType := ""
+	if strings.HasPrefix(fullName, "map") {
+		openIdx := strings.Index(fullName, "[")
+		closeIdx := strings.Index(fullName, "]")
+		mapKeyType = fullName[openIdx+1 : closeIdx]
+		fullName = fullName[closeIdx+1:]
 		isMap = true
 	}
 	isArray := false
@@ -317,43 +318,43 @@ func newType(fullName string) Type {
 		pos = strings.LastIndexByte(pkg, '/')
 		short := pkg[pos+1:]
 		_, isEnum := enumTypes[name]
-		return Type{pkg, short, name, false, isArray, isMap, isPointer, isEnum}
+		return Type{pkg, short, name, false, isArray, isMap, isPointer, isEnum, mapKeyType}
 	}
-	return Type{"", "", fullName, true, isArray, isMap, isPointer, false}
+	return Type{"", "", fullName, true, isArray, isMap, isPointer, false, mapKeyType}
 }
 
-func newStruct(obj types.Object) *Struct {
+func newStruct(obj types.Object, mapMappers map[string]struct{}, arrayMappers map[string]struct{}, enumTypes map[string]struct{}) *Struct {
 	u := obj.Type().Underlying().(*types.Struct)
 	fields := make([]Field, u.NumFields())
 	for i := 0; i < u.NumFields(); i++ {
 		f := u.Field(i)
 		field := Field{
 			Name: f.Name(),
-			Type: newType(f.Type().String()),
+			Type: newType(f.Type().String(), enumTypes),
 		}
 		if field.Type.IsArray && !field.Type.IsPrimitive {
-			requiredArrayMappers[f.Type().String()] = struct{}{}
+			arrayMappers[f.Type().String()] = struct{}{}
 		}
 		if field.Type.IsMap && !field.Type.IsPrimitive {
-			requiredMapMappers[f.Type().String()] = struct{}{}
+			mapMappers[f.Type().String()] = struct{}{}
 		}
 		fields[i] = field
 	}
 	return &Struct{
-		Type:   newType(obj.Type().String()),
+		Type:   newType(obj.Type().String(), enumTypes),
 		Fields: fields,
 	}
 }
 
-func newArray(fullType string) *Array {
+func newArray(fullType string, enumTypes map[string]struct{}) *Array {
 	return &Array{
-		Type: newType(fullType),
+		Type: newType(fullType, enumTypes),
 	}
 }
 
-func newMap(fullType string) *Map {
+func newMap(fullType string, enumTypes map[string]struct{}) *Map {
 	return &Map{
-		Type: newType(fullType),
+		Type: newType(fullType, enumTypes),
 	}
 }
 
@@ -361,8 +362,8 @@ var enumPointerExceptions = map[string]struct{}{
 	"IndexedValueType": {},
 }
 
-func newEnum(obj types.Object) *Enum {
-	enumType := newType(obj.Type().String())
+func newEnum(obj types.Object, enumTypes map[string]struct{}) *Enum {
+	enumType := newType(obj.Type().String(), enumTypes)
 	if _, ok := enumPointerExceptions[enumType.Name]; !ok {
 		enumType.IsPointer = true
 	}
@@ -399,13 +400,13 @@ func rewriteFile(path string) *os.File {
 	return f
 }
 
-func createRenderer(obj types.Object) Renderer {
+func createRenderer(obj types.Object, mapMappers map[string]struct{}, arrayMappers map[string]struct{}, enumTypes map[string]struct{}) Renderer {
 	if _, ok := obj.(*types.TypeName); ok {
 		switch obj.Type().Underlying().(type) {
 		case *types.Struct:
-			return newStruct(obj)
+			return newStruct(obj, mapMappers, arrayMappers, enumTypes)
 		case *types.Basic:
-			return newEnum(obj)
+			return newEnum(obj, enumTypes)
 		default:
 			fmt.Printf("encountered unexpected type: %v\n", obj)
 		}
@@ -413,7 +414,7 @@ func createRenderer(obj types.Object) Renderer {
 	return nil
 }
 
-// Package describes a trift package to convert to internal types
+// Package describes a thrift package to convert to internal types
 type Package struct {
 	ThriftPackage string
 	TypesFile     string
@@ -421,15 +422,30 @@ type Package struct {
 }
 
 func main() {
+
+	var (
+		arrayMappers = map[string]struct{}{}
+		mapMappers   = map[string]struct{}{}
+	)
+
 	packages := []Package{
 		{
 			ThriftPackage: "github.com/uber/cadence/.gen/go/shared",
 			TypesFile:     "common/types/shared.go",
 			MapperFile:    "common/types/mapper/thrift/shared.go",
 		},
+		{
+			ThriftPackage: "github.com/uber/cadence/.gen/go/replicator",
+			TypesFile:     "common/types/replicator.go",
+			MapperFile:    "common/types/mapper/thrift/replicator.go",
+		},
 	}
 
 	for _, p := range packages {
+		currentArrayMappers := map[string]struct{}{}
+		currentMapMappers := map[string]struct{}{}
+		currentEnumTypes := map[string]struct{}{}
+
 		typesFile := rewriteFile(p.TypesFile)
 		mapperFile := rewriteFile(p.MapperFile)
 
@@ -450,7 +466,7 @@ func main() {
 			switch obj.Type().Underlying().(type) {
 			case *types.Basic:
 				if !isEnumValue(obj, obj.Type()) {
-					enumTypes[obj.Name()] = struct{}{}
+					currentEnumTypes[obj.Name()] = struct{}{}
 				}
 			}
 		}
@@ -460,16 +476,23 @@ func main() {
 			if !obj.Exported() {
 				continue
 			}
-			if r := createRenderer(obj); r != nil {
+			if r := createRenderer(obj, currentMapMappers, currentArrayMappers, currentEnumTypes); r != nil {
 				r.renderType(typesFile)
 				r.renderMapper(mapperFile)
 			}
 		}
-		for m := range requiredArrayMappers {
-			newArray(m).renderMapper(mapperFile)
+		for m := range currentArrayMappers {
+			if _, ok := arrayMappers[m]; !ok {
+				newArray(m, currentEnumTypes).renderMapper(mapperFile)
+				arrayMappers[m] = struct{}{}
+			}
 		}
-		for m := range requiredMapMappers {
-			newMap(m).renderMapper(mapperFile)
+		for m := range currentMapMappers {
+			if _, ok := mapMappers[m]; !ok {
+				newMap(m, currentEnumTypes).renderMapper(mapperFile)
+				mapMappers[m] = struct{}{}
+			}
+
 		}
 
 		typesFile.Close()
