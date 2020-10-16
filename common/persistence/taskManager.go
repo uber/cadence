@@ -24,6 +24,8 @@ package persistence
 
 import (
 	"context"
+
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -108,7 +110,7 @@ func (t *taskManager) toInternalCreateTaskInfo(createTaskInfo *CreateTaskInfo) *
 		return nil
 	}
 	return &InternalCreateTasksInfo{
-		Execution: createTaskInfo.Execution,
+		Execution: *thrift.ToWorkflowExecution(&createTaskInfo.Execution),
 		Data:      t.toInternalTaskInfo(createTaskInfo.Data),
 		TaskID:    createTaskInfo.TaskID,
 	}
