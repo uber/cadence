@@ -406,6 +406,15 @@ func (m *sqlTaskManager) CreateTasks(
 		var ttl time.Duration
 		if v.Data.ScheduleToStartTimeout > 0 {
 			ttl = time.Second * time.Duration(v.Data.ScheduleToStartTimeout)
+			if m.db.SupportsTTL() {
+				maxAllowedTTL, err := m.db.MaxAllowedTTL()
+				if err != nil {
+					return nil, err
+				}
+				if ttl > *maxAllowedTTL {
+					ttl = *maxAllowedTTL
+				}
+			}
 			expiryTime = time.Now().Add(ttl)
 		}
 		blob, err := m.parser.TaskInfoToBlob(&sqlblobs.TaskInfo{

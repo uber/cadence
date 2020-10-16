@@ -176,7 +176,10 @@ type (
 	// TasksRowWithTTL represents a row in tasks table with a ttl
 	TasksRowWithTTL struct {
 		TasksRow TasksRow
-		TTL      *time.Duration
+		// TTL is optional because InsertIntoTasksWithTTL operates over a slice of TasksRowWithTTL.
+		// Some items in the slice may have a TTL while others do not. It is the responsibility
+		// of the plugin implementation to handle items with TTL set and items with TTL not set.
+		TTL *time.Duration
 	}
 
 	// TasksFilter contains the column names within tasks table that
@@ -736,6 +739,7 @@ type (
 
 		// The follow provide information about the underlying sql crud implementation
 		SupportsTTL() bool
+		MaxAllowedTTL() (*time.Duration, error)
 	}
 
 	// adminCRUD defines admin operations for CLI and test suites
