@@ -720,7 +720,7 @@ func (s *ESVisibilitySuite) TestConvertSearchResultToVisibilityRecord() {
 	s.Equal("TestWorkflowExecute", info.TypeName)
 	s.Equal(int64(1547596872371000000), info.StartTime.UnixNano())
 	s.Equal(int64(1547596872817380000), info.CloseTime.UnixNano())
-	s.Equal(workflow.WorkflowExecutionCloseStatusCompleted, *info.Status)
+	s.Equal(workflow.WorkflowExecutionCloseStatusCompleted, *thrift.FromWorkflowExecutionCloseStatus(info.Status))
 	s.Equal(int64(29), info.HistoryLength)
 
 	// test for error case
