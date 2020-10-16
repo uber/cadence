@@ -350,10 +350,16 @@ func (m *sqlTaskManager) CreateTasks(
 	request *persistence.InternalCreateTasksRequest,
 ) (*persistence.CreateTasksResponse, error) {
 	tasksRows := make([]sqlplugin.TasksRow, len(request.Tasks))
+	var rowTTLs []*time.Duration
+	if m.db.SupportsTTL() {
+		rowTTLs = make([]*time.Duration, len(request.Tasks))
+	}
 	for i, v := range request.Tasks {
 		var expiryTime time.Time
 		if v.Data.ScheduleToStartTimeout > 0 {
+			ttl := time.Second * time.Duration(v.Data.ScheduleToStartTimeout)
 			expiryTime = time.Now().Add(time.Second * time.Duration(v.Data.ScheduleToStartTimeout))
+			rowTTLs[i] = &ttl
 		}
 		blob, err := m.parser.TaskInfoToBlob(&sqlblobs.TaskInfo{
 			WorkflowID:       &v.Data.WorkflowID,

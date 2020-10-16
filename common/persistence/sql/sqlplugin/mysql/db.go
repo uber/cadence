@@ -102,3 +102,8 @@ func (mdb *db) Close() error {
 func (mdb *db) PluginName() string {
 	return PluginName
 }
+
+// SupportsTTL returns weather MySQL supports TTL
+func(mdb *db) SupportsTTL() bool {
+	return false
+}

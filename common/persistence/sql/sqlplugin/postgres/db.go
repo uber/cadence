@@ -101,3 +101,8 @@ func (pdb *db) Close() error {
 func (pdb *db) PluginName() string {
 	return PluginName
 }
+
+// SupportsTTL returns weather Postgres supports TTL
+func(mdb *db) SupportsTTL() bool {
+	return false
+}
