@@ -24,6 +24,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
+	"github.com/uber/cadence/.gen/go/health/metaserver"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/definition"
@@ -146,7 +148,7 @@ type Service struct {
 	resource.Resource
 
 	status       int32
-	handler      Handler
+	handler      *WorkflowHandler
 	adminHandler *AdminHandler
 	stopC        chan struct{}
 	config       *Config
@@ -241,12 +243,20 @@ func (s *Service) Start() {
 		replicationMessageSink = messaging.NewNoopProducer()
 	}
 
-	wfHandler := NewWorkflowHandler(s, s.config, replicationMessageSink, client.NewVersionChecker())
-	s.handler = NewDCRedirectionHandler(wfHandler, s.params.DCRedirectionPolicy)
+	// Base handler
+	s.handler = NewWorkflowHandler(s, s.config, replicationMessageSink, client.NewVersionChecker())
+
+	// Additional decorations
+	var handler Handler = s.handler
+	handler = NewDCRedirectionHandler(handler, s, s.config, s.params.DCRedirectionPolicy)
 	if s.params.Authorizer != nil {
-		s.handler = NewAccessControlledHandlerImpl(s.handler, s.params.Authorizer)
+		handler = NewAccessControlledHandlerImpl(handler, s, s.params.Authorizer)
 	}
-	s.handler.RegisterHandler()
+
+	// Register the latest (most decorated) handler
+	// TODO: this is temporary, will be moved to Thrift specific handler later
+	s.GetDispatcher().Register(workflowserviceserver.New(handler))
+	s.GetDispatcher().Register(metaserver.New(handler))
 
 	s.adminHandler = NewAdminHandler(s, s.params, s.config)
 	s.adminHandler.RegisterHandler()
