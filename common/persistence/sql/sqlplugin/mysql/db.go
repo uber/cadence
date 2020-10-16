@@ -23,6 +23,7 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -101,4 +102,14 @@ func (mdb *db) Close() error {
 // PluginName returns the name of the mysql plugin
 func (mdb *db) PluginName() string {
 	return PluginName
+}
+
+// SupportsTTL returns weather MySQL supports TTL
+func (mdb *db) SupportsTTL() bool {
+	return false
+}
+
+// MaxAllowedTTL returns the max allowed ttl MySQL supports
+func (mdb *db) MaxAllowedTTL() (*time.Duration, error) {
+	return nil, sqlplugin.ErrTTLNotSupported
 }
