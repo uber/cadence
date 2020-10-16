@@ -164,7 +164,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted_EmptyRequest() {
 	// test empty request
 	request := &p.InternalRecordWorkflowExecutionStartedRequest{
-		Memo: &types.Memo{},
+		Memo: nil,
 	}
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		s.Equal(indexer.MessageTypeIndex, input.GetMessageType())
@@ -192,8 +192,11 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 	request.StartTimestamp = int64(123)
 	request.ExecutionTimestamp = int64(321)
 	request.TaskID = int64(111)
-	memoBytes := []byte(`test bytes`)
-	memo, err := s.serializer.DeserializeVisibilityMemo(p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW))
+	memo := &workflow.Memo{
+		Fields: map[string][]byte{"test": []byte("test bytes")},
+	}
+	request.Memo = thrift.ToMemo(memo)
+	memoBlob, err := s.serializer.SerializeVisibilityMemo(memo, common.EncodingTypeThriftRW)
 	s.NoError(err)
 	request.Memo = thrift.ToMemo(memo)
 	request.CloseTimestamp = int64(999)
@@ -209,10 +212,10 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 		s.Equal(request.WorkflowTypeName, fields[es.WorkflowType].GetStringData())
 		s.Equal(request.StartTimestamp, fields[es.StartTime].GetIntData())
 		s.Equal(request.ExecutionTimestamp, fields[es.ExecutionTime].GetIntData())
-		s.Equal(memoBytes, fields[es.Memo].GetBinaryData())
+		s.Equal(memoBlob.Data, fields[es.Memo].GetBinaryData())
 		s.Equal(string(common.EncodingTypeThriftRW), fields[es.Encoding].GetStringData())
 		s.Equal(request.CloseTimestamp, fields[es.CloseTime].GetIntData())
-		s.Equal(int64(request.Status), fields[es.CloseStatus].GetIntData())
+		s.Equal(int64(closeStatus), fields[es.CloseStatus].GetIntData())
 		s.Equal(request.HistoryLength, fields[es.HistoryLength].GetIntData())
 		return true
 	})).Return(nil).Once()
@@ -227,7 +230,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed_EmptyRequest() {
 	// test empty request
 	request := &p.InternalRecordWorkflowExecutionClosedRequest{
-		Memo: &types.Memo{},
+		Memo: nil,
 	}
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		s.Equal(indexer.MessageTypeIndex, input.GetMessageType())
