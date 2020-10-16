@@ -116,6 +116,7 @@ func (s *ESVisibilitySuite) SetupTest() {
 	s.mockProducer = &mocks.KafkaProducer{}
 	mgr := NewElasticSearchVisibilityStore(s.mockESClient, testIndex, s.mockProducer, config, loggerimpl.NewNopLogger())
 	s.visibilityStore = mgr.(*esVisibilityStore)
+	s.serializer = p.NewPayloadSerializer()
 }
 
 func (s *ESVisibilitySuite) TearDownTest() {
@@ -133,10 +134,12 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 	request.StartTimestamp = int64(123)
 	request.ExecutionTimestamp = int64(321)
 	request.TaskID = int64(111)
-	memoBytes := []byte(`test bytes`)
-	memo, err := s.serializer.DeserializeVisibilityMemo(p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW))
-	s.NoError(err)
+	memo := &workflow.Memo{
+		Fields: map[string][]byte{"test": []byte("test bytes")},
+	}
 	request.Memo = thrift.ToMemo(memo)
+	memoBlob, err := s.serializer.SerializeVisibilityMemo(memo, common.EncodingTypeThriftRW)
+	s.NoError(err)
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
 		s.Equal(request.DomainUUID, input.GetDomainID())
@@ -146,7 +149,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 		s.Equal(request.WorkflowTypeName, fields[es.WorkflowType].GetStringData())
 		s.Equal(request.StartTimestamp, fields[es.StartTime].GetIntData())
 		s.Equal(request.ExecutionTimestamp, fields[es.ExecutionTime].GetIntData())
-		s.Equal(memoBytes, fields[es.Memo].GetBinaryData())
+		s.Equal(memoBlob.Data, fields[es.Memo].GetBinaryData())
 		s.Equal(string(common.EncodingTypeThriftRW), fields[es.Encoding].GetStringData())
 		return true
 	})).Return(nil).Once()
