@@ -176,7 +176,7 @@ type (
 	// TasksRowWithTTL represents a row in tasks table with a ttl
 	TasksRowWithTTL struct {
 		TasksRow TasksRow
-		TTL *time.Duration
+		TTL      *time.Duration
 	}
 
 	// TasksFilter contains the column names within tasks table that
@@ -207,7 +207,7 @@ type (
 	// TaskListsRowWithTTL represents a row in task_lists table with a ttl
 	TaskListsRowWithTTL struct {
 		TaskListsRow TaskListsRow
-		TTL *time.Duration
+		TTL          time.Duration
 	}
 
 	// TaskListsFilter contains the column names within task_lists table that

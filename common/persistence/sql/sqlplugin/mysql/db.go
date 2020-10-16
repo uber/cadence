@@ -104,6 +104,6 @@ func (mdb *db) PluginName() string {
 }
 
 // SupportsTTL returns weather MySQL supports TTL
-func(mdb *db) SupportsTTL() bool {
+func (mdb *db) SupportsTTL() bool {
 	return false
 }

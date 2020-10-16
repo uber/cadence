@@ -103,6 +103,6 @@ func (pdb *db) PluginName() string {
 }
 
 // SupportsTTL returns weather Postgres supports TTL
-func(mdb *db) SupportsTTL() bool {
+func (mdb *db) SupportsTTL() bool {
 	return false
 }
