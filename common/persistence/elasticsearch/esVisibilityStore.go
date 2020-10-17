@@ -47,6 +47,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -119,7 +120,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
 	v.checkProducer()
-	memo := v.serializeMemo(thrift.FromMemo(request.Memo), request.DomainUUID, request.WorkflowID, request.RunID)
+	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	msg := getVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
@@ -141,7 +142,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 	request *p.InternalRecordWorkflowExecutionClosedRequest,
 ) error {
 	v.checkProducer()
-	memo := v.serializeMemo(thrift.FromMemo(request.Memo), request.DomainUUID, request.WorkflowID, request.RunID)
+	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	msg := getVisibilityMessageForCloseExecution(
 		request.DomainUUID,
 		request.WorkflowID,
@@ -166,7 +167,7 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 	request *p.InternalUpsertWorkflowExecutionRequest,
 ) error {
 	v.checkProducer()
-	memo := v.serializeMemo(thrift.FromMemo(request.Memo), request.DomainUUID, request.WorkflowID, request.RunID)
+	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	msg := getVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
@@ -960,8 +961,8 @@ func (v *esVisibilityStore) convertSearchResultToVisibilityRecord(hit *elastic.S
 	return record
 }
 
-func (v *esVisibilityStore) serializeMemo(visibilityMemo *workflow.Memo, domainID, wID, rID string) *p.DataBlob {
-	memo, err := v.serializer.SerializeVisibilityMemo(visibilityMemo, common.EncodingTypeThriftRW)
+func (v *esVisibilityStore) serializeMemo(visibilityMemo *types.Memo, domainID, wID, rID string) *p.DataBlob {
+	memo, err := v.serializer.SerializeVisibilityMemo(thrift.FromMemo(visibilityMemo), common.EncodingTypeThriftRW)
 	if err != nil {
 		v.logger.WithTags(
 			tag.WorkflowDomainID(domainID),

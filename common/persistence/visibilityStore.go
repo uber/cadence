@@ -24,12 +24,11 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/uber/cadence/common/types/mapper/thrift"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (

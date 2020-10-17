@@ -34,6 +34,7 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -228,7 +229,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 	ttl := request.WorkflowTimeout + openExecutionTTLBuffer
 	var query *gocql.Query
 
-	memo := v.serializeMemo(thrift.FromMemo(request.Memo), request.DomainUUID, request.WorkflowID, request.RunID)
+	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	if ttl > maxCassandraTTL {
 		query = v.session.Query(templateCreateWorkflowExecutionStarted,
 			request.DomainUUID,
@@ -295,7 +296,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 		retention = defaultCloseTTLSeconds
 	}
 
-	memo := v.serializeMemo(thrift.FromMemo(request.Memo), request.DomainUUID, request.WorkflowID, request.RunID)
+	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	if retention > maxCassandraTTL {
 		batch.Query(templateCreateWorkflowExecutionClosed,
 			request.DomainUUID,
@@ -951,8 +952,8 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByStatusOrd
 	return response, nil
 }
 
-func (v *cassandraVisibilityPersistence) serializeMemo(visibilityMemo *workflow.Memo, domainID, wID, rID string) *p.DataBlob {
-	memo, err := v.serializer.SerializeVisibilityMemo(visibilityMemo, common.EncodingTypeThriftRW)
+func (v *cassandraVisibilityPersistence) serializeMemo(visibilityMemo *types.Memo, domainID, wID, rID string) *p.DataBlob {
+	memo, err := v.serializer.SerializeVisibilityMemo(thrift.FromMemo(visibilityMemo), common.EncodingTypeThriftRW)
 	if err != nil {
 		v.logger.WithTags(
 			tag.WorkflowDomainID(domainID),

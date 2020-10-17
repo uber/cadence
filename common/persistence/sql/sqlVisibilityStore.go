@@ -34,6 +34,7 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -68,7 +69,7 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(
 	ctx context.Context,
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
-	memo := s.serializeMemo(thrift.FromMemo(request.Memo), request.DomainUUID, request.WorkflowID, request.RunID)
+	memo := s.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	_, err := s.db.InsertIntoVisibility(ctx, &sqlplugin.VisibilityRow{
 		DomainID:         request.DomainUUID,
 		WorkflowID:       request.WorkflowID,
@@ -87,7 +88,7 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(
 	ctx context.Context,
 	request *p.InternalRecordWorkflowExecutionClosedRequest,
 ) error {
-	memo := s.serializeMemo(thrift.FromMemo(request.Memo), request.DomainUUID, request.WorkflowID, request.RunID)
+	memo := s.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	closeTime := time.Unix(0, request.CloseTimestamp)
 	result, err := s.db.ReplaceIntoVisibility(ctx, &sqlplugin.VisibilityRow{
 		DomainID:         request.DomainUUID,
@@ -397,8 +398,8 @@ func (s *sqlVisibilityStore) serializePageToken(token *visibilityPageToken) ([]b
 	return data, err
 }
 
-func (s *sqlVisibilityStore) serializeMemo(visibilityMemo *workflow.Memo, domainID, wID, rID string) *p.DataBlob {
-	memo, err := s.serializer.SerializeVisibilityMemo(visibilityMemo, common.EncodingTypeThriftRW)
+func (s *sqlVisibilityStore) serializeMemo(visibilityMemo *types.Memo, domainID, wID, rID string) *p.DataBlob {
+	memo, err := s.serializer.SerializeVisibilityMemo(thrift.FromMemo(visibilityMemo), common.EncodingTypeThriftRW)
 	if err != nil {
 		s.logger.WithTags(
 			tag.WorkflowDomainID(domainID),
