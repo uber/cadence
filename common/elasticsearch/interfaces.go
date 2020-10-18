@@ -23,10 +23,11 @@ package elasticsearch
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/metrics"
 	"math"
 	"math/rand"
 	"time"
+
+	"github.com/uber/cadence/common/metrics"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"

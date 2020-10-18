@@ -22,6 +22,7 @@ package indexer
 
 import (
 	"fmt"
+
 	"github.com/uber/cadence/common/service/config"
 
 	"github.com/uber/cadence/common"

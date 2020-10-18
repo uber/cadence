@@ -443,4 +443,3 @@ func (s *esProcessorSuite) TestIsErrorRetriable() {
 		s.Equal(test.expected, isResponseRetriable(test.input.Status))
 	}
 }
-

@@ -24,11 +24,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/common/metrics"
 	"io"
 	"math"
 	"strconv"
 	"time"
+
+	"github.com/uber/cadence/common/metrics"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
