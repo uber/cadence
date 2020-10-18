@@ -23,11 +23,12 @@ package elasticsearch
 import (
 	"context"
 	"fmt"
+	"time"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
-	"time"
 )
 
 // NewClient create a ES client
@@ -49,16 +50,23 @@ type (
 		CountByQuery(ctx context.Context, index, query string) (int64, error)
 		PutMapping(ctx context.Context, index, root, key, valueType string) error
 		CreateIndex(ctx context.Context, index string) error
+		GetClosedWorkflowExecution(ctx context.Context, index string, request *p.InternalGetClosedWorkflowExecutionRequest) (*p.InternalGetClosedWorkflowExecutionResponse, error)
 
 		RunBulkProcessor(ctx context.Context, p *GenericBulkProcessorParameters) (GenericBulkProcessor, error)
 	}
 
 	// SearchRequest is request for Search
 	SearchRequest struct {
-		Parameters    *GenericSearchParameters
-		NextPageToken []byte
-		PageSize      int
-		Filter        IsRecordValidFilter
+		Index       string
+		ListRequest *p.InternalListWorkflowExecutionsRequest
+		IsOpen      bool
+		Filter      IsRecordValidFilter
+		MatchQuery  *GenericMatch
+	}
+
+	GenericMatch struct {
+		Name string
+		Text interface{}
 	}
 
 	// SearchByQueryRequest is request for SearchByQuery

@@ -28,9 +28,8 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 )
 
-type(
-
-	esVisibilityPageToken struct {
+type (
+	ElasticVisibilityPageToken struct {
 		// for ES API From+Size
 		From int
 		// for ES API searchAfter
@@ -41,8 +40,8 @@ type(
 	}
 )
 
-func deserializePageToken(data []byte) (*esVisibilityPageToken, error) {
-	var token esVisibilityPageToken
+func DeserializePageToken(data []byte) (*ElasticVisibilityPageToken, error) {
+	var token ElasticVisibilityPageToken
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.UseNumber()
 	err := dec.Decode(&token)
@@ -54,7 +53,7 @@ func deserializePageToken(data []byte) (*esVisibilityPageToken, error) {
 	return &token, nil
 }
 
-func serializePageToken(token *esVisibilityPageToken) ([]byte, error) {
+func SerializePageToken(token *ElasticVisibilityPageToken) ([]byte, error) {
 	data, err := json.Marshal(token)
 	if err != nil {
 		return nil, &workflow.BadRequestError{
@@ -64,16 +63,20 @@ func serializePageToken(token *esVisibilityPageToken) ([]byte, error) {
 	return data, nil
 }
 
-func getNextPageToken(token []byte) (*esVisibilityPageToken, error) {
-	var result *esVisibilityPageToken
+func GetNextPageToken(token []byte) (*ElasticVisibilityPageToken, error) {
+	var result *ElasticVisibilityPageToken
 	var err error
 	if len(token) > 0 {
-		result, err = deserializePageToken(token)
+		result, err = DeserializePageToken(token)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		result = &esVisibilityPageToken{}
+		result = &ElasticVisibilityPageToken{}
 	}
 	return result, nil
+}
+
+func ShouldSearchAfter(token *ElasticVisibilityPageToken) bool {
+	return token.TieBreaker != ""
 }
