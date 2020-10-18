@@ -361,7 +361,7 @@ func (s *esProcessorSuite) TestGetMsgInfo_Error() {
 	s.Equal("", domainID)
 }
 
-// TODO move to client_v6_test
+// TODO move to client_v6_test 
 //func (s *esProcessorSuite) TestGetKeyForKafkaMsg() {
 //	request := elastic.NewBulkIndexRequest()
 //	s.PanicsWithValue("KafkaKey not found", func() { s.esProcessor.processor.RetrieveKafkaKey(request, s.esProcessor.logger, s.esProcessor.metricsClient) })
