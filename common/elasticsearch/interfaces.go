@@ -23,21 +23,59 @@ package elasticsearch
 import (
 	"context"
 	"fmt"
+	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/config"
 	"time"
 )
+
+// NewClient create a ES client
+func NewGenericElasticSearchClient(
+	connectConfig *Config,
+	visibilityConfig *config.VisibilityConfig,
+	logger log.Logger,
+) (GenericElasticSearch, error) {
+	// TODO hardcoded to V6 for now
+	return newV6Client(connectConfig, visibilityConfig, logger)
+}
 
 type (
 	// GenericElasticSearch is a generic interface for all versions of ElasticSearch clients
 	GenericElasticSearch interface {
-		Search(ctx context.Context, p *GenericSearchParameters) (*p.InternalListWorkflowExecutionsResponse, error)
-		SearchByQuery(ctx context.Context, index, query string) (*p.InternalListWorkflowExecutionsResponse, error)
-		ScrollFirstPage(ctx context.Context, index, query string, nextPageToken []byte) (*p.InternalListWorkflowExecutionsResponse, error)
+		Search(ctx context.Context, request *SearchRequest) (*p.InternalListWorkflowExecutionsResponse, error)
+		SearchByQuery(ctx context.Context, request *SearchByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error)
+		ScanByQuery(ctx context.Context, request *ScanByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error)
 		CountByQuery(ctx context.Context, index, query string) (int64, error)
 		PutMapping(ctx context.Context, index, root, key, valueType string) error
 		CreateIndex(ctx context.Context, index string) error
 
 		RunBulkProcessor(ctx context.Context, p *GenericBulkProcessorParameters) (GenericBulkProcessor, error)
+	}
+
+	// SearchRequest is request for Search
+	SearchRequest struct {
+		Parameters    *GenericSearchParameters
+		NextPageToken []byte
+		PageSize      int
+		Filter        IsRecordValidFilter
+	}
+
+	// SearchByQueryRequest is request for SearchByQuery
+	SearchByQueryRequest struct {
+		Index         string
+		Query         string
+		NextPageToken []byte
+		PageSize      int
+		Filter        IsRecordValidFilter
+	}
+
+	// ScanByQueryRequest is request for SearchByQuery
+	ScanByQueryRequest struct {
+		Index         string
+		Query         string
+		NextPageToken []byte
+		PageSize      int
 	}
 
 	// GenericSearchParameters holds all required and optional parameters for executing a search
@@ -95,6 +133,8 @@ type (
 	// after a commit to Elasticsearch. The err parameter signals an error.
 	GenericBulkAfterFunc func(executionId int64, requests []GenericBulkableRequest, response *GenericBulkResponse, err error)
 
+	IsRecordValidFilter func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool
+
 	// BulkableRequest is a generic interface to bulkable requests.
 	GenericBulkableRequest interface {
 		fmt.Stringer
@@ -119,5 +159,20 @@ type (
 		PrimaryTerm   int64  `json:"_primary_term,omitempty"`
 		Status        int    `json:"status,omitempty"`
 		ForcedRefresh bool   `json:"forced_refresh,omitempty"`
+	}
+
+	VisibilityRecord struct {
+		WorkflowID    string
+		RunID         string
+		WorkflowType  string
+		StartTime     int64
+		ExecutionTime int64
+		CloseTime     int64
+		CloseStatus   workflow.WorkflowExecutionCloseStatus
+		HistoryLength int64
+		Memo          []byte
+		Encoding      string
+		TaskList      string
+		Attr          map[string]interface{}
 	}
 )
