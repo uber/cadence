@@ -23,6 +23,9 @@ package elasticsearch
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/metrics"
+	"math"
+	"math/rand"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -33,7 +36,7 @@ import (
 
 // NewClient create a ES client
 func NewGenericElasticSearchClient(
-	connectConfig *Config,
+	connectConfig *config.ElasticSearchConfig,
 	visibilityConfig *config.VisibilityConfig,
 	logger log.Logger,
 ) (GenericElasticSearch, error) {
@@ -100,8 +103,9 @@ type (
 		Start(ctx context.Context) error
 		Stop() error
 		Close() error
-		Add(request GenericBulkableRequest)
+		Add(request *GenericBulkableAddRequest)
 		Flush() error
+		RetrieveKafkaKey(request GenericBulkableRequest, logger log.Logger, client metrics.Client) string
 	}
 
 	// GenericBulkProcessorParameters holds all required and optional parameters for executing bulk service
@@ -139,14 +143,27 @@ type (
 
 	// GenericBulkAfterFunc defines the signature of callbacks that are executed
 	// after a commit to Elasticsearch. The err parameter signals an error.
-	GenericBulkAfterFunc func(executionId int64, requests []GenericBulkableRequest, response *GenericBulkResponse, err error)
+	GenericBulkAfterFunc func(executionId int64, requests []GenericBulkableRequest, response *GenericBulkResponse, err *GenericError)
 
 	IsRecordValidFilter func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool
 
 	// BulkableRequest is a generic interface to bulkable requests.
+
 	GenericBulkableRequest interface {
 		fmt.Stringer
 		Source() ([]string, error)
+	}
+
+	GenericBulkableAddRequest struct {
+		Index       string
+		Type        string
+		Id          string
+		VersionType string
+		Version     int64
+		// true means it's delete, otherwise it's a index request
+		IsDelete bool
+		// should be nil if IsDelete is true
+		Doc interface{}
 	}
 
 	// GenericBulkResponse is generic struct of bulk response
@@ -154,6 +171,12 @@ type (
 		Took   int                                   `json:"took,omitempty"`
 		Errors bool                                  `json:"errors,omitempty"`
 		Items  []map[string]*GenericBulkResponseItem `json:"items,omitempty"`
+	}
+
+	// GenericError encapsulates error status and details returned from Elasticsearch.
+	GenericError struct {
+		Status  int   `json:"status"`
+		Details error `json:"error,omitempty"`
 	}
 
 	// GenericBulkResponseItem is the result of a single bulk request.
@@ -167,6 +190,8 @@ type (
 		PrimaryTerm   int64  `json:"_primary_term,omitempty"`
 		Status        int    `json:"status,omitempty"`
 		ForcedRefresh bool   `json:"forced_refresh,omitempty"`
+		// the error details
+		Error interface{}
 	}
 
 	VisibilityRecord struct {
@@ -184,3 +209,33 @@ type (
 		Attr          map[string]interface{}
 	}
 )
+
+// ExponentialBackoff implements the simple exponential backoff described by
+// Douglas Thain at http://dthain.blogspot.de/2009/02/exponential-backoff-in-distributed.html.
+type ExponentialBackoff struct {
+	t float64 // initial timeout (in msec)
+	f float64 // exponential factor (e.g. 2)
+	m float64 // maximum timeout (in msec)
+}
+
+// NewExponentialBackoff returns a ExponentialBackoff backoff policy.
+// Use initialTimeout to set the first/minimal interval
+// and maxTimeout to set the maximum wait interval.
+func NewExponentialBackoff(initialTimeout, maxTimeout time.Duration) *ExponentialBackoff {
+	return &ExponentialBackoff{
+		t: float64(int64(initialTimeout / time.Millisecond)),
+		f: 2.0,
+		m: float64(int64(maxTimeout / time.Millisecond)),
+	}
+}
+
+// Next implements BackoffFunc for ExponentialBackoff.
+func (b *ExponentialBackoff) Next(retry int) (time.Duration, bool) {
+	r := 1.0 + rand.Float64() // random number in [1..2]
+	m := math.Min(r*b.t*math.Pow(b.f, float64(retry)), b.m)
+	if m >= b.m {
+		return 0, false
+	}
+	d := time.Duration(int64(m)) * time.Millisecond
+	return d, true
+}

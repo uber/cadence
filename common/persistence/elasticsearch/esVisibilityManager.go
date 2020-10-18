@@ -33,7 +33,7 @@ import (
 // NewESVisibilityManager create a visibility manager for ElasticSearch
 // In history, it only needs kafka producer for writing data;
 // In frontend, it only needs ES client and related config for reading data
-func NewESVisibilityManager(indexName string, esClient es.Client, config *config.VisibilityConfig,
+func NewESVisibilityManager(indexName string, esClient es.GenericElasticSearch, config *config.VisibilityConfig,
 	producer messaging.Producer, metricsClient metrics.Client, log log.Logger) p.VisibilityManager {
 
 	visibilityFromESStore := NewElasticSearchVisibilityStore(esClient, indexName, producer, config, log)

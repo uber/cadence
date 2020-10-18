@@ -110,8 +110,8 @@ type (
 		archiverMetadata              carchiver.ArchivalMetadata
 		archiverProvider              provider.ArchiverProvider
 		historyConfig                 *HistoryConfig
-		esConfig                      *elasticsearch.Config
-		esClient                      elasticsearch.Client
+		esConfig                      *config.ElasticSearchConfig
+		esClient                      elasticsearch.GenericElasticSearch
 		workerConfig                  *WorkerConfig
 		mockAdminClient               map[string]adminClient.Client
 		domainReplicationTaskExecutor domain.ReplicationTaskExecutor
@@ -144,8 +144,8 @@ type (
 		ArchiverProvider              provider.ArchiverProvider
 		EnableReadHistoryFromArchival bool
 		HistoryConfig                 *HistoryConfig
-		ESConfig                      *elasticsearch.Config
-		ESClient                      elasticsearch.Client
+		ESConfig                      *config.ElasticSearchConfig
+		ESClient                      elasticsearch.GenericElasticSearch
 		WorkerConfig                  *WorkerConfig
 		MockAdminClient               map[string]adminClient.Client
 		DomainReplicationTaskExecutor domain.ReplicationTaskExecutor

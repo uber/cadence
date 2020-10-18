@@ -39,7 +39,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/definition"
-	"github.com/uber/cadence/common/elasticsearch"
 	esmock "github.com/uber/cadence/common/elasticsearch/mocks"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -469,7 +468,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 	dynamicConfig := dynamicconfig.NewMockClient(s.controller)
 	handler.params.DynamicConfig = dynamicConfig
 	// add advanced visibility store related config
-	handler.params.ESConfig = &elasticsearch.Config{}
+	handler.params.ESConfig = &config.ElasticSearchConfig{}
 	esClient := &esmock.Client{}
 	defer func() { esClient.AssertExpectations(s.T()) }()
 	handler.params.ESClient = esClient

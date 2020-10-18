@@ -18,33 +18,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package elasticsearch
+package config
 
 import (
-	"fmt"
-	"testing"
+	"net/url"
 
-	"github.com/stretchr/testify/require"
+	"github.com/uber/cadence/common"
 )
 
-func Test_BuildPutMappingBody(t *testing.T) {
-	tests := []struct {
-		root     string
-		expected string
-	}{
-		{
-			root:     "Attr",
-			expected: "map[properties:map[Attr:map[properties:map[testKey:map[type:text]]]]]",
-		},
-		{
-			root:     "",
-			expected: "map[properties:map[testKey:map[type:text]]]",
-		},
+// ElasticSearchConfig for connecting to ElasticSearch
+type (
+	ElasticSearchConfig struct {
+		URL     url.URL           `yaml:url`     //nolint:govet
+		Indices map[string]string `yaml:indices` //nolint:govet
 	}
-	k := "testKey"
-	v := "text"
+)
 
-	for _, test := range tests {
-		require.Equal(t, test.expected, fmt.Sprintf("%v", buildPutMappingBody(test.root, k, v)))
-	}
+// GetVisibilityIndex return visibility index name
+func (cfg *ElasticSearchConfig) GetVisibilityIndex() string {
+	return cfg.Indices[common.VisibilityAppName]
 }

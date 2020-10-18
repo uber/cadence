@@ -27,8 +27,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/olivere/elastic"
-
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -46,8 +44,8 @@ type indexProcessor struct {
 	consumerName    string
 	kafkaClient     messaging.Client
 	consumer        messaging.Consumer
-	esClient        es.Client
-	esProcessor     ESProcessor
+	esClient        es.GenericElasticSearch
+	esProcessor     *esProcessorImpl
 	esProcessorName string
 	esIndexName     string
 	config          *Config
@@ -72,7 +70,7 @@ var (
 	errUnknownMessageType = &shared.BadRequestError{Message: "unknown message type"}
 )
 
-func newIndexProcessor(appName, consumerName string, kafkaClient messaging.Client, esClient es.Client,
+func newIndexProcessor(appName, consumerName string, kafkaClient messaging.Client, esClient es.GenericElasticSearch,
 	esProcessorName, esIndexName string, config *Config, logger log.Logger, metricsClient metrics.Client) *indexProcessor {
 	return &indexProcessor{
 		appName:         appName,
@@ -106,7 +104,7 @@ func (p *indexProcessor) Start() error {
 		return err
 	}
 
-	esProcessor, err := NewESProcessorAndStart(p.config, p.esClient, p.esProcessorName, p.logger, p.metricsClient, p.msgEncoder)
+	esProcessor, err := newESProcessorAndStart(p.config, p.esClient, p.esProcessorName, p.logger, p.metricsClient, p.msgEncoder)
 	if err != nil {
 		p.logger.Info("Index processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
 		return err
@@ -205,26 +203,22 @@ func (p *indexProcessor) addMessageToES(indexMsg *indexer.Message, kafkaMsg mess
 	}
 
 	var keyToKafkaMsg string
-	var req elastic.BulkableRequest
+	req := &es.GenericBulkableAddRequest{
+		Index:       p.esIndexName,
+		Type:        esDocType,
+		Id:          docID,
+		VersionType: versionTypeExternal,
+		Version:     indexMsg.GetVersion(),
+	}
 	switch indexMsg.GetMessageType() {
 	case indexer.MessageTypeIndex:
 		keyToKafkaMsg = fmt.Sprintf("%v-%v", kafkaMsg.Partition(), kafkaMsg.Offset())
 		doc := p.generateESDoc(indexMsg, keyToKafkaMsg)
-		req = elastic.NewBulkIndexRequest().
-			Index(p.esIndexName).
-			Type(esDocType).
-			Id(docID).
-			VersionType(versionTypeExternal).
-			Version(indexMsg.GetVersion()).
-			Doc(doc)
+		req.Doc = doc
+		req.IsDelete = false
 	case indexer.MessageTypeDelete:
 		keyToKafkaMsg = docID
-		req = elastic.NewBulkDeleteRequest().
-			Index(p.esIndexName).
-			Type(esDocType).
-			Id(docID).
-			VersionType(versionTypeExternal).
-			Version(indexMsg.GetVersion())
+		req.IsDelete = true
 	default:
 		logger.Error("Unknown message type")
 		p.metricsClient.IncCounter(metrics.IndexProcessorScope, metrics.IndexProcessorCorruptedData)

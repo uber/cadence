@@ -22,10 +22,9 @@ package indexer
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"time"
 
-	"github.com/olivere/elastic"
 	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/.gen/go/indexer"
@@ -40,29 +39,9 @@ import (
 )
 
 type (
-	// ESProcessor is interface for elastic search bulk processor
-	ESProcessor interface {
-		// Stop processor and clean up
-		Stop()
-		// Add request to bulk, and record kafka message in map with provided key
-		// This call will be blocked when downstream has issues
-		Add(request elastic.BulkableRequest, key string, kafkaMsg messaging.Message)
-	}
-
-	// ElasticBulkProcessor is interface for elastic.BulkProcessor
-	// (elastic package doesn't provide such interface that tests can mock)
-	ElasticBulkProcessor interface {
-		Start(ctx context.Context) error
-		Stop() error
-		Close() error
-		Stats() elastic.BulkProcessorStats
-		Add(request elastic.BulkableRequest)
-		Flush() error
-	}
-
-	// esProcessorImpl implements ESProcessor, it's an agent of elastic.BulkProcessor
+	// esProcessorImpl implements ESProcessor, it's an agent of GenericBulkProcessor
 	esProcessorImpl struct {
-		processor     ElasticBulkProcessor
+		processor     es.GenericBulkProcessor
 		mapToKafkaMsg collection.ConcurrentTxMap // used to map ES request to kafka message
 		config        *Config
 		logger        log.Logger
@@ -76,19 +55,15 @@ type (
 	}
 )
 
-var _ ESProcessor = (*esProcessorImpl)(nil)
-var _ ElasticBulkProcessor = (*elastic.BulkProcessor)(nil)
-
 const (
 	// retry configs for es bulk processor
 	esProcessorInitialRetryInterval = 200 * time.Millisecond
 	esProcessorMaxRetryInterval     = 20 * time.Second
-	unknownStatusCode               = -1
 )
 
-// NewESProcessorAndStart create new ESProcessor and start
-func NewESProcessorAndStart(config *Config, client es.Client, processorName string,
-	logger log.Logger, metricsClient metrics.Client, msgEncoder codec.BinaryEncoder) (ESProcessor, error) {
+// newESProcessorAndStart create new ESProcessor and start
+func newESProcessorAndStart(config *Config, client es.GenericElasticSearch, processorName string,
+	logger log.Logger, metricsClient metrics.Client, msgEncoder codec.BinaryEncoder) (*esProcessorImpl, error) {
 	p := &esProcessorImpl{
 		config:        config,
 		logger:        logger.WithTags(tag.ComponentIndexerESProcessor),
@@ -96,13 +71,13 @@ func NewESProcessorAndStart(config *Config, client es.Client, processorName stri
 		msgEncoder:    msgEncoder,
 	}
 
-	params := &es.BulkProcessorParameters{
+	params := &es.GenericBulkProcessorParameters{
 		Name:          processorName,
 		NumOfWorkers:  config.ESProcessorNumOfWorkers(),
 		BulkActions:   config.ESProcessorBulkActions(),
 		BulkSize:      config.ESProcessorBulkSize(),
 		FlushInterval: config.ESProcessorFlushInterval(),
-		Backoff:       elastic.NewExponentialBackoff(esProcessorInitialRetryInterval, esProcessorMaxRetryInterval),
+		Backoff:       es.NewExponentialBackoff(esProcessorInitialRetryInterval, esProcessorMaxRetryInterval),
 		BeforeFunc:    p.bulkBeforeAction,
 		AfterFunc:     p.bulkAfterAction,
 	}
@@ -122,7 +97,7 @@ func (p *esProcessorImpl) Stop() {
 }
 
 // Add an ES request, and an map item for kafka message
-func (p *esProcessorImpl) Add(request elastic.BulkableRequest, key string, kafkaMsg messaging.Message) {
+func (p *esProcessorImpl) Add(request *es.GenericBulkableAddRequest, key string, kafkaMsg messaging.Message) {
 	actionWhenFoundDuplicates := func(key interface{}, value interface{}) error {
 		return kafkaMsg.Ack()
 	}
@@ -136,27 +111,27 @@ func (p *esProcessorImpl) Add(request elastic.BulkableRequest, key string, kafka
 }
 
 // bulkBeforeAction is triggered before bulk processor commit
-func (p *esProcessorImpl) bulkBeforeAction(executionID int64, requests []elastic.BulkableRequest) {
+func (p *esProcessorImpl) bulkBeforeAction(executionID int64, requests []es.GenericBulkableRequest) {
 	p.metricsClient.AddCounter(metrics.ESProcessorScope, metrics.ESProcessorRequests, int64(len(requests)))
 }
 
 // bulkAfterAction is triggered after bulk processor commit
-func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
+func (p *esProcessorImpl) bulkAfterAction(id int64, requests []es.GenericBulkableRequest, response *es.GenericBulkResponse, err *es.GenericError) {
 	if err != nil {
 		// This happens after configured retry, which means something bad happens on cluster or index
 		// When cluster back to live, processor will re-commit those failure requests
-		p.logger.Error("Error commit bulk request.", tag.Error(err))
+		p.logger.Error("Error commit bulk request.", tag.Error(err.Details))
 
-		isRetryable := isErrorRetriable(err)
+		isRetryable := isResponseRetriable(err.Status)
 		for _, request := range requests {
 			if !isRetryable {
-				key := p.getKeyForKafkaMsg(request)
+				key := p.processor.RetrieveKafkaKey(request, p.logger, p.metricsClient)
 				if key == "" {
 					continue
 				}
 				wid, rid, domainID := p.getMsgWithInfo(key)
 				p.logger.Error("ES request failed.",
-					tag.ESResponseStatus(getErrorStatusCode(err)),
+					tag.ESResponseStatus(err.Status),
 					tag.ESRequest(request.String()),
 					tag.WorkflowID(wid),
 					tag.WorkflowRunID(rid),
@@ -172,7 +147,7 @@ func (p *esProcessorImpl) bulkAfterAction(id int64, requests []elastic.BulkableR
 
 	responseItems := response.Items
 	for i := 0; i < len(requests); i++ {
-		key := p.getKeyForKafkaMsg(requests[i])
+		key := p.processor.RetrieveKafkaKey(requests[i], p.logger, p.metricsClient)
 		if key == "" {
 			continue
 		}
@@ -253,56 +228,6 @@ func (p *esProcessorImpl) hashFn(key interface{}) uint32 {
 	return uint32(common.WorkflowIDToHistoryShard(id, numOfShards))
 }
 
-func (p *esProcessorImpl) getKeyForKafkaMsg(request elastic.BulkableRequest) string {
-	req, err := request.Source()
-	if err != nil {
-		p.logger.Error("Get request source err.", tag.Error(err), tag.ESRequest(request.String()))
-		p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
-		return ""
-	}
-
-	var key string
-	if len(req) == 2 { // index or update requests
-		var body map[string]interface{}
-		if err := json.Unmarshal([]byte(req[1]), &body); err != nil {
-			p.logger.Error("Unmarshal index request body err.", tag.Error(err))
-			p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
-			return ""
-		}
-
-		k, ok := body[es.KafkaKey]
-		if !ok {
-			// must be bug in code and bad deployment, check processor that add es requests
-			panic("KafkaKey not found")
-		}
-		key, ok = k.(string)
-		if !ok {
-			// must be bug in code and bad deployment, check processor that add es requests
-			panic("KafkaKey is not string")
-		}
-	} else { // delete requests
-		var body map[string]map[string]interface{}
-		if err := json.Unmarshal([]byte(req[0]), &body); err != nil {
-			p.logger.Error("Unmarshal delete request body err.", tag.Error(err))
-			p.metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
-			return ""
-		}
-
-		opMap, ok := body["delete"]
-		if !ok {
-			// must be bug, check if dependency changed
-			panic("delete key not found in request")
-		}
-		k, ok := opMap["_id"]
-		if !ok {
-			// must be bug in code and bad deployment, check processor that add es requests
-			panic("_id not found in request opMap")
-		}
-		key, _ = k.(string)
-	}
-	return key
-}
-
 // 409 - Version Conflict
 // 404 - Not Found
 func isResponseSuccess(status int) bool {
@@ -312,7 +237,7 @@ func isResponseSuccess(status int) bool {
 	return false
 }
 
-// isResponseRetriable is complaint with elastic.BulkProcessorService.RetryItemStatusCodes
+// isResponseRetriable is complaint with GenericBulkProcessorService.RetryItemStatusCodes
 // responses with these status will be kept in queue and retried until success
 // 408 - Request Timeout
 // 429 - Too Many Requests
@@ -326,25 +251,10 @@ func isResponseRetriable(status int) bool {
 	return ok
 }
 
-func isErrorRetriable(err error) bool {
-	status := getErrorStatusCode(err)
-	return isResponseRetriable(status)
-}
-
-func getErrorStatusCode(err interface{}) int {
-	switch e := err.(type) {
-	case *elastic.Error:
-		return e.Status
-	case elastic.Error:
-		return e.Status
-	}
-	return unknownStatusCode
-}
-
-func getErrorMsgFromESResp(resp *elastic.BulkResponseItem) string {
+func getErrorMsgFromESResp(resp *es.GenericBulkResponseItem) string {
 	var errMsg string
 	if resp.Error != nil {
-		errMsg = resp.Error.Reason
+		errMsg = fmt.Sprintf("%v", resp.Error)
 	}
 	return errMsg
 }

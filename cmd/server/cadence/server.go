@@ -175,7 +175,7 @@ func (s *server) startService() common.Daemon {
 		}
 
 		params.ESConfig = advancedVisStore.ElasticSearch
-		esClient, err := elasticsearch.NewClient(params.ESConfig)
+		esClient, err := elasticsearch.NewGenericElasticSearchClient(params.ESConfig, s.cfg.Persistence.VisibilityConfig, params.Logger)
 		if err != nil {
 			log.Fatalf("error creating elastic search client: %v", err)
 		}

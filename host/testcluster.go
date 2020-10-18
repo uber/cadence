@@ -81,7 +81,7 @@ type (
 		MessagingClientConfig *MessagingClientConfig
 		Persistence           persistencetests.TestBaseOptions
 		HistoryConfig         *HistoryConfig
-		ESConfig              *elasticsearch.Config
+		ESConfig              *config.ElasticSearchConfig
 		WorkerConfig          *WorkerConfig
 		MockAdminClient       map[string]adminClient.Client
 	}
@@ -146,13 +146,18 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
 	archiverBase := newArchiverBase(options.EnableArchival, logger)
 	messagingClient := getMessagingClient(options.MessagingClientConfig, logger)
-	var esClient elasticsearch.Client
+	var esClient elasticsearch.GenericElasticSearch
 	var esVisibilityMgr persistence.VisibilityManager
 	advancedVisibilityWritingMode := dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff)
 	if options.WorkerConfig.EnableIndexer {
 		advancedVisibilityWritingMode = dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOn)
 		var err error
-		esClient, err = elasticsearch.NewClient(options.ESConfig)
+		visConfig := &config.VisibilityConfig{
+			VisibilityListMaxQPS:   dynamicconfig.GetIntPropertyFilteredByDomain(2000),
+			ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(defaultTestValueOfESIndexMaxResultWindow),
+			ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		}
+		esClient, err = elasticsearch.NewGenericElasticSearchClient(options.ESConfig, visConfig, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -161,11 +166,6 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		visProducer, err := messagingClient.NewProducer(common.VisibilityAppName)
 		if err != nil {
 			return nil, err
-		}
-		visConfig := &config.VisibilityConfig{
-			VisibilityListMaxQPS:   dynamicconfig.GetIntPropertyFilteredByDomain(2000),
-			ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(defaultTestValueOfESIndexMaxResultWindow),
-			ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 		}
 		esVisibilityStore := pes.NewElasticSearchVisibilityStore(esClient, indexName, visProducer, visConfig, logger)
 		esVisibilityMgr = persistence.NewVisibilityManagerImpl(esVisibilityStore, logger)

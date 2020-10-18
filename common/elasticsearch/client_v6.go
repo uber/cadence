@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/common/metrics"
 	"io"
 	"math"
 	"strconv"
@@ -76,7 +77,7 @@ var (
 
 // NewWrapperClient returns a new implementation of Client
 func newV6Client(
-	connectConfig *Config,
+	connectConfig *config.ElasticSearchConfig,
 	visibilityConfig *config.VisibilityConfig,
 	logger log.Logger,
 ) (GenericElasticSearch, error) {
@@ -194,11 +195,12 @@ func (c *elasticV6) RunBulkProcessor(ctx context.Context, parameters *GenericBul
 	}
 
 	afterFunc := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
+		gerr := convertToGenericError(err)
 		parameters.AfterFunc(
 			executionId,
 			fromV6ToGenericBulkableRequests(requests),
 			fromV6toGenericBulkResponse(response),
-			err)
+			gerr)
 	}
 
 	return c.runBulkProcessor(ctx, &BulkProcessorParametersV6{
@@ -211,6 +213,70 @@ func (c *elasticV6) RunBulkProcessor(ctx context.Context, parameters *GenericBul
 		BeforeFunc:    beforeFunc,
 		AfterFunc:     afterFunc,
 	})
+}
+
+const unknownStatusCode = -1
+
+func convertToGenericError(err error) *GenericError {
+	status := unknownStatusCode
+	switch e := err.(type) {
+	case *elastic.Error:
+		status = e.Status
+	}
+	return &GenericError{
+		Status:  status,
+		Details: err,
+	}
+}
+
+func (v *v6BulkProcessor) RetrieveKafkaKey(request GenericBulkableRequest, logger log.Logger, metricsClient metrics.Client) string {
+	req, err := request.Source()
+	if err != nil {
+		logger.Error("Get request source err.", tag.Error(err), tag.ESRequest(request.String()))
+		metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
+		return ""
+	}
+
+	var key string
+	if len(req) == 2 { // index or update requests
+		var body map[string]interface{}
+		if err := json.Unmarshal([]byte(req[1]), &body); err != nil {
+			logger.Error("Unmarshal index request body err.", tag.Error(err))
+			metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
+			return ""
+		}
+
+		k, ok := body[KafkaKey]
+		if !ok {
+			// must be bug in code and bad deployment, check processor that add es requests
+			panic("KafkaKey not found")
+		}
+		key, ok = k.(string)
+		if !ok {
+			// must be bug in code and bad deployment, check processor that add es requests
+			panic("KafkaKey is not string")
+		}
+	} else { // delete requests
+		var body map[string]map[string]interface{}
+		if err := json.Unmarshal([]byte(req[0]), &body); err != nil {
+			logger.Error("Unmarshal delete request body err.", tag.Error(err))
+			metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
+			return ""
+		}
+
+		opMap, ok := body["delete"]
+		if !ok {
+			// must be bug, check if dependency changed
+			panic("delete key not found in request")
+		}
+		k, ok := opMap["_id"]
+		if !ok {
+			// must be bug in code and bad deployment, check processor that add es requests
+			panic("_id not found in request opMap")
+		}
+		key, _ = k.(string)
+	}
+	return key
 }
 
 func (c *elasticV6) GetClosedWorkflowExecution(
@@ -340,23 +406,40 @@ type v6BulkProcessor struct {
 	processor *elastic.BulkProcessor
 }
 
-func (v v6BulkProcessor) Start(ctx context.Context) error {
+func (v *v6BulkProcessor) Start(ctx context.Context) error {
 	return v.processor.Start(ctx)
 }
 
-func (v v6BulkProcessor) Stop() error {
+func (v *v6BulkProcessor) Stop() error {
 	return v.processor.Stop()
 }
 
-func (v v6BulkProcessor) Close() error {
+func (v *v6BulkProcessor) Close() error {
 	return v.processor.Close()
 }
 
-func (v v6BulkProcessor) Add(request GenericBulkableRequest) {
-	v.processor.Add(request)
+func (v *v6BulkProcessor) Add(request *GenericBulkableAddRequest) {
+	var req elastic.BulkableRequest
+	if request.IsDelete {
+		req = elastic.NewBulkDeleteRequest().
+			Index(request.Index).
+			Type(request.Type).
+			Id(request.Id).
+			VersionType(request.VersionType).
+			Version(request.Version)
+	} else {
+		req = elastic.NewBulkIndexRequest().
+			Index(request.Index).
+			Type(request.Type).
+			Id(request.Id).
+			VersionType(request.VersionType).
+			Version(request.Version).
+			Doc(request.Doc)
+	}
+	v.processor.Add(req)
 }
 
-func (v v6BulkProcessor) Flush() error {
+func (v *v6BulkProcessor) Flush() error {
 	return v.processor.Flush()
 }
 
