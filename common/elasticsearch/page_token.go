@@ -29,6 +29,7 @@ import (
 )
 
 type (
+	// ElasticVisibilityPageToken holds the paging token for ElasticSearch
 	ElasticVisibilityPageToken struct {
 		// for ES API From+Size
 		From int
@@ -40,6 +41,7 @@ type (
 	}
 )
 
+// DeserializePageToken return the structural token
 func DeserializePageToken(data []byte) (*ElasticVisibilityPageToken, error) {
 	var token ElasticVisibilityPageToken
 	dec := json.NewDecoder(bytes.NewReader(data))
@@ -53,6 +55,7 @@ func DeserializePageToken(data []byte) (*ElasticVisibilityPageToken, error) {
 	return &token, nil
 }
 
+// SerializePageToken return the token blob
 func SerializePageToken(token *ElasticVisibilityPageToken) ([]byte, error) {
 	data, err := json.Marshal(token)
 	if err != nil {
@@ -63,6 +66,7 @@ func SerializePageToken(token *ElasticVisibilityPageToken) ([]byte, error) {
 	return data, nil
 }
 
+// GetNextPageToken returns the structural token with nil handling
 func GetNextPageToken(token []byte) (*ElasticVisibilityPageToken, error) {
 	var result *ElasticVisibilityPageToken
 	var err error
@@ -77,6 +81,7 @@ func GetNextPageToken(token []byte) (*ElasticVisibilityPageToken, error) {
 	return result, nil
 }
 
+// ShouldSearchAfter decides if should search after
 func ShouldSearchAfter(token *ElasticVisibilityPageToken) bool {
 	return token.TieBreaker != ""
 }

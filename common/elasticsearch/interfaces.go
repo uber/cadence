@@ -35,7 +35,7 @@ import (
 	"github.com/uber/cadence/common/service/config"
 )
 
-// NewClient create a ES client
+// NewGenericElasticSearchClient create a ES client
 func NewGenericElasticSearchClient(
 	connectConfig *config.ElasticSearchConfig,
 	visibilityConfig *config.VisibilityConfig,
@@ -68,6 +68,7 @@ type (
 		MatchQuery  *GenericMatch
 	}
 
+	// GenericMatch is a match struct
 	GenericMatch struct {
 		Name string
 		Text interface{}
@@ -100,6 +101,7 @@ type (
 		SearchAfter []interface{}
 	}
 
+	// GenericBulkProcessor is a bulk processor
 	GenericBulkProcessor interface {
 		Start(ctx context.Context) error
 		Stop() error
@@ -146,15 +148,16 @@ type (
 	// after a commit to Elasticsearch. The err parameter signals an error.
 	GenericBulkAfterFunc func(executionId int64, requests []GenericBulkableRequest, response *GenericBulkResponse, err *GenericError)
 
+	// IsRecordValidFilter is a function to filter visibility records
 	IsRecordValidFilter func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool
 
-	// BulkableRequest is a generic interface to bulkable requests.
-
+	// GenericBulkableRequest is a generic interface to bulkable requests.
 	GenericBulkableRequest interface {
 		fmt.Stringer
 		Source() ([]string, error)
 	}
 
+	// GenericBulkableAddRequest a struct to hold a bulk request
 	GenericBulkableAddRequest struct {
 		Index       string
 		Type        string
@@ -195,6 +198,7 @@ type (
 		Error interface{}
 	}
 
+	// VisibilityRecord is a struct of doc for deserialization
 	VisibilityRecord struct {
 		WorkflowID    string
 		RunID         string

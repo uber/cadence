@@ -41,6 +41,9 @@ import (
 	"github.com/olivere/elastic"
 )
 
+var _ GenericElasticSearch = (*elasticV6)(nil)
+var _ GenericBulkProcessor = (*v6BulkProcessor)(nil)
+
 type (
 	// elasticV6 implements Client
 	elasticV6 struct {
@@ -49,8 +52,8 @@ type (
 		logger log.Logger
 	}
 
-	// SearchParameters holds all required and optional parameters for executing a search
-	SearchParametersV6 struct {
+	// searchParametersV6 holds all required and optional parameters for executing a search
+	searchParametersV6 struct {
 		Index       string
 		Query       elastic.Query
 		From        int
@@ -59,8 +62,8 @@ type (
 		SearchAfter []interface{}
 	}
 
-	// BulkProcessorParameters holds all required and optional parameters for executing bulk service
-	BulkProcessorParametersV6 struct {
+	// bulkProcessorParametersV6 holds all required and optional parameters for executing bulk service
+	bulkProcessorParametersV6 struct {
 		Name          string
 		NumOfWorkers  int
 		BulkActions   int
@@ -204,7 +207,7 @@ func (c *elasticV6) RunBulkProcessor(ctx context.Context, parameters *GenericBul
 			gerr)
 	}
 
-	return c.runBulkProcessor(ctx, &BulkProcessorParametersV6{
+	return c.runBulkProcessor(ctx, &bulkProcessorParametersV6{
 		Name:          parameters.Name,
 		NumOfWorkers:  parameters.NumOfWorkers,
 		BulkActions:   parameters.BulkActions,
@@ -296,7 +299,7 @@ func (c *elasticV6) GetClosedWorkflowExecution(
 		boolQuery = boolQuery.Must(matchRunIDQuery)
 	}
 
-	params := &SearchParametersV6{
+	params := &searchParametersV6{
 		Index: index,
 		Query: boolQuery,
 	}
@@ -366,7 +369,7 @@ func fromV6ToGenericBulkableRequests(requests []elastic.BulkableRequest) []Gener
 	return v6Reqs
 }
 
-func (c *elasticV6) search(ctx context.Context, p *SearchParametersV6) (*elastic.SearchResult, error) {
+func (c *elasticV6) search(ctx context.Context, p *searchParametersV6) (*elastic.SearchResult, error) {
 	searchService := c.client.Search(p.Index).
 		Query(p.Query).
 		From(p.From).
@@ -444,7 +447,7 @@ func (v *v6BulkProcessor) Flush() error {
 	return v.processor.Flush()
 }
 
-func (c *elasticV6) runBulkProcessor(ctx context.Context, p *BulkProcessorParametersV6) (*v6BulkProcessor, error) {
+func (c *elasticV6) runBulkProcessor(ctx context.Context, p *bulkProcessorParametersV6) (*v6BulkProcessor, error) {
 	processor, err := c.client.BulkProcessor().
 		Name(p.Name).
 		Workers(p.NumOfWorkers).
@@ -557,14 +560,6 @@ func (c *elasticV6) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit
 	return record
 }
 
-func toV6Sorter(sorters []GenericSorter) []elastic.Sorter {
-	var sts []elastic.Sorter
-	for _, st := range sorters {
-		sts = append(sts, st)
-	}
-	return sts
-}
-
 func (c *elasticV6) getScanWorkflowExecutionsResponse(
 	searchHits *elastic.SearchHits,
 	pageSize int, scrollID string,
@@ -635,7 +630,7 @@ func (c *elasticV6) getSearchResult(
 		boolQuery = boolQuery.Must(existClosedStatusQuery)
 	}
 
-	params := &SearchParametersV6{
+	params := &searchParametersV6{
 		Index:    index,
 		Query:    boolQuery,
 		From:     token.From,
