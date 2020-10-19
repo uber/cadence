@@ -469,7 +469,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 	handler.params.DynamicConfig = dynamicConfig
 	// add advanced visibility store related config
 	handler.params.ESConfig = &config.ElasticSearchConfig{}
-	esClient := &esmock.Client{}
+	esClient := &esmock.GenericElasticSearch{}
 	defer func() { esClient.AssertExpectations(s.T()) }()
 	handler.params.ESClient = esClient
 
