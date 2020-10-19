@@ -23,10 +23,16 @@ package sqlplugin
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
+)
+
+var (
+	// ErrTTLNotSupported indicates the sql plugin does not support ttl
+	ErrTTLNotSupported = errors.New("plugin implementation does not support ttl")
 )
 
 type (
@@ -167,6 +173,15 @@ type (
 		DataEncoding string
 	}
 
+	// TasksRowWithTTL represents a row in tasks table with a ttl
+	TasksRowWithTTL struct {
+		TasksRow TasksRow
+		// TTL is optional because InsertIntoTasksWithTTL operates over a slice of TasksRowWithTTL.
+		// Some items in the slice may have a TTL while others do not. It is the responsibility
+		// of the plugin implementation to handle items with TTL set and items with TTL not set.
+		TTL *time.Duration
+	}
+
 	// TasksFilter contains the column names within tasks table that
 	// can be used to filter results through a WHERE clause
 	TasksFilter struct {
@@ -190,6 +205,12 @@ type (
 		RangeID      int64
 		Data         []byte
 		DataEncoding string
+	}
+
+	// TaskListsRowWithTTL represents a row in task_lists table with a ttl
+	TaskListsRowWithTTL struct {
+		TaskListsRow TaskListsRow
+		TTL          time.Duration
 	}
 
 	// TaskListsFilter contains the column names within task_lists table that
@@ -524,6 +545,7 @@ type (
 		WriteLockShards(ctx context.Context, filter *ShardsFilter) (int, error)
 
 		InsertIntoTasks(ctx context.Context, rows []TasksRow) (sql.Result, error)
+		InsertIntoTasksWithTTL(ctx context.Context, rows []TasksRowWithTTL) (sql.Result, error)
 		// SelectFromTasks retrieves one or more rows from the tasks table
 		// Required filter params - {domainID, tasklistName, taskType, minTaskID, maxTaskID, pageSize}
 		SelectFromTasks(ctx context.Context, filter *TasksFilter) ([]TasksRow, error)
@@ -537,8 +559,11 @@ type (
 		DeleteFromTasks(ctx context.Context, filter *TasksFilter) (sql.Result, error)
 
 		InsertIntoTaskLists(ctx context.Context, row *TaskListsRow) (sql.Result, error)
+		InsertIntoTaskListsWithTTL(ctx context.Context, row *TaskListsRowWithTTL) (sql.Result, error)
 		ReplaceIntoTaskLists(ctx context.Context, row *TaskListsRow) (sql.Result, error)
+		ReplaceIntoTaskListsWithTTL(ctx context.Context, row *TaskListsRowWithTTL) (sql.Result, error)
 		UpdateTaskLists(ctx context.Context, row *TaskListsRow) (sql.Result, error)
+		UpdateTaskListsWithTTL(ctx context.Context, row *TaskListsRowWithTTL) (sql.Result, error)
 		// SelectFromTaskLists returns one or more rows from task_lists table
 		// Required Filter params:
 		//  to read a single row: {shardID, domainID, name, taskType}
@@ -711,6 +736,10 @@ type (
 		InsertAckLevel(ctx context.Context, queueType persistence.QueueType, messageID int64, clusterName string) error
 		UpdateAckLevels(ctx context.Context, queueType persistence.QueueType, clusterAckLevels map[string]int64) error
 		GetAckLevels(ctx context.Context, queueType persistence.QueueType, forUpdate bool) (map[string]int64, error)
+
+		// The follow provide information about the underlying sql crud implementation
+		SupportsTTL() bool
+		MaxAllowedTTL() (*time.Duration, error)
 	}
 
 	// adminCRUD defines admin operations for CLI and test suites

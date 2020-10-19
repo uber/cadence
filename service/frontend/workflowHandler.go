@@ -33,9 +33,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/yarpcerrors"
 
-	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/.gen/go/health"
-	"github.com/uber/cadence/.gen/go/health/metaserver"
 	h "github.com/uber/cadence/.gen/go/history"
 	m "github.com/uber/cadence/.gen/go/matching"
 	gen "github.com/uber/cadence/.gen/go/shared"
@@ -152,7 +150,7 @@ func NewWorkflowHandler(
 	config *Config,
 	replicationMessageSink messaging.Producer,
 	versionChecker client.VersionChecker,
-) Handler {
+) *WorkflowHandler {
 	return &WorkflowHandler{
 		Resource:        resource,
 		config:          config,
@@ -195,13 +193,6 @@ func NewWorkflowHandler(
 	}
 }
 
-// RegisterHandler register this handler, must be called before Start()
-// if DCRedirectionHandler is also used, use RegisterHandler in DCRedirectionHandler instead
-func (wh *WorkflowHandler) RegisterHandler() {
-	wh.GetDispatcher().Register(workflowserviceserver.New(wh))
-	wh.GetDispatcher().Register(metaserver.New(wh))
-}
-
 // Start starts the handler
 func (wh *WorkflowHandler) Start() {
 }
@@ -219,16 +210,6 @@ func (wh *WorkflowHandler) UpdateHealthStatus(status HealthStatus) {
 
 func (wh *WorkflowHandler) isShuttingDown() bool {
 	return atomic.LoadInt32(&wh.shuttingDown) != 0
-}
-
-// GetResource return resource
-func (wh *WorkflowHandler) GetResource() resource.Resource {
-	return wh.Resource
-}
-
-// GetConfig return config
-func (wh *WorkflowHandler) GetConfig() *Config {
-	return wh.config
 }
 
 // Health is for health check

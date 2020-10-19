@@ -24,9 +24,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/.gen/go/health"
-	"github.com/uber/cadence/.gen/go/health/metaserver"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -43,7 +41,6 @@ type (
 		resource.Resource
 
 		currentClusterName string
-		config             *Config
 		redirectionPolicy  DCRedirectionPolicy
 		tokenSerializer    common.TaskTokenSerializer
 		frontendHandler    Handler
@@ -53,12 +50,13 @@ type (
 // NewDCRedirectionHandler creates a thrift handler for the cadence service, frontend
 func NewDCRedirectionHandler(
 	wfHandler Handler,
+	resource resource.Resource,
+	config *Config,
 	policy config.DCRedirectionPolicy,
 ) *DCRedirectionHandlerImpl {
-	resource := wfHandler.GetResource()
 	dcRedirectionPolicy := RedirectionPolicyGenerator(
 		resource.GetClusterMetadata(),
-		wfHandler.GetConfig(),
+		config,
 		resource.GetDomainCache(),
 		policy,
 	)
@@ -66,44 +64,10 @@ func NewDCRedirectionHandler(
 	return &DCRedirectionHandlerImpl{
 		Resource:           resource,
 		currentClusterName: resource.GetClusterMetadata().GetCurrentClusterName(),
-		config:             wfHandler.GetConfig(),
 		redirectionPolicy:  dcRedirectionPolicy,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		frontendHandler:    wfHandler,
 	}
-}
-
-// RegisterHandler register this handler, must be called before Start()
-func (handler *DCRedirectionHandlerImpl) RegisterHandler() {
-	dispatcher := handler.GetResource().GetDispatcher()
-	dispatcher.Register(workflowserviceserver.New(handler))
-	dispatcher.Register(metaserver.New(handler))
-}
-
-// Start starts the handler
-func (handler *DCRedirectionHandlerImpl) Start() {
-	handler.frontendHandler.Start()
-}
-
-// Stop stops the handler
-func (handler *DCRedirectionHandlerImpl) Stop() {
-	handler.frontendHandler.Stop()
-}
-
-// GetResource return resource
-func (handler *DCRedirectionHandlerImpl) GetResource() resource.Resource {
-	return handler.Resource
-}
-
-// GetConfig return config
-func (handler *DCRedirectionHandlerImpl) GetConfig() *Config {
-	return handler.frontendHandler.GetConfig()
-}
-
-// UpdateHealthStatus sets the health status for this rpc handler.
-// This health status will be used within the rpc health check handler
-func (handler *DCRedirectionHandlerImpl) UpdateHealthStatus(status HealthStatus) {
-	handler.frontendHandler.UpdateHealthStatus(status)
 }
 
 // Health is for health check

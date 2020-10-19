@@ -46,6 +46,8 @@ type sqlTaskManager struct {
 
 var (
 	minUUID = "00000000-0000-0000-0000-000000000000"
+
+	stickyTasksListsTTL = time.Hour * 24
 )
 
 // newTaskPersistence creates a new instance of TaskManager
@@ -99,9 +101,21 @@ func (m *sqlTaskManager) LeaseTaskList(
 				DataEncoding: string(blob.Encoding),
 			}
 			rows = []sqlplugin.TaskListsRow{row}
-			if _, err := m.db.InsertIntoTaskLists(ctx, &row); err != nil {
-				return nil, &workflow.InternalServiceError{
-					Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to make task list %v of type %v. Error: %v", request.TaskList, request.TaskType, err),
+			if m.db.SupportsTTL() && request.TaskListKind == persistence.TaskListKindSticky {
+				rowWithTTL := sqlplugin.TaskListsRowWithTTL{
+					TaskListsRow: row,
+					TTL:          stickyTasksListsTTL,
+				}
+				if _, err := m.db.InsertIntoTaskListsWithTTL(ctx, &rowWithTTL); err != nil {
+					return nil, &workflow.InternalServiceError{
+						Message: fmt.Sprintf("LeaseTaskListWithTTL operation failed. Failed to make task list %v of type %v. Error: %v", request.TaskList, request.TaskType, err),
+					}
+				}
+			} else {
+				if _, err := m.db.InsertIntoTaskLists(ctx, &row); err != nil {
+					return nil, &workflow.InternalServiceError{
+						Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to make task list %v of type %v. Error: %v", request.TaskList, request.TaskType, err),
+					}
 				}
 			}
 		} else {
@@ -141,7 +155,7 @@ func (m *sqlTaskManager) LeaseTaskList(
 		if err1 != nil {
 			return err1
 		}
-		result, err1 := tx.UpdateTaskLists(ctx, &sqlplugin.TaskListsRow{
+		row := &sqlplugin.TaskListsRow{
 			ShardID:      shardID,
 			DomainID:     row.DomainID,
 			RangeID:      row.RangeID + 1,
@@ -149,7 +163,16 @@ func (m *sqlTaskManager) LeaseTaskList(
 			TaskType:     row.TaskType,
 			Data:         blob.Data,
 			DataEncoding: string(blob.Encoding),
-		})
+		}
+		var result sql.Result
+		if tlInfo.GetKind() == persistence.TaskListKindSticky && m.db.SupportsTTL() {
+			result, err1 = tx.UpdateTaskListsWithTTL(ctx, &sqlplugin.TaskListsRowWithTTL{
+				TaskListsRow: *row,
+				TTL:          stickyTasksListsTTL,
+			})
+		} else {
+			result, err1 = tx.UpdateTaskLists(ctx, row)
+		}
 		if err1 != nil {
 			return err1
 		}
@@ -187,12 +210,12 @@ func (m *sqlTaskManager) UpdateTaskList(
 		LastUpdatedNanos: common.TimeNowNanosPtr(),
 	}
 	if request.TaskListInfo.Kind == persistence.TaskListKindSticky {
-		tlInfo.ExpiryTimeNanos = common.Int64Ptr(stickyTaskListTTL().UnixNano())
+		tlInfo.ExpiryTimeNanos = common.Int64Ptr(stickyTaskListExpiry().UnixNano())
 		blob, err := m.parser.TaskListInfoToBlob(tlInfo)
 		if err != nil {
 			return nil, err
 		}
-		if _, err := m.db.ReplaceIntoTaskLists(ctx, &sqlplugin.TaskListsRow{
+		row := &sqlplugin.TaskListsRow{
 			ShardID:      shardID,
 			DomainID:     domainID,
 			RangeID:      request.TaskListInfo.RangeID,
@@ -200,9 +223,21 @@ func (m *sqlTaskManager) UpdateTaskList(
 			TaskType:     int64(request.TaskListInfo.TaskType),
 			Data:         blob.Data,
 			DataEncoding: string(blob.Encoding),
-		}); err != nil {
-			return nil, &workflow.InternalServiceError{
-				Message: fmt.Sprintf("UpdateTaskList operation failed. Failed to make sticky task list. Error: %v", err),
+		}
+		if m.db.SupportsTTL() {
+			if _, err := m.db.ReplaceIntoTaskListsWithTTL(ctx, &sqlplugin.TaskListsRowWithTTL{
+				TaskListsRow: *row,
+				TTL:          stickyTasksListsTTL,
+			}); err != nil {
+				return nil, &workflow.InternalServiceError{
+					Message: fmt.Sprintf("UpdateTaskList operation failed. Failed to make sticky task list. Error: %v", err),
+				}
+			}
+		} else {
+			if _, err := m.db.ReplaceIntoTaskLists(ctx, row); err != nil {
+				return nil, &workflow.InternalServiceError{
+					Message: fmt.Sprintf("UpdateTaskList operation failed. Failed to make sticky task list. Error: %v", err),
+				}
 			}
 		}
 	}
@@ -217,7 +252,8 @@ func (m *sqlTaskManager) UpdateTaskList(
 		if err1 != nil {
 			return err1
 		}
-		result, err1 := tx.UpdateTaskLists(ctx, &sqlplugin.TaskListsRow{
+		var result sql.Result
+		row := &sqlplugin.TaskListsRow{
 			ShardID:      shardID,
 			DomainID:     domainID,
 			RangeID:      request.TaskListInfo.RangeID,
@@ -225,7 +261,15 @@ func (m *sqlTaskManager) UpdateTaskList(
 			TaskType:     int64(request.TaskListInfo.TaskType),
 			Data:         blob.Data,
 			DataEncoding: string(blob.Encoding),
-		})
+		}
+		if m.db.SupportsTTL() && request.TaskListInfo.Kind == persistence.TaskListKindSticky {
+			result, err1 = tx.UpdateTaskListsWithTTL(ctx, &sqlplugin.TaskListsRowWithTTL{
+				TaskListsRow: *row,
+				TTL:          stickyTasksListsTTL,
+			})
+		} else {
+			result, err1 = tx.UpdateTaskLists(ctx, row)
+		}
 		if err1 != nil {
 			return err1
 		}
@@ -349,11 +393,29 @@ func (m *sqlTaskManager) CreateTasks(
 	ctx context.Context,
 	request *persistence.InternalCreateTasksRequest,
 ) (*persistence.CreateTasksResponse, error) {
-	tasksRows := make([]sqlplugin.TasksRow, len(request.Tasks))
+	var tasksRows []sqlplugin.TasksRow
+	var tasksRowsWithTTL []sqlplugin.TasksRowWithTTL
+	if m.db.SupportsTTL() {
+		tasksRowsWithTTL = make([]sqlplugin.TasksRowWithTTL, len(request.Tasks))
+	} else {
+		tasksRows = make([]sqlplugin.TasksRow, len(request.Tasks))
+	}
+
 	for i, v := range request.Tasks {
 		var expiryTime time.Time
+		var ttl time.Duration
 		if v.Data.ScheduleToStartTimeout > 0 {
-			expiryTime = time.Now().Add(time.Second * time.Duration(v.Data.ScheduleToStartTimeout))
+			ttl = time.Second * time.Duration(v.Data.ScheduleToStartTimeout)
+			if m.db.SupportsTTL() {
+				maxAllowedTTL, err := m.db.MaxAllowedTTL()
+				if err != nil {
+					return nil, err
+				}
+				if ttl > *maxAllowedTTL {
+					ttl = *maxAllowedTTL
+				}
+			}
+			expiryTime = time.Now().Add(ttl)
 		}
 		blob, err := m.parser.TaskInfoToBlob(&sqlblobs.TaskInfo{
 			WorkflowID:       &v.Data.WorkflowID,
@@ -365,7 +427,7 @@ func (m *sqlTaskManager) CreateTasks(
 		if err != nil {
 			return nil, err
 		}
-		tasksRows[i] = sqlplugin.TasksRow{
+		currTasksRow := sqlplugin.TasksRow{
 			DomainID:     sqlplugin.MustParseUUID(v.Data.DomainID),
 			TaskListName: request.TaskListInfo.Name,
 			TaskType:     int64(request.TaskListInfo.TaskType),
@@ -373,12 +435,31 @@ func (m *sqlTaskManager) CreateTasks(
 			Data:         blob.Data,
 			DataEncoding: string(blob.Encoding),
 		}
+		if m.db.SupportsTTL() {
+			currTasksRowWithTTL := sqlplugin.TasksRowWithTTL{
+				TasksRow: currTasksRow,
+			}
+			if ttl > 0 {
+				currTasksRowWithTTL.TTL = &ttl
+			}
+			tasksRowsWithTTL[i] = currTasksRowWithTTL
+		} else {
+			tasksRows[i] = currTasksRow
+		}
+
 	}
 	var resp *persistence.CreateTasksResponse
 	err := m.txExecute(ctx, "CreateTasks", func(tx sqlplugin.Tx) error {
-		if _, err1 := tx.InsertIntoTasks(ctx, tasksRows); err1 != nil {
-			return err1
+		if m.db.SupportsTTL() {
+			if _, err := tx.InsertIntoTasksWithTTL(ctx, tasksRowsWithTTL); err != nil {
+				return err
+			}
+		} else {
+			if _, err := tx.InsertIntoTasks(ctx, tasksRows); err != nil {
+				return err
+			}
 		}
+
 		// Lock task list before committing.
 		err1 := lockTaskList(ctx, tx,
 			m.shardID(request.TaskListInfo.DomainID, request.TaskListInfo.Name),
@@ -493,6 +574,6 @@ func lockTaskList(ctx context.Context, tx sqlplugin.Tx, shardID int, domainID sq
 	return nil
 }
 
-func stickyTaskListTTL() time.Time {
-	return time.Now().Add(24 * time.Hour)
+func stickyTaskListExpiry() time.Time {
+	return time.Now().Add(stickyTasksListsTTL)
 }

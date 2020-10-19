@@ -853,7 +853,7 @@ type (
 
 	// InternalCreateTasksInfo describes a task to be created in InternalCreateTasksRequest
 	InternalCreateTasksInfo struct {
-		Execution workflow.WorkflowExecution
+		Execution types.WorkflowExecution
 		Data      *InternalTaskInfo
 		TaskID    int64
 	}
