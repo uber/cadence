@@ -190,27 +190,37 @@ type (
 	// this is used to have activities with better determinism
 	CustomScannerConfig map[string]string
 
-	// ResolvedScannerWorkflowConfig is the resolved config after reading dynamic config
-	// and applying overwrites.
-	ResolvedScannerWorkflowConfig struct {
+	// GenericScannerConfig is a generic params for all shard scanners
+	GenericScannerConfig struct {
 		Enabled                 bool
 		Concurrency             int
 		PageSize                int
 		BlobstoreFlushThreshold int
 		ActivityBatchSize       int
-		CustomScannerConfig     CustomScannerConfig
+	}
+
+	// GenericScannerConfigOverwrites allows to override generic params
+	GenericScannerConfigOverwrites struct {
+		Enabled                 *bool
+		Concurrency             *int
+		PageSize                *int
+		BlobstoreFlushThreshold *int
+		ActivityBatchSize       *int
+	}
+
+	// ResolvedScannerWorkflowConfig is the resolved config after reading dynamic config
+	// and applying overwrites.
+	ResolvedScannerWorkflowConfig struct {
+		GenericScannerConfig GenericScannerConfig
+		CustomScannerConfig  CustomScannerConfig
 	}
 
 	// ScannerWorkflowConfigOverwrites enables overwriting the values in dynamic config.
 	// If provided workflow will favor overwrites over dynamic config.
 	// Any overwrites that are left as nil will fall back to using dynamic config.
 	ScannerWorkflowConfigOverwrites struct {
-		Enabled                 *bool
-		Concurrency             *int
-		PageSize                *int
-		BlobstoreFlushThreshold *int
-		ActivityBatchSize       *int
-		CustomScannerConfig     *CustomScannerConfig
+		GenericScannerConfig GenericScannerConfigOverwrites
+		CustomScannerConfig  *CustomScannerConfig
 	}
 
 	// DynamicParams is the dynamic config for scanner workflow.

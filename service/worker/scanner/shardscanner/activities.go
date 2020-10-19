@@ -61,37 +61,39 @@ func ScannerConfigActivity(
 	dc := ctx.Config.DynamicParams
 
 	result := ResolvedScannerWorkflowConfig{
-		Enabled:                 dc.Enabled(),
-		Concurrency:             dc.Concurrency(),
-		PageSize:                dc.PageSize(),
-		BlobstoreFlushThreshold: dc.BlobstoreFlushThreshold(),
-		ActivityBatchSize:       dc.ActivityBatchSize(),
+		GenericScannerConfig: GenericScannerConfig{
+			Enabled:                 dc.Enabled(),
+			Concurrency:             dc.Concurrency(),
+			PageSize:                dc.PageSize(),
+			BlobstoreFlushThreshold: dc.BlobstoreFlushThreshold(),
+			ActivityBatchSize:       dc.ActivityBatchSize(),
+		},
 	}
 
 	if ctx.Hooks != nil && ctx.Hooks.Config != nil {
 		result.CustomScannerConfig = ctx.Hooks.Config(ctx)
 	}
 
-	overwrites := params.Overwrites
+	overwrites := params.Overwrites.GenericScannerConfig
 	if overwrites.Enabled != nil {
-		result.Enabled = *overwrites.Enabled
+		result.GenericScannerConfig.Enabled = *overwrites.Enabled
 	}
 	if overwrites.Concurrency != nil {
-		result.Concurrency = *overwrites.Concurrency
+		result.GenericScannerConfig.Concurrency = *overwrites.Concurrency
 	}
 	if overwrites.PageSize != nil {
-		result.PageSize = *overwrites.PageSize
+		result.GenericScannerConfig.PageSize = *overwrites.PageSize
 	}
 	if overwrites.BlobstoreFlushThreshold != nil {
-		result.BlobstoreFlushThreshold = *overwrites.BlobstoreFlushThreshold
+		result.GenericScannerConfig.BlobstoreFlushThreshold = *overwrites.BlobstoreFlushThreshold
 	}
 
 	if overwrites.ActivityBatchSize != nil {
-		result.ActivityBatchSize = *overwrites.ActivityBatchSize
+		result.GenericScannerConfig.ActivityBatchSize = *overwrites.ActivityBatchSize
 	}
 
-	if overwrites.CustomScannerConfig != nil {
-		result.CustomScannerConfig = *overwrites.CustomScannerConfig
+	if params.Overwrites.CustomScannerConfig != nil {
+		result.CustomScannerConfig = *params.Overwrites.CustomScannerConfig
 	}
 
 	return result, nil

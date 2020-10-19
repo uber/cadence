@@ -120,22 +120,22 @@ func (wf *ScannerWorkflow) Start(ctx workflow.Context) error {
 		return err
 	}
 
-	if !resolvedConfig.Enabled {
+	if !resolvedConfig.GenericScannerConfig.Enabled {
 		return nil
 	}
 
 	shardReportChan := workflow.GetSignalChannel(ctx, scanShardReportChan)
-	for i := 0; i < resolvedConfig.Concurrency; i++ {
+	for i := 0; i < resolvedConfig.GenericScannerConfig.Concurrency; i++ {
 		idx := i
 		workflow.Go(ctx, func(ctx workflow.Context) {
-			batches := getShardBatches(resolvedConfig.ActivityBatchSize, resolvedConfig.Concurrency, wf.Shards, idx)
+			batches := getShardBatches(resolvedConfig.GenericScannerConfig.ActivityBatchSize, resolvedConfig.GenericScannerConfig.Concurrency, wf.Shards, idx)
 			for _, batch := range batches {
 				activityCtx = getLongActivityContext(ctx)
 				var reports []ScanReport
 				if err := workflow.ExecuteActivity(activityCtx, ActivityScanShard, ScanShardActivityParams{
 					Shards:                  batch,
-					PageSize:                resolvedConfig.PageSize,
-					BlobstoreFlushThreshold: resolvedConfig.BlobstoreFlushThreshold,
+					PageSize:                resolvedConfig.GenericScannerConfig.PageSize,
+					BlobstoreFlushThreshold: resolvedConfig.GenericScannerConfig.BlobstoreFlushThreshold,
 					ContextKey:              ScannerContextKey(wf.Name),
 					ScannerConfig:           resolvedConfig.CustomScannerConfig,
 				}).Get(ctx, &reports); err != nil {

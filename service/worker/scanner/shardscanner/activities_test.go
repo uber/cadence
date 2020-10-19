@@ -262,11 +262,13 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 			},
 			addHook: true,
 			resolved: ResolvedScannerWorkflowConfig{
-				Enabled:                 true,
-				Concurrency:             10,
-				ActivityBatchSize:       10,
-				PageSize:                100,
-				BlobstoreFlushThreshold: 1000,
+				GenericScannerConfig: GenericScannerConfig{
+					Enabled:                 true,
+					Concurrency:             10,
+					ActivityBatchSize:       10,
+					PageSize:                100,
+					BlobstoreFlushThreshold: 1000,
+				},
 				CustomScannerConfig: CustomScannerConfig{
 					"test-key": "test-value",
 				},
@@ -285,11 +287,13 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 				ContextKey: TestContextKey,
 			},
 			resolved: ResolvedScannerWorkflowConfig{
-				Enabled:                 true,
-				Concurrency:             10,
-				ActivityBatchSize:       10,
-				PageSize:                100,
-				BlobstoreFlushThreshold: 1000,
+				GenericScannerConfig: GenericScannerConfig{
+					Enabled:                 true,
+					Concurrency:             10,
+					ActivityBatchSize:       10,
+					PageSize:                100,
+					BlobstoreFlushThreshold: 1000,
+				},
 			},
 		},
 		{
@@ -302,9 +306,11 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 			},
 			params: ScannerConfigActivityParams{
 				Overwrites: ScannerWorkflowConfigOverwrites{
-					Enabled:                 common.BoolPtr(false),
-					ActivityBatchSize:       common.IntPtr(1),
-					BlobstoreFlushThreshold: common.IntPtr(100),
+					GenericScannerConfig: GenericScannerConfigOverwrites{
+						Enabled:                 common.BoolPtr(false),
+						ActivityBatchSize:       common.IntPtr(1),
+						BlobstoreFlushThreshold: common.IntPtr(100),
+					},
 					CustomScannerConfig: &CustomScannerConfig{
 						"test": "test",
 					},
@@ -312,11 +318,13 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 				ContextKey: TestContextKey,
 			},
 			resolved: ResolvedScannerWorkflowConfig{
-				Enabled:                 false,
-				Concurrency:             10,
-				ActivityBatchSize:       1,
-				PageSize:                100,
-				BlobstoreFlushThreshold: 100,
+				GenericScannerConfig: GenericScannerConfig{
+					Enabled:                 false,
+					Concurrency:             10,
+					ActivityBatchSize:       1,
+					PageSize:                100,
+					BlobstoreFlushThreshold: 100,
+				},
 				CustomScannerConfig: CustomScannerConfig{
 					"test": "test",
 				},
