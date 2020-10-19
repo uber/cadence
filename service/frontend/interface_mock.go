@@ -35,7 +35,6 @@ import (
 
 	health "github.com/uber/cadence/.gen/go/health"
 	shared "github.com/uber/cadence/.gen/go/shared"
-	resource "github.com/uber/cadence/common/resource"
 )
 
 // MockHandler is a mock of Handler interface
@@ -59,6 +58,21 @@ func NewMockHandler(ctrl *gomock.Controller) *MockHandler {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockHandler) EXPECT() *MockHandlerMockRecorder {
 	return m.recorder
+}
+
+// Health mocks base method
+func (m *MockHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Health", ctx)
+	ret0, _ := ret[0].(*health.HealthStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Health indicates an expected call of Health
+func (mr *MockHandlerMockRecorder) Health(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Health", reflect.TypeOf((*MockHandler)(nil).Health), ctx)
 }
 
 // CountWorkflowExecutions mocks base method
@@ -616,95 +630,4 @@ func (m *MockHandler) UpdateDomain(ctx context.Context, UpdateRequest *shared.Up
 func (mr *MockHandlerMockRecorder) UpdateDomain(ctx, UpdateRequest interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDomain", reflect.TypeOf((*MockHandler)(nil).UpdateDomain), ctx, UpdateRequest)
-}
-
-// Start mocks base method
-func (m *MockHandler) Start() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Start")
-}
-
-// Start indicates an expected call of Start
-func (mr *MockHandlerMockRecorder) Start() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockHandler)(nil).Start))
-}
-
-// Stop mocks base method
-func (m *MockHandler) Stop() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Stop")
-}
-
-// Stop indicates an expected call of Stop
-func (mr *MockHandlerMockRecorder) Stop() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockHandler)(nil).Stop))
-}
-
-// GetResource mocks base method
-func (m *MockHandler) GetResource() resource.Resource {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetResource")
-	ret0, _ := ret[0].(resource.Resource)
-	return ret0
-}
-
-// GetResource indicates an expected call of GetResource
-func (mr *MockHandlerMockRecorder) GetResource() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResource", reflect.TypeOf((*MockHandler)(nil).GetResource))
-}
-
-// GetConfig mocks base method
-func (m *MockHandler) GetConfig() *Config {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetConfig")
-	ret0, _ := ret[0].(*Config)
-	return ret0
-}
-
-// GetConfig indicates an expected call of GetConfig
-func (mr *MockHandlerMockRecorder) GetConfig() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfig", reflect.TypeOf((*MockHandler)(nil).GetConfig))
-}
-
-// RegisterHandler mocks base method
-func (m *MockHandler) RegisterHandler() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RegisterHandler")
-}
-
-// RegisterHandler indicates an expected call of RegisterHandler
-func (mr *MockHandlerMockRecorder) RegisterHandler() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterHandler", reflect.TypeOf((*MockHandler)(nil).RegisterHandler))
-}
-
-// Health mocks base method
-func (m *MockHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Health", ctx)
-	ret0, _ := ret[0].(*health.HealthStatus)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Health indicates an expected call of Health
-func (mr *MockHandlerMockRecorder) Health(ctx interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Health", reflect.TypeOf((*MockHandler)(nil).Health), ctx)
-}
-
-// UpdateHealthStatus mocks base method
-func (m *MockHandler) UpdateHealthStatus(status HealthStatus) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateHealthStatus", status)
-}
-
-// UpdateHealthStatus indicates an expected call of UpdateHealthStatus
-func (mr *MockHandlerMockRecorder) UpdateHealthStatus(status interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateHealthStatus", reflect.TypeOf((*MockHandler)(nil).UpdateHealthStatus), status)
 }
