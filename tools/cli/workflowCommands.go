@@ -1438,7 +1438,6 @@ func ObserveHistory(c *cli.Context) {
 func ResetWorkflow(c *cli.Context) {
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
-	rid := getRequiredOption(c, FlagRunID)
 	reason := getRequiredOption(c, FlagReason)
 	if len(reason) == 0 {
 		ErrorAndExit("wrong reason", fmt.Errorf("reason cannot be empty"))
@@ -1457,10 +1456,17 @@ func ResetWorkflow(c *cli.Context) {
 	defer cancel()
 
 	frontendClient := cFactory.ServerFrontendClient(c)
+	rid := c.String(FlagRunID)
+	var err error
+	if rid == "" {
+		rid, err = getCurrentRunID(ctx, domain, wid, frontendClient)
+		if err != nil {
+			ErrorAndExit("Cannot get latest RunID as default", err)
+		}
+	}
 
 	resetBaseRunID := rid
 	decisionFinishID := eventID
-	var err error
 	if resetType != "" {
 		resetBaseRunID, decisionFinishID, err = getResetEventIDByType(ctx, c, resetType, domain, wid, rid, frontendClient)
 		if err != nil {
@@ -1826,8 +1832,55 @@ func getResetEventIDByType(ctx context.Context, c *cli.Context, resetType, domai
 		if err != nil {
 			return
 		}
+	case "DecisionStartedTime":
+		earliestTime := parseTime(c.String(FlagEarliestTime), 0)
+		resetBaseRunID, decisionFinishID, err = getEarliestDecisionID(ctx, domain, wid, rid, earliestTime, frontendClient)
+		if err != nil {
+			return
+		}
 	default:
 		panic("not supported resetType")
+	}
+	return
+}
+
+func getEarliestDecisionID(ctx context.Context, domain string, wid string, rid string, earliestTime int64, frontendClient workflowserviceclient.Interface) (resetBaseRunID string, decisionFinishID int64, err error) {
+	resetBaseRunID = rid
+	req := &shared.GetWorkflowExecutionHistoryRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+			RunId:      common.StringPtr(rid),
+		},
+		MaximumPageSize: common.Int32Ptr(1000),
+		NextPageToken:   nil,
+	}
+
+	for {
+		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
+		if err != nil {
+			return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
+		}
+		found := false
+		for _, e := range resp.GetHistory().GetEvents() {
+			if e.GetEventType() == shared.EventTypeDecisionTaskCompleted {
+				if e.GetTimestamp() >= earliestTime {
+					found = true
+					decisionFinishID = e.GetEventId()
+				}
+			}
+		}
+		if found {
+			break
+		}
+		if len(resp.NextPageToken) != 0 {
+			req.NextPageToken = resp.NextPageToken
+		} else {
+			break
+		}
+	}
+	if decisionFinishID == 0 {
+		return "", 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
 	}
 	return
 }
@@ -1864,6 +1917,19 @@ func getLastDecisionCompletedID(ctx context.Context, domain, wid, rid string, fr
 		return "", 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
 	}
 	return
+}
+
+func getCurrentRunID(ctx context.Context, domain, wid string, frontendClient workflowserviceclient.Interface) (string, error) {
+	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &shared.DescribeWorkflowExecutionRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(wid),
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	return resp.WorkflowExecutionInfo.Execution.GetRunId(), nil
 }
 
 func getBadDecisionCompletedID(ctx context.Context, domain, wid, rid, binChecksum string, frontendClient workflowserviceclient.Interface) (resetBaseRunID string, decisionFinishID int64, err error) {
