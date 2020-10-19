@@ -49,6 +49,8 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type ESVisibilitySuite struct {
@@ -59,6 +61,7 @@ type ESVisibilitySuite struct {
 	visibilityStore *esVisibilityStore
 	mockESClient    *esMocks.Client
 	mockProducer    *mocks.KafkaProducer
+	serializer      p.PayloadSerializer
 }
 
 var (
@@ -112,6 +115,7 @@ func (s *ESVisibilitySuite) SetupTest() {
 	s.mockProducer = &mocks.KafkaProducer{}
 	mgr := NewElasticSearchVisibilityStore(s.mockESClient, testIndex, s.mockProducer, config, loggerimpl.NewNopLogger())
 	s.visibilityStore = mgr.(*esVisibilityStore)
+	s.serializer = p.NewPayloadSerializer()
 }
 
 func (s *ESVisibilitySuite) TearDownTest() {
@@ -129,8 +133,12 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 	request.StartTimestamp = int64(123)
 	request.ExecutionTimestamp = int64(321)
 	request.TaskID = int64(111)
-	memoBytes := []byte(`test bytes`)
-	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
+	memo := &workflow.Memo{
+		Fields: map[string][]byte{"test": []byte("test bytes")},
+	}
+	request.Memo = thrift.ToMemo(memo)
+	memoBlob, err := s.serializer.SerializeVisibilityMemo(memo, common.EncodingTypeThriftRW)
+	s.NoError(err)
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
 		s.Equal(request.DomainUUID, input.GetDomainID())
@@ -140,7 +148,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 		s.Equal(request.WorkflowTypeName, fields[es.WorkflowType].GetStringData())
 		s.Equal(request.StartTimestamp, fields[es.StartTime].GetIntData())
 		s.Equal(request.ExecutionTimestamp, fields[es.ExecutionTime].GetIntData())
-		s.Equal(memoBytes, fields[es.Memo].GetBinaryData())
+		s.Equal(memoBlob.Data, fields[es.Memo].GetBinaryData())
 		s.Equal(string(common.EncodingTypeThriftRW), fields[es.Encoding].GetStringData())
 		return true
 	})).Return(nil).Once()
@@ -148,14 +156,14 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	err := s.visibilityStore.RecordWorkflowExecutionStarted(ctx, request)
+	err = s.visibilityStore.RecordWorkflowExecutionStarted(ctx, request)
 	s.NoError(err)
 }
 
 func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted_EmptyRequest() {
 	// test empty request
 	request := &p.InternalRecordWorkflowExecutionStartedRequest{
-		Memo: &p.DataBlob{},
+		Memo: nil,
 	}
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		s.Equal(indexer.MessageTypeIndex, input.GetMessageType())
@@ -183,10 +191,16 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 	request.StartTimestamp = int64(123)
 	request.ExecutionTimestamp = int64(321)
 	request.TaskID = int64(111)
-	memoBytes := []byte(`test bytes`)
-	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
+	memo := &workflow.Memo{
+		Fields: map[string][]byte{"test": []byte("test bytes")},
+	}
+	request.Memo = thrift.ToMemo(memo)
+	memoBlob, err := s.serializer.SerializeVisibilityMemo(memo, common.EncodingTypeThriftRW)
+	s.NoError(err)
+	request.Memo = thrift.ToMemo(memo)
 	request.CloseTimestamp = int64(999)
-	request.Status = workflow.WorkflowExecutionCloseStatusTerminated
+	closeStatus := workflow.WorkflowExecutionCloseStatusTerminated
+	request.Status = *thrift.ToWorkflowExecutionCloseStatus(&closeStatus)
 	request.HistoryLength = int64(20)
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
@@ -197,10 +211,10 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 		s.Equal(request.WorkflowTypeName, fields[es.WorkflowType].GetStringData())
 		s.Equal(request.StartTimestamp, fields[es.StartTime].GetIntData())
 		s.Equal(request.ExecutionTimestamp, fields[es.ExecutionTime].GetIntData())
-		s.Equal(memoBytes, fields[es.Memo].GetBinaryData())
+		s.Equal(memoBlob.Data, fields[es.Memo].GetBinaryData())
 		s.Equal(string(common.EncodingTypeThriftRW), fields[es.Encoding].GetStringData())
 		s.Equal(request.CloseTimestamp, fields[es.CloseTime].GetIntData())
-		s.Equal(int64(request.Status), fields[es.CloseStatus].GetIntData())
+		s.Equal(int64(closeStatus), fields[es.CloseStatus].GetIntData())
 		s.Equal(request.HistoryLength, fields[es.HistoryLength].GetIntData())
 		return true
 	})).Return(nil).Once()
@@ -208,14 +222,14 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	err := s.visibilityStore.RecordWorkflowExecutionClosed(ctx, request)
+	err = s.visibilityStore.RecordWorkflowExecutionClosed(ctx, request)
 	s.NoError(err)
 }
 
 func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed_EmptyRequest() {
 	// test empty request
 	request := &p.InternalRecordWorkflowExecutionClosedRequest{
-		Memo: &p.DataBlob{},
+		Memo: nil,
 	}
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		s.Equal(indexer.MessageTypeIndex, input.GetMessageType())
@@ -391,9 +405,10 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
 		return true
 	})).Return(testSearchResult, nil).Once()
 
+	closeStatus := workflow.WorkflowExecutionCloseStatus(testCloseStatus)
 	request := &p.InternalListClosedWorkflowExecutionsByStatusRequest{
 		InternalListWorkflowExecutionsRequest: *testRequest,
-		Status:                                workflow.WorkflowExecutionCloseStatus(testCloseStatus),
+		Status:                                *thrift.ToWorkflowExecutionCloseStatus(&closeStatus),
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -420,9 +435,9 @@ func (s *ESVisibilitySuite) TestGetClosedWorkflowExecution() {
 	})).Return(testSearchResult, nil).Once()
 	request := &p.InternalGetClosedWorkflowExecutionRequest{
 		DomainUUID: testDomainID,
-		Execution: workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(testWorkflowID),
-			RunId:      common.StringPtr(testRunID),
+		Execution: types.WorkflowExecution{
+			WorkflowID: common.StringPtr(testWorkflowID),
+			RunID:      common.StringPtr(testRunID),
 		},
 	}
 
@@ -450,8 +465,8 @@ func (s *ESVisibilitySuite) TestGetClosedWorkflowExecution_NoRunID() {
 	})).Return(testSearchResult, nil).Once()
 	request := &p.InternalGetClosedWorkflowExecutionRequest{
 		DomainUUID: testDomainID,
-		Execution: workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(testWorkflowID),
+		Execution: types.WorkflowExecution{
+			WorkflowID: common.StringPtr(testWorkflowID),
 		},
 	}
 
@@ -704,7 +719,7 @@ func (s *ESVisibilitySuite) TestConvertSearchResultToVisibilityRecord() {
 	s.Equal("TestWorkflowExecute", info.TypeName)
 	s.Equal(int64(1547596872371000000), info.StartTime.UnixNano())
 	s.Equal(int64(1547596872817380000), info.CloseTime.UnixNano())
-	s.Equal(workflow.WorkflowExecutionCloseStatusCompleted, *info.Status)
+	s.Equal(workflow.WorkflowExecutionCloseStatusCompleted, *thrift.FromWorkflowExecutionCloseStatus(info.Status))
 	s.Equal(int64(29), info.HistoryLength)
 
 	// test for error case
