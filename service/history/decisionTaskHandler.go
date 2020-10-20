@@ -249,6 +249,9 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 			if _, err1 := handler.mutableState.AddActivityTaskStartedEvent(ai, event.GetEventId(), uuid.New(), handler.identity); err1 != nil {
 				return nil, err1
 			}
+			activityDispatchInfo.ScheduledTimestamp = common.Int64Ptr(ai.ScheduledTime.UnixNano())
+			activityDispatchInfo.ScheduledTimestampOfThisAttempt = common.Int64Ptr(ai.ScheduledTime.UnixNano())
+			activityDispatchInfo.StartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
 			return &decisionResult{activityDispatchInfo: activityDispatchInfo}, nil
 		}
 		return nil, nil
