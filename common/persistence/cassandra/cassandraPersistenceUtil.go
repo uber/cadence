@@ -24,14 +24,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/common/types/mapper/thrift"
-
 	"github.com/gocql/gocql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 func applyWorkflowMutationBatch(

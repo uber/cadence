@@ -26,17 +26,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/types/mapper/thrift"
-
 	"github.com/gocql/gocql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (

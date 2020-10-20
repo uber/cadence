@@ -26,16 +26,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/common/types/mapper/thrift"
-
-	"github.com/uber/cadence/common/persistence/serialization"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type sqlShardManager struct {
