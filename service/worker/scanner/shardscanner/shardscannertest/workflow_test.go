@@ -55,9 +55,11 @@ func (s *workflowsSuite) SetupSuite() {
 func (s *workflowsSuite) TestScannerWorkflow_Failure_ScanShard() {
 	env := s.NewTestWorkflowEnvironment()
 	env.OnActivity(shardscanner.ActivityScannerConfig, mock.Anything, mock.Anything).Return(shardscanner.ResolvedScannerWorkflowConfig{
-		Enabled:           true,
-		Concurrency:       3,
-		ActivityBatchSize: 5,
+		GenericScannerConfig: shardscanner.GenericScannerConfig{
+			Enabled:           true,
+			Concurrency:       3,
+			ActivityBatchSize: 5,
+		},
 	}, nil)
 	shards := shardscanner.Shards{
 		Range: &shardscanner.ShardRange{
@@ -145,7 +147,9 @@ func (s *workflowsSuite) TestScannerWorkflow_Requires_Valid_ShardConfig() {
 func (s *workflowsSuite) TestScannerWorkflow_Success_Disabled() {
 	env := s.NewTestWorkflowEnvironment()
 	env.OnActivity(shardscanner.ActivityScannerConfig, mock.Anything, mock.Anything).Return(shardscanner.ResolvedScannerWorkflowConfig{
-		Enabled: false,
+		GenericScannerConfig: shardscanner.GenericScannerConfig{
+			Enabled: false,
+		},
 	}, nil)
 
 	env.ExecuteWorkflow(NewTestWorkflow, "test-workflow", shardscanner.ScannerWorkflowParams{
