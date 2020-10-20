@@ -417,6 +417,7 @@ Update_History_Loop:
 				msBuilder,
 				handler.decisionAttrValidator,
 				workflowSizeChecker,
+				handler.tokenSerializer,
 				handler.logger,
 				handler.domainCache,
 				handler.metricsClient,
