@@ -39,15 +39,15 @@ import (
 
 const (
 	// ActivityScannerEmitMetrics is the activity name for ScannerEmitMetricsActivity
-	ActivityScannerEmitMetrics = "cadence-sys-executions-shardscanner-emit-metrics-activity"
+	ActivityScannerEmitMetrics = "cadence-sys-shardscanner-emit-metrics-activity"
 	// ActivityScannerConfig is the activity name ScannerConfigActivity
-	ActivityScannerConfig = "cadence-sys-executions-shardscanner-config-activity"
+	ActivityScannerConfig = "cadence-sys-shardscanner-config-activity"
 	// ActivityScanShard is the activity name for ScanShardActivity
-	ActivityScanShard = "cadence-sys-executions-shardscanner-scan-shard-activity"
+	ActivityScanShard = "cadence-sys-shardscanner-scanshard-activity"
 	// ActivityFixerCorruptedKeys is the activity name for FixerCorruptedKeysActivity
-	ActivityFixerCorruptedKeys = "cadence-sys-executions-shardfixer-corrupted-keys-activity"
+	ActivityFixerCorruptedKeys = "cadence-sys-shardscanner-corruptedkeys-activity"
 	// ActivityFixShard is the activity name for FixShardActivity
-	ActivityFixShard = "cadence-sys-executions-shardfixer-fix-shard-activity"
+	ActivityFixShard = "cadence-sys-shardscanner-fixshard-activity"
 	// ShardCorruptKeysQuery is the query name for the query used to get all completed shards with at least one corruption
 	ShardCorruptKeysQuery = "shard_corrupt_keys"
 )
@@ -70,8 +70,8 @@ func ScannerConfigActivity(
 		},
 	}
 
-	if ctx.Hooks != nil && ctx.Hooks.Config != nil {
-		result.CustomScannerConfig = ctx.Hooks.Config(ctx)
+	if ctx.Hooks != nil && ctx.Hooks.GetScannerConfig != nil {
+		result.CustomScannerConfig = ctx.Hooks.GetScannerConfig(ctx)
 	}
 
 	overwrites := params.Overwrites.GenericScannerConfig
@@ -134,7 +134,11 @@ func scanShard(
 	heartbeatDetails ScanShardHeartbeatDetails,
 ) (*ScanReport, error) {
 	ctx := activityCtx.Value(params.ContextKey).(Context)
-	scope := ctx.Scope.Tagged(metrics.ActivityTypeTag(params.ContextKey.String()))
+	scope := ctx.Scope.Tagged(
+		metrics.ActivityTypeTag(ActivityScanShard),
+		metrics.WorkflowTypeTag(params.ContextKey.String()),
+		metrics.DomainTag(c.SystemLocalDomainName),
+	)
 	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer sw.Stop()
 
@@ -275,7 +279,11 @@ func fixShard(
 ) (*FixReport, error) {
 	ctx := activityCtx.Value(params.ContextKey).(FixerContext)
 	resources := ctx.Resource
-	scope := ctx.Scope.Tagged(metrics.ActivityTypeTag(ActivityFixShard))
+	scope := ctx.Scope.Tagged(
+		metrics.ActivityTypeTag(ActivityFixShard),
+		metrics.WorkflowTypeTag(params.ContextKey.String()),
+		metrics.DomainTag(c.SystemLocalDomainName),
+	)
 	sw := scope.StartTimer(metrics.CadenceLatency)
 	defer sw.Stop()
 
@@ -313,6 +321,8 @@ func ScannerEmitMetricsActivity(
 ) error {
 	scope := activityCtx.Value(params.ContextKey).(Context).Scope.Tagged(
 		metrics.ActivityTypeTag(ActivityScannerEmitMetrics),
+		metrics.WorkflowTypeTag(params.ContextKey.String()),
+		metrics.DomainTag(c.SystemLocalDomainName),
 	)
 	scope.UpdateGauge(metrics.CadenceShardSuccessGauge, float64(params.ShardSuccessCount))
 	scope.UpdateGauge(metrics.CadenceShardFailureGauge, float64(params.ShardControlFlowFailureCount))

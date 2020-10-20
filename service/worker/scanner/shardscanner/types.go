@@ -48,15 +48,6 @@ type (
 	// ScannerContextKey is type used for identifying context
 	ScannerContextKey string
 
-	// ScannerEmitMetricsActivityParams is the parameter for ScannerEmitMetricsActivity
-	ScannerEmitMetricsActivityParams struct {
-		ShardSuccessCount            int
-		ShardControlFlowFailureCount int
-		AggregateReportResult        AggregateScanReportResult
-		ShardDistributionStats       ShardDistributionStats
-		ContextKey                   ScannerContextKey
-	}
-
 	// Context is the resource that is available in activities under ShardScanner context key
 	Context struct {
 		Resource   resource.Resource
@@ -73,6 +64,28 @@ type (
 		Scope      metrics.Scope
 		Config     *ScannerConfig
 		ContextKey ScannerContextKey
+	}
+
+	// ScannerEmitMetricsActivityParams is the parameter for ScannerEmitMetricsActivity
+	ScannerEmitMetricsActivityParams struct {
+		ShardSuccessCount            int
+		ShardControlFlowFailureCount int
+		AggregateReportResult        AggregateScanReportResult
+		ShardDistributionStats       ShardDistributionStats
+		ContextKey                   ScannerContextKey
+	}
+
+	// ShardRange identifies a set of shards based on min (inclusive) and max (exclusive)
+	ShardRange struct {
+		Min int
+		Max int
+	}
+
+	// Shards identify the shards that should be scanned.
+	// Exactly one of List or Range should be non-nil.
+	Shards struct {
+		List  []int
+		Range *ShardRange
 	}
 
 	// ScannerWorkflowParams are the parameters to the scan workflow
@@ -360,19 +373,6 @@ func getBatchIndices(
 		batches = append(batches, currBatch)
 	}
 	return batches
-}
-
-// Shards identify the shards that should be scanned.
-// Exactly one of List or Range should be non-nil.
-type Shards struct {
-	List  []int
-	Range *ShardRange
-}
-
-// ShardRange identifies a set of shards based on min (inclusive) and max (exclusive)
-type ShardRange struct {
-	Min int
-	Max int
 }
 
 // Validate validates shard list or range

@@ -27,6 +27,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/uber-go/tally"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -48,7 +50,7 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
-var TestContextKey ScannerContextKey = "test-context"
+var TestContextKey ScannerContextKey = "test-workflow"
 
 type activitiesSuite struct {
 	suite.Suite
@@ -124,7 +126,7 @@ func (s *activitiesSuite) TestScanShardActivity() {
 			BackgroundActivityContext: context.WithValue(context.Background(), TestContextKey, Context{
 				ContextKey: TestContextKey,
 				Config:     &ScannerConfig{},
-				Scope:      metrics.NoopScope(metrics.Worker),
+				Scope:      s.mockResource.MetricsClient.Scope(metrics.ShardScannerScope),
 				Resource:   s.mockResource,
 				Hooks:      hooks,
 			}),
@@ -137,6 +139,13 @@ func (s *activitiesSuite) TestScanShardActivity() {
 		}
 		var reports []ScanReport
 		s.NoError(report.Get(&reports))
+
+		for _, v := range s.mockResource.MetricsScope.(tally.TestScope).Snapshot().Timers() {
+			tags := v.Tags()
+			s.Equal(tags["activityType"], "cadence-sys-shardscanner-scanshard-activity")
+			s.Equal(tags["workflowType"], "test-workflow")
+		}
+
 	}
 }
 
@@ -343,7 +352,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 
 		if tc.addHook {
 			sc.Hooks = &ScannerHooks{
-				Config: func(scanner Context) CustomScannerConfig {
+				GetScannerConfig: func(scanner Context) CustomScannerConfig {
 					return map[string]string{"test-key": "test-value"}
 				},
 			}
