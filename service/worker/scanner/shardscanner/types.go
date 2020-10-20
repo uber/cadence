@@ -42,6 +42,8 @@ const (
 	ErrScanWorkflowNotClosed = "scan workflow is not closed, only can run fix on output of finished scan workflow"
 	// ErrSerialization indicates a serialization or deserialization error occurred
 	ErrSerialization = "encountered serialization error"
+	// ErrMissingHooks indicates scanner is not providing hooks to Invariant manager or Iterator
+	ErrMissingHooks = "hooks are not provided for this scanner"
 )
 
 type (
@@ -282,7 +284,7 @@ func getShortActivityContext(ctx workflow.Context) workflow.Context {
 			InitialInterval:          time.Second,
 			BackoffCoefficient:       1.7,
 			ExpirationInterval:       10 * time.Minute,
-			NonRetriableErrorReasons: []string{ErrScanWorkflowNotClosed, ErrSerialization},
+			NonRetriableErrorReasons: []string{ErrScanWorkflowNotClosed, ErrSerialization, ErrMissingHooks},
 		},
 	}
 	return workflow.WithActivityOptions(ctx, activityOptions)
@@ -297,7 +299,7 @@ func getLongActivityContext(ctx workflow.Context) workflow.Context {
 			InitialInterval:          time.Second,
 			BackoffCoefficient:       1.7,
 			ExpirationInterval:       48 * time.Hour,
-			NonRetriableErrorReasons: []string{ErrScanWorkflowNotClosed, ErrSerialization},
+			NonRetriableErrorReasons: []string{ErrScanWorkflowNotClosed, ErrSerialization, ErrMissingHooks},
 		},
 	}
 	return workflow.WithActivityOptions(ctx, activityOptions)

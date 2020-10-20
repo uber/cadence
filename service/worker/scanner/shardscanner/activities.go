@@ -25,7 +25,6 @@ package shardscanner
 import (
 	"context"
 	"encoding/json"
-	"errors"
 
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/.gen/go/shared"
@@ -143,7 +142,7 @@ func scanShard(
 	defer sw.Stop()
 
 	if ctx.Hooks == nil {
-		return nil, errors.New("scanner hooks are not provided")
+		return nil, cadence.NewCustomError(ErrMissingHooks)
 	}
 
 	resources := ctx.Resource
@@ -288,7 +287,7 @@ func fixShard(
 	defer sw.Stop()
 
 	if ctx.Hooks == nil {
-		return nil, errors.New("fixer hooks are not provided")
+		return nil, cadence.NewCustomError(ErrMissingHooks)
 	}
 
 	execManager, err := resources.GetExecutionManager(shardID)
