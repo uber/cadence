@@ -222,6 +222,9 @@ func (c *elasticV6) RunBulkProcessor(ctx context.Context, parameters *GenericBul
 const unknownStatusCode = -1
 
 func convertToGenericError(err error) *GenericError {
+	if err == nil {
+		return nil
+	}
 	status := unknownStatusCode
 	switch e := err.(type) {
 	case *elastic.Error:
