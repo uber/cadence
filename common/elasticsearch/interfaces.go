@@ -91,16 +91,6 @@ type (
 		PageSize      int
 	}
 
-	// GenericSearchParameters holds all required and optional parameters for executing a search
-	GenericSearchParameters struct {
-		Index       string
-		Query       GenericQuery
-		From        int
-		PageSize    int
-		Sorter      []GenericSorter
-		SearchAfter []interface{}
-	}
-
 	// GenericBulkProcessor is a bulk processor
 	GenericBulkProcessor interface {
 		Start(ctx context.Context) error
@@ -121,17 +111,6 @@ type (
 		Backoff       GenericBackoff
 		BeforeFunc    GenericBulkBeforeFunc
 		AfterFunc     GenericBulkAfterFunc
-	}
-
-	// GenericSorter is an interface for sorting strategies
-	GenericSorter interface {
-		Source() (interface{}, error)
-	}
-
-	// GenericQuery represents the generic query interface.
-	GenericQuery interface {
-		// Source returns the JSON-serializable query request.
-		Source() (interface{}, error)
 	}
 
 	// GenericBackoff allows callers to implement their own Backoff strategy.
