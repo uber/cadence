@@ -271,7 +271,6 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 			activityDispatchInfo.ScheduledTimestamp = common.Int64Ptr(ai.ScheduledTime.UnixNano())
 			activityDispatchInfo.ScheduledTimestampOfThisAttempt = common.Int64Ptr(ai.ScheduledTime.UnixNano())
 			activityDispatchInfo.StartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
-
 			return &decisionResult{activityDispatchInfo: activityDispatchInfo}, nil
 		}
 		return nil, nil
