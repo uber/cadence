@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	es "github.com/uber/cadence/common/elasticsearch"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
@@ -58,7 +60,7 @@ func BenchmarkJSONDecodeToType(b *testing.B) {
 	bytes := (*json.RawMessage)(&data)
 	serializer := p.NewPayloadSerializer()
 	for i := 0; i < b.N; i++ {
-		var source *visibilityRecord
+		var source *es.VisibilityRecord
 		json.Unmarshal(*bytes, &source)
 		memo, _ := serializer.DeserializeVisibilityMemo(p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)))
 		record := &p.InternalVisibilityWorkflowExecutionInfo{

@@ -181,13 +181,19 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutions(
 		return request.EarliestTime <= startTime && startTime <= request.LatestTime
 	}
 
-	return v.esClient.Search(ctx, &es.SearchRequest{
+	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
 		Index:       v.index,
 		ListRequest: request,
 		IsOpen:      true,
 		Filter:      isRecordValid,
 		MatchQuery:  nil,
 	})
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListOpenWorkflowExecutions failed, %v", err),
+		}
+	}
+	return resp, nil
 }
 
 func (v *esVisibilityStore) ListClosedWorkflowExecutions(
@@ -199,13 +205,19 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutions(
 		return request.EarliestTime <= closeTime && closeTime <= request.LatestTime
 	}
 
-	return v.esClient.Search(ctx, &es.SearchRequest{
+	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
 		Index:       v.index,
 		ListRequest: request,
 		IsOpen:      false,
 		Filter:      isRecordValid,
 		MatchQuery:  nil,
 	})
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
+		}
+	}
+	return resp, nil
 }
 
 func (v *esVisibilityStore) ListOpenWorkflowExecutionsByType(
@@ -217,7 +229,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByType(
 		return request.EarliestTime <= startTime && startTime <= request.LatestTime
 	}
 
-	return v.esClient.Search(ctx, &es.SearchRequest{
+	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
 		Index:       v.index,
 		ListRequest: &request.InternalListWorkflowExecutionsRequest,
 		IsOpen:      true,
@@ -227,6 +239,12 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByType(
 			Text: request.WorkflowTypeName,
 		},
 	})
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListOpenWorkflowExecutionsByType failed, %v", err),
+		}
+	}
+	return resp, nil
 }
 
 func (v *esVisibilityStore) ListClosedWorkflowExecutionsByType(
@@ -238,7 +256,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByType(
 		return request.EarliestTime <= closeTime && closeTime <= request.LatestTime
 	}
 
-	return v.esClient.Search(ctx, &es.SearchRequest{
+	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
 		Index:       v.index,
 		ListRequest: &request.InternalListWorkflowExecutionsRequest,
 		IsOpen:      false,
@@ -248,6 +266,12 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByType(
 			Text: request.WorkflowTypeName,
 		},
 	})
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByType failed, %v", err),
+		}
+	}
+	return resp, nil
 }
 
 func (v *esVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
@@ -259,7 +283,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 		return request.EarliestTime <= startTime && startTime <= request.LatestTime
 	}
 
-	return v.esClient.Search(ctx, &es.SearchRequest{
+	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
 		Index:       v.index,
 		ListRequest: &request.InternalListWorkflowExecutionsRequest,
 		IsOpen:      true,
@@ -269,6 +293,12 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 			Text: request.WorkflowID,
 		},
 	})
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListOpenWorkflowExecutionsByWorkflowID failed, %v", err),
+		}
+	}
+	return resp, nil
 }
 
 func (v *esVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
@@ -280,7 +310,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 		return request.EarliestTime <= closeTime && closeTime <= request.LatestTime
 	}
 
-	return v.esClient.Search(ctx, &es.SearchRequest{
+	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
 		Index:       v.index,
 		ListRequest: &request.InternalListWorkflowExecutionsRequest,
 		IsOpen:      false,
@@ -290,6 +320,12 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 			Text: request.WorkflowID,
 		},
 	})
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID failed, %v", err),
+		}
+	}
+	return resp, nil
 }
 
 func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
@@ -335,7 +371,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 		return request.EarliestTime <= closeTime && closeTime <= request.LatestTime
 	}
 
-	return v.esClient.Search(ctx, &es.SearchRequest{
+	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
 		Index:       v.index,
 		ListRequest: &request.InternalListWorkflowExecutionsRequest,
 		IsOpen:      false,
@@ -345,12 +381,19 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 			Text: int32(request.Status),
 		},
 	})
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByStatus failed, %v", err),
+		}
+	}
+	return resp, nil
 }
 
 func (v *esVisibilityStore) GetClosedWorkflowExecution(
 	ctx context.Context,
 	request *p.InternalGetClosedWorkflowExecutionRequest,
 ) (*p.InternalGetClosedWorkflowExecutionResponse, error) {
+<<<<<<< HEAD
 <<<<<<< HEAD
 
 	matchDomainQuery := elastic.NewMatchQuery(es.DomainID, request.DomainUUID)
@@ -416,6 +459,17 @@ func (v *esVisibilityStore) GetClosedWorkflowExecution(
 =======
 	return v.esClient.GetClosedWorkflowExecution(ctx, v.index, request)
 >>>>>>> c9fc2491... refactor esVisibilityStore
+||||||| parent of 8da913d7... Fix esVisibilityStore unit tests
+	return v.esClient.GetClosedWorkflowExecution(ctx, v.index, request)
+=======
+	resp, err := v.esClient.GetClosedWorkflowExecution(ctx, v.index, request)
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("GetClosedWorkflowExecution failed, %v", err),
+		}
+	}
+	return resp, nil
+>>>>>>> 8da913d7... Fix esVisibilityStore unit tests
 }
 
 func (v *esVisibilityStore) DeleteWorkflowExecution(
@@ -449,13 +503,19 @@ func (v *esVisibilityStore) ListWorkflowExecutions(
 		return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
 	}
 
-	return v.esClient.SearchByQuery(ctx, &es.SearchByQueryRequest{
+	resp, err := v.esClient.SearchByQuery(ctx, &es.SearchByQueryRequest{
 		Index:         v.index,
 		Query:         queryDSL,
 		NextPageToken: request.NextPageToken,
 		PageSize:      request.PageSize,
 		Filter:        nil,
 	})
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ListWorkflowExecutions failed, %v", err),
+		}
+	}
+	return resp, nil
 }
 
 func (v *esVisibilityStore) ScanWorkflowExecutions(
@@ -476,15 +536,20 @@ func (v *esVisibilityStore) ScanWorkflowExecutions(
 		if err != nil {
 			return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
 		}
-	} else {
 	}
 
-	return v.esClient.ScanByQuery(ctx, &es.ScanByQueryRequest{
+	resp, err := v.esClient.ScanByQuery(ctx, &es.ScanByQueryRequest{
 		Index:         v.index,
 		Query:         queryDSL,
 		NextPageToken: request.NextPageToken,
 		PageSize:      request.PageSize,
 	})
+	if err != nil {
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("ScanWorkflowExecutions failed, %v", err),
+		}
+	}
+	return resp, nil
 }
 
 func (v *esVisibilityStore) CountWorkflowExecutions(
@@ -577,7 +642,7 @@ func (v *esVisibilityStore) getESQueryDSL(request *p.ListWorkflowExecutionsByQue
 		return "", err
 	}
 
-	if shouldSearchAfter(token) {
+	if es.ShouldSearchAfter(token) {
 		valueOfSearchAfter, err := v.getValueOfSearchAfterInJSON(token, sortField)
 		if err != nil {
 			return "", err
@@ -708,10 +773,6 @@ func (v *esVisibilityStore) getFieldType(fieldName string) workflow.IndexedValue
 		v.logger.Error("Unknown fieldName, validation should be done in frontend already", tag.Value(fieldName))
 	}
 	return common.ConvertIndexedValueTypeToThriftType(fieldType, v.logger)
-}
-
-func shouldSearchAfter(token *es.ElasticVisibilityPageToken) bool {
-	return token.TieBreaker != ""
 }
 
 func (v *esVisibilityStore) getValueOfSearchAfterInJSON(token *es.ElasticVisibilityPageToken, sortField string) (string, error) {
