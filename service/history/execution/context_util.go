@@ -110,6 +110,7 @@ func emitSessionUpdateStats(
 func emitWorkflowCompletionStats(
 	metricsClient metrics.Client,
 	domainName string,
+	workflowType string,
 	taskList string,
 	event *workflow.HistoryEvent,
 ) {
@@ -121,6 +122,7 @@ func emitWorkflowCompletionStats(
 	scope := metricsClient.Scope(
 		metrics.WorkflowCompletionStatsScope,
 		metrics.DomainTag(domainName),
+		metrics.WorkflowTypeTag(workflowType),
 		metrics.TaskListTag(taskList),
 	)
 
