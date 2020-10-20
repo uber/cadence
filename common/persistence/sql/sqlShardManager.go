@@ -26,6 +26,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/types/mapper/thrift"
+
 	"github.com/uber/cadence/common/persistence/serialization"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -39,6 +41,7 @@ import (
 type sqlShardManager struct {
 	sqlStore
 	currentClusterName string
+	serializer         persistence.PayloadSerializer
 }
 
 // newShardPersistence creates an instance of ShardStore
@@ -55,6 +58,7 @@ func newShardPersistence(
 			parser: parser,
 		},
 		currentClusterName: currentClusterName,
+		serializer:         persistence.NewPayloadSerializer(),
 	}, nil
 }
 
@@ -70,7 +74,7 @@ func (m *sqlShardManager) CreateShard(
 		}
 	}
 
-	row, err := shardInfoToShardsRow(*request.ShardInfo, m.parser)
+	row, err := shardInfoToShardsRow(*request.ShardInfo, m.parser, m.serializer)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("CreateShard operation failed. Error: %v", err),
@@ -131,20 +135,28 @@ func (m *sqlShardManager) GetShard(
 		shardInfo.ReplicationDlqAckLevel = make(map[string]int64)
 	}
 
-	var transferPQS *persistence.DataBlob
+	var transferPQSBlob *persistence.DataBlob
 	if shardInfo.GetTransferProcessingQueueStates() != nil {
-		transferPQS = &persistence.DataBlob{
+		transferPQSBlob = &persistence.DataBlob{
 			Encoding: common.EncodingType(shardInfo.GetTransferProcessingQueueStatesEncoding()),
 			Data:     shardInfo.GetTransferProcessingQueueStates(),
 		}
 	}
+	transferPQS, err := m.serializer.DeserializeProcessingQueueStates(transferPQSBlob)
+	if err != nil {
+		return nil, err
+	}
 
-	var timerPQS *persistence.DataBlob
+	var timerPQSBlob *persistence.DataBlob
 	if shardInfo.GetTimerProcessingQueueStates() != nil {
-		timerPQS = &persistence.DataBlob{
+		timerPQSBlob = &persistence.DataBlob{
 			Encoding: common.EncodingType(shardInfo.GetTimerProcessingQueueStatesEncoding()),
 			Data:     shardInfo.GetTimerProcessingQueueStates(),
 		}
+	}
+	timerPQS, err := m.serializer.DeserializeProcessingQueueStates(timerPQSBlob)
+	if err != nil {
+		return nil, err
 	}
 
 	resp := &persistence.InternalGetShardResponse{ShardInfo: &persistence.InternalShardInfo{
@@ -158,8 +170,8 @@ func (m *sqlShardManager) GetShard(
 		TimerAckLevel:                 time.Unix(0, shardInfo.GetTimerAckLevelNanos()),
 		ClusterTransferAckLevel:       shardInfo.ClusterTransferAckLevel,
 		ClusterTimerAckLevel:          timerAckLevel,
-		TransferProcessingQueueStates: transferPQS,
-		TimerProcessingQueueStates:    timerPQS,
+		TransferProcessingQueueStates: thrift.ToProcessingQueueStates(transferPQS),
+		TimerProcessingQueueStates:    thrift.ToProcessingQueueStates(timerPQS),
 		DomainNotificationVersion:     shardInfo.GetDomainNotificationVersion(),
 		ClusterReplicationLevel:       shardInfo.ClusterReplicationLevel,
 		ReplicationDLQAckLevel:        shardInfo.ReplicationDlqAckLevel,
@@ -172,7 +184,7 @@ func (m *sqlShardManager) UpdateShard(
 	ctx context.Context,
 	request *persistence.InternalUpdateShardRequest,
 ) error {
-	row, err := shardInfoToShardsRow(*request.ShardInfo, m.parser)
+	row, err := shardInfoToShardsRow(*request.ShardInfo, m.parser, m.serializer)
 	if err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("UpdateShard operation failed. Error: %v", err),
@@ -244,7 +256,7 @@ func readLockShard(ctx context.Context, tx sqlplugin.Tx, shardID int, oldRangeID
 	return nil
 }
 
-func shardInfoToShardsRow(s persistence.InternalShardInfo, parser serialization.Parser) (*sqlplugin.ShardsRow, error) {
+func shardInfoToShardsRow(s persistence.InternalShardInfo, parser serialization.Parser, serializer persistence.PayloadSerializer) (*sqlplugin.ShardsRow, error) {
 	timerAckLevels := make(map[string]int64, len(s.ClusterTimerAckLevel))
 	for k, v := range s.ClusterTimerAckLevel {
 		timerAckLevels[k] = v.UnixNano()
@@ -253,22 +265,34 @@ func shardInfoToShardsRow(s persistence.InternalShardInfo, parser serialization.
 	var markerData []byte
 	var markerEncoding string
 	if s.PendingFailoverMarkers != nil {
-		markerData = s.PendingFailoverMarkers.Data
-		markerEncoding = string(s.PendingFailoverMarkers.Encoding)
+		markerBlob, err := serializer.SerializePendingFailoverMarkers(thrift.FromFailoverMarkerAttributesArray(s.PendingFailoverMarkers), common.EncodingTypeThriftRW)
+		if err != nil {
+			return nil, err
+		}
+		markerData = markerBlob.Data
+		markerEncoding = string(markerBlob.Encoding)
 	}
 
 	var transferPQSData []byte
 	var transferPQSEncoding string
 	if s.TransferProcessingQueueStates != nil {
-		transferPQSData = s.TransferProcessingQueueStates.Data
-		transferPQSEncoding = string(s.TransferProcessingQueueStates.Encoding)
+		transferPQSBlob, err := serializer.SerializeProcessingQueueStates(thrift.FromProcessingQueueStates(s.TransferProcessingQueueStates), common.EncodingTypeThriftRW)
+		if err != nil {
+			return nil, err
+		}
+		transferPQSData = transferPQSBlob.Data
+		transferPQSEncoding = string(transferPQSBlob.Encoding)
 	}
 
 	var timerPQSData []byte
 	var timerPQSEncoding string
 	if s.TimerProcessingQueueStates != nil {
-		timerPQSData = s.TimerProcessingQueueStates.Data
-		timerPQSEncoding = string(s.TimerProcessingQueueStates.Encoding)
+		timerPQSBlob, err := serializer.SerializeProcessingQueueStates(thrift.FromProcessingQueueStates(s.TimerProcessingQueueStates), common.EncodingTypeThriftRW)
+		if err != nil {
+			return nil, err
+		}
+		timerPQSData = timerPQSBlob.Data
+		timerPQSEncoding = string(timerPQSBlob.Encoding)
 	}
 
 	shardInfo := &sqlblobs.ShardInfo{

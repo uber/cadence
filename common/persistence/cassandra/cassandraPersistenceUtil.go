@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/types/mapper/thrift"
+
 	"github.com/gocql/gocql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -1509,7 +1511,8 @@ func createShardInfo(
 	currentCluster string,
 	rangeID int64,
 	shard map[string]interface{},
-) *p.InternalShardInfo {
+	serializer p.PayloadSerializer,
+) (*p.InternalShardInfo, error) {
 
 	var pendingFailoverMarkersRawData []byte
 	var pendingFailoverMarkersEncoding string
@@ -1576,20 +1579,37 @@ func createShardInfo(
 	if info.ReplicationDLQAckLevel == nil {
 		info.ReplicationDLQAckLevel = make(map[string]int64)
 	}
-	info.PendingFailoverMarkers = p.NewDataBlob(
+	pendingFailoverMarkersBlob := p.NewDataBlob(
 		pendingFailoverMarkersRawData,
 		common.EncodingType(pendingFailoverMarkersEncoding),
 	)
-	info.TransferProcessingQueueStates = p.NewDataBlob(
+	pendingFailoverMarkers, err := serializer.DeserializePendingFailoverMarkers(pendingFailoverMarkersBlob)
+	if err != nil {
+		return nil, err
+	}
+	info.PendingFailoverMarkers = thrift.ToFailoverMarkerAttributesArray(pendingFailoverMarkers)
+
+	transferPQSBlob := p.NewDataBlob(
 		transferProcessingQueueStatesRawData,
 		common.EncodingType(transferProcessingQueueStatesEncoding),
 	)
-	info.TimerProcessingQueueStates = p.NewDataBlob(
+	transferPQS, err := serializer.DeserializeProcessingQueueStates(transferPQSBlob)
+	if err != nil {
+		return nil, err
+	}
+	info.TransferProcessingQueueStates = thrift.ToProcessingQueueStates(transferPQS)
+
+	timerPQSBlob := p.NewDataBlob(
 		timerProcessingQueueStatesRawData,
 		common.EncodingType(timerProcessingQueueStatesEncoding),
 	)
+	timerPQS, err := serializer.DeserializeProcessingQueueStates(timerPQSBlob)
+	if err != nil {
+		return nil, err
+	}
+	info.TimerProcessingQueueStates = thrift.ToProcessingQueueStates(timerPQS)
 
-	return info
+	return info, nil
 }
 
 func createWorkflowExecutionInfo(

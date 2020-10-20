@@ -26,6 +26,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types/mapper/thrift"
+
 	"github.com/gocql/gocql"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -102,6 +105,7 @@ type (
 		cassandraStore
 		shardID            int
 		currentClusterName string
+		serializer         p.PayloadSerializer
 	}
 )
 
@@ -124,6 +128,7 @@ func newShardPersistence(cfg config.Cassandra, clusterName string, logger log.Lo
 		cassandraStore:     cassandraStore{session: session, logger: logger},
 		shardID:            -1,
 		currentClusterName: clusterName,
+		serializer:         p.NewPayloadSerializer(),
 	}, nil
 }
 
@@ -143,9 +148,21 @@ func (d *cassandraShardPersistence) CreateShard(
 ) error {
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	shardInfo := request.ShardInfo
-	markerData, markerEncoding := p.FromDataBlob(shardInfo.PendingFailoverMarkers)
-	transferPQS, transferPQSEncoding := p.FromDataBlob(shardInfo.TransferProcessingQueueStates)
-	timerPQS, timerPQSEncoding := p.FromDataBlob(shardInfo.TimerProcessingQueueStates)
+	markerBlob, err := d.serializer.SerializePendingFailoverMarkers(thrift.FromFailoverMarkerAttributesArray(shardInfo.PendingFailoverMarkers), common.EncodingTypeThriftRW)
+	if err != nil {
+		return err
+	}
+	markerData, markerEncoding := p.FromDataBlob(markerBlob)
+	transferPQSBlob, err := d.serializer.SerializeProcessingQueueStates(thrift.FromProcessingQueueStates(shardInfo.TransferProcessingQueueStates), common.EncodingTypeThriftRW)
+	if err != nil {
+		return err
+	}
+	transferPQS, transferPQSEncoding := p.FromDataBlob(transferPQSBlob)
+	timerPQSBlob, err := d.serializer.SerializeProcessingQueueStates(thrift.FromProcessingQueueStates(shardInfo.TimerProcessingQueueStates), common.EncodingTypeThriftRW)
+	if err != nil {
+		return err
+	}
+	timerPQS, timerPQSEncoding := p.FromDataBlob(timerPQSBlob)
 	query := d.session.Query(templateCreateShardQuery,
 		shardInfo.ShardID,
 		rowTypeShard,
@@ -259,7 +276,10 @@ func (d *cassandraShardPersistence) GetShard(
 		// as the value from rangeID columns is returned, shardInfoRangeID will also be updated to the correct value.
 	}
 
-	info := createShardInfo(d.currentClusterName, rangeID, shard)
+	info, err := createShardInfo(d.currentClusterName, rangeID, shard, d.serializer)
+	if err != nil {
+		return nil, err
+	}
 
 	return &p.InternalGetShardResponse{ShardInfo: info}, nil
 }
@@ -317,9 +337,21 @@ func (d *cassandraShardPersistence) UpdateShard(
 ) error {
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
 	shardInfo := request.ShardInfo
-	markerData, markerEncoding := p.FromDataBlob(shardInfo.PendingFailoverMarkers)
-	transferPQS, transferPQSEncoding := p.FromDataBlob(shardInfo.TransferProcessingQueueStates)
-	timerPQS, timerPQSEncoding := p.FromDataBlob(shardInfo.TimerProcessingQueueStates)
+	markerBlob, err := d.serializer.SerializePendingFailoverMarkers(thrift.FromFailoverMarkerAttributesArray(shardInfo.PendingFailoverMarkers), common.EncodingTypeThriftRW)
+	if err != nil {
+		return err
+	}
+	markerData, markerEncoding := p.FromDataBlob(markerBlob)
+	transferPQSBlob, err := d.serializer.SerializeProcessingQueueStates(thrift.FromProcessingQueueStates(shardInfo.TransferProcessingQueueStates), common.EncodingTypeThriftRW)
+	if err != nil {
+		return err
+	}
+	transferPQS, transferPQSEncoding := p.FromDataBlob(transferPQSBlob)
+	timerPQSBlob, err := d.serializer.SerializeProcessingQueueStates(thrift.FromProcessingQueueStates(shardInfo.TimerProcessingQueueStates), common.EncodingTypeThriftRW)
+	if err != nil {
+		return err
+	}
+	timerPQS, timerPQSEncoding := p.FromDataBlob(timerPQSBlob)
 
 	query := d.session.Query(templateUpdateShardQuery,
 		shardInfo.ShardID,
