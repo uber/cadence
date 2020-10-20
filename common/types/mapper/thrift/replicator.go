@@ -728,54 +728,6 @@ func ToSyncShardStatusTaskAttributes(t *replicator.SyncShardStatusTaskAttributes
 	}
 }
 
-// FromFailoverMarkerAttributesArray converts internal FailoverMarkerAttributes type array to thrift
-func FromFailoverMarkerAttributesArray(t []*types.FailoverMarkerAttributes) []*replicator.FailoverMarkerAttributes {
-	if t == nil {
-		return nil
-	}
-	v := make([]*replicator.FailoverMarkerAttributes, len(t))
-	for i := range t {
-		v[i] = FromFailoverMarkerAttributes(t[i])
-	}
-	return v
-}
-
-// ToFailoverMarkerAttributesArray converts thrift FailoverMarkerAttributes type array to internal
-func ToFailoverMarkerAttributesArray(t []*replicator.FailoverMarkerAttributes) []*types.FailoverMarkerAttributes {
-	if t == nil {
-		return nil
-	}
-	v := make([]*types.FailoverMarkerAttributes, len(t))
-	for i := range t {
-		v[i] = ToFailoverMarkerAttributes(t[i])
-	}
-	return v
-}
-
-// FromReplicationTaskInfoArray converts internal ReplicationTaskInfo type array to thrift
-func FromReplicationTaskInfoArray(t []*types.ReplicationTaskInfo) []*replicator.ReplicationTaskInfo {
-	if t == nil {
-		return nil
-	}
-	v := make([]*replicator.ReplicationTaskInfo, len(t))
-	for i := range t {
-		v[i] = FromReplicationTaskInfo(t[i])
-	}
-	return v
-}
-
-// ToReplicationTaskInfoArray converts thrift ReplicationTaskInfo type array to internal
-func ToReplicationTaskInfoArray(t []*replicator.ReplicationTaskInfo) []*types.ReplicationTaskInfo {
-	if t == nil {
-		return nil
-	}
-	v := make([]*types.ReplicationTaskInfo, len(t))
-	for i := range t {
-		v[i] = ToReplicationTaskInfo(t[i])
-	}
-	return v
-}
-
 // FromReplicationTaskArray converts internal ReplicationTask type array to thrift
 func FromReplicationTaskArray(t []*types.ReplicationTask) []*replicator.ReplicationTask {
 	if t == nil {
@@ -820,6 +772,54 @@ func ToReplicationTokenArray(t []*replicator.ReplicationToken) []*types.Replicat
 	v := make([]*types.ReplicationToken, len(t))
 	for i := range t {
 		v[i] = ToReplicationToken(t[i])
+	}
+	return v
+}
+
+// FromFailoverMarkerAttributesArray converts internal FailoverMarkerAttributes type array to thrift
+func FromFailoverMarkerAttributesArray(t []*types.FailoverMarkerAttributes) []*replicator.FailoverMarkerAttributes {
+	if t == nil {
+		return nil
+	}
+	v := make([]*replicator.FailoverMarkerAttributes, len(t))
+	for i := range t {
+		v[i] = FromFailoverMarkerAttributes(t[i])
+	}
+	return v
+}
+
+// ToFailoverMarkerAttributesArray converts thrift FailoverMarkerAttributes type array to internal
+func ToFailoverMarkerAttributesArray(t []*replicator.FailoverMarkerAttributes) []*types.FailoverMarkerAttributes {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.FailoverMarkerAttributes, len(t))
+	for i := range t {
+		v[i] = ToFailoverMarkerAttributes(t[i])
+	}
+	return v
+}
+
+// FromReplicationTaskInfoArray converts internal ReplicationTaskInfo type array to thrift
+func FromReplicationTaskInfoArray(t []*types.ReplicationTaskInfo) []*replicator.ReplicationTaskInfo {
+	if t == nil {
+		return nil
+	}
+	v := make([]*replicator.ReplicationTaskInfo, len(t))
+	for i := range t {
+		v[i] = FromReplicationTaskInfo(t[i])
+	}
+	return v
+}
+
+// ToReplicationTaskInfoArray converts thrift ReplicationTaskInfo type array to internal
+func ToReplicationTaskInfoArray(t []*replicator.ReplicationTaskInfo) []*types.ReplicationTaskInfo {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.ReplicationTaskInfo, len(t))
+	for i := range t {
+		v[i] = ToReplicationTaskInfo(t[i])
 	}
 	return v
 }
