@@ -151,6 +151,9 @@ go-generate:
 	GOOS= GOARCH= gobin -mod=readonly github.com/dmarkham/enumer
 	@echo "running go generate ./..."
 	@go generate ./...
+	@echo "running go run cmd/tools/copyright/licensegen.go"
+        @go run cmd/tools/copyright/licensegen.go 
+	fmt
 
 lint:
 	@echo "running linter"
