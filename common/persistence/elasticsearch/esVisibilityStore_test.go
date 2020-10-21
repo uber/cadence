@@ -55,7 +55,7 @@ type ESVisibilitySuite struct {
 	// not merely log an error
 	*require.Assertions
 	visibilityStore *esVisibilityStore
-	mockESClient    *esMocks.GenericElasticSearch
+	mockESClient    *esMocks.GenericClient
 	mockProducer    *mocks.KafkaProducer
 	serializer      p.PayloadSerializer
 }
@@ -100,7 +100,7 @@ func (s *ESVisibilitySuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 
-	s.mockESClient = &esMocks.GenericElasticSearch{}
+	s.mockESClient = &esMocks.GenericClient{}
 	config := &config.VisibilityConfig{
 		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
 		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
@@ -542,15 +542,15 @@ func (s *ESVisibilitySuite) TestGetClosedWorkflowExecution_NoRunID() {
 //	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 //	defer cancel()
 //
-//	_, err := s.visibilityStore.GetClosedWorkflowExecution(ctx, request)
+//	_, err := s.visibilityStore.SearchForOneClosedExecution(ctx, request)
 //	s.NoError(err)
 //
 //	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
-//	_, err = s.visibilityStore.GetClosedWorkflowExecution(ctx, request)
+//	_, err = s.visibilityStore.SearchForOneClosedExecution(ctx, request)
 //	s.Error(err)
 //	_, ok := err.(*workflow.InternalServiceError)
 //	s.True(ok)
-//	s.True(strings.Contains(err.Error(), "GetClosedWorkflowExecution failed"))
+//	s.True(strings.Contains(err.Error(), "SearchForOneClosedExecution failed"))
 //}
 
 // TODO move to client_v6_test
@@ -572,7 +572,7 @@ func (s *ESVisibilitySuite) TestGetClosedWorkflowExecution_NoRunID() {
 //	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 //	defer cancel()
 //
-//	_, err := s.visibilityStore.GetClosedWorkflowExecution(ctx, request)
+//	_, err := s.visibilityStore.SearchForOneClosedExecution(ctx, request)
 //	s.NoError(err)
 //}
 >>>>>>> 8da913d7... Fix esVisibilityStore unit tests

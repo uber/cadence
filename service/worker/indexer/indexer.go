@@ -39,7 +39,7 @@ type (
 	Indexer struct {
 		config              *Config
 		kafkaClient         messaging.Client
-		esClient            es.GenericElasticSearch
+		esClient            es.GenericClient
 		logger              log.Logger
 		metricsClient       metrics.Client
 		visibilityProcessor *indexProcessor
@@ -62,7 +62,7 @@ const (
 )
 
 // NewIndexer create a new Indexer
-func NewIndexer(config *Config, client messaging.Client, esClient es.GenericElasticSearch, esConfig *config.ElasticSearchConfig,
+func NewIndexer(config *Config, client messaging.Client, esClient es.GenericClient, esConfig *config.ElasticSearchConfig,
 	logger log.Logger, metricsClient metrics.Client) *Indexer {
 	logger = logger.WithTags(tag.ComponentIndexer)
 

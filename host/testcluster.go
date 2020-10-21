@@ -146,7 +146,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
 	archiverBase := newArchiverBase(options.EnableArchival, logger)
 	messagingClient := getMessagingClient(options.MessagingClientConfig, logger)
-	var esClient elasticsearch.GenericElasticSearch
+	var esClient elasticsearch.GenericClient
 	var esVisibilityMgr persistence.VisibilityManager
 	advancedVisibilityWritingMode := dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff)
 	if options.WorkerConfig.EnableIndexer {

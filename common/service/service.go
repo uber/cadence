@@ -68,7 +68,7 @@ type (
 		MetricsClient       metrics.Client
 		MessagingClient     messaging.Client
 		BlobstoreClient     blobstore.Client
-		ESClient            es.GenericElasticSearch
+		ESClient            es.GenericClient
 		ESConfig            *config.ElasticSearchConfig
 		DynamicConfig       dynamicconfig.Client
 		DispatcherProvider  client.DispatcherProvider

@@ -111,7 +111,7 @@ type (
 		archiverProvider              provider.ArchiverProvider
 		historyConfig                 *HistoryConfig
 		esConfig                      *config.ElasticSearchConfig
-		esClient                      elasticsearch.GenericElasticSearch
+		esClient                      elasticsearch.GenericClient
 		workerConfig                  *WorkerConfig
 		mockAdminClient               map[string]adminClient.Client
 		domainReplicationTaskExecutor domain.ReplicationTaskExecutor
@@ -145,7 +145,7 @@ type (
 		EnableReadHistoryFromArchival bool
 		HistoryConfig                 *HistoryConfig
 		ESConfig                      *config.ElasticSearchConfig
-		ESClient                      elasticsearch.GenericElasticSearch
+		ESClient                      elasticsearch.GenericClient
 		WorkerConfig                  *WorkerConfig
 		MockAdminClient               map[string]adminClient.Client
 		DomainReplicationTaskExecutor domain.ReplicationTaskExecutor

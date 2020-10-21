@@ -48,7 +48,7 @@ type esProcessorSuite struct {
 	esProcessor       *esProcessorImpl
 	mockBulkProcessor *esMocks.GenericBulkProcessor
 	mockMetricClient  *mmocks.Client
-	mockESClient      *esMocks.GenericElasticSearch
+	mockESClient      *esMocks.GenericClient
 }
 
 var (
@@ -93,7 +93,7 @@ func (s *esProcessorSuite) SetupTest() {
 
 	s.esProcessor = p
 
-	s.mockESClient = &esMocks.GenericElasticSearch{}
+	s.mockESClient = &esMocks.GenericClient{}
 }
 
 func (s *esProcessorSuite) TearDownTest() {
@@ -111,7 +111,7 @@ func (s *esProcessorSuite) TestNewESProcessorAndStart() {
 	}
 	processorName := "test-processor"
 
-	s.mockESClient.On("RunBulkProcessor", mock.Anything, mock.MatchedBy(func(input *es.GenericBulkProcessorParameters) bool {
+	s.mockESClient.On("RunBulkProcessor", mock.Anything, mock.MatchedBy(func(input *es.BulkProcessorParameters) bool {
 		s.Equal(processorName, input.Name)
 		s.Equal(config.ESProcessorNumOfWorkers(), input.NumOfWorkers)
 		s.Equal(config.ESProcessorBulkActions(), input.BulkActions)

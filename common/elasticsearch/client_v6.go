@@ -41,7 +41,7 @@ import (
 	"github.com/olivere/elastic"
 )
 
-var _ GenericElasticSearch = (*elasticV6)(nil)
+var _ GenericClient = (*elasticV6)(nil)
 var _ GenericBulkProcessor = (*v6BulkProcessor)(nil)
 
 type (
@@ -84,7 +84,7 @@ func newV6Client(
 	connectConfig *config.ElasticSearchConfig,
 	visibilityConfig *config.VisibilityConfig,
 	logger log.Logger,
-) (GenericElasticSearch, error) {
+) (GenericClient, error) {
 	client, err := elastic.NewClient(
 		elastic.SetURL(connectConfig.URL.String()),
 		elastic.SetRetrier(elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))),
@@ -193,7 +193,7 @@ func (c *elasticV6) ScanByQuery(ctx context.Context, request *ScanByQueryRequest
 	return c.getScanWorkflowExecutionsResponse(searchResult.Hits, request.PageSize, searchResult.ScrollId, isLastPage)
 }
 
-func (c *elasticV6) RunBulkProcessor(ctx context.Context, parameters *GenericBulkProcessorParameters) (GenericBulkProcessor, error) {
+func (c *elasticV6) RunBulkProcessor(ctx context.Context, parameters *BulkProcessorParameters) (GenericBulkProcessor, error) {
 	beforeFunc := func(executionId int64, requests []elastic.BulkableRequest) {
 		parameters.BeforeFunc(executionId, fromV6ToGenericBulkableRequests(requests))
 	}
@@ -286,7 +286,7 @@ func (v *v6BulkProcessor) RetrieveKafkaKey(request GenericBulkableRequest, logge
 	return key
 }
 
-func (c *elasticV6) GetClosedWorkflowExecution(
+func (c *elasticV6) SearchForOneClosedExecution(
 	ctx context.Context,
 	index string,
 	request *p.InternalGetClosedWorkflowExecutionRequest,
@@ -309,7 +309,7 @@ func (c *elasticV6) GetClosedWorkflowExecution(
 	searchResult, err := c.search(ctx, params)
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetClosedWorkflowExecution failed. Error: %v", err),
+			Message: fmt.Sprintf("SearchForOneClosedExecution failed. Error: %v", err),
 		}
 	}
 

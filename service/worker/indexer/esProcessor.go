@@ -62,7 +62,7 @@ const (
 )
 
 // newESProcessorAndStart create new ESProcessor and start
-func newESProcessorAndStart(config *Config, client es.GenericElasticSearch, processorName string,
+func newESProcessorAndStart(config *Config, client es.GenericClient, processorName string,
 	logger log.Logger, metricsClient metrics.Client, msgEncoder codec.BinaryEncoder) (*esProcessorImpl, error) {
 	p := &esProcessorImpl{
 		config:        config,
@@ -71,7 +71,7 @@ func newESProcessorAndStart(config *Config, client es.GenericElasticSearch, proc
 		msgEncoder:    msgEncoder,
 	}
 
-	params := &es.GenericBulkProcessorParameters{
+	params := &es.BulkProcessorParameters{
 		Name:          processorName,
 		NumOfWorkers:  config.ESProcessorNumOfWorkers(),
 		BulkActions:   config.ESProcessorBulkActions(),

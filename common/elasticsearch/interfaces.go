@@ -23,8 +23,6 @@ package elasticsearch
 import (
 	"context"
 	"fmt"
-	"math"
-	"math/rand"
 	"time"
 
 	"github.com/uber/cadence/common/metrics"
@@ -40,23 +38,23 @@ func NewGenericElasticSearchClient(
 	connectConfig *config.ElasticSearchConfig,
 	visibilityConfig *config.VisibilityConfig,
 	logger log.Logger,
-) (GenericElasticSearch, error) {
+) (GenericClient, error) {
 	// TODO hardcoded to V6 for now
 	return newV6Client(connectConfig, visibilityConfig, logger)
 }
 
 type (
-	// GenericElasticSearch is a generic interface for all versions of ElasticSearch clients
-	GenericElasticSearch interface {
-		Search(ctx context.Context, request *SearchRequest) (*p.InternalListWorkflowExecutionsResponse, error)
-		SearchByQuery(ctx context.Context, request *SearchByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error)
-		ScanByQuery(ctx context.Context, request *ScanByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error)
+	// GenericClient is a generic interface for all versions of ElasticSearch clients
+	GenericClient interface {
+		Search(ctx context.Context, request *SearchRequest) (*SearchResponse, error)
+		SearchByQuery(ctx context.Context, request *SearchByQueryRequest) (*SearchResponse, error)
+		ScanByQuery(ctx context.Context, request *ScanByQueryRequest) (*SearchResponse, error)
 		CountByQuery(ctx context.Context, index, query string) (int64, error)
 		PutMapping(ctx context.Context, index, root, key, valueType string) error
 		CreateIndex(ctx context.Context, index string) error
-		GetClosedWorkflowExecution(ctx context.Context, index string, request *p.InternalGetClosedWorkflowExecutionRequest) (*p.InternalGetClosedWorkflowExecutionResponse, error)
+		SearchForOneClosedExecution(ctx context.Context, index string, request *SearchForOneClosedExecutionRequest) (*SearchForOneClosedExecutionResponse, error)
 
-		RunBulkProcessor(ctx context.Context, p *GenericBulkProcessorParameters) (GenericBulkProcessor, error)
+		RunBulkProcessor(ctx context.Context, p *BulkProcessorParameters) (GenericBulkProcessor, error)
 	}
 
 	// SearchRequest is request for Search
@@ -91,6 +89,15 @@ type (
 		PageSize      int
 	}
 
+	// SearchResponse is a response to Search, SearchByQuery and ScanByQuery
+	SearchResponse = p.InternalListWorkflowExecutionsResponse
+
+	// SearchForOneClosedExecutionRequest is request for SearchForOneClosedExecution
+	SearchForOneClosedExecutionRequest = p.InternalGetClosedWorkflowExecutionRequest
+
+	// SearchForOneClosedExecutionResponse is response for SearchForOneClosedExecution
+	SearchForOneClosedExecutionResponse = p.InternalGetClosedWorkflowExecutionResponse
+
 	// GenericBulkProcessor is a bulk processor
 	GenericBulkProcessor interface {
 		Start(ctx context.Context) error
@@ -101,8 +108,8 @@ type (
 		RetrieveKafkaKey(request GenericBulkableRequest, logger log.Logger, client metrics.Client) string
 	}
 
-	// GenericBulkProcessorParameters holds all required and optional parameters for executing bulk service
-	GenericBulkProcessorParameters struct {
+	// BulkProcessorParameters holds all required and optional parameters for executing bulk service
+	BulkProcessorParameters struct {
 		Name          string
 		NumOfWorkers  int
 		BulkActions   int
@@ -193,33 +200,3 @@ type (
 		Attr          map[string]interface{}
 	}
 )
-
-// ExponentialBackoff implements the simple exponential backoff described by
-// Douglas Thain at http://dthain.blogspot.de/2009/02/exponential-backoff-in-distributed.html.
-type ExponentialBackoff struct {
-	t float64 // initial timeout (in msec)
-	f float64 // exponential factor (e.g. 2)
-	m float64 // maximum timeout (in msec)
-}
-
-// NewExponentialBackoff returns a ExponentialBackoff backoff policy.
-// Use initialTimeout to set the first/minimal interval
-// and maxTimeout to set the maximum wait interval.
-func NewExponentialBackoff(initialTimeout, maxTimeout time.Duration) *ExponentialBackoff {
-	return &ExponentialBackoff{
-		t: float64(int64(initialTimeout / time.Millisecond)),
-		f: 2.0,
-		m: float64(int64(maxTimeout / time.Millisecond)),
-	}
-}
-
-// Next implements BackoffFunc for ExponentialBackoff.
-func (b *ExponentialBackoff) Next(retry int) (time.Duration, bool) {
-	r := 1.0 + rand.Float64() // random number in [1..2]
-	m := math.Min(r*b.t*math.Pow(b.f, float64(retry)), b.m)
-	if m >= b.m {
-		return 0, false
-	}
-	d := time.Duration(int64(m)) * time.Millisecond
-	return d, true
-}
