@@ -53,7 +53,7 @@ type (
 const licenseFileName = "LICENSE"
 
 // unique prefix that identifies a license header
-const licenseHeaderPrefixOld = "// Copyright (c)"
+const licenseHeaderPrefixOld = "Copyright (c)"
 const licenseHeaderPrefix = "// The MIT License (MIT)"
 const cadenceCopyright = "// Copyright (c) 2017-2020 Uber Technologies Inc."
 const cadenceModificationHeader = "// Modifications Copyright (c) 2020 Uber Technologies Inc."
@@ -191,7 +191,7 @@ func (task *addLicenseHeaderTask) handleFile(path string, fileInfo os.FileInfo, 
 
 	if hasCopyright(firstLine) {
 		if task.config.temporalModifyMode || task.config.temporalAddMode {
-			return fmt.Errorf("when running in temporalModifyMode or temporalAddMode please first remove existing license header %v", path)
+			return fmt.Errorf("when running in temporalModifyMode or temporalAddMode please first remove existing license header: %v", path)
 		}
 		return nil
 	}
