@@ -104,7 +104,7 @@ func (s *dcRedirectionHandlerSuite) SetupTest() {
 	frontendHandler := NewWorkflowHandler(s.mockResource, s.config, nil, client.NewVersionChecker())
 
 	s.mockFrontendHandler = NewMockHandler(s.controller)
-	s.handler = NewDCRedirectionHandler(frontendHandler, config.DCRedirectionPolicy{})
+	s.handler = NewDCRedirectionHandler(frontendHandler, s.mockResource, s.config, config.DCRedirectionPolicy{})
 	s.handler.frontendHandler = s.mockFrontendHandler
 	s.handler.redirectionPolicy = s.mockDCRedirectionPolicy
 }

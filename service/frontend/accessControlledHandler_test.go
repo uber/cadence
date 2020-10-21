@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/metrics/mocks"
+	"github.com/uber/cadence/common/resource"
 )
 
 type (
@@ -40,6 +41,7 @@ type (
 		*require.Assertions
 
 		controller          *gomock.Controller
+		mockResource        *resource.Test
 		mockFrontendHandler *MockHandler
 		mockAuthorizer      *authorization.MockAuthorizer
 		mockMetricsScope    *mocks.Scope
@@ -56,10 +58,11 @@ func TestAccessControlledHandlerSuite(t *testing.T) {
 func (s *accessControlledHandlerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 	s.controller = gomock.NewController(s.T())
+	s.mockResource = resource.NewTest(s.controller, metrics.Frontend)
 	s.mockFrontendHandler = NewMockHandler(s.controller)
 	s.mockAuthorizer = authorization.NewMockAuthorizer(s.controller)
 	s.mockMetricsScope = &mocks.Scope{}
-	s.handler = NewAccessControlledHandlerImpl(s.mockFrontendHandler, s.mockAuthorizer)
+	s.handler = NewAccessControlledHandlerImpl(s.mockFrontendHandler, s.mockResource, s.mockAuthorizer)
 }
 
 func (s *accessControlledHandlerSuite) TearDownTest() {

@@ -47,6 +47,8 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -55,11 +57,12 @@ const (
 
 type (
 	esVisibilityStore struct {
-		esClient es.Client
-		index    string
-		producer messaging.Producer
-		logger   log.Logger
-		config   *config.VisibilityConfig
+		esClient   es.Client
+		index      string
+		producer   messaging.Producer
+		logger     log.Logger
+		config     *config.VisibilityConfig
+		serializer p.PayloadSerializer
 	}
 
 	esVisibilityPageToken struct {
@@ -97,11 +100,12 @@ var (
 // NewElasticSearchVisibilityStore create a visibility store connecting to ElasticSearch
 func NewElasticSearchVisibilityStore(esClient es.Client, index string, producer messaging.Producer, config *config.VisibilityConfig, logger log.Logger) p.VisibilityStore {
 	return &esVisibilityStore{
-		esClient: esClient,
-		index:    index,
-		producer: producer,
-		logger:   logger.WithTags(tag.ComponentESVisibilityManager),
-		config:   config,
+		esClient:   esClient,
+		index:      index,
+		producer:   producer,
+		logger:     logger.WithTags(tag.ComponentESVisibilityManager),
+		config:     config,
+		serializer: p.NewPayloadSerializer(),
 	}
 }
 
@@ -116,6 +120,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
 	v.checkProducer()
+	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	msg := getVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
@@ -125,8 +130,8 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 		request.StartTimestamp,
 		request.ExecutionTimestamp,
 		request.TaskID,
-		request.Memo.Data,
-		request.Memo.GetEncoding(),
+		memo.Data,
+		memo.GetEncoding(),
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
@@ -137,6 +142,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 	request *p.InternalRecordWorkflowExecutionClosedRequest,
 ) error {
 	v.checkProducer()
+	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	msg := getVisibilityMessageForCloseExecution(
 		request.DomainUUID,
 		request.WorkflowID,
@@ -145,12 +151,12 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 		request.StartTimestamp,
 		request.ExecutionTimestamp,
 		request.CloseTimestamp,
-		request.Status,
+		*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 		request.HistoryLength,
 		request.TaskID,
-		request.Memo.Data,
+		memo.Data,
 		request.TaskList,
-		request.Memo.GetEncoding(),
+		memo.GetEncoding(),
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
@@ -161,6 +167,7 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 	request *p.InternalUpsertWorkflowExecutionRequest,
 ) error {
 	v.checkProducer()
+	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	msg := getVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
@@ -170,8 +177,8 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 		request.StartTimestamp,
 		request.ExecutionTimestamp,
 		request.TaskID,
-		request.Memo.Data,
-		request.Memo.GetEncoding(),
+		memo.Data,
+		memo.GetEncoding(),
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
@@ -347,7 +354,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 	}
 
 	isOpen := false
-	matchQuery := elastic.NewMatchQuery(es.CloseStatus, int32(request.Status))
+	matchQuery := elastic.NewMatchQuery(es.CloseStatus, int32(*thrift.FromWorkflowExecutionCloseStatus(&request.Status)))
 	searchResult, err := v.getSearchResult(ctx, &request.InternalListWorkflowExecutionsRequest, token, matchQuery, isOpen)
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
@@ -370,9 +377,9 @@ func (v *esVisibilityStore) GetClosedWorkflowExecution(
 
 	matchDomainQuery := elastic.NewMatchQuery(es.DomainID, request.DomainUUID)
 	existClosedStatusQuery := elastic.NewExistsQuery(es.CloseStatus)
-	matchWorkflowIDQuery := elastic.NewMatchQuery(es.WorkflowID, request.Execution.GetWorkflowId())
+	matchWorkflowIDQuery := elastic.NewMatchQuery(es.WorkflowID, request.Execution.GetWorkflowID())
 	boolQuery := elastic.NewBoolQuery().Must(matchDomainQuery).Must(existClosedStatusQuery).Must(matchWorkflowIDQuery)
-	rid := request.Execution.GetRunId()
+	rid := request.Execution.GetRunID()
 	if rid != "" {
 		matchRunIDQuery := elastic.NewMatchQuery(es.RunID, rid)
 		boolQuery = boolQuery.Must(matchRunIDQuery)
@@ -928,24 +935,46 @@ func (v *esVisibilityStore) convertSearchResultToVisibilityRecord(hit *elastic.S
 			tag.Error(err), tag.ESDocID(hit.Id))
 		return nil
 	}
-
+	memo, err := v.serializer.DeserializeVisibilityMemo(p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)))
+	if err != nil {
+		v.logger.Error("failed to deserialize memo",
+			tag.WorkflowID(source.WorkflowID),
+			tag.WorkflowRunID(source.RunID),
+			tag.Error(err))
+	}
 	record := &p.InternalVisibilityWorkflowExecutionInfo{
 		WorkflowID:       source.WorkflowID,
 		RunID:            source.RunID,
 		TypeName:         source.WorkflowType,
 		StartTime:        time.Unix(0, source.StartTime),
 		ExecutionTime:    time.Unix(0, source.ExecutionTime),
-		Memo:             p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
+		Memo:             thrift.ToMemo(memo),
 		TaskList:         source.TaskList,
 		SearchAttributes: source.Attr,
 	}
 	if source.CloseTime != 0 {
 		record.CloseTime = time.Unix(0, source.CloseTime)
-		record.Status = &source.CloseStatus
+		record.Status = thrift.ToWorkflowExecutionCloseStatus(&source.CloseStatus)
 		record.HistoryLength = source.HistoryLength
 	}
 
 	return record
+}
+
+func (v *esVisibilityStore) serializeMemo(visibilityMemo *types.Memo, domainID, wID, rID string) *p.DataBlob {
+	memo, err := v.serializer.SerializeVisibilityMemo(thrift.FromMemo(visibilityMemo), common.EncodingTypeThriftRW)
+	if err != nil {
+		v.logger.WithTags(
+			tag.WorkflowDomainID(domainID),
+			tag.WorkflowID(wID),
+			tag.WorkflowRunID(rID),
+			tag.Error(err)).
+			Error("Unable to encode visibility memo")
+	}
+	if memo == nil {
+		return &p.DataBlob{}
+	}
+	return memo
 }
 
 func getVisibilityMessage(domainID string, wid, rid string, workflowTypeName string, taskList string,
