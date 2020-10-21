@@ -145,6 +145,8 @@ cadence-canary: $(ALL_SRC)
 	@echo "compiling cadence-canary with OS: $(GOOS), ARCH: $(GOARCH)"
 	go build -o cadence-canary cmd/canary/main.go
 
+go-generate-format: go-generate fmt
+
 go-generate:
 	GO111MODULE=off go get -u github.com/myitcv/gobin
 	GOOS= GOARCH= gobin -mod=readonly github.com/golang/mock/mockgen
@@ -153,7 +155,6 @@ go-generate:
 	@go generate ./...
 	@echo "running go run cmd/tools/copyright/licensegen.go"
 	@go run cmd/tools/copyright/licensegen.go 
-	fmt
 
 lint:
 	@echo "running linter"
