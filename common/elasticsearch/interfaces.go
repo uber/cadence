@@ -33,8 +33,8 @@ import (
 	"github.com/uber/cadence/common/service/config"
 )
 
-// NewGenericElasticSearchClient create a ES client
-func NewGenericElasticSearchClient(
+// NewGenericClient create a ES client
+func NewGenericClient(
 	connectConfig *config.ElasticSearchConfig,
 	visibilityConfig *config.VisibilityConfig,
 	logger log.Logger,
