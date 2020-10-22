@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"io"
 	"math"
 	"strconv"
@@ -47,9 +48,10 @@ var _ GenericBulkProcessor = (*v6BulkProcessor)(nil)
 type (
 	// elasticV6 implements Client
 	elasticV6 struct {
-		client *elastic.Client
-		config *config.VisibilityConfig
-		logger log.Logger
+		client     *elastic.Client
+		config     *config.VisibilityConfig
+		logger     log.Logger
+		serializer p.PayloadSerializer
 	}
 
 	// searchParametersV6 holds all required and optional parameters for executing a search
@@ -95,9 +97,10 @@ func newV6Client(
 	}
 
 	return &elasticV6{
-		client: client,
-		config: visibilityConfig,
-		logger: logger,
+		client:     client,
+		config:     visibilityConfig,
+		logger:     logger,
+		serializer: p.NewPayloadSerializer(),
 	}, nil
 }
 
@@ -294,9 +297,9 @@ func (c *elasticV6) SearchForOneClosedExecution(
 
 	matchDomainQuery := elastic.NewMatchQuery(DomainID, request.DomainUUID)
 	existClosedStatusQuery := elastic.NewExistsQuery(CloseStatus)
-	matchWorkflowIDQuery := elastic.NewMatchQuery(WorkflowID, request.Execution.GetWorkflowId())
+	matchWorkflowIDQuery := elastic.NewMatchQuery(WorkflowID, request.Execution.GetWorkflowID())
 	boolQuery := elastic.NewBoolQuery().Must(matchDomainQuery).Must(existClosedStatusQuery).Must(matchWorkflowIDQuery)
-	rid := request.Execution.GetRunId()
+	rid := request.Execution.GetRunID()
 	if rid != "" {
 		matchRunIDQuery := elastic.NewMatchQuery(RunID, rid)
 		boolQuery = boolQuery.Must(matchRunIDQuery)
@@ -544,19 +547,27 @@ func (c *elasticV6) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit
 		return nil
 	}
 
+	memo, err := c.serializer.DeserializeVisibilityMemo(p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)))
+	if err != nil {
+		c.logger.Error("failed to deserialize memo",
+			tag.WorkflowID(source.WorkflowID),
+			tag.WorkflowRunID(source.RunID),
+			tag.Error(err))
+	}
+
 	record := &p.InternalVisibilityWorkflowExecutionInfo{
 		WorkflowID:       source.WorkflowID,
 		RunID:            source.RunID,
 		TypeName:         source.WorkflowType,
 		StartTime:        time.Unix(0, source.StartTime),
 		ExecutionTime:    time.Unix(0, source.ExecutionTime),
-		Memo:             p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
+		Memo:             thrift.ToMemo(memo),
 		TaskList:         source.TaskList,
 		SearchAttributes: source.Attr,
 	}
 	if source.CloseTime != 0 {
 		record.CloseTime = time.Unix(0, source.CloseTime)
-		record.Status = &source.CloseStatus
+		record.Status = thrift.ToWorkflowExecutionCloseStatus(&source.CloseStatus)
 		record.HistoryLength = source.HistoryLength
 	}
 

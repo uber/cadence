@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"strings"
 	"testing"
 	"time"
@@ -45,8 +46,6 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type ESVisibilitySuite struct {
@@ -128,11 +127,13 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 	request.ExecutionTimestamp = int64(321)
 	request.TaskID = int64(111)
 	memo := &workflow.Memo{
-		Fields: map[string][]byte{"test": []byte("test bytes")},
+		Fields:
+		map[string][]byte{"test": []byte("test bytes")},
 	}
 	request.Memo = thrift.ToMemo(memo)
 	memoBlob, err := s.serializer.SerializeVisibilityMemo(memo, common.EncodingTypeThriftRW)
 	s.NoError(err)
+
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
 		s.Equal(request.DomainUUID, input.GetDomainID())
@@ -192,6 +193,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 	memoBlob, err := s.serializer.SerializeVisibilityMemo(memo, common.EncodingTypeThriftRW)
 	s.NoError(err)
 	request.Memo = thrift.ToMemo(memo)
+
 	request.CloseTimestamp = int64(999)
 	closeStatus := workflow.WorkflowExecutionCloseStatusTerminated
 	request.Status = *thrift.ToWorkflowExecutionCloseStatus(&closeStatus)
@@ -417,111 +419,6 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
 	s.True(strings.Contains(err.Error(), "ListClosedWorkflowExecutionsByStatus failed"))
 }
 
-<<<<<<< HEAD
-func (s *ESVisibilitySuite) TestGetClosedWorkflowExecution() {
-	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchParameters) bool {
-		source, _ := input.Query.Source()
-		s.True(strings.Contains(fmt.Sprintf("%v", source), filterClose))
-		s.True(strings.Contains(fmt.Sprintf("%v", source), filterByWID))
-		s.True(strings.Contains(fmt.Sprintf("%v", source), filterByRunID))
-		return true
-	})).Return(testSearchResult, nil).Once()
-	request := &p.InternalGetClosedWorkflowExecutionRequest{
-		DomainUUID: testDomainID,
-		Execution: types.WorkflowExecution{
-			WorkflowID: common.StringPtr(testWorkflowID),
-			RunID:      common.StringPtr(testRunID),
-		},
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
-
-	_, err := s.visibilityStore.GetClosedWorkflowExecution(ctx, request)
-	s.NoError(err)
-
-	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
-	_, err = s.visibilityStore.GetClosedWorkflowExecution(ctx, request)
-	s.Error(err)
-	_, ok := err.(*workflow.InternalServiceError)
-	s.True(ok)
-	s.True(strings.Contains(err.Error(), "GetClosedWorkflowExecution failed"))
-}
-
-func (s *ESVisibilitySuite) TestGetClosedWorkflowExecution_NoRunID() {
-	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchParameters) bool {
-		source, _ := input.Query.Source()
-		s.True(strings.Contains(fmt.Sprintf("%v", source), filterClose))
-		s.True(strings.Contains(fmt.Sprintf("%v", source), filterByWID))
-		s.False(strings.Contains(fmt.Sprintf("%v", source), filterByRunID))
-		return true
-	})).Return(testSearchResult, nil).Once()
-	request := &p.InternalGetClosedWorkflowExecutionRequest{
-		DomainUUID: testDomainID,
-		Execution: types.WorkflowExecution{
-			WorkflowID: common.StringPtr(testWorkflowID),
-		},
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
-
-	_, err := s.visibilityStore.GetClosedWorkflowExecution(ctx, request)
-	s.NoError(err)
-}
-||||||| parent of 8da913d7... Fix esVisibilityStore unit tests
-func (s *ESVisibilitySuite) TestGetClosedWorkflowExecution() {
-	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchParameters) bool {
-		source, _ := input.Query.Source()
-		s.True(strings.Contains(fmt.Sprintf("%v", source), filterClose))
-		s.True(strings.Contains(fmt.Sprintf("%v", source), filterByWID))
-		s.True(strings.Contains(fmt.Sprintf("%v", source), filterByRunID))
-		return true
-	})).Return(testSearchResult, nil).Once()
-	request := &p.InternalGetClosedWorkflowExecutionRequest{
-		DomainUUID: testDomainID,
-		Execution: workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(testWorkflowID),
-			RunId:      common.StringPtr(testRunID),
-		},
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
-
-	_, err := s.visibilityStore.GetClosedWorkflowExecution(ctx, request)
-	s.NoError(err)
-
-	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
-	_, err = s.visibilityStore.GetClosedWorkflowExecution(ctx, request)
-	s.Error(err)
-	_, ok := err.(*workflow.InternalServiceError)
-	s.True(ok)
-	s.True(strings.Contains(err.Error(), "GetClosedWorkflowExecution failed"))
-}
-
-func (s *ESVisibilitySuite) TestGetClosedWorkflowExecution_NoRunID() {
-	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchParameters) bool {
-		source, _ := input.Query.Source()
-		s.True(strings.Contains(fmt.Sprintf("%v", source), filterClose))
-		s.True(strings.Contains(fmt.Sprintf("%v", source), filterByWID))
-		s.False(strings.Contains(fmt.Sprintf("%v", source), filterByRunID))
-		return true
-	})).Return(testSearchResult, nil).Once()
-	request := &p.InternalGetClosedWorkflowExecutionRequest{
-		DomainUUID: testDomainID,
-		Execution: workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(testWorkflowID),
-		},
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
-	defer cancel()
-
-	_, err := s.visibilityStore.GetClosedWorkflowExecution(ctx, request)
-	s.NoError(err)
-}
-=======
 // TODO move to client_v6_test
 //func (s *ESVisibilitySuite) TestGetClosedWorkflowExecution() {
 //	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchRequest) bool {
@@ -575,7 +472,6 @@ func (s *ESVisibilitySuite) TestGetClosedWorkflowExecution_NoRunID() {
 //	_, err := s.visibilityStore.SearchForOneClosedExecution(ctx, request)
 //	s.NoError(err)
 //}
->>>>>>> 8da913d7... Fix esVisibilityStore unit tests
 
 func (s *ESVisibilitySuite) TestGetNextPageToken() {
 	token, err := es.GetNextPageToken([]byte{})
@@ -790,95 +686,6 @@ func (s *ESVisibilitySuite) TestSerializePageToken() {
 	s.Equal(newToken.TieBreaker, token.TieBreaker)
 }
 
-<<<<<<< HEAD
-func (s *ESVisibilitySuite) TestConvertSearchResultToVisibilityRecord() {
-	data := []byte(`{"CloseStatus": 0,
-          "CloseTime": 1547596872817380000,
-          "DomainID": "bfd5c907-f899-4baf-a7b2-2ab85e623ebd",
-          "HistoryLength": 29,
-          "KafkaKey": "7-619",
-          "RunID": "e481009e-14b3-45ae-91af-dce6e2a88365",
-          "StartTime": 1547596872371000000,
-          "WorkflowID": "6bfbc1e5-6ce4-4e22-bbfb-e0faa9a7a604-1-2256",
-          "WorkflowType": "TestWorkflowExecute"}`)
-	source := (*json.RawMessage)(&data)
-	searchHit := &elastic.SearchHit{
-		Source: source,
-	}
-
-	// test for open
-	info := s.visibilityStore.convertSearchResultToVisibilityRecord(searchHit)
-	s.NotNil(info)
-	s.Equal("6bfbc1e5-6ce4-4e22-bbfb-e0faa9a7a604-1-2256", info.WorkflowID)
-	s.Equal("e481009e-14b3-45ae-91af-dce6e2a88365", info.RunID)
-	s.Equal("TestWorkflowExecute", info.TypeName)
-	s.Equal(int64(1547596872371000000), info.StartTime.UnixNano())
-
-	// test for close
-	info = s.visibilityStore.convertSearchResultToVisibilityRecord(searchHit)
-	s.NotNil(info)
-	s.Equal("6bfbc1e5-6ce4-4e22-bbfb-e0faa9a7a604-1-2256", info.WorkflowID)
-	s.Equal("e481009e-14b3-45ae-91af-dce6e2a88365", info.RunID)
-	s.Equal("TestWorkflowExecute", info.TypeName)
-	s.Equal(int64(1547596872371000000), info.StartTime.UnixNano())
-	s.Equal(int64(1547596872817380000), info.CloseTime.UnixNano())
-	s.Equal(workflow.WorkflowExecutionCloseStatusCompleted, *thrift.FromWorkflowExecutionCloseStatus(info.Status))
-	s.Equal(int64(29), info.HistoryLength)
-
-	// test for error case
-	badData := []byte(`corrupted data`)
-	source = (*json.RawMessage)(&badData)
-	searchHit = &elastic.SearchHit{
-		Source: source,
-	}
-	info = s.visibilityStore.convertSearchResultToVisibilityRecord(searchHit)
-	s.Nil(info)
-}
-||||||| parent of 8da913d7... Fix esVisibilityStore unit tests
-func (s *ESVisibilitySuite) TestConvertSearchResultToVisibilityRecord() {
-	data := []byte(`{"CloseStatus": 0,
-          "CloseTime": 1547596872817380000,
-          "DomainID": "bfd5c907-f899-4baf-a7b2-2ab85e623ebd",
-          "HistoryLength": 29,
-          "KafkaKey": "7-619",
-          "RunID": "e481009e-14b3-45ae-91af-dce6e2a88365",
-          "StartTime": 1547596872371000000,
-          "WorkflowID": "6bfbc1e5-6ce4-4e22-bbfb-e0faa9a7a604-1-2256",
-          "WorkflowType": "TestWorkflowExecute"}`)
-	source := (*json.RawMessage)(&data)
-	searchHit := &elastic.SearchHit{
-		Source: source,
-	}
-
-	// test for open
-	info := s.visibilityStore.convertSearchResultToVisibilityRecord(searchHit)
-	s.NotNil(info)
-	s.Equal("6bfbc1e5-6ce4-4e22-bbfb-e0faa9a7a604-1-2256", info.WorkflowID)
-	s.Equal("e481009e-14b3-45ae-91af-dce6e2a88365", info.RunID)
-	s.Equal("TestWorkflowExecute", info.TypeName)
-	s.Equal(int64(1547596872371000000), info.StartTime.UnixNano())
-
-	// test for close
-	info = s.visibilityStore.convertSearchResultToVisibilityRecord(searchHit)
-	s.NotNil(info)
-	s.Equal("6bfbc1e5-6ce4-4e22-bbfb-e0faa9a7a604-1-2256", info.WorkflowID)
-	s.Equal("e481009e-14b3-45ae-91af-dce6e2a88365", info.RunID)
-	s.Equal("TestWorkflowExecute", info.TypeName)
-	s.Equal(int64(1547596872371000000), info.StartTime.UnixNano())
-	s.Equal(int64(1547596872817380000), info.CloseTime.UnixNano())
-	s.Equal(workflow.WorkflowExecutionCloseStatusCompleted, *info.Status)
-	s.Equal(int64(29), info.HistoryLength)
-
-	// test for error case
-	badData := []byte(`corrupted data`)
-	source = (*json.RawMessage)(&badData)
-	searchHit = &elastic.SearchHit{
-		Source: source,
-	}
-	info = s.visibilityStore.convertSearchResultToVisibilityRecord(searchHit)
-	s.Nil(info)
-}
-=======
 // Move to client_v6_test
 //func (s *ESVisibilitySuite) TestConvertSearchResultToVisibilityRecord() {
 //	data := []byte(`{"CloseStatus": 0,
@@ -923,7 +730,6 @@ func (s *ESVisibilitySuite) TestConvertSearchResultToVisibilityRecord() {
 //	info = s.visibilityStore.convertSearchResultToVisibilityRecord(searchHit)
 //	s.Nil(info)
 //}
->>>>>>> 8da913d7... Fix esVisibilityStore unit tests
 
 func (s *ESVisibilitySuite) TestShouldSearchAfter() {
 	token := &es.ElasticVisibilityPageToken{}
