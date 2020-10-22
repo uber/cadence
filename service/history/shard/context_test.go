@@ -23,6 +23,7 @@
 package shard
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -138,6 +139,6 @@ func (s *contextTestSuite) TestReplicateFailoverMarkersSuccess() {
 	s.mockResource.ExecutionMgr.On("CreateFailoverMarkerTasks", mock.Anything, mock.Anything).Once().Return(nil)
 
 	markers := make([]*persistence.FailoverMarkerTask, 0)
-	err := s.context.ReplicateFailoverMarkers(markers)
+	err := s.context.ReplicateFailoverMarkers(context.Background(), markers)
 	s.NoError(err)
 }

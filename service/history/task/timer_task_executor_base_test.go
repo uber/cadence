@@ -21,6 +21,7 @@
 package task
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -124,7 +125,7 @@ func (s *timerQueueTaskExecutorBaseSuite) TestDeleteWorkflow_NoErr() {
 		WorkflowId: &task.WorkflowID,
 		RunId:      &task.RunID,
 	}
-	ctx := execution.NewContext(task.DomainID, executionInfo, s.mockShard, s.mockExecutionManager, log.NewNoop())
+	wfContext := execution.NewContext(task.DomainID, executionInfo, s.mockShard, s.mockExecutionManager, log.NewNoop())
 
 	s.mockExecutionManager.On("DeleteCurrentWorkflowExecution", mock.Anything, mock.Anything).Return(nil).Once()
 	s.mockExecutionManager.On("DeleteWorkflowExecution", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
@@ -133,12 +134,12 @@ func (s *timerQueueTaskExecutorBaseSuite) TestDeleteWorkflow_NoErr() {
 	s.mockMutableState.EXPECT().GetCurrentBranchToken().Return([]byte{1, 2, 3}, nil).Times(1)
 	s.mockMutableState.EXPECT().GetLastWriteVersion().Return(int64(1234), nil).AnyTimes()
 
-	err := s.timerQueueTaskExecutorBase.deleteWorkflow(task, ctx, s.mockMutableState)
+	err := s.timerQueueTaskExecutorBase.deleteWorkflow(context.Background(), task, wfContext, s.mockMutableState)
 	s.NoError(err)
 }
 
 func (s *timerQueueTaskExecutorBaseSuite) TestArchiveHistory_NoErr_InlineArchivalFailed() {
-	s.mockWorkflowExecutionContext.EXPECT().LoadExecutionStats().Return(&persistence.ExecutionStats{
+	s.mockWorkflowExecutionContext.EXPECT().LoadExecutionStats(gomock.Any()).Return(&persistence.ExecutionStats{
 		HistorySize: 1024,
 	}, nil).Times(1)
 	s.mockWorkflowExecutionContext.EXPECT().Clear().Times(1)
@@ -166,12 +167,18 @@ func (s *timerQueueTaskExecutorBaseSuite) TestArchiveHistory_NoErr_InlineArchiva
 		nil,
 		nil,
 	)
-	err := s.timerQueueTaskExecutorBase.archiveWorkflow(&persistence.TimerTaskInfo{}, s.mockWorkflowExecutionContext, s.mockMutableState, domainCacheEntry)
+	err := s.timerQueueTaskExecutorBase.archiveWorkflow(
+		context.Background(),
+		&persistence.TimerTaskInfo{},
+		s.mockWorkflowExecutionContext,
+		s.mockMutableState,
+		domainCacheEntry,
+	)
 	s.NoError(err)
 }
 
 func (s *timerQueueTaskExecutorBaseSuite) TestArchiveHistory_SendSignalErr() {
-	s.mockWorkflowExecutionContext.EXPECT().LoadExecutionStats().Return(&persistence.ExecutionStats{
+	s.mockWorkflowExecutionContext.EXPECT().LoadExecutionStats(gomock.Any()).Return(&persistence.ExecutionStats{
 		HistorySize: 1024 * 1024 * 1024,
 	}, nil).Times(1)
 
@@ -192,6 +199,11 @@ func (s *timerQueueTaskExecutorBaseSuite) TestArchiveHistory_SendSignalErr() {
 		nil,
 		nil,
 	)
-	err := s.timerQueueTaskExecutorBase.archiveWorkflow(&persistence.TimerTaskInfo{}, s.mockWorkflowExecutionContext, s.mockMutableState, domainCacheEntry)
+	err := s.timerQueueTaskExecutorBase.archiveWorkflow(
+		context.Background(),
+		&persistence.TimerTaskInfo{},
+		s.mockWorkflowExecutionContext,
+		s.mockMutableState, domainCacheEntry,
+	)
 	s.Error(err)
 }

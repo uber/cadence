@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source $GOFILE -destination branch_manager_mock.go
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination branch_manager_mock.go
 
 package ndc
 
@@ -178,6 +178,7 @@ func (r *branchManagerImpl) flushBufferedEvents(
 	}
 	// the workflow must be updated as active, to send out replication tasks
 	if err := targetWorkflow.GetContext().UpdateWorkflowExecutionAsActive(
+		ctx,
 		r.shard.GetTimeSource().Now(),
 	); err != nil {
 		return 0, nil, err

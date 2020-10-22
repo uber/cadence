@@ -416,8 +416,8 @@ func (d *cassandraTaskPersistence) CreateTasks(
 				rowTypeTask,
 				task.TaskID,
 				domainID,
-				task.Execution.GetWorkflowId(),
-				task.Execution.GetRunId(),
+				task.Execution.GetWorkflowID(),
+				task.Execution.GetRunID(),
 				scheduleID,
 				cqlNowTimestamp)
 		} else {
@@ -431,8 +431,8 @@ func (d *cassandraTaskPersistence) CreateTasks(
 				rowTypeTask,
 				task.TaskID,
 				domainID,
-				task.Execution.GetWorkflowId(),
-				task.Execution.GetRunId(),
+				task.Execution.GetWorkflowID(),
+				task.Execution.GetRunID(),
 				scheduleID,
 				cqlNowTimestamp,
 				ttl)

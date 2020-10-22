@@ -657,11 +657,6 @@ func ReplicationInfo(replicationInfo interface{}) Tag {
 	return newObjectTag("xdc-replication-info", replicationInfo)
 }
 
-// ReplicationState returns tag for ReplicationState
-func ReplicationState(replicationState interface{}) Tag {
-	return newObjectTag("xdc-replication-state", replicationState)
-}
-
 // FirstEventVersion returns tag for FirstEventVersion
 func FirstEventVersion(version int64) Tag {
 	return newInt64("xdc-first-event-version", version)

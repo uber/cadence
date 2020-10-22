@@ -199,7 +199,7 @@ func (v *visibilityManagerWrapper) DeleteWorkflowExecution(
 
 func (v *visibilityManagerWrapper) ListWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsRequestV2,
+	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager := v.chooseVisibilityManagerForDomain(request.Domain)
 	return manager.ListWorkflowExecutions(ctx, request)
@@ -207,7 +207,7 @@ func (v *visibilityManagerWrapper) ListWorkflowExecutions(
 
 func (v *visibilityManagerWrapper) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsRequestV2,
+	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	manager := v.chooseVisibilityManagerForDomain(request.Domain)
 	return manager.ScanWorkflowExecutions(ctx, request)

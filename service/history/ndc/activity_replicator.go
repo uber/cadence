@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source $GOFILE -destination activity_replicator_mock.go
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination activity_replicator_mock.go
 
 package ndc
 
@@ -102,7 +102,7 @@ func (r *activityReplicatorImpl) SyncActivity(
 	}
 	defer func() { release(retError) }()
 
-	mutableState, err := context.LoadWorkflowExecution()
+	mutableState, err := context.LoadWorkflowExecution(ctx)
 	if err != nil {
 		if _, ok := err.(*workflow.EntityNotExistsError); !ok {
 			return err
@@ -202,6 +202,7 @@ func (r *activityReplicatorImpl) SyncActivity(
 	}
 
 	return context.UpdateWorkflowExecutionWithNew(
+		ctx,
 		now,
 		updateMode,
 		nil, // no new workflow

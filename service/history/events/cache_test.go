@@ -21,6 +21,7 @@
 package events
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -95,7 +96,7 @@ func (s *eventsCacheSuite) TestEventsCacheHitSuccess() {
 	}
 
 	s.cache.PutEvent(domainID, workflowID, runID, eventID, event)
-	actualEvent, err := s.cache.GetEvent(0, domainID, workflowID, runID, eventID, eventID, nil)
+	actualEvent, err := s.cache.GetEvent(context.Background(), 0, domainID, workflowID, runID, eventID, eventID, nil)
 	s.Nil(err)
 	s.Equal(event, actualEvent)
 }
@@ -150,7 +151,7 @@ func (s *eventsCacheSuite) TestEventsCacheMissMultiEventsBatchV2Success() {
 	}, nil)
 
 	s.cache.PutEvent(domainID, workflowID, runID, event2.GetEventId(), event2)
-	actualEvent, err := s.cache.GetEvent(*shardID, domainID, workflowID, runID, event1.GetEventId(), event6.GetEventId(), []byte("store_token"))
+	actualEvent, err := s.cache.GetEvent(context.Background(), *shardID, domainID, workflowID, runID, event1.GetEventId(), event6.GetEventId(), []byte("store_token"))
 	s.Nil(err)
 	s.Equal(event6, actualEvent)
 }
@@ -171,7 +172,7 @@ func (s *eventsCacheSuite) TestEventsCacheMissV2Failure() {
 		ShardID:       shardID,
 	}).Return(nil, expectedErr)
 
-	actualEvent, err := s.cache.GetEvent(*shardID, domainID, workflowID, runID, int64(11), int64(14), []byte("store_token"))
+	actualEvent, err := s.cache.GetEvent(context.Background(), *shardID, domainID, workflowID, runID, int64(11), int64(14), []byte("store_token"))
 	s.Nil(actualEvent)
 	s.Equal(expectedErr, err)
 }
@@ -208,7 +209,7 @@ func (s *eventsCacheSuite) TestEventsCacheDisableSuccess() {
 	s.cache.PutEvent(domainID, workflowID, runID, event1.GetEventId(), event1)
 	s.cache.PutEvent(domainID, workflowID, runID, event2.GetEventId(), event2)
 	s.cache.disabled = true
-	actualEvent, err := s.cache.GetEvent(*shardID, domainID, workflowID, runID, event2.GetEventId(), event2.GetEventId(), []byte("store_token"))
+	actualEvent, err := s.cache.GetEvent(context.Background(), *shardID, domainID, workflowID, runID, event2.GetEventId(), event2.GetEventId(), []byte("store_token"))
 	s.Nil(err)
 	s.Equal(event2, actualEvent)
 }

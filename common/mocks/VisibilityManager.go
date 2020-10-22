@@ -275,11 +275,11 @@ func (_m *VisibilityManager) ListOpenWorkflowExecutionsByWorkflowID(ctx context.
 }
 
 // ListWorkflowExecutions provides a mock function with given fields: ctx, request
-func (_m *VisibilityManager) ListWorkflowExecutions(ctx context.Context, request *persistence.ListWorkflowExecutionsRequestV2) (*persistence.ListWorkflowExecutionsResponse, error) {
+func (_m *VisibilityManager) ListWorkflowExecutions(ctx context.Context, request *persistence.ListWorkflowExecutionsByQueryRequest) (*persistence.ListWorkflowExecutionsResponse, error) {
 	ret := _m.Called(ctx, request)
 
 	var r0 *persistence.ListWorkflowExecutionsResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *persistence.ListWorkflowExecutionsRequestV2) *persistence.ListWorkflowExecutionsResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *persistence.ListWorkflowExecutionsByQueryRequest) *persistence.ListWorkflowExecutionsResponse); ok {
 		r0 = rf(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
@@ -288,7 +288,7 @@ func (_m *VisibilityManager) ListWorkflowExecutions(ctx context.Context, request
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *persistence.ListWorkflowExecutionsRequestV2) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *persistence.ListWorkflowExecutionsByQueryRequest) error); ok {
 		r1 = rf(ctx, request)
 	} else {
 		r1 = ret.Error(1)
@@ -326,11 +326,11 @@ func (_m *VisibilityManager) RecordWorkflowExecutionStarted(ctx context.Context,
 }
 
 // ScanWorkflowExecutions provides a mock function with given fields: ctx, request
-func (_m *VisibilityManager) ScanWorkflowExecutions(ctx context.Context, request *persistence.ListWorkflowExecutionsRequestV2) (*persistence.ListWorkflowExecutionsResponse, error) {
+func (_m *VisibilityManager) ScanWorkflowExecutions(ctx context.Context, request *persistence.ListWorkflowExecutionsByQueryRequest) (*persistence.ListWorkflowExecutionsResponse, error) {
 	ret := _m.Called(ctx, request)
 
 	var r0 *persistence.ListWorkflowExecutionsResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *persistence.ListWorkflowExecutionsRequestV2) *persistence.ListWorkflowExecutionsResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *persistence.ListWorkflowExecutionsByQueryRequest) *persistence.ListWorkflowExecutionsResponse); ok {
 		r0 = rf(ctx, request)
 	} else {
 		if ret.Get(0) != nil {
@@ -339,7 +339,7 @@ func (_m *VisibilityManager) ScanWorkflowExecutions(ctx context.Context, request
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *persistence.ListWorkflowExecutionsRequestV2) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *persistence.ListWorkflowExecutionsByQueryRequest) error); ok {
 		r1 = rf(ctx, request)
 	} else {
 		r1 = ret.Error(1)

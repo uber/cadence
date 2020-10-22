@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source $GOFILE -destination new_workflow_transaction_mamanger_mock.go
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination new_workflow_transaction_mamanger_mock.go
 
 package ndc
 
@@ -158,6 +158,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsCurrent(
 	}
 
 	targetWorkflowHistorySize, err := targetWorkflow.GetContext().PersistFirstWorkflowEvents(
+		ctx,
 		targetWorkflowEventsSeq[0],
 	)
 	if err != nil {
@@ -174,6 +175,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsCurrent(
 			return err
 		}
 		return targetWorkflow.GetContext().CreateWorkflowExecution(
+			ctx,
 			targetWorkflowSnapshot,
 			targetWorkflowHistorySize,
 			now,
@@ -188,6 +190,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsCurrent(
 	prevRunID := ""
 	prevLastWriteVersion := int64(0)
 	return targetWorkflow.GetContext().CreateWorkflowExecution(
+		ctx,
 		targetWorkflowSnapshot,
 		targetWorkflowHistorySize,
 		now,
@@ -225,6 +228,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsZombie(
 	}
 
 	targetWorkflowHistorySize, err := targetWorkflow.GetContext().PersistFirstWorkflowEvents(
+		ctx,
 		targetWorkflowEventsSeq[0],
 	)
 	if err != nil {
@@ -241,6 +245,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsZombie(
 	prevRunID := ""
 	prevLastWriteVersion := int64(0)
 	err = targetWorkflow.GetContext().CreateWorkflowExecution(
+		ctx,
 		targetWorkflowSnapshot,
 		targetWorkflowHistorySize,
 		now,
@@ -277,6 +282,7 @@ func (r *transactionManagerForNewWorkflowImpl) suppressCurrentAndCreateAsCurrent
 	}
 
 	return currentWorkflow.GetContext().UpdateWorkflowExecutionWithNew(
+		ctx,
 		now,
 		persistence.UpdateWorkflowModeUpdateCurrent,
 		targetWorkflow.GetContext(),

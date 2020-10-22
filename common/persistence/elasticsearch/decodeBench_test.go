@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 var (
@@ -55,26 +56,29 @@ BenchmarkJSONDecodeToMap-8        100000             12878 ns/op
 //nolint
 func BenchmarkJSONDecodeToType(b *testing.B) {
 	bytes := (*json.RawMessage)(&data)
+	serializer := p.NewPayloadSerializer()
 	for i := 0; i < b.N; i++ {
 		var source *visibilityRecord
 		json.Unmarshal(*bytes, &source)
+		memo, _ := serializer.DeserializeVisibilityMemo(p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)))
 		record := &p.InternalVisibilityWorkflowExecutionInfo{
 			WorkflowID:    source.WorkflowID,
 			RunID:         source.RunID,
 			TypeName:      source.WorkflowType,
 			StartTime:     time.Unix(0, source.StartTime),
 			ExecutionTime: time.Unix(0, source.ExecutionTime),
-			Memo:          p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
+			Memo:          thrift.ToMemo(memo),
 			TaskList:      source.TaskList,
 		}
 		record.CloseTime = time.Unix(0, source.CloseTime)
-		record.Status = &source.CloseStatus
+		record.Status = thrift.ToWorkflowExecutionCloseStatus(&source.CloseStatus)
 		record.HistoryLength = source.HistoryLength
 	}
 }
 
 //nolint
 func BenchmarkJSONDecodeToMap(b *testing.B) {
+	serializer := p.NewPayloadSerializer()
 	for i := 0; i < b.N; i++ {
 		var source map[string]interface{}
 		d := json.NewDecoder(bytes.NewReader(data))
@@ -87,6 +91,7 @@ func BenchmarkJSONDecodeToMap(b *testing.B) {
 		closeStatus, _ := source[definition.CloseStatus].(json.Number).Int64()
 		historyLen, _ := source[definition.HistoryLength].(json.Number).Int64()
 
+		memo, _ := serializer.DeserializeVisibilityMemo(p.NewDataBlob([]byte(source[definition.Memo].(string)), common.EncodingType(source[definition.Encoding].(string))))
 		record := &p.InternalVisibilityWorkflowExecutionInfo{
 			WorkflowID:    source[definition.WorkflowID].(string),
 			RunID:         source[definition.RunID].(string),
@@ -94,11 +99,11 @@ func BenchmarkJSONDecodeToMap(b *testing.B) {
 			StartTime:     time.Unix(0, startTime),
 			ExecutionTime: time.Unix(0, executionTime),
 			TaskList:      source[definition.TaskList].(string),
-			Memo:          p.NewDataBlob([]byte(source[definition.Memo].(string)), common.EncodingType(source[definition.Encoding].(string))),
+			Memo:          thrift.ToMemo(memo),
 		}
 		record.CloseTime = time.Unix(0, closeTime)
 		status := (shared.WorkflowExecutionCloseStatus)(int32(closeStatus))
-		record.Status = &status
+		record.Status = thrift.ToWorkflowExecutionCloseStatus(&status)
 		record.HistoryLength = historyLen
 	}
 }

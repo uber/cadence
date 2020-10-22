@@ -166,8 +166,8 @@ type (
 		ListClosedWorkflowExecutionsByStatus(ctx context.Context, request *InternalListClosedWorkflowExecutionsByStatusRequest) (*InternalListWorkflowExecutionsResponse, error)
 		GetClosedWorkflowExecution(ctx context.Context, request *InternalGetClosedWorkflowExecutionRequest) (*InternalGetClosedWorkflowExecutionResponse, error)
 		DeleteWorkflowExecution(ctx context.Context, request *VisibilityDeleteWorkflowExecutionRequest) error
-		ListWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
-		ScanWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequestV2) (*InternalListWorkflowExecutionsResponse, error)
+		ListWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsByQueryRequest) (*InternalListWorkflowExecutionsResponse, error)
+		ScanWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsByQueryRequest) (*InternalListWorkflowExecutionsResponse, error)
 		CountWorkflowExecutions(ctx context.Context, request *CountWorkflowExecutionsRequest) (*CountWorkflowExecutionsResponse, error)
 	}
 
@@ -628,9 +628,9 @@ type (
 		StartTime        time.Time
 		ExecutionTime    time.Time
 		CloseTime        time.Time
-		Status           *workflow.WorkflowExecutionCloseStatus
+		Status           *types.WorkflowExecutionCloseStatus
 		HistoryLength    int64
-		Memo             *DataBlob
+		Memo             *types.Memo
 		TaskList         string
 		SearchAttributes map[string]interface{}
 	}
@@ -647,13 +647,13 @@ type (
 	InternalGetClosedWorkflowExecutionRequest struct {
 		DomainUUID string
 		Domain     string // domain name is not persisted, but used as config filter key
-		Execution  workflow.WorkflowExecution
+		Execution  types.WorkflowExecution
 	}
 
 	// InternalListClosedWorkflowExecutionsByStatusRequest is used to list executions that have specific close status
 	InternalListClosedWorkflowExecutionsByStatusRequest struct {
 		InternalListWorkflowExecutionsRequest
-		Status workflow.WorkflowExecutionCloseStatus
+		Status types.WorkflowExecutionCloseStatus
 	}
 
 	// InternalListWorkflowExecutionsByWorkflowIDRequest is used to list executions that have specific WorkflowID in a domain
@@ -683,7 +683,7 @@ type (
 		ExecutionTimestamp int64
 		WorkflowTimeout    int64
 		TaskID             int64
-		Memo               *DataBlob
+		Memo               *types.Memo
 		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
@@ -697,11 +697,11 @@ type (
 		StartTimestamp     int64
 		ExecutionTimestamp int64
 		TaskID             int64
-		Memo               *DataBlob
+		Memo               *types.Memo
 		TaskList           string
 		SearchAttributes   map[string][]byte
 		CloseTimestamp     int64
-		Status             workflow.WorkflowExecutionCloseStatus
+		Status             types.WorkflowExecutionCloseStatus
 		HistoryLength      int64
 		RetentionSeconds   int64
 	}
@@ -716,17 +716,19 @@ type (
 		ExecutionTimestamp int64
 		WorkflowTimeout    int64
 		TaskID             int64
-		Memo               *DataBlob
+		Memo               *types.Memo
 		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
 
 	// InternalListWorkflowExecutionsRequest is used to list executions in a domain
 	InternalListWorkflowExecutionsRequest struct {
-		DomainUUID        string
-		Domain            string // domain name is not persisted, but used as config filter key
-		EarliestStartTime int64
-		LatestStartTime   int64
+		DomainUUID string
+		Domain     string // domain name is not persisted, but used as config filter key
+		// The earliest end of the time range
+		EarliestTime int64
+		// The latest end of the time range
+		LatestTime int64
 		// Maximum number of workflow executions per page
 		PageSize int
 		// Token to continue reading next page of workflow executions.
@@ -851,7 +853,7 @@ type (
 
 	// InternalCreateTasksInfo describes a task to be created in InternalCreateTasksRequest
 	InternalCreateTasksInfo struct {
-		Execution workflow.WorkflowExecution
+		Execution types.WorkflowExecution
 		Data      *InternalTaskInfo
 		TaskID    int64
 	}

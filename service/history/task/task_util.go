@@ -21,6 +21,7 @@
 package task
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/golang/mock/gomock"
@@ -217,13 +218,13 @@ func verifyTaskVersion(
 // load mutable state, if mutable state's next event ID <= task ID, will attempt to refresh
 // if still mutable state's next event ID <= task ID, will return nil, nil
 func loadMutableStateForTimerTask(
-	context execution.Context,
+	ctx context.Context,
+	wfContext execution.Context,
 	timerTask *persistence.TimerTaskInfo,
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) (execution.MutableState, error) {
-
-	msBuilder, err := context.LoadWorkflowExecution()
+	msBuilder, err := wfContext.LoadWorkflowExecution(ctx)
 	if err != nil {
 		if _, ok := err.(*workflow.EntityNotExistsError); ok {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
@@ -242,9 +243,9 @@ func loadMutableStateForTimerTask(
 
 	if timerTask.EventID >= msBuilder.GetNextEventID() && !isDecisionRetry {
 		metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.StaleMutableStateCounter)
-		context.Clear()
+		wfContext.Clear()
 
-		msBuilder, err = context.LoadWorkflowExecution()
+		msBuilder, err = wfContext.LoadWorkflowExecution(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -262,13 +263,14 @@ func loadMutableStateForTimerTask(
 // load mutable state, if mutable state's next event ID <= task ID, will attempt to refresh
 // if still mutable state's next event ID <= task ID, will return nil, nil
 func loadMutableStateForTransferTask(
-	context execution.Context,
+	ctx context.Context,
+	wfContext execution.Context,
 	transferTask *persistence.TransferTaskInfo,
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) (execution.MutableState, error) {
 
-	msBuilder, err := context.LoadWorkflowExecution()
+	msBuilder, err := wfContext.LoadWorkflowExecution(ctx)
 	if err != nil {
 		if _, ok := err.(*workflow.EntityNotExistsError); ok {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
@@ -287,9 +289,9 @@ func loadMutableStateForTransferTask(
 
 	if transferTask.ScheduleID >= msBuilder.GetNextEventID() && !isDecisionRetry {
 		metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.StaleMutableStateCounter)
-		context.Clear()
+		wfContext.Clear()
 
-		msBuilder, err = context.LoadWorkflowExecution()
+		msBuilder, err = wfContext.LoadWorkflowExecution(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -326,6 +328,7 @@ func timeoutWorkflow(
 }
 
 func retryWorkflow(
+	ctx context.Context,
 	mutableState execution.MutableState,
 	eventBatchFirstEventID int64,
 	parentDomainName string,
@@ -343,6 +346,7 @@ func retryWorkflow(
 	}
 
 	_, newMutableState, err := mutableState.AddContinueAsNewEvent(
+		ctx,
 		eventBatchFirstEventID,
 		common.EmptyEventID,
 		parentDomainName,

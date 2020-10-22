@@ -21,6 +21,7 @@
 package task
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -983,7 +984,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything, mock.Anything).Return(nil).Once()
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
-	s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything).Return(nil).Times(1)
+	s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything, mock.Anything).Return(nil).Times(1)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
 	s.Nil(err)
@@ -2124,7 +2125,7 @@ func (s *transferActiveTaskExecutorSuite) createChildWorkflowExecutionRequest(
 	ci *persistence.ChildExecutionInfo,
 ) *history.StartWorkflowExecutionRequest {
 
-	event, err := mutableState.GetChildExecutionInitiatedEvent(task.ScheduleID)
+	event, err := mutableState.GetChildExecutionInitiatedEvent(context.Background(), task.ScheduleID)
 	s.NoError(err)
 	attributes := event.StartChildWorkflowExecutionInitiatedEventAttributes
 	workflowExecution := workflow.WorkflowExecution{

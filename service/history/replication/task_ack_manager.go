@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source $GOFILE -destination task_ack_manager_mock.go
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination task_ack_manager_mock.go
 
 package replication
 
@@ -261,7 +261,7 @@ func (t *taskAckManagerImpl) processReplication(
 	}
 	defer func() { release(retError) }()
 
-	msBuilder, err := context.LoadWorkflowExecution()
+	msBuilder, err := context.LoadWorkflowExecution(ctx)
 	switch err.(type) {
 	case nil:
 		if !processTaskIfClosed && !msBuilder.IsWorkflowExecutionRunning() {
@@ -353,7 +353,7 @@ func (t *taskAckManagerImpl) isNewRunNDCEnabled(
 	}
 	defer func() { release(retError) }()
 
-	mutableState, err := context.LoadWorkflowExecution()
+	mutableState, err := context.LoadWorkflowExecution(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -465,8 +465,8 @@ func (t *taskAckManagerImpl) generateFailoverMarkerTask(
 		FailoverMarkerAttributes: &replicator.FailoverMarkerAttributes{
 			DomainID:        common.StringPtr(taskInfo.GetDomainID()),
 			FailoverVersion: common.Int64Ptr(taskInfo.GetVersion()),
-			CreationTime:    common.Int64Ptr(taskInfo.CreationTime),
 		},
+		CreationTime: common.Int64Ptr(taskInfo.CreationTime),
 	}
 }
 
@@ -525,6 +525,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 					LastFailureDetails: activityInfo.LastFailureDetails,
 					VersionHistory:     versionHistory,
 				},
+				CreationTime: common.Int64Ptr(taskInfo.CreationTime),
 			}, nil
 		},
 	)
@@ -592,6 +593,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 					Events:              eventsBlob,
 					NewRunEvents:        newRunEventsBlob,
 				},
+				CreationTime: common.Int64Ptr(task.CreationTime),
 			}
 			return replicationTask, nil
 		},
