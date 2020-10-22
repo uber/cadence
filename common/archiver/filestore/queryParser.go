@@ -103,7 +103,7 @@ func (p *queryParser) convertWhereExpr(expr sqlparser.Expr, parsedQuery *parsedQ
 	case *sqlparser.ParenExpr:
 		return p.convertParenExpr(expr.(*sqlparser.ParenExpr), parsedQuery)
 	default:
-		return errors.New("only comparsion and \"and\" expression is supported")
+		return errors.New("only comparison and \"and\" expression is supported")
 	}
 }
 
@@ -138,7 +138,7 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 			return err
 		}
 		if op != "=" {
-			return fmt.Errorf("only operation = is support for %s", WorkflowID)
+			return fmt.Errorf("only operator = is supported for %s with file system", WorkflowID)
 		}
 		if parsedQuery.workflowID != nil && *parsedQuery.workflowID != val {
 			parsedQuery.emptyResult = true
@@ -151,7 +151,7 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 			return err
 		}
 		if op != "=" {
-			return fmt.Errorf("only operation = is support for %s", RunID)
+			return fmt.Errorf("only operator = is supported for %s with file system", RunID)
 		}
 		if parsedQuery.runID != nil && *parsedQuery.runID != val {
 			parsedQuery.emptyResult = true
@@ -164,7 +164,7 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 			return err
 		}
 		if op != "=" {
-			return fmt.Errorf("only operation = is support for %s", WorkflowType)
+			return fmt.Errorf("only operator = is supported for %s with file system", WorkflowType)
 		}
 		if parsedQuery.workflowTypeName != nil && *parsedQuery.workflowTypeName != val {
 			parsedQuery.emptyResult = true
@@ -178,7 +178,7 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 			val = valStr
 		}
 		if op != "=" {
-			return fmt.Errorf("only operation = is support for %s", CloseStatus)
+			return fmt.Errorf("only operator = is supported for %s with file system", CloseStatus)
 		}
 		status, err := convertStatusStr(val)
 		if err != nil {
