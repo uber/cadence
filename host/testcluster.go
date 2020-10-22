@@ -210,7 +210,7 @@ func setupShards(testBase persistencetests.TestBase, numHistoryShards int, logge
 	// shard 0 is always created, we create additional shards if needed
 	for shardID := 1; shardID < numHistoryShards; shardID++ {
 		ctx, cancel := context.WithTimeout(context.Background(), defaultTestPersistenceTimeout)
-		err := testBase.CreateShard(ctx, shardID, "", 0)
+		err := testBase.CreateShard(ctx, shardID, "", 0, nil, nil)
 		if err != nil {
 			cancel()
 			logger.Fatal("Failed to create shard", tag.Error(err))

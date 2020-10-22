@@ -278,11 +278,13 @@ func (s *TestBase) fatalOnError(msg string, err error) {
 }
 
 // CreateShard is a utility method to create the shard using persistence layer
-func (s *TestBase) CreateShard(ctx context.Context, shardID int, owner string, rangeID int64) error {
+func (s *TestBase) CreateShard(ctx context.Context, shardID int, owner string, rangeID int64, transferPQS *p.DataBlob, timerPQS *p.DataBlob) error {
 	info := &p.ShardInfo{
 		ShardID: shardID,
 		Owner:   owner,
 		RangeID: rangeID,
+		TransferProcessingQueueStates: transferPQS,
+		TimerProcessingQueueStates: timerPQS,
 	}
 
 	return s.ShardMgr.CreateShard(ctx, &p.CreateShardRequest{
@@ -364,8 +366,8 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 					VisibilityTimestamp: time.Now(),
 				},
 			},
-			TimerTasks: timerTasks,
-			Checksum:   testWorkflowChecksum,
+			TimerTasks:       timerTasks,
+			Checksum:         testWorkflowChecksum,
 			VersionHistories: verisonHistories,
 		},
 		RangeID: s.ShardInfo.RangeID,
@@ -561,7 +563,7 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 					ScheduleID: decisionScheduleID,
 				},
 			},
-			TimerTasks: timerTasks,
+			TimerTasks:       timerTasks,
 			VersionHistories: verisonHistories,
 		},
 		RangeID: s.ShardInfo.RangeID,
@@ -666,9 +668,9 @@ func (s *TestBase) ContinueAsNewExecution(
 				DecisionTimeout:             1,
 				AutoResetPoints:             prevResetPoints,
 			},
-			ExecutionStats: updatedStats,
-			TransferTasks:  nil,
-			TimerTasks:     nil,
+			ExecutionStats:   updatedStats,
+			TransferTasks:    nil,
+			TimerTasks:       nil,
 			VersionHistories: verisonHistories,
 		},
 		RangeID:  s.ShardInfo.RangeID,

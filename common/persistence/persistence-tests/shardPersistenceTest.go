@@ -22,6 +22,8 @@ package persistencetests
 
 import (
 	"context"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cluster"
 	"os"
 	"testing"
 	"time"
@@ -66,10 +68,10 @@ func (s *ShardPersistenceSuite) TestCreateShard() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	err0 := s.CreateShard(ctx, 19, "test_create_shard1", 123)
+	err0 := s.CreateShard(ctx, 19, "test_create_shard1", 123, nil, nil)
 	s.Nil(err0, "No error expected.")
 
-	err1 := s.CreateShard(ctx, 19, "test_create_shard2", 124)
+	err1 := s.CreateShard(ctx, 19, "test_create_shard2", 124, nil, nil)
 	s.NotNil(err1, "expected non nil error.")
 	s.IsType(&p.ShardAlreadyExistError{}, err1)
 	log.Infof("CreateShard failed with error: %v", err1)
@@ -83,7 +85,24 @@ func (s *ShardPersistenceSuite) TestGetShard() {
 	shardID := 20
 	owner := "test_get_shard"
 	rangeID := int64(131)
-	err0 := s.CreateShard(ctx, shardID, owner, rangeID)
+
+	currentClusterTransferAck := int64(21)
+	alternativeClusterTransferAck := int64(32)
+	currentClusterTimerAck := timestampConvertor(time.Now().Add(-10 * time.Second))
+	alternativeClusterTimerAck := timestampConvertor(time.Now().Add(-20 * time.Second))
+	transferPQS := createTransferPQS(cluster.TestCurrentClusterName, 0, currentClusterTransferAck,
+		cluster.TestAlternativeClusterName, 1, alternativeClusterTransferAck)
+	transferPQSBlob, _ := s.PayloadSerializer.SerializeProcessingQueueStates(
+		&transferPQS,
+		common.EncodingTypeThriftRW,
+	)
+	timerPQS := createTimerPQS(cluster.TestCurrentClusterName, 0, currentClusterTimerAck,
+		cluster.TestAlternativeClusterName, 1, alternativeClusterTimerAck)
+	timerPQSBlob, _ := s.PayloadSerializer.SerializeProcessingQueueStates(
+		&timerPQS,
+		common.EncodingTypeThriftRW,
+	)
+	err0 := s.CreateShard(ctx, shardID, owner, rangeID, transferPQSBlob, timerPQSBlob)
 	s.Nil(err0, "No error expected.")
 
 	shardInfo, err1 := s.GetShard(ctx, shardID)
@@ -93,6 +112,15 @@ func (s *ShardPersistenceSuite) TestGetShard() {
 	s.Equal(owner, shardInfo.Owner)
 	s.Equal(rangeID, shardInfo.RangeID)
 	s.Equal(0, shardInfo.StolenSinceRenew)
+
+	s.Equal(shardInfo.TransferProcessingQueueStates, shardInfo.TransferProcessingQueueStates)
+	s.Equal(shardInfo.TimerProcessingQueueStates, shardInfo.TimerProcessingQueueStates)
+	deserializedTransferPQS, err := s.PayloadSerializer.DeserializeProcessingQueueStates(shardInfo.TransferProcessingQueueStates)
+	s.Nil(err)
+	s.Equal(&transferPQS, deserializedTransferPQS)
+	deserializedTimerPQS, err := s.PayloadSerializer.DeserializeProcessingQueueStates(shardInfo.TimerProcessingQueueStates)
+	s.Nil(err)
+	s.Equal(&timerPQS, deserializedTimerPQS)
 
 	_, err2 := s.GetShard(ctx, 4766)
 	s.NotNil(err2)
@@ -108,7 +136,7 @@ func (s *ShardPersistenceSuite) TestUpdateShard() {
 	shardID := 30
 	owner := "test_update_shard"
 	rangeID := int64(141)
-	err0 := s.CreateShard(ctx, shardID, owner, rangeID)
+	err0 := s.CreateShard(ctx, shardID, owner, rangeID, nil, nil)
 	s.Nil(err0, "No error expected.")
 
 	shardInfo, err1 := s.GetShard(ctx, shardID)
