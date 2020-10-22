@@ -46,15 +46,26 @@ func NewGenericClient(
 type (
 	// GenericClient is a generic interface for all versions of ElasticSearch clients
 	GenericClient interface {
+		// Search API is only for supporting various List[Open/Closed]WorkflowExecutions(ByXyz).
+		// Use SearchByQuery or ScanByQuery for generic purpose searching.
 		Search(ctx context.Context, request *SearchRequest) (*SearchResponse, error)
+		// SearchByQuery is the generic purpose searching
 		SearchByQuery(ctx context.Context, request *SearchByQueryRequest) (*SearchResponse, error)
+		// ScanByQuery is also generic purpose searching, but implemented with ScrollService of ElasticSearch,
+		// which is more performant for pagination, but comes with some limitation of in-parallel requests.
 		ScanByQuery(ctx context.Context, request *ScanByQueryRequest) (*SearchResponse, error)
-		CountByQuery(ctx context.Context, index, query string) (int64, error)
-		PutMapping(ctx context.Context, index, root, key, valueType string) error
-		CreateIndex(ctx context.Context, index string) error
+		// TODO remove it in https://github.com/uber/cadence/issues/3682
 		SearchForOneClosedExecution(ctx context.Context, index string, request *SearchForOneClosedExecutionRequest) (*SearchForOneClosedExecutionResponse, error)
+		// CountByQuery is for returning the count of workflow executions that match the query
+		CountByQuery(ctx context.Context, index, query string) (int64, error)
 
+		// RunBulkProcessor returns a processor for adding/removing docs into ElasticSearch index
 		RunBulkProcessor(ctx context.Context, p *BulkProcessorParameters) (GenericBulkProcessor, error)
+
+		// PutMapping adds new field type to the index
+		PutMapping(ctx context.Context, index, root, key, valueType string) error
+		// CreateIndex creates a new index
+		CreateIndex(ctx context.Context, index string) error
 	}
 
 	// SearchRequest is request for Search
