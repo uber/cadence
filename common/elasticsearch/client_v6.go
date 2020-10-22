@@ -29,18 +29,16 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/uber/cadence/common/types/mapper/thrift"
-
-	"github.com/uber/cadence/common/metrics"
+	"github.com/olivere/elastic"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
-
-	"github.com/olivere/elastic"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 var _ GenericClient = (*elasticV6)(nil)
