@@ -24,11 +24,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"io"
 	"math"
 	"strconv"
 	"time"
+
+	"github.com/uber/cadence/common/types/mapper/thrift"
 
 	"github.com/uber/cadence/common/metrics"
 

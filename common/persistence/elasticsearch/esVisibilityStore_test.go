@@ -25,10 +25,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/types/mapper/thrift"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -127,8 +128,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 	request.ExecutionTimestamp = int64(321)
 	request.TaskID = int64(111)
 	memo := &workflow.Memo{
-		Fields:
-		map[string][]byte{"test": []byte("test bytes")},
+		Fields: map[string][]byte{"test": []byte("test bytes")},
 	}
 	request.Memo = thrift.ToMemo(memo)
 	memoBlob, err := s.serializer.SerializeVisibilityMemo(memo, common.EncodingTypeThriftRW)
