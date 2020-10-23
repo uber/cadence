@@ -202,32 +202,32 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 		return nil, err
 	}
 
-	// TODO add checking of reset until event ID == decision task started ID + 1
 	decision, ok := resetMutableState.GetInFlightDecision()
-	if !ok || decision.StartedID+1 != resetMutableState.GetNextEventID() {
-		return nil, &shared.BadRequestError{
-			Message: fmt.Sprintf("Can only reset workflow to DecisionTaskStarted + 1: %v", baseRebuildLastEventID+1),
+	if ok {
+		if decision.StartedID+1 != resetMutableState.GetNextEventID() {
+			return nil, &shared.BadRequestError{
+				Message: fmt.Sprintf("Can only reset workflow to DecisionTaskStarted + 1: %v", baseRebuildLastEventID+1),
+			}
 		}
-	}
-	if len(resetMutableState.GetPendingChildExecutionInfos()) > 0 {
-		return nil, &shared.BadRequestError{
-			Message: fmt.Sprintf("Can only reset workflow with pending child workflows"),
+		if len(resetMutableState.GetPendingChildExecutionInfos()) > 0 {
+			return nil, &shared.BadRequestError{
+				Message: fmt.Sprintf("Can only reset workflow with pending child workflows"),
+			}
 		}
-	}
-
-	_, err = resetMutableState.AddDecisionTaskFailedEvent(
-		decision.ScheduleID,
-		decision.StartedID, shared.DecisionTaskFailedCauseResetWorkflow,
-		nil,
-		execution.IdentityHistoryService,
-		resetReason,
-		"",
-		baseRunID,
-		resetRunID,
-		baseLastEventVersion,
-	)
-	if err != nil {
-		return nil, err
+		_, err = resetMutableState.AddDecisionTaskFailedEvent(
+			decision.ScheduleID,
+			decision.StartedID, shared.DecisionTaskFailedCauseResetWorkflow,
+			nil,
+			execution.IdentityHistoryService,
+			resetReason,
+			"",
+			baseRunID,
+			resetRunID,
+			baseLastEventVersion,
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if err := r.failInflightActivity(resetMutableState, resetReason); err != nil {
@@ -289,16 +289,22 @@ func (r *workflowResetterImpl) persistToDB(
 	if err != nil {
 		return err
 	}
-	if len(resetWorkflowEventsSeq) != 1 {
+
+	resetHistorySize := int64(0)
+	switch len(resetWorkflowEventsSeq) {
+	case 0:
+		// reset workflow without decision task completes
+	case 1:
+		// reset workflow with decision task completes
+		resetHistorySize, err = resetWorkflow.GetContext().PersistNonFirstWorkflowEvents(ctx, resetWorkflowEventsSeq[0])
+		if err != nil {
+			return err
+		}
+	default:
 		return &shared.InternalServiceError{
-			Message: "there should be EXACTLY one batch of events for reset",
+			Message: "there should be no more than one batch of events for reset",
 		}
 	}
-	resetHistorySize, err := resetWorkflow.GetContext().PersistNonFirstWorkflowEvents(ctx, resetWorkflowEventsSeq[0])
-	if err != nil {
-		return err
-	}
-
 	return resetWorkflow.GetContext().CreateWorkflowExecution(
 		ctx,
 		resetWorkflowSnapshot,
