@@ -361,45 +361,6 @@ func (s *esProcessorSuite) TestGetMsgInfo_Error() {
 	s.Equal("", domainID)
 }
 
-// TODO move to client_v6_test
-//func (s *esProcessorSuite) TestGetKeyForKafkaMsg() {
-//	request := elastic.NewBulkIndexRequest()
-//	s.PanicsWithValue("KafkaKey not found", func() { s.esProcessor.processor.RetrieveKafkaKey(request, s.esProcessor.logger, s.esProcessor.metricsClient) })
-//
-//	m := map[string]interface{}{
-//		es.KafkaKey: 1,
-//	}
-//	request.Doc(m)
-//	s.PanicsWithValue("KafkaKey is not string", func() { s.esProcessor.processor.RetrieveKafkaKey(request, s.esProcessor.logger, s.esProcessor.metricsClient) })
-//
-//	testKey := "test-key"
-//	m[es.KafkaKey] = testKey
-//	request.Doc(m)
-//	s.Equal(testKey, s.esProcessor.processor.RetrieveKafkaKey(request, s.esProcessor.logger, s.esProcessor.metricsClient))
-//}
-
-// TODO move to client_v6_test
-//func (s *esProcessorSuite) TestGetKeyForKafkaMsg_Delete() {
-//	request := elastic.NewBulkDeleteRequest()
-//
-//	// ensure compatible with dependency
-//	source, err := request.Source()
-//	s.NoError(err)
-//	s.Equal(1, len(source))
-//	var body map[string]map[string]interface{}
-//	err = json.Unmarshal([]byte(source[0]), &body)
-//	s.NoError(err)
-//	_, ok := body["delete"]
-//	s.True(ok)
-//
-//	s.PanicsWithValue("_id not found in request opMap", func() { s.esProcessor.processor.RetrieveKafkaKey(request, s.esProcessor.logger, s.esProcessor.metricsClient) })
-//
-//	id := "id"
-//	request.Id(id)
-//	key := s.esProcessor.processor.RetrieveKafkaKey(request, s.esProcessor.logger, s.esProcessor.metricsClient)
-//	s.Equal(id, key)
-//}
-
 func (s *esProcessorSuite) TestIsResponseSuccess() {
 	for i := 200; i < 300; i++ {
 		s.True(isResponseSuccess(i))
