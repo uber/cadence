@@ -1882,6 +1882,7 @@ func getFirstDecisionCompletedID(ctx context.Context, domain, wid, rid string, f
 				decisionFinishID = e.GetEventId()
 				return resetBaseRunID, decisionFinishID, nil
 			}
+			decisionFinishID = e.GetEventId()
 		}
 		if len(resp.NextPageToken) != 0 {
 			req.NextPageToken = resp.NextPageToken
