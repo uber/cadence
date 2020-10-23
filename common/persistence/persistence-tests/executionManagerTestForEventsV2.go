@@ -175,7 +175,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 	}}
 	updatedInfo.BranchToken = []byte("branchToken2")
 
-	err2 := s.UpdateWorkflowExecution(ctx, updatedInfo, updatedStats, nil, []int64{int64(4)}, nil, int64(3), nil, nil, nil, timerInfos, nil)
+	err2 := s.UpdateWorkflowExecution(ctx, updatedInfo, updatedStats, verisonHistories, []int64{int64(4)}, nil, int64(3), nil, nil, nil, timerInfos, nil)
 	s.NoError(err2)
 
 	state, err1 := s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
@@ -189,7 +189,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 	s.Equal(int64(5), state.TimerInfos[timerID].StartedID)
 	s.assertChecksumsEqual(testWorkflowChecksum, state.Checksum)
 
-	err2 = s.UpdateWorkflowExecution(ctx, updatedInfo, updatedStats, nil, nil, nil, int64(5), nil, nil, nil, nil, []string{timerID})
+	err2 = s.UpdateWorkflowExecution(ctx, updatedInfo, updatedStats, verisonHistories, nil, nil, int64(5), nil, nil, nil, nil, []string{timerID})
 	s.NoError(err2)
 
 	state, err2 = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
@@ -351,6 +351,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 			DeleteActivityInfos: nil,
 			UpsertTimerInfos:    nil,
 			DeleteTimerInfos:    nil,
+			VersionHistories:    verisonHistories,
 		},
 		NewWorkflowSnapshot: &p.WorkflowSnapshot{
 			ExecutionInfo: &p.WorkflowExecutionInfo{
@@ -886,7 +887,11 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 
 	info0.State = p.WorkflowStateCompleted
 	info0.CloseStatus = p.WorkflowCloseStatusCompleted
-	err = s.UpdateWorklowStateAndReplication(ctx, info0, stats0, nil, info0.NextEventID, nil)
+	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
+		{info0.DecisionScheduleID, common.EmptyVersion},
+	})
+	verisonHistories := p.NewVersionHistories(versionHistory)
+	err = s.UpdateWorklowStateAndReplication(ctx, info0, stats0, verisonHistories, info0.NextEventID, nil)
 	s.Nil(err)
 
 	updatedInfo := copyWorkflowExecutionInfo(info0)
