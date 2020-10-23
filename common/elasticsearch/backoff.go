@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-// exponentialBackoff implements the simple exponential backoff described by
+// exponentialBackoff implements the simple exponential backoff described by 
 // Douglas Thain at http://dthain.blogspot.de/2009/02/exponential-backoff-in-distributed.html.
 // TODO https://github.com/uber/cadence/issues/3676
 type exponentialBackoff struct {
