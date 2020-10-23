@@ -76,9 +76,8 @@ type (
 	}
 )
 
-var (
-	oneMilliSecondInNano = int64(1000)
-)
+// TODO https://github.com/uber/cadence/issues/3686
+const oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
 
 // NewWrapperClient returns a new implementation of Client
 func newV6Client(
@@ -621,14 +620,14 @@ func (c *elasticV6) getSearchResult(
 	// ElasticSearch v6 is unable to precisely compare time, have to manually add resolution 1ms to time range.
 	// Also has to use string instead of int64 to avoid data conversion issue,
 	// 9223372036854775807 to 9223372036854776000 (long overflow)
-	if request.LatestTime > math.MaxInt64-oneMilliSecondInNano { // prevent latestTime overflow
-		request.LatestTime = math.MaxInt64 - oneMilliSecondInNano
+	if request.LatestTime > math.MaxInt64-oneMicroSecondInNano { // prevent latestTime overflow
+		request.LatestTime = math.MaxInt64 - oneMicroSecondInNano
 	}
-	if request.EarliestTime < math.MinInt64+oneMilliSecondInNano { // prevent earliestTime overflow
-		request.EarliestTime = math.MinInt64 + oneMilliSecondInNano
+	if request.EarliestTime < math.MinInt64+oneMicroSecondInNano { // prevent earliestTime overflow
+		request.EarliestTime = math.MinInt64 + oneMicroSecondInNano
 	}
-	earliestTimeStr := strconv.FormatInt(request.EarliestTime-oneMilliSecondInNano, 10)
-	latestTimeStr := strconv.FormatInt(request.LatestTime+oneMilliSecondInNano, 10)
+	earliestTimeStr := strconv.FormatInt(request.EarliestTime-oneMicroSecondInNano, 10)
+	latestTimeStr := strconv.FormatInt(request.LatestTime+oneMicroSecondInNano, 10)
 	rangeQuery = rangeQuery.
 		Gte(earliestTimeStr).
 		Lte(latestTimeStr)
