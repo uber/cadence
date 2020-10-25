@@ -180,7 +180,7 @@ func (c *elasticV6) ScanByQuery(ctx context.Context, request *ScanByQueryRequest
 	if err == io.EOF { // no more result
 		isLastPage = true
 		if scrollService != nil {
-			err := scrollService.Clear(context.Background())
+			err := scrollService.Clear(ctx)
 			if err != nil {
 				c.logger.Warn("scrollService Clear fail", tag.Error(err))
 			}
