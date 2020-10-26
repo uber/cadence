@@ -56,6 +56,14 @@ const licence = `// Copyright (c) 2017-2020 Uber Technologies Inc.
 `
 
 func internalName(name string) string {
+	return noUnderscores(capitalizeID(name))
+}
+
+func noUnderscores(name string) string {
+	return strings.ReplaceAll(name, "_", "")
+}
+
+func capitalizeID(name string) string {
 	if index := strings.Index(name, "Id"); index > 0 {
 		nextWordIndex := index + len("Id")
 		if nextWordIndex >= len(name) || unicode.IsUpper([]rune(name)[nextWordIndex]) {
@@ -208,6 +216,7 @@ func To{{internal .Name}}(t {{if .IsPointer}}*{{end}}{{.ThriftPackage}}.{{.Name}
 `))
 
 var historyMapperAdditions = template.Must(template.New("history mapper additions").Parse(`
+// FromProcessingQueueStateArrayMap converts internal ProcessingQueueState array map to thrift
 func FromProcessingQueueStateArrayMap(t map[string][]*types.ProcessingQueueState) map[string][]*history.ProcessingQueueState {
 	if t == nil {
 		return nil
@@ -219,6 +228,7 @@ func FromProcessingQueueStateArrayMap(t map[string][]*types.ProcessingQueueState
 	return v
 }
 
+// ToProcessingQueueStateArrayMap converts thrift ProcessingQueueState array map to internal
 func ToProcessingQueueStateArrayMap(t map[string][]*history.ProcessingQueueState) map[string][]*types.ProcessingQueueState {
 	if t == nil {
 		return nil
