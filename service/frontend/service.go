@@ -147,7 +147,7 @@ type Service struct {
 
 	status       int32
 	handler      *WorkflowHandler
-	adminHandler *AdminHandler
+	adminHandler *adminHandlerImpl
 	stopC        chan struct{}
 	config       *Config
 	params       *service.BootstrapParams
@@ -256,7 +256,9 @@ func (s *Service) Start() {
 	thriftHandler.register(s.GetDispatcher())
 
 	s.adminHandler = NewAdminHandler(s, s.params, s.config)
-	s.adminHandler.RegisterHandler()
+
+	adminThriftHandler := NewAdminThriftHandler(s.adminHandler)
+	adminThriftHandler.register(s.GetDispatcher())
 
 	// must start resource first
 	s.Resource.Start()
