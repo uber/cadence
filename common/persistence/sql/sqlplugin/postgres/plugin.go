@@ -21,31 +21,27 @@
 package postgres
 
 import (
-	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"runtime"
 
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/common/persistence/sql"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/environment"
 
 	"github.com/iancoleman/strcase"
 	"github.com/jmoiron/sqlx"
-
-	"github.com/uber/cadence/common/persistence/sql"
-	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
-	"github.com/uber/cadence/common/service/config"
 )
 
 const (
 	// PluginName is the name of the plugin
-	PluginName                     = "postgres"
-	dataSourceNamePostgres         = "user=%v host=%v port=%v dbname=%v sslmode=disable %v "
-	dataSourceNamePostgresPassword = "password=%v"
+	PluginName = "postgres"
+	dsnFmt     = "postgres://%s@%s:%s/%s"
 )
-
-var errTLSNotImplemented = errors.New("tls for postgres has not been implemented")
 
 type plugin struct{}
 
@@ -80,7 +76,7 @@ func (d *plugin) CreateAdminDB(cfg *config.SQL) (sqlplugin.AdminDB, error) {
 // SQL database and the object can be used to perform CRUD operations on
 // the tables in the database
 func (d *plugin) createDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
-	err := registerTLSConfig(cfg)
+	sslParams, err := registerTLSConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -90,19 +86,18 @@ func (d *plugin) createDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
 		return nil, fmt.Errorf("invalid connect address, it must be in host:port format, %v, err: %v", cfg.ConnectAddr, err)
 	}
 
-	dbName := cfg.DatabaseName
-	//NOTE: postgres doesn't allow to connect with empty dbName, the admin dbName is "postgres"
-	if dbName == "" {
-		dbName = "postgres"
-	}
-	password := ""
-	if cfg.Password != "" {
-		password = fmt.Sprintf(dataSourceNamePostgresPassword, cfg.Password)
-	}
-	db, err := sqlx.Connect(PluginName, fmt.Sprintf(dataSourceNamePostgres, cfg.User, host, port, dbName, password))
-
+	db, err := sqlx.Connect(PluginName, buildDSN(cfg, host, port, sslParams))
 	if err != nil {
 		return nil, err
+	}
+	if cfg.MaxConns > 0 {
+		db.SetMaxOpenConns(cfg.MaxConns)
+	}
+	if cfg.MaxIdleConns > 0 {
+		db.SetMaxIdleConns(cfg.MaxIdleConns)
+	}
+	if cfg.MaxConnLifetime > 0 {
+		db.SetConnMaxLifetime(cfg.MaxConnLifetime)
 	}
 
 	// Maps struct names in CamelCase to snake without need for db struct tags.
@@ -110,12 +105,41 @@ func (d *plugin) createDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
 	return db, nil
 }
 
-// TODO: implement postgres specific support for TLS
-func registerTLSConfig(cfg *config.SQL) error {
-	if cfg.TLS == nil || !cfg.TLS.Enabled {
-		return nil
+func buildDSN(cfg *config.SQL, host string, port string, sslParams url.Values) string {
+	dbName := cfg.DatabaseName
+	//NOTE: postgres doesn't allow to connect with empty dbName, the admin dbName is "postgres"
+	if dbName == "" {
+		dbName = "postgres"
 	}
-	return errTLSNotImplemented
+
+	credentialString := generateCredentialString(cfg.User, cfg.Password)
+	dsn := fmt.Sprintf(dsnFmt, credentialString, host, port, dbName)
+	if attrs := sslParams.Encode(); attrs != "" {
+		dsn += "?" + attrs
+	}
+	return dsn
+}
+
+func generateCredentialString(user string, password string) string {
+	userPass := user
+	if password != "" {
+		userPass += ":" + password
+	}
+	return userPass
+}
+
+func registerTLSConfig(cfg *config.SQL) (sslParams url.Values, err error) {
+	sslParams = url.Values{}
+	if cfg.TLS != nil && cfg.TLS.Enabled {
+		sslParams.Set("ssl", "true")
+		sslParams.Set("sslmode", "require")
+		sslParams.Set("sslrootcert", cfg.TLS.CaFile)
+		sslParams.Set("sslkey", cfg.TLS.KeyFile)
+		sslParams.Set("sslcert", cfg.TLS.CertFile)
+	} else {
+		sslParams.Set("sslmode", "disable")
+	}
+	return
 }
 
 const (
@@ -137,7 +161,7 @@ func GetTestClusterOption() *pt.TestBaseOptions {
 	}
 
 	if os.Getenv("POSTGRES_PASSWORD") != "" {
-		testUser = os.Getenv("POSTGRES_PASSWORD")
+		testPassword = os.Getenv("POSTGRES_PASSWORD")
 	}
 
 	return &pt.TestBaseOptions{

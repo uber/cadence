@@ -23,6 +23,8 @@
 package parentclosepolicy
 
 import (
+	"context"
+
 	"github.com/stretchr/testify/mock"
 )
 
@@ -34,12 +36,12 @@ type ClientMock struct {
 }
 
 // SendParentClosePolicyRequest provides a mock function with given fields: _a0, _a1
-func (_m *ClientMock) SendParentClosePolicyRequest(_a0 Request) error {
-	ret := _m.Called(_a0)
+func (_m *ClientMock) SendParentClosePolicyRequest(_a0 context.Context, _a1 Request) error {
+	ret := _m.Called(_a0, _a1)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(Request) error); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func(context.Context, Request) error); ok {
+		r0 = rf(_a0, _a1)
 	} else {
 		r0 = ret.Error(0)
 	}

@@ -5194,9 +5194,11 @@ func (s *engineSuite) getBuilder(testDomainID string, we workflow.WorkflowExecut
 	return context.GetWorkflowExecution()
 }
 
-func (s *engineSuite) getActivityScheduledEvent(msBuilder execution.MutableState,
-	scheduleID int64) *workflow.HistoryEvent {
-	event, _ := msBuilder.GetActivityScheduledEvent(scheduleID)
+func (s *engineSuite) getActivityScheduledEvent(
+	msBuilder execution.MutableState,
+	scheduleID int64,
+) *workflow.HistoryEvent {
+	event, _ := msBuilder.GetActivityScheduledEvent(context.Background(), scheduleID)
 	return event
 }
 

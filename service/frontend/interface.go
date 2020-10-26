@@ -18,33 +18,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../LICENSE -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -self_package github.com/uber/cadence/service/frontend
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -self_package github.com/uber/cadence/service/frontend
 
 package frontend
 
 import (
-	"context"
-
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
-	"github.com/uber/cadence/.gen/go/health"
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/.gen/go/health/metaserver"
 )
 
 type (
 	// Handler is interface wrapping frontend handler
 	Handler interface {
+		metaserver.Interface
 		workflowserviceserver.Interface
-		common.Daemon
-
-		GetResource() resource.Resource
-		GetConfig() *Config
-		// RegisterHandler register this handler, must be called before Start()
-		RegisterHandler()
-		// Health is the health check method for this rpc handler
-		Health(ctx context.Context) (*health.HealthStatus, error)
-		// UpdateHealthStatus sets the health status for this rpc handler.
-		// This health status will be used within the rpc health check handler
-		UpdateHealthStatus(status HealthStatus)
 	}
 )

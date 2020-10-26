@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source $GOFILE -destination state_rebuilder_mock.go -self_package github.com/uber/cadence/service/history/execution
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination state_rebuilder_mock.go -self_package github.com/uber/cadence/service/history/execution
 
 package execution
 
@@ -176,7 +176,7 @@ func (r *stateRebuilderImpl) Rebuild(
 	}
 
 	// refresh tasks to be generated
-	if err := r.taskRefresher.RefreshTasks(now, rebuiltMutableState); err != nil {
+	if err := r.taskRefresher.RefreshTasks(ctx, now, rebuiltMutableState); err != nil {
 		return nil, 0, err
 	}
 

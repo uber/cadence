@@ -878,7 +878,7 @@ func (p *visibilityRateLimitedPersistenceClient) DeleteWorkflowExecution(
 
 func (p *visibilityRateLimitedPersistenceClient) ListWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsRequestV2,
+	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded
@@ -888,7 +888,7 @@ func (p *visibilityRateLimitedPersistenceClient) ListWorkflowExecutions(
 
 func (p *visibilityRateLimitedPersistenceClient) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsRequestV2,
+	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return nil, ErrPersistenceLimitExceeded

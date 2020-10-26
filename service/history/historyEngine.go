@@ -135,6 +135,8 @@ var (
 	ErrWorkflowParent = &workflow.EntityNotExistsError{Message: "workflow parent does not match"}
 	// ErrDeserializingToken is the error to indicate task token is invalid
 	ErrDeserializingToken = &workflow.BadRequestError{Message: "error deserializing task token"}
+	// ErrSerializingToken is the error to indicate task token can not be serialized
+	ErrSerializingToken = &workflow.BadRequestError{Message: "error serializing task token"}
 	// ErrSignalOverSize is the error to indicate signal input size is > 256K
 	ErrSignalOverSize = &workflow.BadRequestError{Message: "signal input size is over 256K"}
 	// ErrCancellationAlreadyRequested is the error indicating cancellation for target workflow is already requested
@@ -480,10 +482,10 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 					domainActiveCluster != e.currentClusterName &&
 					previousFailoverVersion != common.InitialPreviousFailoverVersion &&
 					e.clusterMetadata.ClusterNameForFailoverVersion(previousFailoverVersion) == e.currentClusterName {
+					// the visibility timestamp will be set in shard context
 					failoverMarkerTasks = append(failoverMarkerTasks, &persistence.FailoverMarkerTask{
-						VisibilityTimestamp: e.timeSource.Now(),
-						Version:             nextDomain.GetFailoverVersion(),
-						DomainID:            nextDomain.GetInfo().ID,
+						Version:  nextDomain.GetFailoverVersion(),
+						DomainID: nextDomain.GetInfo().ID,
 					})
 				}
 			}
@@ -1218,11 +1220,22 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	sw := scope.StartTimer(metrics.DirectQueryDispatchLatency)
 	defer sw.Stop()
 
+	// Sticky task list is not very useful in the standby cluster because the decider cache is
+	// not updated by dispatching tasks to it (it is only updated in the case of query).
+	// Additionally on the standby side we are not even able to clear sticky.
+	// Stickiness might be outdated if the customer did a restart of their nodes causing a query
+	// dispatched on the standby side on sticky to hang. We decided it made sense to simply not attempt
+	// query on sticky task list at all on the passive side.
+	de, err := e.shard.GetDomainCache().GetDomainByID(domainID)
+	if err != nil {
+		return nil, err
+	}
 	supportsStickyQuery := e.clientChecker.SupportsStickyQuery(msResp.GetClientImpl(), msResp.GetClientFeatureVersion()) == nil
 	if msResp.GetIsStickyTaskListEnabled() &&
 		len(msResp.GetStickyTaskList().GetName()) != 0 &&
 		supportsStickyQuery &&
-		e.config.EnableStickyQuery(queryRequest.GetDomain()) {
+		e.config.EnableStickyQuery(queryRequest.GetDomain()) &&
+		de.IsDomainActive() {
 
 		stickyMatchingRequest := &m.QueryWorkflowRequest{
 			DomainUUID:   common.StringPtr(domainID),
@@ -1496,7 +1509,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	// TODO: we need to consider adding execution time to mutable state
 	// For now execution time will be calculated based on start time and cron schedule/retry policy
 	// each time DescribeWorkflowExecution is called.
-	startEvent, err := mutableState.GetStartEvent()
+	startEvent, err := mutableState.GetStartEvent(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1514,7 +1527,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 		// for closed workflow
 		closeStatus := persistence.ToThriftWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 		result.WorkflowExecutionInfo.CloseStatus = &closeStatus
-		completionEvent, err := mutableState.GetCompletionEvent()
+		completionEvent, err := mutableState.GetCompletionEvent(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -1539,7 +1552,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 				p.HeartbeatDetails = ai.Details
 			}
 			// TODO: move to mutable state instead of loading it from event
-			scheduledEvent, err := mutableState.GetActivityScheduledEvent(ai.ScheduleID)
+			scheduledEvent, err := mutableState.GetActivityScheduledEvent(ctx, ai.ScheduleID)
 			if err != nil {
 				return nil, err
 			}
@@ -1630,7 +1643,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 				return ErrActivityTaskNotFound
 			}
 
-			scheduledEvent, err := mutableState.GetActivityScheduledEvent(scheduleID)
+			scheduledEvent, err := mutableState.GetActivityScheduledEvent(ctx, scheduleID)
 			if err != nil {
 				return err
 			}
@@ -3286,7 +3299,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 
 	now := e.shard.GetTimeSource().Now()
 
-	err = mutableStateTaskRefresher.RefreshTasks(now, mutableState)
+	err = mutableStateTaskRefresher.RefreshTasks(ctx, now, mutableState)
 	if err != nil {
 		return err
 	}
