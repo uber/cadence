@@ -23,9 +23,7 @@ package frontend
 import (
 	"context"
 
-	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
-	"github.com/uber/cadence/.gen/go/health"
-	"github.com/uber/cadence/.gen/go/health/metaserver"
+	health "github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/metrics"
@@ -36,6 +34,8 @@ var errUnauthorized = &shared.BadRequestError{Message: "Request unauthorized."}
 
 // AccessControlledWorkflowHandler frontend handler wrapper for authentication and authorization
 type AccessControlledWorkflowHandler struct {
+	resource.Resource
+
 	frontendHandler Handler
 	authorizer      authorization.Authorizer
 }
@@ -43,53 +43,21 @@ type AccessControlledWorkflowHandler struct {
 var _ Handler = (*AccessControlledWorkflowHandler)(nil)
 
 // NewAccessControlledHandlerImpl creates frontend handler with authentication support
-func NewAccessControlledHandlerImpl(wfHandler Handler, authorizer authorization.Authorizer) *AccessControlledWorkflowHandler {
+func NewAccessControlledHandlerImpl(wfHandler Handler, resource resource.Resource, authorizer authorization.Authorizer) *AccessControlledWorkflowHandler {
 	if authorizer == nil {
 		authorizer = authorization.NewNopAuthorizer()
 	}
 
 	return &AccessControlledWorkflowHandler{
+		Resource:        resource,
 		frontendHandler: wfHandler,
 		authorizer:      authorizer,
 	}
 }
 
-// GetResource return resource
-func (a *AccessControlledWorkflowHandler) GetResource() resource.Resource {
-	return a.frontendHandler.GetResource()
-}
-
-// GetConfig return config
-func (a *AccessControlledWorkflowHandler) GetConfig() *Config {
-	return a.frontendHandler.GetConfig()
-}
-
-// RegisterHandler register this handler, must be called before Start()
-func (a *AccessControlledWorkflowHandler) RegisterHandler() {
-	dispatcher := a.GetResource().GetDispatcher()
-	dispatcher.Register(workflowserviceserver.New(a))
-	dispatcher.Register(metaserver.New(a))
-}
-
-// UpdateHealthStatus sets the health status for this rpc handler.
-// This health status will be used within the rpc health check handler
-func (a *AccessControlledWorkflowHandler) UpdateHealthStatus(status HealthStatus) {
-	a.frontendHandler.UpdateHealthStatus(status)
-}
-
 // Health callback for for health check
 func (a *AccessControlledWorkflowHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
 	return a.frontendHandler.Health(ctx)
-}
-
-// Start starts the handler
-func (a *AccessControlledWorkflowHandler) Start() {
-	a.frontendHandler.Start()
-}
-
-// Stop stops the handler
-func (a *AccessControlledWorkflowHandler) Stop() {
-	a.frontendHandler.Stop()
 }
 
 // CountWorkflowExecutions API call
@@ -289,7 +257,7 @@ func (a *AccessControlledWorkflowHandler) ListDomains(
 	request *shared.ListDomainsRequest,
 ) (*shared.ListDomainsResponse, error) {
 
-	scope := a.GetResource().GetMetricsClient().Scope(metrics.FrontendListDomainsScope)
+	scope := a.GetMetricsClient().Scope(metrics.FrontendListDomainsScope)
 
 	attr := &authorization.Attributes{
 		APIName: "ListDomains",
@@ -794,7 +762,7 @@ func (a *AccessControlledWorkflowHandler) getMetricsScopeWithDomain(
 	scope int,
 	d domainGetter,
 ) metrics.Scope {
-	return getMetricsScopeWithDomain(scope, d, a.GetResource().GetMetricsClient())
+	return getMetricsScopeWithDomain(scope, d, a.GetMetricsClient())
 }
 
 func getMetricsScopeWithDomain(
@@ -816,5 +784,5 @@ func (a *AccessControlledWorkflowHandler) getMetricsScopeWithDomainName(
 	scope int,
 	domainName string,
 ) metrics.Scope {
-	return a.GetResource().GetMetricsClient().Scope(scope).Tagged(metrics.DomainTag(domainName))
+	return a.GetMetricsClient().Scope(scope).Tagged(metrics.DomainTag(domainName))
 }

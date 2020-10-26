@@ -133,7 +133,7 @@ type (
 		SelectDomainMetadata(ctx context.Context) (int64, error)
 	}
 
-	// QueueMessageRow defines the row struct for queue message
+	// DomainRow defines the row struct for queue message
 	DomainRow struct {
 		Info                        *persistence.DomainInfo
 		Config                      *NoSQLInternalDomainConfig

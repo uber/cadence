@@ -135,6 +135,8 @@ var (
 	ErrWorkflowParent = &workflow.EntityNotExistsError{Message: "workflow parent does not match"}
 	// ErrDeserializingToken is the error to indicate task token is invalid
 	ErrDeserializingToken = &workflow.BadRequestError{Message: "error deserializing task token"}
+	// ErrSerializingToken is the error to indicate task token can not be serialized
+	ErrSerializingToken = &workflow.BadRequestError{Message: "error serializing task token"}
 	// ErrSignalOverSize is the error to indicate signal input size is > 256K
 	ErrSignalOverSize = &workflow.BadRequestError{Message: "signal input size is over 256K"}
 	// ErrCancellationAlreadyRequested is the error indicating cancellation for target workflow is already requested
@@ -480,10 +482,10 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 					domainActiveCluster != e.currentClusterName &&
 					previousFailoverVersion != common.InitialPreviousFailoverVersion &&
 					e.clusterMetadata.ClusterNameForFailoverVersion(previousFailoverVersion) == e.currentClusterName {
+					// the visibility timestamp will be set in shard context
 					failoverMarkerTasks = append(failoverMarkerTasks, &persistence.FailoverMarkerTask{
-						VisibilityTimestamp: e.timeSource.Now(),
-						Version:             nextDomain.GetFailoverVersion(),
-						DomainID:            nextDomain.GetInfo().ID,
+						Version:  nextDomain.GetFailoverVersion(),
+						DomainID: nextDomain.GetInfo().ID,
 					})
 				}
 			}
@@ -1218,11 +1220,22 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	sw := scope.StartTimer(metrics.DirectQueryDispatchLatency)
 	defer sw.Stop()
 
+	// Sticky task list is not very useful in the standby cluster because the decider cache is
+	// not updated by dispatching tasks to it (it is only updated in the case of query).
+	// Additionally on the standby side we are not even able to clear sticky.
+	// Stickiness might be outdated if the customer did a restart of their nodes causing a query
+	// dispatched on the standby side on sticky to hang. We decided it made sense to simply not attempt
+	// query on sticky task list at all on the passive side.
+	de, err := e.shard.GetDomainCache().GetDomainByID(domainID)
+	if err != nil {
+		return nil, err
+	}
 	supportsStickyQuery := e.clientChecker.SupportsStickyQuery(msResp.GetClientImpl(), msResp.GetClientFeatureVersion()) == nil
 	if msResp.GetIsStickyTaskListEnabled() &&
 		len(msResp.GetStickyTaskList().GetName()) != 0 &&
 		supportsStickyQuery &&
-		e.config.EnableStickyQuery(queryRequest.GetDomain()) {
+		e.config.EnableStickyQuery(queryRequest.GetDomain()) &&
+		de.IsDomainActive() {
 
 		stickyMatchingRequest := &m.QueryWorkflowRequest{
 			DomainUUID:   common.StringPtr(domainID),
