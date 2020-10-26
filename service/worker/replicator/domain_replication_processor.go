@@ -49,7 +49,6 @@ const (
 	pollIntervalSecs                          = 1
 	taskProcessorErrorRetryWait               = time.Second
 	taskProcessorErrorRetryBackoffCoefficient = 1
-	taskProcessorErrorRetryMaxAttampts        = 5
 )
 
 func newDomainReplicationProcessor(
@@ -61,10 +60,11 @@ func newDomainReplicationProcessor(
 	hostInfo *membership.HostInfo,
 	serviceResolver membership.ServiceResolver,
 	domainReplicationQueue persistence.DomainReplicationQueue,
+	replicationMaxRetry time.Duration,
 ) *domainReplicationProcessor {
 	retryPolicy := backoff.NewExponentialRetryPolicy(taskProcessorErrorRetryWait)
 	retryPolicy.SetBackoffCoefficient(taskProcessorErrorRetryBackoffCoefficient)
-	retryPolicy.SetMaximumAttempts(taskProcessorErrorRetryMaxAttampts)
+	retryPolicy.SetExpirationInterval(replicationMaxRetry)
 
 	return &domainReplicationProcessor{
 		hostInfo:               hostInfo,
@@ -163,7 +163,6 @@ func (p *domainReplicationProcessor) fetchDomainReplicationTasks() {
 		}, p.retryPolicy, isTransientRetryableError)
 
 		if err != nil {
-			p.metricsClient.IncCounter(metrics.DomainReplicationTaskScope, metrics.ReplicatorFailures)
 			p.logger.Error("Failed to apply domain replication tasks", tag.Error(err))
 
 			dlqErr := backoff.Retry(func() error {
@@ -205,7 +204,11 @@ func (p *domainReplicationProcessor) handleDomainReplicationTask(
 	sw := p.metricsClient.StartTimer(metrics.DomainReplicationTaskScope, metrics.ReplicatorLatency)
 	defer sw.Stop()
 
-	return p.taskExecutor.Execute(task.DomainTaskAttributes)
+	err := p.taskExecutor.Execute(task.DomainTaskAttributes)
+	if err != nil {
+		p.metricsClient.IncCounter(metrics.DomainReplicationTaskScope, metrics.ReplicatorFailures)
+	}
+	return err
 }
 
 func (p *domainReplicationProcessor) Stop() {
