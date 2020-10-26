@@ -38,7 +38,7 @@ type Service struct {
 	resource.Resource
 
 	status  int32
-	handler *Handler
+	handler *handlerImpl
 	stopC   chan struct{}
 	config  *Config
 }
@@ -90,7 +90,9 @@ func (s *Service) Start() {
 	logger.Info("matching starting")
 
 	s.handler = NewHandler(s, s.config)
-	s.handler.RegisterHandler()
+
+	thriftHandler := NewThriftHandler(s.handler)
+	thriftHandler.register(s.GetDispatcher())
 
 	// must start base service first
 	s.Resource.Start()

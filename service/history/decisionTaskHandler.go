@@ -59,6 +59,8 @@ type (
 		attrValidator    *decisionAttrValidator
 		sizeLimitChecker *workflowSizeChecker
 
+		tokenSerializer common.TaskTokenSerializer
+
 		logger        log.Logger
 		domainCache   cache.DomainCache
 		metricsClient metrics.Client
@@ -77,6 +79,7 @@ func newDecisionTaskHandler(
 	mutableState execution.MutableState,
 	attrValidator *decisionAttrValidator,
 	sizeLimitChecker *workflowSizeChecker,
+	tokenSerializer common.TaskTokenSerializer,
 	logger log.Logger,
 	domainCache cache.DomainCache,
 	metricsClient metrics.Client,
@@ -101,6 +104,8 @@ func newDecisionTaskHandler(
 		// validation
 		attrValidator:    attrValidator,
 		sizeLimitChecker: sizeLimitChecker,
+
+		tokenSerializer: tokenSerializer,
 
 		logger:        logger,
 		domainCache:   domainCache,
@@ -249,6 +254,23 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 			if _, err1 := handler.mutableState.AddActivityTaskStartedEvent(ai, event.GetEventId(), uuid.New(), handler.identity); err1 != nil {
 				return nil, err1
 			}
+			token := &common.TaskToken{
+				DomainID:        executionInfo.DomainID,
+				WorkflowID:      executionInfo.WorkflowID,
+				WorkflowType:    executionInfo.WorkflowTypeName,
+				RunID:           executionInfo.RunID,
+				ScheduleID:      ai.ScheduleID,
+				ScheduleAttempt: 0,
+				ActivityID:      ai.ActivityID,
+				ActivityType:    attr.ActivityType.GetName(),
+			}
+			activityDispatchInfo.TaskToken, err = handler.tokenSerializer.Serialize(token)
+			if err != nil {
+				return nil, ErrSerializingToken
+			}
+			activityDispatchInfo.ScheduledTimestamp = common.Int64Ptr(ai.ScheduledTime.UnixNano())
+			activityDispatchInfo.ScheduledTimestampOfThisAttempt = common.Int64Ptr(ai.ScheduledTime.UnixNano())
+			activityDispatchInfo.StartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
 			return &decisionResult{activityDispatchInfo: activityDispatchInfo}, nil
 		}
 		return nil, nil

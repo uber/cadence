@@ -545,25 +545,3 @@ func CopyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.Chil
 	}
 	return result
 }
-
-// CopyReplicationState copies workflow ReplicationState
-func CopyReplicationState(source *persistence.ReplicationState) *persistence.ReplicationState {
-	var lastReplicationInfo map[string]*persistence.ReplicationInfo
-	if source.LastReplicationInfo != nil {
-		lastReplicationInfo = map[string]*persistence.ReplicationInfo{}
-		for k, v := range source.LastReplicationInfo {
-			lastReplicationInfo[k] = &persistence.ReplicationInfo{
-				Version:     v.Version,
-				LastEventID: v.LastEventID,
-			}
-		}
-	}
-
-	return &persistence.ReplicationState{
-		CurrentVersion:      source.CurrentVersion,
-		StartVersion:        source.StartVersion,
-		LastWriteVersion:    source.LastWriteVersion,
-		LastWriteEventID:    source.LastWriteEventID,
-		LastReplicationInfo: lastReplicationInfo,
-	}
-}

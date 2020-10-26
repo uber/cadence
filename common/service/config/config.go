@@ -30,7 +30,6 @@ import (
 	"github.com/uber-go/tally/prometheus"
 	"github.com/uber/ringpop-go/discovery"
 
-	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
@@ -152,7 +151,7 @@ type (
 		// SQL contains the config for a SQL based datastore
 		SQL *SQL `yaml:"sql"`
 		// ElasticSearch contains the config for a ElasticSearch datastore
-		ElasticSearch *elasticsearch.Config `yaml:"elasticsearch"`
+		ElasticSearch *ElasticSearchConfig `yaml:"elasticsearch"`
 	}
 
 	// VisibilityConfig is config for visibility
