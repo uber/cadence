@@ -95,33 +95,37 @@ func (t *timerStandbyTaskExecutor) Execute(
 		return nil
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), taskDefaultTimeout)
+	defer cancel()
+
 	switch timerTask.TaskType {
 	case persistence.TaskTypeUserTimer:
-		return t.executeUserTimerTimeoutTask(timerTask)
+		return t.executeUserTimerTimeoutTask(ctx, timerTask)
 	case persistence.TaskTypeActivityTimeout:
-		return t.executeActivityTimeoutTask(timerTask)
+		return t.executeActivityTimeoutTask(ctx, timerTask)
 	case persistence.TaskTypeDecisionTimeout:
-		return t.executeDecisionTimeoutTask(timerTask)
+		return t.executeDecisionTimeoutTask(ctx, timerTask)
 	case persistence.TaskTypeWorkflowTimeout:
-		return t.executeWorkflowTimeoutTask(timerTask)
+		return t.executeWorkflowTimeoutTask(ctx, timerTask)
 	case persistence.TaskTypeActivityRetryTimer:
 		// retry backoff timer should not get created on passive cluster
 		// TODO: add error logs
 		return nil
 	case persistence.TaskTypeWorkflowBackoffTimer:
-		return t.executeWorkflowBackoffTimerTask(timerTask)
+		return t.executeWorkflowBackoffTimerTask(ctx, timerTask)
 	case persistence.TaskTypeDeleteHistoryEvent:
-		return t.executeDeleteHistoryEventTask(timerTask)
+		return t.executeDeleteHistoryEventTask(ctx, timerTask)
 	default:
 		return errUnknownTimerTask
 	}
 }
 
 func (t *timerStandbyTaskExecutor) executeUserTimerTimeoutTask(
+	ctx context.Context,
 	timerTask *persistence.TimerTaskInfo,
 ) error {
 
-	actionFn := func(context execution.Context, mutableState execution.MutableState) (interface{}, error) {
+	actionFn := func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (interface{}, error) {
 
 		timerSequence := t.getTimerSequence(mutableState)
 
@@ -149,6 +153,7 @@ func (t *timerStandbyTaskExecutor) executeUserTimerTimeoutTask(
 	}
 
 	return t.processTimer(
+		ctx,
 		timerTask,
 		actionFn,
 		getStandbyPostActionFn(
@@ -163,6 +168,7 @@ func (t *timerStandbyTaskExecutor) executeUserTimerTimeoutTask(
 }
 
 func (t *timerStandbyTaskExecutor) executeActivityTimeoutTask(
+	ctx context.Context,
 	timerTask *persistence.TimerTaskInfo,
 ) error {
 
@@ -178,7 +184,7 @@ func (t *timerStandbyTaskExecutor) executeActivityTimeoutTask(
 	// the overall solution is to attempt to generate a new activity timer task whenever the
 	// task passed in is safe to be throw away.
 
-	actionFn := func(wfContext execution.Context, mutableState execution.MutableState) (interface{}, error) {
+	actionFn := func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (interface{}, error) {
 
 		timerSequence := t.getTimerSequence(mutableState)
 		updateMutableState := false
@@ -246,11 +252,12 @@ func (t *timerStandbyTaskExecutor) executeActivityTimeoutTask(
 			return nil, err
 		}
 
-		err = wfContext.UpdateWorkflowExecutionAsPassive(context.TODO(), now)
+		err = wfContext.UpdateWorkflowExecutionAsPassive(ctx, now)
 		return nil, err
 	}
 
 	return t.processTimer(
+		ctx,
 		timerTask,
 		actionFn,
 		getStandbyPostActionFn(
@@ -265,6 +272,7 @@ func (t *timerStandbyTaskExecutor) executeActivityTimeoutTask(
 }
 
 func (t *timerStandbyTaskExecutor) executeDecisionTimeoutTask(
+	ctx context.Context,
 	timerTask *persistence.TimerTaskInfo,
 ) error {
 
@@ -275,7 +283,7 @@ func (t *timerStandbyTaskExecutor) executeDecisionTimeoutTask(
 		return nil
 	}
 
-	actionFn := func(context execution.Context, mutableState execution.MutableState) (interface{}, error) {
+	actionFn := func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (interface{}, error) {
 
 		decision, isPending := mutableState.GetDecisionInfo(timerTask.EventID)
 		if !isPending {
@@ -291,6 +299,7 @@ func (t *timerStandbyTaskExecutor) executeDecisionTimeoutTask(
 	}
 
 	return t.processTimer(
+		ctx,
 		timerTask,
 		actionFn,
 		getStandbyPostActionFn(
@@ -305,10 +314,11 @@ func (t *timerStandbyTaskExecutor) executeDecisionTimeoutTask(
 }
 
 func (t *timerStandbyTaskExecutor) executeWorkflowBackoffTimerTask(
+	ctx context.Context,
 	timerTask *persistence.TimerTaskInfo,
 ) error {
 
-	actionFn := func(context execution.Context, mutableState execution.MutableState) (interface{}, error) {
+	actionFn := func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (interface{}, error) {
 
 		if mutableState.HasProcessedOrPendingDecision() {
 			// if there is one decision already been processed
@@ -330,6 +340,7 @@ func (t *timerStandbyTaskExecutor) executeWorkflowBackoffTimerTask(
 	}
 
 	return t.processTimer(
+		ctx,
 		timerTask,
 		actionFn,
 		getStandbyPostActionFn(
@@ -344,10 +355,11 @@ func (t *timerStandbyTaskExecutor) executeWorkflowBackoffTimerTask(
 }
 
 func (t *timerStandbyTaskExecutor) executeWorkflowTimeoutTask(
+	ctx context.Context,
 	timerTask *persistence.TimerTaskInfo,
 ) error {
 
-	actionFn := func(context execution.Context, mutableState execution.MutableState) (interface{}, error) {
+	actionFn := func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (interface{}, error) {
 
 		// we do not need to notify new timer to base, since if there is no new event being replicated
 		// checking again if the timer can be completed is meaningless
@@ -365,6 +377,7 @@ func (t *timerStandbyTaskExecutor) executeWorkflowTimeoutTask(
 	}
 
 	return t.processTimer(
+		ctx,
 		timerTask,
 		actionFn,
 		getStandbyPostActionFn(
@@ -395,15 +408,16 @@ func (t *timerStandbyTaskExecutor) getTimerSequence(
 }
 
 func (t *timerStandbyTaskExecutor) processTimer(
+	ctx context.Context,
 	timerTask *persistence.TimerTaskInfo,
 	actionFn standbyActionFn,
 	postActionFn standbyPostActionFn,
 ) (retError error) {
 
-	context, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
+	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		timerTask.DomainID,
 		getWorkflowExecution(timerTask),
-		taskDefaultTimeout,
+		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
 		return err
@@ -416,7 +430,7 @@ func (t *timerStandbyTaskExecutor) processTimer(
 		}
 	}()
 
-	mutableState, err := loadMutableStateForTimerTask(context, timerTask, t.metricsClient, t.logger)
+	mutableState, err := loadMutableStateForTimerTask(ctx, wfContext, timerTask, t.metricsClient, t.logger)
 	if err != nil {
 		return err
 	}
@@ -429,16 +443,17 @@ func (t *timerStandbyTaskExecutor) processTimer(
 		return nil
 	}
 
-	historyResendInfo, err := actionFn(context, mutableState)
+	historyResendInfo, err := actionFn(ctx, wfContext, mutableState)
 	if err != nil {
 		return err
 	}
 
 	release(nil)
-	return postActionFn(timerTask, historyResendInfo, t.logger)
+	return postActionFn(ctx, timerTask, historyResendInfo, t.logger)
 }
 
 func (t *timerStandbyTaskExecutor) fetchHistoryFromRemote(
+	_ context.Context,
 	taskInfo Info,
 	postActionInfo interface{},
 	log log.Logger,
@@ -457,6 +472,8 @@ func (t *timerStandbyTaskExecutor) fetchHistoryFromRemote(
 
 	var err error
 	if resendInfo.lastEventID != nil && resendInfo.lastEventVersion != nil {
+		// note history resender doesn't take in a context parameter, there's a separate dynamicconfig for
+		// controlling the timeout for resending history.
 		err = t.historyResender.SendSingleWorkflowHistory(
 			timerTask.DomainID,
 			timerTask.WorkflowID,

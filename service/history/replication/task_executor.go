@@ -18,13 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source $GOFILE -destination task_executor_mock.go
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination task_executor_mock.go
 
 package replication
 
 import (
 	"context"
-	"time"
 
 	"github.com/uber/cadence/.gen/go/history"
 	r "github.com/uber/cadence/.gen/go/replicator"
@@ -254,13 +253,7 @@ func (e *taskExecutorImpl) handleFailoverReplicationTask(
 	task *r.ReplicationTask,
 ) error {
 	failoverAttributes := task.GetFailoverMarkerAttributes()
-	now := e.shard.GetTimeSource().Now()
-	e.metricsClient.Scope(
-		metrics.FailoverMarkerScope,
-	).RecordTimer(
-		metrics.FailoverMarkerReplicationLatency,
-		now.Sub(time.Unix(0, failoverAttributes.GetCreationTime())),
-	)
+	failoverAttributes.CreationTime = task.CreationTime
 	return e.shard.AddingPendingFailoverMarker(failoverAttributes)
 }
 

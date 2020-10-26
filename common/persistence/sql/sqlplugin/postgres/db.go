@@ -23,6 +23,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -100,4 +101,14 @@ func (pdb *db) Close() error {
 // PluginName returns the name of the mysql plugin
 func (pdb *db) PluginName() string {
 	return PluginName
+}
+
+// SupportsTTL returns weather Postgres supports TTL
+func (pdb *db) SupportsTTL() bool {
+	return false
+}
+
+// MaxAllowedTTL returns the max allowed ttl Postgres supports
+func (pdb *db) MaxAllowedTTL() (*time.Duration, error) {
+	return nil, sqlplugin.ErrTTLNotSupported
 }

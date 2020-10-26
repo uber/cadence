@@ -184,3 +184,23 @@ func (pdb *db) LockTaskLists(ctx context.Context, filter *sqlplugin.TaskListsFil
 	err := pdb.conn.GetContext(ctx, &rangeID, lockTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType)
 	return rangeID, err
 }
+
+// InsertIntoTasksWithTTL is not supported in Postgres
+func (pdb *db) InsertIntoTasksWithTTL(_ context.Context, _ []sqlplugin.TasksRowWithTTL) (sql.Result, error) {
+	return nil, sqlplugin.ErrTTLNotSupported
+}
+
+// InsertIntoTaskListsWithTTL is not supported in Postgres
+func (pdb *db) InsertIntoTaskListsWithTTL(_ context.Context, _ *sqlplugin.TaskListsRowWithTTL) (sql.Result, error) {
+	return nil, sqlplugin.ErrTTLNotSupported
+}
+
+// ReplaceIntoTaskListsWithTTL is not supported in Postgres
+func (pdb *db) ReplaceIntoTaskListsWithTTL(_ context.Context, _ *sqlplugin.TaskListsRowWithTTL) (sql.Result, error) {
+	return nil, sqlplugin.ErrTTLNotSupported
+}
+
+// UpdateTaskListsWithTTL is not supported in Postgres
+func (pdb *db) UpdateTaskListsWithTTL(_ context.Context, _ *sqlplugin.TaskListsRowWithTTL) (sql.Result, error) {
+	return nil, sqlplugin.ErrTTLNotSupported
+}

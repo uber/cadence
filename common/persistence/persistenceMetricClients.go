@@ -1233,7 +1233,7 @@ func (p *visibilityPersistenceClient) DeleteWorkflowExecution(
 
 func (p *visibilityPersistenceClient) ListWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsRequestV2,
+	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceListWorkflowExecutionsScope, metrics.PersistenceRequests)
 
@@ -1250,7 +1250,7 @@ func (p *visibilityPersistenceClient) ListWorkflowExecutions(
 
 func (p *visibilityPersistenceClient) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *ListWorkflowExecutionsRequestV2,
+	request *ListWorkflowExecutionsByQueryRequest,
 ) (*ListWorkflowExecutionsResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceScanWorkflowExecutionsScope, metrics.PersistenceRequests)
 

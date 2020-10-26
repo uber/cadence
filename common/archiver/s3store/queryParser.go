@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -copyright_file ../../../LICENSE -package $GOPACKAGE -source queryParser.go -destination queryParser_mock.go -mock_names Interface=MockQueryParser
+//go:generate mockgen -package $GOPACKAGE -source queryParser.go -destination queryParser_mock.go -mock_names Interface=MockQueryParser
 
 package s3store
 
@@ -118,7 +118,7 @@ func (p *queryParser) convertWhereExpr(expr sqlparser.Expr, parsedQuery *parsedQ
 	case *sqlparser.ParenExpr:
 		return p.convertParenExpr(expr.(*sqlparser.ParenExpr), parsedQuery)
 	default:
-		return errors.New("only comparsion and \"and\" expression is supported")
+		return errors.New("only comparison and \"and\" expression is supported")
 	}
 }
 
@@ -153,7 +153,7 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 			return err
 		}
 		if op != "=" {
-			return fmt.Errorf("only operation = is support for %s", WorkflowTypeName)
+			return fmt.Errorf("only operator = is supported for %s with Amazon S3", WorkflowTypeName)
 		}
 		if parsedQuery.workflowTypeName != nil {
 			return fmt.Errorf("can not query %s multiple times", WorkflowTypeName)
@@ -165,7 +165,7 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 			return err
 		}
 		if op != "=" {
-			return fmt.Errorf("only operation = is support for %s", WorkflowID)
+			return fmt.Errorf("only operator = is supported for %s with Amazon S3", WorkflowID)
 		}
 		if parsedQuery.workflowID != nil {
 			return fmt.Errorf("can not query %s multiple times", WorkflowID)
@@ -177,7 +177,7 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 			return err
 		}
 		if op != "=" {
-			return fmt.Errorf("only operation = is support for %s", CloseTime)
+			return fmt.Errorf("only operator = is supported for %s with Amazon S3", CloseTime)
 		}
 		parsedQuery.closeTime = &timestamp
 	case StartTime:
@@ -186,7 +186,7 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 			return err
 		}
 		if op != "=" {
-			return fmt.Errorf("only operation = is support for %s", CloseTime)
+			return fmt.Errorf("only operator = is supported for %s with Amazon S3", StartTime)
 		}
 		parsedQuery.startTime = &timestamp
 	case SearchPrecision:
@@ -195,7 +195,7 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 			return err
 		}
 		if op != "=" {
-			return fmt.Errorf("only operation = is support for %s", SearchPrecision)
+			return fmt.Errorf("only operator = is supported for %s with Amazon S3", SearchPrecision)
 		}
 		if parsedQuery.searchPrecision != nil && *parsedQuery.searchPrecision != val {
 			return fmt.Errorf("only one expression is allowed for %s", SearchPrecision)
