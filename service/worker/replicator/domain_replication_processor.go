@@ -49,7 +49,6 @@ const (
 	pollIntervalSecs                          = 1
 	taskProcessorErrorRetryWait               = time.Second
 	taskProcessorErrorRetryBackoffCoefficient = 1
-	taskProcessorErrorRetryMaxAttampts        = 5
 )
 
 func newDomainReplicationProcessor(
@@ -61,10 +60,11 @@ func newDomainReplicationProcessor(
 	hostInfo *membership.HostInfo,
 	serviceResolver membership.ServiceResolver,
 	domainReplicationQueue persistence.DomainReplicationQueue,
+	replicationMaxRetry time.Duration,
 ) *domainReplicationProcessor {
 	retryPolicy := backoff.NewExponentialRetryPolicy(taskProcessorErrorRetryWait)
 	retryPolicy.SetBackoffCoefficient(taskProcessorErrorRetryBackoffCoefficient)
-	retryPolicy.SetMaximumAttempts(taskProcessorErrorRetryMaxAttampts)
+	retryPolicy.SetExpirationInterval(replicationMaxRetry)
 
 	return &domainReplicationProcessor{
 		hostInfo:               hostInfo,
