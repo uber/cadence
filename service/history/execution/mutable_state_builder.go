@@ -3793,7 +3793,7 @@ func (e *mutableStateBuilder) AddTransferTasks(
 	e.insertTransferTasks = append(e.insertTransferTasks, transferTasks...)
 }
 
-// TODO convert AddTransferTasks to prepareTimerTasks
+// TODO convert AddTimerTasks to prepareTimerTasks
 func (e *mutableStateBuilder) AddTimerTasks(
 	timerTasks ...persistence.Task,
 ) {
@@ -3902,8 +3902,6 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		}
 	}
 
-	setTaskInfo(e.GetCurrentVersion(), now, e.insertTransferTasks, e.insertTimerTasks)
-
 	// update last update time
 	e.executionInfo.LastUpdatedTimestamp = now
 
@@ -3989,8 +3987,6 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 			return nil, nil, err
 		}
 	}
-
-	setTaskInfo(e.GetCurrentVersion(), now, e.insertTransferTasks, e.insertTimerTasks)
 
 	// update last update time
 	e.executionInfo.LastUpdatedTimestamp = now

@@ -1219,24 +1219,28 @@ func (s *contextImpl) allocateTaskIDsLocked(
 
 	if err := s.allocateTransferIDsLocked(
 		transferTasks,
-		transferMaxReadLevel); err != nil {
+		transferMaxReadLevel,
+	); err != nil {
 		return err
 	}
 	if err := s.allocateTransferIDsLocked(
 		replicationTasks,
-		transferMaxReadLevel); err != nil {
+		transferMaxReadLevel,
+	); err != nil {
 		return err
 	}
 	return s.allocateTimerIDsLocked(
 		domainEntry,
 		workflowID,
-		timerTasks)
+		timerTasks,
+	)
 }
 
 func (s *contextImpl) allocateTransferIDsLocked(
 	tasks []persistence.Task,
 	transferMaxReadLevel *int64,
 ) error {
+	now := s.GetTimeSource().Now()
 
 	for _, task := range tasks {
 		id, err := s.generateTransferTaskIDLocked()
@@ -1245,8 +1249,7 @@ func (s *contextImpl) allocateTransferIDsLocked(
 		}
 		s.logger.Debug(fmt.Sprintf("Assigning task ID: %v", id))
 		task.SetTaskID(id)
-		// TODO: set the task visibility time
-		//task.SetVisibilityTimestamp(s.GetTimeSource().Now())
+		task.SetVisibilityTimestamp(now)
 		*transferMaxReadLevel = id
 	}
 	return nil
