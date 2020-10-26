@@ -1259,7 +1259,7 @@ message TimerTaskInfo {
     int32 schedule_attempt = 8;
     int64 event_id = 9;
     int64 task_id = 10;
-    google.protobuf.Timestamp visibility_time = 11 [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp task_timestamp = 11 [(gogoproto.stdtime) = true];
 }
 
 message TransferTaskInfo {
@@ -1275,7 +1275,7 @@ message TransferTaskInfo {
     int64 schedule_id = 10;
     int64 version = 11;
     int64 task_id = 12;
-    google.protobuf.Timestamp visibility_time = 13 [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp task_timestamp = 13 [(gogoproto.stdtime) = true];
     bool record_visibility = 14;
 }
 
