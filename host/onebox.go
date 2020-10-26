@@ -644,6 +644,7 @@ func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, ser
 		serviceResolver,
 		c.domainReplicationQueue,
 		c.domainReplicationTaskExecutor,
+		time.Millisecond,
 	)
 	if err := c.replicator.Start(); err != nil {
 		c.replicator.Stop()
