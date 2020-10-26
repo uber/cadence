@@ -65,17 +65,18 @@ type (
 
 	// Config contains all the service config for worker
 	Config struct {
-		ArchiverConfig                *archiver.Config
-		IndexerCfg                    *indexer.Config
-		ScannerCfg                    *scanner.Config
-		BatcherCfg                    *batcher.Config
-		failoverManagerCfg            *failovermanager.Config
-		ThrottledLogRPS               dynamicconfig.IntPropertyFn
-		PersistenceGlobalMaxQPS       dynamicconfig.IntPropertyFn
-		PersistenceMaxQPS             dynamicconfig.IntPropertyFn
-		EnableBatcher                 dynamicconfig.BoolPropertyFn
-		EnableParentClosePolicyWorker dynamicconfig.BoolPropertyFn
-		EnableFailoverManager         dynamicconfig.BoolPropertyFn
+		ArchiverConfig                    *archiver.Config
+		IndexerCfg                        *indexer.Config
+		ScannerCfg                        *scanner.Config
+		BatcherCfg                        *batcher.Config
+		failoverManagerCfg                *failovermanager.Config
+		ThrottledLogRPS                   dynamicconfig.IntPropertyFn
+		PersistenceGlobalMaxQPS           dynamicconfig.IntPropertyFn
+		PersistenceMaxQPS                 dynamicconfig.IntPropertyFn
+		EnableBatcher                     dynamicconfig.BoolPropertyFn
+		EnableParentClosePolicyWorker     dynamicconfig.BoolPropertyFn
+		EnableFailoverManager             dynamicconfig.BoolPropertyFn
+		DomainReplicationMaxRetryDuration dynamicconfig.DurationPropertyFn
 	}
 )
 
@@ -162,12 +163,13 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
 			ClusterMetadata:     params.ClusterMetadata,
 		},
-		EnableBatcher:                 dc.GetBoolProperty(dynamicconfig.EnableBatcher, false),
-		EnableParentClosePolicyWorker: dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
-		EnableFailoverManager:         dc.GetBoolProperty(dynamicconfig.EnableFailoverManager, true),
-		ThrottledLogRPS:               dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS, 20),
-		PersistenceGlobalMaxQPS:       dc.GetIntProperty(dynamicconfig.WorkerPersistenceGlobalMaxQPS, 0),
-		PersistenceMaxQPS:             dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
+		EnableBatcher:                     dc.GetBoolProperty(dynamicconfig.EnableBatcher, false),
+		EnableParentClosePolicyWorker:     dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
+		EnableFailoverManager:             dc.GetBoolProperty(dynamicconfig.EnableFailoverManager, true),
+		ThrottledLogRPS:                   dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS, 20),
+		PersistenceGlobalMaxQPS:           dc.GetIntProperty(dynamicconfig.WorkerPersistenceGlobalMaxQPS, 0),
+		PersistenceMaxQPS:                 dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
+		DomainReplicationMaxRetryDuration: dc.GetDurationProperty(dynamicconfig.WorkerReplicationTaskMaxRetryDuration, 10*time.Minute),
 	}
 	advancedVisWritingMode := dc.GetStringProperty(
 		dynamicconfig.AdvancedVisibilityWritingMode,
@@ -289,6 +291,7 @@ func (s *Service) startReplicator() {
 		s.GetWorkerServiceResolver(),
 		s.GetDomainReplicationQueue(),
 		domainReplicationTaskExecutor,
+		s.config.DomainReplicationMaxRetryDuration(),
 	)
 	if err := msgReplicator.Start(); err != nil {
 		msgReplicator.Stop()
