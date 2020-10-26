@@ -28,6 +28,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+
 	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/.gen/go/shared"
 )

@@ -24,6 +24,7 @@ package frontend
 
 import (
 	"context"
+
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
