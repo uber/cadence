@@ -394,9 +394,11 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *r.ReplicationTask
 	)
 
 	if _, ok := err.(*shared.ServiceBusyError); err == nil || ok {
+		// skip DLQ if the err is service busy error or no error
 		return err
 	}
 
+	// handle error to DLQ
 	select {
 	case <-p.done:
 		p.logger.Warn("Skip adding new messages to DLQ.", tag.Error(err))
