@@ -300,7 +300,7 @@ func (p *taskProcessorImpl) processResponse(response *r.ReplicationMessages) {
 		_ = p.shardRateLimiter.Wait(ctx)
 		err := p.processSingleTask(replicationTask)
 		if err != nil {
-			// Processor is shutdown. Exit without updating the checkpoint.
+			// Encounter error and skip updating ack levels
 			return
 		}
 	}
