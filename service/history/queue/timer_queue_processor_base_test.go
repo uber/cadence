@@ -535,6 +535,9 @@ func (s *timerQueueProcessorBaseSuite) TestNotifyNewTimes() {
 }
 
 func (s *timerQueueProcessorBaseSuite) TestProcessQueueCollections_SkipRead() {
+	mockClusterMetadata := s.mockShard.Resource.ClusterMetadata
+	mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.clusterName).AnyTimes()
+
 	now := time.Now()
 	queueLevel := 0
 	shardMaxReadLevel := newTimerTaskKey(now, 0)
