@@ -24,8 +24,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
-	"github.com/uber/cadence/.gen/go/health/metaserver"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/definition"
@@ -149,7 +147,7 @@ type Service struct {
 
 	status       int32
 	handler      *WorkflowHandler
-	adminHandler *AdminHandler
+	adminHandler *adminHandlerImpl
 	stopC        chan struct{}
 	config       *Config
 	params       *service.BootstrapParams
@@ -254,12 +252,13 @@ func (s *Service) Start() {
 	}
 
 	// Register the latest (most decorated) handler
-	// TODO: this is temporary, will be moved to Thrift specific handler later
-	s.GetDispatcher().Register(workflowserviceserver.New(handler))
-	s.GetDispatcher().Register(metaserver.New(handler))
+	thriftHandler := NewThriftHandler(handler)
+	thriftHandler.register(s.GetDispatcher())
 
 	s.adminHandler = NewAdminHandler(s, s.params, s.config)
-	s.adminHandler.RegisterHandler()
+
+	adminThriftHandler := NewAdminThriftHandler(s.adminHandler)
+	adminThriftHandler.register(s.GetDispatcher())
 
 	// must start resource first
 	s.Resource.Start()

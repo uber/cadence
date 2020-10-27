@@ -162,9 +162,8 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 	executionInfo := r.mutableState.GetExecutionInfo()
 
 	r.mutableState.AddTransferTasks(&persistence.CloseExecutionTask{
-		// TaskID is set by shard
-		VisibilityTimestamp: now,
-		Version:             currentVersion,
+		// TaskID and VisibilityTimestamp are set by shard context
+		Version: currentVersion,
 	})
 
 	retentionInDays := defaultWorkflowRetentionInDays
@@ -238,9 +237,8 @@ func (r *mutableStateTaskGeneratorImpl) GenerateRecordWorkflowStartedTasks(
 	startVersion := startEvent.GetVersion()
 
 	r.mutableState.AddTransferTasks(&persistence.RecordWorkflowStartedTask{
-		// TaskID is set by shard
-		VisibilityTimestamp: now,
-		Version:             startVersion,
+		// TaskID and VisibilityTimestamp are set by shard context
+		Version: startVersion,
 	})
 
 	return nil
@@ -262,12 +260,11 @@ func (r *mutableStateTaskGeneratorImpl) GenerateDecisionScheduleTasks(
 	}
 
 	r.mutableState.AddTransferTasks(&persistence.DecisionTask{
-		// TaskID is set by shard
-		VisibilityTimestamp: now,
-		DomainID:            executionInfo.DomainID,
-		TaskList:            decision.TaskList,
-		ScheduleID:          decision.ScheduleID,
-		Version:             decision.Version,
+		// TaskID and VisibilityTimestamp are set by shard context
+		DomainID:   executionInfo.DomainID,
+		TaskList:   decision.TaskList,
+		ScheduleID: decision.ScheduleID,
+		Version:    decision.Version,
 	})
 
 	if r.mutableState.IsStickyTaskListEnabled() {
@@ -359,12 +356,11 @@ func (r *mutableStateTaskGeneratorImpl) GenerateActivityTransferTasks(
 	}
 
 	r.mutableState.AddTransferTasks(&persistence.ActivityTask{
-		// TaskID is set by shard
-		VisibilityTimestamp: now,
-		DomainID:            targetDomainID,
-		TaskList:            activityInfo.TaskList,
-		ScheduleID:          activityInfo.ScheduleID,
-		Version:             activityInfo.Version,
+		// TaskID and VisibilityTimestamp are set by shard context
+		DomainID:   targetDomainID,
+		TaskList:   activityInfo.TaskList,
+		ScheduleID: activityInfo.ScheduleID,
+		Version:    activityInfo.Version,
 	})
 
 	return nil
@@ -413,12 +409,11 @@ func (r *mutableStateTaskGeneratorImpl) GenerateChildWorkflowTasks(
 	}
 
 	r.mutableState.AddTransferTasks(&persistence.StartChildExecutionTask{
-		// TaskID is set by shard
-		VisibilityTimestamp: now,
-		TargetDomainID:      targetDomainID,
-		TargetWorkflowID:    childWorkflowInfo.StartedWorkflowID,
-		InitiatedID:         childWorkflowInfo.InitiatedID,
-		Version:             childWorkflowInfo.Version,
+		// TaskID and VisibilityTimestamp are set by shard context
+		TargetDomainID:   targetDomainID,
+		TargetWorkflowID: childWorkflowInfo.StartedWorkflowID,
+		InitiatedID:      childWorkflowInfo.InitiatedID,
+		Version:          childWorkflowInfo.Version,
 	})
 
 	return nil
@@ -450,8 +445,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateRequestCancelExternalTasks(
 	}
 
 	r.mutableState.AddTransferTasks(&persistence.CancelExecutionTask{
-		// TaskID is set by shard
-		VisibilityTimestamp:     now,
+		// TaskID and VisibilityTimestamp are set by shard context
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
 		TargetRunID:             targetRunID,
@@ -489,8 +483,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateSignalExternalTasks(
 	}
 
 	r.mutableState.AddTransferTasks(&persistence.SignalExecutionTask{
-		// TaskID is set by shard
-		VisibilityTimestamp:     now,
+		// TaskID and VisibilityTimestamp are set by shard context
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
 		TargetRunID:             targetRunID,
@@ -509,9 +502,8 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowSearchAttrTasks(
 	currentVersion := r.mutableState.GetCurrentVersion()
 
 	r.mutableState.AddTransferTasks(&persistence.UpsertWorkflowSearchAttributesTask{
-		// TaskID is set by shard
-		VisibilityTimestamp: now,
-		Version:             currentVersion, // task processing does not check this version
+		// TaskID and VisibilityTimestamp are set by shard context
+		Version: currentVersion, // task processing does not check this version
 	})
 
 	return nil
@@ -524,9 +516,8 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowResetTasks(
 	currentVersion := r.mutableState.GetCurrentVersion()
 
 	r.mutableState.AddTransferTasks(&persistence.ResetWorkflowTask{
-		// TaskID is set by shard
-		VisibilityTimestamp: now,
-		Version:             currentVersion,
+		// TaskID and VisibilityTimestamp are set by shard context
+		Version: currentVersion,
 	})
 
 	return nil
