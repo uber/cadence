@@ -64,7 +64,7 @@ type (
 		domainName string
 		domainID   string
 
-		handler *AdminHandler
+		handler *adminHandlerImpl
 	}
 )
 
