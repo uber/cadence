@@ -156,7 +156,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 
 	clientProvider := func(clientKey string) (interface{}, error) {
 		dispatcher := cf.rpcFactory.CreateDispatcherForOutbound(matchingCaller, common.MatchingServiceName, clientKey)
-		return matchingserviceclient.New(dispatcher.ClientConfig(common.MatchingServiceName)), nil
+		return matching.NewThriftClient(matchingserviceclient.New(dispatcher.ClientConfig(common.MatchingServiceName))), nil
 	}
 
 	client := matching.NewClient(
@@ -193,7 +193,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeout(
 
 	clientProvider := func(clientKey string) (interface{}, error) {
 		dispatcher := cf.rpcFactory.CreateDispatcherForOutbound(frontendCaller, common.FrontendServiceName, clientKey)
-		return workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName)), nil
+		return frontend.NewThriftClient(workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))), nil
 	}
 
 	client := frontend.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider))
@@ -214,7 +214,7 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndDispatcher(
 	}
 
 	clientProvider := func(clientKey string) (interface{}, error) {
-		return adminserviceclient.New(dispatcher.ClientConfig(rpcName)), nil
+		return admin.NewThriftClient(adminserviceclient.New(dispatcher.ClientConfig(rpcName))), nil
 	}
 
 	client := admin.NewClient(timeout, largeTimeout, common.NewClientCache(keyResolver, clientProvider))
@@ -235,7 +235,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndDispatcher(
 	}
 
 	clientProvider := func(clientKey string) (interface{}, error) {
-		return workflowserviceclient.New(dispatcher.ClientConfig(rpcName)), nil
+		return frontend.NewThriftClient(workflowserviceclient.New(dispatcher.ClientConfig(rpcName))), nil
 	}
 
 	client := frontend.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider))
