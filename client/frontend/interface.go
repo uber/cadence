@@ -25,47 +25,49 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
+
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -self_package github.com/uber/cadence/client/frontend
 
 // Client is the interface exposed by frontend service client
 type Client interface {
-	CountWorkflowExecutions(context.Context, *shared.CountWorkflowExecutionsRequest, ...yarpc.CallOption) (*shared.CountWorkflowExecutionsResponse, error)
-	DeprecateDomain(context.Context, *shared.DeprecateDomainRequest, ...yarpc.CallOption) error
-	DescribeDomain(context.Context, *shared.DescribeDomainRequest, ...yarpc.CallOption) (*shared.DescribeDomainResponse, error)
-	DescribeTaskList(context.Context, *shared.DescribeTaskListRequest, ...yarpc.CallOption) (*shared.DescribeTaskListResponse, error)
-	DescribeWorkflowExecution(context.Context, *shared.DescribeWorkflowExecutionRequest, ...yarpc.CallOption) (*shared.DescribeWorkflowExecutionResponse, error)
-	GetClusterInfo(context.Context, ...yarpc.CallOption) (*shared.ClusterInfo, error)
-	GetSearchAttributes(context.Context, ...yarpc.CallOption) (*shared.GetSearchAttributesResponse, error)
-	GetWorkflowExecutionHistory(context.Context, *shared.GetWorkflowExecutionHistoryRequest, ...yarpc.CallOption) (*shared.GetWorkflowExecutionHistoryResponse, error)
-	ListArchivedWorkflowExecutions(context.Context, *shared.ListArchivedWorkflowExecutionsRequest, ...yarpc.CallOption) (*shared.ListArchivedWorkflowExecutionsResponse, error)
-	ListClosedWorkflowExecutions(context.Context, *shared.ListClosedWorkflowExecutionsRequest, ...yarpc.CallOption) (*shared.ListClosedWorkflowExecutionsResponse, error)
-	ListDomains(context.Context, *shared.ListDomainsRequest, ...yarpc.CallOption) (*shared.ListDomainsResponse, error)
-	ListOpenWorkflowExecutions(context.Context, *shared.ListOpenWorkflowExecutionsRequest, ...yarpc.CallOption) (*shared.ListOpenWorkflowExecutionsResponse, error)
-	ListTaskListPartitions(context.Context, *shared.ListTaskListPartitionsRequest, ...yarpc.CallOption) (*shared.ListTaskListPartitionsResponse, error)
-	ListWorkflowExecutions(context.Context, *shared.ListWorkflowExecutionsRequest, ...yarpc.CallOption) (*shared.ListWorkflowExecutionsResponse, error)
-	PollForActivityTask(context.Context, *shared.PollForActivityTaskRequest, ...yarpc.CallOption) (*shared.PollForActivityTaskResponse, error)
-	PollForDecisionTask(context.Context, *shared.PollForDecisionTaskRequest, ...yarpc.CallOption) (*shared.PollForDecisionTaskResponse, error)
-	QueryWorkflow(context.Context, *shared.QueryWorkflowRequest, ...yarpc.CallOption) (*shared.QueryWorkflowResponse, error)
-	RecordActivityTaskHeartbeat(context.Context, *shared.RecordActivityTaskHeartbeatRequest, ...yarpc.CallOption) (*shared.RecordActivityTaskHeartbeatResponse, error)
-	RecordActivityTaskHeartbeatByID(context.Context, *shared.RecordActivityTaskHeartbeatByIDRequest, ...yarpc.CallOption) (*shared.RecordActivityTaskHeartbeatResponse, error)
-	RegisterDomain(context.Context, *shared.RegisterDomainRequest, ...yarpc.CallOption) error
-	RequestCancelWorkflowExecution(context.Context, *shared.RequestCancelWorkflowExecutionRequest, ...yarpc.CallOption) error
-	ResetStickyTaskList(context.Context, *shared.ResetStickyTaskListRequest, ...yarpc.CallOption) (*shared.ResetStickyTaskListResponse, error)
-	ResetWorkflowExecution(context.Context, *shared.ResetWorkflowExecutionRequest, ...yarpc.CallOption) (*shared.ResetWorkflowExecutionResponse, error)
-	RespondActivityTaskCanceled(context.Context, *shared.RespondActivityTaskCanceledRequest, ...yarpc.CallOption) error
-	RespondActivityTaskCanceledByID(context.Context, *shared.RespondActivityTaskCanceledByIDRequest, ...yarpc.CallOption) error
-	RespondActivityTaskCompleted(context.Context, *shared.RespondActivityTaskCompletedRequest, ...yarpc.CallOption) error
-	RespondActivityTaskCompletedByID(context.Context, *shared.RespondActivityTaskCompletedByIDRequest, ...yarpc.CallOption) error
-	RespondActivityTaskFailed(context.Context, *shared.RespondActivityTaskFailedRequest, ...yarpc.CallOption) error
-	RespondActivityTaskFailedByID(context.Context, *shared.RespondActivityTaskFailedByIDRequest, ...yarpc.CallOption) error
-	RespondDecisionTaskCompleted(context.Context, *shared.RespondDecisionTaskCompletedRequest, ...yarpc.CallOption) (*shared.RespondDecisionTaskCompletedResponse, error)
-	RespondDecisionTaskFailed(context.Context, *shared.RespondDecisionTaskFailedRequest, ...yarpc.CallOption) error
-	RespondQueryTaskCompleted(context.Context, *shared.RespondQueryTaskCompletedRequest, ...yarpc.CallOption) error
-	ScanWorkflowExecutions(context.Context, *shared.ListWorkflowExecutionsRequest, ...yarpc.CallOption) (*shared.ListWorkflowExecutionsResponse, error)
-	SignalWithStartWorkflowExecution(context.Context, *shared.SignalWithStartWorkflowExecutionRequest, ...yarpc.CallOption) (*shared.StartWorkflowExecutionResponse, error)
-	SignalWorkflowExecution(context.Context, *shared.SignalWorkflowExecutionRequest, ...yarpc.CallOption) error
-	StartWorkflowExecution(context.Context, *shared.StartWorkflowExecutionRequest, ...yarpc.CallOption) (*shared.StartWorkflowExecutionResponse, error)
-	TerminateWorkflowExecution(context.Context, *shared.TerminateWorkflowExecutionRequest, ...yarpc.CallOption) error
-	UpdateDomain(context.Context, *shared.UpdateDomainRequest, ...yarpc.CallOption) (*shared.UpdateDomainResponse, error)
+	CountWorkflowExecutions(context.Context, *types.CountWorkflowExecutionsRequest, ...yarpc.CallOption) (*types.CountWorkflowExecutionsResponse, error)
+	DeprecateDomain(context.Context, *types.DeprecateDomainRequest, ...yarpc.CallOption) error
+	DescribeDomain(context.Context, *types.DescribeDomainRequest, ...yarpc.CallOption) (*types.DescribeDomainResponse, error)
+	DescribeTaskList(context.Context, *types.DescribeTaskListRequest, ...yarpc.CallOption) (*types.DescribeTaskListResponse, error)
+	DescribeWorkflowExecution(context.Context, *types.DescribeWorkflowExecutionRequest, ...yarpc.CallOption) (*types.DescribeWorkflowExecutionResponse, error)
+	GetClusterInfo(context.Context, ...yarpc.CallOption) (*types.ClusterInfo, error)
+	GetSearchAttributes(context.Context, ...yarpc.CallOption) (*types.GetSearchAttributesResponse, error)
+	GetWorkflowExecutionHistory(context.Context, *types.GetWorkflowExecutionHistoryRequest, ...yarpc.CallOption) (*types.GetWorkflowExecutionHistoryResponse, error)
+	ListArchivedWorkflowExecutions(context.Context, *types.ListArchivedWorkflowExecutionsRequest, ...yarpc.CallOption) (*types.ListArchivedWorkflowExecutionsResponse, error)
+	ListClosedWorkflowExecutions(context.Context, *types.ListClosedWorkflowExecutionsRequest, ...yarpc.CallOption) (*types.ListClosedWorkflowExecutionsResponse, error)
+	ListDomains(context.Context, *types.ListDomainsRequest, ...yarpc.CallOption) (*types.ListDomainsResponse, error)
+	ListOpenWorkflowExecutions(context.Context, *types.ListOpenWorkflowExecutionsRequest, ...yarpc.CallOption) (*types.ListOpenWorkflowExecutionsResponse, error)
+	ListTaskListPartitions(context.Context, *types.ListTaskListPartitionsRequest, ...yarpc.CallOption) (*types.ListTaskListPartitionsResponse, error)
+	ListWorkflowExecutions(context.Context, *types.ListWorkflowExecutionsRequest, ...yarpc.CallOption) (*types.ListWorkflowExecutionsResponse, error)
+	PollForActivityTask(context.Context, *types.PollForActivityTaskRequest, ...yarpc.CallOption) (*types.PollForActivityTaskResponse, error)
+	PollForDecisionTask(context.Context, *types.PollForDecisionTaskRequest, ...yarpc.CallOption) (*types.PollForDecisionTaskResponse, error)
+	QueryWorkflow(context.Context, *types.QueryWorkflowRequest, ...yarpc.CallOption) (*types.QueryWorkflowResponse, error)
+	RecordActivityTaskHeartbeat(context.Context, *types.RecordActivityTaskHeartbeatRequest, ...yarpc.CallOption) (*types.RecordActivityTaskHeartbeatResponse, error)
+	RecordActivityTaskHeartbeatByID(context.Context, *types.RecordActivityTaskHeartbeatByIDRequest, ...yarpc.CallOption) (*types.RecordActivityTaskHeartbeatResponse, error)
+	RegisterDomain(context.Context, *types.RegisterDomainRequest, ...yarpc.CallOption) error
+	RequestCancelWorkflowExecution(context.Context, *types.RequestCancelWorkflowExecutionRequest, ...yarpc.CallOption) error
+	ResetStickyTaskList(context.Context, *types.ResetStickyTaskListRequest, ...yarpc.CallOption) (*types.ResetStickyTaskListResponse, error)
+	ResetWorkflowExecution(context.Context, *types.ResetWorkflowExecutionRequest, ...yarpc.CallOption) (*types.ResetWorkflowExecutionResponse, error)
+	RespondActivityTaskCanceled(context.Context, *types.RespondActivityTaskCanceledRequest, ...yarpc.CallOption) error
+	RespondActivityTaskCanceledByID(context.Context, *types.RespondActivityTaskCanceledByIDRequest, ...yarpc.CallOption) error
+	RespondActivityTaskCompleted(context.Context, *types.RespondActivityTaskCompletedRequest, ...yarpc.CallOption) error
+	RespondActivityTaskCompletedByID(context.Context, *types.RespondActivityTaskCompletedByIDRequest, ...yarpc.CallOption) error
+	RespondActivityTaskFailed(context.Context, *types.RespondActivityTaskFailedRequest, ...yarpc.CallOption) error
+	RespondActivityTaskFailedByID(context.Context, *types.RespondActivityTaskFailedByIDRequest, ...yarpc.CallOption) error
+	RespondDecisionTaskCompleted(context.Context, *types.RespondDecisionTaskCompletedRequest, ...yarpc.CallOption) (*types.RespondDecisionTaskCompletedResponse, error)
+	RespondDecisionTaskFailed(context.Context, *types.RespondDecisionTaskFailedRequest, ...yarpc.CallOption) error
+	RespondQueryTaskCompleted(context.Context, *types.RespondQueryTaskCompletedRequest, ...yarpc.CallOption) error
+	ScanWorkflowExecutions(context.Context, *types.ListWorkflowExecutionsRequest, ...yarpc.CallOption) (*types.ListWorkflowExecutionsResponse, error)
+	SignalWithStartWorkflowExecution(context.Context, *types.SignalWithStartWorkflowExecutionRequest, ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error)
+	SignalWorkflowExecution(context.Context, *types.SignalWorkflowExecutionRequest, ...yarpc.CallOption) error
+	StartWorkflowExecution(context.Context, *types.StartWorkflowExecutionRequest, ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error)
+	TerminateWorkflowExecution(context.Context, *types.TerminateWorkflowExecutionRequest, ...yarpc.CallOption) error
+	UpdateDomain(context.Context, *types.UpdateDomainRequest, ...yarpc.CallOption) (*types.UpdateDomainResponse, error)
 }
