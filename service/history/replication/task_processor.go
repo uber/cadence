@@ -393,7 +393,7 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *r.ReplicationTask
 		common.IsServiceBusyError,
 	)
 
-	if _, ok := err.(*shared.ServiceBusyError); err == nil || ok {
+	if err == nil || common.IsServiceBusyError(err) {
 		// skip DLQ if the err is service busy error or no error
 		return err
 	}
