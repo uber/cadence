@@ -300,7 +300,7 @@ func (p *taskProcessorImpl) processResponse(response *r.ReplicationMessages) {
 		_ = p.shardRateLimiter.Wait(ctx)
 		err := p.processSingleTask(replicationTask)
 		if err != nil {
-			// Processor is shutdown. Exit without updating the checkpoint.
+			// Encounter error and skip updating ack levels
 			return
 		}
 	}
@@ -393,21 +393,24 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *r.ReplicationTask
 		common.IsServiceBusyError,
 	)
 
-	if err != nil {
-		select {
-		case <-p.done:
-			p.logger.Warn("Skip adding new messages to DLQ.", tag.Error(err))
-		default:
-			p.logger.Error(
-				"Failed to apply replication task after retry. Putting task into DLQ.",
-				tag.TaskID(replicationTask.GetSourceTaskId()),
-				tag.Error(err),
-			)
-			return p.putReplicationTaskToDLQ(replicationTask)
-		}
+	if err == nil || common.IsServiceBusyError(err) {
+		// skip DLQ if the err is service busy error or no error
+		return err
 	}
 
-	return nil
+	// handle error to DLQ
+	select {
+	case <-p.done:
+		p.logger.Warn("Skip adding new messages to DLQ.", tag.Error(err))
+		return err
+	default:
+		p.logger.Error(
+			"Failed to apply replication task after retry. Putting task into DLQ.",
+			tag.TaskID(replicationTask.GetSourceTaskId()),
+			tag.Error(err),
+		)
+		return p.putReplicationTaskToDLQ(replicationTask)
+	}
 }
 
 func (p *taskProcessorImpl) processTaskOnce(replicationTask *r.ReplicationTask) error {
