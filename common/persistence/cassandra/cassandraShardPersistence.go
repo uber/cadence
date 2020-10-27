@@ -178,14 +178,7 @@ func (d *cassandraShardPersistence) CreateShard(
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("CreateShard operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CreateShard operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "CreateShard", err)
 	}
 
 	if !applied {
@@ -215,19 +208,13 @@ func (d *cassandraShardPersistence) GetShard(
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		if err == gocql.ErrNotFound {
+		if cassandra.IsNotFoundError(err) {
 			return nil, &workflow.EntityNotExistsError{
 				Message: fmt.Sprintf("Shard not found.  ShardId: %v", shardID),
 			}
-		} else if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("GetShard operation failed. Error: %v", err),
-			}
 		}
 
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetShard operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "GetShard", err)
 	}
 
 	rangeID := result["range_id"].(int64)
@@ -285,14 +272,7 @@ func (d *cassandraShardPersistence) updateRangeID(
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("UpdateRangeID operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateRangeID operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "UpdateRangeID", err)
 	}
 
 	if !applied {
@@ -354,14 +334,7 @@ func (d *cassandraShardPersistence) UpdateShard(
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("UpdateShard operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateShard operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "UpdateShard", err)
 	}
 
 	if !applied {

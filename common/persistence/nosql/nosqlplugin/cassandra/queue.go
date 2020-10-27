@@ -183,7 +183,7 @@ func (db *cdb) InsertQueueMetadata(
 	query := db.session.Query(templateInsertQueueMetadataQuery, queueType, clusterAckLevels, version).WithContext(ctx)
 	_, err := query.ScanCAS()
 	if err != nil {
-		return fmt.Errorf("failed to insert initial queue metadata record: %v, Type: %v", err, queueType)
+		return err
 	}
 	// it's ok if the query is not applied, which means that the record exists already.
 	return nil

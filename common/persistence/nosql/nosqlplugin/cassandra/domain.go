@@ -452,7 +452,7 @@ func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []b
 
 	nextPageToken := iter.PageState()
 	if err := iter.Close(); err != nil {
-		return nil, nil, fmt.Errorf("ListDomains operation failed. Error: %v", err)
+		return nil, nil, err
 	}
 	return rows, nextPageToken, nil
 }
@@ -509,12 +509,12 @@ func (db *cdb) SelectDomainMetadata(ctx context.Context) (int64, error) {
 func (db *cdb) deleteDomain(ctx context.Context, name, ID string) error {
 	query := db.session.Query(templateDeleteDomainByNameQueryV2, constDomainPartition, name).WithContext(ctx)
 	if err := query.Exec(); err != nil {
-		return fmt.Errorf("DeleteDomainByName operation failed. Error %v", err)
+		return err
 	}
 
 	query = db.session.Query(templateDeleteDomainQuery, ID).WithContext(ctx)
 	if err := query.Exec(); err != nil {
-		return fmt.Errorf("DeleteDomain operation failed. Error %v", err)
+		return err
 	}
 
 	return nil

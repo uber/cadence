@@ -21,66 +21,33 @@
 package cassandra
 
 import (
-	"errors"
+	"context"
 
 	"github.com/gocql/gocql"
-
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
-	"github.com/uber/cadence/common/service/config"
 )
 
-var (
-	errConditionFailed = errors.New("internal condition fail error")
-)
-
-// cdb represents a logical connection to Cassandra database
-type cdb struct {
-	logger  log.Logger
-	session *gocql.Session
-}
-
-var _ nosqlplugin.DB = (*cdb)(nil)
-
-// NewCassandraDBFromSession returns a DB from a session
-func NewCassandraDBFromSession(session *gocql.Session, logger log.Logger) nosqlplugin.DB {
-	return &cdb{
-		logger:  logger,
-		session: session,
+// IsTimeoutError checks if an error is timeout error
+func IsTimeoutError(err error) bool {
+	if err == context.DeadlineExceeded {
+		return true
 	}
-}
-
-// NewCassandraDB return a new DB
-func NewCassandraDB(cfg config.Cassandra, logger log.Logger) (nosqlplugin.DB, error) {
-	session, err := CreateSession(cfg)
-	if err != nil {
-		return nil, err
+	if err == gocql.ErrTimeoutNoResponse {
+		return true
 	}
-	return &cdb{
-		logger:  logger,
-		session: session,
-	}, nil
-}
-
-func (db *cdb) Close() {
-	if db.session != nil {
-		db.session.Close()
+	if err == gocql.ErrConnectionClosed {
+		return true
 	}
+	_, ok := err.(*gocql.RequestErrWriteTimeout)
+	return ok
 }
 
-func (db *cdb) PluginName() string {
-	return PluginName
-}
-
-func (db *cdb) IsNotFoundError(err error) bool {
+// IsNotFoundError checks if an error due to entity not found
+func IsNotFoundError(err error) bool {
 	return err == gocql.ErrNotFound
 }
 
-func (db *cdb) IsTimeoutError(err error) bool {
-	return IsTimeoutError(err)
-}
-
-func (db *cdb) IsThrottlingError(err error) bool {
+// IsThrottlingError checks if an error is due to throttling error
+func IsThrottlingError(err error) bool {
 	if req, ok := err.(gocql.RequestError); ok {
 		// gocql does not expose the constant errOverloaded = 0x1001
 		return req.Code() == 0x1001
@@ -88,7 +55,8 @@ func (db *cdb) IsThrottlingError(err error) bool {
 	return false
 }
 
-func (db *cdb) IsConditionFailedError(err error) bool {
+// IsConditionFailedError checks if an error is conditional update failure error
+func IsConditionFailedError(err error) bool {
 	if err == errConditionFailed {
 		return true
 	}
