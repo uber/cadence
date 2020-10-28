@@ -23,7 +23,7 @@ jobs:
           username: ${{ secrets.CADENCE_SERVER_DOCKERHUB_USERNAME }}
           password: ${{ secrets.CADENCE_SERVER_DOCKERHUB_TOKEN }}
           repository: justatuber/server
-          build-args: TARGET=server
+          build_args: TARGET=server
           tag_with_ref: true
   push_server_auto_setup_to_registry:
     name: Push Docker server auto-setup images to Docker Hub
@@ -38,5 +38,5 @@ jobs:
           username: ${{ secrets.CADENCE_SERVER_DOCKERHUB_USERNAME }}
           password: ${{ secrets.CADENCE_SERVER_DOCKERHUB_TOKEN }}
           repository: justatuber/server
-          build-args: TARGET=auto-setup
+          build_args: TARGET=auto-setup
           tags: ${{ github.event.release.tag_name }}-auto-setup, latestRelease-auto-setup
