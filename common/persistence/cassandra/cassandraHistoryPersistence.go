@@ -78,26 +78,6 @@ func (h *nosqlHistoryManager) Close() {
 	h.db.Close()
 }
 
-func (h *nosqlHistoryManager) convertCommonErrors(
-	operation string,
-	err error,
-) error {
-	if h.db.IsNotFoundError(err) {
-		return &shared.EntityNotExistsError{
-			Message: fmt.Sprintf("%v failed. Error: %v ", operation, err),
-		}
-	} else if h.db.IsTimeoutError(err) {
-		return &p.TimeoutError{Msg: fmt.Sprintf("%v timed out. Error: %v", operation, err)}
-	} else if h.db.IsThrottlingError(err) {
-		return &shared.ServiceBusyError{
-			Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
-		}
-	}
-	return &shared.InternalServiceError{
-		Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
-	}
-}
-
 // AppendHistoryNodes upsert a batch of events as a single node to a history branch
 // Note that it's not allowed to append above the branch's ancestors' nodes, which means nodeID >= ForkNodeID
 func (h *nosqlHistoryManager) AppendHistoryNodes(
@@ -142,7 +122,7 @@ func (h *nosqlHistoryManager) AppendHistoryNodes(
 	err = h.db.InsertIntoHistoryTreeAndNode(ctx, treeRow, nodeRow)
 
 	if err != nil {
-		return h.convertCommonErrors("AppendHistoryNodes", err)
+		return convertCommonErrors(h.db, "AppendHistoryNodes", err)
 	}
 	return nil
 }
@@ -164,7 +144,7 @@ func (h *nosqlHistoryManager) ReadHistoryBranch(
 	}
 	rows, pagingToken, err := h.db.SelectFromHistoryNode(ctx, filter)
 	if err != nil {
-		return nil, err
+		return nil, convertCommonErrors(h.db, "SelectFromHistoryNode", err)
 	}
 
 	history := make([]*p.DataBlob, 0, int(request.PageSize))
@@ -324,7 +304,7 @@ func (h *nosqlHistoryManager) ForkHistoryBranch(
 
 	err := h.db.InsertIntoHistoryTreeAndNode(ctx, treeRow, nil)
 	if err != nil {
-		return nil, h.convertCommonErrors("ForkHistoryBranch", err)
+		return nil, convertCommonErrors(h.db, "ForkHistoryBranch", err)
 	}
 	return resp, nil
 }
@@ -344,7 +324,7 @@ func (h *nosqlHistoryManager) DeleteHistoryBranch(
 		BeginNodeID: common.Int64Ptr(beginNodeID),
 	})
 
-	rsp, err := h.GetHistoryTree(context.TODO(), &p.InternalGetHistoryTreeRequest{
+	rsp, err := h.GetHistoryTree(ctx, &p.InternalGetHistoryTreeRequest{
 		TreeID:  treeID,
 		ShardID: &request.ShardID,
 	})
@@ -398,7 +378,7 @@ func (h *nosqlHistoryManager) DeleteHistoryBranch(
 
 	err = h.db.DeleteFromHistoryTreeAndNode(ctx, treeFilter, nodeFilters)
 	if err != nil {
-		return h.convertCommonErrors("DeleteHistoryBranch", err)
+		return convertCommonErrors(h.db, "DeleteHistoryBranch", err)
 	}
 	return nil
 }
@@ -409,7 +389,7 @@ func (h *nosqlHistoryManager) GetAllHistoryTreeBranches(
 ) (*p.GetAllHistoryTreeBranchesResponse, error) {
 	dbBranches, pagingToken, err := h.db.SelectAllHistoryTrees(ctx, request.NextPageToken, request.PageSize)
 	if err != nil {
-		return nil, err
+		return nil, convertCommonErrors(h.db, "SelectAllHistoryTrees", err)
 	}
 
 	branchDetails := make([]p.HistoryBranchDetail, 0, int(request.PageSize))
@@ -447,7 +427,7 @@ func (h *nosqlHistoryManager) GetHistoryTree(
 			TreeID:  treeID,
 		})
 	if err != nil {
-		return nil, err
+		return nil, convertCommonErrors(h.db, "SelectFromHistoryTree", err)
 	}
 
 	branches := make([]*shared.HistoryBranch, 0)
