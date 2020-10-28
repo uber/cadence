@@ -81,16 +81,9 @@ func (db *cdb) IsTimeoutError(err error) bool {
 }
 
 func (db *cdb) IsThrottlingError(err error) bool {
-	if req, ok := err.(gocql.RequestError); ok {
-		// gocql does not expose the constant errOverloaded = 0x1001
-		return req.Code() == 0x1001
-	}
-	return false
+	return IsThrottlingError(err)
 }
 
 func (db *cdb) IsConditionFailedError(err error) bool {
-	if err == errConditionFailed {
-		return true
-	}
-	return false
+	return IsConditionFailedError(err)
 }
