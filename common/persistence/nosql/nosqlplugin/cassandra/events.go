@@ -117,9 +117,7 @@ func (db *cdb) SelectFromHistoryNode(ctx context.Context, filter *nosqlplugin.Hi
 	}
 
 	if err := iter.Close(); err != nil {
-		return nil, nil, &shared.InternalServiceError{
-			Message: fmt.Sprintf("SelectFromHistoryNode. Close operation failed. Error: %v", err),
-		}
+		return nil, nil, err
 	}
 	return rows, pagingToken, nil
 }
@@ -162,9 +160,7 @@ func (db *cdb) SelectAllHistoryTrees(ctx context.Context, nextPageToken []byte, 
 	}
 
 	if err := iter.Close(); err != nil {
-		return nil, nil, &shared.InternalServiceError{
-			Message: fmt.Sprintf("SelectAllHistoryTrees. Close operation failed. Error: %v", err),
-		}
+		return nil, nil, err
 	}
 	return rows, pagingToken, nil
 }
@@ -208,9 +204,7 @@ func (db *cdb) SelectFromHistoryTree(ctx context.Context, filter *nosqlplugin.Hi
 		}
 
 		if err := iter.Close(); err != nil {
-			return nil, &shared.InternalServiceError{
-				Message: fmt.Sprintf("SelectFromHistoryTree. Close operation failed. Error: %v", err),
-			}
+			return nil, err
 		}
 
 		if len(pagingToken) == 0 {

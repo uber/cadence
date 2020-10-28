@@ -206,7 +206,7 @@ func (p *indexProcessor) addMessageToES(indexMsg *indexer.Message, kafkaMsg mess
 	req := &es.GenericBulkableAddRequest{
 		Index:       p.esIndexName,
 		Type:        esDocType,
-		Id:          docID,
+		ID:          docID,
 		VersionType: versionTypeExternal,
 		Version:     indexMsg.GetVersion(),
 	}

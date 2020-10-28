@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 )
 
 type (
@@ -770,7 +771,8 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 		// noop
 
 	default:
-		if err := createOrUpdateCurrentExecution(batch,
+		if err := createOrUpdateCurrentExecution(
+			batch,
 			request.Mode,
 			d.shardID,
 			domainID,
@@ -788,7 +790,8 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 		}
 	}
 
-	if err := applyWorkflowSnapshotBatchAsNew(batch,
+	if err := applyWorkflowSnapshotBatchAsNew(
+		batch,
 		d.shardID,
 		&newWorkflow,
 	); err != nil {
@@ -816,19 +819,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 	}()
 
 	if err != nil {
-		if isTimeoutError(err) {
-			// Write may have succeeded, but we don't know
-			// return this info to the caller so they have the option of trying to find out by executing a read
-			return nil, &p.TimeoutError{Msg: fmt.Sprintf("CreateWorkflowExecution timed out. Error: %v", err)}
-		} else if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Error: %v", err),
-			}
-		}
-
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CreateWorkflowExecution operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "CreateWorkflowExecution", err)
 	}
 
 	if !applied {
@@ -941,20 +932,14 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		if err == gocql.ErrNotFound {
+		if cassandra.IsNotFoundError(err) {
 			return nil, &workflow.EntityNotExistsError{
 				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
 					*execution.WorkflowId, *execution.RunId),
 			}
-		} else if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("GetWorkflowExecution operation failed. Error: %v", err),
-			}
 		}
 
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetWorkflowExecution operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "GetWorkflowExecution", err)
 	}
 
 	state := &p.InternalWorkflowMutableState{}
@@ -1148,18 +1133,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 	}()
 
 	if err != nil {
-		if isTimeoutError(err) {
-			// Write may have succeeded, but we don't know
-			// return this info to the caller so they have the option of trying to find out by executing a read
-			return &p.TimeoutError{Msg: fmt.Sprintf("UpdateWorkflowExecution timed out. Error: %v", err)}
-		} else if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateWorkflowExecution operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "UpdateWorkflowExecution", err)
 	}
 
 	if !applied {
@@ -1272,18 +1246,7 @@ func (d *cassandraPersistence) ResetWorkflowExecution(
 	}()
 
 	if err != nil {
-		if isTimeoutError(err) {
-			// Write may have succeeded, but we don't know
-			// return this info to the caller so they have the option of trying to find out by executing a read
-			return &p.TimeoutError{Msg: fmt.Sprintf("ResetWorkflowExecution timed out. Error: %v", err)}
-		} else if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ResetWorkflowExecution operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ResetWorkflowExecution operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "ResetWorkflowExecution", err)
 	}
 
 	if !applied {
@@ -1428,18 +1391,7 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 	}()
 
 	if err != nil {
-		if isTimeoutError(err) {
-			// Write may have succeeded, but we don't know
-			// return this info to the caller so they have the option of trying to find out by executing a read
-			return &p.TimeoutError{Msg: fmt.Sprintf("ConflictResolveWorkflowExecution timed out. Error: %v", err)}
-		} else if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ConflictResolveWorkflowExecution operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ConflictResolveWorkflowExecution operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "ConflictResolveWorkflowExecution", err)
 	}
 
 	if !applied {
@@ -1572,14 +1524,7 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("DeleteWorkflowExecution operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("DeleteWorkflowExecution operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "DeleteWorkflowExecution", err)
 	}
 
 	return nil
@@ -1601,14 +1546,7 @@ func (d *cassandraPersistence) DeleteCurrentWorkflowExecution(
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("DeleteWorkflowCurrentRow operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("DeleteWorkflowCurrentRow operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "DeleteWorkflowCurrentRow", err)
 	}
 
 	return nil
@@ -1630,20 +1568,14 @@ func (d *cassandraPersistence) GetCurrentExecution(
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		if err == gocql.ErrNotFound {
+		if cassandra.IsNotFoundError(err) {
 			return nil, &workflow.EntityNotExistsError{
 				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v",
 					request.WorkflowID),
 			}
-		} else if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("GetCurrentExecution operation failed. Error: %v", err),
-			}
 		}
 
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetCurrentExecution operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "GetCurrentExecution", err)
 	}
 
 	currentRunID := result["current_run_id"].(gocql.UUID).String()
@@ -1699,9 +1631,7 @@ func (d *cassandraPersistence) ListCurrentExecutions(
 	copy(response.PageToken, nextPageToken)
 
 	if err := iter.Close(); err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListCurrentExecutions operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListCurrentExecutions", err)
 	}
 	return response, nil
 }
@@ -1721,17 +1651,11 @@ func (d *cassandraPersistence) IsWorkflowExecutionExists(
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		if err == gocql.ErrNotFound {
+		if cassandra.IsNotFoundError(err) {
 			return &p.IsWorkflowExecutionExistsResponse{Exists: false}, nil
-		} else if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("IsWorkflowExecutionExists operation failed. Error: %v", err),
-			}
 		}
 
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("IsWorkflowExecutionExists operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "IsWorkflowExecutionExists", err)
 	}
 	return &p.IsWorkflowExecutionExistsResponse{Exists: true}, nil
 }
@@ -1772,9 +1696,7 @@ func (d *cassandraPersistence) ListConcreteExecutions(
 	copy(response.NextPageToken, nextPageToken)
 
 	if err := iter.Close(); err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListConcreteExecutions operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListConcreteExecutions", err)
 	}
 
 	return response, nil
@@ -1818,9 +1740,7 @@ func (d *cassandraPersistence) GetTransferTasks(
 	copy(response.NextPageToken, nextPageToken)
 
 	if err := iter.Close(); err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetTransferTasks operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "GetTransferTasks", err)
 	}
 
 	return response, nil
@@ -1870,9 +1790,7 @@ func (d *cassandraPersistence) populateGetReplicationTasksResponse(
 	copy(response.NextPageToken, nextPageToken)
 
 	if err := iter.Close(); err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetReplicationTasks operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "GetReplicationTasks", err)
 	}
 
 	return response, nil
@@ -1893,14 +1811,7 @@ func (d *cassandraPersistence) CompleteTransferTask(
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("CompleteTransferTask operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CompleteTransferTask operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "CompleteTransferTask", err)
 	}
 
 	return nil
@@ -1923,14 +1834,7 @@ func (d *cassandraPersistence) RangeCompleteTransferTask(
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("RangeCompleteTransferTask operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("RangeCompleteTransferTask operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "RangeCompleteTransferTask", err)
 	}
 
 	return nil
@@ -1951,14 +1855,7 @@ func (d *cassandraPersistence) CompleteReplicationTask(
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("CompleteReplicationTask operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CompleteReplicationTask operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "CompleteReplicationTask", err)
 	}
 
 	return nil
@@ -1981,14 +1878,7 @@ func (d *cassandraPersistence) RangeCompleteReplicationTask(
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("RangeCompleteReplicationTask operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("RangeCompleteReplicationTask operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "RangeCompleteReplicationTask", err)
 	}
 
 	return nil
@@ -2010,14 +1900,7 @@ func (d *cassandraPersistence) CompleteTimerTask(
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("CompleteTimerTask operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CompleteTimerTask operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "CompleteTimerTask", err)
 	}
 
 	return nil
@@ -2041,14 +1924,7 @@ func (d *cassandraPersistence) RangeCompleteTimerTask(
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("RangeCompleteTimerTask operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("RangeCompleteTimerTask operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "RangeCompleteTimerTask", err)
 	}
 
 	return nil
@@ -2092,14 +1968,7 @@ func (d *cassandraPersistence) GetTimerIndexTasks(
 	copy(response.NextPageToken, nextPageToken)
 
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("GetTimerTasks operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetTimerTasks operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "GetTimerTasks", err)
 	}
 
 	return response, nil
@@ -2137,14 +2006,7 @@ func (d *cassandraPersistence) PutReplicationTaskToDLQ(
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("PutReplicationTaskToDLQ operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("PutReplicationTaskToDLQ operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "PutReplicationTaskToDLQ", err)
 	}
 
 	return nil
@@ -2185,16 +2047,9 @@ func (d *cassandraPersistence) GetReplicationDLQSize(
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("GetReplicationDLQSize operation failed. Error: %v", err),
-			}
-		}
-
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetReplicationDLQSize operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "GetReplicationDLQSize", err)
 	}
+
 	queueSize := result["count"].(int64)
 	return &p.GetReplicationDLQSizeResponse{
 		Size: queueSize,
@@ -2218,15 +2073,9 @@ func (d *cassandraPersistence) DeleteReplicationTaskFromDLQ(
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("DeleteReplicationTaskFromDLQ operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("DeleteReplicationTaskFromDLQ operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "DeleteReplicationTaskFromDLQ", err)
 	}
+
 	return nil
 }
 
@@ -2248,15 +2097,9 @@ func (d *cassandraPersistence) RangeDeleteReplicationTaskFromDLQ(
 
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("RangeDeleteReplicationTaskFromDLQ operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("RangeDeleteReplicationTaskFromDLQ operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "RangeDeleteReplicationTaskFromDLQ", err)
 	}
+
 	return nil
 }
 
@@ -2301,15 +2144,9 @@ func (d *cassandraPersistence) CreateFailoverMarkerTasks(
 		}
 	}()
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("CreateFailoverMarkerTasks operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CreateFailoverMarkerTasks operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "CreateFailoverMarkerTasks", err)
 	}
+
 	if !applied {
 		rowType, ok := previous["type"].(int)
 		if !ok {
