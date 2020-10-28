@@ -1631,6 +1631,7 @@ type (
 		RangeDeleteMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64) error
 		UpdateDLQAckLevel(ctx context.Context, messageID int64, clusterName string) error
 		GetDLQAckLevels(ctx context.Context) (map[string]int64, error)
+		GetDLQSize(ctx context.Context) (int64, error)
 	}
 
 	// QueueMessage is the message that stores in the queue

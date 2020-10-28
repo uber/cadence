@@ -1605,6 +1605,20 @@ func (p *queuePersistenceClient) GetDLQAckLevels(ctx context.Context) (map[strin
 	return result, err
 }
 
+func (p *queuePersistenceClient) GetDLQSize(ctx context.Context) (int64, error) {
+	p.metricClient.IncCounter(metrics.PersistenceGetDLQSizeScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceGetDLQSizeScope, metrics.PersistenceLatency)
+	result, err := p.persistence.GetDLQSize(ctx)
+	sw.Stop()
+
+	if err != nil {
+		p.metricClient.IncCounter(metrics.PersistenceGetDLQSizeScope, metrics.PersistenceFailures)
+	}
+
+	return result, err
+}
+
 func (p *queuePersistenceClient) Close() {
 	p.persistence.Close()
 }

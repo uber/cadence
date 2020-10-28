@@ -107,6 +107,10 @@ func (q *queueManager) GetDLQAckLevels(ctx context.Context) (map[string]int64, e
 	return q.persistence.GetDLQAckLevels(ctx)
 }
 
+func (q *queueManager) GetDLQSize(ctx context.Context) (int64, error) {
+	return q.persistence.GetDLQSize(ctx)
+}
+
 func (q *queueManager) fromInternalQueueMessage(message *InternalQueueMessage) *QueueMessage {
 	return &QueueMessage{
 		ID:        message.ID,
