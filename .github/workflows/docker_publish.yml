@@ -1,0 +1,42 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Publish Docker image
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  release:
+    types: [ published ]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  push_server_to_registry:
+    name: Push Docker server image to Docker Hub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+      - name: Push to Docker Hub (server build)
+        if: "!github.event.release.prerelease"
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ secrets.CADENCE_SERVER_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.CADENCE_SERVER_DOCKERHUB_TOKEN }}
+          repository: ubercadence/server
+          build_args: TARGET=server
+          tag_with_ref: true
+  push_server_auto_setup_to_registry:
+    name: Push Docker server auto-setup images to Docker Hub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+      - name: Push to Docker Hub (auto-setup build)
+        if: "!github.event.release.prerelease"
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ secrets.CADENCE_SERVER_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.CADENCE_SERVER_DOCKERHUB_TOKEN }}
+          repository: ubercadence/server
+          build_args: TARGET=auto-setup
+          tags: ${{ github.event.release.tag_name }}-auto-setup, latestRelease-auto-setup
