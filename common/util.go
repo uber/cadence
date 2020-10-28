@@ -76,7 +76,7 @@ const (
 
 	replicationServiceBusyInitialInterval    = 2 * time.Second
 	replicationServiceBusyMaxInterval        = 10 * time.Second
-	replicationServiceBusyExpirationInterval = 30 * time.Second
+	replicationServiceBusyExpirationInterval = 5 * time.Minute
 
 	contextExpireThreshold = 10 * time.Millisecond
 
