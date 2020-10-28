@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination domainReplicationQueue_mock.go -self_package github.com/uber/common/persistence
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination replication_queue_mock.go -self_package github.com/uber/common/persistence
 
-package persistence
+package domain
 
 import (
 	"context"
@@ -36,24 +36,24 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 )
 
 const (
 	purgeInterval                 = 5 * time.Minute
-	emptyMessageID                = -1
 	localDomainReplicationCluster = "domainReplication"
 )
 
-var _ DomainReplicationQueue = (*domainReplicationQueueImpl)(nil)
+var _ ReplicationQueue = (*replicationQueueImpl)(nil)
 
-// NewDomainReplicationQueue creates a new DomainReplicationQueue instance
-func NewDomainReplicationQueue(
-	queue QueueManager,
+// NewReplicationQueue creates a new DomainReplicationQueue instance
+func NewReplicationQueue(
+	queue persistence.QueueManager,
 	clusterName string,
 	metricsClient metrics.Client,
 	logger log.Logger,
-) DomainReplicationQueue {
-	return &domainReplicationQueueImpl{
+) ReplicationQueue {
+	return &replicationQueueImpl{
 		queue:               queue,
 		clusterName:         clusterName,
 		metricsClient:       metricsClient,
@@ -66,8 +66,8 @@ func NewDomainReplicationQueue(
 }
 
 type (
-	domainReplicationQueueImpl struct {
-		queue               QueueManager
+	replicationQueueImpl struct {
+		queue               persistence.QueueManager
 		clusterName         string
 		metricsClient       metrics.Client
 		logger              log.Logger
@@ -78,8 +78,8 @@ type (
 		status              int32
 	}
 
-	// DomainReplicationQueue is used to publish and list domain replication tasks
-	DomainReplicationQueue interface {
+	// ReplicationQueue is used to publish and list domain replication tasks
+	ReplicationQueue interface {
 		common.Daemon
 		Publish(ctx context.Context, message interface{}) error
 		PublishToDLQ(ctx context.Context, message interface{}) error
@@ -94,21 +94,21 @@ type (
 	}
 )
 
-func (q *domainReplicationQueueImpl) Start() {
+func (q *replicationQueueImpl) Start() {
 	if !atomic.CompareAndSwapInt32(&q.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return
 	}
 	go q.purgeProcessor()
 }
 
-func (q *domainReplicationQueueImpl) Stop() {
+func (q *replicationQueueImpl) Stop() {
 	if !atomic.CompareAndSwapInt32(&q.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
 		return
 	}
 	close(q.done)
 }
 
-func (q *domainReplicationQueueImpl) Publish(
+func (q *replicationQueueImpl) Publish(
 	ctx context.Context,
 	message interface{},
 ) error {
@@ -124,7 +124,7 @@ func (q *domainReplicationQueueImpl) Publish(
 	return q.queue.EnqueueMessage(ctx, bytes)
 }
 
-func (q *domainReplicationQueueImpl) PublishToDLQ(
+func (q *replicationQueueImpl) PublishToDLQ(
 	ctx context.Context,
 	message interface{},
 ) error {
@@ -137,21 +137,15 @@ func (q *domainReplicationQueueImpl) PublishToDLQ(
 	if err != nil {
 		return fmt.Errorf("failed to encode message: %v", err)
 	}
-	messageID, err := q.queue.EnqueueMessageToDLQ(ctx, bytes)
+	_, err = q.queue.EnqueueMessageToDLQ(ctx, bytes)
 	if err != nil {
 		return err
 	}
 
-	q.metricsClient.Scope(
-		metrics.PersistenceDomainReplicationQueueScope,
-	).UpdateGauge(
-		metrics.DomainReplicationDLQMaxLevelGauge,
-		float64(messageID),
-	)
 	return nil
 }
 
-func (q *domainReplicationQueueImpl) GetReplicationMessages(
+func (q *replicationQueueImpl) GetReplicationMessages(
 	ctx context.Context,
 	lastMessageID int64,
 	maxCount int,
@@ -177,7 +171,7 @@ func (q *domainReplicationQueueImpl) GetReplicationMessages(
 	return replicationTasks, lastMessageID, nil
 }
 
-func (q *domainReplicationQueueImpl) UpdateAckLevel(
+func (q *replicationQueueImpl) UpdateAckLevel(
 	ctx context.Context,
 	lastProcessedMessageID int64,
 	clusterName string,
@@ -196,13 +190,13 @@ func (q *domainReplicationQueueImpl) UpdateAckLevel(
 	return nil
 }
 
-func (q *domainReplicationQueueImpl) GetAckLevels(
+func (q *replicationQueueImpl) GetAckLevels(
 	ctx context.Context,
 ) (map[string]int64, error) {
 	return q.queue.GetAckLevels(ctx)
 }
 
-func (q *domainReplicationQueueImpl) GetMessagesFromDLQ(
+func (q *replicationQueueImpl) GetMessagesFromDLQ(
 	ctx context.Context,
 	firstMessageID int64,
 	lastMessageID int64,
@@ -231,7 +225,7 @@ func (q *domainReplicationQueueImpl) GetMessagesFromDLQ(
 	return replicationTasks, token, nil
 }
 
-func (q *domainReplicationQueueImpl) UpdateDLQAckLevel(
+func (q *replicationQueueImpl) UpdateDLQAckLevel(
 	ctx context.Context,
 	lastProcessedMessageID int64,
 ) error {
@@ -244,31 +238,25 @@ func (q *domainReplicationQueueImpl) UpdateDLQAckLevel(
 		return err
 	}
 
-	q.metricsClient.Scope(
-		metrics.PersistenceDomainReplicationQueueScope,
-	).UpdateGauge(
-		metrics.DomainReplicationDLQAckLevelGauge,
-		float64(lastProcessedMessageID),
-	)
 	return nil
 }
 
-func (q *domainReplicationQueueImpl) GetDLQAckLevel(
+func (q *replicationQueueImpl) GetDLQAckLevel(
 	ctx context.Context,
 ) (int64, error) {
 	dlqMetadata, err := q.queue.GetDLQAckLevels(ctx)
 	if err != nil {
-		return emptyMessageID, err
+		return common.EmptyMessageID, err
 	}
 
 	ackLevel, ok := dlqMetadata[localDomainReplicationCluster]
 	if !ok {
-		return emptyMessageID, nil
+		return common.EmptyMessageID, nil
 	}
 	return ackLevel, nil
 }
 
-func (q *domainReplicationQueueImpl) RangeDeleteMessagesFromDLQ(
+func (q *replicationQueueImpl) RangeDeleteMessagesFromDLQ(
 	ctx context.Context,
 	firstMessageID int64,
 	lastMessageID int64,
@@ -285,7 +273,7 @@ func (q *domainReplicationQueueImpl) RangeDeleteMessagesFromDLQ(
 	return nil
 }
 
-func (q *domainReplicationQueueImpl) DeleteMessageFromDLQ(
+func (q *replicationQueueImpl) DeleteMessageFromDLQ(
 	ctx context.Context,
 	messageID int64,
 ) error {
@@ -293,7 +281,7 @@ func (q *domainReplicationQueueImpl) DeleteMessageFromDLQ(
 	return q.queue.DeleteMessageFromDLQ(ctx, messageID)
 }
 
-func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
+func (q *replicationQueueImpl) purgeAckedMessages() error {
 	ackLevelByCluster, err := q.GetAckLevels(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to purge messages: %v", err)
@@ -315,13 +303,10 @@ func (q *domainReplicationQueueImpl) purgeAckedMessages() error {
 		return fmt.Errorf("failed to purge messages: %v", err)
 	}
 
-	q.metricsClient.
-		Scope(metrics.PersistenceDomainReplicationQueueScope).
-		UpdateGauge(metrics.DomainReplicationTaskAckLevelGauge, float64(minAckLevel))
 	return nil
 }
 
-func (q *domainReplicationQueueImpl) purgeProcessor() {
+func (q *replicationQueueImpl) purgeProcessor() {
 	ticker := time.NewTicker(purgeInterval)
 	defer ticker.Stop()
 
