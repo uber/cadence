@@ -24,7 +24,6 @@ import (
 	"context"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/quotas"
 )
@@ -1053,9 +1052,9 @@ func (p *queueRateLimitedPersistenceClient) DeleteMessagesBefore(ctx context.Con
 	return p.persistence.DeleteMessagesBefore(ctx, messageID)
 }
 
-func (p *queueRateLimitedPersistenceClient) EnqueueMessageToDLQ(ctx context.Context, message []byte) (int64, error) {
+func (p *queueRateLimitedPersistenceClient) EnqueueMessageToDLQ(ctx context.Context, message []byte) error {
 	if ok := p.rateLimiter.Allow(); !ok {
-		return common.EmptyMessageID, ErrPersistenceLimitExceeded
+		return ErrPersistenceLimitExceeded
 	}
 
 	return p.persistence.EnqueueMessageToDLQ(ctx, message)

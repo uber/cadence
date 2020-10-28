@@ -1813,8 +1813,7 @@ func (s *TestBase) PublishToDomainDLQ(
 
 	return backoff.Retry(
 		func() error {
-			_, err := s.DomainReplicationQueueMgr.EnqueueMessageToDLQ(ctx, messagePayload)
-			return err
+			return s.DomainReplicationQueueMgr.EnqueueMessageToDLQ(ctx, messagePayload)
 		},
 		retryPolicy,
 		func(e error) bool {
@@ -1857,7 +1856,7 @@ func (s *TestBase) GetDomainDLQAckLevel(
 	return s.DomainReplicationQueueMgr.GetDLQAckLevels(ctx)
 }
 
-// GetDLQSize returns domain dlq size
+// GetDomainDLQSize returns domain dlq size
 func (s *TestBase) GetDomainDLQSize(
 	ctx context.Context,
 ) (int64, error) {

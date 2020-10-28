@@ -111,15 +111,15 @@ func (q *nosqlQueue) EnqueueMessage(
 func (q *nosqlQueue) EnqueueMessageToDLQ(
 	ctx context.Context,
 	messagePayload []byte,
-) (int64, error) {
+) error {
 	// Use negative queue type as the dlq type
 	lastMessageID, err := q.getLastMessageID(ctx, q.getDLQTypeFromQueueType())
 	if err != nil {
-		return emptyMessageID, err
+		return err
 	}
 
-	// Use negative queue type as the dlq type
-	return q.tryEnqueue(ctx, q.getDLQTypeFromQueueType(), lastMessageID+1, messagePayload)
+	_, err = q.tryEnqueue(ctx, q.getDLQTypeFromQueueType(), lastMessageID+1, messagePayload)
+	return err
 }
 
 func (q *nosqlQueue) tryEnqueue(

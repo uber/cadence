@@ -75,7 +75,7 @@ func (q *queueManager) GetAckLevels(ctx context.Context) (map[string]int64, erro
 	return q.persistence.GetAckLevels(ctx)
 }
 
-func (q *queueManager) EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) (int64, error) {
+func (q *queueManager) EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) error {
 	return q.persistence.EnqueueMessageToDLQ(ctx, messagePayload)
 }
 
