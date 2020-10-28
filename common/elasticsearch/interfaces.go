@@ -38,8 +38,13 @@ func NewGenericClient(
 	visibilityConfig *config.VisibilityConfig,
 	logger log.Logger,
 ) (GenericClient, error) {
-	// TODO hardcoded to V6 for now
-	return newV6Client(connectConfig, visibilityConfig, logger)
+	if connectConfig.Version == "" || connectConfig.Version == "v6" {
+		return newV6Client(connectConfig, visibilityConfig, logger)
+	} else if connectConfig.Version == "v7" {
+		return newV7Client(connectConfig, visibilityConfig, logger)
+	} else {
+		return nil, fmt.Errorf("not supported ElasticSearch version: %v", connectConfig.Version)
+	}
 }
 
 type (

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,25 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package elasticsearch
 
 import (
-	"net/url"
-
-	"github.com/uber/cadence/common"
+	"time"
 )
 
-// ElasticSearchConfig for connecting to ElasticSearch
-type (
-	ElasticSearchConfig struct {
-		URL     url.URL           `yaml:url`     //nolint:govet
-		Indices map[string]string `yaml:indices` //nolint:govet
-		// supporting v6 and v7. Default to v6 if empty.
-		Version string `yaml:version` //nolint:govet
-	}
-)
+const unknownStatusCode = -1
 
-// GetVisibilityIndex return visibility index name
-func (cfg *ElasticSearchConfig) GetVisibilityIndex() string {
-	return cfg.Indices[common.VisibilityAppName]
-}
+// TODO https://github.com/uber/cadence/issues/3686
+const oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
