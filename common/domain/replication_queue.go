@@ -139,12 +139,8 @@ func (q *replicationQueueImpl) PublishToDLQ(
 	if err != nil {
 		return fmt.Errorf("failed to encode message: %v", err)
 	}
-	_, err = q.queue.EnqueueMessageToDLQ(ctx, bytes)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return q.queue.EnqueueMessageToDLQ(ctx, bytes)
 }
 
 func (q *replicationQueueImpl) GetReplicationMessages(

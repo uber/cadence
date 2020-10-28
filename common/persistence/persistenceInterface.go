@@ -179,7 +179,7 @@ type (
 		DeleteMessagesBefore(ctx context.Context, messageID int64) error
 		UpdateAckLevel(ctx context.Context, messageID int64, clusterName string) error
 		GetAckLevels(ctx context.Context) (map[string]int64, error)
-		EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) (int64, error)
+		EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) error
 		ReadMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*InternalQueueMessage, []byte, error)
 		DeleteMessageFromDLQ(ctx context.Context, messageID int64) error
 		RangeDeleteMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64) error
