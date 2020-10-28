@@ -102,7 +102,7 @@ func newV7Client(
 // root is for nested object like Attr property for search attributes.
 func (c *elasticV7) PutMapping(ctx context.Context, index, root, key, valueType string) error {
 	body := buildPutMappingBodyV7(root, key, valueType)
-	_, err := c.client.PutMapping().Index(index).Type("_doc").BodyJson(body).Do(ctx)
+	_, err := c.client.PutMapping().Index(index).BodyJson(body).Do(ctx)
 	return err
 }
 
@@ -510,7 +510,7 @@ func (c *elasticV7) getListWorkflowExecutionsResponse(searchHits *elastic.Search
 
 		// ES Search API support pagination using From and PageSize, but has limit that From+PageSize cannot exceed a threshold
 		// to retrieve deeper pages, use ES SearchAfter
-		if searchHits.TotalHits <= int64(c.config.ESIndexMaxResultWindow()-pageSize) { // use ES Search From+Size
+		if searchHits.TotalHits.Value <= int64(c.config.ESIndexMaxResultWindow()-pageSize) { // use ES Search From+Size
 			nextPageToken, err = SerializePageToken(&ElasticVisibilityPageToken{From: token.From + numOfActualHits})
 		} else { // use ES Search After
 			var sortVal interface{}
@@ -533,7 +533,7 @@ func (c *elasticV7) getListWorkflowExecutionsResponse(searchHits *elastic.Search
 
 func (c *elasticV7) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit) *p.InternalVisibilityWorkflowExecutionInfo {
 	var source *VisibilityRecord
-	err := json.Unmarshal(*hit.Source, &source)
+	err := json.Unmarshal(hit.Source, &source)
 	if err != nil { // log and skip error
 		c.logger.Error("unable to unmarshal search hit source",
 			tag.Error(err), tag.ESDocID(hit.Id))
