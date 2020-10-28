@@ -28,7 +28,7 @@ import (
 	"math"
 	"strconv"
 	"time"
-	
+
 	"github.com/olivere/elastic/v7"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
