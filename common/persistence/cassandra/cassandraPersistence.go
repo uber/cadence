@@ -1655,7 +1655,7 @@ func (d *cassandraPersistence) IsWorkflowExecutionExists(
 			return &p.IsWorkflowExecutionExistsResponse{Exists: false}, nil
 		}
 
-		return nil, convertCommonErrors(nil, "IsWorkflowExecutionExists", nil)
+		return nil, convertCommonErrors(nil, "IsWorkflowExecutionExists", err)
 	}
 	return &p.IsWorkflowExecutionExistsResponse{Exists: true}, nil
 }
@@ -1740,7 +1740,7 @@ func (d *cassandraPersistence) GetTransferTasks(
 	copy(response.NextPageToken, nextPageToken)
 
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "GetTransferTasks", nil)
+		return nil, convertCommonErrors(nil, "GetTransferTasks", err)
 	}
 
 	return response, nil
