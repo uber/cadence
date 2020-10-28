@@ -1092,6 +1092,14 @@ func (p *queueRateLimitedPersistenceClient) GetDLQAckLevels(ctx context.Context)
 	return p.persistence.GetDLQAckLevels(ctx)
 }
 
+func (p *queueRateLimitedPersistenceClient) GetDLQSize(ctx context.Context) (int64, error) {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return 0, ErrPersistenceLimitExceeded
+	}
+
+	return p.persistence.GetDLQSize(ctx)
+}
+
 func (p *queueRateLimitedPersistenceClient) DeleteMessageFromDLQ(ctx context.Context, messageID int64) error {
 	if ok := p.rateLimiter.Allow(); !ok {
 		return ErrPersistenceLimitExceeded

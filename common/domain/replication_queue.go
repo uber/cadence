@@ -41,6 +41,7 @@ import (
 
 const (
 	purgeInterval                 = 5 * time.Minute
+	queueSizeQueryInterval        = 5 * time.Minute
 	localDomainReplicationCluster = "domainReplication"
 )
 
@@ -99,6 +100,7 @@ func (q *replicationQueueImpl) Start() {
 		return
 	}
 	go q.purgeProcessor()
+	go q.emitDLQSize()
 }
 
 func (q *replicationQueueImpl) Stop() {
@@ -325,6 +327,34 @@ func (q *replicationQueueImpl) purgeProcessor() {
 			}
 		case <-q.ackNotificationChan:
 			q.ackLevelUpdated = true
+		}
+	}
+}
+
+func (q *replicationQueueImpl) emitDLQSize() {
+	ticker := time.NewTicker(queueSizeQueryInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-q.done:
+			return
+		case <-ticker.C:
+			size, err := q.queue.GetDLQSize(context.Background())
+			if err != nil {
+				q.logger.Warn("Failed to get DLQ size.", tag.Error(err))
+				q.metricsClient.Scope(
+					metrics.DomainReplicationQueueScope,
+				).IncCounter(
+					metrics.DomainReplicationQueueSizeErrorCount,
+				)
+			}
+			q.metricsClient.Scope(
+				metrics.DomainReplicationQueueScope,
+			).AddCounter(
+				metrics.DomainReplicationQueueSizeCounter,
+				size,
+			)
 		}
 	}
 }

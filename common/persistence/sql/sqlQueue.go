@@ -318,6 +318,13 @@ func (q *sqlQueue) GetDLQAckLevels(
 	return q.db.GetAckLevels(ctx, q.getDLQTypeFromQueueType(), false)
 }
 
+func (q *sqlQueue) GetDLQSize(
+	ctx context.Context,
+) (int64, error) {
+
+	return q.db.GetQueueSize(ctx, q.getDLQTypeFromQueueType())
+}
+
 func (q *sqlQueue) getDLQTypeFromQueueType() persistence.QueueType {
 	return -q.queueType
 }

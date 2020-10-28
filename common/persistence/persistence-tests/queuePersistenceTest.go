@@ -172,6 +172,10 @@ func (s *QueuePersistenceSuite) TestDomainReplicationDLQ() {
 	s.NoError(err, "GetReplicationMessages failed.")
 	s.Equal(len(token), 0)
 
+	size, err := s.GetDomainDLQSize(ctx)
+	s.NoError(err, "GetDomainDLQSize failed")
+	s.Equal(int64(numMessages), size)
+
 	lastMessageID := result2[len(result2)-1].ID
 	err = s.DeleteMessageFromDomainDLQ(ctx, lastMessageID)
 	s.NoError(err)

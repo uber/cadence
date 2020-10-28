@@ -1857,6 +1857,13 @@ func (s *TestBase) GetDomainDLQAckLevel(
 	return s.DomainReplicationQueueMgr.GetDLQAckLevels(ctx)
 }
 
+// GetDLQSize returns domain dlq size
+func (s *TestBase) GetDomainDLQSize(
+	ctx context.Context,
+) (int64, error) {
+	return s.DomainReplicationQueueMgr.GetDLQSize(ctx)
+}
+
 // DeleteMessageFromDomainDLQ deletes one message from domain DLQ
 func (s *TestBase) DeleteMessageFromDomainDLQ(
 	ctx context.Context,
