@@ -22,7 +22,7 @@ jobs:
         with:
           username: ${{ secrets.CADENCE_SERVER_DOCKERHUB_USERNAME }}
           password: ${{ secrets.CADENCE_SERVER_DOCKERHUB_TOKEN }}
-          repository: justatuber/server
+          repository: ubercadence/server
           build_args: TARGET=server
           tag_with_ref: true
   push_server_auto_setup_to_registry:
@@ -37,6 +37,6 @@ jobs:
         with:
           username: ${{ secrets.CADENCE_SERVER_DOCKERHUB_USERNAME }}
           password: ${{ secrets.CADENCE_SERVER_DOCKERHUB_TOKEN }}
-          repository: justatuber/server
+          repository: ubercadence/server
           build_args: TARGET=auto-setup
           tags: ${{ github.event.release.tag_name }}-auto-setup, latestRelease-auto-setup
