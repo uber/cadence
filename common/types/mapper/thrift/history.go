@@ -236,8 +236,8 @@ func ToGetMutableStateResponse(t *history.GetMutableStateResponse) *types.GetMut
 	}
 }
 
-// FromHistoryService_CloseShard_Args converts internal HistoryService_CloseShard_Args type to thrift
-func FromHistoryService_CloseShard_Args(t *types.HistoryService_CloseShard_Args) *history.HistoryService_CloseShard_Args {
+// FromHistoryServiceCloseShardArgs converts internal HistoryService_CloseShard_Args type to thrift
+func FromHistoryServiceCloseShardArgs(t *types.HistoryServiceCloseShardArgs) *history.HistoryService_CloseShard_Args {
 	if t == nil {
 		return nil
 	}
@@ -246,18 +246,18 @@ func FromHistoryService_CloseShard_Args(t *types.HistoryService_CloseShard_Args)
 	}
 }
 
-// ToHistoryService_CloseShard_Args converts thrift HistoryService_CloseShard_Args type to internal
-func ToHistoryService_CloseShard_Args(t *history.HistoryService_CloseShard_Args) *types.HistoryService_CloseShard_Args {
+// ToHistoryServiceCloseShardArgs converts thrift HistoryService_CloseShard_Args type to internal
+func ToHistoryServiceCloseShardArgs(t *history.HistoryService_CloseShard_Args) *types.HistoryServiceCloseShardArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_CloseShard_Args{
+	return &types.HistoryServiceCloseShardArgs{
 		Request: ToCloseShardRequest(t.Request),
 	}
 }
 
-// FromHistoryService_CloseShard_Result converts internal HistoryService_CloseShard_Result type to thrift
-func FromHistoryService_CloseShard_Result(t *types.HistoryService_CloseShard_Result) *history.HistoryService_CloseShard_Result {
+// FromHistoryServiceCloseShardResult converts internal HistoryService_CloseShard_Result type to thrift
+func FromHistoryServiceCloseShardResult(t *types.HistoryServiceCloseShardResult) *history.HistoryService_CloseShard_Result {
 	if t == nil {
 		return nil
 	}
@@ -268,20 +268,20 @@ func FromHistoryService_CloseShard_Result(t *types.HistoryService_CloseShard_Res
 	}
 }
 
-// ToHistoryService_CloseShard_Result converts thrift HistoryService_CloseShard_Result type to internal
-func ToHistoryService_CloseShard_Result(t *history.HistoryService_CloseShard_Result) *types.HistoryService_CloseShard_Result {
+// ToHistoryServiceCloseShardResult converts thrift HistoryService_CloseShard_Result type to internal
+func ToHistoryServiceCloseShardResult(t *history.HistoryService_CloseShard_Result) *types.HistoryServiceCloseShardResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_CloseShard_Result{
+	return &types.HistoryServiceCloseShardResult{
 		BadRequestError:      ToBadRequestError(t.BadRequestError),
 		InternalServiceError: ToInternalServiceError(t.InternalServiceError),
 		AccessDeniedError:    ToAccessDeniedError(t.AccessDeniedError),
 	}
 }
 
-// FromHistoryService_DescribeHistoryHost_Args converts internal HistoryService_DescribeHistoryHost_Args type to thrift
-func FromHistoryService_DescribeHistoryHost_Args(t *types.HistoryService_DescribeHistoryHost_Args) *history.HistoryService_DescribeHistoryHost_Args {
+// FromHistoryServiceDescribeHistoryHostArgs converts internal HistoryService_DescribeHistoryHost_Args type to thrift
+func FromHistoryServiceDescribeHistoryHostArgs(t *types.HistoryServiceDescribeHistoryHostArgs) *history.HistoryService_DescribeHistoryHost_Args {
 	if t == nil {
 		return nil
 	}
@@ -290,18 +290,18 @@ func FromHistoryService_DescribeHistoryHost_Args(t *types.HistoryService_Describ
 	}
 }
 
-// ToHistoryService_DescribeHistoryHost_Args converts thrift HistoryService_DescribeHistoryHost_Args type to internal
-func ToHistoryService_DescribeHistoryHost_Args(t *history.HistoryService_DescribeHistoryHost_Args) *types.HistoryService_DescribeHistoryHost_Args {
+// ToHistoryServiceDescribeHistoryHostArgs converts thrift HistoryService_DescribeHistoryHost_Args type to internal
+func ToHistoryServiceDescribeHistoryHostArgs(t *history.HistoryService_DescribeHistoryHost_Args) *types.HistoryServiceDescribeHistoryHostArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_DescribeHistoryHost_Args{
+	return &types.HistoryServiceDescribeHistoryHostArgs{
 		Request: ToDescribeHistoryHostRequest(t.Request),
 	}
 }
 
-// FromHistoryService_DescribeHistoryHost_Result converts internal HistoryService_DescribeHistoryHost_Result type to thrift
-func FromHistoryService_DescribeHistoryHost_Result(t *types.HistoryService_DescribeHistoryHost_Result) *history.HistoryService_DescribeHistoryHost_Result {
+// FromHistoryServiceDescribeHistoryHostResult converts internal HistoryService_DescribeHistoryHost_Result type to thrift
+func FromHistoryServiceDescribeHistoryHostResult(t *types.HistoryServiceDescribeHistoryHostResult) *history.HistoryService_DescribeHistoryHost_Result {
 	if t == nil {
 		return nil
 	}
@@ -313,12 +313,12 @@ func FromHistoryService_DescribeHistoryHost_Result(t *types.HistoryService_Descr
 	}
 }
 
-// ToHistoryService_DescribeHistoryHost_Result converts thrift HistoryService_DescribeHistoryHost_Result type to internal
-func ToHistoryService_DescribeHistoryHost_Result(t *history.HistoryService_DescribeHistoryHost_Result) *types.HistoryService_DescribeHistoryHost_Result {
+// ToHistoryServiceDescribeHistoryHostResult converts thrift HistoryService_DescribeHistoryHost_Result type to internal
+func ToHistoryServiceDescribeHistoryHostResult(t *history.HistoryService_DescribeHistoryHost_Result) *types.HistoryServiceDescribeHistoryHostResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_DescribeHistoryHost_Result{
+	return &types.HistoryServiceDescribeHistoryHostResult{
 		Success:              ToDescribeHistoryHostResponse(t.Success),
 		BadRequestError:      ToBadRequestError(t.BadRequestError),
 		InternalServiceError: ToInternalServiceError(t.InternalServiceError),
@@ -326,8 +326,8 @@ func ToHistoryService_DescribeHistoryHost_Result(t *history.HistoryService_Descr
 	}
 }
 
-// FromHistoryService_DescribeMutableState_Args converts internal HistoryService_DescribeMutableState_Args type to thrift
-func FromHistoryService_DescribeMutableState_Args(t *types.HistoryService_DescribeMutableState_Args) *history.HistoryService_DescribeMutableState_Args {
+// FromHistoryServiceDescribeMutableStateArgs converts internal HistoryService_DescribeMutableState_Args type to thrift
+func FromHistoryServiceDescribeMutableStateArgs(t *types.HistoryServiceDescribeMutableStateArgs) *history.HistoryService_DescribeMutableState_Args {
 	if t == nil {
 		return nil
 	}
@@ -336,18 +336,18 @@ func FromHistoryService_DescribeMutableState_Args(t *types.HistoryService_Descri
 	}
 }
 
-// ToHistoryService_DescribeMutableState_Args converts thrift HistoryService_DescribeMutableState_Args type to internal
-func ToHistoryService_DescribeMutableState_Args(t *history.HistoryService_DescribeMutableState_Args) *types.HistoryService_DescribeMutableState_Args {
+// ToHistoryServiceDescribeMutableStateArgs converts thrift HistoryService_DescribeMutableState_Args type to internal
+func ToHistoryServiceDescribeMutableStateArgs(t *history.HistoryService_DescribeMutableState_Args) *types.HistoryServiceDescribeMutableStateArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_DescribeMutableState_Args{
+	return &types.HistoryServiceDescribeMutableStateArgs{
 		Request: ToDescribeMutableStateRequest(t.Request),
 	}
 }
 
-// FromHistoryService_DescribeMutableState_Result converts internal HistoryService_DescribeMutableState_Result type to thrift
-func FromHistoryService_DescribeMutableState_Result(t *types.HistoryService_DescribeMutableState_Result) *history.HistoryService_DescribeMutableState_Result {
+// FromHistoryServiceDescribeMutableStateResult converts internal HistoryService_DescribeMutableState_Result type to thrift
+func FromHistoryServiceDescribeMutableStateResult(t *types.HistoryServiceDescribeMutableStateResult) *history.HistoryService_DescribeMutableState_Result {
 	if t == nil {
 		return nil
 	}
@@ -362,12 +362,12 @@ func FromHistoryService_DescribeMutableState_Result(t *types.HistoryService_Desc
 	}
 }
 
-// ToHistoryService_DescribeMutableState_Result converts thrift HistoryService_DescribeMutableState_Result type to internal
-func ToHistoryService_DescribeMutableState_Result(t *history.HistoryService_DescribeMutableState_Result) *types.HistoryService_DescribeMutableState_Result {
+// ToHistoryServiceDescribeMutableStateResult converts thrift HistoryService_DescribeMutableState_Result type to internal
+func ToHistoryServiceDescribeMutableStateResult(t *history.HistoryService_DescribeMutableState_Result) *types.HistoryServiceDescribeMutableStateResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_DescribeMutableState_Result{
+	return &types.HistoryServiceDescribeMutableStateResult{
 		Success:                 ToDescribeMutableStateResponse(t.Success),
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
@@ -378,8 +378,8 @@ func ToHistoryService_DescribeMutableState_Result(t *history.HistoryService_Desc
 	}
 }
 
-// FromHistoryService_DescribeQueue_Args converts internal HistoryService_DescribeQueue_Args type to thrift
-func FromHistoryService_DescribeQueue_Args(t *types.HistoryService_DescribeQueue_Args) *history.HistoryService_DescribeQueue_Args {
+// FromHistoryServiceDescribeQueueArgs converts internal HistoryService_DescribeQueue_Args type to thrift
+func FromHistoryServiceDescribeQueueArgs(t *types.HistoryServiceDescribeQueueArgs) *history.HistoryService_DescribeQueue_Args {
 	if t == nil {
 		return nil
 	}
@@ -388,18 +388,18 @@ func FromHistoryService_DescribeQueue_Args(t *types.HistoryService_DescribeQueue
 	}
 }
 
-// ToHistoryService_DescribeQueue_Args converts thrift HistoryService_DescribeQueue_Args type to internal
-func ToHistoryService_DescribeQueue_Args(t *history.HistoryService_DescribeQueue_Args) *types.HistoryService_DescribeQueue_Args {
+// ToHistoryServiceDescribeQueueArgs converts thrift HistoryService_DescribeQueue_Args type to internal
+func ToHistoryServiceDescribeQueueArgs(t *history.HistoryService_DescribeQueue_Args) *types.HistoryServiceDescribeQueueArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_DescribeQueue_Args{
+	return &types.HistoryServiceDescribeQueueArgs{
 		Request: ToDescribeQueueRequest(t.Request),
 	}
 }
 
-// FromHistoryService_DescribeQueue_Result converts internal HistoryService_DescribeQueue_Result type to thrift
-func FromHistoryService_DescribeQueue_Result(t *types.HistoryService_DescribeQueue_Result) *history.HistoryService_DescribeQueue_Result {
+// FromHistoryServiceDescribeQueueResult converts internal HistoryService_DescribeQueue_Result type to thrift
+func FromHistoryServiceDescribeQueueResult(t *types.HistoryServiceDescribeQueueResult) *history.HistoryService_DescribeQueue_Result {
 	if t == nil {
 		return nil
 	}
@@ -411,12 +411,12 @@ func FromHistoryService_DescribeQueue_Result(t *types.HistoryService_DescribeQue
 	}
 }
 
-// ToHistoryService_DescribeQueue_Result converts thrift HistoryService_DescribeQueue_Result type to internal
-func ToHistoryService_DescribeQueue_Result(t *history.HistoryService_DescribeQueue_Result) *types.HistoryService_DescribeQueue_Result {
+// ToHistoryServiceDescribeQueueResult converts thrift HistoryService_DescribeQueue_Result type to internal
+func ToHistoryServiceDescribeQueueResult(t *history.HistoryService_DescribeQueue_Result) *types.HistoryServiceDescribeQueueResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_DescribeQueue_Result{
+	return &types.HistoryServiceDescribeQueueResult{
 		Success:              ToDescribeQueueResponse(t.Success),
 		BadRequestError:      ToBadRequestError(t.BadRequestError),
 		InternalServiceError: ToInternalServiceError(t.InternalServiceError),
@@ -424,8 +424,8 @@ func ToHistoryService_DescribeQueue_Result(t *history.HistoryService_DescribeQue
 	}
 }
 
-// FromHistoryService_DescribeWorkflowExecution_Args converts internal HistoryService_DescribeWorkflowExecution_Args type to thrift
-func FromHistoryService_DescribeWorkflowExecution_Args(t *types.HistoryService_DescribeWorkflowExecution_Args) *history.HistoryService_DescribeWorkflowExecution_Args {
+// FromHistoryServiceDescribeWorkflowExecutionArgs converts internal HistoryService_DescribeWorkflowExecution_Args type to thrift
+func FromHistoryServiceDescribeWorkflowExecutionArgs(t *types.HistoryServiceDescribeWorkflowExecutionArgs) *history.HistoryService_DescribeWorkflowExecution_Args {
 	if t == nil {
 		return nil
 	}
@@ -434,18 +434,18 @@ func FromHistoryService_DescribeWorkflowExecution_Args(t *types.HistoryService_D
 	}
 }
 
-// ToHistoryService_DescribeWorkflowExecution_Args converts thrift HistoryService_DescribeWorkflowExecution_Args type to internal
-func ToHistoryService_DescribeWorkflowExecution_Args(t *history.HistoryService_DescribeWorkflowExecution_Args) *types.HistoryService_DescribeWorkflowExecution_Args {
+// ToHistoryServiceDescribeWorkflowExecutionArgs converts thrift HistoryService_DescribeWorkflowExecution_Args type to internal
+func ToHistoryServiceDescribeWorkflowExecutionArgs(t *history.HistoryService_DescribeWorkflowExecution_Args) *types.HistoryServiceDescribeWorkflowExecutionArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_DescribeWorkflowExecution_Args{
+	return &types.HistoryServiceDescribeWorkflowExecutionArgs{
 		DescribeRequest: ToHistoryDescribeWorkflowExecutionRequest(t.DescribeRequest),
 	}
 }
 
-// FromHistoryService_DescribeWorkflowExecution_Result converts internal HistoryService_DescribeWorkflowExecution_Result type to thrift
-func FromHistoryService_DescribeWorkflowExecution_Result(t *types.HistoryService_DescribeWorkflowExecution_Result) *history.HistoryService_DescribeWorkflowExecution_Result {
+// FromHistoryServiceDescribeWorkflowExecutionResult converts internal HistoryService_DescribeWorkflowExecution_Result type to thrift
+func FromHistoryServiceDescribeWorkflowExecutionResult(t *types.HistoryServiceDescribeWorkflowExecutionResult) *history.HistoryService_DescribeWorkflowExecution_Result {
 	if t == nil {
 		return nil
 	}
@@ -460,12 +460,12 @@ func FromHistoryService_DescribeWorkflowExecution_Result(t *types.HistoryService
 	}
 }
 
-// ToHistoryService_DescribeWorkflowExecution_Result converts thrift HistoryService_DescribeWorkflowExecution_Result type to internal
-func ToHistoryService_DescribeWorkflowExecution_Result(t *history.HistoryService_DescribeWorkflowExecution_Result) *types.HistoryService_DescribeWorkflowExecution_Result {
+// ToHistoryServiceDescribeWorkflowExecutionResult converts thrift HistoryService_DescribeWorkflowExecution_Result type to internal
+func ToHistoryServiceDescribeWorkflowExecutionResult(t *history.HistoryService_DescribeWorkflowExecution_Result) *types.HistoryServiceDescribeWorkflowExecutionResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_DescribeWorkflowExecution_Result{
+	return &types.HistoryServiceDescribeWorkflowExecutionResult{
 		Success:                 ToDescribeWorkflowExecutionResponse(t.Success),
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
@@ -476,8 +476,8 @@ func ToHistoryService_DescribeWorkflowExecution_Result(t *history.HistoryService
 	}
 }
 
-// FromHistoryService_GetDLQReplicationMessages_Args converts internal HistoryService_GetDLQReplicationMessages_Args type to thrift
-func FromHistoryService_GetDLQReplicationMessages_Args(t *types.HistoryService_GetDLQReplicationMessages_Args) *history.HistoryService_GetDLQReplicationMessages_Args {
+// FromHistoryServiceGetDLQReplicationMessagesArgs converts internal HistoryService_GetDLQReplicationMessages_Args type to thrift
+func FromHistoryServiceGetDLQReplicationMessagesArgs(t *types.HistoryServiceGetDLQReplicationMessagesArgs) *history.HistoryService_GetDLQReplicationMessages_Args {
 	if t == nil {
 		return nil
 	}
@@ -486,18 +486,18 @@ func FromHistoryService_GetDLQReplicationMessages_Args(t *types.HistoryService_G
 	}
 }
 
-// ToHistoryService_GetDLQReplicationMessages_Args converts thrift HistoryService_GetDLQReplicationMessages_Args type to internal
-func ToHistoryService_GetDLQReplicationMessages_Args(t *history.HistoryService_GetDLQReplicationMessages_Args) *types.HistoryService_GetDLQReplicationMessages_Args {
+// ToHistoryServiceGetDLQReplicationMessagesArgs converts thrift HistoryService_GetDLQReplicationMessages_Args type to internal
+func ToHistoryServiceGetDLQReplicationMessagesArgs(t *history.HistoryService_GetDLQReplicationMessages_Args) *types.HistoryServiceGetDLQReplicationMessagesArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_GetDLQReplicationMessages_Args{
+	return &types.HistoryServiceGetDLQReplicationMessagesArgs{
 		Request: ToGetDLQReplicationMessagesRequest(t.Request),
 	}
 }
 
-// FromHistoryService_GetDLQReplicationMessages_Result converts internal HistoryService_GetDLQReplicationMessages_Result type to thrift
-func FromHistoryService_GetDLQReplicationMessages_Result(t *types.HistoryService_GetDLQReplicationMessages_Result) *history.HistoryService_GetDLQReplicationMessages_Result {
+// FromHistoryServiceGetDLQReplicationMessagesResult converts internal HistoryService_GetDLQReplicationMessages_Result type to thrift
+func FromHistoryServiceGetDLQReplicationMessagesResult(t *types.HistoryServiceGetDLQReplicationMessagesResult) *history.HistoryService_GetDLQReplicationMessages_Result {
 	if t == nil {
 		return nil
 	}
@@ -510,12 +510,12 @@ func FromHistoryService_GetDLQReplicationMessages_Result(t *types.HistoryService
 	}
 }
 
-// ToHistoryService_GetDLQReplicationMessages_Result converts thrift HistoryService_GetDLQReplicationMessages_Result type to internal
-func ToHistoryService_GetDLQReplicationMessages_Result(t *history.HistoryService_GetDLQReplicationMessages_Result) *types.HistoryService_GetDLQReplicationMessages_Result {
+// ToHistoryServiceGetDLQReplicationMessagesResult converts thrift HistoryService_GetDLQReplicationMessages_Result type to internal
+func ToHistoryServiceGetDLQReplicationMessagesResult(t *history.HistoryService_GetDLQReplicationMessages_Result) *types.HistoryServiceGetDLQReplicationMessagesResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_GetDLQReplicationMessages_Result{
+	return &types.HistoryServiceGetDLQReplicationMessagesResult{
 		Success:              ToGetDLQReplicationMessagesResponse(t.Success),
 		BadRequestError:      ToBadRequestError(t.BadRequestError),
 		InternalServiceError: ToInternalServiceError(t.InternalServiceError),
@@ -524,8 +524,8 @@ func ToHistoryService_GetDLQReplicationMessages_Result(t *history.HistoryService
 	}
 }
 
-// FromHistoryService_GetMutableState_Args converts internal HistoryService_GetMutableState_Args type to thrift
-func FromHistoryService_GetMutableState_Args(t *types.HistoryService_GetMutableState_Args) *history.HistoryService_GetMutableState_Args {
+// FromHistoryServiceGetMutableStateArgs converts internal HistoryService_GetMutableState_Args type to thrift
+func FromHistoryServiceGetMutableStateArgs(t *types.HistoryServiceGetMutableStateArgs) *history.HistoryService_GetMutableState_Args {
 	if t == nil {
 		return nil
 	}
@@ -534,18 +534,18 @@ func FromHistoryService_GetMutableState_Args(t *types.HistoryService_GetMutableS
 	}
 }
 
-// ToHistoryService_GetMutableState_Args converts thrift HistoryService_GetMutableState_Args type to internal
-func ToHistoryService_GetMutableState_Args(t *history.HistoryService_GetMutableState_Args) *types.HistoryService_GetMutableState_Args {
+// ToHistoryServiceGetMutableStateArgs converts thrift HistoryService_GetMutableState_Args type to internal
+func ToHistoryServiceGetMutableStateArgs(t *history.HistoryService_GetMutableState_Args) *types.HistoryServiceGetMutableStateArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_GetMutableState_Args{
+	return &types.HistoryServiceGetMutableStateArgs{
 		GetRequest: ToGetMutableStateRequest(t.GetRequest),
 	}
 }
 
-// FromHistoryService_GetMutableState_Result converts internal HistoryService_GetMutableState_Result type to thrift
-func FromHistoryService_GetMutableState_Result(t *types.HistoryService_GetMutableState_Result) *history.HistoryService_GetMutableState_Result {
+// FromHistoryServiceGetMutableStateResult converts internal HistoryService_GetMutableState_Result type to thrift
+func FromHistoryServiceGetMutableStateResult(t *types.HistoryServiceGetMutableStateResult) *history.HistoryService_GetMutableState_Result {
 	if t == nil {
 		return nil
 	}
@@ -561,12 +561,12 @@ func FromHistoryService_GetMutableState_Result(t *types.HistoryService_GetMutabl
 	}
 }
 
-// ToHistoryService_GetMutableState_Result converts thrift HistoryService_GetMutableState_Result type to internal
-func ToHistoryService_GetMutableState_Result(t *history.HistoryService_GetMutableState_Result) *types.HistoryService_GetMutableState_Result {
+// ToHistoryServiceGetMutableStateResult converts thrift HistoryService_GetMutableState_Result type to internal
+func ToHistoryServiceGetMutableStateResult(t *history.HistoryService_GetMutableState_Result) *types.HistoryServiceGetMutableStateResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_GetMutableState_Result{
+	return &types.HistoryServiceGetMutableStateResult{
 		Success:                   ToGetMutableStateResponse(t.Success),
 		BadRequestError:           ToBadRequestError(t.BadRequestError),
 		InternalServiceError:      ToInternalServiceError(t.InternalServiceError),
@@ -578,8 +578,8 @@ func ToHistoryService_GetMutableState_Result(t *history.HistoryService_GetMutabl
 	}
 }
 
-// FromHistoryService_GetReplicationMessages_Args converts internal HistoryService_GetReplicationMessages_Args type to thrift
-func FromHistoryService_GetReplicationMessages_Args(t *types.HistoryService_GetReplicationMessages_Args) *history.HistoryService_GetReplicationMessages_Args {
+// FromHistoryServiceGetReplicationMessagesArgs converts internal HistoryService_GetReplicationMessages_Args type to thrift
+func FromHistoryServiceGetReplicationMessagesArgs(t *types.HistoryServiceGetReplicationMessagesArgs) *history.HistoryService_GetReplicationMessages_Args {
 	if t == nil {
 		return nil
 	}
@@ -588,18 +588,18 @@ func FromHistoryService_GetReplicationMessages_Args(t *types.HistoryService_GetR
 	}
 }
 
-// ToHistoryService_GetReplicationMessages_Args converts thrift HistoryService_GetReplicationMessages_Args type to internal
-func ToHistoryService_GetReplicationMessages_Args(t *history.HistoryService_GetReplicationMessages_Args) *types.HistoryService_GetReplicationMessages_Args {
+// ToHistoryServiceGetReplicationMessagesArgs converts thrift HistoryService_GetReplicationMessages_Args type to internal
+func ToHistoryServiceGetReplicationMessagesArgs(t *history.HistoryService_GetReplicationMessages_Args) *types.HistoryServiceGetReplicationMessagesArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_GetReplicationMessages_Args{
+	return &types.HistoryServiceGetReplicationMessagesArgs{
 		Request: ToGetReplicationMessagesRequest(t.Request),
 	}
 }
 
-// FromHistoryService_GetReplicationMessages_Result converts internal HistoryService_GetReplicationMessages_Result type to thrift
-func FromHistoryService_GetReplicationMessages_Result(t *types.HistoryService_GetReplicationMessages_Result) *history.HistoryService_GetReplicationMessages_Result {
+// FromHistoryServiceGetReplicationMessagesResult converts internal HistoryService_GetReplicationMessages_Result type to thrift
+func FromHistoryServiceGetReplicationMessagesResult(t *types.HistoryServiceGetReplicationMessagesResult) *history.HistoryService_GetReplicationMessages_Result {
 	if t == nil {
 		return nil
 	}
@@ -613,12 +613,12 @@ func FromHistoryService_GetReplicationMessages_Result(t *types.HistoryService_Ge
 	}
 }
 
-// ToHistoryService_GetReplicationMessages_Result converts thrift HistoryService_GetReplicationMessages_Result type to internal
-func ToHistoryService_GetReplicationMessages_Result(t *history.HistoryService_GetReplicationMessages_Result) *types.HistoryService_GetReplicationMessages_Result {
+// ToHistoryServiceGetReplicationMessagesResult converts thrift HistoryService_GetReplicationMessages_Result type to internal
+func ToHistoryServiceGetReplicationMessagesResult(t *history.HistoryService_GetReplicationMessages_Result) *types.HistoryServiceGetReplicationMessagesResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_GetReplicationMessages_Result{
+	return &types.HistoryServiceGetReplicationMessagesResult{
 		Success:                        ToGetReplicationMessagesResponse(t.Success),
 		BadRequestError:                ToBadRequestError(t.BadRequestError),
 		InternalServiceError:           ToInternalServiceError(t.InternalServiceError),
@@ -628,8 +628,8 @@ func ToHistoryService_GetReplicationMessages_Result(t *history.HistoryService_Ge
 	}
 }
 
-// FromHistoryService_MergeDLQMessages_Args converts internal HistoryService_MergeDLQMessages_Args type to thrift
-func FromHistoryService_MergeDLQMessages_Args(t *types.HistoryService_MergeDLQMessages_Args) *history.HistoryService_MergeDLQMessages_Args {
+// FromHistoryServiceMergeDLQMessagesArgs converts internal HistoryService_MergeDLQMessages_Args type to thrift
+func FromHistoryServiceMergeDLQMessagesArgs(t *types.HistoryServiceMergeDLQMessagesArgs) *history.HistoryService_MergeDLQMessages_Args {
 	if t == nil {
 		return nil
 	}
@@ -638,18 +638,18 @@ func FromHistoryService_MergeDLQMessages_Args(t *types.HistoryService_MergeDLQMe
 	}
 }
 
-// ToHistoryService_MergeDLQMessages_Args converts thrift HistoryService_MergeDLQMessages_Args type to internal
-func ToHistoryService_MergeDLQMessages_Args(t *history.HistoryService_MergeDLQMessages_Args) *types.HistoryService_MergeDLQMessages_Args {
+// ToHistoryServiceMergeDLQMessagesArgs converts thrift HistoryService_MergeDLQMessages_Args type to internal
+func ToHistoryServiceMergeDLQMessagesArgs(t *history.HistoryService_MergeDLQMessages_Args) *types.HistoryServiceMergeDLQMessagesArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_MergeDLQMessages_Args{
+	return &types.HistoryServiceMergeDLQMessagesArgs{
 		Request: ToMergeDLQMessagesRequest(t.Request),
 	}
 }
 
-// FromHistoryService_MergeDLQMessages_Result converts internal HistoryService_MergeDLQMessages_Result type to thrift
-func FromHistoryService_MergeDLQMessages_Result(t *types.HistoryService_MergeDLQMessages_Result) *history.HistoryService_MergeDLQMessages_Result {
+// FromHistoryServiceMergeDLQMessagesResult converts internal HistoryService_MergeDLQMessages_Result type to thrift
+func FromHistoryServiceMergeDLQMessagesResult(t *types.HistoryServiceMergeDLQMessagesResult) *history.HistoryService_MergeDLQMessages_Result {
 	if t == nil {
 		return nil
 	}
@@ -663,12 +663,12 @@ func FromHistoryService_MergeDLQMessages_Result(t *types.HistoryService_MergeDLQ
 	}
 }
 
-// ToHistoryService_MergeDLQMessages_Result converts thrift HistoryService_MergeDLQMessages_Result type to internal
-func ToHistoryService_MergeDLQMessages_Result(t *history.HistoryService_MergeDLQMessages_Result) *types.HistoryService_MergeDLQMessages_Result {
+// ToHistoryServiceMergeDLQMessagesResult converts thrift HistoryService_MergeDLQMessages_Result type to internal
+func ToHistoryServiceMergeDLQMessagesResult(t *history.HistoryService_MergeDLQMessages_Result) *types.HistoryServiceMergeDLQMessagesResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_MergeDLQMessages_Result{
+	return &types.HistoryServiceMergeDLQMessagesResult{
 		Success:                 ToMergeDLQMessagesResponse(t.Success),
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
@@ -678,8 +678,8 @@ func ToHistoryService_MergeDLQMessages_Result(t *history.HistoryService_MergeDLQ
 	}
 }
 
-// FromHistoryService_NotifyFailoverMarkers_Args converts internal HistoryService_NotifyFailoverMarkers_Args type to thrift
-func FromHistoryService_NotifyFailoverMarkers_Args(t *types.HistoryService_NotifyFailoverMarkers_Args) *history.HistoryService_NotifyFailoverMarkers_Args {
+// FromHistoryServiceNotifyFailoverMarkersArgs converts internal HistoryService_NotifyFailoverMarkers_Args type to thrift
+func FromHistoryServiceNotifyFailoverMarkersArgs(t *types.HistoryServiceNotifyFailoverMarkersArgs) *history.HistoryService_NotifyFailoverMarkers_Args {
 	if t == nil {
 		return nil
 	}
@@ -688,18 +688,18 @@ func FromHistoryService_NotifyFailoverMarkers_Args(t *types.HistoryService_Notif
 	}
 }
 
-// ToHistoryService_NotifyFailoverMarkers_Args converts thrift HistoryService_NotifyFailoverMarkers_Args type to internal
-func ToHistoryService_NotifyFailoverMarkers_Args(t *history.HistoryService_NotifyFailoverMarkers_Args) *types.HistoryService_NotifyFailoverMarkers_Args {
+// ToHistoryServiceNotifyFailoverMarkersArgs converts thrift HistoryService_NotifyFailoverMarkers_Args type to internal
+func ToHistoryServiceNotifyFailoverMarkersArgs(t *history.HistoryService_NotifyFailoverMarkers_Args) *types.HistoryServiceNotifyFailoverMarkersArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_NotifyFailoverMarkers_Args{
+	return &types.HistoryServiceNotifyFailoverMarkersArgs{
 		Request: ToNotifyFailoverMarkersRequest(t.Request),
 	}
 }
 
-// FromHistoryService_NotifyFailoverMarkers_Result converts internal HistoryService_NotifyFailoverMarkers_Result type to thrift
-func FromHistoryService_NotifyFailoverMarkers_Result(t *types.HistoryService_NotifyFailoverMarkers_Result) *history.HistoryService_NotifyFailoverMarkers_Result {
+// FromHistoryServiceNotifyFailoverMarkersResult converts internal HistoryService_NotifyFailoverMarkers_Result type to thrift
+func FromHistoryServiceNotifyFailoverMarkersResult(t *types.HistoryServiceNotifyFailoverMarkersResult) *history.HistoryService_NotifyFailoverMarkers_Result {
 	if t == nil {
 		return nil
 	}
@@ -710,20 +710,20 @@ func FromHistoryService_NotifyFailoverMarkers_Result(t *types.HistoryService_Not
 	}
 }
 
-// ToHistoryService_NotifyFailoverMarkers_Result converts thrift HistoryService_NotifyFailoverMarkers_Result type to internal
-func ToHistoryService_NotifyFailoverMarkers_Result(t *history.HistoryService_NotifyFailoverMarkers_Result) *types.HistoryService_NotifyFailoverMarkers_Result {
+// ToHistoryServiceNotifyFailoverMarkersResult converts thrift HistoryService_NotifyFailoverMarkers_Result type to internal
+func ToHistoryServiceNotifyFailoverMarkersResult(t *history.HistoryService_NotifyFailoverMarkers_Result) *types.HistoryServiceNotifyFailoverMarkersResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_NotifyFailoverMarkers_Result{
+	return &types.HistoryServiceNotifyFailoverMarkersResult{
 		BadRequestError:      ToBadRequestError(t.BadRequestError),
 		InternalServiceError: ToInternalServiceError(t.InternalServiceError),
 		ServiceBusyError:     ToServiceBusyError(t.ServiceBusyError),
 	}
 }
 
-// FromHistoryService_PollMutableState_Args converts internal HistoryService_PollMutableState_Args type to thrift
-func FromHistoryService_PollMutableState_Args(t *types.HistoryService_PollMutableState_Args) *history.HistoryService_PollMutableState_Args {
+// FromHistoryServicePollMutableStateArgs converts internal HistoryService_PollMutableState_Args type to thrift
+func FromHistoryServicePollMutableStateArgs(t *types.HistoryServicePollMutableStateArgs) *history.HistoryService_PollMutableState_Args {
 	if t == nil {
 		return nil
 	}
@@ -732,18 +732,18 @@ func FromHistoryService_PollMutableState_Args(t *types.HistoryService_PollMutabl
 	}
 }
 
-// ToHistoryService_PollMutableState_Args converts thrift HistoryService_PollMutableState_Args type to internal
-func ToHistoryService_PollMutableState_Args(t *history.HistoryService_PollMutableState_Args) *types.HistoryService_PollMutableState_Args {
+// ToHistoryServicePollMutableStateArgs converts thrift HistoryService_PollMutableState_Args type to internal
+func ToHistoryServicePollMutableStateArgs(t *history.HistoryService_PollMutableState_Args) *types.HistoryServicePollMutableStateArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_PollMutableState_Args{
+	return &types.HistoryServicePollMutableStateArgs{
 		PollRequest: ToPollMutableStateRequest(t.PollRequest),
 	}
 }
 
-// FromHistoryService_PollMutableState_Result converts internal HistoryService_PollMutableState_Result type to thrift
-func FromHistoryService_PollMutableState_Result(t *types.HistoryService_PollMutableState_Result) *history.HistoryService_PollMutableState_Result {
+// FromHistoryServicePollMutableStateResult converts internal HistoryService_PollMutableState_Result type to thrift
+func FromHistoryServicePollMutableStateResult(t *types.HistoryServicePollMutableStateResult) *history.HistoryService_PollMutableState_Result {
 	if t == nil {
 		return nil
 	}
@@ -759,12 +759,12 @@ func FromHistoryService_PollMutableState_Result(t *types.HistoryService_PollMuta
 	}
 }
 
-// ToHistoryService_PollMutableState_Result converts thrift HistoryService_PollMutableState_Result type to internal
-func ToHistoryService_PollMutableState_Result(t *history.HistoryService_PollMutableState_Result) *types.HistoryService_PollMutableState_Result {
+// ToHistoryServicePollMutableStateResult converts thrift HistoryService_PollMutableState_Result type to internal
+func ToHistoryServicePollMutableStateResult(t *history.HistoryService_PollMutableState_Result) *types.HistoryServicePollMutableStateResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_PollMutableState_Result{
+	return &types.HistoryServicePollMutableStateResult{
 		Success:                   ToPollMutableStateResponse(t.Success),
 		BadRequestError:           ToBadRequestError(t.BadRequestError),
 		InternalServiceError:      ToInternalServiceError(t.InternalServiceError),
@@ -776,8 +776,8 @@ func ToHistoryService_PollMutableState_Result(t *history.HistoryService_PollMuta
 	}
 }
 
-// FromHistoryService_PurgeDLQMessages_Args converts internal HistoryService_PurgeDLQMessages_Args type to thrift
-func FromHistoryService_PurgeDLQMessages_Args(t *types.HistoryService_PurgeDLQMessages_Args) *history.HistoryService_PurgeDLQMessages_Args {
+// FromHistoryServicePurgeDLQMessagesArgs converts internal HistoryService_PurgeDLQMessages_Args type to thrift
+func FromHistoryServicePurgeDLQMessagesArgs(t *types.HistoryServicePurgeDLQMessagesArgs) *history.HistoryService_PurgeDLQMessages_Args {
 	if t == nil {
 		return nil
 	}
@@ -786,18 +786,18 @@ func FromHistoryService_PurgeDLQMessages_Args(t *types.HistoryService_PurgeDLQMe
 	}
 }
 
-// ToHistoryService_PurgeDLQMessages_Args converts thrift HistoryService_PurgeDLQMessages_Args type to internal
-func ToHistoryService_PurgeDLQMessages_Args(t *history.HistoryService_PurgeDLQMessages_Args) *types.HistoryService_PurgeDLQMessages_Args {
+// ToHistoryServicePurgeDLQMessagesArgs converts thrift HistoryService_PurgeDLQMessages_Args type to internal
+func ToHistoryServicePurgeDLQMessagesArgs(t *history.HistoryService_PurgeDLQMessages_Args) *types.HistoryServicePurgeDLQMessagesArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_PurgeDLQMessages_Args{
+	return &types.HistoryServicePurgeDLQMessagesArgs{
 		Request: ToPurgeDLQMessagesRequest(t.Request),
 	}
 }
 
-// FromHistoryService_PurgeDLQMessages_Result converts internal HistoryService_PurgeDLQMessages_Result type to thrift
-func FromHistoryService_PurgeDLQMessages_Result(t *types.HistoryService_PurgeDLQMessages_Result) *history.HistoryService_PurgeDLQMessages_Result {
+// FromHistoryServicePurgeDLQMessagesResult converts internal HistoryService_PurgeDLQMessages_Result type to thrift
+func FromHistoryServicePurgeDLQMessagesResult(t *types.HistoryServicePurgeDLQMessagesResult) *history.HistoryService_PurgeDLQMessages_Result {
 	if t == nil {
 		return nil
 	}
@@ -810,12 +810,12 @@ func FromHistoryService_PurgeDLQMessages_Result(t *types.HistoryService_PurgeDLQ
 	}
 }
 
-// ToHistoryService_PurgeDLQMessages_Result converts thrift HistoryService_PurgeDLQMessages_Result type to internal
-func ToHistoryService_PurgeDLQMessages_Result(t *history.HistoryService_PurgeDLQMessages_Result) *types.HistoryService_PurgeDLQMessages_Result {
+// ToHistoryServicePurgeDLQMessagesResult converts thrift HistoryService_PurgeDLQMessages_Result type to internal
+func ToHistoryServicePurgeDLQMessagesResult(t *history.HistoryService_PurgeDLQMessages_Result) *types.HistoryServicePurgeDLQMessagesResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_PurgeDLQMessages_Result{
+	return &types.HistoryServicePurgeDLQMessagesResult{
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
 		ServiceBusyError:        ToServiceBusyError(t.ServiceBusyError),
@@ -824,8 +824,8 @@ func ToHistoryService_PurgeDLQMessages_Result(t *history.HistoryService_PurgeDLQ
 	}
 }
 
-// FromHistoryService_QueryWorkflow_Args converts internal HistoryService_QueryWorkflow_Args type to thrift
-func FromHistoryService_QueryWorkflow_Args(t *types.HistoryService_QueryWorkflow_Args) *history.HistoryService_QueryWorkflow_Args {
+// FromHistoryServiceQueryWorkflowArgs converts internal HistoryService_QueryWorkflow_Args type to thrift
+func FromHistoryServiceQueryWorkflowArgs(t *types.HistoryServiceQueryWorkflowArgs) *history.HistoryService_QueryWorkflow_Args {
 	if t == nil {
 		return nil
 	}
@@ -834,18 +834,18 @@ func FromHistoryService_QueryWorkflow_Args(t *types.HistoryService_QueryWorkflow
 	}
 }
 
-// ToHistoryService_QueryWorkflow_Args converts thrift HistoryService_QueryWorkflow_Args type to internal
-func ToHistoryService_QueryWorkflow_Args(t *history.HistoryService_QueryWorkflow_Args) *types.HistoryService_QueryWorkflow_Args {
+// ToHistoryServiceQueryWorkflowArgs converts thrift HistoryService_QueryWorkflow_Args type to internal
+func ToHistoryServiceQueryWorkflowArgs(t *history.HistoryService_QueryWorkflow_Args) *types.HistoryServiceQueryWorkflowArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_QueryWorkflow_Args{
+	return &types.HistoryServiceQueryWorkflowArgs{
 		QueryRequest: ToHistoryQueryWorkflowRequest(t.QueryRequest),
 	}
 }
 
-// FromHistoryService_QueryWorkflow_Result converts internal HistoryService_QueryWorkflow_Result type to thrift
-func FromHistoryService_QueryWorkflow_Result(t *types.HistoryService_QueryWorkflow_Result) *history.HistoryService_QueryWorkflow_Result {
+// FromHistoryServiceQueryWorkflowResult converts internal HistoryService_QueryWorkflow_Result type to thrift
+func FromHistoryServiceQueryWorkflowResult(t *types.HistoryServiceQueryWorkflowResult) *history.HistoryService_QueryWorkflow_Result {
 	if t == nil {
 		return nil
 	}
@@ -861,12 +861,12 @@ func FromHistoryService_QueryWorkflow_Result(t *types.HistoryService_QueryWorkfl
 	}
 }
 
-// ToHistoryService_QueryWorkflow_Result converts thrift HistoryService_QueryWorkflow_Result type to internal
-func ToHistoryService_QueryWorkflow_Result(t *history.HistoryService_QueryWorkflow_Result) *types.HistoryService_QueryWorkflow_Result {
+// ToHistoryServiceQueryWorkflowResult converts thrift HistoryService_QueryWorkflow_Result type to internal
+func ToHistoryServiceQueryWorkflowResult(t *history.HistoryService_QueryWorkflow_Result) *types.HistoryServiceQueryWorkflowResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_QueryWorkflow_Result{
+	return &types.HistoryServiceQueryWorkflowResult{
 		Success:                        ToHistoryQueryWorkflowResponse(t.Success),
 		BadRequestError:                ToBadRequestError(t.BadRequestError),
 		InternalServiceError:           ToInternalServiceError(t.InternalServiceError),
@@ -878,8 +878,8 @@ func ToHistoryService_QueryWorkflow_Result(t *history.HistoryService_QueryWorkfl
 	}
 }
 
-// FromHistoryService_ReadDLQMessages_Args converts internal HistoryService_ReadDLQMessages_Args type to thrift
-func FromHistoryService_ReadDLQMessages_Args(t *types.HistoryService_ReadDLQMessages_Args) *history.HistoryService_ReadDLQMessages_Args {
+// FromHistoryServiceReadDLQMessagesArgs converts internal HistoryService_ReadDLQMessages_Args type to thrift
+func FromHistoryServiceReadDLQMessagesArgs(t *types.HistoryServiceReadDLQMessagesArgs) *history.HistoryService_ReadDLQMessages_Args {
 	if t == nil {
 		return nil
 	}
@@ -888,18 +888,18 @@ func FromHistoryService_ReadDLQMessages_Args(t *types.HistoryService_ReadDLQMess
 	}
 }
 
-// ToHistoryService_ReadDLQMessages_Args converts thrift HistoryService_ReadDLQMessages_Args type to internal
-func ToHistoryService_ReadDLQMessages_Args(t *history.HistoryService_ReadDLQMessages_Args) *types.HistoryService_ReadDLQMessages_Args {
+// ToHistoryServiceReadDLQMessagesArgs converts thrift HistoryService_ReadDLQMessages_Args type to internal
+func ToHistoryServiceReadDLQMessagesArgs(t *history.HistoryService_ReadDLQMessages_Args) *types.HistoryServiceReadDLQMessagesArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_ReadDLQMessages_Args{
+	return &types.HistoryServiceReadDLQMessagesArgs{
 		Request: ToReadDLQMessagesRequest(t.Request),
 	}
 }
 
-// FromHistoryService_ReadDLQMessages_Result converts internal HistoryService_ReadDLQMessages_Result type to thrift
-func FromHistoryService_ReadDLQMessages_Result(t *types.HistoryService_ReadDLQMessages_Result) *history.HistoryService_ReadDLQMessages_Result {
+// FromHistoryServiceReadDLQMessagesResult converts internal HistoryService_ReadDLQMessages_Result type to thrift
+func FromHistoryServiceReadDLQMessagesResult(t *types.HistoryServiceReadDLQMessagesResult) *history.HistoryService_ReadDLQMessages_Result {
 	if t == nil {
 		return nil
 	}
@@ -913,12 +913,12 @@ func FromHistoryService_ReadDLQMessages_Result(t *types.HistoryService_ReadDLQMe
 	}
 }
 
-// ToHistoryService_ReadDLQMessages_Result converts thrift HistoryService_ReadDLQMessages_Result type to internal
-func ToHistoryService_ReadDLQMessages_Result(t *history.HistoryService_ReadDLQMessages_Result) *types.HistoryService_ReadDLQMessages_Result {
+// ToHistoryServiceReadDLQMessagesResult converts thrift HistoryService_ReadDLQMessages_Result type to internal
+func ToHistoryServiceReadDLQMessagesResult(t *history.HistoryService_ReadDLQMessages_Result) *types.HistoryServiceReadDLQMessagesResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_ReadDLQMessages_Result{
+	return &types.HistoryServiceReadDLQMessagesResult{
 		Success:                 ToReadDLQMessagesResponse(t.Success),
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
@@ -928,8 +928,8 @@ func ToHistoryService_ReadDLQMessages_Result(t *history.HistoryService_ReadDLQMe
 	}
 }
 
-// FromHistoryService_ReapplyEvents_Args converts internal HistoryService_ReapplyEvents_Args type to thrift
-func FromHistoryService_ReapplyEvents_Args(t *types.HistoryService_ReapplyEvents_Args) *history.HistoryService_ReapplyEvents_Args {
+// FromHistoryServiceReapplyEventsArgs converts internal HistoryService_ReapplyEvents_Args type to thrift
+func FromHistoryServiceReapplyEventsArgs(t *types.HistoryServiceReapplyEventsArgs) *history.HistoryService_ReapplyEvents_Args {
 	if t == nil {
 		return nil
 	}
@@ -938,18 +938,18 @@ func FromHistoryService_ReapplyEvents_Args(t *types.HistoryService_ReapplyEvents
 	}
 }
 
-// ToHistoryService_ReapplyEvents_Args converts thrift HistoryService_ReapplyEvents_Args type to internal
-func ToHistoryService_ReapplyEvents_Args(t *history.HistoryService_ReapplyEvents_Args) *types.HistoryService_ReapplyEvents_Args {
+// ToHistoryServiceReapplyEventsArgs converts thrift HistoryService_ReapplyEvents_Args type to internal
+func ToHistoryServiceReapplyEventsArgs(t *history.HistoryService_ReapplyEvents_Args) *types.HistoryServiceReapplyEventsArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_ReapplyEvents_Args{
+	return &types.HistoryServiceReapplyEventsArgs{
 		ReapplyEventsRequest: ToHistoryReapplyEventsRequest(t.ReapplyEventsRequest),
 	}
 }
 
-// FromHistoryService_ReapplyEvents_Result converts internal HistoryService_ReapplyEvents_Result type to thrift
-func FromHistoryService_ReapplyEvents_Result(t *types.HistoryService_ReapplyEvents_Result) *history.HistoryService_ReapplyEvents_Result {
+// FromHistoryServiceReapplyEventsResult converts internal HistoryService_ReapplyEvents_Result type to thrift
+func FromHistoryServiceReapplyEventsResult(t *types.HistoryServiceReapplyEventsResult) *history.HistoryService_ReapplyEvents_Result {
 	if t == nil {
 		return nil
 	}
@@ -964,12 +964,12 @@ func FromHistoryService_ReapplyEvents_Result(t *types.HistoryService_ReapplyEven
 	}
 }
 
-// ToHistoryService_ReapplyEvents_Result converts thrift HistoryService_ReapplyEvents_Result type to internal
-func ToHistoryService_ReapplyEvents_Result(t *history.HistoryService_ReapplyEvents_Result) *types.HistoryService_ReapplyEvents_Result {
+// ToHistoryServiceReapplyEventsResult converts thrift HistoryService_ReapplyEvents_Result type to internal
+func ToHistoryServiceReapplyEventsResult(t *history.HistoryService_ReapplyEvents_Result) *types.HistoryServiceReapplyEventsResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_ReapplyEvents_Result{
+	return &types.HistoryServiceReapplyEventsResult{
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
 		DomainNotActiveError:    ToDomainNotActiveError(t.DomainNotActiveError),
@@ -980,8 +980,8 @@ func ToHistoryService_ReapplyEvents_Result(t *history.HistoryService_ReapplyEven
 	}
 }
 
-// FromHistoryService_RecordActivityTaskHeartbeat_Args converts internal HistoryService_RecordActivityTaskHeartbeat_Args type to thrift
-func FromHistoryService_RecordActivityTaskHeartbeat_Args(t *types.HistoryService_RecordActivityTaskHeartbeat_Args) *history.HistoryService_RecordActivityTaskHeartbeat_Args {
+// FromHistoryServiceRecordActivityTaskHeartbeatArgs converts internal HistoryService_RecordActivityTaskHeartbeat_Args type to thrift
+func FromHistoryServiceRecordActivityTaskHeartbeatArgs(t *types.HistoryServiceRecordActivityTaskHeartbeatArgs) *history.HistoryService_RecordActivityTaskHeartbeat_Args {
 	if t == nil {
 		return nil
 	}
@@ -990,18 +990,18 @@ func FromHistoryService_RecordActivityTaskHeartbeat_Args(t *types.HistoryService
 	}
 }
 
-// ToHistoryService_RecordActivityTaskHeartbeat_Args converts thrift HistoryService_RecordActivityTaskHeartbeat_Args type to internal
-func ToHistoryService_RecordActivityTaskHeartbeat_Args(t *history.HistoryService_RecordActivityTaskHeartbeat_Args) *types.HistoryService_RecordActivityTaskHeartbeat_Args {
+// ToHistoryServiceRecordActivityTaskHeartbeatArgs converts thrift HistoryService_RecordActivityTaskHeartbeat_Args type to internal
+func ToHistoryServiceRecordActivityTaskHeartbeatArgs(t *history.HistoryService_RecordActivityTaskHeartbeat_Args) *types.HistoryServiceRecordActivityTaskHeartbeatArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RecordActivityTaskHeartbeat_Args{
+	return &types.HistoryServiceRecordActivityTaskHeartbeatArgs{
 		HeartbeatRequest: ToHistoryRecordActivityTaskHeartbeatRequest(t.HeartbeatRequest),
 	}
 }
 
-// FromHistoryService_RecordActivityTaskHeartbeat_Result converts internal HistoryService_RecordActivityTaskHeartbeat_Result type to thrift
-func FromHistoryService_RecordActivityTaskHeartbeat_Result(t *types.HistoryService_RecordActivityTaskHeartbeat_Result) *history.HistoryService_RecordActivityTaskHeartbeat_Result {
+// FromHistoryServiceRecordActivityTaskHeartbeatResult converts internal HistoryService_RecordActivityTaskHeartbeat_Result type to thrift
+func FromHistoryServiceRecordActivityTaskHeartbeatResult(t *types.HistoryServiceRecordActivityTaskHeartbeatResult) *history.HistoryService_RecordActivityTaskHeartbeat_Result {
 	if t == nil {
 		return nil
 	}
@@ -1017,12 +1017,12 @@ func FromHistoryService_RecordActivityTaskHeartbeat_Result(t *types.HistoryServi
 	}
 }
 
-// ToHistoryService_RecordActivityTaskHeartbeat_Result converts thrift HistoryService_RecordActivityTaskHeartbeat_Result type to internal
-func ToHistoryService_RecordActivityTaskHeartbeat_Result(t *history.HistoryService_RecordActivityTaskHeartbeat_Result) *types.HistoryService_RecordActivityTaskHeartbeat_Result {
+// ToHistoryServiceRecordActivityTaskHeartbeatResult converts thrift HistoryService_RecordActivityTaskHeartbeat_Result type to internal
+func ToHistoryServiceRecordActivityTaskHeartbeatResult(t *history.HistoryService_RecordActivityTaskHeartbeat_Result) *types.HistoryServiceRecordActivityTaskHeartbeatResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RecordActivityTaskHeartbeat_Result{
+	return &types.HistoryServiceRecordActivityTaskHeartbeatResult{
 		Success:                 ToRecordActivityTaskHeartbeatResponse(t.Success),
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
@@ -1034,8 +1034,8 @@ func ToHistoryService_RecordActivityTaskHeartbeat_Result(t *history.HistoryServi
 	}
 }
 
-// FromHistoryService_RecordActivityTaskStarted_Args converts internal HistoryService_RecordActivityTaskStarted_Args type to thrift
-func FromHistoryService_RecordActivityTaskStarted_Args(t *types.HistoryService_RecordActivityTaskStarted_Args) *history.HistoryService_RecordActivityTaskStarted_Args {
+// FromHistoryServiceRecordActivityTaskStartedArgs converts internal HistoryService_RecordActivityTaskStarted_Args type to thrift
+func FromHistoryServiceRecordActivityTaskStartedArgs(t *types.HistoryServiceRecordActivityTaskStartedArgs) *history.HistoryService_RecordActivityTaskStarted_Args {
 	if t == nil {
 		return nil
 	}
@@ -1044,18 +1044,18 @@ func FromHistoryService_RecordActivityTaskStarted_Args(t *types.HistoryService_R
 	}
 }
 
-// ToHistoryService_RecordActivityTaskStarted_Args converts thrift HistoryService_RecordActivityTaskStarted_Args type to internal
-func ToHistoryService_RecordActivityTaskStarted_Args(t *history.HistoryService_RecordActivityTaskStarted_Args) *types.HistoryService_RecordActivityTaskStarted_Args {
+// ToHistoryServiceRecordActivityTaskStartedArgs converts thrift HistoryService_RecordActivityTaskStarted_Args type to internal
+func ToHistoryServiceRecordActivityTaskStartedArgs(t *history.HistoryService_RecordActivityTaskStarted_Args) *types.HistoryServiceRecordActivityTaskStartedArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RecordActivityTaskStarted_Args{
+	return &types.HistoryServiceRecordActivityTaskStartedArgs{
 		AddRequest: ToRecordActivityTaskStartedRequest(t.AddRequest),
 	}
 }
 
-// FromHistoryService_RecordActivityTaskStarted_Result converts internal HistoryService_RecordActivityTaskStarted_Result type to thrift
-func FromHistoryService_RecordActivityTaskStarted_Result(t *types.HistoryService_RecordActivityTaskStarted_Result) *history.HistoryService_RecordActivityTaskStarted_Result {
+// FromHistoryServiceRecordActivityTaskStartedResult converts internal HistoryService_RecordActivityTaskStarted_Result type to thrift
+func FromHistoryServiceRecordActivityTaskStartedResult(t *types.HistoryServiceRecordActivityTaskStartedResult) *history.HistoryService_RecordActivityTaskStarted_Result {
 	if t == nil {
 		return nil
 	}
@@ -1072,12 +1072,12 @@ func FromHistoryService_RecordActivityTaskStarted_Result(t *types.HistoryService
 	}
 }
 
-// ToHistoryService_RecordActivityTaskStarted_Result converts thrift HistoryService_RecordActivityTaskStarted_Result type to internal
-func ToHistoryService_RecordActivityTaskStarted_Result(t *history.HistoryService_RecordActivityTaskStarted_Result) *types.HistoryService_RecordActivityTaskStarted_Result {
+// ToHistoryServiceRecordActivityTaskStartedResult converts thrift HistoryService_RecordActivityTaskStarted_Result type to internal
+func ToHistoryServiceRecordActivityTaskStartedResult(t *history.HistoryService_RecordActivityTaskStarted_Result) *types.HistoryServiceRecordActivityTaskStartedResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RecordActivityTaskStarted_Result{
+	return &types.HistoryServiceRecordActivityTaskStartedResult{
 		Success:                  ToRecordActivityTaskStartedResponse(t.Success),
 		BadRequestError:          ToBadRequestError(t.BadRequestError),
 		InternalServiceError:     ToInternalServiceError(t.InternalServiceError),
@@ -1090,8 +1090,8 @@ func ToHistoryService_RecordActivityTaskStarted_Result(t *history.HistoryService
 	}
 }
 
-// FromHistoryService_RecordChildExecutionCompleted_Args converts internal HistoryService_RecordChildExecutionCompleted_Args type to thrift
-func FromHistoryService_RecordChildExecutionCompleted_Args(t *types.HistoryService_RecordChildExecutionCompleted_Args) *history.HistoryService_RecordChildExecutionCompleted_Args {
+// FromHistoryServiceRecordChildExecutionCompletedArgs converts internal HistoryService_RecordChildExecutionCompleted_Args type to thrift
+func FromHistoryServiceRecordChildExecutionCompletedArgs(t *types.HistoryServiceRecordChildExecutionCompletedArgs) *history.HistoryService_RecordChildExecutionCompleted_Args {
 	if t == nil {
 		return nil
 	}
@@ -1100,18 +1100,18 @@ func FromHistoryService_RecordChildExecutionCompleted_Args(t *types.HistoryServi
 	}
 }
 
-// ToHistoryService_RecordChildExecutionCompleted_Args converts thrift HistoryService_RecordChildExecutionCompleted_Args type to internal
-func ToHistoryService_RecordChildExecutionCompleted_Args(t *history.HistoryService_RecordChildExecutionCompleted_Args) *types.HistoryService_RecordChildExecutionCompleted_Args {
+// ToHistoryServiceRecordChildExecutionCompletedArgs converts thrift HistoryService_RecordChildExecutionCompleted_Args type to internal
+func ToHistoryServiceRecordChildExecutionCompletedArgs(t *history.HistoryService_RecordChildExecutionCompleted_Args) *types.HistoryServiceRecordChildExecutionCompletedArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RecordChildExecutionCompleted_Args{
+	return &types.HistoryServiceRecordChildExecutionCompletedArgs{
 		CompletionRequest: ToRecordChildExecutionCompletedRequest(t.CompletionRequest),
 	}
 }
 
-// FromHistoryService_RecordChildExecutionCompleted_Result converts internal HistoryService_RecordChildExecutionCompleted_Result type to thrift
-func FromHistoryService_RecordChildExecutionCompleted_Result(t *types.HistoryService_RecordChildExecutionCompleted_Result) *history.HistoryService_RecordChildExecutionCompleted_Result {
+// FromHistoryServiceRecordChildExecutionCompletedResult converts internal HistoryService_RecordChildExecutionCompleted_Result type to thrift
+func FromHistoryServiceRecordChildExecutionCompletedResult(t *types.HistoryServiceRecordChildExecutionCompletedResult) *history.HistoryService_RecordChildExecutionCompleted_Result {
 	if t == nil {
 		return nil
 	}
@@ -1126,12 +1126,12 @@ func FromHistoryService_RecordChildExecutionCompleted_Result(t *types.HistorySer
 	}
 }
 
-// ToHistoryService_RecordChildExecutionCompleted_Result converts thrift HistoryService_RecordChildExecutionCompleted_Result type to internal
-func ToHistoryService_RecordChildExecutionCompleted_Result(t *history.HistoryService_RecordChildExecutionCompleted_Result) *types.HistoryService_RecordChildExecutionCompleted_Result {
+// ToHistoryServiceRecordChildExecutionCompletedResult converts thrift HistoryService_RecordChildExecutionCompleted_Result type to internal
+func ToHistoryServiceRecordChildExecutionCompletedResult(t *history.HistoryService_RecordChildExecutionCompleted_Result) *types.HistoryServiceRecordChildExecutionCompletedResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RecordChildExecutionCompleted_Result{
+	return &types.HistoryServiceRecordChildExecutionCompletedResult{
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
 		EntityNotExistError:     ToEntityNotExistsError(t.EntityNotExistError),
@@ -1142,8 +1142,8 @@ func ToHistoryService_RecordChildExecutionCompleted_Result(t *history.HistorySer
 	}
 }
 
-// FromHistoryService_RecordDecisionTaskStarted_Args converts internal HistoryService_RecordDecisionTaskStarted_Args type to thrift
-func FromHistoryService_RecordDecisionTaskStarted_Args(t *types.HistoryService_RecordDecisionTaskStarted_Args) *history.HistoryService_RecordDecisionTaskStarted_Args {
+// FromHistoryServiceRecordDecisionTaskStartedArgs converts internal HistoryService_RecordDecisionTaskStarted_Args type to thrift
+func FromHistoryServiceRecordDecisionTaskStartedArgs(t *types.HistoryServiceRecordDecisionTaskStartedArgs) *history.HistoryService_RecordDecisionTaskStarted_Args {
 	if t == nil {
 		return nil
 	}
@@ -1152,18 +1152,18 @@ func FromHistoryService_RecordDecisionTaskStarted_Args(t *types.HistoryService_R
 	}
 }
 
-// ToHistoryService_RecordDecisionTaskStarted_Args converts thrift HistoryService_RecordDecisionTaskStarted_Args type to internal
-func ToHistoryService_RecordDecisionTaskStarted_Args(t *history.HistoryService_RecordDecisionTaskStarted_Args) *types.HistoryService_RecordDecisionTaskStarted_Args {
+// ToHistoryServiceRecordDecisionTaskStartedArgs converts thrift HistoryService_RecordDecisionTaskStarted_Args type to internal
+func ToHistoryServiceRecordDecisionTaskStartedArgs(t *history.HistoryService_RecordDecisionTaskStarted_Args) *types.HistoryServiceRecordDecisionTaskStartedArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RecordDecisionTaskStarted_Args{
+	return &types.HistoryServiceRecordDecisionTaskStartedArgs{
 		AddRequest: ToRecordDecisionTaskStartedRequest(t.AddRequest),
 	}
 }
 
-// FromHistoryService_RecordDecisionTaskStarted_Result converts internal HistoryService_RecordDecisionTaskStarted_Result type to thrift
-func FromHistoryService_RecordDecisionTaskStarted_Result(t *types.HistoryService_RecordDecisionTaskStarted_Result) *history.HistoryService_RecordDecisionTaskStarted_Result {
+// FromHistoryServiceRecordDecisionTaskStartedResult converts internal HistoryService_RecordDecisionTaskStarted_Result type to thrift
+func FromHistoryServiceRecordDecisionTaskStartedResult(t *types.HistoryServiceRecordDecisionTaskStartedResult) *history.HistoryService_RecordDecisionTaskStarted_Result {
 	if t == nil {
 		return nil
 	}
@@ -1180,12 +1180,12 @@ func FromHistoryService_RecordDecisionTaskStarted_Result(t *types.HistoryService
 	}
 }
 
-// ToHistoryService_RecordDecisionTaskStarted_Result converts thrift HistoryService_RecordDecisionTaskStarted_Result type to internal
-func ToHistoryService_RecordDecisionTaskStarted_Result(t *history.HistoryService_RecordDecisionTaskStarted_Result) *types.HistoryService_RecordDecisionTaskStarted_Result {
+// ToHistoryServiceRecordDecisionTaskStartedResult converts thrift HistoryService_RecordDecisionTaskStarted_Result type to internal
+func ToHistoryServiceRecordDecisionTaskStartedResult(t *history.HistoryService_RecordDecisionTaskStarted_Result) *types.HistoryServiceRecordDecisionTaskStartedResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RecordDecisionTaskStarted_Result{
+	return &types.HistoryServiceRecordDecisionTaskStartedResult{
 		Success:                  ToRecordDecisionTaskStartedResponse(t.Success),
 		BadRequestError:          ToBadRequestError(t.BadRequestError),
 		InternalServiceError:     ToInternalServiceError(t.InternalServiceError),
@@ -1198,8 +1198,8 @@ func ToHistoryService_RecordDecisionTaskStarted_Result(t *history.HistoryService
 	}
 }
 
-// FromHistoryService_RefreshWorkflowTasks_Args converts internal HistoryService_RefreshWorkflowTasks_Args type to thrift
-func FromHistoryService_RefreshWorkflowTasks_Args(t *types.HistoryService_RefreshWorkflowTasks_Args) *history.HistoryService_RefreshWorkflowTasks_Args {
+// FromHistoryServiceRefreshWorkflowTasksArgs converts internal HistoryService_RefreshWorkflowTasks_Args type to thrift
+func FromHistoryServiceRefreshWorkflowTasksArgs(t *types.HistoryServiceRefreshWorkflowTasksArgs) *history.HistoryService_RefreshWorkflowTasks_Args {
 	if t == nil {
 		return nil
 	}
@@ -1208,18 +1208,18 @@ func FromHistoryService_RefreshWorkflowTasks_Args(t *types.HistoryService_Refres
 	}
 }
 
-// ToHistoryService_RefreshWorkflowTasks_Args converts thrift HistoryService_RefreshWorkflowTasks_Args type to internal
-func ToHistoryService_RefreshWorkflowTasks_Args(t *history.HistoryService_RefreshWorkflowTasks_Args) *types.HistoryService_RefreshWorkflowTasks_Args {
+// ToHistoryServiceRefreshWorkflowTasksArgs converts thrift HistoryService_RefreshWorkflowTasks_Args type to internal
+func ToHistoryServiceRefreshWorkflowTasksArgs(t *history.HistoryService_RefreshWorkflowTasks_Args) *types.HistoryServiceRefreshWorkflowTasksArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RefreshWorkflowTasks_Args{
+	return &types.HistoryServiceRefreshWorkflowTasksArgs{
 		Request: ToHistoryRefreshWorkflowTasksRequest(t.Request),
 	}
 }
 
-// FromHistoryService_RefreshWorkflowTasks_Result converts internal HistoryService_RefreshWorkflowTasks_Result type to thrift
-func FromHistoryService_RefreshWorkflowTasks_Result(t *types.HistoryService_RefreshWorkflowTasks_Result) *history.HistoryService_RefreshWorkflowTasks_Result {
+// FromHistoryServiceRefreshWorkflowTasksResult converts internal HistoryService_RefreshWorkflowTasks_Result type to thrift
+func FromHistoryServiceRefreshWorkflowTasksResult(t *types.HistoryServiceRefreshWorkflowTasksResult) *history.HistoryService_RefreshWorkflowTasks_Result {
 	if t == nil {
 		return nil
 	}
@@ -1233,12 +1233,12 @@ func FromHistoryService_RefreshWorkflowTasks_Result(t *types.HistoryService_Refr
 	}
 }
 
-// ToHistoryService_RefreshWorkflowTasks_Result converts thrift HistoryService_RefreshWorkflowTasks_Result type to internal
-func ToHistoryService_RefreshWorkflowTasks_Result(t *history.HistoryService_RefreshWorkflowTasks_Result) *types.HistoryService_RefreshWorkflowTasks_Result {
+// ToHistoryServiceRefreshWorkflowTasksResult converts thrift HistoryService_RefreshWorkflowTasks_Result type to internal
+func ToHistoryServiceRefreshWorkflowTasksResult(t *history.HistoryService_RefreshWorkflowTasks_Result) *types.HistoryServiceRefreshWorkflowTasksResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RefreshWorkflowTasks_Result{
+	return &types.HistoryServiceRefreshWorkflowTasksResult{
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
 		DomainNotActiveError:    ToDomainNotActiveError(t.DomainNotActiveError),
@@ -1248,8 +1248,8 @@ func ToHistoryService_RefreshWorkflowTasks_Result(t *history.HistoryService_Refr
 	}
 }
 
-// FromHistoryService_RemoveSignalMutableState_Args converts internal HistoryService_RemoveSignalMutableState_Args type to thrift
-func FromHistoryService_RemoveSignalMutableState_Args(t *types.HistoryService_RemoveSignalMutableState_Args) *history.HistoryService_RemoveSignalMutableState_Args {
+// FromHistoryServiceRemoveSignalMutableStateArgs converts internal HistoryService_RemoveSignalMutableState_Args type to thrift
+func FromHistoryServiceRemoveSignalMutableStateArgs(t *types.HistoryServiceRemoveSignalMutableStateArgs) *history.HistoryService_RemoveSignalMutableState_Args {
 	if t == nil {
 		return nil
 	}
@@ -1258,18 +1258,18 @@ func FromHistoryService_RemoveSignalMutableState_Args(t *types.HistoryService_Re
 	}
 }
 
-// ToHistoryService_RemoveSignalMutableState_Args converts thrift HistoryService_RemoveSignalMutableState_Args type to internal
-func ToHistoryService_RemoveSignalMutableState_Args(t *history.HistoryService_RemoveSignalMutableState_Args) *types.HistoryService_RemoveSignalMutableState_Args {
+// ToHistoryServiceRemoveSignalMutableStateArgs converts thrift HistoryService_RemoveSignalMutableState_Args type to internal
+func ToHistoryServiceRemoveSignalMutableStateArgs(t *history.HistoryService_RemoveSignalMutableState_Args) *types.HistoryServiceRemoveSignalMutableStateArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RemoveSignalMutableState_Args{
+	return &types.HistoryServiceRemoveSignalMutableStateArgs{
 		RemoveRequest: ToRemoveSignalMutableStateRequest(t.RemoveRequest),
 	}
 }
 
-// FromHistoryService_RemoveSignalMutableState_Result converts internal HistoryService_RemoveSignalMutableState_Result type to thrift
-func FromHistoryService_RemoveSignalMutableState_Result(t *types.HistoryService_RemoveSignalMutableState_Result) *history.HistoryService_RemoveSignalMutableState_Result {
+// FromHistoryServiceRemoveSignalMutableStateResult converts internal HistoryService_RemoveSignalMutableState_Result type to thrift
+func FromHistoryServiceRemoveSignalMutableStateResult(t *types.HistoryServiceRemoveSignalMutableStateResult) *history.HistoryService_RemoveSignalMutableState_Result {
 	if t == nil {
 		return nil
 	}
@@ -1284,12 +1284,12 @@ func FromHistoryService_RemoveSignalMutableState_Result(t *types.HistoryService_
 	}
 }
 
-// ToHistoryService_RemoveSignalMutableState_Result converts thrift HistoryService_RemoveSignalMutableState_Result type to internal
-func ToHistoryService_RemoveSignalMutableState_Result(t *history.HistoryService_RemoveSignalMutableState_Result) *types.HistoryService_RemoveSignalMutableState_Result {
+// ToHistoryServiceRemoveSignalMutableStateResult converts thrift HistoryService_RemoveSignalMutableState_Result type to internal
+func ToHistoryServiceRemoveSignalMutableStateResult(t *history.HistoryService_RemoveSignalMutableState_Result) *types.HistoryServiceRemoveSignalMutableStateResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RemoveSignalMutableState_Result{
+	return &types.HistoryServiceRemoveSignalMutableStateResult{
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
 		EntityNotExistError:     ToEntityNotExistsError(t.EntityNotExistError),
@@ -1300,8 +1300,8 @@ func ToHistoryService_RemoveSignalMutableState_Result(t *history.HistoryService_
 	}
 }
 
-// FromHistoryService_RemoveTask_Args converts internal HistoryService_RemoveTask_Args type to thrift
-func FromHistoryService_RemoveTask_Args(t *types.HistoryService_RemoveTask_Args) *history.HistoryService_RemoveTask_Args {
+// FromHistoryServiceRemoveTaskArgs converts internal HistoryService_RemoveTask_Args type to thrift
+func FromHistoryServiceRemoveTaskArgs(t *types.HistoryServiceRemoveTaskArgs) *history.HistoryService_RemoveTask_Args {
 	if t == nil {
 		return nil
 	}
@@ -1310,18 +1310,18 @@ func FromHistoryService_RemoveTask_Args(t *types.HistoryService_RemoveTask_Args)
 	}
 }
 
-// ToHistoryService_RemoveTask_Args converts thrift HistoryService_RemoveTask_Args type to internal
-func ToHistoryService_RemoveTask_Args(t *history.HistoryService_RemoveTask_Args) *types.HistoryService_RemoveTask_Args {
+// ToHistoryServiceRemoveTaskArgs converts thrift HistoryService_RemoveTask_Args type to internal
+func ToHistoryServiceRemoveTaskArgs(t *history.HistoryService_RemoveTask_Args) *types.HistoryServiceRemoveTaskArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RemoveTask_Args{
+	return &types.HistoryServiceRemoveTaskArgs{
 		Request: ToRemoveTaskRequest(t.Request),
 	}
 }
 
-// FromHistoryService_RemoveTask_Result converts internal HistoryService_RemoveTask_Result type to thrift
-func FromHistoryService_RemoveTask_Result(t *types.HistoryService_RemoveTask_Result) *history.HistoryService_RemoveTask_Result {
+// FromHistoryServiceRemoveTaskResult converts internal HistoryService_RemoveTask_Result type to thrift
+func FromHistoryServiceRemoveTaskResult(t *types.HistoryServiceRemoveTaskResult) *history.HistoryService_RemoveTask_Result {
 	if t == nil {
 		return nil
 	}
@@ -1332,20 +1332,20 @@ func FromHistoryService_RemoveTask_Result(t *types.HistoryService_RemoveTask_Res
 	}
 }
 
-// ToHistoryService_RemoveTask_Result converts thrift HistoryService_RemoveTask_Result type to internal
-func ToHistoryService_RemoveTask_Result(t *history.HistoryService_RemoveTask_Result) *types.HistoryService_RemoveTask_Result {
+// ToHistoryServiceRemoveTaskResult converts thrift HistoryService_RemoveTask_Result type to internal
+func ToHistoryServiceRemoveTaskResult(t *history.HistoryService_RemoveTask_Result) *types.HistoryServiceRemoveTaskResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RemoveTask_Result{
+	return &types.HistoryServiceRemoveTaskResult{
 		BadRequestError:      ToBadRequestError(t.BadRequestError),
 		InternalServiceError: ToInternalServiceError(t.InternalServiceError),
 		AccessDeniedError:    ToAccessDeniedError(t.AccessDeniedError),
 	}
 }
 
-// FromHistoryService_ReplicateEventsV2_Args converts internal HistoryService_ReplicateEventsV2_Args type to thrift
-func FromHistoryService_ReplicateEventsV2_Args(t *types.HistoryService_ReplicateEventsV2_Args) *history.HistoryService_ReplicateEventsV2_Args {
+// FromHistoryServiceReplicateEventsV2Args converts internal HistoryService_ReplicateEventsV2_Args type to thrift
+func FromHistoryServiceReplicateEventsV2Args(t *types.HistoryServiceReplicateEventsV2Args) *history.HistoryService_ReplicateEventsV2_Args {
 	if t == nil {
 		return nil
 	}
@@ -1354,18 +1354,18 @@ func FromHistoryService_ReplicateEventsV2_Args(t *types.HistoryService_Replicate
 	}
 }
 
-// ToHistoryService_ReplicateEventsV2_Args converts thrift HistoryService_ReplicateEventsV2_Args type to internal
-func ToHistoryService_ReplicateEventsV2_Args(t *history.HistoryService_ReplicateEventsV2_Args) *types.HistoryService_ReplicateEventsV2_Args {
+// ToHistoryServiceReplicateEventsV2Args converts thrift HistoryService_ReplicateEventsV2_Args type to internal
+func ToHistoryServiceReplicateEventsV2Args(t *history.HistoryService_ReplicateEventsV2_Args) *types.HistoryServiceReplicateEventsV2Args {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_ReplicateEventsV2_Args{
+	return &types.HistoryServiceReplicateEventsV2Args{
 		ReplicateV2Request: ToReplicateEventsV2Request(t.ReplicateV2Request),
 	}
 }
 
-// FromHistoryService_ReplicateEventsV2_Result converts internal HistoryService_ReplicateEventsV2_Result type to thrift
-func FromHistoryService_ReplicateEventsV2_Result(t *types.HistoryService_ReplicateEventsV2_Result) *history.HistoryService_ReplicateEventsV2_Result {
+// FromHistoryServiceReplicateEventsV2Result converts internal HistoryService_ReplicateEventsV2_Result type to thrift
+func FromHistoryServiceReplicateEventsV2Result(t *types.HistoryServiceReplicateEventsV2Result) *history.HistoryService_ReplicateEventsV2_Result {
 	if t == nil {
 		return nil
 	}
@@ -1380,12 +1380,12 @@ func FromHistoryService_ReplicateEventsV2_Result(t *types.HistoryService_Replica
 	}
 }
 
-// ToHistoryService_ReplicateEventsV2_Result converts thrift HistoryService_ReplicateEventsV2_Result type to internal
-func ToHistoryService_ReplicateEventsV2_Result(t *history.HistoryService_ReplicateEventsV2_Result) *types.HistoryService_ReplicateEventsV2_Result {
+// ToHistoryServiceReplicateEventsV2Result converts thrift HistoryService_ReplicateEventsV2_Result type to internal
+func ToHistoryServiceReplicateEventsV2Result(t *history.HistoryService_ReplicateEventsV2_Result) *types.HistoryServiceReplicateEventsV2Result {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_ReplicateEventsV2_Result{
+	return &types.HistoryServiceReplicateEventsV2Result{
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
 		EntityNotExistError:     ToEntityNotExistsError(t.EntityNotExistError),
@@ -1396,8 +1396,8 @@ func ToHistoryService_ReplicateEventsV2_Result(t *history.HistoryService_Replica
 	}
 }
 
-// FromHistoryService_RequestCancelWorkflowExecution_Args converts internal HistoryService_RequestCancelWorkflowExecution_Args type to thrift
-func FromHistoryService_RequestCancelWorkflowExecution_Args(t *types.HistoryService_RequestCancelWorkflowExecution_Args) *history.HistoryService_RequestCancelWorkflowExecution_Args {
+// FromHistoryServiceRequestCancelWorkflowExecutionArgs converts internal HistoryService_RequestCancelWorkflowExecution_Args type to thrift
+func FromHistoryServiceRequestCancelWorkflowExecutionArgs(t *types.HistoryServiceRequestCancelWorkflowExecutionArgs) *history.HistoryService_RequestCancelWorkflowExecution_Args {
 	if t == nil {
 		return nil
 	}
@@ -1406,18 +1406,18 @@ func FromHistoryService_RequestCancelWorkflowExecution_Args(t *types.HistoryServ
 	}
 }
 
-// ToHistoryService_RequestCancelWorkflowExecution_Args converts thrift HistoryService_RequestCancelWorkflowExecution_Args type to internal
-func ToHistoryService_RequestCancelWorkflowExecution_Args(t *history.HistoryService_RequestCancelWorkflowExecution_Args) *types.HistoryService_RequestCancelWorkflowExecution_Args {
+// ToHistoryServiceRequestCancelWorkflowExecutionArgs converts thrift HistoryService_RequestCancelWorkflowExecution_Args type to internal
+func ToHistoryServiceRequestCancelWorkflowExecutionArgs(t *history.HistoryService_RequestCancelWorkflowExecution_Args) *types.HistoryServiceRequestCancelWorkflowExecutionArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RequestCancelWorkflowExecution_Args{
+	return &types.HistoryServiceRequestCancelWorkflowExecutionArgs{
 		CancelRequest: ToHistoryRequestCancelWorkflowExecutionRequest(t.CancelRequest),
 	}
 }
 
-// FromHistoryService_RequestCancelWorkflowExecution_Result converts internal HistoryService_RequestCancelWorkflowExecution_Result type to thrift
-func FromHistoryService_RequestCancelWorkflowExecution_Result(t *types.HistoryService_RequestCancelWorkflowExecution_Result) *history.HistoryService_RequestCancelWorkflowExecution_Result {
+// FromHistoryServiceRequestCancelWorkflowExecutionResult converts internal HistoryService_RequestCancelWorkflowExecution_Result type to thrift
+func FromHistoryServiceRequestCancelWorkflowExecutionResult(t *types.HistoryServiceRequestCancelWorkflowExecutionResult) *history.HistoryService_RequestCancelWorkflowExecution_Result {
 	if t == nil {
 		return nil
 	}
@@ -1433,12 +1433,12 @@ func FromHistoryService_RequestCancelWorkflowExecution_Result(t *types.HistorySe
 	}
 }
 
-// ToHistoryService_RequestCancelWorkflowExecution_Result converts thrift HistoryService_RequestCancelWorkflowExecution_Result type to internal
-func ToHistoryService_RequestCancelWorkflowExecution_Result(t *history.HistoryService_RequestCancelWorkflowExecution_Result) *types.HistoryService_RequestCancelWorkflowExecution_Result {
+// ToHistoryServiceRequestCancelWorkflowExecutionResult converts thrift HistoryService_RequestCancelWorkflowExecution_Result type to internal
+func ToHistoryServiceRequestCancelWorkflowExecutionResult(t *history.HistoryService_RequestCancelWorkflowExecution_Result) *types.HistoryServiceRequestCancelWorkflowExecutionResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RequestCancelWorkflowExecution_Result{
+	return &types.HistoryServiceRequestCancelWorkflowExecutionResult{
 		BadRequestError:                   ToBadRequestError(t.BadRequestError),
 		InternalServiceError:              ToInternalServiceError(t.InternalServiceError),
 		EntityNotExistError:               ToEntityNotExistsError(t.EntityNotExistError),
@@ -1450,8 +1450,8 @@ func ToHistoryService_RequestCancelWorkflowExecution_Result(t *history.HistorySe
 	}
 }
 
-// FromHistoryService_ResetQueue_Args converts internal HistoryService_ResetQueue_Args type to thrift
-func FromHistoryService_ResetQueue_Args(t *types.HistoryService_ResetQueue_Args) *history.HistoryService_ResetQueue_Args {
+// FromHistoryServiceResetQueueArgs converts internal HistoryService_ResetQueue_Args type to thrift
+func FromHistoryServiceResetQueueArgs(t *types.HistoryServiceResetQueueArgs) *history.HistoryService_ResetQueue_Args {
 	if t == nil {
 		return nil
 	}
@@ -1460,18 +1460,18 @@ func FromHistoryService_ResetQueue_Args(t *types.HistoryService_ResetQueue_Args)
 	}
 }
 
-// ToHistoryService_ResetQueue_Args converts thrift HistoryService_ResetQueue_Args type to internal
-func ToHistoryService_ResetQueue_Args(t *history.HistoryService_ResetQueue_Args) *types.HistoryService_ResetQueue_Args {
+// ToHistoryServiceResetQueueArgs converts thrift HistoryService_ResetQueue_Args type to internal
+func ToHistoryServiceResetQueueArgs(t *history.HistoryService_ResetQueue_Args) *types.HistoryServiceResetQueueArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_ResetQueue_Args{
+	return &types.HistoryServiceResetQueueArgs{
 		Request: ToResetQueueRequest(t.Request),
 	}
 }
 
-// FromHistoryService_ResetQueue_Result converts internal HistoryService_ResetQueue_Result type to thrift
-func FromHistoryService_ResetQueue_Result(t *types.HistoryService_ResetQueue_Result) *history.HistoryService_ResetQueue_Result {
+// FromHistoryServiceResetQueueResult converts internal HistoryService_ResetQueue_Result type to thrift
+func FromHistoryServiceResetQueueResult(t *types.HistoryServiceResetQueueResult) *history.HistoryService_ResetQueue_Result {
 	if t == nil {
 		return nil
 	}
@@ -1482,20 +1482,20 @@ func FromHistoryService_ResetQueue_Result(t *types.HistoryService_ResetQueue_Res
 	}
 }
 
-// ToHistoryService_ResetQueue_Result converts thrift HistoryService_ResetQueue_Result type to internal
-func ToHistoryService_ResetQueue_Result(t *history.HistoryService_ResetQueue_Result) *types.HistoryService_ResetQueue_Result {
+// ToHistoryServiceResetQueueResult converts thrift HistoryService_ResetQueue_Result type to internal
+func ToHistoryServiceResetQueueResult(t *history.HistoryService_ResetQueue_Result) *types.HistoryServiceResetQueueResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_ResetQueue_Result{
+	return &types.HistoryServiceResetQueueResult{
 		BadRequestError:      ToBadRequestError(t.BadRequestError),
 		InternalServiceError: ToInternalServiceError(t.InternalServiceError),
 		AccessDeniedError:    ToAccessDeniedError(t.AccessDeniedError),
 	}
 }
 
-// FromHistoryService_ResetStickyTaskList_Args converts internal HistoryService_ResetStickyTaskList_Args type to thrift
-func FromHistoryService_ResetStickyTaskList_Args(t *types.HistoryService_ResetStickyTaskList_Args) *history.HistoryService_ResetStickyTaskList_Args {
+// FromHistoryServiceResetStickyTaskListArgs converts internal HistoryService_ResetStickyTaskList_Args type to thrift
+func FromHistoryServiceResetStickyTaskListArgs(t *types.HistoryServiceResetStickyTaskListArgs) *history.HistoryService_ResetStickyTaskList_Args {
 	if t == nil {
 		return nil
 	}
@@ -1504,18 +1504,18 @@ func FromHistoryService_ResetStickyTaskList_Args(t *types.HistoryService_ResetSt
 	}
 }
 
-// ToHistoryService_ResetStickyTaskList_Args converts thrift HistoryService_ResetStickyTaskList_Args type to internal
-func ToHistoryService_ResetStickyTaskList_Args(t *history.HistoryService_ResetStickyTaskList_Args) *types.HistoryService_ResetStickyTaskList_Args {
+// ToHistoryServiceResetStickyTaskListArgs converts thrift HistoryService_ResetStickyTaskList_Args type to internal
+func ToHistoryServiceResetStickyTaskListArgs(t *history.HistoryService_ResetStickyTaskList_Args) *types.HistoryServiceResetStickyTaskListArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_ResetStickyTaskList_Args{
+	return &types.HistoryServiceResetStickyTaskListArgs{
 		ResetRequest: ToHistoryResetStickyTaskListRequest(t.ResetRequest),
 	}
 }
 
-// FromHistoryService_ResetStickyTaskList_Result converts internal HistoryService_ResetStickyTaskList_Result type to thrift
-func FromHistoryService_ResetStickyTaskList_Result(t *types.HistoryService_ResetStickyTaskList_Result) *history.HistoryService_ResetStickyTaskList_Result {
+// FromHistoryServiceResetStickyTaskListResult converts internal HistoryService_ResetStickyTaskList_Result type to thrift
+func FromHistoryServiceResetStickyTaskListResult(t *types.HistoryServiceResetStickyTaskListResult) *history.HistoryService_ResetStickyTaskList_Result {
 	if t == nil {
 		return nil
 	}
@@ -1530,12 +1530,12 @@ func FromHistoryService_ResetStickyTaskList_Result(t *types.HistoryService_Reset
 	}
 }
 
-// ToHistoryService_ResetStickyTaskList_Result converts thrift HistoryService_ResetStickyTaskList_Result type to internal
-func ToHistoryService_ResetStickyTaskList_Result(t *history.HistoryService_ResetStickyTaskList_Result) *types.HistoryService_ResetStickyTaskList_Result {
+// ToHistoryServiceResetStickyTaskListResult converts thrift HistoryService_ResetStickyTaskList_Result type to internal
+func ToHistoryServiceResetStickyTaskListResult(t *history.HistoryService_ResetStickyTaskList_Result) *types.HistoryServiceResetStickyTaskListResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_ResetStickyTaskList_Result{
+	return &types.HistoryServiceResetStickyTaskListResult{
 		Success:                 ToHistoryResetStickyTaskListResponse(t.Success),
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
@@ -1546,8 +1546,8 @@ func ToHistoryService_ResetStickyTaskList_Result(t *history.HistoryService_Reset
 	}
 }
 
-// FromHistoryService_ResetWorkflowExecution_Args converts internal HistoryService_ResetWorkflowExecution_Args type to thrift
-func FromHistoryService_ResetWorkflowExecution_Args(t *types.HistoryService_ResetWorkflowExecution_Args) *history.HistoryService_ResetWorkflowExecution_Args {
+// FromHistoryServiceResetWorkflowExecutionArgs converts internal HistoryService_ResetWorkflowExecution_Args type to thrift
+func FromHistoryServiceResetWorkflowExecutionArgs(t *types.HistoryServiceResetWorkflowExecutionArgs) *history.HistoryService_ResetWorkflowExecution_Args {
 	if t == nil {
 		return nil
 	}
@@ -1556,18 +1556,18 @@ func FromHistoryService_ResetWorkflowExecution_Args(t *types.HistoryService_Rese
 	}
 }
 
-// ToHistoryService_ResetWorkflowExecution_Args converts thrift HistoryService_ResetWorkflowExecution_Args type to internal
-func ToHistoryService_ResetWorkflowExecution_Args(t *history.HistoryService_ResetWorkflowExecution_Args) *types.HistoryService_ResetWorkflowExecution_Args {
+// ToHistoryServiceResetWorkflowExecutionArgs converts thrift HistoryService_ResetWorkflowExecution_Args type to internal
+func ToHistoryServiceResetWorkflowExecutionArgs(t *history.HistoryService_ResetWorkflowExecution_Args) *types.HistoryServiceResetWorkflowExecutionArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_ResetWorkflowExecution_Args{
+	return &types.HistoryServiceResetWorkflowExecutionArgs{
 		ResetRequest: ToHistoryResetWorkflowExecutionRequest(t.ResetRequest),
 	}
 }
 
-// FromHistoryService_ResetWorkflowExecution_Result converts internal HistoryService_ResetWorkflowExecution_Result type to thrift
-func FromHistoryService_ResetWorkflowExecution_Result(t *types.HistoryService_ResetWorkflowExecution_Result) *history.HistoryService_ResetWorkflowExecution_Result {
+// FromHistoryServiceResetWorkflowExecutionResult converts internal HistoryService_ResetWorkflowExecution_Result type to thrift
+func FromHistoryServiceResetWorkflowExecutionResult(t *types.HistoryServiceResetWorkflowExecutionResult) *history.HistoryService_ResetWorkflowExecution_Result {
 	if t == nil {
 		return nil
 	}
@@ -1583,12 +1583,12 @@ func FromHistoryService_ResetWorkflowExecution_Result(t *types.HistoryService_Re
 	}
 }
 
-// ToHistoryService_ResetWorkflowExecution_Result converts thrift HistoryService_ResetWorkflowExecution_Result type to internal
-func ToHistoryService_ResetWorkflowExecution_Result(t *history.HistoryService_ResetWorkflowExecution_Result) *types.HistoryService_ResetWorkflowExecution_Result {
+// ToHistoryServiceResetWorkflowExecutionResult converts thrift HistoryService_ResetWorkflowExecution_Result type to internal
+func ToHistoryServiceResetWorkflowExecutionResult(t *history.HistoryService_ResetWorkflowExecution_Result) *types.HistoryServiceResetWorkflowExecutionResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_ResetWorkflowExecution_Result{
+	return &types.HistoryServiceResetWorkflowExecutionResult{
 		Success:                 ToResetWorkflowExecutionResponse(t.Success),
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
@@ -1600,8 +1600,8 @@ func ToHistoryService_ResetWorkflowExecution_Result(t *history.HistoryService_Re
 	}
 }
 
-// FromHistoryService_RespondActivityTaskCanceled_Args converts internal HistoryService_RespondActivityTaskCanceled_Args type to thrift
-func FromHistoryService_RespondActivityTaskCanceled_Args(t *types.HistoryService_RespondActivityTaskCanceled_Args) *history.HistoryService_RespondActivityTaskCanceled_Args {
+// FromHistoryServiceRespondActivityTaskCanceledArgs converts internal HistoryService_RespondActivityTaskCanceled_Args type to thrift
+func FromHistoryServiceRespondActivityTaskCanceledArgs(t *types.HistoryServiceRespondActivityTaskCanceledArgs) *history.HistoryService_RespondActivityTaskCanceled_Args {
 	if t == nil {
 		return nil
 	}
@@ -1610,18 +1610,18 @@ func FromHistoryService_RespondActivityTaskCanceled_Args(t *types.HistoryService
 	}
 }
 
-// ToHistoryService_RespondActivityTaskCanceled_Args converts thrift HistoryService_RespondActivityTaskCanceled_Args type to internal
-func ToHistoryService_RespondActivityTaskCanceled_Args(t *history.HistoryService_RespondActivityTaskCanceled_Args) *types.HistoryService_RespondActivityTaskCanceled_Args {
+// ToHistoryServiceRespondActivityTaskCanceledArgs converts thrift HistoryService_RespondActivityTaskCanceled_Args type to internal
+func ToHistoryServiceRespondActivityTaskCanceledArgs(t *history.HistoryService_RespondActivityTaskCanceled_Args) *types.HistoryServiceRespondActivityTaskCanceledArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RespondActivityTaskCanceled_Args{
+	return &types.HistoryServiceRespondActivityTaskCanceledArgs{
 		CanceledRequest: ToHistoryRespondActivityTaskCanceledRequest(t.CanceledRequest),
 	}
 }
 
-// FromHistoryService_RespondActivityTaskCanceled_Result converts internal HistoryService_RespondActivityTaskCanceled_Result type to thrift
-func FromHistoryService_RespondActivityTaskCanceled_Result(t *types.HistoryService_RespondActivityTaskCanceled_Result) *history.HistoryService_RespondActivityTaskCanceled_Result {
+// FromHistoryServiceRespondActivityTaskCanceledResult converts internal HistoryService_RespondActivityTaskCanceled_Result type to thrift
+func FromHistoryServiceRespondActivityTaskCanceledResult(t *types.HistoryServiceRespondActivityTaskCanceledResult) *history.HistoryService_RespondActivityTaskCanceled_Result {
 	if t == nil {
 		return nil
 	}
@@ -1636,12 +1636,12 @@ func FromHistoryService_RespondActivityTaskCanceled_Result(t *types.HistoryServi
 	}
 }
 
-// ToHistoryService_RespondActivityTaskCanceled_Result converts thrift HistoryService_RespondActivityTaskCanceled_Result type to internal
-func ToHistoryService_RespondActivityTaskCanceled_Result(t *history.HistoryService_RespondActivityTaskCanceled_Result) *types.HistoryService_RespondActivityTaskCanceled_Result {
+// ToHistoryServiceRespondActivityTaskCanceledResult converts thrift HistoryService_RespondActivityTaskCanceled_Result type to internal
+func ToHistoryServiceRespondActivityTaskCanceledResult(t *history.HistoryService_RespondActivityTaskCanceled_Result) *types.HistoryServiceRespondActivityTaskCanceledResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RespondActivityTaskCanceled_Result{
+	return &types.HistoryServiceRespondActivityTaskCanceledResult{
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
 		EntityNotExistError:     ToEntityNotExistsError(t.EntityNotExistError),
@@ -1652,8 +1652,8 @@ func ToHistoryService_RespondActivityTaskCanceled_Result(t *history.HistoryServi
 	}
 }
 
-// FromHistoryService_RespondActivityTaskCompleted_Args converts internal HistoryService_RespondActivityTaskCompleted_Args type to thrift
-func FromHistoryService_RespondActivityTaskCompleted_Args(t *types.HistoryService_RespondActivityTaskCompleted_Args) *history.HistoryService_RespondActivityTaskCompleted_Args {
+// FromHistoryServiceRespondActivityTaskCompletedArgs converts internal HistoryService_RespondActivityTaskCompleted_Args type to thrift
+func FromHistoryServiceRespondActivityTaskCompletedArgs(t *types.HistoryServiceRespondActivityTaskCompletedArgs) *history.HistoryService_RespondActivityTaskCompleted_Args {
 	if t == nil {
 		return nil
 	}
@@ -1662,18 +1662,18 @@ func FromHistoryService_RespondActivityTaskCompleted_Args(t *types.HistoryServic
 	}
 }
 
-// ToHistoryService_RespondActivityTaskCompleted_Args converts thrift HistoryService_RespondActivityTaskCompleted_Args type to internal
-func ToHistoryService_RespondActivityTaskCompleted_Args(t *history.HistoryService_RespondActivityTaskCompleted_Args) *types.HistoryService_RespondActivityTaskCompleted_Args {
+// ToHistoryServiceRespondActivityTaskCompletedArgs converts thrift HistoryService_RespondActivityTaskCompleted_Args type to internal
+func ToHistoryServiceRespondActivityTaskCompletedArgs(t *history.HistoryService_RespondActivityTaskCompleted_Args) *types.HistoryServiceRespondActivityTaskCompletedArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RespondActivityTaskCompleted_Args{
+	return &types.HistoryServiceRespondActivityTaskCompletedArgs{
 		CompleteRequest: ToHistoryRespondActivityTaskCompletedRequest(t.CompleteRequest),
 	}
 }
 
-// FromHistoryService_RespondActivityTaskCompleted_Result converts internal HistoryService_RespondActivityTaskCompleted_Result type to thrift
-func FromHistoryService_RespondActivityTaskCompleted_Result(t *types.HistoryService_RespondActivityTaskCompleted_Result) *history.HistoryService_RespondActivityTaskCompleted_Result {
+// FromHistoryServiceRespondActivityTaskCompletedResult converts internal HistoryService_RespondActivityTaskCompleted_Result type to thrift
+func FromHistoryServiceRespondActivityTaskCompletedResult(t *types.HistoryServiceRespondActivityTaskCompletedResult) *history.HistoryService_RespondActivityTaskCompleted_Result {
 	if t == nil {
 		return nil
 	}
@@ -1688,12 +1688,12 @@ func FromHistoryService_RespondActivityTaskCompleted_Result(t *types.HistoryServ
 	}
 }
 
-// ToHistoryService_RespondActivityTaskCompleted_Result converts thrift HistoryService_RespondActivityTaskCompleted_Result type to internal
-func ToHistoryService_RespondActivityTaskCompleted_Result(t *history.HistoryService_RespondActivityTaskCompleted_Result) *types.HistoryService_RespondActivityTaskCompleted_Result {
+// ToHistoryServiceRespondActivityTaskCompletedResult converts thrift HistoryService_RespondActivityTaskCompleted_Result type to internal
+func ToHistoryServiceRespondActivityTaskCompletedResult(t *history.HistoryService_RespondActivityTaskCompleted_Result) *types.HistoryServiceRespondActivityTaskCompletedResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RespondActivityTaskCompleted_Result{
+	return &types.HistoryServiceRespondActivityTaskCompletedResult{
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
 		EntityNotExistError:     ToEntityNotExistsError(t.EntityNotExistError),
@@ -1704,8 +1704,8 @@ func ToHistoryService_RespondActivityTaskCompleted_Result(t *history.HistoryServ
 	}
 }
 
-// FromHistoryService_RespondActivityTaskFailed_Args converts internal HistoryService_RespondActivityTaskFailed_Args type to thrift
-func FromHistoryService_RespondActivityTaskFailed_Args(t *types.HistoryService_RespondActivityTaskFailed_Args) *history.HistoryService_RespondActivityTaskFailed_Args {
+// FromHistoryServiceRespondActivityTaskFailedArgs converts internal HistoryService_RespondActivityTaskFailed_Args type to thrift
+func FromHistoryServiceRespondActivityTaskFailedArgs(t *types.HistoryServiceRespondActivityTaskFailedArgs) *history.HistoryService_RespondActivityTaskFailed_Args {
 	if t == nil {
 		return nil
 	}
@@ -1714,18 +1714,18 @@ func FromHistoryService_RespondActivityTaskFailed_Args(t *types.HistoryService_R
 	}
 }
 
-// ToHistoryService_RespondActivityTaskFailed_Args converts thrift HistoryService_RespondActivityTaskFailed_Args type to internal
-func ToHistoryService_RespondActivityTaskFailed_Args(t *history.HistoryService_RespondActivityTaskFailed_Args) *types.HistoryService_RespondActivityTaskFailed_Args {
+// ToHistoryServiceRespondActivityTaskFailedArgs converts thrift HistoryService_RespondActivityTaskFailed_Args type to internal
+func ToHistoryServiceRespondActivityTaskFailedArgs(t *history.HistoryService_RespondActivityTaskFailed_Args) *types.HistoryServiceRespondActivityTaskFailedArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RespondActivityTaskFailed_Args{
+	return &types.HistoryServiceRespondActivityTaskFailedArgs{
 		FailRequest: ToHistoryRespondActivityTaskFailedRequest(t.FailRequest),
 	}
 }
 
-// FromHistoryService_RespondActivityTaskFailed_Result converts internal HistoryService_RespondActivityTaskFailed_Result type to thrift
-func FromHistoryService_RespondActivityTaskFailed_Result(t *types.HistoryService_RespondActivityTaskFailed_Result) *history.HistoryService_RespondActivityTaskFailed_Result {
+// FromHistoryServiceRespondActivityTaskFailedResult converts internal HistoryService_RespondActivityTaskFailed_Result type to thrift
+func FromHistoryServiceRespondActivityTaskFailedResult(t *types.HistoryServiceRespondActivityTaskFailedResult) *history.HistoryService_RespondActivityTaskFailed_Result {
 	if t == nil {
 		return nil
 	}
@@ -1740,12 +1740,12 @@ func FromHistoryService_RespondActivityTaskFailed_Result(t *types.HistoryService
 	}
 }
 
-// ToHistoryService_RespondActivityTaskFailed_Result converts thrift HistoryService_RespondActivityTaskFailed_Result type to internal
-func ToHistoryService_RespondActivityTaskFailed_Result(t *history.HistoryService_RespondActivityTaskFailed_Result) *types.HistoryService_RespondActivityTaskFailed_Result {
+// ToHistoryServiceRespondActivityTaskFailedResult converts thrift HistoryService_RespondActivityTaskFailed_Result type to internal
+func ToHistoryServiceRespondActivityTaskFailedResult(t *history.HistoryService_RespondActivityTaskFailed_Result) *types.HistoryServiceRespondActivityTaskFailedResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RespondActivityTaskFailed_Result{
+	return &types.HistoryServiceRespondActivityTaskFailedResult{
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
 		EntityNotExistError:     ToEntityNotExistsError(t.EntityNotExistError),
@@ -1756,8 +1756,8 @@ func ToHistoryService_RespondActivityTaskFailed_Result(t *history.HistoryService
 	}
 }
 
-// FromHistoryService_RespondDecisionTaskCompleted_Args converts internal HistoryService_RespondDecisionTaskCompleted_Args type to thrift
-func FromHistoryService_RespondDecisionTaskCompleted_Args(t *types.HistoryService_RespondDecisionTaskCompleted_Args) *history.HistoryService_RespondDecisionTaskCompleted_Args {
+// FromHistoryServiceRespondDecisionTaskCompletedArgs converts internal HistoryService_RespondDecisionTaskCompleted_Args type to thrift
+func FromHistoryServiceRespondDecisionTaskCompletedArgs(t *types.HistoryServiceRespondDecisionTaskCompletedArgs) *history.HistoryService_RespondDecisionTaskCompleted_Args {
 	if t == nil {
 		return nil
 	}
@@ -1766,18 +1766,18 @@ func FromHistoryService_RespondDecisionTaskCompleted_Args(t *types.HistoryServic
 	}
 }
 
-// ToHistoryService_RespondDecisionTaskCompleted_Args converts thrift HistoryService_RespondDecisionTaskCompleted_Args type to internal
-func ToHistoryService_RespondDecisionTaskCompleted_Args(t *history.HistoryService_RespondDecisionTaskCompleted_Args) *types.HistoryService_RespondDecisionTaskCompleted_Args {
+// ToHistoryServiceRespondDecisionTaskCompletedArgs converts thrift HistoryService_RespondDecisionTaskCompleted_Args type to internal
+func ToHistoryServiceRespondDecisionTaskCompletedArgs(t *history.HistoryService_RespondDecisionTaskCompleted_Args) *types.HistoryServiceRespondDecisionTaskCompletedArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RespondDecisionTaskCompleted_Args{
+	return &types.HistoryServiceRespondDecisionTaskCompletedArgs{
 		CompleteRequest: ToHistoryRespondDecisionTaskCompletedRequest(t.CompleteRequest),
 	}
 }
 
-// FromHistoryService_RespondDecisionTaskCompleted_Result converts internal HistoryService_RespondDecisionTaskCompleted_Result type to thrift
-func FromHistoryService_RespondDecisionTaskCompleted_Result(t *types.HistoryService_RespondDecisionTaskCompleted_Result) *history.HistoryService_RespondDecisionTaskCompleted_Result {
+// FromHistoryServiceRespondDecisionTaskCompletedResult converts internal HistoryService_RespondDecisionTaskCompleted_Result type to thrift
+func FromHistoryServiceRespondDecisionTaskCompletedResult(t *types.HistoryServiceRespondDecisionTaskCompletedResult) *history.HistoryService_RespondDecisionTaskCompleted_Result {
 	if t == nil {
 		return nil
 	}
@@ -1793,12 +1793,12 @@ func FromHistoryService_RespondDecisionTaskCompleted_Result(t *types.HistoryServ
 	}
 }
 
-// ToHistoryService_RespondDecisionTaskCompleted_Result converts thrift HistoryService_RespondDecisionTaskCompleted_Result type to internal
-func ToHistoryService_RespondDecisionTaskCompleted_Result(t *history.HistoryService_RespondDecisionTaskCompleted_Result) *types.HistoryService_RespondDecisionTaskCompleted_Result {
+// ToHistoryServiceRespondDecisionTaskCompletedResult converts thrift HistoryService_RespondDecisionTaskCompleted_Result type to internal
+func ToHistoryServiceRespondDecisionTaskCompletedResult(t *history.HistoryService_RespondDecisionTaskCompleted_Result) *types.HistoryServiceRespondDecisionTaskCompletedResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RespondDecisionTaskCompleted_Result{
+	return &types.HistoryServiceRespondDecisionTaskCompletedResult{
 		Success:                 ToHistoryRespondDecisionTaskCompletedResponse(t.Success),
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
@@ -1810,8 +1810,8 @@ func ToHistoryService_RespondDecisionTaskCompleted_Result(t *history.HistoryServ
 	}
 }
 
-// FromHistoryService_RespondDecisionTaskFailed_Args converts internal HistoryService_RespondDecisionTaskFailed_Args type to thrift
-func FromHistoryService_RespondDecisionTaskFailed_Args(t *types.HistoryService_RespondDecisionTaskFailed_Args) *history.HistoryService_RespondDecisionTaskFailed_Args {
+// FromHistoryServiceRespondDecisionTaskFailedArgs converts internal HistoryService_RespondDecisionTaskFailed_Args type to thrift
+func FromHistoryServiceRespondDecisionTaskFailedArgs(t *types.HistoryServiceRespondDecisionTaskFailedArgs) *history.HistoryService_RespondDecisionTaskFailed_Args {
 	if t == nil {
 		return nil
 	}
@@ -1820,18 +1820,18 @@ func FromHistoryService_RespondDecisionTaskFailed_Args(t *types.HistoryService_R
 	}
 }
 
-// ToHistoryService_RespondDecisionTaskFailed_Args converts thrift HistoryService_RespondDecisionTaskFailed_Args type to internal
-func ToHistoryService_RespondDecisionTaskFailed_Args(t *history.HistoryService_RespondDecisionTaskFailed_Args) *types.HistoryService_RespondDecisionTaskFailed_Args {
+// ToHistoryServiceRespondDecisionTaskFailedArgs converts thrift HistoryService_RespondDecisionTaskFailed_Args type to internal
+func ToHistoryServiceRespondDecisionTaskFailedArgs(t *history.HistoryService_RespondDecisionTaskFailed_Args) *types.HistoryServiceRespondDecisionTaskFailedArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RespondDecisionTaskFailed_Args{
+	return &types.HistoryServiceRespondDecisionTaskFailedArgs{
 		FailedRequest: ToHistoryRespondDecisionTaskFailedRequest(t.FailedRequest),
 	}
 }
 
-// FromHistoryService_RespondDecisionTaskFailed_Result converts internal HistoryService_RespondDecisionTaskFailed_Result type to thrift
-func FromHistoryService_RespondDecisionTaskFailed_Result(t *types.HistoryService_RespondDecisionTaskFailed_Result) *history.HistoryService_RespondDecisionTaskFailed_Result {
+// FromHistoryServiceRespondDecisionTaskFailedResult converts internal HistoryService_RespondDecisionTaskFailed_Result type to thrift
+func FromHistoryServiceRespondDecisionTaskFailedResult(t *types.HistoryServiceRespondDecisionTaskFailedResult) *history.HistoryService_RespondDecisionTaskFailed_Result {
 	if t == nil {
 		return nil
 	}
@@ -1846,12 +1846,12 @@ func FromHistoryService_RespondDecisionTaskFailed_Result(t *types.HistoryService
 	}
 }
 
-// ToHistoryService_RespondDecisionTaskFailed_Result converts thrift HistoryService_RespondDecisionTaskFailed_Result type to internal
-func ToHistoryService_RespondDecisionTaskFailed_Result(t *history.HistoryService_RespondDecisionTaskFailed_Result) *types.HistoryService_RespondDecisionTaskFailed_Result {
+// ToHistoryServiceRespondDecisionTaskFailedResult converts thrift HistoryService_RespondDecisionTaskFailed_Result type to internal
+func ToHistoryServiceRespondDecisionTaskFailedResult(t *history.HistoryService_RespondDecisionTaskFailed_Result) *types.HistoryServiceRespondDecisionTaskFailedResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_RespondDecisionTaskFailed_Result{
+	return &types.HistoryServiceRespondDecisionTaskFailedResult{
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
 		EntityNotExistError:     ToEntityNotExistsError(t.EntityNotExistError),
@@ -1862,8 +1862,8 @@ func ToHistoryService_RespondDecisionTaskFailed_Result(t *history.HistoryService
 	}
 }
 
-// FromHistoryService_ScheduleDecisionTask_Args converts internal HistoryService_ScheduleDecisionTask_Args type to thrift
-func FromHistoryService_ScheduleDecisionTask_Args(t *types.HistoryService_ScheduleDecisionTask_Args) *history.HistoryService_ScheduleDecisionTask_Args {
+// FromHistoryServiceScheduleDecisionTaskArgs converts internal HistoryService_ScheduleDecisionTask_Args type to thrift
+func FromHistoryServiceScheduleDecisionTaskArgs(t *types.HistoryServiceScheduleDecisionTaskArgs) *history.HistoryService_ScheduleDecisionTask_Args {
 	if t == nil {
 		return nil
 	}
@@ -1872,18 +1872,18 @@ func FromHistoryService_ScheduleDecisionTask_Args(t *types.HistoryService_Schedu
 	}
 }
 
-// ToHistoryService_ScheduleDecisionTask_Args converts thrift HistoryService_ScheduleDecisionTask_Args type to internal
-func ToHistoryService_ScheduleDecisionTask_Args(t *history.HistoryService_ScheduleDecisionTask_Args) *types.HistoryService_ScheduleDecisionTask_Args {
+// ToHistoryServiceScheduleDecisionTaskArgs converts thrift HistoryService_ScheduleDecisionTask_Args type to internal
+func ToHistoryServiceScheduleDecisionTaskArgs(t *history.HistoryService_ScheduleDecisionTask_Args) *types.HistoryServiceScheduleDecisionTaskArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_ScheduleDecisionTask_Args{
+	return &types.HistoryServiceScheduleDecisionTaskArgs{
 		ScheduleRequest: ToScheduleDecisionTaskRequest(t.ScheduleRequest),
 	}
 }
 
-// FromHistoryService_ScheduleDecisionTask_Result converts internal HistoryService_ScheduleDecisionTask_Result type to thrift
-func FromHistoryService_ScheduleDecisionTask_Result(t *types.HistoryService_ScheduleDecisionTask_Result) *history.HistoryService_ScheduleDecisionTask_Result {
+// FromHistoryServiceScheduleDecisionTaskResult converts internal HistoryService_ScheduleDecisionTask_Result type to thrift
+func FromHistoryServiceScheduleDecisionTaskResult(t *types.HistoryServiceScheduleDecisionTaskResult) *history.HistoryService_ScheduleDecisionTask_Result {
 	if t == nil {
 		return nil
 	}
@@ -1898,12 +1898,12 @@ func FromHistoryService_ScheduleDecisionTask_Result(t *types.HistoryService_Sche
 	}
 }
 
-// ToHistoryService_ScheduleDecisionTask_Result converts thrift HistoryService_ScheduleDecisionTask_Result type to internal
-func ToHistoryService_ScheduleDecisionTask_Result(t *history.HistoryService_ScheduleDecisionTask_Result) *types.HistoryService_ScheduleDecisionTask_Result {
+// ToHistoryServiceScheduleDecisionTaskResult converts thrift HistoryService_ScheduleDecisionTask_Result type to internal
+func ToHistoryServiceScheduleDecisionTaskResult(t *history.HistoryService_ScheduleDecisionTask_Result) *types.HistoryServiceScheduleDecisionTaskResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_ScheduleDecisionTask_Result{
+	return &types.HistoryServiceScheduleDecisionTaskResult{
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
 		EntityNotExistError:     ToEntityNotExistsError(t.EntityNotExistError),
@@ -1914,8 +1914,8 @@ func ToHistoryService_ScheduleDecisionTask_Result(t *history.HistoryService_Sche
 	}
 }
 
-// FromHistoryService_SignalWithStartWorkflowExecution_Args converts internal HistoryService_SignalWithStartWorkflowExecution_Args type to thrift
-func FromHistoryService_SignalWithStartWorkflowExecution_Args(t *types.HistoryService_SignalWithStartWorkflowExecution_Args) *history.HistoryService_SignalWithStartWorkflowExecution_Args {
+// FromHistoryServiceSignalWithStartWorkflowExecutionArgs converts internal HistoryService_SignalWithStartWorkflowExecution_Args type to thrift
+func FromHistoryServiceSignalWithStartWorkflowExecutionArgs(t *types.HistoryServiceSignalWithStartWorkflowExecutionArgs) *history.HistoryService_SignalWithStartWorkflowExecution_Args {
 	if t == nil {
 		return nil
 	}
@@ -1924,18 +1924,18 @@ func FromHistoryService_SignalWithStartWorkflowExecution_Args(t *types.HistorySe
 	}
 }
 
-// ToHistoryService_SignalWithStartWorkflowExecution_Args converts thrift HistoryService_SignalWithStartWorkflowExecution_Args type to internal
-func ToHistoryService_SignalWithStartWorkflowExecution_Args(t *history.HistoryService_SignalWithStartWorkflowExecution_Args) *types.HistoryService_SignalWithStartWorkflowExecution_Args {
+// ToHistoryServiceSignalWithStartWorkflowExecutionArgs converts thrift HistoryService_SignalWithStartWorkflowExecution_Args type to internal
+func ToHistoryServiceSignalWithStartWorkflowExecutionArgs(t *history.HistoryService_SignalWithStartWorkflowExecution_Args) *types.HistoryServiceSignalWithStartWorkflowExecutionArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_SignalWithStartWorkflowExecution_Args{
+	return &types.HistoryServiceSignalWithStartWorkflowExecutionArgs{
 		SignalWithStartRequest: ToHistorySignalWithStartWorkflowExecutionRequest(t.SignalWithStartRequest),
 	}
 }
 
-// FromHistoryService_SignalWithStartWorkflowExecution_Result converts internal HistoryService_SignalWithStartWorkflowExecution_Result type to thrift
-func FromHistoryService_SignalWithStartWorkflowExecution_Result(t *types.HistoryService_SignalWithStartWorkflowExecution_Result) *history.HistoryService_SignalWithStartWorkflowExecution_Result {
+// FromHistoryServiceSignalWithStartWorkflowExecutionResult converts internal HistoryService_SignalWithStartWorkflowExecution_Result type to thrift
+func FromHistoryServiceSignalWithStartWorkflowExecutionResult(t *types.HistoryServiceSignalWithStartWorkflowExecutionResult) *history.HistoryService_SignalWithStartWorkflowExecution_Result {
 	if t == nil {
 		return nil
 	}
@@ -1951,12 +1951,12 @@ func FromHistoryService_SignalWithStartWorkflowExecution_Result(t *types.History
 	}
 }
 
-// ToHistoryService_SignalWithStartWorkflowExecution_Result converts thrift HistoryService_SignalWithStartWorkflowExecution_Result type to internal
-func ToHistoryService_SignalWithStartWorkflowExecution_Result(t *history.HistoryService_SignalWithStartWorkflowExecution_Result) *types.HistoryService_SignalWithStartWorkflowExecution_Result {
+// ToHistoryServiceSignalWithStartWorkflowExecutionResult converts thrift HistoryService_SignalWithStartWorkflowExecution_Result type to internal
+func ToHistoryServiceSignalWithStartWorkflowExecutionResult(t *history.HistoryService_SignalWithStartWorkflowExecution_Result) *types.HistoryServiceSignalWithStartWorkflowExecutionResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_SignalWithStartWorkflowExecution_Result{
+	return &types.HistoryServiceSignalWithStartWorkflowExecutionResult{
 		Success:                     ToStartWorkflowExecutionResponse(t.Success),
 		BadRequestError:             ToBadRequestError(t.BadRequestError),
 		InternalServiceError:        ToInternalServiceError(t.InternalServiceError),
@@ -1968,8 +1968,8 @@ func ToHistoryService_SignalWithStartWorkflowExecution_Result(t *history.History
 	}
 }
 
-// FromHistoryService_SignalWorkflowExecution_Args converts internal HistoryService_SignalWorkflowExecution_Args type to thrift
-func FromHistoryService_SignalWorkflowExecution_Args(t *types.HistoryService_SignalWorkflowExecution_Args) *history.HistoryService_SignalWorkflowExecution_Args {
+// FromHistoryServiceSignalWorkflowExecutionArgs converts internal HistoryService_SignalWorkflowExecution_Args type to thrift
+func FromHistoryServiceSignalWorkflowExecutionArgs(t *types.HistoryServiceSignalWorkflowExecutionArgs) *history.HistoryService_SignalWorkflowExecution_Args {
 	if t == nil {
 		return nil
 	}
@@ -1978,18 +1978,18 @@ func FromHistoryService_SignalWorkflowExecution_Args(t *types.HistoryService_Sig
 	}
 }
 
-// ToHistoryService_SignalWorkflowExecution_Args converts thrift HistoryService_SignalWorkflowExecution_Args type to internal
-func ToHistoryService_SignalWorkflowExecution_Args(t *history.HistoryService_SignalWorkflowExecution_Args) *types.HistoryService_SignalWorkflowExecution_Args {
+// ToHistoryServiceSignalWorkflowExecutionArgs converts thrift HistoryService_SignalWorkflowExecution_Args type to internal
+func ToHistoryServiceSignalWorkflowExecutionArgs(t *history.HistoryService_SignalWorkflowExecution_Args) *types.HistoryServiceSignalWorkflowExecutionArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_SignalWorkflowExecution_Args{
+	return &types.HistoryServiceSignalWorkflowExecutionArgs{
 		SignalRequest: ToHistorySignalWorkflowExecutionRequest(t.SignalRequest),
 	}
 }
 
-// FromHistoryService_SignalWorkflowExecution_Result converts internal HistoryService_SignalWorkflowExecution_Result type to thrift
-func FromHistoryService_SignalWorkflowExecution_Result(t *types.HistoryService_SignalWorkflowExecution_Result) *history.HistoryService_SignalWorkflowExecution_Result {
+// FromHistoryServiceSignalWorkflowExecutionResult converts internal HistoryService_SignalWorkflowExecution_Result type to thrift
+func FromHistoryServiceSignalWorkflowExecutionResult(t *types.HistoryServiceSignalWorkflowExecutionResult) *history.HistoryService_SignalWorkflowExecution_Result {
 	if t == nil {
 		return nil
 	}
@@ -2004,12 +2004,12 @@ func FromHistoryService_SignalWorkflowExecution_Result(t *types.HistoryService_S
 	}
 }
 
-// ToHistoryService_SignalWorkflowExecution_Result converts thrift HistoryService_SignalWorkflowExecution_Result type to internal
-func ToHistoryService_SignalWorkflowExecution_Result(t *history.HistoryService_SignalWorkflowExecution_Result) *types.HistoryService_SignalWorkflowExecution_Result {
+// ToHistoryServiceSignalWorkflowExecutionResult converts thrift HistoryService_SignalWorkflowExecution_Result type to internal
+func ToHistoryServiceSignalWorkflowExecutionResult(t *history.HistoryService_SignalWorkflowExecution_Result) *types.HistoryServiceSignalWorkflowExecutionResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_SignalWorkflowExecution_Result{
+	return &types.HistoryServiceSignalWorkflowExecutionResult{
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
 		EntityNotExistError:     ToEntityNotExistsError(t.EntityNotExistError),
@@ -2020,8 +2020,8 @@ func ToHistoryService_SignalWorkflowExecution_Result(t *history.HistoryService_S
 	}
 }
 
-// FromHistoryService_StartWorkflowExecution_Args converts internal HistoryService_StartWorkflowExecution_Args type to thrift
-func FromHistoryService_StartWorkflowExecution_Args(t *types.HistoryService_StartWorkflowExecution_Args) *history.HistoryService_StartWorkflowExecution_Args {
+// FromHistoryServiceStartWorkflowExecutionArgs converts internal HistoryService_StartWorkflowExecution_Args type to thrift
+func FromHistoryServiceStartWorkflowExecutionArgs(t *types.HistoryServiceStartWorkflowExecutionArgs) *history.HistoryService_StartWorkflowExecution_Args {
 	if t == nil {
 		return nil
 	}
@@ -2030,18 +2030,18 @@ func FromHistoryService_StartWorkflowExecution_Args(t *types.HistoryService_Star
 	}
 }
 
-// ToHistoryService_StartWorkflowExecution_Args converts thrift HistoryService_StartWorkflowExecution_Args type to internal
-func ToHistoryService_StartWorkflowExecution_Args(t *history.HistoryService_StartWorkflowExecution_Args) *types.HistoryService_StartWorkflowExecution_Args {
+// ToHistoryServiceStartWorkflowExecutionArgs converts thrift HistoryService_StartWorkflowExecution_Args type to internal
+func ToHistoryServiceStartWorkflowExecutionArgs(t *history.HistoryService_StartWorkflowExecution_Args) *types.HistoryServiceStartWorkflowExecutionArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_StartWorkflowExecution_Args{
+	return &types.HistoryServiceStartWorkflowExecutionArgs{
 		StartRequest: ToHistoryStartWorkflowExecutionRequest(t.StartRequest),
 	}
 }
 
-// FromHistoryService_StartWorkflowExecution_Result converts internal HistoryService_StartWorkflowExecution_Result type to thrift
-func FromHistoryService_StartWorkflowExecution_Result(t *types.HistoryService_StartWorkflowExecution_Result) *history.HistoryService_StartWorkflowExecution_Result {
+// FromHistoryServiceStartWorkflowExecutionResult converts internal HistoryService_StartWorkflowExecution_Result type to thrift
+func FromHistoryServiceStartWorkflowExecutionResult(t *types.HistoryServiceStartWorkflowExecutionResult) *history.HistoryService_StartWorkflowExecution_Result {
 	if t == nil {
 		return nil
 	}
@@ -2057,12 +2057,12 @@ func FromHistoryService_StartWorkflowExecution_Result(t *types.HistoryService_St
 	}
 }
 
-// ToHistoryService_StartWorkflowExecution_Result converts thrift HistoryService_StartWorkflowExecution_Result type to internal
-func ToHistoryService_StartWorkflowExecution_Result(t *history.HistoryService_StartWorkflowExecution_Result) *types.HistoryService_StartWorkflowExecution_Result {
+// ToHistoryServiceStartWorkflowExecutionResult converts thrift HistoryService_StartWorkflowExecution_Result type to internal
+func ToHistoryServiceStartWorkflowExecutionResult(t *history.HistoryService_StartWorkflowExecution_Result) *types.HistoryServiceStartWorkflowExecutionResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_StartWorkflowExecution_Result{
+	return &types.HistoryServiceStartWorkflowExecutionResult{
 		Success:                  ToStartWorkflowExecutionResponse(t.Success),
 		BadRequestError:          ToBadRequestError(t.BadRequestError),
 		InternalServiceError:     ToInternalServiceError(t.InternalServiceError),
@@ -2074,8 +2074,8 @@ func ToHistoryService_StartWorkflowExecution_Result(t *history.HistoryService_St
 	}
 }
 
-// FromHistoryService_SyncActivity_Args converts internal HistoryService_SyncActivity_Args type to thrift
-func FromHistoryService_SyncActivity_Args(t *types.HistoryService_SyncActivity_Args) *history.HistoryService_SyncActivity_Args {
+// FromHistoryServiceSyncActivityArgs converts internal HistoryService_SyncActivity_Args type to thrift
+func FromHistoryServiceSyncActivityArgs(t *types.HistoryServiceSyncActivityArgs) *history.HistoryService_SyncActivity_Args {
 	if t == nil {
 		return nil
 	}
@@ -2084,18 +2084,18 @@ func FromHistoryService_SyncActivity_Args(t *types.HistoryService_SyncActivity_A
 	}
 }
 
-// ToHistoryService_SyncActivity_Args converts thrift HistoryService_SyncActivity_Args type to internal
-func ToHistoryService_SyncActivity_Args(t *history.HistoryService_SyncActivity_Args) *types.HistoryService_SyncActivity_Args {
+// ToHistoryServiceSyncActivityArgs converts thrift HistoryService_SyncActivity_Args type to internal
+func ToHistoryServiceSyncActivityArgs(t *history.HistoryService_SyncActivity_Args) *types.HistoryServiceSyncActivityArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_SyncActivity_Args{
+	return &types.HistoryServiceSyncActivityArgs{
 		SyncActivityRequest: ToSyncActivityRequest(t.SyncActivityRequest),
 	}
 }
 
-// FromHistoryService_SyncActivity_Result converts internal HistoryService_SyncActivity_Result type to thrift
-func FromHistoryService_SyncActivity_Result(t *types.HistoryService_SyncActivity_Result) *history.HistoryService_SyncActivity_Result {
+// FromHistoryServiceSyncActivityResult converts internal HistoryService_SyncActivity_Result type to thrift
+func FromHistoryServiceSyncActivityResult(t *types.HistoryServiceSyncActivityResult) *history.HistoryService_SyncActivity_Result {
 	if t == nil {
 		return nil
 	}
@@ -2109,12 +2109,12 @@ func FromHistoryService_SyncActivity_Result(t *types.HistoryService_SyncActivity
 	}
 }
 
-// ToHistoryService_SyncActivity_Result converts thrift HistoryService_SyncActivity_Result type to internal
-func ToHistoryService_SyncActivity_Result(t *history.HistoryService_SyncActivity_Result) *types.HistoryService_SyncActivity_Result {
+// ToHistoryServiceSyncActivityResult converts thrift HistoryService_SyncActivity_Result type to internal
+func ToHistoryServiceSyncActivityResult(t *history.HistoryService_SyncActivity_Result) *types.HistoryServiceSyncActivityResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_SyncActivity_Result{
+	return &types.HistoryServiceSyncActivityResult{
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
 		EntityNotExistError:     ToEntityNotExistsError(t.EntityNotExistError),
@@ -2124,8 +2124,8 @@ func ToHistoryService_SyncActivity_Result(t *history.HistoryService_SyncActivity
 	}
 }
 
-// FromHistoryService_SyncShardStatus_Args converts internal HistoryService_SyncShardStatus_Args type to thrift
-func FromHistoryService_SyncShardStatus_Args(t *types.HistoryService_SyncShardStatus_Args) *history.HistoryService_SyncShardStatus_Args {
+// FromHistoryServiceSyncShardStatusArgs converts internal HistoryService_SyncShardStatus_Args type to thrift
+func FromHistoryServiceSyncShardStatusArgs(t *types.HistoryServiceSyncShardStatusArgs) *history.HistoryService_SyncShardStatus_Args {
 	if t == nil {
 		return nil
 	}
@@ -2134,18 +2134,18 @@ func FromHistoryService_SyncShardStatus_Args(t *types.HistoryService_SyncShardSt
 	}
 }
 
-// ToHistoryService_SyncShardStatus_Args converts thrift HistoryService_SyncShardStatus_Args type to internal
-func ToHistoryService_SyncShardStatus_Args(t *history.HistoryService_SyncShardStatus_Args) *types.HistoryService_SyncShardStatus_Args {
+// ToHistoryServiceSyncShardStatusArgs converts thrift HistoryService_SyncShardStatus_Args type to internal
+func ToHistoryServiceSyncShardStatusArgs(t *history.HistoryService_SyncShardStatus_Args) *types.HistoryServiceSyncShardStatusArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_SyncShardStatus_Args{
+	return &types.HistoryServiceSyncShardStatusArgs{
 		SyncShardStatusRequest: ToSyncShardStatusRequest(t.SyncShardStatusRequest),
 	}
 }
 
-// FromHistoryService_SyncShardStatus_Result converts internal HistoryService_SyncShardStatus_Result type to thrift
-func FromHistoryService_SyncShardStatus_Result(t *types.HistoryService_SyncShardStatus_Result) *history.HistoryService_SyncShardStatus_Result {
+// FromHistoryServiceSyncShardStatusResult converts internal HistoryService_SyncShardStatus_Result type to thrift
+func FromHistoryServiceSyncShardStatusResult(t *types.HistoryServiceSyncShardStatusResult) *history.HistoryService_SyncShardStatus_Result {
 	if t == nil {
 		return nil
 	}
@@ -2158,12 +2158,12 @@ func FromHistoryService_SyncShardStatus_Result(t *types.HistoryService_SyncShard
 	}
 }
 
-// ToHistoryService_SyncShardStatus_Result converts thrift HistoryService_SyncShardStatus_Result type to internal
-func ToHistoryService_SyncShardStatus_Result(t *history.HistoryService_SyncShardStatus_Result) *types.HistoryService_SyncShardStatus_Result {
+// ToHistoryServiceSyncShardStatusResult converts thrift HistoryService_SyncShardStatus_Result type to internal
+func ToHistoryServiceSyncShardStatusResult(t *history.HistoryService_SyncShardStatus_Result) *types.HistoryServiceSyncShardStatusResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_SyncShardStatus_Result{
+	return &types.HistoryServiceSyncShardStatusResult{
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
 		ShardOwnershipLostError: ToShardOwnershipLostError(t.ShardOwnershipLostError),
@@ -2172,8 +2172,8 @@ func ToHistoryService_SyncShardStatus_Result(t *history.HistoryService_SyncShard
 	}
 }
 
-// FromHistoryService_TerminateWorkflowExecution_Args converts internal HistoryService_TerminateWorkflowExecution_Args type to thrift
-func FromHistoryService_TerminateWorkflowExecution_Args(t *types.HistoryService_TerminateWorkflowExecution_Args) *history.HistoryService_TerminateWorkflowExecution_Args {
+// FromHistoryServiceTerminateWorkflowExecutionArgs converts internal HistoryService_TerminateWorkflowExecution_Args type to thrift
+func FromHistoryServiceTerminateWorkflowExecutionArgs(t *types.HistoryServiceTerminateWorkflowExecutionArgs) *history.HistoryService_TerminateWorkflowExecution_Args {
 	if t == nil {
 		return nil
 	}
@@ -2182,18 +2182,18 @@ func FromHistoryService_TerminateWorkflowExecution_Args(t *types.HistoryService_
 	}
 }
 
-// ToHistoryService_TerminateWorkflowExecution_Args converts thrift HistoryService_TerminateWorkflowExecution_Args type to internal
-func ToHistoryService_TerminateWorkflowExecution_Args(t *history.HistoryService_TerminateWorkflowExecution_Args) *types.HistoryService_TerminateWorkflowExecution_Args {
+// ToHistoryServiceTerminateWorkflowExecutionArgs converts thrift HistoryService_TerminateWorkflowExecution_Args type to internal
+func ToHistoryServiceTerminateWorkflowExecutionArgs(t *history.HistoryService_TerminateWorkflowExecution_Args) *types.HistoryServiceTerminateWorkflowExecutionArgs {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_TerminateWorkflowExecution_Args{
+	return &types.HistoryServiceTerminateWorkflowExecutionArgs{
 		TerminateRequest: ToHistoryTerminateWorkflowExecutionRequest(t.TerminateRequest),
 	}
 }
 
-// FromHistoryService_TerminateWorkflowExecution_Result converts internal HistoryService_TerminateWorkflowExecution_Result type to thrift
-func FromHistoryService_TerminateWorkflowExecution_Result(t *types.HistoryService_TerminateWorkflowExecution_Result) *history.HistoryService_TerminateWorkflowExecution_Result {
+// FromHistoryServiceTerminateWorkflowExecutionResult converts internal HistoryService_TerminateWorkflowExecution_Result type to thrift
+func FromHistoryServiceTerminateWorkflowExecutionResult(t *types.HistoryServiceTerminateWorkflowExecutionResult) *history.HistoryService_TerminateWorkflowExecution_Result {
 	if t == nil {
 		return nil
 	}
@@ -2208,12 +2208,12 @@ func FromHistoryService_TerminateWorkflowExecution_Result(t *types.HistoryServic
 	}
 }
 
-// ToHistoryService_TerminateWorkflowExecution_Result converts thrift HistoryService_TerminateWorkflowExecution_Result type to internal
-func ToHistoryService_TerminateWorkflowExecution_Result(t *history.HistoryService_TerminateWorkflowExecution_Result) *types.HistoryService_TerminateWorkflowExecution_Result {
+// ToHistoryServiceTerminateWorkflowExecutionResult converts thrift HistoryService_TerminateWorkflowExecution_Result type to internal
+func ToHistoryServiceTerminateWorkflowExecutionResult(t *history.HistoryService_TerminateWorkflowExecution_Result) *types.HistoryServiceTerminateWorkflowExecutionResult {
 	if t == nil {
 		return nil
 	}
-	return &types.HistoryService_TerminateWorkflowExecution_Result{
+	return &types.HistoryServiceTerminateWorkflowExecutionResult{
 		BadRequestError:         ToBadRequestError(t.BadRequestError),
 		InternalServiceError:    ToInternalServiceError(t.InternalServiceError),
 		EntityNotExistError:     ToEntityNotExistsError(t.EntityNotExistError),
@@ -2898,8 +2898,7 @@ func FromHistoryRespondDecisionTaskCompletedResponse(t *types.HistoryRespondDeci
 		return nil
 	}
 	return &history.RespondDecisionTaskCompletedResponse{
-		StartedResponse:             FromRecordDecisionTaskStartedResponse(t.StartedResponse),
-		ActivitiesToDispatchLocally: FromActivityLocalDispatchInfoMap(t.ActivitiesToDispatchLocally),
+		StartedResponse: FromRecordDecisionTaskStartedResponse(t.StartedResponse),
 	}
 }
 
@@ -2909,8 +2908,7 @@ func ToHistoryRespondDecisionTaskCompletedResponse(t *history.RespondDecisionTas
 		return nil
 	}
 	return &types.HistoryRespondDecisionTaskCompletedResponse{
-		StartedResponse:             ToRecordDecisionTaskStartedResponse(t.StartedResponse),
-		ActivitiesToDispatchLocally: ToActivityLocalDispatchInfoMap(t.ActivitiesToDispatchLocally),
+		StartedResponse: ToRecordDecisionTaskStartedResponse(t.StartedResponse),
 	}
 }
 
@@ -3234,6 +3232,7 @@ func ToProcessingQueueStateMap(t map[string]*history.ProcessingQueueState) map[s
 	return v
 }
 
+// FromProcessingQueueStateArrayMap converts internal ProcessingQueueState array map to thrift
 func FromProcessingQueueStateArrayMap(t map[string][]*types.ProcessingQueueState) map[string][]*history.ProcessingQueueState {
 	if t == nil {
 		return nil
@@ -3245,6 +3244,7 @@ func FromProcessingQueueStateArrayMap(t map[string][]*types.ProcessingQueueState
 	return v
 }
 
+// ToProcessingQueueStateArrayMap converts thrift ProcessingQueueState array map to internal
 func ToProcessingQueueStateArrayMap(t map[string][]*history.ProcessingQueueState) map[string][]*types.ProcessingQueueState {
 	if t == nil {
 		return nil
