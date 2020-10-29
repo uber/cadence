@@ -23,13 +23,11 @@ package cassandra
 import (
 	"errors"
 
-	"github.com/uber/cadence/common/log"
-
 	"github.com/gocql/gocql"
 
-	"github.com/uber/cadence/common/service/config"
-
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/common/service/config"
 )
 
 var (
@@ -79,27 +77,13 @@ func (db *cdb) IsNotFoundError(err error) bool {
 }
 
 func (db *cdb) IsTimeoutError(err error) bool {
-	if err == gocql.ErrTimeoutNoResponse {
-		return true
-	}
-	if err == gocql.ErrConnectionClosed {
-		return true
-	}
-	_, ok := err.(*gocql.RequestErrWriteTimeout)
-	return ok
+	return IsTimeoutError(err)
 }
 
 func (db *cdb) IsThrottlingError(err error) bool {
-	if req, ok := err.(gocql.RequestError); ok {
-		// gocql does not expose the constant errOverloaded = 0x1001
-		return req.Code() == 0x1001
-	}
-	return false
+	return IsThrottlingError(err)
 }
 
 func (db *cdb) IsConditionFailedError(err error) bool {
-	if err == errConditionFailed {
-		return true
-	}
-	return false
+	return IsConditionFailedError(err)
 }

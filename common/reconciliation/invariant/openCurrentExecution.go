@@ -131,7 +131,7 @@ func (o *openCurrentExecution) Fix(
 	if fixResult != nil {
 		return *fixResult
 	}
-	fixResult = DeleteExecution(ctx, &execution, o.pr)
+	fixResult = DeleteExecution(ctx, execution, o.pr)
 	fixResult.CheckResult = *checkResult
 	fixResult.InvariantName = o.Name()
 	return *fixResult
