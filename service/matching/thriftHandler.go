@@ -30,6 +30,7 @@ import (
 	m "github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceserver"
 	s "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 // ThriftHandler wrap underlying handler and handles Thrift related type conversions
@@ -48,51 +49,61 @@ func (t ThriftHandler) register(dispatcher *yarpc.Dispatcher) {
 }
 
 // Health forwards request to the underlying handler
-func (t ThriftHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
-	return t.h.Health(ctx)
+func (t ThriftHandler) Health(ctx context.Context) (response *health.HealthStatus, err error) {
+	response, err = t.h.Health(ctx)
+	return response, thrift.FromError(err)
 }
 
 // AddActivityTask forwards request to the underlying handler
 func (t ThriftHandler) AddActivityTask(ctx context.Context, request *m.AddActivityTaskRequest) (err error) {
-	return t.h.AddActivityTask(ctx, request)
+	err = t.h.AddActivityTask(ctx, request)
+	return thrift.FromError(err)
 }
 
 // AddDecisionTask forwards request to the underlying handler
 func (t ThriftHandler) AddDecisionTask(ctx context.Context, request *m.AddDecisionTaskRequest) (err error) {
-	return t.h.AddDecisionTask(ctx, request)
+	err = t.h.AddDecisionTask(ctx, request)
+	return thrift.FromError(err)
 }
 
 // CancelOutstandingPoll forwards request to the underlying handler
 func (t ThriftHandler) CancelOutstandingPoll(ctx context.Context, request *m.CancelOutstandingPollRequest) (err error) {
-	return t.h.CancelOutstandingPoll(ctx, request)
+	err = t.h.CancelOutstandingPoll(ctx, request)
+	return thrift.FromError(err)
 }
 
 // DescribeTaskList forwards request to the underlying handler
 func (t ThriftHandler) DescribeTaskList(ctx context.Context, request *m.DescribeTaskListRequest) (response *s.DescribeTaskListResponse, err error) {
-	return t.h.DescribeTaskList(ctx, request)
+	response, err = t.h.DescribeTaskList(ctx, request)
+	return response, thrift.FromError(err)
 }
 
 // ListTaskListPartitions forwards request to the underlying handler
 func (t ThriftHandler) ListTaskListPartitions(ctx context.Context, request *m.ListTaskListPartitionsRequest) (response *s.ListTaskListPartitionsResponse, err error) {
-	return t.h.ListTaskListPartitions(ctx, request)
+	response, err = t.h.ListTaskListPartitions(ctx, request)
+	return response, thrift.FromError(err)
 }
 
 // PollForActivityTask forwards request to the underlying handler
 func (t ThriftHandler) PollForActivityTask(ctx context.Context, request *m.PollForActivityTaskRequest) (response *s.PollForActivityTaskResponse, err error) {
-	return t.h.PollForActivityTask(ctx, request)
+	response, err = t.h.PollForActivityTask(ctx, request)
+	return response, thrift.FromError(err)
 }
 
 // PollForDecisionTask forwards request to the underlying handler
 func (t ThriftHandler) PollForDecisionTask(ctx context.Context, request *m.PollForDecisionTaskRequest) (response *m.PollForDecisionTaskResponse, err error) {
-	return t.h.PollForDecisionTask(ctx, request)
+	response, err = t.h.PollForDecisionTask(ctx, request)
+	return response, thrift.FromError(err)
 }
 
 // QueryWorkflow forwards request to the underlying handler
 func (t ThriftHandler) QueryWorkflow(ctx context.Context, request *m.QueryWorkflowRequest) (response *s.QueryWorkflowResponse, err error) {
-	return t.h.QueryWorkflow(ctx, request)
+	response, err = t.h.QueryWorkflow(ctx, request)
+	return response, thrift.FromError(err)
 }
 
 // RespondQueryTaskCompleted forwards request to the underlying handler
 func (t ThriftHandler) RespondQueryTaskCompleted(ctx context.Context, request *m.RespondQueryTaskCompletedRequest) (err error) {
-	return t.h.RespondQueryTaskCompleted(ctx, request)
+	err = t.h.RespondQueryTaskCompleted(ctx, request)
+	return thrift.FromError(err)
 }
