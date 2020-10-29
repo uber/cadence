@@ -10,7 +10,7 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  push_server_to_registry:
+  push_server_to_dockerhub:
     name: Push Docker server image to Docker Hub
     runs-on: ubuntu-latest
     steps:
@@ -25,7 +25,7 @@ jobs:
           repository: ubercadence/server
           build_args: TARGET=server
           tag_with_ref: true
-  push_server_auto_setup_to_registry:
+  push_server_auto_setup_to_dockerhub:
     name: Push Docker server auto-setup images to Docker Hub
     runs-on: ubuntu-latest
     steps:
@@ -38,5 +38,37 @@ jobs:
           username: ${{ secrets.CADENCE_SERVER_DOCKERHUB_USERNAME }}
           password: ${{ secrets.CADENCE_SERVER_DOCKERHUB_TOKEN }}
           repository: ubercadence/server
+          build_args: TARGET=auto-setup
+          tags: ${{ github.event.release.tag_name }}-auto-setup, latestRelease-auto-setup
+  push_server_to_ghcr:
+    name: Push Docker server image to GitHub Container Registry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+      - name: Push to GitHub Container Registry (server build)
+        if: "!github.event.release.prerelease"
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.CADENCE_SERVER_GHCR_PAT }}
+          registry: ghcr.io
+          repository: just-at-uber/cadence/server
+          build_args: TARGET=server
+          tag_with_ref: true
+  push_server_auto_setup_to_ghcr:
+    name: Push Docker server auto-setup images to GitHub Container Registry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+      - name: Push to GitHub Container Registry (auto-setup build)
+        if: "!github.event.release.prerelease"
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.CADENCE_SERVER_GHCR_PAT }}
+          registry: ghcr.io
+          repository: just-at-uber/cadence/server
           build_args: TARGET=auto-setup
           tags: ${{ github.event.release.tag_name }}-auto-setup, latestRelease-auto-setup
