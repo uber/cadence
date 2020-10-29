@@ -28,7 +28,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -38,6 +37,9 @@ type (
 		logger      log.Logger
 	}
 )
+
+// VisibilityEncoding is default encoding for visibility data
+const VisibilityEncoding = common.EncodingTypeThriftRW
 
 var _ VisibilityManager = (*visibilityManagerImpl)(nil)
 
@@ -72,7 +74,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionStarted(
 		WorkflowTimeout:    request.WorkflowTimeout,
 		TaskID:             request.TaskID,
 		TaskList:           request.TaskList,
-		Memo:               thrift.ToMemo(request.Memo),
+		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
 		SearchAttributes:   request.SearchAttributes,
 	}
 	return v.persistence.RecordWorkflowExecutionStarted(ctx, req)
@@ -90,11 +92,11 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(
 		StartTimestamp:     request.StartTimestamp,
 		ExecutionTimestamp: request.ExecutionTimestamp,
 		TaskID:             request.TaskID,
-		Memo:               thrift.ToMemo(request.Memo),
+		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
 		TaskList:           request.TaskList,
 		SearchAttributes:   request.SearchAttributes,
 		CloseTimestamp:     request.CloseTimestamp,
-		Status:             *thrift.ToWorkflowExecutionCloseStatus(&request.Status),
+		Status:             request.Status,
 		HistoryLength:      request.HistoryLength,
 		RetentionSeconds:   request.RetentionSeconds,
 	}
@@ -113,7 +115,7 @@ func (v *visibilityManagerImpl) UpsertWorkflowExecution(
 		StartTimestamp:     request.StartTimestamp,
 		ExecutionTimestamp: request.ExecutionTimestamp,
 		TaskID:             request.TaskID,
-		Memo:               thrift.ToMemo(request.Memo),
+		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
 		TaskList:           request.TaskList,
 		SearchAttributes:   request.SearchAttributes,
 	}
@@ -220,7 +222,7 @@ func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByStatus(
 ) (*ListWorkflowExecutionsResponse, error) {
 	internalListRequest := v.toInternalListWorkflowExecutionsRequest(&request.ListWorkflowExecutionsRequest)
 	internalRequest := &InternalListClosedWorkflowExecutionsByStatusRequest{
-		Status: *thrift.ToWorkflowExecutionCloseStatus(&request.Status),
+		Status: request.Status,
 	}
 	if internalListRequest != nil {
 		internalRequest.InternalListWorkflowExecutionsRequest = *internalListRequest
@@ -239,7 +241,7 @@ func (v *visibilityManagerImpl) GetClosedWorkflowExecution(
 	internalReq := &InternalGetClosedWorkflowExecutionRequest{
 		DomainUUID: request.DomainUUID,
 		Domain:     request.Domain,
-		Execution:  *thrift.ToWorkflowExecution(&request.Execution),
+		Execution:  request.Execution,
 	}
 	internalResp, err := v.persistence.GetClosedWorkflowExecution(ctx, internalReq)
 	if err != nil {
@@ -335,7 +337,13 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 		execution.ExecutionTime = execution.StartTime
 	}
 
-	memo := thrift.FromMemo(execution.Memo)
+	memo, err := v.serializer.DeserializeVisibilityMemo(execution.Memo)
+	if err != nil {
+		v.logger.Error("failed to deserialize memo",
+			tag.WorkflowID(execution.WorkflowID),
+			tag.WorkflowRunID(execution.RunID),
+			tag.Error(err))
+	}
 	searchAttributes, err := v.getSearchAttributes(execution.SearchAttributes)
 	if err != nil {
 		v.logger.Error("failed to convert search attributes",
@@ -362,11 +370,27 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 	// for close records
 	if execution.Status != nil {
 		convertedExecution.CloseTime = common.Int64Ptr(execution.CloseTime.UnixNano())
-		convertedExecution.CloseStatus = thrift.FromWorkflowExecutionCloseStatus(execution.Status)
+		convertedExecution.CloseStatus = execution.Status
 		convertedExecution.HistoryLength = common.Int64Ptr(execution.HistoryLength)
 	}
 
 	return convertedExecution
+}
+
+func (v *visibilityManagerImpl) serializeMemo(visibilityMemo *shared.Memo, domainID, wID, rID string) *DataBlob {
+	memo, err := v.serializer.SerializeVisibilityMemo(visibilityMemo, VisibilityEncoding)
+	if err != nil {
+		v.logger.WithTags(
+			tag.WorkflowDomainID(domainID),
+			tag.WorkflowID(wID),
+			tag.WorkflowRunID(rID),
+			tag.Error(err)).
+			Error("Unable to encode visibility memo")
+	}
+	if memo == nil {
+		return &DataBlob{}
+	}
+	return memo
 }
 
 func (v *visibilityManagerImpl) fromInternalListWorkflowExecutionsRequest(internalReq *InternalListWorkflowExecutionsRequest) *ListWorkflowExecutionsRequest {

@@ -30,12 +30,9 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 // Fixed domain values for now
@@ -186,7 +183,6 @@ type (
 		sortByCloseTime bool
 		cassandraStore
 		lowConslevel gocql.Consistency
-		serializer   p.PayloadSerializer
 	}
 )
 
@@ -208,10 +204,9 @@ func newVisibilityPersistence(
 	}
 
 	return &cassandraVisibilityPersistence{
-		sortByCloseTime: listClosedOrderingByCloseTime,
 		cassandraStore:  cassandraStore{session: session, logger: logger},
 		lowConslevel:    gocql.One,
-		serializer:      p.NewPayloadSerializer(),
+		sortByCloseTime: listClosedOrderingByCloseTime,
 	}, nil
 }
 
@@ -229,7 +224,6 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 	ttl := request.WorkflowTimeout + openExecutionTTLBuffer
 	var query *gocql.Query
 
-	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	if ttl > maxCassandraTTL {
 		query = v.session.Query(templateCreateWorkflowExecutionStarted,
 			request.DomainUUID,
@@ -239,8 +233,8 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 			p.UnixNanoToDBTimestamp(request.StartTimestamp),
 			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
 			request.WorkflowTypeName,
-			memo.Data,
-			string(memo.GetEncoding()),
+			request.Memo.Data,
+			string(request.Memo.GetEncoding()),
 			request.TaskList,
 		)
 	} else {
@@ -252,8 +246,8 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 			p.UnixNanoToDBTimestamp(request.StartTimestamp),
 			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
 			request.WorkflowTypeName,
-			memo.Data,
-			string(memo.GetEncoding()),
+			request.Memo.Data,
+			string(request.Memo.GetEncoding()),
 			request.TaskList,
 			ttl,
 		)
@@ -289,7 +283,6 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 		retention = defaultCloseTTLSeconds
 	}
 
-	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	if retention > maxCassandraTTL {
 		batch.Query(templateCreateWorkflowExecutionClosed,
 			request.DomainUUID,
@@ -300,10 +293,10 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
 			p.UnixNanoToDBTimestamp(request.CloseTimestamp),
 			request.WorkflowTypeName,
-			*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
+			request.Status,
 			request.HistoryLength,
-			memo.Data,
-			string(memo.GetEncoding()),
+			request.Memo.Data,
+			string(request.Memo.GetEncoding()),
 			request.TaskList,
 		)
 		// duplicate write to v2 to order by close time
@@ -316,10 +309,10 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
 			p.UnixNanoToDBTimestamp(request.CloseTimestamp),
 			request.WorkflowTypeName,
-			*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
+			request.Status,
 			request.HistoryLength,
-			memo.Data,
-			string(memo.GetEncoding()),
+			request.Memo.Data,
+			string(request.Memo.GetEncoding()),
 			request.TaskList,
 		)
 	} else {
@@ -332,10 +325,10 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
 			p.UnixNanoToDBTimestamp(request.CloseTimestamp),
 			request.WorkflowTypeName,
-			*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
+			request.Status,
 			request.HistoryLength,
-			memo.Data,
-			string(memo.GetEncoding()),
+			request.Memo.Data,
+			string(request.Memo.GetEncoding()),
 			request.TaskList,
 			retention,
 		)
@@ -349,10 +342,10 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
 			p.UnixNanoToDBTimestamp(request.CloseTimestamp),
 			request.WorkflowTypeName,
-			*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
+			request.Status,
 			request.HistoryLength,
-			memo.Data,
-			string(memo.GetEncoding()),
+			request.Memo.Data,
+			string(request.Memo.GetEncoding()),
 			request.TaskList,
 			retention,
 		)
@@ -405,10 +398,10 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readOpenWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readOpenWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readOpenWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readOpenWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -443,10 +436,10 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutions(
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -479,10 +472,10 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByType(
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readOpenWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readOpenWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readOpenWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readOpenWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -518,10 +511,10 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByType(
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -554,10 +547,10 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByWorkflowID(
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readOpenWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readOpenWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readOpenWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readOpenWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -593,10 +586,10 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByWorkflowI
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -621,7 +614,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByStatus(
 		domainPartition,
 		p.UnixNanoToDBTimestamp(request.EarliestTime),
 		p.UnixNanoToDBTimestamp(request.LatestTime),
-		*thrift.FromWorkflowExecutionCloseStatus(&request.Status)).Consistency(v.lowConslevel)
+		request.Status).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
@@ -632,10 +625,10 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByStatus(
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -656,8 +649,8 @@ func (v *cassandraVisibilityPersistence) GetClosedWorkflowExecution(
 	query := v.session.Query(templateGetClosedWorkflowExecution,
 		request.DomainUUID,
 		domainPartition,
-		execution.GetWorkflowID(),
-		execution.GetRunID())
+		execution.GetWorkflowId(),
+		execution.GetRunId())
 
 	iter := query.Iter()
 	if iter == nil {
@@ -666,11 +659,11 @@ func (v *cassandraVisibilityPersistence) GetClosedWorkflowExecution(
 		}
 	}
 
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	if !has {
 		return nil, &workflow.EntityNotExistsError{
 			Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
-				execution.GetWorkflowID(), execution.GetRunID()),
+				execution.GetWorkflowId(), execution.GetRunId()),
 		}
 	}
 
@@ -730,10 +723,10 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsOrderByClos
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -766,10 +759,10 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByTypeOrder
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -802,10 +795,10 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByWorkflowI
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -838,10 +831,10 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByStatusOrd
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
@@ -854,23 +847,7 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByStatusOrd
 	return response, nil
 }
 
-func (v *cassandraVisibilityPersistence) serializeMemo(visibilityMemo *types.Memo, domainID, wID, rID string) *p.DataBlob {
-	memo, err := v.serializer.SerializeVisibilityMemo(thrift.FromMemo(visibilityMemo), common.EncodingTypeThriftRW)
-	if err != nil {
-		v.logger.WithTags(
-			tag.WorkflowDomainID(domainID),
-			tag.WorkflowID(wID),
-			tag.WorkflowRunID(rID),
-			tag.Error(err)).
-			Error("Unable to encode visibility memo")
-	}
-	if memo == nil {
-		return &p.DataBlob{}
-	}
-	return memo
-}
-
-func readOpenWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSerializer, logger log.Logger) (*p.InternalVisibilityWorkflowExecutionInfo, bool) {
+func readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*p.InternalVisibilityWorkflowExecutionInfo, bool) {
 	var workflowID string
 	var runID gocql.UUID
 	var typeName string
@@ -880,20 +857,13 @@ func readOpenWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSeria
 	var encoding string
 	var taskList string
 	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &typeName, &memo, &encoding, &taskList) {
-		memo, err := serializer.DeserializeVisibilityMemo(p.NewDataBlob(memo, common.EncodingType(encoding)))
-		if err != nil {
-			logger.Error("failed to deserialize memo",
-				tag.WorkflowID(workflowID),
-				tag.WorkflowRunID(runID.String()),
-				tag.Error(err))
-		}
 		record := &p.InternalVisibilityWorkflowExecutionInfo{
 			WorkflowID:    workflowID,
 			RunID:         runID.String(),
 			TypeName:      typeName,
 			StartTime:     startTime,
 			ExecutionTime: executionTime,
-			Memo:          thrift.ToMemo(memo),
+			Memo:          p.NewDataBlob(memo, common.EncodingType(encoding)),
 			TaskList:      taskList,
 		}
 		return record, true
@@ -901,7 +871,7 @@ func readOpenWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSeria
 	return nil, false
 }
 
-func readClosedWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSerializer, logger log.Logger) (*p.InternalVisibilityWorkflowExecutionInfo, bool) {
+func readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*p.InternalVisibilityWorkflowExecutionInfo, bool) {
 	var workflowID string
 	var runID gocql.UUID
 	var typeName string
@@ -914,13 +884,6 @@ func readClosedWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSer
 	var encoding string
 	var taskList string
 	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &closeTime, &typeName, &status, &historyLength, &memo, &encoding, &taskList) {
-		memo, err := serializer.DeserializeVisibilityMemo(p.NewDataBlob(memo, common.EncodingType(encoding)))
-		if err != nil {
-			logger.Error("failed to deserialize memo",
-				tag.WorkflowID(workflowID),
-				tag.WorkflowRunID(runID.String()),
-				tag.Error(err))
-		}
 		record := &p.InternalVisibilityWorkflowExecutionInfo{
 			WorkflowID:    workflowID,
 			RunID:         runID.String(),
@@ -928,9 +891,9 @@ func readClosedWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSer
 			StartTime:     startTime,
 			ExecutionTime: executionTime,
 			CloseTime:     closeTime,
-			Status:        thrift.ToWorkflowExecutionCloseStatus(&status),
+			Status:        &status,
 			HistoryLength: historyLength,
-			Memo:          thrift.ToMemo(memo),
+			Memo:          p.NewDataBlob(memo, common.EncodingType(encoding)),
 			TaskList:      taskList,
 		}
 		return record, true

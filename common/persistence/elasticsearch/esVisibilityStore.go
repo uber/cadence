@@ -44,8 +44,6 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -54,12 +52,11 @@ const (
 
 type (
 	esVisibilityStore struct {
-		esClient   es.GenericClient
-		index      string
-		producer   messaging.Producer
-		logger     log.Logger
-		config     *config.VisibilityConfig
-		serializer p.PayloadSerializer
+		esClient es.Client
+		index    string
+		producer messaging.Producer
+		logger   log.Logger
+		config   *config.VisibilityConfig
 	}
 )
 
@@ -74,12 +71,11 @@ func NewElasticSearchVisibilityStore(
 	logger log.Logger,
 ) p.VisibilityStore {
 	return &esVisibilityStore{
-		esClient:   esClient,
-		index:      index,
-		producer:   producer,
-		logger:     logger.WithTags(tag.ComponentESVisibilityManager),
-		config:     config,
-		serializer: p.NewPayloadSerializer(),
+		esClient: esClient,
+		index:    index,
+		producer: producer,
+		logger:   logger.WithTags(tag.ComponentESVisibilityManager),
+		config:   config,
 	}
 }
 
@@ -94,7 +90,6 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
 	v.checkProducer()
-	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	msg := getVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
@@ -104,8 +99,8 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 		request.StartTimestamp,
 		request.ExecutionTimestamp,
 		request.TaskID,
-		memo.Data,
-		memo.GetEncoding(),
+		request.Memo.Data,
+		request.Memo.GetEncoding(),
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
@@ -116,7 +111,6 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 	request *p.InternalRecordWorkflowExecutionClosedRequest,
 ) error {
 	v.checkProducer()
-	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	msg := getVisibilityMessageForCloseExecution(
 		request.DomainUUID,
 		request.WorkflowID,
@@ -125,12 +119,12 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 		request.StartTimestamp,
 		request.ExecutionTimestamp,
 		request.CloseTimestamp,
-		*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
+		request.Status,
 		request.HistoryLength,
 		request.TaskID,
-		memo.Data,
+		request.Memo.Data,
 		request.TaskList,
-		memo.GetEncoding(),
+		request.Memo.GetEncoding(),
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
@@ -141,7 +135,6 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 	request *p.InternalUpsertWorkflowExecutionRequest,
 ) error {
 	v.checkProducer()
-	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	msg := getVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
@@ -151,8 +144,8 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 		request.StartTimestamp,
 		request.ExecutionTimestamp,
 		request.TaskID,
-		memo.Data,
-		memo.GetEncoding(),
+		request.Memo.Data,
+		request.Memo.GetEncoding(),
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
