@@ -26,10 +26,13 @@ import (
 
 	"github.com/gocql/gocql"
 
+	"github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 )
 
 func applyWorkflowMutationBatch(
@@ -2203,21 +2206,30 @@ func createChecksum(result map[string]interface{}) checksum.Checksum {
 	return csum
 }
 
-func isTimeoutError(err error) bool {
-	if err == gocql.ErrTimeoutNoResponse {
-		return true
-	}
-	if err == gocql.ErrConnectionClosed {
-		return true
-	}
-	_, ok := err.(*gocql.RequestErrWriteTimeout)
-	return ok
-}
+func convertCommonErrors(
+	db nosqlplugin.DB,
+	operation string,
+	err error,
+) error {
+	// TODO: remove all checks related db and cassandra.IsXXXError(err) after nosql refactoring is done
 
-func isThrottlingError(err error) bool {
-	if req, ok := err.(gocql.RequestError); ok {
-		// gocql does not expose the constant errOverloaded = 0x1001
-		return req.Code() == 0x1001
+	if db != nil && db.IsNotFoundError(err) || db == nil && cassandra.IsNotFoundError(err) {
+		return &shared.EntityNotExistsError{
+			Message: fmt.Sprintf("%v failed. Error: %v ", operation, err),
+		}
 	}
-	return false
+
+	if db != nil && db.IsTimeoutError(err) || db == nil && cassandra.IsTimeoutError(err) {
+		return &p.TimeoutError{Msg: fmt.Sprintf("%v timed out. Error: %v", operation, err)}
+	}
+
+	if db != nil && db.IsThrottlingError(err) || db == nil && cassandra.IsThrottlingError(err) {
+		return &shared.ServiceBusyError{
+			Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
+		}
+	}
+
+	return &shared.InternalServiceError{
+		Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
+	}
 }
