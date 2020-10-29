@@ -37,7 +37,6 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 )
 
@@ -48,7 +47,7 @@ type domainReplicationSuite struct {
 
 	sourceCluster          string
 	taskExecutor           *domain.MockReplicationTaskExecutor
-	domainReplicationQueue *persistence.MockDomainReplicationQueue
+	domainReplicationQueue *domain.MockReplicationQueue
 	remoteClient           *adminservicetest.MockClient
 	replicationProcessor   *domainReplicationProcessor
 }
@@ -65,7 +64,7 @@ func (s *domainReplicationSuite) SetupTest() {
 
 	s.sourceCluster = "active"
 	s.taskExecutor = domain.NewMockReplicationTaskExecutor(s.controller)
-	s.domainReplicationQueue = persistence.NewMockDomainReplicationQueue(s.controller)
+	s.domainReplicationQueue = domain.NewMockReplicationQueue(s.controller)
 	s.remoteClient = resource.RemoteAdminClient
 	serviceResolver := resource.WorkerServiceResolver
 	serviceResolver.EXPECT().Lookup(s.sourceCluster).Return(resource.GetHostInfo(), nil).AnyTimes()
