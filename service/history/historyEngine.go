@@ -1593,6 +1593,20 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 		}
 	}
 
+	if di, ok := mutableState.GetPendingDecision(); ok {
+		pendingDecision := &workflow.PendingDecisionInfo{
+			State:                      workflow.PendingDecisionStateScheduled.Ptr(),
+			ScheduledTimestamp:         common.Int64Ptr(di.ScheduledTimestamp),
+			Attempt:                    common.Int64Ptr(di.Attempt),
+			OriginalScheduledTimestamp: common.Int64Ptr(di.OriginalScheduledTimestamp),
+		}
+		if di.StartedID != common.EmptyEventID {
+			pendingDecision.State = workflow.PendingDecisionStateStarted.Ptr()
+			pendingDecision.StartedTimestamp = common.Int64Ptr(di.StartedTimestamp)
+		}
+		result.PendingDecision = pendingDecision
+	}
+
 	return result, nil
 }
 

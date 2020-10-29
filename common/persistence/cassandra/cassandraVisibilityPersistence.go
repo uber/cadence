@@ -261,14 +261,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 	query = query.WithTimestamp(p.UnixNanoToDBTimestamp(request.StartTimestamp))
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("RecordWorkflowExecutionStarted operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("RecordWorkflowExecutionStarted operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "RecordWorkflowExecutionStarted", err)
 	}
 
 	return nil
@@ -378,14 +371,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 	batch = batch.WithTimestamp(p.UnixNanoToDBTimestamp(queryTimeStamp))
 	err := v.session.ExecuteBatch(batch)
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("RecordWorkflowExecutionClosed operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("RecordWorkflowExecutionClosed operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "RecordWorkflowExecutionClosed", err)
 	}
 	return nil
 }
@@ -429,14 +415,7 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListOpenWorkflowExecutions operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListOpenWorkflowExecutions operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListOpenWorkflowExecutions", err)
 	}
 
 	return response, nil
@@ -474,14 +453,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutions(
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListClosedWorkflowExecutions operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutions", err)
 	}
 
 	return response, nil
@@ -517,14 +489,7 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByType(
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListOpenWorkflowExecutionsByType operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListOpenWorkflowExecutionsByType operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListOpenWorkflowExecutionsByType", err)
 	}
 
 	return response, nil
@@ -563,14 +528,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByType(
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListClosedWorkflowExecutionsByType operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByType operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByType", err)
 	}
 
 	return response, nil
@@ -606,14 +564,7 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByWorkflowID(
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListOpenWorkflowExecutionsByWorkflowID operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListOpenWorkflowExecutionsByWorkflowID operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListOpenWorkflowExecutionsByWorkflowID", err)
 	}
 
 	return response, nil
@@ -652,14 +603,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByWorkflowI
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByWorkflowID", err)
 	}
 
 	return response, nil
@@ -698,14 +642,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByStatus(
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListClosedWorkflowExecutionsByStatus operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByStatus operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByStatus", err)
 	}
 
 	return response, nil
@@ -738,14 +675,7 @@ func (v *cassandraVisibilityPersistence) GetClosedWorkflowExecution(
 	}
 
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("GetClosedWorkflowExecution operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetClosedWorkflowExecution operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "GetClosedWorkflowExecution", err)
 	}
 
 	return &p.InternalGetClosedWorkflowExecutionResponse{
@@ -810,14 +740,7 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsOrderByClos
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListClosedWorkflowExecutions operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutions", err)
 	}
 
 	return response, nil
@@ -853,14 +776,7 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByTypeOrder
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListClosedWorkflowExecutionsByType operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByType operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByType", err)
 	}
 
 	return response, nil
@@ -896,14 +812,7 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByWorkflowI
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByWorkflowID", err)
 	}
 
 	return response, nil
@@ -939,14 +848,7 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByStatusOrd
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListClosedWorkflowExecutionsByStatus operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByStatus operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByStatus", err)
 	}
 
 	return response, nil

@@ -1070,6 +1070,8 @@ const (
 	HistoryScavengerScope
 	// ParentClosePolicyProcessorScope is scope used by all metrics emitted by worker.ParentClosePolicyProcessor
 	ParentClosePolicyProcessorScope
+	// ShardScannerScope is scope used by all metrics emitted by worker.shardscanner module
+	ShardScannerScope
 
 	NumWorkerScopes
 )
@@ -1547,6 +1549,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ArchiverArchivalWorkflowScope:          {operation: "ArchiverArchivalWorkflow"},
 		TaskListScavengerScope:                 {operation: "tasklistscavenger"},
 		ExecutionsScannerScope:                 {operation: "ExecutionsScanner"},
+		ShardScannerScope:                      {operation: "ShardScanner"},
 		ExecutionsFixerScope:                   {operation: "ExecutionsFixer"},
 		HistoryScavengerScope:                  {operation: "historyscavenger"},
 		BatcherScope:                           {operation: "batcher"},

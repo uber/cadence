@@ -906,6 +906,7 @@ type describeWorkflowExecutionResponse struct {
 	WorkflowExecutionInfo  workflowExecutionInfo
 	PendingActivities      []*pendingActivityInfo
 	PendingChildren        []*shared.PendingChildExecutionInfo
+	PendingDecision        *pendingDecisionInfo
 }
 
 // workflowExecutionInfo has same fields as shared.WorkflowExecutionInfo, but has datetime instead of raw time
@@ -938,6 +939,14 @@ type pendingActivityInfo struct {
 	LastFailureReason      *string `json:",omitempty"`
 	LastWorkerIdentity     *string `json:",omitempty"`
 	LastFailureDetails     *string `json:",omitempty"` // change from []byte
+}
+
+type pendingDecisionInfo struct {
+	State                      *shared.PendingDecisionState
+	OriginalScheduledTimestamp *string `json:",omitempty"` // change from *int64
+	ScheduledTimestamp         *string `json:",omitempty"` // change from *int64
+	StartedTimestamp           *string `json:",omitempty"` // change from *int64
+	Attempt                    *int64  `json:",omitempty"`
 }
 
 func convertDescribeWorkflowExecutionResponse(resp *shared.DescribeWorkflowExecutionResponse,
@@ -983,11 +992,32 @@ func convertDescribeWorkflowExecutionResponse(resp *shared.DescribeWorkflowExecu
 		pendingActs = append(pendingActs, tmpAct)
 	}
 
+	var pendingDecision *pendingDecisionInfo
+	if resp.PendingDecision != nil {
+		pendingDecision = &pendingDecisionInfo{
+			State:              resp.PendingDecision.State,
+			ScheduledTimestamp: timestampPtrToStringPtr(resp.PendingDecision.ScheduledTimestamp, false),
+			StartedTimestamp:   timestampPtrToStringPtr(resp.PendingDecision.StartedTimestamp, false),
+			Attempt:            resp.PendingDecision.Attempt,
+		}
+		// TODO: Idea here is only display decision task original scheduled timestamp if user are
+		// using decision heartbeat. And we should be able to tell whether a decision task has heartbeat
+		// or not by comparing the original scheduled timestamp and scheduled timestamp.
+		// However, currently server may assign different value to original scheduled timestamp and
+		// scheduled time even if there's no decision heartbeat.
+		// if resp.PendingDecision.OriginalScheduledTimestamp != nil &&
+		// 	resp.PendingDecision.ScheduledTimestamp != nil &&
+		// 	*resp.PendingDecision.OriginalScheduledTimestamp != *resp.PendingDecision.ScheduledTimestamp {
+		// 	pendingDecision.OriginalScheduledTimestamp = timestampPtrToStringPtr(resp.PendingDecision.OriginalScheduledTimestamp, false)
+		// }
+	}
+
 	return &describeWorkflowExecutionResponse{
 		ExecutionConfiguration: resp.ExecutionConfiguration,
 		WorkflowExecutionInfo:  executionInfo,
 		PendingActivities:      pendingActs,
 		PendingChildren:        resp.PendingChildren,
+		PendingDecision:        pendingDecision,
 	}
 }
 

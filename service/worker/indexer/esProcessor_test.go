@@ -186,7 +186,7 @@ func (s *esProcessorSuite) TestBulkAfterActionX() {
 		"index": {
 			Index:   testIndex,
 			Type:    testType,
-			Id:      testID,
+			ID:      testID,
 			Version: version,
 			Status:  200,
 		},
@@ -217,7 +217,7 @@ func (s *esProcessorSuite) TestBulkAfterAction_Nack() {
 		"index": {
 			Index:   testIndex,
 			Type:    testType,
-			Id:      testID,
+			ID:      testID,
 			Version: version,
 			Status:  400,
 		},
@@ -254,7 +254,7 @@ func (s *esProcessorSuite) TestBulkAfterAction_Error() {
 		"index": {
 			Index:   testIndex,
 			Type:    testType,
-			Id:      testID,
+			ID:      testID,
 			Version: version,
 			Status:  400,
 		},

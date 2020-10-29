@@ -157,7 +157,7 @@ type (
 	GenericBulkableAddRequest struct {
 		Index       string
 		Type        string
-		Id          string
+		ID          string
 		VersionType string
 		Version     int64
 		// true means it's delete, otherwise it's a index request
@@ -183,7 +183,7 @@ type (
 	GenericBulkResponseItem struct {
 		Index         string `json:"_index,omitempty"`
 		Type          string `json:"_type,omitempty"`
-		Id            string `json:"_id,omitempty"`
+		ID            string `json:"_id,omitempty"`
 		Version       int64  `json:"_version,omitempty"`
 		Result        string `json:"result,omitempty"`
 		SeqNo         int64  `json:"_seq_no,omitempty"`
