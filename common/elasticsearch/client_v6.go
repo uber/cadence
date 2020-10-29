@@ -38,7 +38,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 var _ GenericClient = (*elasticV6)(nil)
@@ -295,9 +294,9 @@ func (c *elasticV6) SearchForOneClosedExecution(
 
 	matchDomainQuery := elastic.NewMatchQuery(DomainID, request.DomainUUID)
 	existClosedStatusQuery := elastic.NewExistsQuery(CloseStatus)
-	matchWorkflowIDQuery := elastic.NewMatchQuery(WorkflowID, request.Execution.GetWorkflowID())
+	matchWorkflowIDQuery := elastic.NewMatchQuery(WorkflowID, request.Execution.GetWorkflowId())
 	boolQuery := elastic.NewBoolQuery().Must(matchDomainQuery).Must(existClosedStatusQuery).Must(matchWorkflowIDQuery)
-	rid := request.Execution.GetRunID()
+	rid := request.Execution.GetRunId()
 	if rid != "" {
 		matchRunIDQuery := elastic.NewMatchQuery(RunID, rid)
 		boolQuery = boolQuery.Must(matchRunIDQuery)
@@ -545,27 +544,19 @@ func (c *elasticV6) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit
 		return nil
 	}
 
-	memo, err := c.serializer.DeserializeVisibilityMemo(p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)))
-	if err != nil {
-		c.logger.Error("failed to deserialize memo",
-			tag.WorkflowID(source.WorkflowID),
-			tag.WorkflowRunID(source.RunID),
-			tag.Error(err))
-	}
-
 	record := &p.InternalVisibilityWorkflowExecutionInfo{
 		WorkflowID:       source.WorkflowID,
 		RunID:            source.RunID,
 		TypeName:         source.WorkflowType,
 		StartTime:        time.Unix(0, source.StartTime),
 		ExecutionTime:    time.Unix(0, source.ExecutionTime),
-		Memo:             thrift.ToMemo(memo),
+		Memo:             p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
 		TaskList:         source.TaskList,
 		SearchAttributes: source.Attr,
 	}
 	if source.CloseTime != 0 {
 		record.CloseTime = time.Unix(0, source.CloseTime)
-		record.Status = thrift.ToWorkflowExecutionCloseStatus(&source.CloseStatus)
+		record.Status = &source.CloseStatus
 		record.HistoryLength = source.HistoryLength
 	}
 

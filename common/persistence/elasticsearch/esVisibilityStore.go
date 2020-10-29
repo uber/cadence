@@ -52,7 +52,7 @@ const (
 
 type (
 	esVisibilityStore struct {
-		esClient es.Client
+		esClient es.GenericClient
 		index    string
 		producer messaging.Producer
 		logger   log.Logger
@@ -323,7 +323,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 		Filter:      isRecordValid,
 		MatchQuery: &es.GenericMatch{
 			Name: es.CloseStatus,
-			Text: int32(*thrift.FromWorkflowExecutionCloseStatus(&request.Status)),
+			Text: &request.Status,
 		},
 	})
 	if err != nil {
@@ -846,20 +846,4 @@ func cleanDSL(input string) string {
 	var re = regexp.MustCompile("(`)(Attr.\\w+)(`)")
 	result := re.ReplaceAllString(input, `$2`)
 	return result
-}
-
-func (v *esVisibilityStore) serializeMemo(visibilityMemo *types.Memo, domainID, wID, rID string) *p.DataBlob {
-	memo, err := v.serializer.SerializeVisibilityMemo(thrift.FromMemo(visibilityMemo), common.EncodingTypeThriftRW)
-	if err != nil {
-		v.logger.WithTags(
-			tag.WorkflowDomainID(domainID),
-			tag.WorkflowID(wID),
-			tag.WorkflowRunID(rID),
-			tag.Error(err)).
-			Error("Unable to encode visibility memo")
-	}
-	if memo == nil {
-		return &p.DataBlob{}
-	}
-	return memo
 }
