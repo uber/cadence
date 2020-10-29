@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 // AdminThriftHandler wrap underlying handler and handles Thrift related type conversions
@@ -47,90 +48,108 @@ func (t AdminThriftHandler) register(dispatcher *yarpc.Dispatcher) {
 
 // AddSearchAttribute forwards request to the underlying handler
 func (t AdminThriftHandler) AddSearchAttribute(ctx context.Context, request *admin.AddSearchAttributeRequest) (err error) {
-	return t.h.AddSearchAttribute(ctx, request)
+	err = t.h.AddSearchAttribute(ctx, request)
+	return thrift.FromError(err)
 }
 
 // CloseShard forwards request to the underlying handler
 func (t AdminThriftHandler) CloseShard(ctx context.Context, request *shared.CloseShardRequest) (err error) {
-	return t.h.CloseShard(ctx, request)
+	err = t.h.CloseShard(ctx, request)
+	return thrift.FromError(err)
 }
 
 // DescribeCluster forwards request to the underlying handler
 func (t AdminThriftHandler) DescribeCluster(ctx context.Context) (response *admin.DescribeClusterResponse, err error) {
-	return t.h.DescribeCluster(ctx)
+	response, err = t.h.DescribeCluster(ctx)
+	return response, thrift.FromError(err)
 }
 
 // DescribeHistoryHost forwards request to the underlying handler
 func (t AdminThriftHandler) DescribeHistoryHost(ctx context.Context, request *shared.DescribeHistoryHostRequest) (response *shared.DescribeHistoryHostResponse, err error) {
-	return t.h.DescribeHistoryHost(ctx, request)
+	response, err = t.h.DescribeHistoryHost(ctx, request)
+	return response, thrift.FromError(err)
 }
 
 // DescribeQueue forwards request to the underlying handler
 func (t AdminThriftHandler) DescribeQueue(ctx context.Context, request *shared.DescribeQueueRequest) (response *shared.DescribeQueueResponse, err error) {
-	return t.h.DescribeQueue(ctx, request)
+	response, err = t.h.DescribeQueue(ctx, request)
+	return response, thrift.FromError(err)
 }
 
 // DescribeWorkflowExecution forwards request to the underlying handler
 func (t AdminThriftHandler) DescribeWorkflowExecution(ctx context.Context, request *admin.DescribeWorkflowExecutionRequest) (response *admin.DescribeWorkflowExecutionResponse, err error) {
-	return t.h.DescribeWorkflowExecution(ctx, request)
+	response, err = t.h.DescribeWorkflowExecution(ctx, request)
+	return response, thrift.FromError(err)
 }
 
 // GetDLQReplicationMessages forwards request to the underlying handler
 func (t AdminThriftHandler) GetDLQReplicationMessages(ctx context.Context, request *replicator.GetDLQReplicationMessagesRequest) (response *replicator.GetDLQReplicationMessagesResponse, err error) {
-	return t.h.GetDLQReplicationMessages(ctx, request)
+	response, err = t.h.GetDLQReplicationMessages(ctx, request)
+	return response, thrift.FromError(err)
 }
 
 // GetDomainReplicationMessages forwards request to the underlying handler
 func (t AdminThriftHandler) GetDomainReplicationMessages(ctx context.Context, request *replicator.GetDomainReplicationMessagesRequest) (response *replicator.GetDomainReplicationMessagesResponse, err error) {
-	return t.h.GetDomainReplicationMessages(ctx, request)
+	response, err = t.h.GetDomainReplicationMessages(ctx, request)
+	return response, thrift.FromError(err)
 }
 
 // GetReplicationMessages forwards request to the underlying handler
 func (t AdminThriftHandler) GetReplicationMessages(ctx context.Context, request *replicator.GetReplicationMessagesRequest) (response *replicator.GetReplicationMessagesResponse, err error) {
-	return t.h.GetReplicationMessages(ctx, request)
+	response, err = t.h.GetReplicationMessages(ctx, request)
+	return response, thrift.FromError(err)
 }
 
 // GetWorkflowExecutionRawHistoryV2 forwards request to the underlying handler
 func (t AdminThriftHandler) GetWorkflowExecutionRawHistoryV2(ctx context.Context, request *admin.GetWorkflowExecutionRawHistoryV2Request) (response *admin.GetWorkflowExecutionRawHistoryV2Response, err error) {
-	return t.h.GetWorkflowExecutionRawHistoryV2(ctx, request)
+	response, err = t.h.GetWorkflowExecutionRawHistoryV2(ctx, request)
+	return response, thrift.FromError(err)
 }
 
 // MergeDLQMessages forwards request to the underlying handler
 func (t AdminThriftHandler) MergeDLQMessages(ctx context.Context, request *replicator.MergeDLQMessagesRequest) (response *replicator.MergeDLQMessagesResponse, err error) {
-	return t.h.MergeDLQMessages(ctx, request)
+	response, err = t.h.MergeDLQMessages(ctx, request)
+	return response, thrift.FromError(err)
 }
 
 // PurgeDLQMessages forwards request to the underlying handler
 func (t AdminThriftHandler) PurgeDLQMessages(ctx context.Context, request *replicator.PurgeDLQMessagesRequest) (err error) {
-	return t.h.PurgeDLQMessages(ctx, request)
+	err = t.h.PurgeDLQMessages(ctx, request)
+	return thrift.FromError(err)
 }
 
 // ReadDLQMessages forwards request to the underlying handler
 func (t AdminThriftHandler) ReadDLQMessages(ctx context.Context, request *replicator.ReadDLQMessagesRequest) (response *replicator.ReadDLQMessagesResponse, err error) {
-	return t.h.ReadDLQMessages(ctx, request)
+	response, err = t.h.ReadDLQMessages(ctx, request)
+	return response, thrift.FromError(err)
 }
 
 // ReapplyEvents forwards request to the underlying handler
 func (t AdminThriftHandler) ReapplyEvents(ctx context.Context, request *shared.ReapplyEventsRequest) (err error) {
-	return t.h.ReapplyEvents(ctx, request)
+	err = t.h.ReapplyEvents(ctx, request)
+	return thrift.FromError(err)
 }
 
 // RefreshWorkflowTasks forwards request to the underlying handler
 func (t AdminThriftHandler) RefreshWorkflowTasks(ctx context.Context, request *shared.RefreshWorkflowTasksRequest) (err error) {
-	return t.h.RefreshWorkflowTasks(ctx, request)
+	err = t.h.RefreshWorkflowTasks(ctx, request)
+	return thrift.FromError(err)
 }
 
 // RemoveTask forwards request to the underlying handler
 func (t AdminThriftHandler) RemoveTask(ctx context.Context, request *shared.RemoveTaskRequest) (err error) {
-	return t.h.RemoveTask(ctx, request)
+	err = t.h.RemoveTask(ctx, request)
+	return thrift.FromError(err)
 }
 
 // ResendReplicationTasks forwards request to the underlying handler
 func (t AdminThriftHandler) ResendReplicationTasks(ctx context.Context, request *admin.ResendReplicationTasksRequest) (err error) {
-	return t.h.ResendReplicationTasks(ctx, request)
+	err = t.h.ResendReplicationTasks(ctx, request)
+	return thrift.FromError(err)
 }
 
 // ResetQueue forwards request to the underlying handler
 func (t AdminThriftHandler) ResetQueue(ctx context.Context, request *shared.ResetQueueRequest) (err error) {
-	return t.h.ResetQueue(ctx, request)
+	err = t.h.ResetQueue(ctx, request)
+	return thrift.FromError(err)
 }
