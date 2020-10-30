@@ -31,7 +31,6 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -42,7 +41,6 @@ type (
 	nosqlDomainManager struct {
 		nosqlManager
 		currentClusterName string
-		serializer         p.PayloadSerializer
 	}
 )
 
@@ -60,7 +58,6 @@ func newMetadataPersistenceV2(cfg config.Cassandra, currentClusterName string, l
 			logger: logger,
 		},
 		currentClusterName: currentClusterName,
-		serializer:         p.NewPayloadSerializer(),
 	}, nil
 }
 
@@ -297,13 +294,6 @@ func (m *nosqlDomainManager) GetMetadata(
 func (m *nosqlDomainManager) toNoSQLInternalDomainConfig(
 	domainConfig *p.InternalDomainConfig,
 ) (*nosqlplugin.NoSQLInternalDomainConfig, error) {
-	serializedBadBinaries, err := m.serializer.SerializeBadBinaries(
-		thrift.FromBadBinaries(&domainConfig.BadBinaries),
-		common.EncodingTypeThriftRW)
-	if err != nil {
-		return nil, err
-	}
-
 	return &nosqlplugin.NoSQLInternalDomainConfig{
 		Retention:                domainConfig.Retention,
 		EmitMetric:               domainConfig.EmitMetric,
@@ -313,18 +303,13 @@ func (m *nosqlDomainManager) toNoSQLInternalDomainConfig(
 		HistoryArchivalURI:       domainConfig.HistoryArchivalURI,
 		VisibilityArchivalStatus: domainConfig.VisibilityArchivalStatus,
 		VisibilityArchivalURI:    domainConfig.VisibilityArchivalURI,
-		BadBinaries:              p.NewDataBlob(serializedBadBinaries.Data, serializedBadBinaries.Encoding),
+		BadBinaries:              domainConfig.BadBinaries,
 	}, nil
 }
 
 func (m *nosqlDomainManager) fromNoSQLInternalDomainConfig(
 	domainConfig *nosqlplugin.NoSQLInternalDomainConfig,
 ) (*p.InternalDomainConfig, error) {
-	badBinaries, err := m.serializer.DeserializeBadBinaries(domainConfig.BadBinaries)
-	if err != nil {
-		return nil, err
-	}
-
 	return &p.InternalDomainConfig{
 		Retention:                domainConfig.Retention,
 		EmitMetric:               domainConfig.EmitMetric,
@@ -334,6 +319,6 @@ func (m *nosqlDomainManager) fromNoSQLInternalDomainConfig(
 		HistoryArchivalURI:       domainConfig.HistoryArchivalURI,
 		VisibilityArchivalStatus: domainConfig.VisibilityArchivalStatus,
 		VisibilityArchivalURI:    domainConfig.VisibilityArchivalURI,
-		BadBinaries:              *thrift.ToBadBinaries(badBinaries),
+		BadBinaries:              domainConfig.BadBinaries,
 	}, nil
 }
