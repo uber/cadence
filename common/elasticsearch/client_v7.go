@@ -350,7 +350,7 @@ func fromV7ToGenericBulkResponseItem(v *elastic.BulkResponseItem) *GenericBulkRe
 	return &GenericBulkResponseItem{
 		Index:         v.Index,
 		Type:          v.Type,
-		Id:            v.Id,
+		ID:            v.Id,
 		Version:       v.Version,
 		Result:        v.Result,
 		SeqNo:         v.SeqNo,
@@ -427,14 +427,14 @@ func (v *v7BulkProcessor) Add(request *GenericBulkableAddRequest) {
 		req = elastic.NewBulkDeleteRequest().
 			Index(request.Index).
 			Type(request.Type).
-			Id(request.Id).
+			Id(request.ID).
 			VersionType(request.VersionType).
 			Version(request.Version)
 	} else {
 		req = elastic.NewBulkIndexRequest().
 			Index(request.Index).
 			Type(request.Type).
-			Id(request.Id).
+			Id(request.ID).
 			VersionType(request.VersionType).
 			Version(request.Version).
 			Doc(request.Doc)
