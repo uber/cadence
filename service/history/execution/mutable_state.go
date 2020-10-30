@@ -77,6 +77,7 @@ type (
 		AddDecisionTaskCompletedEvent(int64, int64, *workflow.RespondDecisionTaskCompletedRequest, int) (*workflow.HistoryEvent, error)
 		AddDecisionTaskFailedEvent(scheduleEventID int64, startedEventID int64, cause workflow.DecisionTaskFailedCause, details []byte, identity, reason, binChecksum, baseRunID, newRunID string, forkEventVersion int64) (*workflow.HistoryEvent, error)
 		AddDecisionTaskScheduleToStartTimeoutEvent(int64) (*workflow.HistoryEvent, error)
+		AddDecisionTaskResetTimeoutEvent(int64, string, string, int64) (*workflow.HistoryEvent, error)
 		AddFirstDecisionTaskScheduled(*workflow.HistoryEvent) error
 		AddDecisionTaskScheduledEvent(bypassTaskGeneration bool) (*DecisionInfo, error)
 		AddDecisionTaskScheduledEventAsHeartbeat(bypassTaskGeneration bool, originalScheduledTimestamp int64) (*DecisionInfo, error)

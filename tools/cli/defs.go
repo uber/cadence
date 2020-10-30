@@ -78,6 +78,8 @@ var envKeysForUserName = []string{
 var resetTypesMap = map[string]string{
 	"FirstDecisionCompleted": "",
 	"LastDecisionCompleted":  "",
+	"FirstDecisionScheduled": "",
+	"LastDecisionScheduled":  "",
 	"LastContinuedAsNew":     "",
 	"BadBinary":              FlagResetBadBinaryChecksum,
 }

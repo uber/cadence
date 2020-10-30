@@ -617,12 +617,9 @@ func (r *historyReplicatorImpl) applyNonStartEventsMissingMutableState(
 		)
 	}
 
-	decisionTaskFailedEvent := task.getFirstEvent()
-	attr := decisionTaskFailedEvent.DecisionTaskFailedEventAttributes
-	baseRunID := attr.GetBaseRunId()
-	baseEventID := decisionTaskFailedEvent.GetEventId() - 1
-	baseEventVersion := attr.GetForkEventVersion()
-	newRunID := attr.GetNewRunId()
+	decisionTaskEvent := task.getFirstEvent()
+	baseEventID := decisionTaskEvent.GetEventId() - 1
+	baseRunID, newRunID, baseEventVersion := task.getWorkflowResetMetadata()
 
 	workflowResetter := r.newWorkflowResetter(
 		task.getDomainID(),

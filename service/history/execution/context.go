@@ -929,7 +929,7 @@ func (c *contextImpl) PersistNonFirstWorkflowEvents(
 			// TransactionID is set by shard context
 		},
 	)
-	return int64(size), err
+	return size, err
 }
 
 func (c *contextImpl) appendHistoryV2EventsWithRetry(

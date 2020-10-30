@@ -2458,9 +2458,9 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	if err != nil {
 		return nil, err
 	}
-	if _, ok := baseMutableState.GetInFlightDecision(); !ok && baseMutableState.IsWorkflowExecutionRunning() {
+	if ok := baseMutableState.HasProcessedOrPendingDecision(); !ok {
 		return nil, &workflow.BadRequestError{
-			Message: "Cannot reset open workflow without completed decision task.",
+			Message: "Cannot reset workflow without a decision task schedule.",
 		}
 	}
 	if request.GetDecisionFinishEventId() <= common.FirstEventID ||

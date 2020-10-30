@@ -354,6 +354,21 @@ func (mr *MockMutableStateMockRecorder) AddDecisionTaskScheduleToStartTimeoutEve
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDecisionTaskScheduleToStartTimeoutEvent", reflect.TypeOf((*MockMutableState)(nil).AddDecisionTaskScheduleToStartTimeoutEvent), arg0)
 }
 
+// AddDecisionTaskResetTimeoutEvent mocks base method
+func (m *MockMutableState) AddDecisionTaskResetTimeoutEvent(arg0 int64, arg1, arg2 string, arg3 int64) (*shared.HistoryEvent, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddDecisionTaskResetTimeoutEvent", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(*shared.HistoryEvent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AddDecisionTaskResetTimeoutEvent indicates an expected call of AddDecisionTaskResetTimeoutEvent
+func (mr *MockMutableStateMockRecorder) AddDecisionTaskResetTimeoutEvent(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDecisionTaskResetTimeoutEvent", reflect.TypeOf((*MockMutableState)(nil).AddDecisionTaskResetTimeoutEvent), arg0, arg1, arg2, arg3)
+}
+
 // AddFirstDecisionTaskScheduled mocks base method
 func (m *MockMutableState) AddFirstDecisionTaskScheduled(arg0 *shared.HistoryEvent) error {
 	m.ctrl.T.Helper()
