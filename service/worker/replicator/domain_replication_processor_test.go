@@ -26,13 +26,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/types/mapper/thrift"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/admin/adminservicetest"
 	"github.com/uber/cadence/.gen/go/replicator"
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/domain"
@@ -49,7 +51,7 @@ type domainReplicationSuite struct {
 	sourceCluster          string
 	taskExecutor           *domain.MockReplicationTaskExecutor
 	domainReplicationQueue *persistence.MockDomainReplicationQueue
-	remoteClient           *adminservicetest.MockClient
+	remoteClient           *admin.MockClient
 	replicationProcessor   *domainReplicationProcessor
 }
 
@@ -152,7 +154,7 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks() {
 			LastRetrievedMessageId: common.Int64Ptr(lastMessageID),
 		},
 	}
-	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(resp, nil)
+	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(thrift.ToGetDomainReplicationMessagesResponse(resp), nil)
 	s.taskExecutor.EXPECT().Execute(resp.Messages.ReplicationTasks[0].DomainTaskAttributes).Return(nil).Times(1)
 	s.taskExecutor.EXPECT().Execute(resp.Messages.ReplicationTasks[1].DomainTaskAttributes).Return(nil).Times(1)
 
@@ -192,7 +194,7 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks_FailedOnExecuti
 			LastRetrievedMessageId: common.Int64Ptr(lastMessageID),
 		},
 	}
-	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(resp, nil)
+	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(thrift.ToGetDomainReplicationMessagesResponse(resp), nil)
 	s.taskExecutor.EXPECT().Execute(gomock.Any()).Return(errors.New("test")).AnyTimes()
 	s.domainReplicationQueue.EXPECT().PublishToDLQ(gomock.Any(), gomock.Any()).Return(nil).Times(2)
 
@@ -224,7 +226,7 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks_FailedOnDLQ() {
 			LastRetrievedMessageId: common.Int64Ptr(lastMessageID),
 		},
 	}
-	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(resp, nil)
+	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(thrift.ToGetDomainReplicationMessagesResponse(resp), nil)
 	s.taskExecutor.EXPECT().Execute(gomock.Any()).Return(nil).AnyTimes()
 	s.domainReplicationQueue.EXPECT().PublishToDLQ(gomock.Any(), gomock.Any()).Return(errors.New("test")).Times(1)
 

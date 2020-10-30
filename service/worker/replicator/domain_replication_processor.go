@@ -28,6 +28,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/types/mapper/thrift"
+
 	"go.uber.org/cadence/.gen/go/shared"
 
 	"github.com/uber/cadence/.gen/go/replicator"
@@ -146,7 +148,9 @@ func (p *domainReplicationProcessor) fetchDomainReplicationTasks() {
 		LastRetrievedMessageId: common.Int64Ptr(p.lastRetrievedMessageID),
 		LastProcessedMessageId: common.Int64Ptr(p.lastProcessedMessageID),
 	}
-	response, err := p.remotePeer.GetDomainReplicationMessages(ctx, request)
+	clientResp, err := p.remotePeer.GetDomainReplicationMessages(ctx, thrift.ToGetDomainReplicationMessagesRequest(request))
+	response := thrift.FromGetDomainReplicationMessagesResponse(clientResp)
+	err = thrift.FromError(err)
 	defer cancel()
 
 	if err != nil {

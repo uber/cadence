@@ -23,12 +23,14 @@ package replication
 import (
 	"testing"
 
+	"github.com/uber/cadence/common/types/mapper/thrift"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/admin/adminservicetest"
 	"github.com/uber/cadence/.gen/go/replicator"
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
@@ -44,7 +46,7 @@ type (
 
 		mockResource   *resource.Test
 		config         *config.Config
-		frontendClient *adminservicetest.MockClient
+		frontendClient *admin.MockClient
 		taskFetcher    *taskFetcherImpl
 	}
 )
@@ -106,7 +108,7 @@ func (s *taskFetcherSuite) TestGetMessages() {
 	expectedResponse := &replicator.GetReplicationMessagesResponse{
 		MessagesByShard: messageByShared,
 	}
-	s.frontendClient.EXPECT().GetReplicationMessages(gomock.Any(), replicationMessageRequest).Return(expectedResponse, nil)
+	s.frontendClient.EXPECT().GetReplicationMessages(gomock.Any(), thrift.ToGetReplicationMessagesRequest(replicationMessageRequest)).Return(thrift.ToGetReplicationMessagesResponse(expectedResponse), nil)
 	response, err := s.taskFetcher.getMessages(requestByShard)
 	s.NoError(err)
 	s.Equal(messageByShared, response)
@@ -135,7 +137,7 @@ func (s *taskFetcherSuite) TestFetchAndDistributeTasks() {
 	expectedResponse := &replicator.GetReplicationMessagesResponse{
 		MessagesByShard: messageByShared,
 	}
-	s.frontendClient.EXPECT().GetReplicationMessages(gomock.Any(), replicationMessageRequest).Return(expectedResponse, nil)
+	s.frontendClient.EXPECT().GetReplicationMessages(gomock.Any(), thrift.ToGetReplicationMessagesRequest(replicationMessageRequest)).Return(thrift.ToGetReplicationMessagesResponse(expectedResponse), nil)
 	err := s.taskFetcher.fetchAndDistributeTasks(requestByShard)
 	s.NoError(err)
 	respToken := <-respChan

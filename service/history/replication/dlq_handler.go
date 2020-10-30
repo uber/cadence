@@ -30,6 +30,8 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -137,9 +139,9 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 		return nil, nil, errInvalidCluster
 	}
 
-	taskInfo := make([]*replicator.ReplicationTaskInfo, 0, len(resp.Tasks))
+	taskInfo := make([]*types.ReplicationTaskInfo, 0, len(resp.Tasks))
 	for _, task := range resp.Tasks {
-		taskInfo = append(taskInfo, &replicator.ReplicationTaskInfo{
+		taskInfo = append(taskInfo, &types.ReplicationTaskInfo{
 			DomainID:     common.StringPtr(task.GetDomainID()),
 			WorkflowID:   common.StringPtr(task.GetWorkflowID()),
 			RunID:        common.StringPtr(task.GetRunID()),
@@ -153,12 +155,14 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 	}
 	response := &replicator.GetDLQReplicationMessagesResponse{}
 	if len(taskInfo) > 0 {
-		response, err = remoteAdminClient.GetDLQReplicationMessages(
+		clientResp, err := remoteAdminClient.GetDLQReplicationMessages(
 			ctx,
-			&replicator.GetDLQReplicationMessagesRequest{
+			&types.GetDLQReplicationMessagesRequest{
 				TaskInfos: taskInfo,
 			},
 		)
+		response = thrift.FromGetDLQReplicationMessagesResponse(clientResp)
+		err = thrift.FromError(err)
 		if err != nil {
 			return nil, nil, err
 		}

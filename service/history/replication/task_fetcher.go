@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 )
 
@@ -287,7 +288,9 @@ func (f *taskFetcherImpl) getMessages(
 		Tokens:      tokens,
 		ClusterName: common.StringPtr(f.currentCluster),
 	}
-	response, err := f.remotePeer.GetReplicationMessages(ctx, request)
+	clientResp, err := f.remotePeer.GetReplicationMessages(ctx, thrift.ToGetReplicationMessagesRequest(request))
+	response := thrift.FromGetReplicationMessagesResponse(clientResp)
+	err = thrift.FromError(err)
 	if err != nil {
 		if _, ok := err.(*shared.ServiceBusyError); !ok {
 			return nil, err

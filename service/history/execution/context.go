@@ -36,6 +36,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -1151,9 +1153,9 @@ func (c *contextImpl) ReapplyEvents(
 
 	// Reapply events only reapply to the current run.
 	// The run id is only used for reapply event de-duplication
-	execution := &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
+	execution := &types.WorkflowExecution{
+		WorkflowID: common.StringPtr(workflowID),
+		RunID:      common.StringPtr(runID),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), defaultRemoteCallTimeout)
 	defer cancel()
@@ -1189,10 +1191,10 @@ func (c *contextImpl) ReapplyEvents(
 	}
 	return sourceCluster.ReapplyEvents(
 		ctx,
-		&workflow.ReapplyEventsRequest{
+		&types.ReapplyEventsRequest{
 			DomainName:        common.StringPtr(domainEntry.GetInfo().Name),
 			WorkflowExecution: execution,
-			Events:            reapplyEventsDataBlob.ToThrift(),
+			Events:            thrift.ToDataBlob(reapplyEventsDataBlob.ToThrift()),
 		},
 	)
 }

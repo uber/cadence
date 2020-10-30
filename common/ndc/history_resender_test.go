@@ -30,11 +30,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/admin/adminservicetest"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyservicetest"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -44,6 +43,8 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -53,7 +54,7 @@ type (
 
 		controller        *gomock.Controller
 		mockDomainCache   *cache.MockDomainCache
-		mockAdminClient   *adminservicetest.MockClient
+		mockAdminClient   *admin.MockClient
 		mockHistoryClient *historyservicetest.MockClient
 
 		domainID   string
@@ -84,7 +85,7 @@ func (s *historyResenderSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
-	s.mockAdminClient = adminservicetest.NewMockClient(s.controller)
+	s.mockAdminClient = admin.NewMockClient(s.controller)
 	s.mockHistoryClient = historyservicetest.NewMockClient(s.controller)
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 
@@ -159,41 +160,41 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 
 	s.mockAdminClient.EXPECT().GetWorkflowExecutionRawHistoryV2(
 		gomock.Any(),
-		&admin.GetWorkflowExecutionRawHistoryV2Request{
+		&types.GetWorkflowExecutionRawHistoryV2Request{
 			Domain: common.StringPtr(s.domainName),
-			Execution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(workflowID),
-				RunId:      common.StringPtr(runID),
+			Execution: &types.WorkflowExecution{
+				WorkflowID: common.StringPtr(workflowID),
+				RunID:      common.StringPtr(runID),
 			},
-			StartEventId:      common.Int64Ptr(startEventID),
+			StartEventID:      common.Int64Ptr(startEventID),
 			StartEventVersion: common.Int64Ptr(startEventVersion),
 			MaximumPageSize:   common.Int32Ptr(pageSize),
 			NextPageToken:     nil,
-		}).Return(&admin.GetWorkflowExecutionRawHistoryV2Response{
-		HistoryBatches: []*shared.DataBlob{blob},
+		}).Return(&types.GetWorkflowExecutionRawHistoryV2Response{
+		HistoryBatches: []*types.DataBlob{thrift.ToDataBlob(blob)},
 		NextPageToken:  token,
-		VersionHistory: &shared.VersionHistory{
-			Items: versionHistoryItems,
+		VersionHistory: &types.VersionHistory{
+			Items: thrift.ToVersionHistoryItemArray(versionHistoryItems),
 		},
 	}, nil).Times(1)
 
 	s.mockAdminClient.EXPECT().GetWorkflowExecutionRawHistoryV2(
 		gomock.Any(),
-		&admin.GetWorkflowExecutionRawHistoryV2Request{
+		&types.GetWorkflowExecutionRawHistoryV2Request{
 			Domain: common.StringPtr(s.domainName),
-			Execution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(workflowID),
-				RunId:      common.StringPtr(runID),
+			Execution: &types.WorkflowExecution{
+				WorkflowID: common.StringPtr(workflowID),
+				RunID:      common.StringPtr(runID),
 			},
-			StartEventId:      common.Int64Ptr(startEventID),
+			StartEventID:      common.Int64Ptr(startEventID),
 			StartEventVersion: common.Int64Ptr(startEventVersion),
 			MaximumPageSize:   common.Int32Ptr(pageSize),
 			NextPageToken:     token,
-		}).Return(&admin.GetWorkflowExecutionRawHistoryV2Response{
-		HistoryBatches: []*shared.DataBlob{blob},
+		}).Return(&types.GetWorkflowExecutionRawHistoryV2Response{
+		HistoryBatches: []*types.DataBlob{thrift.ToDataBlob(blob)},
 		NextPageToken:  nil,
-		VersionHistory: &shared.VersionHistory{
-			Items: versionHistoryItems,
+		VersionHistory: &types.VersionHistory{
+			Items: thrift.ToVersionHistoryItemArray(versionHistoryItems),
 		},
 	}, nil).Times(1)
 
@@ -317,23 +318,24 @@ func (s *historyResenderSuite) TestGetHistory() {
 	nextTokenOut := []byte("some random next token out")
 	pageSize := int32(59)
 	blob := []byte("some random events blob")
+	encodingTypeThriftRW := types.EncodingTypeThriftRW
 
-	response := &admin.GetWorkflowExecutionRawHistoryV2Response{
-		HistoryBatches: []*shared.DataBlob{&shared.DataBlob{
-			EncodingType: shared.EncodingTypeThriftRW.Ptr(),
+	response := &types.GetWorkflowExecutionRawHistoryV2Response{
+		HistoryBatches: []*types.DataBlob{&types.DataBlob{
+			EncodingType: &encodingTypeThriftRW,
 			Data:         blob,
 		}},
 		NextPageToken: nextTokenOut,
 	}
-	s.mockAdminClient.EXPECT().GetWorkflowExecutionRawHistoryV2(gomock.Any(), &admin.GetWorkflowExecutionRawHistoryV2Request{
+	s.mockAdminClient.EXPECT().GetWorkflowExecutionRawHistoryV2(gomock.Any(), &types.GetWorkflowExecutionRawHistoryV2Request{
 		Domain: common.StringPtr(s.domainName),
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
-		StartEventId:      common.Int64Ptr(startEventID),
+		StartEventID:      common.Int64Ptr(startEventID),
 		StartEventVersion: common.Int64Ptr(version),
-		EndEventId:        common.Int64Ptr(endEventID),
+		EndEventID:        common.Int64Ptr(endEventID),
 		EndEventVersion:   common.Int64Ptr(version),
 		MaximumPageSize:   common.Int32Ptr(pageSize),
 		NextPageToken:     nextTokenIn,
@@ -351,7 +353,7 @@ func (s *historyResenderSuite) TestGetHistory() {
 		nextTokenIn,
 		pageSize)
 	s.Nil(err)
-	s.Equal(response, out)
+	s.Equal(response, thrift.ToGetWorkflowExecutionRawHistoryV2Response(out))
 }
 
 func (s *historyResenderSuite) TestCurrentExecutionCheck() {
