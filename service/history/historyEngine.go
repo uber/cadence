@@ -2561,6 +2561,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		),
 		request.GetReason(),
 		nil,
+		request.GetSkipSignalReapply(),
 	); err != nil {
 		return nil, err
 	}
@@ -3188,6 +3189,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 					),
 					ndc.EventsReapplicationResetWorkflowReason,
 					toReapplyEvents,
+					false,
 				); err != nil {
 					return nil, err
 				}

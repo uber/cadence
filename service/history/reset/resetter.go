@@ -56,6 +56,7 @@ type (
 			currentWorkflow execution.Workflow,
 			resetReason string,
 			additionalReapplyEvents []*shared.HistoryEvent,
+			skipSignalReapply bool,
 		) error
 	}
 
@@ -107,6 +108,7 @@ func (r *workflowResetterImpl) ResetWorkflow(
 	currentWorkflow execution.Workflow,
 	resetReason string,
 	additionalReapplyEvents []*shared.HistoryEvent,
+	skipSignalReapply bool,
 ) (retError error) {
 
 	domainEntry, err := r.domainCache.GetDomainByID(domainID)
