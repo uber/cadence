@@ -66,7 +66,7 @@ type elasticsearchIntegrationSuite struct {
 func (s *elasticsearchIntegrationSuite) SetupSuite() {
 	s.setupSuite("testdata/integration_elasticsearch_cluster.yaml")
 	s.esClient = CreateESClient(s.Suite, s.testClusterConfig.ESConfig.URL.String())
-	PutIndexTemplate(s.Suite, s.esClient, "testdata/es_index_template.json", "test-visibility-template")
+	PutIndexTemplate(s.Suite, s.esClient, "testdata/es_"+TestFlags.ElasticSearchVersion+"_index_template.json", "test-visibility-template")
 	indexName := s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName]
 	CreateIndex(s.Suite, s.esClient, indexName)
 	s.putIndexSettings(indexName, defaultTestValueOfESIndexMaxResultWindow)

@@ -28,11 +28,13 @@ var TestFlags struct {
 	PersistenceType       string
 	SQLPluginName         string
 	TestClusterConfigFile string
+	ElasticSearchVersion  string
 }
 
 func init() {
 	flag.StringVar(&TestFlags.FrontendAddr, "frontendAddress", "", "host:port for cadence frontend service")
 	flag.StringVar(&TestFlags.PersistenceType, "persistenceType", "cassandra", "type of persistence store - [cassandra or sql]")
-	flag.StringVar(&TestFlags.SQLPluginName, "sqlPluginName", "mysql", "type of sql store - [mysql]")
+	flag.StringVar(&TestFlags.SQLPluginName, "sqlPluginName", "mysql", "type of sql store - [mysql or postgres]")
 	flag.StringVar(&TestFlags.TestClusterConfigFile, "TestClusterConfigFile", "", "test cluster config file location")
+	flag.StringVar(&TestFlags.ElasticSearchVersion, "elasticSearchVersion", "v6", "type of sql store - [v6 or v7]")
 }
