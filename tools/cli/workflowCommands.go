@@ -1476,6 +1476,7 @@ func ResetWorkflow(c *cli.Context) {
 		Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), reason)),
 		DecisionFinishEventId: common.Int64Ptr(decisionFinishID),
 		RequestId:             common.StringPtr(uuid.New()),
+		SkipSignalReapply:     common.BoolPtr(c.Bool(FlagSkipSignalReapply)),
 	})
 	if err != nil {
 		ErrorAndExit("reset failed", err)
@@ -1520,6 +1521,7 @@ type batchResetParamsType struct {
 	skipBaseNotCurrent   bool
 	dryRun               bool
 	resetType            string
+	skipSignalReapply    bool
 }
 
 // ResetInBatch resets workflow in batch
@@ -1547,6 +1549,7 @@ func ResetInBatch(c *cli.Context) {
 		skipBaseNotCurrent:   c.Bool(FlagSkipBaseIsNotCurrent),
 		dryRun:               c.Bool(FlagDryRun),
 		resetType:            resetType,
+		skipSignalReapply:    c.Bool(FlagSkipSignalReapply),
 	}
 
 	if inFileName == "" && query == "" {
@@ -1741,6 +1744,7 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 			DecisionFinishEventId: common.Int64Ptr(decisionFinishID),
 			RequestId:             common.StringPtr(uuid.New()),
 			Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), params.reason)),
+			SkipSignalReapply:     common.BoolPtr(params.skipSignalReapply),
 		})
 
 		if err != nil {
