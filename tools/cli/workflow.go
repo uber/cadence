@@ -259,10 +259,9 @@ func newWorkflowCommands() []cli.Command {
 					Name:  FlagResetBadBinaryChecksum,
 					Usage: "Binary checksum for resetType of BadBinary",
 				},
-				cli.StringFlag{
+				cli.BoolFlag{
 					Name:  FlagSkipSignalReapply,
-					Value: "false",
-					Usage: "[true,false] whether or not skipping signals reapply after the reset point",
+					Usage: "whether or not skipping signals reapply after the reset point",
 				},
 			},
 			Action: func(c *cli.Context) {
