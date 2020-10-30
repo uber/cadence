@@ -25,9 +25,9 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type thriftClient struct {
@@ -39,38 +39,47 @@ func NewThriftClient(c matchingserviceclient.Interface) Client {
 	return thriftClient{c}
 }
 
-func (t thriftClient) AddActivityTask(ctx context.Context, request *matching.AddActivityTaskRequest, opts ...yarpc.CallOption) error {
-	return t.c.AddActivityTask(ctx, request, opts...)
+func (t thriftClient) AddActivityTask(ctx context.Context, request *types.AddActivityTaskRequest, opts ...yarpc.CallOption) error {
+	err := t.c.AddActivityTask(ctx, thrift.FromAddActivityTaskRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) AddDecisionTask(ctx context.Context, request *matching.AddDecisionTaskRequest, opts ...yarpc.CallOption) error {
-	return t.c.AddDecisionTask(ctx, request, opts...)
+func (t thriftClient) AddDecisionTask(ctx context.Context, request *types.AddDecisionTaskRequest, opts ...yarpc.CallOption) error {
+	err := t.c.AddDecisionTask(ctx, thrift.FromAddDecisionTaskRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) CancelOutstandingPoll(ctx context.Context, request *matching.CancelOutstandingPollRequest, opts ...yarpc.CallOption) error {
-	return t.c.CancelOutstandingPoll(ctx, request, opts...)
+func (t thriftClient) CancelOutstandingPoll(ctx context.Context, request *types.CancelOutstandingPollRequest, opts ...yarpc.CallOption) error {
+	err := t.c.CancelOutstandingPoll(ctx, thrift.FromCancelOutstandingPollRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) DescribeTaskList(ctx context.Context, request *matching.DescribeTaskListRequest, opts ...yarpc.CallOption) (*shared.DescribeTaskListResponse, error) {
-	return t.c.DescribeTaskList(ctx, request, opts...)
+func (t thriftClient) DescribeTaskList(ctx context.Context, request *types.MatchingDescribeTaskListRequest, opts ...yarpc.CallOption) (*types.DescribeTaskListResponse, error) {
+	response, err := t.c.DescribeTaskList(ctx, thrift.FromMatchingDescribeTaskListRequest(request), opts...)
+	return thrift.ToDescribeTaskListResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) ListTaskListPartitions(ctx context.Context, request *matching.ListTaskListPartitionsRequest, opts ...yarpc.CallOption) (*shared.ListTaskListPartitionsResponse, error) {
-	return t.c.ListTaskListPartitions(ctx, request, opts...)
+func (t thriftClient) ListTaskListPartitions(ctx context.Context, request *types.MatchingListTaskListPartitionsRequest, opts ...yarpc.CallOption) (*types.ListTaskListPartitionsResponse, error) {
+	response, err := t.c.ListTaskListPartitions(ctx, thrift.FromMatchingListTaskListPartitionsRequest(request), opts...)
+	return thrift.ToListTaskListPartitionsResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) PollForActivityTask(ctx context.Context, request *matching.PollForActivityTaskRequest, opts ...yarpc.CallOption) (*shared.PollForActivityTaskResponse, error) {
-	return t.c.PollForActivityTask(ctx, request, opts...)
+func (t thriftClient) PollForActivityTask(ctx context.Context, request *types.MatchingPollForActivityTaskRequest, opts ...yarpc.CallOption) (*types.PollForActivityTaskResponse, error) {
+	response, err := t.c.PollForActivityTask(ctx, thrift.FromMatchingPollForActivityTaskRequest(request), opts...)
+	return thrift.ToPollForActivityTaskResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) PollForDecisionTask(ctx context.Context, request *matching.PollForDecisionTaskRequest, opts ...yarpc.CallOption) (*matching.PollForDecisionTaskResponse, error) {
-	return t.c.PollForDecisionTask(ctx, request, opts...)
+func (t thriftClient) PollForDecisionTask(ctx context.Context, request *types.MatchingPollForDecisionTaskRequest, opts ...yarpc.CallOption) (*types.MatchingPollForDecisionTaskResponse, error) {
+	response, err := t.c.PollForDecisionTask(ctx, thrift.FromMatchingPollForDecisionTaskRequest(request), opts...)
+	return thrift.ToMatchingPollForDecisionTaskResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) QueryWorkflow(ctx context.Context, request *matching.QueryWorkflowRequest, opts ...yarpc.CallOption) (*shared.QueryWorkflowResponse, error) {
-	return t.c.QueryWorkflow(ctx, request, opts...)
+func (t thriftClient) QueryWorkflow(ctx context.Context, request *types.MatchingQueryWorkflowRequest, opts ...yarpc.CallOption) (*types.QueryWorkflowResponse, error) {
+	response, err := t.c.QueryWorkflow(ctx, thrift.FromMatchingQueryWorkflowRequest(request), opts...)
+	return thrift.ToQueryWorkflowResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) RespondQueryTaskCompleted(ctx context.Context, request *matching.RespondQueryTaskCompletedRequest, opts ...yarpc.CallOption) error {
-	return t.c.RespondQueryTaskCompleted(ctx, request, opts...)
+func (t thriftClient) RespondQueryTaskCompleted(ctx context.Context, request *types.MatchingRespondQueryTaskCompletedRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RespondQueryTaskCompleted(ctx, thrift.FromMatchingRespondQueryTaskCompletedRequest(request), opts...)
+	return thrift.ToError(err)
 }

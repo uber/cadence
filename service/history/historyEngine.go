@@ -52,6 +52,7 @@ import (
 	cndc "github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
@@ -1247,7 +1248,9 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		// a really short deadline, causing we clear the stickiness
 		stickyContext, cancel := context.WithTimeout(context.Background(), time.Duration(msResp.GetStickyTaskListScheduleToStartTimeout())*time.Second)
 		stickyStopWatch := scope.StartTimer(metrics.DirectQueryDispatchStickyLatency)
-		matchingResp, err := e.rawMatchingClient.QueryWorkflow(stickyContext, stickyMatchingRequest)
+		clientResp, err := e.rawMatchingClient.QueryWorkflow(stickyContext, thrift.ToMatchingQueryWorkflowRequest(stickyMatchingRequest))
+		matchingResp := thrift.FromQueryWorkflowResponse(clientResp)
+		err = thrift.FromError(err)
 		stickyStopWatch.Stop()
 		cancel()
 		if err == nil {
@@ -1309,7 +1312,9 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	}
 
 	nonStickyStopWatch := scope.StartTimer(metrics.DirectQueryDispatchNonStickyLatency)
-	matchingResp, err := e.matchingClient.QueryWorkflow(ctx, nonStickyMatchingRequest)
+	clientResp, err := e.matchingClient.QueryWorkflow(ctx, thrift.ToMatchingQueryWorkflowRequest(nonStickyMatchingRequest))
+	matchingResp := thrift.FromQueryWorkflowResponse(clientResp)
+	err = thrift.FromError(err)
 	nonStickyStopWatch.Stop()
 	if err != nil {
 		e.logger.Error("query directly though matching on non-sticky failed",

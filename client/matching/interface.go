@@ -25,19 +25,20 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/matching"
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
-// Client is the interface exposed by matching service client
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -package matching github.com/uber/cadence/client/matching Client
+
+// Client is the interface exposed by types service client
 type Client interface {
-	AddActivityTask(context.Context, *matching.AddActivityTaskRequest, ...yarpc.CallOption) error
-	AddDecisionTask(context.Context, *matching.AddDecisionTaskRequest, ...yarpc.CallOption) error
-	CancelOutstandingPoll(context.Context, *matching.CancelOutstandingPollRequest, ...yarpc.CallOption) error
-	DescribeTaskList(context.Context, *matching.DescribeTaskListRequest, ...yarpc.CallOption) (*shared.DescribeTaskListResponse, error)
-	ListTaskListPartitions(context.Context, *matching.ListTaskListPartitionsRequest, ...yarpc.CallOption) (*shared.ListTaskListPartitionsResponse, error)
-	PollForActivityTask(context.Context, *matching.PollForActivityTaskRequest, ...yarpc.CallOption) (*shared.PollForActivityTaskResponse, error)
-	PollForDecisionTask(context.Context, *matching.PollForDecisionTaskRequest, ...yarpc.CallOption) (*matching.PollForDecisionTaskResponse, error)
-	QueryWorkflow(context.Context, *matching.QueryWorkflowRequest, ...yarpc.CallOption) (*shared.QueryWorkflowResponse, error)
-	RespondQueryTaskCompleted(context.Context, *matching.RespondQueryTaskCompletedRequest, ...yarpc.CallOption) error
+	AddActivityTask(context.Context, *types.AddActivityTaskRequest, ...yarpc.CallOption) error
+	AddDecisionTask(context.Context, *types.AddDecisionTaskRequest, ...yarpc.CallOption) error
+	CancelOutstandingPoll(context.Context, *types.CancelOutstandingPollRequest, ...yarpc.CallOption) error
+	DescribeTaskList(context.Context, *types.MatchingDescribeTaskListRequest, ...yarpc.CallOption) (*types.DescribeTaskListResponse, error)
+	ListTaskListPartitions(context.Context, *types.MatchingListTaskListPartitionsRequest, ...yarpc.CallOption) (*types.ListTaskListPartitionsResponse, error)
+	PollForActivityTask(context.Context, *types.MatchingPollForActivityTaskRequest, ...yarpc.CallOption) (*types.PollForActivityTaskResponse, error)
+	PollForDecisionTask(context.Context, *types.MatchingPollForDecisionTaskRequest, ...yarpc.CallOption) (*types.MatchingPollForDecisionTaskResponse, error)
+	QueryWorkflow(context.Context, *types.MatchingQueryWorkflowRequest, ...yarpc.CallOption) (*types.QueryWorkflowResponse, error)
+	RespondQueryTaskCompleted(context.Context, *types.MatchingRespondQueryTaskCompletedRequest, ...yarpc.CallOption) error
 }
