@@ -99,6 +99,13 @@ func newV7Client(
 	}, nil
 }
 
+func (c *elasticV7) IsNotFoundError(err error) bool {
+	if elastic.IsNotFound(err) {
+		return true
+	}
+	return false
+}
+
 // root is for nested object like Attr property for search attributes.
 func (c *elasticV7) PutMapping(ctx context.Context, index, root, key, valueType string) error {
 	body := buildPutMappingBodyV7(root, key, valueType)

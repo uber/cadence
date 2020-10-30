@@ -74,6 +74,8 @@ type (
 		PutMapping(ctx context.Context, index, root, key, valueType string) error
 		// CreateIndex creates a new index
 		CreateIndex(ctx context.Context, index string) error
+
+		IsNotFoundError(err error) bool
 	}
 
 	// SearchRequest is request for Search

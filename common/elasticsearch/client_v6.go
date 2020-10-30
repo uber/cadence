@@ -76,6 +76,13 @@ type (
 	}
 )
 
+func (c *elasticV6) IsNotFoundError(err error) bool {
+	if elastic.IsNotFound(err) {
+		return true
+	}
+	return false
+}
+
 // NewWrapperClient returns a new implementation of Client
 func newV6Client(
 	connectConfig *config.ElasticSearchConfig,
