@@ -5,6 +5,7 @@ set -x
 DB="${DB:-cassandra}"
 ENABLE_ES="${ENABLE_ES:-false}"
 ES_PORT="${ES_PORT:-9200}"
+ES_VERSION="${ES_VERSION:v6}"
 RF=${RF:-1}
 
 # cassandra env
@@ -54,7 +55,7 @@ setup_postgres_schema() {
 
 
 setup_es_template() {
-    SCHEMA_FILE=$CADENCE_HOME/schema/elasticsearch/visibility/index_template.json
+    SCHEMA_FILE=$CADENCE_HOME/schema/elasticsearch/$ES_VERSION/visibility/index_template.json
     server=`echo $ES_SEEDS | awk -F ',' '{print $1}'`
     URL="http://$server:$ES_PORT/_template/cadence-visibility-template"
     curl -X PUT $URL -H 'Content-Type: application/json' --data-binary "@$SCHEMA_FILE"
