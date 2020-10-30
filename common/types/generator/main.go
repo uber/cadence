@@ -316,6 +316,10 @@ func newNamedType(n *types.Named) Type {
 		}
 	}
 	//TODO: fix this hack
+	if t.Name == "IndexedValueType" {
+		t.IsEnum = true
+		t.IsPrimitive = false
+	}
 	if t.Name == "ContinueAsNewInitiator" {
 		t.IsPrimitive = false
 	}
@@ -423,6 +427,12 @@ func main() {
 			MapperFile:      "common/types/mapper/thrift/history.go",
 			DuplicatePrefix: "History",
 			MapperAdditions: historyMapperAdditions,
+		},
+		{
+			ThriftPackage:   "github.com/uber/cadence/.gen/go/admin",
+			TypesFile:       "common/types/admin.go",
+			MapperFile:      "common/types/mapper/thrift/admin.go",
+			DuplicatePrefix: "Admin",
 		},
 	}
 
