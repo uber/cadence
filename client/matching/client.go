@@ -27,7 +27,6 @@ import (
 	"go.uber.org/yarpc"
 
 	m "github.com/uber/cadence/.gen/go/matching"
-	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
@@ -224,10 +223,10 @@ func (c *clientImpl) createLongPollContext(parent context.Context) (context.Cont
 	return context.WithTimeout(parent, c.longPollTimeout)
 }
 
-func (c *clientImpl) getClientForTasklist(key string) (matchingserviceclient.Interface, error) {
+func (c *clientImpl) getClientForTasklist(key string) (Client, error) {
 	client, err := c.clients.GetClientForKey(key)
 	if err != nil {
 		return nil, err
 	}
-	return client.(matchingserviceclient.Interface), nil
+	return client.(Client), nil
 }

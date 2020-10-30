@@ -20,9 +20,34 @@
 
 package admin
 
-import "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
+import (
+	"context"
+
+	"go.uber.org/yarpc"
+
+	"github.com/uber/cadence/.gen/go/admin"
+	"github.com/uber/cadence/.gen/go/replicator"
+	"github.com/uber/cadence/.gen/go/shared"
+)
 
 // Client is the interface exposed by admin service client
 type Client interface {
-	adminserviceclient.Interface
+	AddSearchAttribute(context.Context, *admin.AddSearchAttributeRequest, ...yarpc.CallOption) error
+	CloseShard(context.Context, *shared.CloseShardRequest, ...yarpc.CallOption) error
+	DescribeCluster(context.Context, ...yarpc.CallOption) (*admin.DescribeClusterResponse, error)
+	DescribeHistoryHost(context.Context, *shared.DescribeHistoryHostRequest, ...yarpc.CallOption) (*shared.DescribeHistoryHostResponse, error)
+	DescribeQueue(context.Context, *shared.DescribeQueueRequest, ...yarpc.CallOption) (*shared.DescribeQueueResponse, error)
+	DescribeWorkflowExecution(context.Context, *admin.DescribeWorkflowExecutionRequest, ...yarpc.CallOption) (*admin.DescribeWorkflowExecutionResponse, error)
+	GetDLQReplicationMessages(context.Context, *replicator.GetDLQReplicationMessagesRequest, ...yarpc.CallOption) (*replicator.GetDLQReplicationMessagesResponse, error)
+	GetDomainReplicationMessages(context.Context, *replicator.GetDomainReplicationMessagesRequest, ...yarpc.CallOption) (*replicator.GetDomainReplicationMessagesResponse, error)
+	GetReplicationMessages(context.Context, *replicator.GetReplicationMessagesRequest, ...yarpc.CallOption) (*replicator.GetReplicationMessagesResponse, error)
+	GetWorkflowExecutionRawHistoryV2(context.Context, *admin.GetWorkflowExecutionRawHistoryV2Request, ...yarpc.CallOption) (*admin.GetWorkflowExecutionRawHistoryV2Response, error)
+	MergeDLQMessages(context.Context, *replicator.MergeDLQMessagesRequest, ...yarpc.CallOption) (*replicator.MergeDLQMessagesResponse, error)
+	PurgeDLQMessages(context.Context, *replicator.PurgeDLQMessagesRequest, ...yarpc.CallOption) error
+	ReadDLQMessages(context.Context, *replicator.ReadDLQMessagesRequest, ...yarpc.CallOption) (*replicator.ReadDLQMessagesResponse, error)
+	ReapplyEvents(context.Context, *shared.ReapplyEventsRequest, ...yarpc.CallOption) error
+	RefreshWorkflowTasks(context.Context, *shared.RefreshWorkflowTasksRequest, ...yarpc.CallOption) error
+	RemoveTask(context.Context, *shared.RemoveTaskRequest, ...yarpc.CallOption) error
+	ResendReplicationTasks(context.Context, *admin.ResendReplicationTasksRequest, ...yarpc.CallOption) error
+	ResetQueue(context.Context, *shared.ResetQueueRequest, ...yarpc.CallOption) error
 }

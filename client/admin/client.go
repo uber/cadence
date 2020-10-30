@@ -28,7 +28,6 @@ import (
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -360,7 +359,7 @@ func (c *clientImpl) createContextWithLargeTimeout(parent context.Context) (cont
 	return context.WithTimeout(parent, c.largeTimeout)
 }
 
-func (c *clientImpl) getRandomClient() (adminserviceclient.Interface, error) {
+func (c *clientImpl) getRandomClient() (Client, error) {
 	// generate a random shard key to do load balancing
 	key := uuid.New()
 	client, err := c.clients.GetClientForKey(key)
@@ -368,5 +367,5 @@ func (c *clientImpl) getRandomClient() (adminserviceclient.Interface, error) {
 		return nil, err
 	}
 
-	return client.(adminserviceclient.Interface), nil
+	return client.(Client), nil
 }
