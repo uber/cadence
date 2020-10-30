@@ -4935,16 +4935,8 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 	domainNotificationVersion := int64(8192)
 	transferPQS := createTransferPQS(cluster.TestCurrentClusterName, 0, currentClusterTransferAck,
 		cluster.TestAlternativeClusterName, 1, alternativeClusterTransferAck)
-	transferPQSBlob, _ := s.PayloadSerializer.SerializeProcessingQueueStates(
-		&transferPQS,
-		common.EncodingTypeThriftRW,
-	)
 	timerPQS := createTimerPQS(cluster.TestCurrentClusterName, 0, currentClusterTimerAck,
 		cluster.TestAlternativeClusterName, 1, alternativeClusterTimerAck)
-	timerPQSBlob, _ := s.PayloadSerializer.SerializeProcessingQueueStates(
-		&timerPQS,
-		common.EncodingTypeThriftRW,
-	)
 	shardInfo := &p.ShardInfo{
 		ShardID:             shardID,
 		Owner:               "some random owner",
@@ -4962,8 +4954,8 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 			cluster.TestCurrentClusterName:     currentClusterTimerAck,
 			cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 		},
-		TransferProcessingQueueStates: transferPQSBlob,
-		TimerProcessingQueueStates:    timerPQSBlob,
+		TransferProcessingQueueStates: &transferPQS,
+		TimerProcessingQueueStates:    &timerPQS,
 		DomainNotificationVersion:     domainNotificationVersion,
 		ClusterReplicationLevel:       map[string]int64{},
 		ReplicationDLQAckLevel:        map[string]int64{},
@@ -4980,12 +4972,8 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 	s.Equal(shardInfo.TimerAckLevel.UnixNano(), resp.ShardInfo.TimerAckLevel.UnixNano())
 	s.Equal(shardInfo.TransferProcessingQueueStates, resp.ShardInfo.TransferProcessingQueueStates)
 	s.Equal(shardInfo.TimerProcessingQueueStates, resp.ShardInfo.TimerProcessingQueueStates)
-	deserializedTransferPQS, err := s.PayloadSerializer.DeserializeProcessingQueueStates(resp.ShardInfo.TransferProcessingQueueStates)
-	s.Nil(err)
-	s.Equal(&transferPQS, deserializedTransferPQS)
-	deserializedTimerPQS, err := s.PayloadSerializer.DeserializeProcessingQueueStates(resp.ShardInfo.TimerProcessingQueueStates)
-	s.Nil(err)
-	s.Equal(&timerPQS, deserializedTimerPQS)
+	s.Equal(&transferPQS, resp.ShardInfo.TransferProcessingQueueStates)
+	s.Equal(&timerPQS, resp.ShardInfo.TimerProcessingQueueStates)
 
 	resp.ShardInfo.TimerAckLevel = shardInfo.TimerAckLevel
 	resp.ShardInfo.UpdatedAt = shardInfo.UpdatedAt
@@ -5003,16 +4991,8 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 	domainNotificationVersion = int64(16384)
 	transferPQS = createTransferPQS(cluster.TestCurrentClusterName, 0, currentClusterTransferAck,
 		cluster.TestAlternativeClusterName, 1, alternativeClusterTransferAck)
-	transferPQSBlob, _ = s.PayloadSerializer.SerializeProcessingQueueStates(
-		&transferPQS,
-		common.EncodingTypeThriftRW,
-	)
 	timerPQS = createTimerPQS(cluster.TestCurrentClusterName, 0, currentClusterTimerAck,
 		cluster.TestAlternativeClusterName, 1, alternativeClusterTimerAck)
-	timerPQSBlob, _ = s.PayloadSerializer.SerializeProcessingQueueStates(
-		&timerPQS,
-		common.EncodingTypeThriftRW,
-	)
 	shardInfo = &p.ShardInfo{
 		ShardID:             shardID,
 		Owner:               "some random owner",
@@ -5030,8 +5010,8 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 			cluster.TestCurrentClusterName:     currentClusterTimerAck,
 			cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 		},
-		TransferProcessingQueueStates: transferPQSBlob,
-		TimerProcessingQueueStates:    timerPQSBlob,
+		TransferProcessingQueueStates: &transferPQS,
+		TimerProcessingQueueStates:    &timerPQS,
 		DomainNotificationVersion:     domainNotificationVersion,
 		ClusterReplicationLevel:       map[string]int64{cluster.TestAlternativeClusterName: 12345},
 		ReplicationDLQAckLevel:        map[string]int64{},
@@ -5050,12 +5030,8 @@ func (s *ExecutionManagerSuite) TestCreateGetUpdateGetShard() {
 	s.Equal(shardInfo.TimerAckLevel.UnixNano(), resp.ShardInfo.TimerAckLevel.UnixNano())
 	s.Equal(shardInfo.TransferProcessingQueueStates, resp.ShardInfo.TransferProcessingQueueStates)
 	s.Equal(shardInfo.TimerProcessingQueueStates, resp.ShardInfo.TimerProcessingQueueStates)
-	deserializedTransferPQS, err = s.PayloadSerializer.DeserializeProcessingQueueStates(resp.ShardInfo.TransferProcessingQueueStates)
-	s.Nil(err)
-	s.Equal(&transferPQS, deserializedTransferPQS)
-	deserializedTimerPQS, err = s.PayloadSerializer.DeserializeProcessingQueueStates(resp.ShardInfo.TimerProcessingQueueStates)
-	s.Nil(err)
-	s.Equal(&timerPQS, deserializedTimerPQS)
+	s.Equal(&transferPQS, resp.ShardInfo.TransferProcessingQueueStates)
+	s.Equal(&timerPQS, resp.ShardInfo.TimerProcessingQueueStates)
 
 	resp.ShardInfo.UpdatedAt = shardInfo.UpdatedAt
 	resp.ShardInfo.TimerAckLevel = shardInfo.TimerAckLevel
