@@ -457,7 +457,7 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 
 	mutableState := execution.NewMockMutableState(s.controller)
 
-	err := s.workflowResetter.reapplyContinueAsNewWorkflowEvents(
+	err := s.workflowResetter.reapplyResetAndContinueAsNewWorkflowEvents(
 		ctx,
 		mutableState,
 		s.domainID,
