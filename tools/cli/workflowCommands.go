@@ -1881,6 +1881,7 @@ func getLastDecisionTaskByType(
 			if e.GetEventType().Equals(decisionType) {
 				decisionFinishID = e.GetEventId()
 			}
+			decisionFinishID = e.GetEventId()
 		}
 		if len(resp.NextPageToken) != 0 {
 			req.NextPageToken = resp.NextPageToken
