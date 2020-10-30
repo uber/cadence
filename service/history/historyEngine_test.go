@@ -37,9 +37,9 @@ import (
 	"go.uber.org/yarpc/api/transport"
 
 	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/history/historyservicetest"
 	"github.com/uber/cadence/.gen/go/matching/matchingservicetest"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	hclient "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	cc "github.com/uber/cadence/common/client"
@@ -73,7 +73,7 @@ type (
 		mockTimerProcessor   *queue.MockProcessor
 		mockDomainCache      *cache.MockDomainCache
 		mockMatchingClient   *matchingservicetest.MockClient
-		mockHistoryClient    *historyservicetest.MockClient
+		mockHistoryClient    *hclient.MockClient
 		mockClusterMetadata  *cluster.MockMetadata
 		mockEventsReapplier  *ndc.MockEventsReapplier
 		mockWorkflowResetter *reset.MockWorkflowResetter

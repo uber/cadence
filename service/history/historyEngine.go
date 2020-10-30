@@ -52,6 +52,7 @@ import (
 	cndc "github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
@@ -300,7 +301,8 @@ func NewEngineWithShardContext(
 		common.IsServiceBusyError,
 	)
 	resendFunc := func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
-		return historyRetryableClient.ReplicateEventsV2(ctx, request)
+		err := historyRetryableClient.ReplicateEventsV2(ctx, thrift.ToReplicateEventsV2Request(request))
+		return thrift.FromError(err)
 	}
 	for _, replicationTaskFetcher := range replicationTaskFetchers.GetFetchers() {
 		sourceCluster := replicationTaskFetcher.GetSourceCluster()

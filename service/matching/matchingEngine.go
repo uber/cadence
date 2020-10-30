@@ -46,6 +46,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 // Implements matching.Engine
@@ -340,10 +342,12 @@ pollLoop:
 
 			// for query task, we don't need to update history to record decision task started. but we need to know
 			// the NextEventID so front end knows what are the history events to load for this decision task.
-			mutableStateResp, err := e.historyService.GetMutableState(hCtx.Context, &h.GetMutableStateRequest{
+			clientResp, err := e.historyService.GetMutableState(hCtx.Context, &types.GetMutableStateRequest{
 				DomainUUID: req.DomainUUID,
-				Execution:  task.workflowExecution(),
+				Execution:  thrift.ToWorkflowExecution(task.workflowExecution()),
 			})
+			mutableStateResp := thrift.FromGetMutableStateResponse(clientResp)
+			err = thrift.FromError(err)
 			if err != nil {
 				// will notify query client that the query task failed
 				e.deliverQueryResult(task.query.taskID, &queryResult{internalError: err}) //nolint:errcheck
@@ -779,18 +783,19 @@ func (e *matchingEngineImpl) recordDecisionTaskStarted(
 	pollReq *workflow.PollForDecisionTaskRequest,
 	task *internalTask,
 ) (*h.RecordDecisionTaskStartedResponse, error) {
-	request := &h.RecordDecisionTaskStartedRequest{
+	request := &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        &task.event.DomainID,
-		WorkflowExecution: task.workflowExecution(),
-		ScheduleId:        &task.event.ScheduleID,
-		TaskId:            &task.event.TaskID,
-		RequestId:         common.StringPtr(uuid.New()),
-		PollRequest:       pollReq,
+		WorkflowExecution: thrift.ToWorkflowExecution(task.workflowExecution()),
+		ScheduleID:        &task.event.ScheduleID,
+		TaskID:            &task.event.TaskID,
+		RequestID:         common.StringPtr(uuid.New()),
+		PollRequest:       thrift.ToPollForDecisionTaskRequest(pollReq),
 	}
 	var resp *h.RecordDecisionTaskStartedResponse
 	op := func() error {
-		var err error
-		resp, err = e.historyService.RecordDecisionTaskStarted(ctx, request)
+		clientResp, err := e.historyService.RecordDecisionTaskStarted(ctx, request)
+		resp = thrift.FromRecordDecisionTaskStartedResponse(clientResp)
+		err = thrift.FromError(err)
 		return err
 	}
 	err := backoff.Retry(op, historyServiceOperationRetryPolicy, func(err error) bool {
@@ -808,18 +813,19 @@ func (e *matchingEngineImpl) recordActivityTaskStarted(
 	pollReq *workflow.PollForActivityTaskRequest,
 	task *internalTask,
 ) (*h.RecordActivityTaskStartedResponse, error) {
-	request := &h.RecordActivityTaskStartedRequest{
+	request := &types.RecordActivityTaskStartedRequest{
 		DomainUUID:        &task.event.DomainID,
-		WorkflowExecution: task.workflowExecution(),
-		ScheduleId:        &task.event.ScheduleID,
-		TaskId:            &task.event.TaskID,
-		RequestId:         common.StringPtr(uuid.New()),
-		PollRequest:       pollReq,
+		WorkflowExecution: thrift.ToWorkflowExecution(task.workflowExecution()),
+		ScheduleID:        &task.event.ScheduleID,
+		TaskID:            &task.event.TaskID,
+		RequestID:         common.StringPtr(uuid.New()),
+		PollRequest:       thrift.ToPollForActivityTaskRequest(pollReq),
 	}
 	var resp *h.RecordActivityTaskStartedResponse
 	op := func() error {
-		var err error
-		resp, err = e.historyService.RecordActivityTaskStarted(ctx, request)
+		clientResp, err := e.historyService.RecordActivityTaskStarted(ctx, request)
+		resp = thrift.FromRecordActivityTaskStartedResponse(clientResp)
+		err = thrift.FromError(err)
 		return err
 	}
 	err := backoff.Retry(op, historyServiceOperationRetryPolicy, func(err error) bool {

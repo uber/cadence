@@ -34,15 +34,16 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/history/historyservicetest"
 	"github.com/uber/cadence/.gen/go/replicator"
+	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 )
 
@@ -54,7 +55,7 @@ type (
 		controller          *gomock.Controller
 		mockResource        *resource.Test
 		mockMetadataManager *mmocks.MetadataManager
-		historyClient       *historyservicetest.MockClient
+		historyClient       *history.MockClient
 		config              *config.Config
 		coordinator         *coordinatorImpl
 	}
@@ -101,15 +102,15 @@ func (s *coordinatorSuite) TestNotifyFailoverMarkers() {
 		CreationTime:    common.Int64Ptr(1),
 	}
 	s.historyClient.EXPECT().NotifyFailoverMarkers(
-		context.Background(), &history.NotifyFailoverMarkersRequest{
-			FailoverMarkerTokens: []*history.FailoverMarkerToken{
+		context.Background(), &types.NotifyFailoverMarkersRequest{
+			FailoverMarkerTokens: []*types.FailoverMarkerToken{
 				{
 					ShardIDs:       []int32{1, 2},
-					FailoverMarker: attributes,
+					FailoverMarker: thrift.ToFailoverMarkerAttributes(attributes),
 				},
 			},
 		},
-	).DoAndReturn(func(ctx context.Context, request *history.NotifyFailoverMarkersRequest) error {
+	).DoAndReturn(func(ctx context.Context, request *types.NotifyFailoverMarkersRequest) error {
 		close(doneCh)
 		return nil
 	}).Times(1)
@@ -145,11 +146,11 @@ func (s *coordinatorSuite) TestNotifyRemoteCoordinator() {
 	}
 
 	s.historyClient.EXPECT().NotifyFailoverMarkers(
-		context.Background(), &history.NotifyFailoverMarkersRequest{
-			FailoverMarkerTokens: []*history.FailoverMarkerToken{
+		context.Background(), &types.NotifyFailoverMarkersRequest{
+			FailoverMarkerTokens: []*types.FailoverMarkerToken{
 				{
 					ShardIDs:       []int32{1, 2, 3},
-					FailoverMarker: attributes,
+					FailoverMarker: thrift.ToFailoverMarkerAttributes(attributes),
 				},
 			},
 		},

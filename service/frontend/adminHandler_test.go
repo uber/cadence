@@ -33,9 +33,8 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/history/historyservicetest"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/definition"
@@ -47,6 +46,8 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -56,7 +57,7 @@ type (
 
 		controller        *gomock.Controller
 		mockResource      *resource.Test
-		mockHistoryClient *historyservicetest.MockClient
+		mockHistoryClient *history.MockClient
 		mockDomainCache   *cache.MockDomainCache
 
 		mockHistoryV2Mgr *mocks.HistoryV2Manager
@@ -231,10 +232,10 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 	})
 	rawVersionHistories := persistence.NewVersionHistories(versionHistory)
 	versionHistories := rawVersionHistories.ToThrift()
-	mState := &history.GetMutableStateResponse{
-		NextEventId:        common.Int64Ptr(11),
+	mState := &types.GetMutableStateResponse{
+		NextEventID:        common.Int64Ptr(11),
 		CurrentBranchToken: branchToken,
-		VersionHistories:   versionHistories,
+		VersionHistories:   thrift.ToVersionHistories(versionHistories),
 	}
 	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(mState, nil).AnyTimes()
 
@@ -269,10 +270,10 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_SameStartIDAnd
 	})
 	rawVersionHistories := persistence.NewVersionHistories(versionHistory)
 	versionHistories := rawVersionHistories.ToThrift()
-	mState := &history.GetMutableStateResponse{
-		NextEventId:        common.Int64Ptr(11),
+	mState := &types.GetMutableStateResponse{
+		NextEventID:        common.Int64Ptr(11),
 		CurrentBranchToken: branchToken,
-		VersionHistories:   versionHistories,
+		VersionHistories:   thrift.ToVersionHistories(versionHistories),
 	}
 	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(mState, nil).AnyTimes()
 

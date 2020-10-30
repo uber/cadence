@@ -25,50 +25,50 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
+
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -package history github.com/uber/cadence/client/history Client
 
 // Client is the interface exposed by history service client
 type Client interface {
-	CloseShard(context.Context, *shared.CloseShardRequest, ...yarpc.CallOption) error
-	DescribeHistoryHost(context.Context, *shared.DescribeHistoryHostRequest, ...yarpc.CallOption) (*shared.DescribeHistoryHostResponse, error)
-	DescribeMutableState(context.Context, *history.DescribeMutableStateRequest, ...yarpc.CallOption) (*history.DescribeMutableStateResponse, error)
-	DescribeQueue(context.Context, *shared.DescribeQueueRequest, ...yarpc.CallOption) (*shared.DescribeQueueResponse, error)
-	DescribeWorkflowExecution(context.Context, *history.DescribeWorkflowExecutionRequest, ...yarpc.CallOption) (*shared.DescribeWorkflowExecutionResponse, error)
-	GetDLQReplicationMessages(context.Context, *replicator.GetDLQReplicationMessagesRequest, ...yarpc.CallOption) (*replicator.GetDLQReplicationMessagesResponse, error)
-	GetMutableState(context.Context, *history.GetMutableStateRequest, ...yarpc.CallOption) (*history.GetMutableStateResponse, error)
-	GetReplicationMessages(context.Context, *replicator.GetReplicationMessagesRequest, ...yarpc.CallOption) (*replicator.GetReplicationMessagesResponse, error)
-	MergeDLQMessages(context.Context, *replicator.MergeDLQMessagesRequest, ...yarpc.CallOption) (*replicator.MergeDLQMessagesResponse, error)
-	NotifyFailoverMarkers(context.Context, *history.NotifyFailoverMarkersRequest, ...yarpc.CallOption) error
-	PollMutableState(context.Context, *history.PollMutableStateRequest, ...yarpc.CallOption) (*history.PollMutableStateResponse, error)
-	PurgeDLQMessages(context.Context, *replicator.PurgeDLQMessagesRequest, ...yarpc.CallOption) error
-	QueryWorkflow(context.Context, *history.QueryWorkflowRequest, ...yarpc.CallOption) (*history.QueryWorkflowResponse, error)
-	ReadDLQMessages(context.Context, *replicator.ReadDLQMessagesRequest, ...yarpc.CallOption) (*replicator.ReadDLQMessagesResponse, error)
-	ReapplyEvents(context.Context, *history.ReapplyEventsRequest, ...yarpc.CallOption) error
-	RecordActivityTaskHeartbeat(context.Context, *history.RecordActivityTaskHeartbeatRequest, ...yarpc.CallOption) (*shared.RecordActivityTaskHeartbeatResponse, error)
-	RecordActivityTaskStarted(context.Context, *history.RecordActivityTaskStartedRequest, ...yarpc.CallOption) (*history.RecordActivityTaskStartedResponse, error)
-	RecordChildExecutionCompleted(context.Context, *history.RecordChildExecutionCompletedRequest, ...yarpc.CallOption) error
-	RecordDecisionTaskStarted(context.Context, *history.RecordDecisionTaskStartedRequest, ...yarpc.CallOption) (*history.RecordDecisionTaskStartedResponse, error)
-	RefreshWorkflowTasks(context.Context, *history.RefreshWorkflowTasksRequest, ...yarpc.CallOption) error
-	RemoveSignalMutableState(context.Context, *history.RemoveSignalMutableStateRequest, ...yarpc.CallOption) error
-	RemoveTask(context.Context, *shared.RemoveTaskRequest, ...yarpc.CallOption) error
-	ReplicateEventsV2(context.Context, *history.ReplicateEventsV2Request, ...yarpc.CallOption) error
-	RequestCancelWorkflowExecution(context.Context, *history.RequestCancelWorkflowExecutionRequest, ...yarpc.CallOption) error
-	ResetQueue(context.Context, *shared.ResetQueueRequest, ...yarpc.CallOption) error
-	ResetStickyTaskList(context.Context, *history.ResetStickyTaskListRequest, ...yarpc.CallOption) (*history.ResetStickyTaskListResponse, error)
-	ResetWorkflowExecution(context.Context, *history.ResetWorkflowExecutionRequest, ...yarpc.CallOption) (*shared.ResetWorkflowExecutionResponse, error)
-	RespondActivityTaskCanceled(context.Context, *history.RespondActivityTaskCanceledRequest, ...yarpc.CallOption) error
-	RespondActivityTaskCompleted(context.Context, *history.RespondActivityTaskCompletedRequest, ...yarpc.CallOption) error
-	RespondActivityTaskFailed(context.Context, *history.RespondActivityTaskFailedRequest, ...yarpc.CallOption) error
-	RespondDecisionTaskCompleted(context.Context, *history.RespondDecisionTaskCompletedRequest, ...yarpc.CallOption) (*history.RespondDecisionTaskCompletedResponse, error)
-	RespondDecisionTaskFailed(context.Context, *history.RespondDecisionTaskFailedRequest, ...yarpc.CallOption) error
-	ScheduleDecisionTask(context.Context, *history.ScheduleDecisionTaskRequest, ...yarpc.CallOption) error
-	SignalWithStartWorkflowExecution(context.Context, *history.SignalWithStartWorkflowExecutionRequest, ...yarpc.CallOption) (*shared.StartWorkflowExecutionResponse, error)
-	SignalWorkflowExecution(context.Context, *history.SignalWorkflowExecutionRequest, ...yarpc.CallOption) error
-	StartWorkflowExecution(context.Context, *history.StartWorkflowExecutionRequest, ...yarpc.CallOption) (*shared.StartWorkflowExecutionResponse, error)
-	SyncActivity(context.Context, *history.SyncActivityRequest, ...yarpc.CallOption) error
-	SyncShardStatus(context.Context, *history.SyncShardStatusRequest, ...yarpc.CallOption) error
-	TerminateWorkflowExecution(context.Context, *history.TerminateWorkflowExecutionRequest, ...yarpc.CallOption) error
+	CloseShard(context.Context, *types.CloseShardRequest, ...yarpc.CallOption) error
+	DescribeHistoryHost(context.Context, *types.DescribeHistoryHostRequest, ...yarpc.CallOption) (*types.DescribeHistoryHostResponse, error)
+	DescribeMutableState(context.Context, *types.DescribeMutableStateRequest, ...yarpc.CallOption) (*types.DescribeMutableStateResponse, error)
+	DescribeQueue(context.Context, *types.DescribeQueueRequest, ...yarpc.CallOption) (*types.DescribeQueueResponse, error)
+	DescribeWorkflowExecution(context.Context, *types.HistoryDescribeWorkflowExecutionRequest, ...yarpc.CallOption) (*types.DescribeWorkflowExecutionResponse, error)
+	GetDLQReplicationMessages(context.Context, *types.GetDLQReplicationMessagesRequest, ...yarpc.CallOption) (*types.GetDLQReplicationMessagesResponse, error)
+	GetMutableState(context.Context, *types.GetMutableStateRequest, ...yarpc.CallOption) (*types.GetMutableStateResponse, error)
+	GetReplicationMessages(context.Context, *types.GetReplicationMessagesRequest, ...yarpc.CallOption) (*types.GetReplicationMessagesResponse, error)
+	MergeDLQMessages(context.Context, *types.MergeDLQMessagesRequest, ...yarpc.CallOption) (*types.MergeDLQMessagesResponse, error)
+	NotifyFailoverMarkers(context.Context, *types.NotifyFailoverMarkersRequest, ...yarpc.CallOption) error
+	PollMutableState(context.Context, *types.PollMutableStateRequest, ...yarpc.CallOption) (*types.PollMutableStateResponse, error)
+	PurgeDLQMessages(context.Context, *types.PurgeDLQMessagesRequest, ...yarpc.CallOption) error
+	QueryWorkflow(context.Context, *types.HistoryQueryWorkflowRequest, ...yarpc.CallOption) (*types.HistoryQueryWorkflowResponse, error)
+	ReadDLQMessages(context.Context, *types.ReadDLQMessagesRequest, ...yarpc.CallOption) (*types.ReadDLQMessagesResponse, error)
+	ReapplyEvents(context.Context, *types.HistoryReapplyEventsRequest, ...yarpc.CallOption) error
+	RecordActivityTaskHeartbeat(context.Context, *types.HistoryRecordActivityTaskHeartbeatRequest, ...yarpc.CallOption) (*types.RecordActivityTaskHeartbeatResponse, error)
+	RecordActivityTaskStarted(context.Context, *types.RecordActivityTaskStartedRequest, ...yarpc.CallOption) (*types.RecordActivityTaskStartedResponse, error)
+	RecordChildExecutionCompleted(context.Context, *types.RecordChildExecutionCompletedRequest, ...yarpc.CallOption) error
+	RecordDecisionTaskStarted(context.Context, *types.RecordDecisionTaskStartedRequest, ...yarpc.CallOption) (*types.RecordDecisionTaskStartedResponse, error)
+	RefreshWorkflowTasks(context.Context, *types.HistoryRefreshWorkflowTasksRequest, ...yarpc.CallOption) error
+	RemoveSignalMutableState(context.Context, *types.RemoveSignalMutableStateRequest, ...yarpc.CallOption) error
+	RemoveTask(context.Context, *types.RemoveTaskRequest, ...yarpc.CallOption) error
+	ReplicateEventsV2(context.Context, *types.ReplicateEventsV2Request, ...yarpc.CallOption) error
+	RequestCancelWorkflowExecution(context.Context, *types.HistoryRequestCancelWorkflowExecutionRequest, ...yarpc.CallOption) error
+	ResetQueue(context.Context, *types.ResetQueueRequest, ...yarpc.CallOption) error
+	ResetStickyTaskList(context.Context, *types.HistoryResetStickyTaskListRequest, ...yarpc.CallOption) (*types.HistoryResetStickyTaskListResponse, error)
+	ResetWorkflowExecution(context.Context, *types.HistoryResetWorkflowExecutionRequest, ...yarpc.CallOption) (*types.ResetWorkflowExecutionResponse, error)
+	RespondActivityTaskCanceled(context.Context, *types.HistoryRespondActivityTaskCanceledRequest, ...yarpc.CallOption) error
+	RespondActivityTaskCompleted(context.Context, *types.HistoryRespondActivityTaskCompletedRequest, ...yarpc.CallOption) error
+	RespondActivityTaskFailed(context.Context, *types.HistoryRespondActivityTaskFailedRequest, ...yarpc.CallOption) error
+	RespondDecisionTaskCompleted(context.Context, *types.HistoryRespondDecisionTaskCompletedRequest, ...yarpc.CallOption) (*types.HistoryRespondDecisionTaskCompletedResponse, error)
+	RespondDecisionTaskFailed(context.Context, *types.HistoryRespondDecisionTaskFailedRequest, ...yarpc.CallOption) error
+	ScheduleDecisionTask(context.Context, *types.ScheduleDecisionTaskRequest, ...yarpc.CallOption) error
+	SignalWithStartWorkflowExecution(context.Context, *types.HistorySignalWithStartWorkflowExecutionRequest, ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error)
+	SignalWorkflowExecution(context.Context, *types.HistorySignalWorkflowExecutionRequest, ...yarpc.CallOption) error
+	StartWorkflowExecution(context.Context, *types.HistoryStartWorkflowExecutionRequest, ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error)
+	SyncActivity(context.Context, *types.SyncActivityRequest, ...yarpc.CallOption) error
+	SyncShardStatus(context.Context, *types.SyncShardStatusRequest, ...yarpc.CallOption) error
+	TerminateWorkflowExecution(context.Context, *types.HistoryTerminateWorkflowExecutionRequest, ...yarpc.CallOption) error
 }
