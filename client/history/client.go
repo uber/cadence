@@ -29,7 +29,6 @@ import (
 	"go.uber.org/yarpc"
 
 	h "github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -79,7 +78,7 @@ func (c *clientImpl) StartWorkflowExecution(
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *workflow.StartWorkflowExecutionResponse
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -104,7 +103,7 @@ func (c *clientImpl) GetMutableState(
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *h.GetMutableStateResponse
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -129,7 +128,7 @@ func (c *clientImpl) PollMutableState(
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *h.PollMutableStateResponse
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -150,7 +149,7 @@ func (c *clientImpl) DescribeHistoryHost(
 ) (*workflow.DescribeHistoryHostResponse, error) {
 
 	var err error
-	var client historyserviceclient.Interface
+	var client Client
 
 	if request.ShardIdForHost != nil {
 		client, err = c.getClientForShardID(int(request.GetShardIdForHost()))
@@ -161,7 +160,7 @@ func (c *clientImpl) DescribeHistoryHost(
 		if err != nil {
 			return nil, err
 		}
-		client = ret.(historyserviceclient.Interface)
+		client = ret.(Client)
 	}
 	if err != nil {
 		return nil, err
@@ -169,7 +168,7 @@ func (c *clientImpl) DescribeHistoryHost(
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *workflow.DescribeHistoryHostResponse
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -189,7 +188,7 @@ func (c *clientImpl) RemoveTask(
 	opts ...yarpc.CallOption,
 ) error {
 	var err error
-	var client historyserviceclient.Interface
+	var client Client
 	if request.ShardID != nil {
 		client, err = c.getClientForShardID(int(request.GetShardID()))
 		if err != nil {
@@ -197,7 +196,7 @@ func (c *clientImpl) RemoveTask(
 		}
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -216,7 +215,7 @@ func (c *clientImpl) CloseShard(
 ) error {
 
 	var err error
-	var client historyserviceclient.Interface
+	var client Client
 	if request.ShardID != nil {
 		client, err = c.getClientForShardID(int(request.GetShardID()))
 		if err != nil {
@@ -224,7 +223,7 @@ func (c *clientImpl) CloseShard(
 		}
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -246,7 +245,7 @@ func (c *clientImpl) ResetQueue(
 ) error {
 
 	var err error
-	var client historyserviceclient.Interface
+	var client Client
 	if request.ShardID != nil {
 		client, err = c.getClientForShardID(int(request.GetShardID()))
 		if err != nil {
@@ -254,7 +253,7 @@ func (c *clientImpl) ResetQueue(
 		}
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -276,7 +275,7 @@ func (c *clientImpl) DescribeQueue(
 ) (*workflow.DescribeQueueResponse, error) {
 
 	var err error
-	var client historyserviceclient.Interface
+	var client Client
 	if request.ShardID != nil {
 		client, err = c.getClientForShardID(int(request.GetShardID()))
 		if err != nil {
@@ -285,7 +284,7 @@ func (c *clientImpl) DescribeQueue(
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *workflow.DescribeQueueResponse
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -311,7 +310,7 @@ func (c *clientImpl) DescribeMutableState(
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *h.DescribeMutableStateResponse
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -336,7 +335,7 @@ func (c *clientImpl) ResetStickyTaskList(
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *h.ResetStickyTaskListResponse
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -361,7 +360,7 @@ func (c *clientImpl) DescribeWorkflowExecution(
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *workflow.DescribeWorkflowExecutionResponse
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -386,7 +385,7 @@ func (c *clientImpl) RecordDecisionTaskStarted(
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *h.RecordDecisionTaskStartedResponse
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -411,7 +410,7 @@ func (c *clientImpl) RecordActivityTaskStarted(
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *h.RecordActivityTaskStartedResponse
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -440,7 +439,7 @@ func (c *clientImpl) RespondDecisionTaskCompleted(
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *h.RespondDecisionTaskCompletedResponse
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		response, err = client.RespondDecisionTaskCompleted(ctx, request, opts...)
@@ -464,7 +463,7 @@ func (c *clientImpl) RespondDecisionTaskFailed(
 		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		return client.RespondDecisionTaskFailed(ctx, request, opts...)
@@ -487,7 +486,7 @@ func (c *clientImpl) RespondActivityTaskCompleted(
 		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		return client.RespondActivityTaskCompleted(ctx, request, opts...)
@@ -510,7 +509,7 @@ func (c *clientImpl) RespondActivityTaskFailed(
 		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		return client.RespondActivityTaskFailed(ctx, request, opts...)
@@ -533,7 +532,7 @@ func (c *clientImpl) RespondActivityTaskCanceled(
 		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		return client.RespondActivityTaskCanceled(ctx, request, opts...)
@@ -557,7 +556,7 @@ func (c *clientImpl) RecordActivityTaskHeartbeat(
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *workflow.RecordActivityTaskHeartbeatResponse
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -581,7 +580,7 @@ func (c *clientImpl) RequestCancelWorkflowExecution(
 		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		return client.RequestCancelWorkflowExecution(ctx, request, opts...)
@@ -599,7 +598,7 @@ func (c *clientImpl) SignalWorkflowExecution(
 		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		return client.SignalWorkflowExecution(ctx, request, opts...)
@@ -620,7 +619,7 @@ func (c *clientImpl) SignalWithStartWorkflowExecution(
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *workflow.StartWorkflowExecutionResponse
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -644,7 +643,7 @@ func (c *clientImpl) RemoveSignalMutableState(
 	if err != nil {
 		return err
 	}
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		return client.RemoveSignalMutableState(ctx, request)
@@ -664,7 +663,7 @@ func (c *clientImpl) TerminateWorkflowExecution(
 		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		return client.TerminateWorkflowExecution(ctx, request, opts...)
@@ -684,7 +683,7 @@ func (c *clientImpl) ResetWorkflowExecution(
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *workflow.ResetWorkflowExecutionResponse
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		response, err = client.ResetWorkflowExecution(ctx, request, opts...)
@@ -707,7 +706,7 @@ func (c *clientImpl) ScheduleDecisionTask(
 		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		return client.ScheduleDecisionTask(ctx, request, opts...)
@@ -726,7 +725,7 @@ func (c *clientImpl) RecordChildExecutionCompleted(
 		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		return client.RecordChildExecutionCompleted(ctx, request, opts...)
@@ -745,7 +744,7 @@ func (c *clientImpl) ReplicateEventsV2(
 		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		return client.ReplicateEventsV2(ctx, request, opts...)
@@ -767,7 +766,7 @@ func (c *clientImpl) SyncShardStatus(
 	}
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		return client.SyncShardStatus(ctx, request, opts...)
@@ -787,7 +786,7 @@ func (c *clientImpl) SyncActivity(
 		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		return client.SyncActivity(ctx, request, opts...)
@@ -807,7 +806,7 @@ func (c *clientImpl) QueryWorkflow(
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *h.QueryWorkflowResponse
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		var err error
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -826,7 +825,7 @@ func (c *clientImpl) GetReplicationMessages(
 	request *replicator.GetReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
 ) (*replicator.GetReplicationMessagesResponse, error) {
-	requestsByClient := make(map[historyserviceclient.Interface]*replicator.GetReplicationMessagesRequest)
+	requestsByClient := make(map[Client]*replicator.GetReplicationMessagesRequest)
 
 	for _, token := range request.Tokens {
 		client, err := c.getClientForShardID(int(token.GetShardID()))
@@ -849,7 +848,7 @@ func (c *clientImpl) GetReplicationMessages(
 	respChan := make(chan *replicator.GetReplicationMessagesResponse, len(requestsByClient))
 	errChan := make(chan error, 1)
 	for client, req := range requestsByClient {
-		go func(client historyserviceclient.Interface, request *replicator.GetReplicationMessagesRequest) {
+		go func(client Client, request *replicator.GetReplicationMessagesRequest) {
 			defer wg.Done()
 
 			ctx, cancel := c.createContext(ctx)
@@ -916,7 +915,7 @@ func (c *clientImpl) ReapplyEvents(
 		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		return client.ReapplyEvents(ctx, request, opts...)
@@ -973,7 +972,7 @@ func (c *clientImpl) RefreshWorkflowTasks(
 	opts ...yarpc.CallOption,
 ) error {
 	client, err := c.getClientForWorkflowID(request.GetRequest().GetExecution().GetWorkflowId())
-	op := func(ctx context.Context, client historyserviceclient.Interface) error {
+	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
 		return client.RefreshWorkflowTasks(ctx, request, opts...)
@@ -987,7 +986,7 @@ func (c *clientImpl) NotifyFailoverMarkers(
 	request *h.NotifyFailoverMarkersRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	requestsByClient := make(map[historyserviceclient.Interface]*h.NotifyFailoverMarkersRequest)
+	requestsByClient := make(map[Client]*h.NotifyFailoverMarkersRequest)
 
 	for _, token := range request.GetFailoverMarkerTokens() {
 		marker := token.GetFailoverMarker()
@@ -1009,7 +1008,7 @@ func (c *clientImpl) NotifyFailoverMarkers(
 	wg.Add(len(requestsByClient))
 	respChan := make(chan error, len(requestsByClient))
 	for client, req := range requestsByClient {
-		go func(client historyserviceclient.Interface, request *h.NotifyFailoverMarkersRequest) {
+		go func(client Client, request *h.NotifyFailoverMarkersRequest) {
 			defer wg.Done()
 
 			ctx, cancel := c.createContext(ctx)
@@ -1041,28 +1040,28 @@ func (c *clientImpl) createContext(parent context.Context) (context.Context, con
 	return context.WithTimeout(parent, c.timeout)
 }
 
-func (c *clientImpl) getClientForWorkflowID(workflowID string) (historyserviceclient.Interface, error) {
+func (c *clientImpl) getClientForWorkflowID(workflowID string) (Client, error) {
 	key := common.WorkflowIDToHistoryShard(workflowID, c.numberOfShards)
 	return c.getClientForShardID(key)
 }
 
-func (c *clientImpl) getClientForDomainID(domainID string) (historyserviceclient.Interface, error) {
+func (c *clientImpl) getClientForDomainID(domainID string) (Client, error) {
 	key := common.DomainIDToHistoryShard(domainID, c.numberOfShards)
 	return c.getClientForShardID(key)
 }
 
-func (c *clientImpl) getClientForShardID(shardID int) (historyserviceclient.Interface, error) {
+func (c *clientImpl) getClientForShardID(shardID int) (Client, error) {
 	client, err := c.clients.GetClientForKey(string(shardID))
 	if err != nil {
 		return nil, err
 	}
-	return client.(historyserviceclient.Interface), nil
+	return client.(Client), nil
 }
 
 func (c *clientImpl) executeWithRedirect(
 	ctx context.Context,
-	client historyserviceclient.Interface,
-	op func(ctx context.Context, client historyserviceclient.Interface) error,
+	client Client,
+	op func(ctx context.Context, client Client) error,
 ) error {
 	var err error
 	if ctx == nil {
@@ -1082,7 +1081,7 @@ redirectLoop:
 				if err != nil {
 					return err
 				}
-				client = ret.(historyserviceclient.Interface)
+				client = ret.(Client)
 				continue redirectLoop
 			}
 		}
