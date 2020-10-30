@@ -78,6 +78,7 @@ func (s *domainReplicationSuite) SetupTest() {
 		resource.GetHostInfo(),
 		serviceResolver,
 		s.domainReplicationQueue,
+		time.Millisecond,
 	)
 	retryPolicy := backoff.NewExponentialRetryPolicy(time.Nanosecond)
 	retryPolicy.SetMaximumAttempts(1)

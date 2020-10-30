@@ -20,7 +20,10 @@
 
 package thrift
 
-import "github.com/uber/cadence/common/types"
+import (
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
+)
 
 // FromError convert error to Thrift type if it comes as its internal equivalent
 func FromError(err error) error {
@@ -61,6 +64,50 @@ func FromError(err error) error {
 		return FromServiceBusyError(e)
 	case *types.WorkflowExecutionAlreadyStartedError:
 		return FromWorkflowExecutionAlreadyStartedError(e)
+	default:
+		return err
+	}
+}
+
+// ToError convert error to internal type if it comes as its thrift equivalent
+func ToError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	switch e := err.(type) {
+	case *shared.AccessDeniedError:
+		return ToAccessDeniedError(e)
+	case *shared.BadRequestError:
+		return ToBadRequestError(e)
+	case *shared.CancellationAlreadyRequestedError:
+		return ToCancellationAlreadyRequestedError(e)
+	case *shared.ClientVersionNotSupportedError:
+		return ToClientVersionNotSupportedError(e)
+	case *shared.CurrentBranchChangedError:
+		return ToCurrentBranchChangedError(e)
+	case *shared.DomainAlreadyExistsError:
+		return ToDomainAlreadyExistsError(e)
+	case *shared.DomainNotActiveError:
+		return ToDomainNotActiveError(e)
+	case *shared.EntityNotExistsError:
+		return ToEntityNotExistsError(e)
+	case *shared.InternalDataInconsistencyError:
+		return ToInternalDataInconsistencyError(e)
+	case *shared.InternalServiceError:
+		return ToInternalServiceError(e)
+	case *shared.LimitExceededError:
+		return ToLimitExceededError(e)
+	case *shared.QueryFailedError:
+		return ToQueryFailedError(e)
+	case *shared.RemoteSyncMatchedError:
+		return ToRemoteSyncMatchedError(e)
+	case *shared.RetryTaskV2Error:
+		return ToRetryTaskV2Error(e)
+	case *shared.ServiceBusyError:
+		return ToServiceBusyError(e)
+	case *shared.WorkflowExecutionAlreadyStartedError:
+		return ToWorkflowExecutionAlreadyStartedError(e)
 	default:
 		return err
 	}

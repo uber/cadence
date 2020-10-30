@@ -95,9 +95,7 @@ func (m *nosqlDomainManager) CreateDomain(
 				Message: fmt.Sprintf("CreateDomain operation failed because of conditional failure, %v", err),
 			}
 		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CreateDomain operation failed. Inserting into domains table. Error: %v", err),
-		}
+		return nil, convertCommonErrors(m.db, "CreateDomain", err)
 	}
 
 	return &p.CreateDomainResponse{ID: request.Info.ID}, nil
@@ -130,9 +128,7 @@ func (m *nosqlDomainManager) UpdateDomain(
 
 	err = m.db.UpdateDomain(ctx, row)
 	if err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateDomain operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(m.db, "UpdateDomain", err)
 	}
 
 	return nil
@@ -169,9 +165,7 @@ func (m *nosqlDomainManager) GetDomain(
 				Message: fmt.Sprintf("Domain %s does not exist.", identity),
 			}
 		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetDomain operation failed. Error %v", err),
-		}
+		return convertCommonErrors(m.db, "GetDomain", err)
 	}
 
 	row, err := m.db.SelectDomain(ctx, domainID, domainName)
@@ -195,7 +189,9 @@ func (m *nosqlDomainManager) GetDomain(
 
 	domainConfig, err := m.fromNoSQLInternalDomainConfig(row.Config)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert fromNoSQLInternalDomainConfig, %v ", err)
+		return nil, &workflow.InternalServiceError{
+			Message: fmt.Sprintf("cannot convert fromNoSQLInternalDomainConfig, %v ", err),
+		}
 	}
 
 	return &p.InternalGetDomainResponse{
@@ -219,9 +215,7 @@ func (m *nosqlDomainManager) ListDomains(
 ) (*p.InternalListDomainsResponse, error) {
 	rows, nextPageToken, err := m.db.SelectAllDomains(ctx, request.PageSize, request.NextPageToken)
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListDomains operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(m.db, "ListDomains", err)
 	}
 	var domains []*p.InternalGetDomainResponse
 	for _, row := range rows {
@@ -239,7 +233,9 @@ func (m *nosqlDomainManager) ListDomains(
 
 		domainConfig, err := m.fromNoSQLInternalDomainConfig(row.Config)
 		if err != nil {
-			return nil, fmt.Errorf("cannot convert fromNoSQLInternalDomainConfig, %v ", err)
+			return nil, &workflow.InternalServiceError{
+				Message: fmt.Sprintf("cannot convert fromNoSQLInternalDomainConfig, %v ", err),
+			}
 		}
 
 		domains = append(domains, &p.InternalGetDomainResponse{
@@ -267,14 +263,22 @@ func (m *nosqlDomainManager) DeleteDomain(
 	ctx context.Context,
 	request *p.DeleteDomainRequest,
 ) error {
-	return m.db.DeleteDomain(ctx, &request.ID, nil)
+	if err := m.db.DeleteDomain(ctx, &request.ID, nil); err != nil {
+		return convertCommonErrors(m.db, "DeleteDomain", err)
+	}
+
+	return nil
 }
 
 func (m *nosqlDomainManager) DeleteDomainByName(
 	ctx context.Context,
 	request *p.DeleteDomainByNameRequest,
 ) error {
-	return m.db.DeleteDomain(ctx, nil, &request.Name)
+	if err := m.db.DeleteDomain(ctx, nil, &request.Name); err != nil {
+		return convertCommonErrors(m.db, "DeleteDomainByName", err)
+	}
+
+	return nil
 }
 
 func (m *nosqlDomainManager) GetMetadata(
@@ -282,7 +286,7 @@ func (m *nosqlDomainManager) GetMetadata(
 ) (*p.GetMetadataResponse, error) {
 	notificationVersion, err := m.db.SelectDomainMetadata(ctx)
 	if err != nil {
-		return nil, err
+		return nil, convertCommonErrors(m.db, "GetMetadata", err)
 	}
 	return &p.GetMetadataResponse{NotificationVersion: notificationVersion}, nil
 }

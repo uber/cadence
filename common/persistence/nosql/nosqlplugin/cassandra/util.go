@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,23 +18,47 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package elasticsearch
+package cassandra
 
 import (
-	"net/url"
+	"context"
 
-	"github.com/uber/cadence/common"
+	"github.com/gocql/gocql"
 )
 
-// Config for connecting to ElasticSearch
-type (
-	Config struct {
-		URL     url.URL           `yaml:url`     //nolint:govet
-		Indices map[string]string `yaml:indices` //nolint:govet
+// IsTimeoutError checks if an error is timeout error
+func IsTimeoutError(err error) bool {
+	if err == context.DeadlineExceeded {
+		return true
 	}
-)
+	if err == gocql.ErrTimeoutNoResponse {
+		return true
+	}
+	if err == gocql.ErrConnectionClosed {
+		return true
+	}
+	_, ok := err.(*gocql.RequestErrWriteTimeout)
+	return ok
+}
 
-// GetVisibilityIndex return visibility index name
-func (cfg *Config) GetVisibilityIndex() string {
-	return cfg.Indices[common.VisibilityAppName]
+// IsNotFoundError checks if an error due to entity not found
+func IsNotFoundError(err error) bool {
+	return err == gocql.ErrNotFound
+}
+
+// IsThrottlingError checks if an error is due to throttling error
+func IsThrottlingError(err error) bool {
+	if req, ok := err.(gocql.RequestError); ok {
+		// gocql does not expose the constant errOverloaded = 0x1001
+		return req.Code() == 0x1001
+	}
+	return false
+}
+
+// IsConditionFailedError checks if an error is conditional update failure error
+func IsConditionFailedError(err error) bool {
+	if err == errConditionFailed {
+		return true
+	}
+	return false
 }

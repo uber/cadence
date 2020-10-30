@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
@@ -37,7 +38,7 @@ type (
 	Indexer struct {
 		config              *Config
 		kafkaClient         messaging.Client
-		esClient            es.Client
+		esClient            es.GenericClient
 		logger              log.Logger
 		metricsClient       metrics.Client
 		visibilityProcessor *indexProcessor
@@ -60,8 +61,14 @@ const (
 )
 
 // NewIndexer create a new Indexer
-func NewIndexer(config *Config, client messaging.Client, esClient es.Client, esConfig *es.Config,
-	logger log.Logger, metricsClient metrics.Client) *Indexer {
+func NewIndexer(
+	config *Config,
+	client messaging.Client,
+	esClient es.GenericClient,
+	esConfig *config.ElasticSearchConfig,
+	logger log.Logger,
+	metricsClient metrics.Client,
+) *Indexer {
 	logger = logger.WithTags(tag.ComponentIndexer)
 
 	return &Indexer{

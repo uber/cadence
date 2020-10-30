@@ -23,10 +23,9 @@ package nosqlplugin
 import (
 	"context"
 
-	"github.com/uber/cadence/common/types"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
