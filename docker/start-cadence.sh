@@ -2,7 +2,7 @@
 
 set -ex
 
-CONFIG_TEMPLATE_PATH="${CONFIG_TEMPLATE_PATH:/etc/cadence/config/config_template.yaml}"
+CONFIG_TEMPLATE_PATH="${CONFIG_TEMPLATE_PATH:-/etc/cadence/config/config_template.yaml}"
 
 dockerize -template $CONFIG_TEMPLATE_PATH:/etc/cadence/config/docker.yaml
 
