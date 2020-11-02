@@ -23,6 +23,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -194,7 +195,7 @@ func (m *nosqlDomainManager) GetDomain(
 		}
 	}
 
-	return &p.InternalGetDomainResponse{
+	resp := &p.InternalGetDomainResponse{
 		Info:                        row.Info,
 		Config:                      domainConfig,
 		ReplicationConfig:           row.ReplicationConfig,
@@ -203,10 +204,14 @@ func (m *nosqlDomainManager) GetDomain(
 		FailoverVersion:             row.FailoverVersion,
 		FailoverNotificationVersion: row.FailoverNotificationVersion,
 		PreviousFailoverVersion:     row.PreviousFailoverVersion,
-		FailoverEndTime:             responseFailoverEndTime,
 		NotificationVersion:         row.NotificationVersion,
 		LastUpdatedTime:             row.LastUpdatedTime,
-	}, nil
+	}
+	if responseFailoverEndTime != nil {
+		// TODO: this only works if what we write to db is indeed unix time - check with Yu
+		resp.FailoverEndTime = common.TimePtr(time.Unix(0, *responseFailoverEndTime))
+	}
+	return resp, nil
 }
 
 func (m *nosqlDomainManager) ListDomains(
@@ -238,7 +243,7 @@ func (m *nosqlDomainManager) ListDomains(
 			}
 		}
 
-		domains = append(domains, &p.InternalGetDomainResponse{
+		currResp :=  &p.InternalGetDomainResponse{
 			Info:                        row.Info,
 			Config:                      domainConfig,
 			ReplicationConfig:           row.ReplicationConfig,
@@ -247,10 +252,13 @@ func (m *nosqlDomainManager) ListDomains(
 			FailoverVersion:             row.FailoverVersion,
 			FailoverNotificationVersion: row.FailoverNotificationVersion,
 			PreviousFailoverVersion:     row.PreviousFailoverVersion,
-			FailoverEndTime:             domainFailoverEndTime,
 			NotificationVersion:         row.NotificationVersion,
 			LastUpdatedTime:             row.LastUpdatedTime,
-		})
+		}
+		if domainFailoverEndTime != nil {
+			currResp.FailoverEndTime = common.TimePtr(time.Unix(0, *domainFailoverEndTime))
+		}
+		domains = append(domains, currResp)
 	}
 
 	return &p.InternalListDomainsResponse{

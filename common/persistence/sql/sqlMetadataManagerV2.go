@@ -24,6 +24,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
@@ -115,7 +116,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(
 		Description:                 &request.Info.Description,
 		Owner:                       &request.Info.OwnerEmail,
 		Data:                        request.Info.Data,
-		RetentionDays:               common.Int16Ptr(int16(request.Config.Retention)),
+		RetentionDays:               common.Int16Ptr(int16(common.DurationToInt32(request.Config.Retention, 24*time.Hour))),
 		EmitMetric:                  &request.Config.EmitMetric,
 		ArchivalBucket:              &request.Config.ArchivalBucket,
 		ArchivalStatus:              common.Int16Ptr(int16(request.Config.ArchivalStatus)),
@@ -130,7 +131,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(
 		NotificationVersion:         common.Int64Ptr(metadata.NotificationVersion),
 		FailoverNotificationVersion: common.Int64Ptr(persistence.InitialFailoverNotificationVersion),
 		PreviousFailoverVersion:     common.Int64Ptr(common.InitialPreviousFailoverVersion),
-		LastUpdatedTime:             common.Int64Ptr(request.LastUpdatedTime),
+		LastUpdatedTime:             common.Int64Ptr(request.LastUpdatedTime.UnixNano()),
 		BadBinaries:                 badBinaries,
 		BadBinariesEncoding:         badBinariesEncoding,
 	}
@@ -237,7 +238,7 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 		failoverEndTime = domainInfo.FailoverEndTime
 	}
 
-	return &persistence.InternalGetDomainResponse{
+	result := &persistence.InternalGetDomainResponse{
 		Info: &persistence.DomainInfo{
 			ID:          row.ID.String(),
 			Name:        row.Name,
@@ -247,7 +248,7 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 			Data:        domainInfo.GetData(),
 		},
 		Config: &persistence.InternalDomainConfig{
-			Retention:                int32(domainInfo.GetRetentionDays()),
+			Retention:                common.Int32ToDuration(int32(domainInfo.GetRetentionDays()), 24*time.Hour),
 			EmitMetric:               domainInfo.GetEmitMetric(),
 			ArchivalBucket:           domainInfo.GetArchivalBucket(),
 			ArchivalStatus:           types.ArchivalStatus(*domainInfo.ArchivalStatus),
@@ -267,9 +268,12 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 		NotificationVersion:         domainInfo.GetNotificationVersion(),
 		FailoverNotificationVersion: domainInfo.GetFailoverNotificationVersion(),
 		PreviousFailoverVersion:     domainInfo.GetPreviousFailoverVersion(),
-		FailoverEndTime:             failoverEndTime,
-		LastUpdatedTime:             domainInfo.GetLastUpdatedTime(),
-	}, nil
+		LastUpdatedTime:             time.Unix(0, domainInfo.GetLastUpdatedTime()),
+	}
+	if failoverEndTime != nil {
+		result.FailoverEndTime = common.TimePtr(time.Unix(0, *failoverEndTime))
+	}
+	return result, nil
 }
 
 func (m *sqlMetadataManagerV2) UpdateDomain(
@@ -299,7 +303,7 @@ func (m *sqlMetadataManagerV2) UpdateDomain(
 		Description:                 &request.Info.Description,
 		Owner:                       &request.Info.OwnerEmail,
 		Data:                        request.Info.Data,
-		RetentionDays:               common.Int16Ptr(int16(request.Config.Retention)),
+		RetentionDays:               common.Int16Ptr(int16(common.DurationToInt32(request.Config.Retention, 24*time.Hour))),
 		EmitMetric:                  &request.Config.EmitMetric,
 		ArchivalBucket:              &request.Config.ArchivalBucket,
 		ArchivalStatus:              common.Int16Ptr(int16(request.Config.ArchivalStatus)),

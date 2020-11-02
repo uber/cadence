@@ -140,7 +140,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(
 		IsGlobalDomain:  true, // local domain will not be replicated
 		ConfigVersion:   task.GetConfigVersion(),
 		FailoverVersion: task.GetFailoverVersion(),
-		LastUpdatedTime: h.timeSource.Now().UnixNano(),
+		LastUpdatedTime: h.timeSource.Now(),
 	}
 
 	_, err = h.metadataManager.CreateDomain(ctx, request)

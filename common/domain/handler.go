@@ -257,7 +257,7 @@ func (d *handlerImpl) RegisterDomain(
 		IsGlobalDomain:    isGlobalDomain,
 		ConfigVersion:     0,
 		FailoverVersion:   failoverVersion,
-		LastUpdatedTime:   d.timeSource.Now().UnixNano(),
+		LastUpdatedTime:   d.timeSource.Now(),
 	}
 
 	domainResponse, err := d.metadataMgr.CreateDomain(ctx, domainRequest)

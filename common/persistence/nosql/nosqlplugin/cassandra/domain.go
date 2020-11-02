@@ -23,6 +23,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gocql/gocql"
 
@@ -175,7 +176,7 @@ func (db *cdb) InsertDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		row.Info.Description,
 		row.Info.OwnerEmail,
 		row.Info.Data,
-		row.Config.Retention,
+		common.DurationToInt32(row.Config.Retention, 24*time.Hour),
 		row.Config.EmitMetric,
 		row.Config.ArchivalBucket,
 		row.Config.ArchivalStatus,
@@ -193,7 +194,7 @@ func (db *cdb) InsertDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		p.InitialFailoverNotificationVersion,
 		common.InitialPreviousFailoverVersion,
 		row.FailoverEndTime,
-		row.LastUpdatedTime,
+		row.LastUpdatedTime.UnixNano(),
 		metadataNotificationVersion,
 	)
 	db.updateMetadataBatch(ctx, batch, metadataNotificationVersion)
@@ -254,7 +255,7 @@ func (db *cdb) UpdateDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		row.Info.Description,
 		row.Info.OwnerEmail,
 		row.Info.Data,
-		row.Config.Retention,
+		common.DurationToInt32(row.Config.Retention, 24*time.Hour),
 		row.Config.EmitMetric,
 		row.Config.ArchivalBucket,
 		row.Config.ArchivalStatus,
@@ -331,6 +332,7 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 	var lastUpdatedTime int64
 	var configVersion int64
 	var isGlobalDomain bool
+	var retentionDays int32
 
 	query = db.session.Query(templateGetDomainByNameQueryV2, constDomainPartition, domainName).WithContext(ctx)
 	err = query.Scan(
@@ -340,7 +342,7 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 		&info.Description,
 		&info.OwnerEmail,
 		&info.Data,
-		&config.Retention,
+		&retentionDays,
 		&config.EmitMetric,
 		&config.ArchivalBucket,
 		&config.ArchivalStatus,
@@ -367,6 +369,7 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 	}
 
 	config.BadBinaries = p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding))
+	config.Retention = common.Int32ToDuration(retentionDays, 24*time.Hour)
 	replicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 
 	return &nosqlplugin.DomainRow{
@@ -379,7 +382,7 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 		PreviousFailoverVersion:     previousFailoverVersion,
 		NotificationVersion:         notificationVersion,
 		FailoverEndTime:             failoverEndTime,
-		LastUpdatedTime:             lastUpdatedTime,
+		LastUpdatedTime:             time.Unix(0, lastUpdatedTime),
 		IsGlobalDomain:              isGlobalDomain,
 	}, nil
 }
@@ -404,6 +407,8 @@ func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []b
 	var replicationClusters []map[string]interface{}
 	var badBinariesData []byte
 	var badBinariesDataEncoding string
+	var retentionDays int32
+	var lastUpdatedTimeNano int64
 	var rows []*nosqlplugin.DomainRow
 	for iter.Scan(
 		&name,
@@ -413,7 +418,7 @@ func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []b
 		&domain.Info.Description,
 		&domain.Info.OwnerEmail,
 		&domain.Info.Data,
-		&domain.Config.Retention,
+		&retentionDays,
 		&domain.Config.EmitMetric,
 		&domain.Config.ArchivalBucket,
 		&domain.Config.ArchivalStatus,
@@ -431,18 +436,21 @@ func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []b
 		&domain.FailoverNotificationVersion,
 		&domain.PreviousFailoverVersion,
 		&domain.FailoverEndTime,
-		&domain.LastUpdatedTime,
+		&lastUpdatedTimeNano,
 		&domain.NotificationVersion,
 	) {
 		if name != domainMetadataRecordName {
 			// do not include the metadata record
 			domain.Config.BadBinaries = p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding))
 			domain.ReplicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
+			domain.Config.Retention = common.Int32ToDuration(retentionDays, 24*time.Hour)
+			domain.LastUpdatedTime = time.Unix(0, lastUpdatedTimeNano)
 			rows = append(rows, domain)
 		}
 		replicationClusters = []map[string]interface{}{}
 		badBinariesData = []byte("")
 		badBinariesDataEncoding = ""
+		retentionDays = 0
 		domain = &nosqlplugin.DomainRow{
 			Info:              &p.DomainInfo{},
 			Config:            &nosqlplugin.NoSQLInternalDomainConfig{},

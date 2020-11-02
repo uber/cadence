@@ -792,3 +792,13 @@ func IsStickyTaskConditionError(err error) bool {
 	}
 	return false
 }
+
+// DurationToInt32 converts duration to int32 at the specified unit
+func DurationToInt32(d time.Duration, unit time.Duration) int32 {
+	return int32(d / unit)
+}
+
+// Int32ToDuration converts int32 to duration at the specified unit
+func Int32ToDuration(d int32, unit time.Duration) time.Duration {
+	return time.Duration(d) * unit
+}
