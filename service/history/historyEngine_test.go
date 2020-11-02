@@ -20,7 +20,7 @@
 
 package history
 
-import (
+import ( 
 	"context"
 	"encoding/json"
 	"errors"
@@ -5173,6 +5173,7 @@ func (s *engineSuite) TestReapplyEvents_ResetWorkflow() {
 	s.mockEventsReapplier.EXPECT().ReapplyEvents(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 	s.mockWorkflowResetter.EXPECT().ResetWorkflow(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
 		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
+		gomock.Any(),
 	).Return(nil).Times(1)
 	err = s.mockHistoryEngine.ReapplyEvents(
 		context.Background(),
