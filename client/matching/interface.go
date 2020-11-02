@@ -21,10 +21,23 @@
 package matching
 
 import (
-	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
+	"context"
+
+	"go.uber.org/yarpc"
+
+	"github.com/uber/cadence/.gen/go/matching"
+	"github.com/uber/cadence/.gen/go/shared"
 )
 
 // Client is the interface exposed by matching service client
 type Client interface {
-	matchingserviceclient.Interface
+	AddActivityTask(context.Context, *matching.AddActivityTaskRequest, ...yarpc.CallOption) error
+	AddDecisionTask(context.Context, *matching.AddDecisionTaskRequest, ...yarpc.CallOption) error
+	CancelOutstandingPoll(context.Context, *matching.CancelOutstandingPollRequest, ...yarpc.CallOption) error
+	DescribeTaskList(context.Context, *matching.DescribeTaskListRequest, ...yarpc.CallOption) (*shared.DescribeTaskListResponse, error)
+	ListTaskListPartitions(context.Context, *matching.ListTaskListPartitionsRequest, ...yarpc.CallOption) (*shared.ListTaskListPartitionsResponse, error)
+	PollForActivityTask(context.Context, *matching.PollForActivityTaskRequest, ...yarpc.CallOption) (*shared.PollForActivityTaskResponse, error)
+	PollForDecisionTask(context.Context, *matching.PollForDecisionTaskRequest, ...yarpc.CallOption) (*matching.PollForDecisionTaskResponse, error)
+	QueryWorkflow(context.Context, *matching.QueryWorkflowRequest, ...yarpc.CallOption) (*shared.QueryWorkflowResponse, error)
+	RespondQueryTaskCompleted(context.Context, *matching.RespondQueryTaskCompletedRequest, ...yarpc.CallOption) error
 }

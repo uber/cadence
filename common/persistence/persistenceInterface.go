@@ -631,7 +631,7 @@ type (
 		CloseTime        time.Time
 		Status           *types.WorkflowExecutionCloseStatus
 		HistoryLength    int64
-		Memo             *types.Memo
+		Memo             *DataBlob
 		TaskList         string
 		SearchAttributes map[string]interface{}
 	}
@@ -684,7 +684,7 @@ type (
 		ExecutionTimestamp int64
 		WorkflowTimeout    int64
 		TaskID             int64
-		Memo               *types.Memo
+		Memo               *DataBlob
 		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
@@ -698,7 +698,7 @@ type (
 		StartTimestamp     int64
 		ExecutionTimestamp int64
 		TaskID             int64
-		Memo               *types.Memo
+		Memo               *DataBlob
 		TaskList           string
 		SearchAttributes   map[string][]byte
 		CloseTimestamp     int64
@@ -717,7 +717,7 @@ type (
 		ExecutionTimestamp int64
 		WorkflowTimeout    int64
 		TaskID             int64
-		Memo               *types.Memo
+		Memo               *DataBlob
 		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
@@ -748,7 +748,7 @@ type (
 		HistoryArchivalURI       string
 		VisibilityArchivalStatus types.ArchivalStatus
 		VisibilityArchivalURI    string
-		BadBinaries              types.BadBinaries
+		BadBinaries              *DataBlob
 	}
 
 	// InternalCreateDomainRequest is used to create the domain
