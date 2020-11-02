@@ -1808,31 +1808,39 @@ func isLastEventDecisionTaskFailedWithNonDeterminism(ctx context.Context, domain
 	return false, nil
 }
 
-func getResetEventIDByType(ctx context.Context, c *cli.Context, resetType, domain, wid, rid string, frontendClient workflowserviceclient.Interface) (resetBaseRunID string, decisionFinishID int64, err error) {
+func getResetEventIDByType(
+	ctx context.Context,
+	c *cli.Context,
+	resetType, domain, wid, rid string,
+	frontendClient workflowserviceclient.Interface,
+) (resetBaseRunID string, decisionFinishID int64, err error) {
+	// default to the same runID
+	resetBaseRunID = rid
+
 	fmt.Println("resetType:", resetType)
 	switch resetType {
-	case "LastDecisionCompleted":
+	case resetTypeLastDecisionCompleted:
 		resetBaseRunID, decisionFinishID, err = getLastDecisionCompletedID(ctx, domain, wid, rid, frontendClient)
 		if err != nil {
 			return
 		}
-	case "LastContinuedAsNew":
+	case resetTypeLastContinuedAsNew:
 		resetBaseRunID, decisionFinishID, err = getLastContinueAsNewID(ctx, domain, wid, rid, frontendClient)
 		if err != nil {
 			return
 		}
-	case "FirstDecisionCompleted":
+	case resetTypeFirstDecisionCompleted:
 		resetBaseRunID, decisionFinishID, err = getFirstDecisionCompletedID(ctx, domain, wid, rid, frontendClient)
 		if err != nil {
 			return
 		}
-	case "BadBinary":
+	case resetTypeBadBinary:
 		binCheckSum := c.String(FlagResetBadBinaryChecksum)
 		resetBaseRunID, decisionFinishID, err = getBadDecisionCompletedID(ctx, domain, wid, rid, binCheckSum, frontendClient)
 		if err != nil {
 			return
 		}
-	case "DecisionStartedTime":
+	case resetTypeDecisionCompletedTime:
 		earliestTime := parseTime(c.String(FlagEarliestTime), 0)
 		decisionFinishID, err = getEarliestDecisionID(ctx, domain, wid, rid, earliestTime, frontendClient)
 		if err != nil {
@@ -1844,7 +1852,12 @@ func getResetEventIDByType(ctx context.Context, c *cli.Context, resetType, domai
 	return
 }
 
-func getEarliestDecisionID(ctx context.Context, domain string, wid string, rid string, earliestTime int64, frontendClient workflowserviceclient.Interface) (decisionFinishID int64, err error) {
+func getEarliestDecisionID(
+	ctx context.Context,
+	domain string, wid string,
+	rid string, earliestTime int64,
+	frontendClient workflowserviceclient.Interface,
+) (decisionFinishID int64, err error) {
 	req := &shared.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domain),
 		Execution: &shared.WorkflowExecution{
