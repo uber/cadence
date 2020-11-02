@@ -34,7 +34,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/olivere/elastic"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -49,6 +48,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/host"
+	"github.com/uber/cadence/host/esUtils"
 )
 
 const (
@@ -66,7 +66,7 @@ type esCrossDCTestSuite struct {
 	cluster2       *host.TestCluster
 	logger         log.Logger
 	clusterConfigs []*host.TestClusterConfig
-	esClient       *elastic.Client
+	esClient       esUtils.ESClient
 
 	testSearchAttributeKey string
 	testSearchAttributeVal string
@@ -117,10 +117,11 @@ func (s *esCrossDCTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.cluster2 = c
 
-	s.esClient = host.CreateESClient(s.Suite, s.clusterConfigs[0].ESConfig.URL.String())
-	host.PutIndexTemplate(s.Suite, s.esClient, "../testdata/es_index_v6_template.json", "test-visibility-template")
-	host.CreateIndex(s.Suite, s.esClient, s.clusterConfigs[0].ESConfig.Indices[common.VisibilityAppName])
-	host.CreateIndex(s.Suite, s.esClient, s.clusterConfigs[1].ESConfig.Indices[common.VisibilityAppName])
+	s.esClient = esUtils.CreateESClient(s.Suite, s.clusterConfigs[0].ESConfig.URL.String(), "v6")
+	//TODO Do we also want to run v7 test here?
+	s.esClient.PutIndexTemplate(s.Suite, "../testdata/es_index_v6_template.json", "test-visibility-template")
+	s.esClient.CreateIndex(s.Suite, s.clusterConfigs[0].ESConfig.Indices[common.VisibilityAppName])
+	s.esClient.CreateIndex(s.Suite, s.clusterConfigs[1].ESConfig.Indices[common.VisibilityAppName])
 
 	s.testSearchAttributeKey = definition.CustomStringField
 	s.testSearchAttributeVal = "test value"
@@ -134,8 +135,8 @@ func (s *esCrossDCTestSuite) SetupTest() {
 func (s *esCrossDCTestSuite) TearDownSuite() {
 	s.cluster1.TearDownCluster()
 	s.cluster2.TearDownCluster()
-	host.DeleteIndex(s.Suite, s.esClient, s.clusterConfigs[0].ESConfig.Indices[common.VisibilityAppName])
-	host.DeleteIndex(s.Suite, s.esClient, s.clusterConfigs[1].ESConfig.Indices[common.VisibilityAppName])
+	s.esClient.DeleteIndex(s.Suite, s.clusterConfigs[0].ESConfig.Indices[common.VisibilityAppName])
+	s.esClient.DeleteIndex(s.Suite, s.clusterConfigs[1].ESConfig.Indices[common.VisibilityAppName])
 }
 
 func (s *esCrossDCTestSuite) TestSearchAttributes() {
