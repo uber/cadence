@@ -40,7 +40,7 @@ func init() {
 	flag.StringVar(&TestFlags.SQLPluginName, "sqlPluginName", "mysql", "type of sql store - [mysql or postgres]")
 	flag.StringVar(&TestFlags.TestClusterConfigFile, "TestClusterConfigFile", "", "test cluster config file location")
 	flag.StringVar(&TestFlags.ElasticSearchVersion, "elasticSearchVersion", "v6", "type of sql store - [v6 or v7]")
-	if TestFlags.ElasticSearchVersion == "" {
+	if os.Getenv("elasticSearchVersion") != "" {
 		TestFlags.ElasticSearchVersion = os.Getenv("elasticSearchVersion")
 	}
 }
