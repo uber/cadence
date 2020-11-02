@@ -80,7 +80,7 @@ var resetTypesMap = map[string]string{
 	"LastDecisionCompleted":  "",
 	"LastContinuedAsNew":     "",
 	"BadBinary":              FlagResetBadBinaryChecksum,
-	"DecisionStartedTime":    FlagEarliestTime,
+	"DecisionCompletedTime":  FlagEarliestTime,
 }
 
 type jsonType int

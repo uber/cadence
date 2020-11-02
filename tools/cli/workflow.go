@@ -244,8 +244,9 @@ func newWorkflowCommands() []cli.Command {
 					Usage: "RunID, optional, default to the current/latest RunID",
 				},
 				cli.StringFlag{
-					Name:  FlagEventID,
-					Usage: "The eventID of any event after DecisionTaskStarted you want to reset to (exclusive). It can be DecisionTaskCompleted, DecisionTaskFailed or others",
+					Name: FlagEventID,
+					Usage: "The eventID of any event after DecisionTaskStarted you want to reset to (this event is exclusive in a new run. The new run " +
+						"history will fork and continue from the previous eventID of this). It can be DecisionTaskCompleted, DecisionTaskFailed or others",
 				},
 				cli.StringFlag{
 					Name:  FlagReason,
@@ -266,11 +267,11 @@ func newWorkflowCommands() []cli.Command {
 
 				cli.StringFlag{
 					Name: FlagEarliestTimeWithAlias,
-					Usage: "EarliestTime of decision start time, for resetType of DecisionStartedTime." +
+					Usage: "EarliestTime of decision start time, required for resetType of DecisionCompletedTime." +
 						"Supported formats are '2006-01-02T15:04:05+07:00', raw UnixNano and " +
 						"time range (N<duration>), where 0 < N < 1000000 and duration (full-notation/short-notation) can be second/s, " +
 						"minute/m, hour/h, day/d, week/w, month/M or year/y. For example, '15minute' or '15m' implies last 15 minutes, " +
-						"meaning that workflow will be reset to the first decision that started in last 15 minutes.",
+						"meaning that workflow will be reset to the first decision that completed in last 15 minutes.",
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -342,11 +343,11 @@ func newWorkflowCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name: FlagEarliestTimeWithAlias,
-					Usage: "EarliestTime of decision start time, for resetType of DecisionStartedTime." +
+					Usage: "EarliestTime of decision start time, required for resetType of DecisionCompletedTime." +
 						"Supported formats are '2006-01-02T15:04:05+07:00', raw UnixNano and " +
 						"time range (N<duration>), where 0 < N < 1000000 and duration (full-notation/short-notation) can be second/s, " +
 						"minute/m, hour/h, day/d, week/w, month/M or year/y. For example, '15minute' or '15m' implies last 15 minutes, " +
-						"meaning that workflow will be reset to the first decision that started in last 15 minutes.",
+						"meaning that workflow will be reset to the first decision that completed in last 15 minutes.",
 				},
 			},
 			Action: func(c *cli.Context) {
