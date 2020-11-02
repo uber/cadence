@@ -33,6 +33,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/environment"
+
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -63,9 +65,9 @@ type elasticsearchIntegrationSuite struct {
 
 // This cluster use customized threshold for history config
 func (s *elasticsearchIntegrationSuite) SetupSuite() {
-	s.setupSuite("testdata/integration_elasticsearch_" + TestFlags.ElasticSearchVersion + "_cluster.yaml")
-	s.esClient = esUtils.CreateESClient(s.Suite, s.testClusterConfig.ESConfig.URL.String(), TestFlags.ElasticSearchVersion)
-	s.esClient.PutIndexTemplate(s.Suite, "testdata/es_"+TestFlags.ElasticSearchVersion+"_index_template.json", "test-visibility-template")
+	s.setupSuite("testdata/integration_elasticsearch_" + environment.GetESVersion() + "_cluster.yaml")
+	s.esClient = esUtils.CreateESClient(s.Suite, s.testClusterConfig.ESConfig.URL.String(), environment.GetESVersion())
+	s.esClient.PutIndexTemplate(s.Suite, "testdata/es_"+environment.GetESVersion()+"_index_template.json", "test-visibility-template")
 	indexName := s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName]
 	s.esClient.CreateIndex(s.Suite, indexName)
 	s.putIndexSettings(indexName, defaultTestValueOfESIndexMaxResultWindow)

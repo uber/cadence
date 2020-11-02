@@ -65,7 +65,7 @@ services:
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
       - "TEST_TAG=esintegration"
-      - "elasticSearchVersion=v7"
+      - "ES_VERSION=v7"
     depends_on:
       - cassandra
       - elasticsearch

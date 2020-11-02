@@ -22,7 +22,6 @@ package host
 
 import (
 	"flag"
-	"os"
 )
 
 // TestFlags contains the feature flags for integration tests
@@ -31,7 +30,6 @@ var TestFlags struct {
 	PersistenceType       string
 	SQLPluginName         string
 	TestClusterConfigFile string
-	ElasticSearchVersion  string
 }
 
 func init() {
@@ -39,8 +37,4 @@ func init() {
 	flag.StringVar(&TestFlags.PersistenceType, "persistenceType", "cassandra", "type of persistence store - [cassandra or sql]")
 	flag.StringVar(&TestFlags.SQLPluginName, "sqlPluginName", "mysql", "type of sql store - [mysql or postgres]")
 	flag.StringVar(&TestFlags.TestClusterConfigFile, "TestClusterConfigFile", "", "test cluster config file location")
-	flag.StringVar(&TestFlags.ElasticSearchVersion, "elasticSearchVersion", "v6", "type of sql store - [v6 or v7]")
-	if os.Getenv("elasticSearchVersion") != "" {
-		TestFlags.ElasticSearchVersion = os.Getenv("elasticSearchVersion")
-	}
 }
