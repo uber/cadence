@@ -452,6 +452,9 @@ func (h *VersionHistories) GetVersionHistory(
 	if branchIndex < 0 || branchIndex >= len(h.Histories) {
 		return nil, &shared.BadRequestError{Message: "invalid branch index."}
 	}
+	if len(h.Histories) == 0 {
+		return nil, &shared.BadRequestError{Message: "version histories is empty."}
+	}
 
 	return h.Histories[branchIndex], nil
 }
