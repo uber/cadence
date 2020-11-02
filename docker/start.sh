@@ -5,7 +5,7 @@ set -x
 DB="${DB:-cassandra}"
 ENABLE_ES="${ENABLE_ES:-false}"
 ES_PORT="${ES_PORT:-9200}"
-ES_VERSION="${ES_VERSION:v6}"
+ES_VERSION="${ES_VERSION:-v6}"
 RF=${RF:-1}
 
 # cassandra env
