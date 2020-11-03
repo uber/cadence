@@ -250,7 +250,7 @@ func (r *historyReplicatorImpl) applyEvents(
 		case nil:
 			// Sanity check to make only 3DC mutable state here
 			if mutableState.GetVersionHistories() == nil {
-				return &shared.InternalServiceError{Message: "The mutable state does not support 3DC."}
+				return &shared.BadRequestError{Message: "The mutable state does not support 3DC."}
 			}
 
 			doContinue, branchIndex, err := r.applyNonStartEventsPrepareBranch(ctx, context, mutableState, task)
@@ -514,7 +514,11 @@ func (r *historyReplicatorImpl) applyNonStartEventsToNoneCurrentBranchWithoutCon
 		task.getLastEvent().GetEventId(),
 		task.getLastEvent().GetVersion(),
 	)
-	versionHistory, err := mutableState.GetVersionHistories().GetVersionHistory(branchIndex)
+	versionHistories := mutableState.GetVersionHistories()
+	if versionHistories == nil {
+		return &shared.BadRequestError{Message: "2DC workflow is not supported."}
+	}
+	versionHistory, err := versionHistories.GetVersionHistory(branchIndex)
 	if err != nil {
 		return err
 	}

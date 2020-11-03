@@ -28,6 +28,7 @@ import (
 
 	"github.com/pborman/uuid"
 
+	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
@@ -172,6 +173,9 @@ func (r *workflowResetterImpl) getBaseBranchToken(
 	}()
 
 	baseVersionHistories := baseWorkflow.GetMutableState().GetVersionHistories()
+	if baseVersionHistories == nil {
+		return nil, &workflow.BadRequestError{Message: "2DC workflow is not supported."}
+	}
 	index, err := baseVersionHistories.FindFirstVersionHistoryIndexByItem(
 		persistence.NewVersionHistoryItem(baseLastEventID, baseLastEventVersion),
 	)

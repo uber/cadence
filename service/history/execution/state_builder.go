@@ -114,6 +114,9 @@ func (b *stateBuilderImpl) ApplyEvents(
 			return nil, err
 		}
 		versionHistories := b.mutableState.GetVersionHistories()
+		if versionHistories == nil {
+			return nil, &shared.BadRequestError{Message: "2DC workflow is not supported."}
+		}
 		versionHistory, err := versionHistories.GetCurrentVersionHistory()
 		if err != nil {
 			return nil, err

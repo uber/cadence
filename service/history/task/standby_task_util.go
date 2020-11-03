@@ -158,7 +158,11 @@ func getHistoryResendInfo(
 	mutableState execution.MutableState,
 ) (*historyResendInfo, error) {
 
-	currentBranch, err := mutableState.GetVersionHistories().GetCurrentVersionHistory()
+	versionHistories := mutableState.GetVersionHistories()
+	if versionHistories == nil {
+		return nil, &shared.BadRequestError{Message: "2DC workflow is not supported."}
+	}
+	currentBranch, err := versionHistories.GetCurrentVersionHistory()
 	if err != nil {
 		return nil, err
 	}

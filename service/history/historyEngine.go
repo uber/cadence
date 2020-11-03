@@ -154,6 +154,8 @@ var (
 	ErrConsistentQueryBufferExceeded = &workflow.InternalServiceError{Message: "consistent query buffer is full, cannot accept new consistent queries"}
 	// ErrConcurrentStartRequest is error indicating there is an outstanding start workflow request. The incoming request fails to acquires the lock before the outstanding request finishes.
 	ErrConcurrentStartRequest = &workflow.ServiceBusyError{Message: "an outstanding start workflow request is in-progress. Failed to acquire the resource."}
+	// ErrUnsupportedWorkflow is the error indicating cadence failed to process 2dc workflow type.
+	ErrUnsupportedWorkflow = &workflow.BadRequestError{Message: "2DC workflow is not supported."}
 
 	// FailedWorkflowCloseState is a set of failed workflow close states, used for start workflow policy
 	// for start workflow execution API
@@ -2534,6 +2536,9 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	resetRunID := uuid.New()
 	baseRebuildLastEventID := request.GetDecisionFinishEventId() - 1
 	baseVersionHistories := baseMutableState.GetVersionHistories()
+	if baseVersionHistories == nil {
+		return nil, ErrUnsupportedWorkflow
+	}
 	baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
 	if err != nil {
 		return nil, err
@@ -3162,6 +3167,9 @@ func (e *historyEngineImpl) ReapplyEvents(
 				}
 
 				baseVersionHistories := mutableState.GetVersionHistories()
+				if baseVersionHistories == nil {
+					return nil, ErrUnsupportedWorkflow
+				}
 				baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
 				if err != nil {
 					return nil, err
