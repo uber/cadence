@@ -192,6 +192,7 @@ const (
 	FlagResetType                         = "reset_type"
 	FlagResetPointsOnly                   = "reset_points_only"
 	FlagResetBadBinaryChecksum            = "reset_bad_binary_checksum"
+	FlagSkipSignalReapply                 = "skip_signal_reapply"
 	FlagListQuery                         = "query"
 	FlagListQueryWithAlias                = FlagListQuery + ", q"
 	FlagBatchType                         = "batch_type"

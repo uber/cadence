@@ -23,6 +23,8 @@ package persistence
 import (
 	"context"
 
+	"github.com/uber/cadence/common"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types/mapper/thrift"
@@ -177,6 +179,10 @@ func (m *metadataManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalD
 	if c.BadBinaries.Binaries == nil {
 		c.BadBinaries.Binaries = map[string]*shared.BadBinaryInfo{}
 	}
+	badBinaries, err := m.serializer.SerializeBadBinaries(&c.BadBinaries, common.EncodingTypeThriftRW)
+	if err != nil {
+		return InternalDomainConfig{}, err
+	}
 	return InternalDomainConfig{
 		Retention:                c.Retention,
 		EmitMetric:               c.EmitMetric,
@@ -184,13 +190,20 @@ func (m *metadataManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalD
 		HistoryArchivalURI:       c.HistoryArchivalURI,
 		VisibilityArchivalStatus: *thrift.ToArchivalStatus(&c.VisibilityArchivalStatus),
 		VisibilityArchivalURI:    c.VisibilityArchivalURI,
-		BadBinaries:              *thrift.ToBadBinaries(&c.BadBinaries),
+		BadBinaries:              badBinaries,
 	}, nil
 }
 
 func (m *metadataManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig) (DomainConfig, error) {
 	if ic == nil {
 		return DomainConfig{}, nil
+	}
+	badBinaries, err := m.serializer.DeserializeBadBinaries(ic.BadBinaries)
+	if err != nil {
+		return DomainConfig{}, err
+	}
+	if badBinaries.Binaries == nil {
+		badBinaries.Binaries = map[string]*shared.BadBinaryInfo{}
 	}
 	return DomainConfig{
 		Retention:                ic.Retention,
@@ -199,7 +212,7 @@ func (m *metadataManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig)
 		HistoryArchivalURI:       ic.HistoryArchivalURI,
 		VisibilityArchivalStatus: *thrift.FromArchivalStatus(&ic.VisibilityArchivalStatus),
 		VisibilityArchivalURI:    ic.VisibilityArchivalURI,
-		BadBinaries:              *thrift.FromBadBinaries(&ic.BadBinaries),
+		BadBinaries:              *badBinaries,
 	}, nil
 }
 
