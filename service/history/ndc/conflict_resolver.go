@@ -80,7 +80,7 @@ func (r *conflictResolverImpl) prepareMutableState(
 
 	versionHistories := r.mutableState.GetVersionHistories()
 	if versionHistories == nil {
-		return nil, false, &shared.BadRequestError{Message: "2DC workflow is not supported."}
+		return nil, false, &shared.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
 	}
 	currentVersionHistoryIndex := versionHistories.GetCurrentVersionHistoryIndex()
 
@@ -127,7 +127,7 @@ func (r *conflictResolverImpl) rebuild(
 
 	versionHistories := r.mutableState.GetVersionHistories()
 	if versionHistories == nil {
-		return nil, &shared.BadRequestError{Message: "2DC workflow is not supported."}
+		return nil, &shared.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
 	}
 	replayVersionHistory, err := versionHistories.GetVersionHistory(branchIndex)
 	if err != nil {
@@ -163,7 +163,7 @@ func (r *conflictResolverImpl) rebuild(
 	// after rebuilt verification
 	rebuildVersionHistories := rebuildMutableState.GetVersionHistories()
 	if rebuildVersionHistories == nil {
-		return nil, &shared.BadRequestError{Message: "2DC workflow is not supported."}
+		return nil, &shared.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
 	}
 	rebuildVersionHistory, err := rebuildVersionHistories.GetCurrentVersionHistory()
 	if err != nil {

@@ -516,7 +516,7 @@ func (r *historyReplicatorImpl) applyNonStartEventsToNoneCurrentBranchWithoutCon
 	)
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories == nil {
-		return &shared.BadRequestError{Message: "2DC workflow is not supported."}
+		return &shared.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
 	}
 	versionHistory, err := versionHistories.GetVersionHistory(branchIndex)
 	if err != nil {

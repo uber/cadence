@@ -174,7 +174,7 @@ func (r *workflowResetterImpl) getBaseBranchToken(
 
 	baseVersionHistories := baseWorkflow.GetMutableState().GetVersionHistories()
 	if baseVersionHistories == nil {
-		return nil, &workflow.BadRequestError{Message: "2DC workflow is not supported."}
+		return nil, &workflow.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
 	}
 	index, err := baseVersionHistories.FindFirstVersionHistoryIndexByItem(
 		persistence.NewVersionHistoryItem(baseLastEventID, baseLastEventVersion),
