@@ -239,7 +239,7 @@ publicClient:
     hostPort: {{ default .Env.BIND_ON_IP "127.0.0.1" }}:7933
 
 dynamicConfigClient:
-    filepath: {{ default .Env.DYNAMIC_CONFIG_FILE_PATH "/etc/cadence/config/dynamicconfig" }}
+    filepath: {{ default .Env.DYNAMIC_CONFIG_FILE_PATH "/etc/cadence/config/dynamicconfig/development.yaml" }}
     pollInterval: "60s"
 
 blobstore:
