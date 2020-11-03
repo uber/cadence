@@ -155,7 +155,7 @@ var (
 	// ErrConcurrentStartRequest is error indicating there is an outstanding start workflow request. The incoming request fails to acquires the lock before the outstanding request finishes.
 	ErrConcurrentStartRequest = &workflow.ServiceBusyError{Message: "an outstanding start workflow request is in-progress. Failed to acquire the resource."}
 	// ErrUnsupportedWorkflow is the error indicating cadence failed to process 2dc workflow type.
-	ErrUnsupportedWorkflow = &workflow.BadRequestError{Message: "2DC workflow is not supported."}
+	ErrUnsupportedWorkflow = &workflow.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
 
 	// FailedWorkflowCloseState is a set of failed workflow close states, used for start workflow policy
 	// for start workflow execution API
