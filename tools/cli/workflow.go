@@ -260,11 +260,6 @@ func newWorkflowCommands() []cli.Command {
 					Name:  FlagResetBadBinaryChecksum,
 					Usage: "Binary checksum for resetType of BadBinary",
 				},
-				cli.BoolFlag{
-					Name:  FlagSkipSignalReapply,
-					Usage: "whether or not skipping signals reapply after the reset point",
-				},
-
 				cli.StringFlag{
 					Name: FlagEarliestTimeWithAlias,
 					Usage: "EarliestTime of decision start time, required for resetType of DecisionCompletedTime." +
@@ -272,6 +267,10 @@ func newWorkflowCommands() []cli.Command {
 						"time range (N<duration>), where 0 < N < 1000000 and duration (full-notation/short-notation) can be second/s, " +
 						"minute/m, hour/h, day/d, week/w, month/M or year/y. For example, '15minute' or '15m' implies last 15 minutes, " +
 						"meaning that workflow will be reset to the first decision that completed in last 15 minutes.",
+				},
+				cli.BoolFlag{
+					Name:  FlagSkipSignalReapply,
+					Usage: "whether or not skipping signals reapply after the reset point",
 				},
 			},
 			Action: func(c *cli.Context) {
