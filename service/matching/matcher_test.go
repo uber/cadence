@@ -26,9 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
-
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
@@ -40,6 +37,8 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type MatcherTestSuite struct {
