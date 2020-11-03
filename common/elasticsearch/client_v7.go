@@ -76,7 +76,7 @@ type (
 	}
 )
 
-// NewWrapperClient returns a new implementation of Client
+// newV7Client returns a new implementation of GenericClient
 func newV7Client(
 	connectConfig *config.ElasticSearchConfig,
 	visibilityConfig *config.VisibilityConfig,

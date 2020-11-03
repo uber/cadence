@@ -83,7 +83,7 @@ func (c *elasticV6) IsNotFoundError(err error) bool {
 	return false
 }
 
-// NewWrapperClient returns a new implementation of Client
+// newV6Client returns a new implementation of GenericClient
 func newV6Client(
 	connectConfig *config.ElasticSearchConfig,
 	visibilityConfig *config.VisibilityConfig,

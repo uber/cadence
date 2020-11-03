@@ -21,7 +21,6 @@
 package esUtils
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"time"
@@ -81,12 +80,12 @@ func (es *v6Client) DeleteIndex(s suite.Suite, indexName string) {
 func (es *v6Client) PutMaxResultWindow(indexName string, maxResultWindow int) error {
 	_, err := es.client.IndexPutSettings(indexName).
 		BodyString(fmt.Sprintf(`{"max_result_window" : %d}`, maxResultWindow)).
-		Do(context.Background())
+		Do(createContext())
 	return err
 }
 
 func (es *v6Client) GetMaxResultWindow(indexName string) (string, error) {
-	settings, err := es.client.IndexGetSettings(indexName).Do(context.Background())
+	settings, err := es.client.IndexGetSettings(indexName).Do(createContext())
 	if err != nil {
 		return "", err
 	}
