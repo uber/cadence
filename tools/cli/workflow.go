@@ -237,19 +237,20 @@ func newWorkflowCommands() []cli.Command {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowID",
+					Usage: "WorkflowID, required",
 				},
 				cli.StringFlag{
 					Name:  FlagRunIDWithAlias,
-					Usage: "RunID",
+					Usage: "RunID, optional, default to the current/latest RunID",
 				},
 				cli.StringFlag{
-					Name:  FlagEventID,
-					Usage: "The eventID of any event after DecisionTaskStarted you want to reset to (exclusive). It can be DecisionTaskCompleted, DecisionTaskFailed or others",
+					Name: FlagEventID,
+					Usage: "The eventID of any event after DecisionTaskStarted you want to reset to (this event is exclusive in a new run. The new run " +
+						"history will fork and continue from the previous eventID of this). It can be DecisionTaskCompleted, DecisionTaskFailed or others",
 				},
 				cli.StringFlag{
 					Name:  FlagReason,
-					Usage: "reason to do the reset",
+					Usage: "reason to do the reset, required for tracking purpose",
 				},
 				cli.StringFlag{
 					Name:  FlagResetType,
@@ -258,6 +259,14 @@ func newWorkflowCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagResetBadBinaryChecksum,
 					Usage: "Binary checksum for resetType of BadBinary",
+				},
+				cli.StringFlag{
+					Name: FlagEarliestTimeWithAlias,
+					Usage: "EarliestTime of decision start time, required for resetType of DecisionCompletedTime." +
+						"Supported formats are '2006-01-02T15:04:05+07:00', raw UnixNano and " +
+						"time range (N<duration>), where 0 < N < 1000000 and duration (full-notation/short-notation) can be second/s, " +
+						"minute/m, hour/h, day/d, week/w, month/M or year/y. For example, '15minute' or '15m' implies last 15 minutes, " +
+						"meaning that workflow will be reset to the first decision that completed in last 15 minutes.",
 				},
 				cli.BoolFlag{
 					Name:  FlagSkipSignalReapply,
@@ -293,7 +302,7 @@ func newWorkflowCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name:  FlagReason,
-					Usage: "Reason for reset",
+					Usage: "Reason for reset, required for tracking purpose",
 				},
 				cli.IntFlag{
 					Name:  FlagParallism,
@@ -330,6 +339,14 @@ func newWorkflowCommands() []cli.Command {
 				cli.BoolFlag{
 					Name:  FlagSkipSignalReapply,
 					Usage: "whether or not skipping signals reapply after the reset point",
+				},
+				cli.StringFlag{
+					Name: FlagEarliestTimeWithAlias,
+					Usage: "EarliestTime of decision start time, required for resetType of DecisionCompletedTime." +
+						"Supported formats are '2006-01-02T15:04:05+07:00', raw UnixNano and " +
+						"time range (N<duration>), where 0 < N < 1000000 and duration (full-notation/short-notation) can be second/s, " +
+						"minute/m, hour/h, day/d, week/w, month/M or year/y. For example, '15minute' or '15m' implies last 15 minutes, " +
+						"meaning that workflow will be reset to the first decision that completed in last 15 minutes.",
 				},
 			},
 			Action: func(c *cli.Context) {

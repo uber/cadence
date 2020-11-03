@@ -20,7 +20,7 @@
 
 package history
 
-import ( 
+import (
 	"context"
 	"encoding/json"
 	"errors"
