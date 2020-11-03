@@ -24,7 +24,6 @@ import (
 	"context"
 	"time"
 
-	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
@@ -32,6 +31,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -93,19 +94,19 @@ func (t *transferTaskExecutorBase) pushActivity(
 		t.logger.Fatal("Cannot process non activity task", tag.TaskType(task.GetTaskType()))
 	}
 
-	err := t.matchingClient.AddActivityTask(ctx, &m.AddActivityTaskRequest{
+	err := t.matchingClient.AddActivityTask(ctx, &types.AddActivityTaskRequest{
 		DomainUUID:       common.StringPtr(task.TargetDomainID),
 		SourceDomainUUID: common.StringPtr(task.DomainID),
-		Execution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(task.WorkflowID),
-			RunId:      common.StringPtr(task.RunID),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(task.WorkflowID),
+			RunID:      common.StringPtr(task.RunID),
 		},
-		TaskList:                      &workflow.TaskList{Name: &task.TaskList},
-		ScheduleId:                    &task.ScheduleID,
+		TaskList:                      &types.TaskList{Name: &task.TaskList},
+		ScheduleID:                    &task.ScheduleID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(activityScheduleToStartTimeout),
 	})
 
-	return err
+	return thrift.FromError(err)
 }
 
 func (t *transferTaskExecutorBase) pushDecision(
@@ -122,17 +123,17 @@ func (t *transferTaskExecutorBase) pushDecision(
 		t.logger.Fatal("Cannot process non decision task", tag.TaskType(task.GetTaskType()))
 	}
 
-	err := t.matchingClient.AddDecisionTask(ctx, &m.AddDecisionTaskRequest{
+	err := t.matchingClient.AddDecisionTask(ctx, &types.AddDecisionTaskRequest{
 		DomainUUID: common.StringPtr(task.DomainID),
-		Execution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(task.WorkflowID),
-			RunId:      common.StringPtr(task.RunID),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(task.WorkflowID),
+			RunID:      common.StringPtr(task.RunID),
 		},
-		TaskList:                      tasklist,
-		ScheduleId:                    common.Int64Ptr(task.ScheduleID),
+		TaskList:                      thrift.ToTaskList(tasklist),
+		ScheduleID:                    common.Int64Ptr(task.ScheduleID),
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(decisionScheduleToStartTimeout),
 	})
-	return err
+	return thrift.FromError(err)
 }
 
 func (t *transferTaskExecutorBase) recordWorkflowStarted(

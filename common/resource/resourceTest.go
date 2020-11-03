@@ -29,7 +29,6 @@ import (
 
 	"github.com/uber/cadence/.gen/go/cadence/workflowservicetest"
 	"github.com/uber/cadence/.gen/go/history/historyservicetest"
-	"github.com/uber/cadence/.gen/go/matching/matchingservicetest"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
@@ -84,7 +83,7 @@ type (
 
 		SDKClient            *publicservicetest.MockClient
 		FrontendClient       *workflowservicetest.MockClient
-		MatchingClient       *matchingservicetest.MockClient
+		MatchingClient       *matching.MockClient
 		HistoryClient        *historyservicetest.MockClient
 		RemoteAdminClient    *admin.MockClient
 		RemoteFrontendClient *workflowservicetest.MockClient
@@ -128,7 +127,7 @@ func NewTest(
 	logger := loggerimpl.NewLogger(zapLogger)
 
 	frontendClient := workflowservicetest.NewMockClient(controller)
-	matchingClient := matchingservicetest.NewMockClient(controller)
+	matchingClient := matching.NewMockClient(controller)
 	historyClient := historyservicetest.NewMockClient(controller)
 	remoteFrontendClient := workflowservicetest.NewMockClient(controller)
 	remoteAdminClient := admin.NewMockClient(controller)

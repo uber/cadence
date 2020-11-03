@@ -25,11 +25,12 @@ import (
 	"errors"
 	"sync/atomic"
 
-	gen "github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -127,30 +128,30 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) erro
 
 	switch fwdr.taskListID.taskType {
 	case persistence.TaskListTypeDecision:
-		err = fwdr.client.AddDecisionTask(ctx, &gen.AddDecisionTaskRequest{
+		err = fwdr.client.AddDecisionTask(ctx, &types.AddDecisionTaskRequest{
 			DomainUUID: &task.event.DomainID,
-			Execution:  task.workflowExecution(),
-			TaskList: &shared.TaskList{
+			Execution:  thrift.ToWorkflowExecution(task.workflowExecution()),
+			TaskList: &types.TaskList{
 				Name: &name,
-				Kind: &fwdr.taskListKind,
+				Kind: thrift.ToTaskListKind(&fwdr.taskListKind),
 			},
-			ScheduleId:                    &task.event.ScheduleID,
+			ScheduleID:                    &task.event.ScheduleID,
 			ScheduleToStartTimeoutSeconds: &task.event.ScheduleToStartTimeout,
-			Source:                        &task.source,
+			Source:                        thrift.ToTaskSource(&task.source),
 			ForwardedFrom:                 &fwdr.taskListID.name,
 		})
 	case persistence.TaskListTypeActivity:
-		err = fwdr.client.AddActivityTask(ctx, &gen.AddActivityTaskRequest{
+		err = fwdr.client.AddActivityTask(ctx, &types.AddActivityTaskRequest{
 			DomainUUID:       &fwdr.taskListID.domainID,
 			SourceDomainUUID: &task.event.DomainID,
-			Execution:        task.workflowExecution(),
-			TaskList: &shared.TaskList{
+			Execution:        thrift.ToWorkflowExecution(task.workflowExecution()),
+			TaskList: &types.TaskList{
 				Name: &name,
-				Kind: &fwdr.taskListKind,
+				Kind: thrift.ToTaskListKind(&fwdr.taskListKind),
 			},
-			ScheduleId:                    &task.event.ScheduleID,
+			ScheduleID:                    &task.event.ScheduleID,
 			ScheduleToStartTimeoutSeconds: &task.event.ScheduleToStartTimeout,
-			Source:                        &task.source,
+			Source:                        thrift.ToTaskSource(&task.source),
 			ForwardedFrom:                 &fwdr.taskListID.name,
 		})
 	default:
@@ -175,17 +176,17 @@ func (fwdr *Forwarder) ForwardQueryTask(
 		return nil, errNoParent
 	}
 
-	resp, err := fwdr.client.QueryWorkflow(ctx, &gen.QueryWorkflowRequest{
+	resp, err := fwdr.client.QueryWorkflow(ctx, &types.MatchingQueryWorkflowRequest{
 		DomainUUID: task.query.request.DomainUUID,
-		TaskList: &shared.TaskList{
+		TaskList: &types.TaskList{
 			Name: &name,
-			Kind: &fwdr.taskListKind,
+			Kind: thrift.ToTaskListKind(&fwdr.taskListKind),
 		},
-		QueryRequest:  task.query.request.QueryRequest,
+		QueryRequest:  thrift.ToQueryWorkflowRequest(task.query.request.QueryRequest),
 		ForwardedFrom: &fwdr.taskListID.name,
 	})
 
-	return resp, fwdr.handleErr(err)
+	return thrift.FromQueryWorkflowResponse(resp), fwdr.handleErr(err)
 }
 
 // ForwardPoll forwards a poll request to parent task list partition if it exist
@@ -204,13 +205,13 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 
 	switch fwdr.taskListID.taskType {
 	case persistence.TaskListTypeDecision:
-		resp, err := fwdr.client.PollForDecisionTask(ctx, &gen.PollForDecisionTaskRequest{
+		resp, err := fwdr.client.PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{
 			DomainUUID: &fwdr.taskListID.domainID,
 			PollerID:   &pollerID,
-			PollRequest: &shared.PollForDecisionTaskRequest{
-				TaskList: &shared.TaskList{
+			PollRequest: &types.PollForDecisionTaskRequest{
+				TaskList: &types.TaskList{
 					Name: &name,
-					Kind: &fwdr.taskListKind,
+					Kind: thrift.ToTaskListKind(&fwdr.taskListKind),
 				},
 				Identity: &identity,
 			},
@@ -219,15 +220,15 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 		if err != nil {
 			return nil, fwdr.handleErr(err)
 		}
-		return newInternalStartedTask(&startedTaskInfo{decisionTaskInfo: resp}), nil
+		return newInternalStartedTask(&startedTaskInfo{decisionTaskInfo: thrift.FromMatchingPollForDecisionTaskResponse(resp)}), nil
 	case persistence.TaskListTypeActivity:
-		resp, err := fwdr.client.PollForActivityTask(ctx, &gen.PollForActivityTaskRequest{
+		resp, err := fwdr.client.PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
 			DomainUUID: &fwdr.taskListID.domainID,
 			PollerID:   &pollerID,
-			PollRequest: &shared.PollForActivityTaskRequest{
-				TaskList: &shared.TaskList{
+			PollRequest: &types.PollForActivityTaskRequest{
+				TaskList: &types.TaskList{
 					Name: &name,
-					Kind: &fwdr.taskListKind,
+					Kind: thrift.ToTaskListKind(&fwdr.taskListKind),
 				},
 				Identity: &identity,
 			},
@@ -236,7 +237,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 		if err != nil {
 			return nil, fwdr.handleErr(err)
 		}
-		return newInternalStartedTask(&startedTaskInfo{activityTaskInfo: resp}), nil
+		return newInternalStartedTask(&startedTaskInfo{activityTaskInfo: thrift.FromPollForActivityTaskResponse(resp)}), nil
 	}
 
 	return nil, errInvalidTaskListType
@@ -268,6 +269,7 @@ func (fwdr *Forwarder) refreshTokenC(value *atomic.Value, curr *int32, maxLimit 
 }
 
 func (fwdr *Forwarder) handleErr(err error) error {
+	err = thrift.FromError(err)
 	if _, ok := err.(*shared.ServiceBusyError); ok {
 		return errForwarderSlowDown
 	}

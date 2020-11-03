@@ -25,8 +25,8 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -42,7 +42,7 @@ type (
 		// performed
 		PickWritePartition(
 			domainID string,
-			taskList shared.TaskList,
+			taskList types.TaskList,
 			taskListType int,
 			forwardedFrom string,
 		) string
@@ -52,7 +52,7 @@ type (
 		// forwardedFrom is non-empty, no load balancing should be done.
 		PickReadPartition(
 			domainID string,
-			taskList shared.TaskList,
+			taskList types.TaskList,
 			taskListType int,
 			forwardedFrom string,
 		) string
@@ -84,7 +84,7 @@ func NewLoadBalancer(
 
 func (lb *defaultLoadBalancer) PickWritePartition(
 	domainID string,
-	taskList shared.TaskList,
+	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
 ) string {
@@ -93,7 +93,7 @@ func (lb *defaultLoadBalancer) PickWritePartition(
 
 func (lb *defaultLoadBalancer) PickReadPartition(
 	domainID string,
-	taskList shared.TaskList,
+	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
 ) string {
@@ -102,13 +102,13 @@ func (lb *defaultLoadBalancer) PickReadPartition(
 
 func (lb *defaultLoadBalancer) pickPartition(
 	domainID string,
-	taskList shared.TaskList,
+	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
 	nPartitions dynamicconfig.IntPropertyFnWithTaskListInfoFilters,
 ) string {
 
-	if forwardedFrom != "" || taskList.GetKind() == shared.TaskListKindSticky {
+	if forwardedFrom != "" || taskList.GetKind() == types.TaskListKindSticky {
 		return taskList.GetName()
 	}
 

@@ -24,11 +24,14 @@ package persistence
 
 import (
 	"context"
+
+	"github.com/uber/cadence/common"
 )
 
 type (
 	shardManager struct {
 		persistence ShardStore
+		serializer  PayloadSerializer
 	}
 )
 
@@ -40,6 +43,7 @@ func NewShardManager(
 ) ShardManager {
 	return &shardManager{
 		persistence: persistence,
+		serializer:  NewPayloadSerializer(),
 	}
 }
 
@@ -52,8 +56,12 @@ func (m *shardManager) Close() {
 }
 
 func (m *shardManager) CreateShard(ctx context.Context, request *CreateShardRequest) error {
+	shardInfo, err := m.toInternalShardInfo(request.ShardInfo)
+	if err != nil {
+		return err
+	}
 	internalRequest := &InternalCreateShardRequest{
-		ShardInfo: m.toInternalShardInfo(request.ShardInfo),
+		ShardInfo: shardInfo,
 	}
 	return m.persistence.CreateShard(ctx, internalRequest)
 }
@@ -66,24 +74,45 @@ func (m *shardManager) GetShard(ctx context.Context, request *GetShardRequest) (
 	if err != nil {
 		return nil, err
 	}
+	shardInfo, err := m.fromInternalShardInfo(internalResult.ShardInfo)
+	if err != nil {
+		return nil, err
+	}
 	result := &GetShardResponse{
-		ShardInfo: m.fromInternalShardInfo(internalResult.ShardInfo),
+		ShardInfo: shardInfo,
 	}
 	return result, nil
 }
 
 func (m *shardManager) UpdateShard(ctx context.Context, request *UpdateShardRequest) error {
+	shardInfo, err := m.toInternalShardInfo(request.ShardInfo)
+	if err != nil {
+		return err
+	}
 	internalRequest := &InternalUpdateShardRequest{
-		ShardInfo:       m.toInternalShardInfo(request.ShardInfo),
+		ShardInfo:       shardInfo,
 		PreviousRangeID: request.PreviousRangeID,
 	}
 	return m.persistence.UpdateShard(ctx, internalRequest)
 }
 
-func (m *shardManager) toInternalShardInfo(shardInfo *ShardInfo) *InternalShardInfo {
+func (m *shardManager) toInternalShardInfo(shardInfo *ShardInfo) (*InternalShardInfo, error) {
 	if shardInfo == nil {
-		return nil
+		return nil, nil
 	}
+	serializedTransferProcessingQueueStates, err := m.serializer.SerializeProcessingQueueStates(shardInfo.TransferProcessingQueueStates, common.EncodingTypeThriftRW)
+	if err != nil {
+		return nil, err
+	}
+	serializedTimerProcessingQueueStates, err := m.serializer.SerializeProcessingQueueStates(shardInfo.TimerProcessingQueueStates, common.EncodingTypeThriftRW)
+	if err != nil {
+		return nil, err
+	}
+	pendingFailoverMarker, err := m.serializer.SerializePendingFailoverMarkers(shardInfo.PendingFailoverMarkers, common.EncodingTypeThriftRW)
+	if err != nil {
+		return nil, err
+	}
+
 	return &InternalShardInfo{
 		ShardID:                       shardInfo.ShardID,
 		Owner:                         shardInfo.Owner,
@@ -96,20 +125,33 @@ func (m *shardManager) toInternalShardInfo(shardInfo *ShardInfo) *InternalShardI
 		TimerAckLevel:                 shardInfo.TimerAckLevel,
 		ClusterTransferAckLevel:       shardInfo.ClusterTransferAckLevel,
 		ClusterTimerAckLevel:          shardInfo.ClusterTimerAckLevel,
-		TransferProcessingQueueStates: shardInfo.TransferProcessingQueueStates,
-		TimerProcessingQueueStates:    shardInfo.TimerProcessingQueueStates,
+		TransferProcessingQueueStates: serializedTransferProcessingQueueStates,
+		TimerProcessingQueueStates:    serializedTimerProcessingQueueStates,
 		ClusterReplicationLevel:       shardInfo.ClusterReplicationLevel,
 		DomainNotificationVersion:     shardInfo.DomainNotificationVersion,
-		PendingFailoverMarkers:        shardInfo.PendingFailoverMarkers,
+		PendingFailoverMarkers:        pendingFailoverMarker,
 		TransferFailoverLevels:        shardInfo.TransferFailoverLevels,
 		TimerFailoverLevels:           shardInfo.TimerFailoverLevels,
-	}
+	}, nil
 }
 
-func (m *shardManager) fromInternalShardInfo(internalShardInfo *InternalShardInfo) *ShardInfo {
+func (m *shardManager) fromInternalShardInfo(internalShardInfo *InternalShardInfo) (*ShardInfo, error) {
 	if internalShardInfo == nil {
-		return nil
+		return nil, nil
 	}
+	transferProcessingQueueStates, err := m.serializer.DeserializeProcessingQueueStates(internalShardInfo.TransferProcessingQueueStates)
+	if err != nil {
+		return nil, err
+	}
+	timerProcessingQueueStates, err := m.serializer.DeserializeProcessingQueueStates(internalShardInfo.TimerProcessingQueueStates)
+	if err != nil {
+		return nil, err
+	}
+	pendingFailoverMarker, err := m.serializer.DeserializePendingFailoverMarkers(internalShardInfo.PendingFailoverMarkers)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ShardInfo{
 		ShardID:                       internalShardInfo.ShardID,
 		Owner:                         internalShardInfo.Owner,
@@ -122,12 +164,12 @@ func (m *shardManager) fromInternalShardInfo(internalShardInfo *InternalShardInf
 		TimerAckLevel:                 internalShardInfo.TimerAckLevel,
 		ClusterTransferAckLevel:       internalShardInfo.ClusterTransferAckLevel,
 		ClusterTimerAckLevel:          internalShardInfo.ClusterTimerAckLevel,
-		TransferProcessingQueueStates: internalShardInfo.TransferProcessingQueueStates,
-		TimerProcessingQueueStates:    internalShardInfo.TimerProcessingQueueStates,
+		TransferProcessingQueueStates: transferProcessingQueueStates,
+		TimerProcessingQueueStates:    timerProcessingQueueStates,
 		ClusterReplicationLevel:       internalShardInfo.ClusterReplicationLevel,
 		DomainNotificationVersion:     internalShardInfo.DomainNotificationVersion,
-		PendingFailoverMarkers:        internalShardInfo.PendingFailoverMarkers,
+		PendingFailoverMarkers:        pendingFailoverMarker,
 		TransferFailoverLevels:        internalShardInfo.TransferFailoverLevels,
 		TimerFailoverLevels:           internalShardInfo.TimerFailoverLevels,
-	}
+	}, nil
 }
