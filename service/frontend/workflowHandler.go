@@ -3232,6 +3232,7 @@ func (wh *WorkflowHandler) DescribeTaskList(
 		DescRequest: thrift.ToDescribeTaskListRequest(request),
 	})
 	response := thrift.FromDescribeTaskListResponse(clientResp)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
