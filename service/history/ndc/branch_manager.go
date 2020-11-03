@@ -97,6 +97,9 @@ func (r *branchManagerImpl) prepareVersionHistory(
 	}
 
 	localVersionHistories := r.mutableState.GetVersionHistories()
+	if localVersionHistories == nil {
+		return false, 0, &shared.BadRequestError{Message: "2DC workflow is not supported."}
+	}
 	versionHistory, err := localVersionHistories.GetVersionHistory(versionHistoryIndex)
 	if err != nil {
 		return false, 0, err
@@ -151,7 +154,9 @@ func (r *branchManagerImpl) flushBufferedEvents(
 ) (int, *persistence.VersionHistoryItem, error) {
 
 	localVersionHistories := r.mutableState.GetVersionHistories()
-
+	if localVersionHistories == nil {
+		return 0, nil, &shared.BadRequestError{Message: "2DC workflow is not supported."}
+	}
 	versionHistoryIndex, lcaVersionHistoryItem, err := localVersionHistories.FindLCAVersionHistoryIndexAndItem(
 		incomingVersionHistory,
 	)
@@ -249,7 +254,11 @@ func (r *branchManagerImpl) createNewBranch(
 	if err := newVersionHistory.SetBranchToken(resp.NewBranchToken); err != nil {
 		return 0, err
 	}
-	branchChanged, newIndex, err := r.mutableState.GetVersionHistories().AddVersionHistory(
+	versionHistory := r.mutableState.GetVersionHistories()
+	if versionHistory == nil {
+		return 0, &shared.BadRequestError{Message: "Current reapply does not support 2dc workflow."}
+	}
+	branchChanged, newIndex, err := versionHistory.AddVersionHistory(
 		newVersionHistory,
 	)
 	if err != nil {

@@ -79,6 +79,9 @@ func (r *conflictResolverImpl) prepareMutableState(
 ) (execution.MutableState, bool, error) {
 
 	versionHistories := r.mutableState.GetVersionHistories()
+	if versionHistories == nil {
+		return nil, false, &shared.BadRequestError{Message: "2DC workflow is not supported."}
+	}
 	currentVersionHistoryIndex := versionHistories.GetCurrentVersionHistoryIndex()
 
 	// replication task to be applied to current branch
@@ -123,6 +126,9 @@ func (r *conflictResolverImpl) rebuild(
 ) (execution.MutableState, error) {
 
 	versionHistories := r.mutableState.GetVersionHistories()
+	if versionHistories == nil {
+		return nil, &shared.BadRequestError{Message: "2DC workflow is not supported."}
+	}
 	replayVersionHistory, err := versionHistories.GetVersionHistory(branchIndex)
 	if err != nil {
 		return nil, err
@@ -156,6 +162,9 @@ func (r *conflictResolverImpl) rebuild(
 
 	// after rebuilt verification
 	rebuildVersionHistories := rebuildMutableState.GetVersionHistories()
+	if rebuildVersionHistories == nil {
+		return nil, &shared.BadRequestError{Message: "2DC workflow is not supported."}
+	}
 	rebuildVersionHistory, err := rebuildVersionHistories.GetCurrentVersionHistory()
 	if err != nil {
 		return nil, err

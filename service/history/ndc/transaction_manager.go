@@ -328,6 +328,9 @@ func (r *transactionManagerImpl) backfillWorkflowEventsReapply(
 		}
 
 		baseVersionHistories := baseMutableState.GetVersionHistories()
+		if baseVersionHistories == nil {
+			return 0, execution.TransactionPolicyActive, &shared.BadRequestError{Message: "2DC workflow is not supported."}
+		}
 		baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
 		if err != nil {
 			return 0, execution.TransactionPolicyActive, err

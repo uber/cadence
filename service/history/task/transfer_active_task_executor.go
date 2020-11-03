@@ -1341,6 +1341,9 @@ func (t *transferActiveTaskExecutor) resetWorkflow(
 	resetRunID := uuid.New()
 	baseRebuildLastEventID := resetPoint.GetFirstDecisionCompletedId() - 1
 	baseVersionHistories := baseMutableState.GetVersionHistories()
+	if baseVersionHistories == nil {
+		return &workflow.BadRequestError{Message: "2DC workflow is not supported."}
+	}
 	baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
 	if err != nil {
 		return err

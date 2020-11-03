@@ -150,7 +150,11 @@ func (r *stateRebuilderImpl) Rebuild(
 	if err := rebuiltMutableState.SetCurrentBranchToken(targetBranchToken); err != nil {
 		return nil, 0, err
 	}
-	currentVersionHistory, err := rebuiltMutableState.GetVersionHistories().GetCurrentVersionHistory()
+	rebuildVersionHistories := rebuiltMutableState.GetVersionHistories()
+	if rebuildVersionHistories == nil {
+		return nil, 0, &shared.BadRequestError{Message: "2DC workflow is not supported."}
+	}
+	currentVersionHistory, err := rebuildVersionHistories.GetCurrentVersionHistory()
 	if err != nil {
 		return nil, 0, err
 	}
