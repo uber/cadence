@@ -162,10 +162,14 @@ func (r *stateRebuilderImpl) Rebuild(
 		baseLastEventID,
 		baseLastEventVersion,
 	)) {
-		return nil, 0, &shared.InternalServiceError{Message: fmt.Sprintf(
-			"nDCStateRebuilder unable to rebuild mutable state to event ID: %v, version: %v",
+		return nil, 0, &shared.BadRequestError{Message: fmt.Sprintf(
+			"nDCStateRebuilder unable to rebuild mutable state to event ID: %v, version: %v, "+
+				"baseLastEventID + baseLastEventVersion is not the same as the last event of the last "+
+				"batch, event ID: %v, version :%v ,typicaly because of attemptting to rebuild to a middle of a batch",
 			baseLastEventID,
 			baseLastEventVersion,
+			lastItem.EventID,
+			lastItem.Version,
 		)}
 	}
 
