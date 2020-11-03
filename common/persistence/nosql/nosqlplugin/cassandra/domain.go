@@ -23,6 +23,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gocql/gocql"
 
@@ -36,6 +37,7 @@ import (
 const (
 	constDomainPartition     = 0
 	domainMetadataRecordName = "cadence-domain-metadata"
+	emptyFailoverEndTime     = int64(0)
 )
 
 const (
@@ -166,6 +168,10 @@ func (db *cdb) InsertDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 	}
 
 	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
+	var failoverEndTime int64
+	if row.FailoverEndTime != nil {
+		failoverEndTime = row.FailoverEndTime.UnixNano()
+	}
 	batch.Query(templateCreateDomainByNameQueryWithinBatchV2,
 		constDomainPartition,
 		row.Info.Name,
@@ -175,7 +181,7 @@ func (db *cdb) InsertDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		row.Info.Description,
 		row.Info.OwnerEmail,
 		row.Info.Data,
-		row.Config.Retention,
+		common.DurationToInt32(row.Config.Retention, 24*time.Hour),
 		row.Config.EmitMetric,
 		row.Config.ArchivalBucket,
 		row.Config.ArchivalStatus,
@@ -192,8 +198,8 @@ func (db *cdb) InsertDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		row.FailoverVersion,
 		p.InitialFailoverNotificationVersion,
 		common.InitialPreviousFailoverVersion,
-		row.FailoverEndTime,
-		row.LastUpdatedTime,
+		failoverEndTime,
+		row.LastUpdatedTime.UnixNano(),
 		metadataNotificationVersion,
 	)
 	db.updateMetadataBatch(ctx, batch, metadataNotificationVersion)
@@ -247,6 +253,10 @@ func (db *cdb) updateMetadataBatch(ctx context.Context, batch *gocql.Batch, noti
 // Update domain
 func (db *cdb) UpdateDomain(ctx context.Context, row *nosqlplugin.DomainRow) error {
 	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
+	var failoverEndTime int64
+	if row.FailoverEndTime != nil {
+		failoverEndTime = row.FailoverEndTime.UnixNano()
+	}
 	batch.Query(templateUpdateDomainByNameQueryWithinBatchV2,
 		row.Info.ID,
 		row.Info.Name,
@@ -254,7 +264,7 @@ func (db *cdb) UpdateDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		row.Info.Description,
 		row.Info.OwnerEmail,
 		row.Info.Data,
-		row.Config.Retention,
+		common.DurationToInt32(row.Config.Retention, 24*time.Hour),
 		row.Config.EmitMetric,
 		row.Config.ArchivalBucket,
 		row.Config.ArchivalStatus,
@@ -270,8 +280,8 @@ func (db *cdb) UpdateDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		row.FailoverVersion,
 		row.FailoverNotificationVersion,
 		row.PreviousFailoverVersion,
-		row.FailoverEndTime,
-		row.LastUpdatedTime,
+		failoverEndTime,
+		row.LastUpdatedTime.UnixNano(),
 		row.NotificationVersion,
 		constDomainPartition,
 		row.Info.Name,
@@ -322,7 +332,6 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 	var badBinariesDataEncoding string
 	var replicationClusters []map[string]interface{}
 
-	// 6 integer + 1 boolean in specific columns
 	var failoverNotificationVersion int64
 	var notificationVersion int64
 	var failoverVersion int64
@@ -331,6 +340,7 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 	var lastUpdatedTime int64
 	var configVersion int64
 	var isGlobalDomain bool
+	var retentionDays int32
 
 	query = db.session.Query(templateGetDomainByNameQueryV2, constDomainPartition, domainName).WithContext(ctx)
 	err = query.Scan(
@@ -340,7 +350,7 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 		&info.Description,
 		&info.OwnerEmail,
 		&info.Data,
-		&config.Retention,
+		&retentionDays,
 		&config.EmitMetric,
 		&config.ArchivalBucket,
 		&config.ArchivalStatus,
@@ -367,9 +377,10 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 	}
 
 	config.BadBinaries = p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding))
+	config.Retention = common.Int32ToDuration(retentionDays, 24*time.Hour)
 	replicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 
-	return &nosqlplugin.DomainRow{
+	dr := &nosqlplugin.DomainRow{
 		Info:                        info,
 		Config:                      config,
 		ReplicationConfig:           replicationConfig,
@@ -378,10 +389,14 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 		FailoverNotificationVersion: failoverNotificationVersion,
 		PreviousFailoverVersion:     previousFailoverVersion,
 		NotificationVersion:         notificationVersion,
-		FailoverEndTime:             failoverEndTime,
-		LastUpdatedTime:             lastUpdatedTime,
+		LastUpdatedTime:             time.Unix(0, lastUpdatedTime),
 		IsGlobalDomain:              isGlobalDomain,
-	}, nil
+	}
+	if failoverEndTime > emptyFailoverEndTime {
+		dr.FailoverEndTime = common.TimePtr(time.Unix(0, failoverEndTime))
+	}
+
+	return dr, nil
 }
 
 // Get all domain data
@@ -404,6 +419,9 @@ func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []b
 	var replicationClusters []map[string]interface{}
 	var badBinariesData []byte
 	var badBinariesDataEncoding string
+	var retentionDays int32
+	var failoverEndTime int64
+	var lastUpdateTime int64
 	var rows []*nosqlplugin.DomainRow
 	for iter.Scan(
 		&name,
@@ -413,7 +431,7 @@ func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []b
 		&domain.Info.Description,
 		&domain.Info.OwnerEmail,
 		&domain.Info.Data,
-		&domain.Config.Retention,
+		&retentionDays,
 		&domain.Config.EmitMetric,
 		&domain.Config.ArchivalBucket,
 		&domain.Config.ArchivalStatus,
@@ -430,19 +448,27 @@ func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []b
 		&domain.FailoverVersion,
 		&domain.FailoverNotificationVersion,
 		&domain.PreviousFailoverVersion,
-		&domain.FailoverEndTime,
-		&domain.LastUpdatedTime,
+		&failoverEndTime,
+		&lastUpdateTime,
 		&domain.NotificationVersion,
 	) {
 		if name != domainMetadataRecordName {
 			// do not include the metadata record
 			domain.Config.BadBinaries = p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding))
 			domain.ReplicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
+			domain.Config.Retention = common.Int32ToDuration(retentionDays, 24*time.Hour)
+			domain.LastUpdatedTime = time.Unix(0, lastUpdateTime)
+			if failoverEndTime > emptyFailoverEndTime {
+				domain.FailoverEndTime = common.TimePtr(time.Unix(0, failoverEndTime))
+			}
 			rows = append(rows, domain)
 		}
 		replicationClusters = []map[string]interface{}{}
 		badBinariesData = []byte("")
 		badBinariesDataEncoding = ""
+		failoverEndTime = 0
+		lastUpdateTime = 0
+		retentionDays = 0
 		domain = &nosqlplugin.DomainRow{
 			Info:              &p.DomainInfo{},
 			Config:            &nosqlplugin.NoSQLInternalDomainConfig{},

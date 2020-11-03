@@ -141,16 +141,15 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
-		FailoverEndTime             int64
+		FailoverEndTime             *time.Time
 		NotificationVersion         int64
-		LastUpdatedTime             int64
+		LastUpdatedTime             time.Time
 		IsGlobalDomain              bool
 	}
 
 	// NoSQLInternalDomainConfig defines the struct for the domainConfig
 	NoSQLInternalDomainConfig struct {
-		// NOTE: this retention is in days, not in seconds
-		Retention                int32
+		Retention                time.Duration
 		EmitMetric               bool                 // deprecated
 		ArchivalBucket           string               // deprecated
 		ArchivalStatus           types.ArchivalStatus // deprecated

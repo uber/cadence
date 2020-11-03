@@ -24,6 +24,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
@@ -115,7 +116,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(
 		Description:                 &request.Info.Description,
 		Owner:                       &request.Info.OwnerEmail,
 		Data:                        request.Info.Data,
-		RetentionDays:               common.Int16Ptr(int16(request.Config.Retention)),
+		RetentionDays:               common.Int16Ptr(int16(common.DurationToInt32(request.Config.Retention, 24*time.Hour))),
 		EmitMetric:                  &request.Config.EmitMetric,
 		ArchivalBucket:              &request.Config.ArchivalBucket,
 		ArchivalStatus:              common.Int16Ptr(int16(request.Config.ArchivalStatus)),
@@ -130,7 +131,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(
 		NotificationVersion:         common.Int64Ptr(metadata.NotificationVersion),
 		FailoverNotificationVersion: common.Int64Ptr(persistence.InitialFailoverNotificationVersion),
 		PreviousFailoverVersion:     common.Int64Ptr(common.InitialPreviousFailoverVersion),
-		LastUpdatedTime:             common.Int64Ptr(request.LastUpdatedTime),
+		LastUpdatedTime:             common.Int64Ptr(request.LastUpdatedTime.UnixNano()),
 		BadBinaries:                 badBinaries,
 		BadBinariesEncoding:         badBinariesEncoding,
 	}
@@ -232,9 +233,9 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 		badBinaries = persistence.NewDataBlob(domainInfo.BadBinaries, common.EncodingType(*domainInfo.BadBinariesEncoding))
 	}
 
-	var failoverEndTime *int64
+	var failoverEndTime *time.Time
 	if domainInfo.IsSetFailoverEndTime() {
-		failoverEndTime = domainInfo.FailoverEndTime
+		failoverEndTime = common.TimePtr(time.Unix(0, *domainInfo.FailoverEndTime))
 	}
 
 	return &persistence.InternalGetDomainResponse{
@@ -247,7 +248,7 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 			Data:        domainInfo.GetData(),
 		},
 		Config: &persistence.InternalDomainConfig{
-			Retention:                int32(domainInfo.GetRetentionDays()),
+			Retention:                common.Int32ToDuration(int32(domainInfo.GetRetentionDays()), 24*time.Hour),
 			EmitMetric:               domainInfo.GetEmitMetric(),
 			ArchivalBucket:           domainInfo.GetArchivalBucket(),
 			ArchivalStatus:           types.ArchivalStatus(*domainInfo.ArchivalStatus),
@@ -268,7 +269,7 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 		FailoverNotificationVersion: domainInfo.GetFailoverNotificationVersion(),
 		PreviousFailoverVersion:     domainInfo.GetPreviousFailoverVersion(),
 		FailoverEndTime:             failoverEndTime,
-		LastUpdatedTime:             domainInfo.GetLastUpdatedTime(),
+		LastUpdatedTime:             time.Unix(0, domainInfo.GetLastUpdatedTime()),
 	}, nil
 }
 
@@ -291,7 +292,7 @@ func (m *sqlMetadataManagerV2) UpdateDomain(
 
 	var failoverEndTime *int64
 	if request.FailoverEndTime != nil {
-		failoverEndTime = request.FailoverEndTime
+		failoverEndTime = common.Int64Ptr(request.FailoverEndTime.UnixNano())
 	}
 
 	domainInfo := &sqlblobs.DomainInfo{
@@ -299,7 +300,7 @@ func (m *sqlMetadataManagerV2) UpdateDomain(
 		Description:                 &request.Info.Description,
 		Owner:                       &request.Info.OwnerEmail,
 		Data:                        request.Info.Data,
-		RetentionDays:               common.Int16Ptr(int16(request.Config.Retention)),
+		RetentionDays:               common.Int16Ptr(int16(common.DurationToInt32(request.Config.Retention, 24*time.Hour))),
 		EmitMetric:                  &request.Config.EmitMetric,
 		ArchivalBucket:              &request.Config.ArchivalBucket,
 		ArchivalStatus:              common.Int16Ptr(int16(request.Config.ArchivalStatus)),
@@ -315,7 +316,7 @@ func (m *sqlMetadataManagerV2) UpdateDomain(
 		FailoverNotificationVersion: common.Int64Ptr(request.FailoverNotificationVersion),
 		PreviousFailoverVersion:     common.Int64Ptr(request.PreviousFailoverVersion),
 		FailoverEndTime:             failoverEndTime,
-		LastUpdatedTime:             common.Int64Ptr(request.LastUpdatedTime),
+		LastUpdatedTime:             common.Int64Ptr(request.LastUpdatedTime.UnixNano()),
 		BadBinaries:                 badBinaries,
 		BadBinariesEncoding:         badBinariesEncoding,
 	}
