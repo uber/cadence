@@ -305,13 +305,7 @@ func (s *contextImpl) UpdateTransferProcessingQueueStates(cluster string, states
 		s.transferProcessingQueueStates.StatesByCluster = make(map[string][]*history.ProcessingQueueState)
 	}
 	s.transferProcessingQueueStates.StatesByCluster[cluster] = states
-	serializer := s.GetPayloadSerializer()
-	data, err := serializer.SerializeProcessingQueueStates(s.transferProcessingQueueStates, common.EncodingTypeThriftRW)
-	if err != nil {
-		s.logger.Error("Failed to serialize transfer processing queue states", tag.Error(err))
-		return err
-	}
-	s.shardInfo.TransferProcessingQueueStates = data
+	s.shardInfo.TransferProcessingQueueStates = s.transferProcessingQueueStates
 
 	// for backward compatibility
 	ackLevel := states[0].GetAckLevel()
@@ -478,13 +472,7 @@ func (s *contextImpl) UpdateTimerProcessingQueueStates(cluster string, states []
 		s.timerProcessingQueueStates.StatesByCluster = make(map[string][]*history.ProcessingQueueState)
 	}
 	s.timerProcessingQueueStates.StatesByCluster[cluster] = states
-	serializer := s.GetPayloadSerializer()
-	data, err := serializer.SerializeProcessingQueueStates(s.timerProcessingQueueStates, common.EncodingTypeThriftRW)
-	if err != nil {
-		s.logger.Error("Failed to serialize timer processing queue states", tag.Error(err))
-		return err
-	}
-	s.shardInfo.TimerProcessingQueueStates = data
+	s.shardInfo.TimerProcessingQueueStates = s.timerProcessingQueueStates
 
 	// for backward compatibility
 	ackLevel := states[0].GetAckLevel()
@@ -1451,14 +1439,7 @@ func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*replicator.Failover
 }
 
 func (s *contextImpl) updateFailoverMarkersInShardInfoLocked() error {
-
-	serializer := s.GetPayloadSerializer()
-	data, err := serializer.SerializePendingFailoverMarkers(s.pendingFailoverMarkers, common.EncodingTypeThriftRW)
-	if err != nil {
-		return err
-	}
-
-	s.shardInfo.PendingFailoverMarkers = data
+	s.shardInfo.PendingFailoverMarkers = s.pendingFailoverMarkers
 	return nil
 }
 
@@ -1535,8 +1516,7 @@ func acquireShard(
 		timerMaxReadLevelMap[clusterName] = timerMaxReadLevelMap[clusterName].Truncate(time.Millisecond)
 	}
 
-	serializer := shardItem.GetPayloadSerializer()
-	transferProcessingQueueStates, err := serializer.DeserializeProcessingQueueStates(shardInfo.TransferProcessingQueueStates)
+	transferProcessingQueueStates := shardInfo.TransferProcessingQueueStates
 	if err != nil {
 		return nil, err
 	}
@@ -1545,7 +1525,7 @@ func acquireShard(
 			StatesByCluster: make(map[string][]*history.ProcessingQueueState),
 		}
 	}
-	timerProcessingQueueStates, err := serializer.DeserializeProcessingQueueStates(shardInfo.TimerProcessingQueueStates)
+	timerProcessingQueueStates := shardInfo.TimerProcessingQueueStates
 	if err != nil {
 		return nil, err
 	}

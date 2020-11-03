@@ -231,6 +231,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Cl
 		workflow,
 		EventsReapplicationResetWorkflowReason,
 		workflowEvents.Events,
+		false,
 	).Return(nil).Times(1)
 
 	s.mockExecutionManager.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
