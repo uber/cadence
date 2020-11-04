@@ -160,7 +160,7 @@ func getHistoryResendInfo(
 
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories == nil {
-		return nil, &shared.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
+		return nil, execution.ErrUnsupportedWorkflow
 	}
 	currentBranch, err := versionHistories.GetCurrentVersionHistory()
 	if err != nil {

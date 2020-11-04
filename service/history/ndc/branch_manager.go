@@ -98,7 +98,7 @@ func (r *branchManagerImpl) prepareVersionHistory(
 
 	localVersionHistories := r.mutableState.GetVersionHistories()
 	if localVersionHistories == nil {
-		return false, 0, &shared.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
+		return false, 0, execution.ErrUnsupportedWorkflow
 	}
 	versionHistory, err := localVersionHistories.GetVersionHistory(versionHistoryIndex)
 	if err != nil {
@@ -155,7 +155,7 @@ func (r *branchManagerImpl) flushBufferedEvents(
 
 	localVersionHistories := r.mutableState.GetVersionHistories()
 	if localVersionHistories == nil {
-		return 0, nil, &shared.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
+		return 0, nil, execution.ErrUnsupportedWorkflow
 	}
 	versionHistoryIndex, lcaVersionHistoryItem, err := localVersionHistories.FindLCAVersionHistoryIndexAndItem(
 		incomingVersionHistory,

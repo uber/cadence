@@ -1342,7 +1342,7 @@ func (t *transferActiveTaskExecutor) resetWorkflow(
 	baseRebuildLastEventID := resetPoint.GetFirstDecisionCompletedId() - 1
 	baseVersionHistories := baseMutableState.GetVersionHistories()
 	if baseVersionHistories == nil {
-		return &workflow.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
+		return execution.ErrUnsupportedWorkflow
 	}
 	baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
 	if err != nil {

@@ -152,7 +152,7 @@ func (r *stateRebuilderImpl) Rebuild(
 	}
 	rebuildVersionHistories := rebuiltMutableState.GetVersionHistories()
 	if rebuildVersionHistories == nil {
-		return nil, 0, &shared.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
+		return nil, 0, ErrUnsupportedWorkflow
 	}
 	currentVersionHistory, err := rebuildVersionHistories.GetCurrentVersionHistory()
 	if err != nil {

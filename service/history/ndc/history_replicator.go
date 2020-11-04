@@ -250,7 +250,7 @@ func (r *historyReplicatorImpl) applyEvents(
 		case nil:
 			// Sanity check to make only 3DC mutable state here
 			if mutableState.GetVersionHistories() == nil {
-				return &shared.BadRequestError{Message: "The mutable state does not support 3DC."}
+				return execution.ErrUnsupportedWorkflow
 			}
 
 			doContinue, branchIndex, err := r.applyNonStartEventsPrepareBranch(ctx, context, mutableState, task)
@@ -516,7 +516,7 @@ func (r *historyReplicatorImpl) applyNonStartEventsToNoneCurrentBranchWithoutCon
 	)
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories == nil {
-		return &shared.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
+		return execution.ErrUnsupportedWorkflow
 	}
 	versionHistory, err := versionHistories.GetVersionHistory(branchIndex)
 	if err != nil {

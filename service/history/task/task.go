@@ -329,6 +329,11 @@ func (t *taskBase) HandleErr(
 		err = nil
 	}
 
+	if err == execution.ErrUnsupportedWorkflow {
+		t.scope.IncCounter(metrics.TaskUnsupportedPerDomain)
+		err = nil
+	}
+
 	// this is a transient error
 	// TODO remove this error check special case
 	//  since the new task life cycle will not give up until task processed / verified
