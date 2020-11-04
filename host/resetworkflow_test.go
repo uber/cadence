@@ -155,25 +155,26 @@ func (s *integrationSuite) TestResetWorkflow() {
 		WorkflowId: common.StringPtr(id),
 		RunId:      common.StringPtr(we.GetRunId()),
 	})
-	var lastWorkflowTask *shared.HistoryEvent
+	var lastDecisionCompleted *shared.HistoryEvent
 	for _, event := range events {
 		if event.GetEventType() == shared.EventTypeDecisionTaskCompleted {
-			lastWorkflowTask = event
+			lastDecisionCompleted = event
 		}
 	}
 
 	// Reset workflow execution
-	_, err = s.engine.ResetWorkflowExecution(createContext(), &shared.ResetWorkflowExecutionRequest{
+	resp, err := s.engine.ResetWorkflowExecution(createContext(), &shared.ResetWorkflowExecutionRequest{
 		Domain: common.StringPtr(s.domainName),
 		WorkflowExecution: &shared.WorkflowExecution{
 			WorkflowId: common.StringPtr(id),
 			RunId:      we.RunId,
 		},
 		Reason:                common.StringPtr("reset execution from test"),
-		DecisionFinishEventId: common.Int64Ptr(lastWorkflowTask.GetEventId()),
+		DecisionFinishEventId: common.Int64Ptr(lastDecisionCompleted.GetEventId()),
 		RequestId:             common.StringPtr(uuid.New()),
 	})
 	s.NoError(err)
+	newRunID := resp.GetRunId()
 
 	err = poller.PollAndProcessActivityTask(false)
 	s.Logger.Info("Poll and process second activity", tag.Error(err))
@@ -184,9 +185,36 @@ func (s *integrationSuite) TestResetWorkflow() {
 	s.NoError(err)
 
 	_, err = poller.PollAndProcessDecisionTask(false, false)
-	s.Logger.Info("Poll and process final workflow task", tag.Error(err))
+	s.Logger.Info("Poll and process final decision task", tag.Error(err))
 	s.NoError(err)
 
 	s.NotNil(firstActivityCompletionEvent)
 	s.True(workflowComplete)
+
+	// another reset
+	events = s.getHistory(s.domainName, &shared.WorkflowExecution{
+		WorkflowId: common.StringPtr(id),
+		RunId:      common.StringPtr(we.GetRunId()),
+	})
+	for _, event := range events {
+		if event.GetEventType() == shared.EventTypeDecisionTaskCompleted {
+			lastDecisionCompleted = event
+		}
+	}
+
+	// Reset for the second time
+	_, err = s.engine.ResetWorkflowExecution(createContext(), &shared.ResetWorkflowExecutionRequest{
+		Domain: common.StringPtr(s.domainName),
+		WorkflowExecution: &shared.WorkflowExecution{
+			WorkflowId: common.StringPtr(id),
+			RunId:      common.StringPtr(newRunID),
+		},
+		Reason:                common.StringPtr("reset execution from test"),
+		DecisionFinishEventId: common.Int64Ptr(lastDecisionCompleted.GetEventId()),
+		RequestId:             common.StringPtr(uuid.New()),
+	})
+	s.NoError(err)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
+	s.Logger.Info("Poll and process final decision task", tag.Error(err))
+	s.NoError(err)
 }
