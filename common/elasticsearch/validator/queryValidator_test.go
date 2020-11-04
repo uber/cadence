@@ -25,10 +25,10 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type queryValidatorSuite struct {
@@ -44,7 +44,7 @@ func (s *queryValidatorSuite) TestValidateListRequestForQuery() {
 	validSearchAttr := dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys())
 	qv := NewQueryValidator(validSearchAttr)
 
-	listRequest := &shared.ListWorkflowExecutionsRequest{}
+	listRequest := &types.ListWorkflowExecutionsRequest{}
 	s.Nil(qv.ValidateListRequestForQuery(listRequest))
 	s.Equal("", listRequest.GetQuery())
 

@@ -1773,7 +1773,8 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errRequestIDTooLong, scope)
 	}
 
-	if err := wh.searchAttributesValidator.ValidateSearchAttributes(startRequest.SearchAttributes, domainName); err != nil {
+	if err := wh.searchAttributesValidator.ValidateSearchAttributes(thrift.ToSearchAttributes(startRequest.SearchAttributes), domainName); err != nil {
+		err = thrift.FromError(err)
 		return nil, wh.error(err, scope)
 	}
 
@@ -2242,7 +2243,8 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if err := wh.searchAttributesValidator.ValidateSearchAttributes(signalWithStartRequest.SearchAttributes, domainName); err != nil {
+	if err := wh.searchAttributesValidator.ValidateSearchAttributes(thrift.ToSearchAttributes(signalWithStartRequest.SearchAttributes), domainName); err != nil {
+		err = thrift.FromError(err)
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2838,7 +2840,8 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}, scope)
 	}
 
-	if err := wh.visibilityQueryValidator.ValidateListRequestForQuery(listRequest); err != nil {
+	if err := wh.visibilityQueryValidator.ValidateListRequestForQuery(thrift.ToListWorkflowExecutionsRequest(listRequest)); err != nil {
+		err = thrift.FromError(err)
 		return nil, wh.error(err, scope)
 	}
 
@@ -2905,7 +2908,8 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}, scope)
 	}
 
-	if err := wh.visibilityQueryValidator.ValidateListRequestForQuery(listRequest); err != nil {
+	if err := wh.visibilityQueryValidator.ValidateListRequestForQuery(thrift.ToListWorkflowExecutionsRequest(listRequest)); err != nil {
+		err = thrift.FromError(err)
 		return nil, wh.error(err, scope)
 	}
 
@@ -2963,7 +2967,8 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if err := wh.visibilityQueryValidator.ValidateCountRequestForQuery(countRequest); err != nil {
+	if err := wh.visibilityQueryValidator.ValidateCountRequestForQuery(thrift.ToCountWorkflowExecutionsRequest(countRequest)); err != nil {
+		err = thrift.FromError(err)
 		return nil, wh.error(err, scope)
 	}
 
