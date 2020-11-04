@@ -52,6 +52,8 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -465,13 +467,13 @@ func (wh *WorkflowHandler) PollForActivityTask(
 
 	pollerID := uuid.New()
 	op := func() error {
-		var err error
-		resp, err = wh.GetMatchingClient().PollForActivityTask(ctx, &m.PollForActivityTaskRequest{
+		clientResp, err := wh.GetMatchingClient().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
 			DomainUUID:  common.StringPtr(domainID),
 			PollerID:    common.StringPtr(pollerID),
-			PollRequest: pollRequest,
+			PollRequest: thrift.ToPollForActivityTaskRequest(pollRequest),
 		})
-		return err
+		resp = thrift.FromPollForActivityTaskResponse(clientResp)
+		return thrift.FromError(err)
 	}
 
 	err = backoff.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
@@ -558,13 +560,13 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	pollerID := uuid.New()
 	var matchingResp *m.PollForDecisionTaskResponse
 	op := func() error {
-		var err error
-		matchingResp, err = wh.GetMatchingClient().PollForDecisionTask(ctx, &m.PollForDecisionTaskRequest{
+		clientResp, err := wh.GetMatchingClient().PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{
 			DomainUUID:  common.StringPtr(domainID),
 			PollerID:    common.StringPtr(pollerID),
-			PollRequest: pollRequest,
+			PollRequest: thrift.ToPollForDecisionTaskRequest(pollRequest),
 		})
-		return err
+		matchingResp = thrift.FromMatchingPollForDecisionTaskResponse(clientResp)
+		return thrift.FromError(err)
 	}
 
 	err = backoff.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
@@ -618,12 +620,13 @@ func (wh *WorkflowHandler) cancelOutstandingPoll(ctx context.Context, err error,
 	if ctx.Err() == context.Canceled {
 		// Our rpc stack does not propagates context cancellation to the other service.  Lets make an explicit
 		// call to matching to notify this poller is gone to prevent any tasks being dispatched to zombie pollers.
-		err = wh.GetMatchingClient().CancelOutstandingPoll(context.Background(), &m.CancelOutstandingPollRequest{
+		err = wh.GetMatchingClient().CancelOutstandingPoll(context.Background(), &types.CancelOutstandingPollRequest{
 			DomainUUID:   common.StringPtr(domainID),
 			TaskListType: common.Int32Ptr(taskListType),
-			TaskList:     taskList,
+			TaskList:     thrift.ToTaskList(taskList),
 			PollerID:     common.StringPtr(pollerID),
 		})
+		err = thrift.FromError(err)
 		// We can not do much if this call fails.  Just log the error and move on
 		if err != nil {
 			wh.GetLogger().Warn("Failed to cancel outstanding poller.",
@@ -1679,7 +1682,8 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 		CompletedRequest: completeRequest,
 	}
 
-	err = wh.GetMatchingClient().RespondQueryTaskCompleted(ctx, matchingRequest)
+	err = wh.GetMatchingClient().RespondQueryTaskCompleted(ctx, thrift.ToMatchingRespondQueryTaskCompletedRequest(matchingRequest))
+	err = thrift.FromError(err)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -3223,10 +3227,12 @@ func (wh *WorkflowHandler) DescribeTaskList(
 		return nil, err
 	}
 
-	response, err := wh.GetMatchingClient().DescribeTaskList(ctx, &m.DescribeTaskListRequest{
+	clientResp, err := wh.GetMatchingClient().DescribeTaskList(ctx, &types.MatchingDescribeTaskListRequest{
 		DomainUUID:  common.StringPtr(domainID),
-		DescRequest: request,
+		DescRequest: thrift.ToDescribeTaskListRequest(request),
 	})
+	response := thrift.FromDescribeTaskListResponse(clientResp)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -3264,10 +3270,12 @@ func (wh *WorkflowHandler) ListTaskListPartitions(
 		return nil, err
 	}
 
-	resp, err := wh.GetMatchingClient().ListTaskListPartitions(ctx, &m.ListTaskListPartitionsRequest{
+	clientResp, err := wh.GetMatchingClient().ListTaskListPartitions(ctx, &types.MatchingListTaskListPartitionsRequest{
 		Domain:   request.Domain,
-		TaskList: request.TaskList,
+		TaskList: thrift.ToTaskList(request.TaskList),
 	})
+	resp = thrift.FromListTaskListPartitionsResponse(clientResp)
+	err = thrift.FromError(err)
 	return resp, err
 }
 

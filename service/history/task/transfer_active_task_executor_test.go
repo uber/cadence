@@ -33,9 +33,8 @@ import (
 
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyservicetest"
-	"github.com/uber/cadence/.gen/go/matching"
-	"github.com/uber/cadence/.gen/go/matching/matchingservicetest"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -48,6 +47,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
 	dc "github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/engine"
@@ -68,7 +68,7 @@ type (
 		mockShard           *shard.TestContext
 		mockEngine          *engine.MockEngine
 		mockDomainCache     *cache.MockDomainCache
-		mockMatchingClient  *matchingservicetest.MockClient
+		mockMatchingClient  *matching.MockClient
 		mockHistoryClient   *historyservicetest.MockClient
 		mockClusterMetadata *cluster.MockMetadata
 
@@ -1985,20 +1985,20 @@ func (s *transferActiveTaskExecutorSuite) TestCopySearchAttributes() {
 func (s *transferActiveTaskExecutorSuite) createAddActivityTaskRequest(
 	task *persistence.TransferTaskInfo,
 	ai *persistence.ActivityInfo,
-) *matching.AddActivityTaskRequest {
+) *types.AddActivityTaskRequest {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(task.WorkflowID),
-		RunId:      common.StringPtr(task.RunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(task.WorkflowID),
+		RunID:      common.StringPtr(task.RunID),
 	}
-	taskList := &workflow.TaskList{Name: &task.TaskList}
+	taskList := &types.TaskList{Name: &task.TaskList}
 
-	return &matching.AddActivityTaskRequest{
+	return &types.AddActivityTaskRequest{
 		DomainUUID:                    common.StringPtr(task.TargetDomainID),
 		SourceDomainUUID:              common.StringPtr(task.DomainID),
 		Execution:                     &workflowExecution,
 		TaskList:                      taskList,
-		ScheduleId:                    &task.ScheduleID,
+		ScheduleID:                    &task.ScheduleID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(ai.ScheduleToStartTimeout),
 	}
 }
@@ -2006,25 +2006,26 @@ func (s *transferActiveTaskExecutorSuite) createAddActivityTaskRequest(
 func (s *transferActiveTaskExecutorSuite) createAddDecisionTaskRequest(
 	task *persistence.TransferTaskInfo,
 	mutableState execution.MutableState,
-) *matching.AddDecisionTaskRequest {
+) *types.AddDecisionTaskRequest {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(task.WorkflowID),
-		RunId:      common.StringPtr(task.RunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(task.WorkflowID),
+		RunID:      common.StringPtr(task.RunID),
 	}
-	taskList := &workflow.TaskList{Name: &task.TaskList}
+	taskList := &types.TaskList{Name: &task.TaskList}
 	executionInfo := mutableState.GetExecutionInfo()
 	timeout := executionInfo.WorkflowTimeout
 	if mutableState.GetExecutionInfo().TaskList != task.TaskList {
-		taskList.Kind = common.TaskListKindPtr(workflow.TaskListKindSticky)
+		taskListStickyKind := types.TaskListKindSticky
+		taskList.Kind = &taskListStickyKind
 		timeout = executionInfo.StickyScheduleToStartTimeout
 	}
 
-	return &matching.AddDecisionTaskRequest{
+	return &types.AddDecisionTaskRequest{
 		DomainUUID:                    common.StringPtr(task.DomainID),
 		Execution:                     &workflowExecution,
 		TaskList:                      taskList,
-		ScheduleId:                    common.Int64Ptr(task.ScheduleID),
+		ScheduleID:                    common.Int64Ptr(task.ScheduleID),
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(timeout),
 	}
 }
