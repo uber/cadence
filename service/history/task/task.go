@@ -330,6 +330,7 @@ func (t *taskBase) HandleErr(
 	}
 
 	if err == execution.ErrMissingVersionHistories {
+		t.logger.Error("Encounter 2DC workflow during task processing.")
 		t.scope.IncCounter(metrics.TaskUnsupportedPerDomain)
 		err = nil
 	}

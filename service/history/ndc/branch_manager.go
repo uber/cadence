@@ -256,7 +256,7 @@ func (r *branchManagerImpl) createNewBranch(
 	}
 	versionHistory := r.mutableState.GetVersionHistories()
 	if versionHistory == nil {
-		return 0, &shared.BadRequestError{Message: "Current reapply does not support 2dc workflow."}
+		return 0, execution.ErrMissingVersionHistories
 	}
 	branchChanged, newIndex, err := versionHistory.AddVersionHistory(
 		newVersionHistory,
