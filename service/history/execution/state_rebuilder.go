@@ -152,7 +152,7 @@ func (r *stateRebuilderImpl) Rebuild(
 	}
 	rebuildVersionHistories := rebuiltMutableState.GetVersionHistories()
 	if rebuildVersionHistories == nil {
-		return nil, 0, ErrUnsupportedWorkflow
+		return nil, 0, ErrMissingVersionHistories
 	}
 	currentVersionHistory, err := rebuildVersionHistories.GetCurrentVersionHistory()
 	if err != nil {

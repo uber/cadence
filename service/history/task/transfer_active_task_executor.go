@@ -1342,7 +1342,7 @@ func (t *transferActiveTaskExecutor) resetWorkflow(
 	baseRebuildLastEventID := resetPoint.GetFirstDecisionCompletedId() - 1
 	baseVersionHistories := baseMutableState.GetVersionHistories()
 	if baseVersionHistories == nil {
-		return execution.ErrUnsupportedWorkflow
+		return execution.ErrMissingVersionHistories
 	}
 	baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
 	if err != nil {

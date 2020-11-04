@@ -98,7 +98,7 @@ func (r *branchManagerImpl) prepareVersionHistory(
 
 	localVersionHistories := r.mutableState.GetVersionHistories()
 	if localVersionHistories == nil {
-		return false, 0, execution.ErrUnsupportedWorkflow
+		return false, 0, execution.ErrMissingVersionHistories
 	}
 	versionHistory, err := localVersionHistories.GetVersionHistory(versionHistoryIndex)
 	if err != nil {
@@ -155,7 +155,7 @@ func (r *branchManagerImpl) flushBufferedEvents(
 
 	localVersionHistories := r.mutableState.GetVersionHistories()
 	if localVersionHistories == nil {
-		return 0, nil, execution.ErrUnsupportedWorkflow
+		return 0, nil, execution.ErrMissingVersionHistories
 	}
 	versionHistoryIndex, lcaVersionHistoryItem, err := localVersionHistories.FindLCAVersionHistoryIndexAndItem(
 		incomingVersionHistory,

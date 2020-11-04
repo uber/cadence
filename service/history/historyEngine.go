@@ -2535,7 +2535,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	baseRebuildLastEventID := request.GetDecisionFinishEventId() - 1
 	baseVersionHistories := baseMutableState.GetVersionHistories()
 	if baseVersionHistories == nil {
-		return nil, execution.ErrUnsupportedWorkflow
+		return nil, execution.ErrMissingVersionHistories
 	}
 	baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
 	if err != nil {
@@ -3166,7 +3166,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 
 				baseVersionHistories := mutableState.GetVersionHistories()
 				if baseVersionHistories == nil {
-					return nil, execution.ErrUnsupportedWorkflow
+					return nil, execution.ErrMissingVersionHistories
 				}
 				baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
 				if err != nil {

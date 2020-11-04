@@ -250,7 +250,7 @@ func (r *historyReplicatorImpl) applyEvents(
 		case nil:
 			// Sanity check to make only 3DC mutable state here
 			if mutableState.GetVersionHistories() == nil {
-				return execution.ErrUnsupportedWorkflow
+				return execution.ErrMissingVersionHistories
 			}
 
 			doContinue, branchIndex, err := r.applyNonStartEventsPrepareBranch(ctx, context, mutableState, task)
@@ -516,7 +516,7 @@ func (r *historyReplicatorImpl) applyNonStartEventsToNoneCurrentBranchWithoutCon
 	)
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories == nil {
-		return execution.ErrUnsupportedWorkflow
+		return execution.ErrMissingVersionHistories
 	}
 	versionHistory, err := versionHistories.GetVersionHistory(branchIndex)
 	if err != nil {

@@ -160,7 +160,7 @@ func getHistoryResendInfo(
 
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories == nil {
-		return nil, execution.ErrUnsupportedWorkflow
+		return nil, execution.ErrMissingVersionHistories
 	}
 	currentBranch, err := versionHistories.GetCurrentVersionHistory()
 	if err != nil {

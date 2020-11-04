@@ -115,7 +115,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 		}
 		versionHistories := b.mutableState.GetVersionHistories()
 		if versionHistories == nil {
-			return nil, ErrUnsupportedWorkflow
+			return nil, ErrMissingVersionHistories
 		}
 		versionHistory, err := versionHistories.GetCurrentVersionHistory()
 		if err != nil {

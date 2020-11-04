@@ -80,7 +80,7 @@ func (r *conflictResolverImpl) prepareMutableState(
 
 	versionHistories := r.mutableState.GetVersionHistories()
 	if versionHistories == nil {
-		return nil, false, execution.ErrUnsupportedWorkflow
+		return nil, false, execution.ErrMissingVersionHistories
 	}
 	currentVersionHistoryIndex := versionHistories.GetCurrentVersionHistoryIndex()
 
@@ -127,7 +127,7 @@ func (r *conflictResolverImpl) rebuild(
 
 	versionHistories := r.mutableState.GetVersionHistories()
 	if versionHistories == nil {
-		return nil, execution.ErrUnsupportedWorkflow
+		return nil, execution.ErrMissingVersionHistories
 	}
 	replayVersionHistory, err := versionHistories.GetVersionHistory(branchIndex)
 	if err != nil {
@@ -163,7 +163,7 @@ func (r *conflictResolverImpl) rebuild(
 	// after rebuilt verification
 	rebuildVersionHistories := rebuildMutableState.GetVersionHistories()
 	if rebuildVersionHistories == nil {
-		return nil, execution.ErrUnsupportedWorkflow
+		return nil, execution.ErrMissingVersionHistories
 	}
 	rebuildVersionHistory, err := rebuildVersionHistories.GetCurrentVersionHistory()
 	if err != nil {

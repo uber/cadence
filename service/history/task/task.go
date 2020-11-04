@@ -329,7 +329,7 @@ func (t *taskBase) HandleErr(
 		err = nil
 	}
 
-	if err == execution.ErrUnsupportedWorkflow {
+	if err == execution.ErrMissingVersionHistories {
 		t.scope.IncCounter(metrics.TaskUnsupportedPerDomain)
 		err = nil
 	}

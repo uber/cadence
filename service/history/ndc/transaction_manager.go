@@ -329,7 +329,7 @@ func (r *transactionManagerImpl) backfillWorkflowEventsReapply(
 
 		baseVersionHistories := baseMutableState.GetVersionHistories()
 		if baseVersionHistories == nil {
-			return 0, execution.TransactionPolicyActive, execution.ErrUnsupportedWorkflow
+			return 0, execution.TransactionPolicyActive, execution.ErrMissingVersionHistories
 		}
 		baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
 		if err != nil {
