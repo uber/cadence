@@ -168,7 +168,7 @@ func (db *cdb) InsertDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 	}
 
 	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
-	var failoverEndTime int64
+	failoverEndTime := emptyFailoverEndTime
 	if row.FailoverEndTime != nil {
 		failoverEndTime = row.FailoverEndTime.UnixNano()
 	}
@@ -253,7 +253,7 @@ func (db *cdb) updateMetadataBatch(ctx context.Context, batch *gocql.Batch, noti
 // Update domain
 func (db *cdb) UpdateDomain(ctx context.Context, row *nosqlplugin.DomainRow) error {
 	batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
-	var failoverEndTime int64
+	failoverEndTime := emptyFailoverEndTime
 	if row.FailoverEndTime != nil {
 		failoverEndTime = row.FailoverEndTime.UnixNano()
 	}
