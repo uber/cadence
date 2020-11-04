@@ -1709,6 +1709,7 @@ const (
 	TaskLatencyPerDomain
 	TaskFailuresPerDomain
 	TaskDiscardedPerDomain
+	TaskUnsupportedPerDomain
 	TaskAttemptTimerPerDomain
 	TaskStandbyRetryCounterPerDomain
 	TaskNotActiveCounterPerDomain
@@ -2182,6 +2183,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskAttemptTimerPerDomain:                {metricName: "task_attempt_per_domain", metricRollupName: "task_attempt", metricType: Timer},
 		TaskFailuresPerDomain:                    {metricName: "task_errors_per_domain", metricRollupName: "task_errors", metricType: Counter},
 		TaskDiscardedPerDomain:                   {metricName: "task_errors_discarded_per_domain", metricRollupName: "task_errors_discarded", metricType: Counter},
+		TaskUnsupportedPerDomain:                 {metricName: "task_errors_unsupported_per_domain", metricRollupName: "task_errors_discarded", metricType: Counter},
 		TaskStandbyRetryCounterPerDomain:         {metricName: "task_errors_standby_retry_counter_per_domain", metricRollupName: "task_errors_standby_retry_counter", metricType: Counter},
 		TaskNotActiveCounterPerDomain:            {metricName: "task_errors_not_active_counter_per_domain", metricRollupName: "task_errors_not_active_counter", metricType: Counter},
 		TaskLimitExceededCounterPerDomain:        {metricName: "task_errors_limit_exceeded_counter_per_domain", metricRollupName: "task_errors_limit_exceeded_counter", metricType: Counter},

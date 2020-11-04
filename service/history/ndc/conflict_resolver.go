@@ -79,6 +79,9 @@ func (r *conflictResolverImpl) prepareMutableState(
 ) (execution.MutableState, bool, error) {
 
 	versionHistories := r.mutableState.GetVersionHistories()
+	if versionHistories == nil {
+		return nil, false, execution.ErrMissingVersionHistories
+	}
 	currentVersionHistoryIndex := versionHistories.GetCurrentVersionHistoryIndex()
 
 	// replication task to be applied to current branch
@@ -123,6 +126,9 @@ func (r *conflictResolverImpl) rebuild(
 ) (execution.MutableState, error) {
 
 	versionHistories := r.mutableState.GetVersionHistories()
+	if versionHistories == nil {
+		return nil, execution.ErrMissingVersionHistories
+	}
 	replayVersionHistory, err := versionHistories.GetVersionHistory(branchIndex)
 	if err != nil {
 		return nil, err
@@ -156,6 +162,9 @@ func (r *conflictResolverImpl) rebuild(
 
 	// after rebuilt verification
 	rebuildVersionHistories := rebuildMutableState.GetVersionHistories()
+	if rebuildVersionHistories == nil {
+		return nil, execution.ErrMissingVersionHistories
+	}
 	rebuildVersionHistory, err := rebuildVersionHistories.GetCurrentVersionHistory()
 	if err != nil {
 		return nil, err
