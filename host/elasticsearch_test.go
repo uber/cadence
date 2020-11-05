@@ -33,8 +33,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/environment"
-
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -43,6 +41,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/host/esUtils"
 )
 
