@@ -24,10 +24,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/uber/cadence/common"
-
 	"go.uber.org/yarpc"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )

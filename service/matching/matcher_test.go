@@ -26,8 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common"
-
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
@@ -35,6 +33,7 @@ import (
 	gen "github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"

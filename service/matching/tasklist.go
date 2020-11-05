@@ -27,7 +27,6 @@ import (
 	"strings"
 
 	"github.com/uber/cadence/common"
-
 	"github.com/uber/cadence/common/persistence"
 )
 
