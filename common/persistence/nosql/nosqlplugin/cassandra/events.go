@@ -154,7 +154,7 @@ func (db *cdb) SelectAllHistoryTrees(ctx context.Context, nextPageToken []byte, 
 	var rows []*nosqlplugin.HistoryTreeRow
 	row := &nosqlplugin.HistoryTreeRow{}
 	for iter.Scan(&row.TreeID, &row.BranchID, &createTime, &row.Info) {
-		row.CreateTimestamp = time.Unix(0, createTime.UnixNano())
+		row.CreateTimestamp = time.Unix(0, p.DBTimestampToUnixNano(p.UnixNanoToDBTimestamp(createTime.UnixNano())))
 		rows = append(rows, row)
 		row = &nosqlplugin.HistoryTreeRow{}
 	}
