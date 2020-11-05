@@ -22,6 +22,7 @@ package nosqlplugin
 
 import (
 	"context"
+	"time"
 
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -217,12 +218,12 @@ type (
 
 	// HistoryTreeRow represents a row in history_tree table
 	HistoryTreeRow struct {
-		ShardID                     int
-		TreeID                      string
-		BranchID                    string
-		Ancestors                   []*types.HistoryBranchRange
-		CreateTimestampMilliseconds int64
-		Info                        string
+		ShardID         int
+		TreeID          string
+		BranchID        string
+		Ancestors       []*types.HistoryBranchRange
+		CreateTimestamp time.Time
+		Info            string
 	}
 
 	// HistoryTreeFilter contains the column names within history_tree table that

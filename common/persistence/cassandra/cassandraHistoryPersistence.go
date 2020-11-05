@@ -103,12 +103,12 @@ func (h *nosqlHistoryManager) AppendHistoryNodes(
 			ancestors = append(ancestors, anc)
 		}
 		treeRow = &nosqlplugin.HistoryTreeRow{
-			ShardID:                     request.ShardID,
-			TreeID:                      branchInfo.GetTreeID(),
-			BranchID:                    branchInfo.GetBranchID(),
-			Ancestors:                   ancestors,
-			CreateTimestampMilliseconds: p.UnixNanoToDBTimestamp(time.Now().UnixNano()),
-			Info:                        request.Info,
+			ShardID:         request.ShardID,
+			TreeID:          branchInfo.GetTreeID(),
+			BranchID:        branchInfo.GetBranchID(),
+			Ancestors:       ancestors,
+			CreateTimestamp: time.Now(),
+			Info:            request.Info,
 		}
 	}
 	nodeRow := &nosqlplugin.HistoryNodeRow{
@@ -295,12 +295,12 @@ func (h *nosqlHistoryManager) ForkHistoryBranch(
 		ancestors = append(ancestors, anc)
 	}
 	treeRow := &nosqlplugin.HistoryTreeRow{
-		ShardID:                     request.ShardID,
-		TreeID:                      treeID,
-		BranchID:                    request.NewBranchID,
-		Ancestors:                   ancestors,
-		CreateTimestampMilliseconds: p.UnixNanoToDBTimestamp(time.Now().UnixNano()),
-		Info:                        request.Info,
+		ShardID:         request.ShardID,
+		TreeID:          treeID,
+		BranchID:        request.NewBranchID,
+		Ancestors:       ancestors,
+		CreateTimestamp: time.Now(),
+		Info:            request.Info,
 	}
 
 	err := h.db.InsertIntoHistoryTreeAndNode(ctx, treeRow, nil)
@@ -400,7 +400,7 @@ func (h *nosqlHistoryManager) GetAllHistoryTreeBranches(
 		branchDetail := p.HistoryBranchDetail{
 			TreeID:   branch.TreeID,
 			BranchID: branch.BranchID,
-			ForkTime: time.Unix(0, p.DBTimestampToUnixNano(branch.CreateTimestampMilliseconds)),
+			ForkTime: branch.CreateTimestamp,
 			Info:     branch.Info,
 		}
 		branchDetails = append(branchDetails, branchDetail)
