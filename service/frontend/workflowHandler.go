@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -140,6 +141,7 @@ var (
 	errWorkflowIDTooLong   = &gen.BadRequestError{Message: "WorkflowID length exceeds limit."}
 	errSignalNameTooLong   = &gen.BadRequestError{Message: "SignalName length exceeds limit."}
 	errTaskListTooLong     = &gen.BadRequestError{Message: "TaskList length exceeds limit."}
+	errRawTaskListTooLong  = &gen.BadRequestError{Message: "Raw TaskList length exceeds limit."}
 	errRequestIDTooLong    = &gen.BadRequestError{Message: "RequestID length exceeds limit."}
 	errIdentityTooLong     = &gen.BadRequestError{Message: "Identity length exceeds limit."}
 
@@ -3529,7 +3531,14 @@ func (wh *WorkflowHandler) validateTaskList(t *gen.TaskList, scope metrics.Scope
 	if !wh.validIDLength(t.GetName(), scope, domain) {
 		return wh.error(errTaskListTooLong, scope)
 	}
+	if wh.isRawListList(t) && len(t.GetName()) > wh.config.MaxRawTaskListNameLimit(domain) {
+		return wh.error(errRawTaskListTooLong, scope)
+	}
 	return nil
+}
+
+func (wh *WorkflowHandler) isRawListList(t *gen.TaskList) bool {
+	return t.GetKind() != gen.TaskListKindSticky && !strings.HasPrefix(t.GetName(), common.ReservedTaskListPrefix)
 }
 
 func (wh *WorkflowHandler) validateExecutionAndEmitMetrics(w *gen.WorkflowExecution, scope metrics.Scope) error {

@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
@@ -60,7 +62,7 @@ func (t *MatcherTestSuite) SetupTest() {
 	t.controller = gomock.NewController(t.T())
 	t.client = matching.NewMockClient(t.controller)
 	cfg := NewConfig(dynamicconfig.NewNopCollection())
-	t.taskList = newTestTaskListID(uuid.New(), taskListPartitionPrefix+"tl0/1", persistence.TaskListTypeDecision)
+	t.taskList = newTestTaskListID(uuid.New(), common.ReservedTaskListPrefix+"tl0/1", persistence.TaskListTypeDecision)
 	tlCfg, err := newTaskListConfig(t.taskList, cfg, t.newDomainCache())
 	t.NoError(err)
 	tlCfg.forwarderConfig = forwarderConfig{
