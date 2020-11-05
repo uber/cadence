@@ -73,8 +73,6 @@ func (es *v6Client) DeleteIndex(s suite.Suite, indexName string) {
 	deleteTestIndex, err := es.client.DeleteIndex(indexName).Do(createContext())
 	s.Nil(err)
 	s.True(deleteTestIndex.Acknowledged)
-
-	es.client.IndexPutSettings(indexName)
 }
 
 func (es *v6Client) PutMaxResultWindow(indexName string, maxResultWindow int) error {
