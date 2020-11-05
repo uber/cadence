@@ -65,6 +65,8 @@ const (
 const (
 	// HealthStatusOK is used when this node is healthy and rpc requests are allowed
 	HealthStatusOK HealthStatus = iota + 1
+	// HealthStatusWarmingUp is used when the rpc handler is warming up
+	HealthStatusWarmingUp
 	// HealthStatusShuttingDown is used when the rpc handler is shutting down
 	HealthStatusShuttingDown
 )
@@ -158,7 +160,7 @@ func NewWorkflowHandler(
 	return &WorkflowHandler{
 		Resource:        resource,
 		config:          config,
-		healthStatus:    int32(HealthStatusOK),
+		healthStatus:    int32(HealthStatusWarmingUp),
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		rateLimiter: quotas.NewMultiStageRateLimiter(
 			func() float64 {
@@ -199,6 +201,20 @@ func NewWorkflowHandler(
 
 // Start starts the handler
 func (wh *WorkflowHandler) Start() {
+	// TODO: Get warmup duration from config. Even better, run proactive checks such as probing downstream connections.
+	const warmUpDuration = 30 * time.Second
+
+	warmupTimer := time.NewTimer(warmUpDuration)
+	go func() {
+		<-warmupTimer.C
+		wh.GetLogger().Warn("Service warmup duration has elapsed.")
+		if atomic.CompareAndSwapInt32(&wh.healthStatus, int32(HealthStatusWarmingUp), int32(HealthStatusOK)) {
+			wh.GetLogger().Warn("Warmup time has elapsed. Service is healthy.")
+		} else {
+			status := HealthStatus(atomic.LoadInt32(&wh.healthStatus))
+			wh.GetLogger().Warn(fmt.Sprintf("Warmup time has elapsed. Service status is: %v", status.String()))
+		}
+	}()
 }
 
 // Stop stops the handler
@@ -220,6 +236,11 @@ func (wh *WorkflowHandler) isShuttingDown() bool {
 func (wh *WorkflowHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
 	status := HealthStatus(atomic.LoadInt32(&wh.healthStatus))
 	msg := status.String()
+
+	if status != HealthStatusOK {
+		wh.GetLogger().Warn(fmt.Sprintf("Service status is: %v", msg))
+	}
+
 	return &health.HealthStatus{
 		Ok:  status == HealthStatusOK,
 		Msg: &msg,
@@ -3955,6 +3976,8 @@ func (hs HealthStatus) String() string {
 	switch hs {
 	case HealthStatusOK:
 		return "OK"
+	case HealthStatusWarmingUp:
+		return "WarmingUp"
 	case HealthStatusShuttingDown:
 		return "ShuttingDown"
 	default:
