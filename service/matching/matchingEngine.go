@@ -655,7 +655,7 @@ func (e *matchingEngineImpl) getAllPartitions(
 	}
 
 	for i := 1; i < n; i++ {
-		partitionKeys = append(partitionKeys, fmt.Sprintf("%v%v/%v", taskListPartitionPrefix, rootPartition, i))
+		partitionKeys = append(partitionKeys, fmt.Sprintf("%v%v/%v", common.ReservedTaskListPrefix, rootPartition, i))
 	}
 
 	return partitionKeys, nil
