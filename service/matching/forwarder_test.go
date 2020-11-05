@@ -334,7 +334,7 @@ func (t *ForwarderTestSuite) TestMaxOutstandingConfigUpdate() {
 }
 
 func (t *ForwarderTestSuite) usingTasklistPartition(taskType int) {
-	t.taskList = newTestTaskListID("fwdr", taskListPartitionPrefix+"tl0/1", taskType)
+	t.taskList = newTestTaskListID("fwdr", common.ReservedTaskListPrefix+"tl0/1", taskType)
 	t.fwdr.taskListID = t.taskList
 }
 
