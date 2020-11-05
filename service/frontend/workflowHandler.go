@@ -3076,6 +3076,10 @@ func (wh *WorkflowHandler) QueryWorkflow(
 		return nil, wh.error(errQueryDisallowedForDomain, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
+	if ok := wh.allow(queryRequest); !ok {
+		return nil, wh.error(createServiceBusyError(), scope)
+	}
+
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
