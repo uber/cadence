@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -97,7 +98,7 @@ func (h *nosqlHistoryManager) AppendHistoryNodes(
 	var err error
 	var treeRow *nosqlplugin.HistoryTreeRow
 	if request.IsNewBranch {
-		var ancestors []*shared.HistoryBranchRange
+		var ancestors []*types.HistoryBranchRange
 		for _, anc := range branchInfo.Ancestors {
 			ancestors = append(ancestors, anc)
 		}
@@ -251,14 +252,14 @@ func (h *nosqlHistoryManager) ForkHistoryBranch(
 
 	forkB := request.ForkBranchInfo
 	treeID := *forkB.TreeID
-	newAncestors := make([]*shared.HistoryBranchRange, 0, len(forkB.Ancestors)+1)
+	newAncestors := make([]*types.HistoryBranchRange, 0, len(forkB.Ancestors)+1)
 
 	beginNodeID := p.GetBeginNodeID(forkB)
 	if beginNodeID >= request.ForkNodeID {
 		// this is the case that new branch's ancestors doesn't include the forking branch
 		for _, br := range forkB.Ancestors {
 			if *br.EndNodeID >= request.ForkNodeID {
-				newAncestors = append(newAncestors, &shared.HistoryBranchRange{
+				newAncestors = append(newAncestors, &types.HistoryBranchRange{
 					BranchID:    br.BranchID,
 					BeginNodeID: br.BeginNodeID,
 					EndNodeID:   common.Int64Ptr(request.ForkNodeID),
@@ -271,7 +272,7 @@ func (h *nosqlHistoryManager) ForkHistoryBranch(
 	} else {
 		// this is the case the new branch will inherit all ancestors from forking branch
 		newAncestors = forkB.Ancestors
-		newAncestors = append(newAncestors, &shared.HistoryBranchRange{
+		newAncestors = append(newAncestors, &types.HistoryBranchRange{
 			BranchID:    forkB.BranchID,
 			BeginNodeID: common.Int64Ptr(beginNodeID),
 			EndNodeID:   common.Int64Ptr(request.ForkNodeID),
@@ -279,15 +280,15 @@ func (h *nosqlHistoryManager) ForkHistoryBranch(
 	}
 
 	resp := &p.InternalForkHistoryBranchResponse{
-		NewBranchInfo: shared.HistoryBranch{
+		NewBranchInfo: types.HistoryBranch{
 			TreeID:    &treeID,
 			BranchID:  &request.NewBranchID,
 			Ancestors: newAncestors,
 		}}
 
-	var ancestors []*shared.HistoryBranchRange
+	var ancestors []*types.HistoryBranchRange
 	for _, an := range newAncestors {
-		anc := &shared.HistoryBranchRange{
+		anc := &types.HistoryBranchRange{
 			BranchID:  an.BranchID,
 			EndNodeID: an.EndNodeID,
 		}
@@ -319,7 +320,7 @@ func (h *nosqlHistoryManager) DeleteHistoryBranch(
 	treeID := *branch.TreeID
 	brsToDelete := branch.Ancestors
 	beginNodeID := p.GetBeginNodeID(branch)
-	brsToDelete = append(brsToDelete, &shared.HistoryBranchRange{
+	brsToDelete = append(brsToDelete, &types.HistoryBranchRange{
 		BranchID:    branch.BranchID,
 		BeginNodeID: common.Int64Ptr(beginNodeID),
 	})
@@ -430,9 +431,9 @@ func (h *nosqlHistoryManager) GetHistoryTree(
 		return nil, convertCommonErrors(h.db, "SelectFromHistoryTree", err)
 	}
 
-	branches := make([]*shared.HistoryBranch, 0)
+	branches := make([]*types.HistoryBranch, 0)
 	for _, dbBr := range dbBranches {
-		br := &shared.HistoryBranch{
+		br := &types.HistoryBranch{
 			TreeID:    &treeID,
 			BranchID:  &dbBr.BranchID,
 			Ancestors: dbBr.Ancestors,

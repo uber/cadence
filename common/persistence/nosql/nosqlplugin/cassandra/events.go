@@ -26,6 +26,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/gocql/gocql"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -216,11 +218,11 @@ func (db *cdb) SelectFromHistoryTree(ctx context.Context, filter *nosqlplugin.Hi
 
 func parseBranchAncestors(
 	ancestors []map[string]interface{},
-) []*shared.HistoryBranchRange {
+) []*types.HistoryBranchRange {
 
-	ans := make([]*shared.HistoryBranchRange, 0, len(ancestors))
+	ans := make([]*types.HistoryBranchRange, 0, len(ancestors))
 	for _, e := range ancestors {
-		an := &shared.HistoryBranchRange{}
+		an := &types.HistoryBranchRange{}
 		for k, v := range e {
 			switch k {
 			case "branch_id":

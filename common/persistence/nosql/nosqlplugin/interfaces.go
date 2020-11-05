@@ -23,7 +23,6 @@ package nosqlplugin
 import (
 	"context"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -221,7 +220,7 @@ type (
 		ShardID                     int
 		TreeID                      string
 		BranchID                    string
-		Ancestors                   []*shared.HistoryBranchRange
+		Ancestors                   []*types.HistoryBranchRange
 		CreateTimestampMilliseconds int64
 		Info                        string
 	}
