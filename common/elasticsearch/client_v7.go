@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -41,20 +41,20 @@ import (
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
-var _ GenericClient = (*elasticV6)(nil)
-var _ GenericBulkProcessor = (*v6BulkProcessor)(nil)
+var _ GenericClient = (*elasticV7)(nil)
+var _ GenericBulkProcessor = (*v7BulkProcessor)(nil)
 
 type (
-	// elasticV6 implements Client
-	elasticV6 struct {
+	// elasticV7 implements Client
+	elasticV7 struct {
 		client     *elastic.Client
 		config     *config.VisibilityConfig
 		logger     log.Logger
 		serializer p.PayloadSerializer
 	}
 
-	// searchParametersV6 holds all required and optional parameters for executing a search
-	searchParametersV6 struct {
+	// searchParametersV7 holds all required and optional parameters for executing a search
+	searchParametersV7 struct {
 		Index       string
 		Query       elastic.Query
 		From        int
@@ -63,8 +63,8 @@ type (
 		SearchAfter []interface{}
 	}
 
-	// bulkProcessorParametersV6 holds all required and optional parameters for executing bulk service
-	bulkProcessorParametersV6 struct {
+	// bulkProcessorParametersV7 holds all required and optional parameters for executing bulk service
+	bulkProcessorParametersV7 struct {
 		Name          string
 		NumOfWorkers  int
 		BulkActions   int
@@ -76,15 +76,8 @@ type (
 	}
 )
 
-func (c *elasticV6) IsNotFoundError(err error) bool {
-	if elastic.IsNotFound(err) {
-		return true
-	}
-	return false
-}
-
-// newV6Client returns a new implementation of GenericClient
-func newV6Client(
+// newV7Client returns a new implementation of GenericClient
+func newV7Client(
 	connectConfig *config.ElasticSearchConfig,
 	visibilityConfig *config.VisibilityConfig,
 	logger log.Logger,
@@ -98,7 +91,7 @@ func newV6Client(
 		return nil, err
 	}
 
-	return &elasticV6{
+	return &elasticV7{
 		client:     client,
 		config:     visibilityConfig,
 		logger:     logger,
@@ -106,23 +99,30 @@ func newV6Client(
 	}, nil
 }
 
+func (c *elasticV7) IsNotFoundError(err error) bool {
+	if elastic.IsNotFound(err) {
+		return true
+	}
+	return false
+}
+
 // root is for nested object like Attr property for search attributes.
-func (c *elasticV6) PutMapping(ctx context.Context, index, root, key, valueType string) error {
-	body := buildPutMappingBodyV6(root, key, valueType)
-	_, err := c.client.PutMapping().Index(index).Type("_doc").BodyJson(body).Do(ctx)
+func (c *elasticV7) PutMapping(ctx context.Context, index, root, key, valueType string) error {
+	body := buildPutMappingBodyV7(root, key, valueType)
+	_, err := c.client.PutMapping().Index(index).BodyJson(body).Do(ctx)
 	return err
 }
 
-func (c *elasticV6) CreateIndex(ctx context.Context, index string) error {
+func (c *elasticV7) CreateIndex(ctx context.Context, index string) error {
 	_, err := c.client.CreateIndex(index).Do(ctx)
 	return err
 }
 
-func (c *elasticV6) CountByQuery(ctx context.Context, index, query string) (int64, error) {
+func (c *elasticV7) CountByQuery(ctx context.Context, index, query string) (int64, error) {
 	return c.client.Count(index).BodyString(query).Do(ctx)
 }
 
-func (c *elasticV6) Search(ctx context.Context, request *SearchRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+func (c *elasticV7) Search(ctx context.Context, request *SearchRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	var matchQuery *elastic.MatchQuery
 	if request.MatchQuery != nil {
@@ -150,7 +150,7 @@ func (c *elasticV6) Search(ctx context.Context, request *SearchRequest) (*p.Inte
 	return c.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.ListRequest.PageSize, request.Filter)
 }
 
-func (c *elasticV6) SearchByQuery(ctx context.Context, request *SearchByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+func (c *elasticV7) SearchByQuery(ctx context.Context, request *SearchByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	searchResult, err := c.searchWithDSL(ctx, request.Index, request.Query)
 	if err != nil {
 		return nil, err
@@ -164,7 +164,7 @@ func (c *elasticV6) SearchByQuery(ctx context.Context, request *SearchByQueryReq
 	return c.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.PageSize, request.Filter)
 }
 
-func (c *elasticV6) ScanByQuery(ctx context.Context, request *ScanByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+func (c *elasticV7) ScanByQuery(ctx context.Context, request *ScanByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	var err error
 	token, err := GetNextPageToken(request.NextPageToken)
 	if err != nil {
@@ -198,21 +198,21 @@ func (c *elasticV6) ScanByQuery(ctx context.Context, request *ScanByQueryRequest
 	return c.getScanWorkflowExecutionsResponse(searchResult.Hits, request.PageSize, searchResult.ScrollId, isLastPage)
 }
 
-func (c *elasticV6) RunBulkProcessor(ctx context.Context, parameters *BulkProcessorParameters) (GenericBulkProcessor, error) {
+func (c *elasticV7) RunBulkProcessor(ctx context.Context, parameters *BulkProcessorParameters) (GenericBulkProcessor, error) {
 	beforeFunc := func(executionId int64, requests []elastic.BulkableRequest) {
-		parameters.BeforeFunc(executionId, fromV6ToGenericBulkableRequests(requests))
+		parameters.BeforeFunc(executionId, fromV7ToGenericBulkableRequests(requests))
 	}
 
 	afterFunc := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
-		gerr := convertV6ErrorToGenericError(err)
+		gerr := convertV7ErrorToGenericError(err)
 		parameters.AfterFunc(
 			executionId,
-			fromV6ToGenericBulkableRequests(requests),
-			fromV6toGenericBulkResponse(response),
+			fromV7ToGenericBulkableRequests(requests),
+			fromV7toGenericBulkResponse(response),
 			gerr)
 	}
 
-	return c.runBulkProcessor(ctx, &bulkProcessorParametersV6{
+	return c.runBulkProcessor(ctx, &bulkProcessorParametersV7{
 		Name:          parameters.Name,
 		NumOfWorkers:  parameters.NumOfWorkers,
 		BulkActions:   parameters.BulkActions,
@@ -224,7 +224,7 @@ func (c *elasticV6) RunBulkProcessor(ctx context.Context, parameters *BulkProces
 	})
 }
 
-func convertV6ErrorToGenericError(err error) *GenericError {
+func convertV7ErrorToGenericError(err error) *GenericError {
 	if err == nil {
 		return nil
 	}
@@ -239,7 +239,7 @@ func convertV6ErrorToGenericError(err error) *GenericError {
 	}
 }
 
-func (v *v6BulkProcessor) RetrieveKafkaKey(request GenericBulkableRequest, logger log.Logger, metricsClient metrics.Client) string {
+func (v *v7BulkProcessor) RetrieveKafkaKey(request GenericBulkableRequest, logger log.Logger, metricsClient metrics.Client) string {
 	req, err := request.Source()
 	if err != nil {
 		logger.Error("Get request source err.", tag.Error(err), tag.ESRequest(request.String()))
@@ -289,7 +289,7 @@ func (v *v6BulkProcessor) RetrieveKafkaKey(request GenericBulkableRequest, logge
 	return key
 }
 
-func (c *elasticV6) SearchForOneClosedExecution(
+func (c *elasticV7) SearchForOneClosedExecution(
 	ctx context.Context,
 	index string,
 	request *p.InternalGetClosedWorkflowExecutionRequest,
@@ -305,7 +305,7 @@ func (c *elasticV6) SearchForOneClosedExecution(
 		boolQuery = boolQuery.Must(matchRunIDQuery)
 	}
 
-	params := &searchParametersV6{
+	params := &searchParametersV7{
 		Index: index,
 		Query: boolQuery,
 	}
@@ -326,34 +326,34 @@ func (c *elasticV6) SearchForOneClosedExecution(
 	return response, nil
 }
 
-func fromV6toGenericBulkResponse(response *elastic.BulkResponse) *GenericBulkResponse {
+func fromV7toGenericBulkResponse(response *elastic.BulkResponse) *GenericBulkResponse {
 	return &GenericBulkResponse{
 		Took:   response.Took,
 		Errors: response.Errors,
-		Items:  fromV6ToGenericBulkResponseItemMaps(response.Items),
+		Items:  fromV7ToGenericBulkResponseItemMaps(response.Items),
 	}
 }
 
-func fromV6ToGenericBulkResponseItemMaps(items []map[string]*elastic.BulkResponseItem) []map[string]*GenericBulkResponseItem {
+func fromV7ToGenericBulkResponseItemMaps(items []map[string]*elastic.BulkResponseItem) []map[string]*GenericBulkResponseItem {
 	var gitems []map[string]*GenericBulkResponseItem
 	for _, it := range items {
-		gitems = append(gitems, fromV6ToGenericBulkResponseItemMap(it))
+		gitems = append(gitems, fromV7ToGenericBulkResponseItemMap(it))
 	}
 	return gitems
 }
 
-func fromV6ToGenericBulkResponseItemMap(m map[string]*elastic.BulkResponseItem) map[string]*GenericBulkResponseItem {
+func fromV7ToGenericBulkResponseItemMap(m map[string]*elastic.BulkResponseItem) map[string]*GenericBulkResponseItem {
 	if m == nil {
 		return nil
 	}
 	gm := make(map[string]*GenericBulkResponseItem, len(m))
 	for k, v := range m {
-		gm[k] = fromV6ToGenericBulkResponseItem(v)
+		gm[k] = fromV7ToGenericBulkResponseItem(v)
 	}
 	return gm
 }
 
-func fromV6ToGenericBulkResponseItem(v *elastic.BulkResponseItem) *GenericBulkResponseItem {
+func fromV7ToGenericBulkResponseItem(v *elastic.BulkResponseItem) *GenericBulkResponseItem {
 	return &GenericBulkResponseItem{
 		Index:         v.Index,
 		Type:          v.Type,
@@ -367,15 +367,15 @@ func fromV6ToGenericBulkResponseItem(v *elastic.BulkResponseItem) *GenericBulkRe
 	}
 }
 
-func fromV6ToGenericBulkableRequests(requests []elastic.BulkableRequest) []GenericBulkableRequest {
-	var v6Reqs []GenericBulkableRequest
+func fromV7ToGenericBulkableRequests(requests []elastic.BulkableRequest) []GenericBulkableRequest {
+	var v7Reqs []GenericBulkableRequest
 	for _, req := range requests {
-		v6Reqs = append(v6Reqs, req)
+		v7Reqs = append(v7Reqs, req)
 	}
-	return v6Reqs
+	return v7Reqs
 }
 
-func (c *elasticV6) search(ctx context.Context, p *searchParametersV6) (*elastic.SearchResult, error) {
+func (c *elasticV7) search(ctx context.Context, p *searchParametersV7) (*elastic.SearchResult, error) {
 	searchService := c.client.Search(p.Index).
 		Query(p.Query).
 		From(p.From).
@@ -392,11 +392,11 @@ func (c *elasticV6) search(ctx context.Context, p *searchParametersV6) (*elastic
 	return searchService.Do(ctx)
 }
 
-func (c *elasticV6) searchWithDSL(ctx context.Context, index, query string) (*elastic.SearchResult, error) {
+func (c *elasticV7) searchWithDSL(ctx context.Context, index, query string) (*elastic.SearchResult, error) {
 	return c.client.Search(index).Source(query).Do(ctx)
 }
 
-func (c *elasticV6) scroll(ctx context.Context, scrollID string) (
+func (c *elasticV7) scroll(ctx context.Context, scrollID string) (
 	*elastic.SearchResult, *elastic.ScrollService, error) {
 
 	scrollService := elastic.NewScrollService(c.client)
@@ -404,7 +404,7 @@ func (c *elasticV6) scroll(ctx context.Context, scrollID string) (
 	return result, scrollService, err
 }
 
-func (c *elasticV6) scrollFirstPage(ctx context.Context, index, query string) (
+func (c *elasticV7) scrollFirstPage(ctx context.Context, index, query string) (
 	*elastic.SearchResult, *elastic.ScrollService, error) {
 
 	scrollService := elastic.NewScrollService(c.client)
@@ -412,23 +412,23 @@ func (c *elasticV6) scrollFirstPage(ctx context.Context, index, query string) (
 	return result, scrollService, err
 }
 
-type v6BulkProcessor struct {
+type v7BulkProcessor struct {
 	processor *elastic.BulkProcessor
 }
 
-func (v *v6BulkProcessor) Start(ctx context.Context) error {
+func (v *v7BulkProcessor) Start(ctx context.Context) error {
 	return v.processor.Start(ctx)
 }
 
-func (v *v6BulkProcessor) Stop() error {
+func (v *v7BulkProcessor) Stop() error {
 	return v.processor.Stop()
 }
 
-func (v *v6BulkProcessor) Close() error {
+func (v *v7BulkProcessor) Close() error {
 	return v.processor.Close()
 }
 
-func (v *v6BulkProcessor) Add(request *GenericBulkableAddRequest) {
+func (v *v7BulkProcessor) Add(request *GenericBulkableAddRequest) {
 	var req elastic.BulkableRequest
 	if request.IsDelete {
 		req = elastic.NewBulkDeleteRequest().
@@ -449,11 +449,11 @@ func (v *v6BulkProcessor) Add(request *GenericBulkableAddRequest) {
 	v.processor.Add(req)
 }
 
-func (v *v6BulkProcessor) Flush() error {
+func (v *v7BulkProcessor) Flush() error {
 	return v.processor.Flush()
 }
 
-func (c *elasticV6) runBulkProcessor(ctx context.Context, p *bulkProcessorParametersV6) (*v6BulkProcessor, error) {
+func (c *elasticV7) runBulkProcessor(ctx context.Context, p *bulkProcessorParametersV7) (*v7BulkProcessor, error) {
 	processor, err := c.client.BulkProcessor().
 		Name(p.Name).
 		Workers(p.NumOfWorkers).
@@ -467,12 +467,12 @@ func (c *elasticV6) runBulkProcessor(ctx context.Context, p *bulkProcessorParame
 	if err != nil {
 		return nil, err
 	}
-	return &v6BulkProcessor{
+	return &v7BulkProcessor{
 		processor: processor,
 	}, nil
 }
 
-func buildPutMappingBodyV6(root, key, valueType string) map[string]interface{} {
+func buildPutMappingBodyV7(root, key, valueType string) map[string]interface{} {
 	body := make(map[string]interface{})
 	if len(root) != 0 {
 		body["properties"] = map[string]interface{}{
@@ -494,7 +494,7 @@ func buildPutMappingBodyV6(root, key, valueType string) map[string]interface{} {
 	return body
 }
 
-func (c *elasticV6) getListWorkflowExecutionsResponse(searchHits *elastic.SearchHits,
+func (c *elasticV7) getListWorkflowExecutionsResponse(searchHits *elastic.SearchHits,
 	token *ElasticVisibilityPageToken, pageSize int, isRecordValid func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
@@ -517,7 +517,7 @@ func (c *elasticV6) getListWorkflowExecutionsResponse(searchHits *elastic.Search
 
 		// ES Search API support pagination using From and PageSize, but has limit that From+PageSize cannot exceed a threshold
 		// to retrieve deeper pages, use ES SearchAfter
-		if searchHits.TotalHits <= int64(c.config.ESIndexMaxResultWindow()-pageSize) { // use ES Search From+Size
+		if searchHits.TotalHits.Value <= int64(c.config.ESIndexMaxResultWindow()-pageSize) { // use ES Search From+Size
 			nextPageToken, err = SerializePageToken(&ElasticVisibilityPageToken{From: token.From + numOfActualHits})
 		} else { // use ES Search After
 			var sortVal interface{}
@@ -538,9 +538,9 @@ func (c *elasticV6) getListWorkflowExecutionsResponse(searchHits *elastic.Search
 	return response, nil
 }
 
-func (c *elasticV6) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit) *p.InternalVisibilityWorkflowExecutionInfo {
+func (c *elasticV7) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit) *p.InternalVisibilityWorkflowExecutionInfo {
 	var source *VisibilityRecord
-	err := json.Unmarshal(*hit.Source, &source)
+	err := json.Unmarshal(hit.Source, &source)
 	if err != nil { // log and skip error
 		c.logger.Error("unable to unmarshal search hit source",
 			tag.Error(err), tag.ESDocID(hit.Id))
@@ -566,7 +566,7 @@ func (c *elasticV6) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit
 	return record
 }
 
-func (c *elasticV6) getScanWorkflowExecutionsResponse(
+func (c *elasticV7) getScanWorkflowExecutionsResponse(
 	searchHits *elastic.SearchHits,
 	pageSize int, scrollID string,
 	isLastPage bool,
@@ -594,7 +594,7 @@ func (c *elasticV6) getScanWorkflowExecutionsResponse(
 	return response, nil
 }
 
-func (c *elasticV6) getSearchResult(
+func (c *elasticV7) getSearchResult(
 	ctx context.Context,
 	index string,
 	request *p.InternalListWorkflowExecutionsRequest,
@@ -611,7 +611,7 @@ func (c *elasticV6) getSearchResult(
 	} else {
 		rangeQuery = elastic.NewRangeQuery(CloseTime)
 	}
-	// ElasticSearch v6 is unable to precisely compare time, have to manually add resolution 1ms to time range.
+	// ElasticSearch v7 is unable to precisely compare time, have to manually add resolution 1ms to time range.
 	// Also has to use string instead of int64 to avoid data conversion issue,
 	// 9223372036854775807 to 9223372036854776000 (long overflow)
 	if request.LatestTime > math.MaxInt64-oneMicroSecondInNano { // prevent latestTime overflow
@@ -636,7 +636,7 @@ func (c *elasticV6) getSearchResult(
 		boolQuery = boolQuery.Must(existClosedStatusQuery)
 	}
 
-	params := &searchParametersV6{
+	params := &searchParametersV7{
 		Index:    index,
 		Query:    boolQuery,
 		From:     token.From,
