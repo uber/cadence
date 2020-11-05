@@ -34,9 +34,9 @@ type (
 		// supporting v6 and v7. Default to v6 if empty.
 		Version string `yaml:version` //nolint:govet
 		// optional username to communicate with ElasticSearch
-		Username string
+		Username string `yaml:username` //nolint:govet
 		// optional password to communicate with ElasticSearch
-		Password string
+		Password string `yaml:password` //nolint:govet
 	}
 )
 
