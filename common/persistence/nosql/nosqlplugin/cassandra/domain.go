@@ -181,7 +181,7 @@ func (db *cdb) InsertDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		row.Info.Description,
 		row.Info.OwnerEmail,
 		row.Info.Data,
-		common.DurationToInt32(row.Config.Retention, 24*time.Hour),
+		common.DurationToDays(row.Config.Retention),
 		row.Config.EmitMetric,
 		row.Config.ArchivalBucket,
 		row.Config.ArchivalStatus,
@@ -264,7 +264,7 @@ func (db *cdb) UpdateDomain(ctx context.Context, row *nosqlplugin.DomainRow) err
 		row.Info.Description,
 		row.Info.OwnerEmail,
 		row.Info.Data,
-		common.DurationToInt32(row.Config.Retention, 24*time.Hour),
+		common.DurationToDays(row.Config.Retention),
 		row.Config.EmitMetric,
 		row.Config.ArchivalBucket,
 		row.Config.ArchivalStatus,
@@ -377,7 +377,7 @@ func (db *cdb) SelectDomain(ctx context.Context, domainID *string, domainName *s
 	}
 
 	config.BadBinaries = p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding))
-	config.Retention = common.Int32ToDuration(retentionDays, 24*time.Hour)
+	config.Retention = common.DaysToDuration(retentionDays)
 	replicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 
 	dr := &nosqlplugin.DomainRow{
@@ -456,7 +456,7 @@ func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []b
 			// do not include the metadata record
 			domain.Config.BadBinaries = p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding))
 			domain.ReplicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
-			domain.Config.Retention = common.Int32ToDuration(retentionDays, 24*time.Hour)
+			domain.Config.Retention = common.DaysToDuration(retentionDays)
 			domain.LastUpdatedTime = time.Unix(0, lastUpdateTime)
 			if failoverEndTime > emptyFailoverEndTime {
 				domain.FailoverEndTime = common.TimePtr(time.Unix(0, failoverEndTime))

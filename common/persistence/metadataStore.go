@@ -194,7 +194,7 @@ func (m *metadataManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalD
 		return InternalDomainConfig{}, err
 	}
 	return InternalDomainConfig{
-		Retention:                common.Int32ToDuration(c.Retention, 24*time.Hour),
+		Retention:                common.DaysToDuration(c.Retention),
 		EmitMetric:               c.EmitMetric,
 		HistoryArchivalStatus:    *thrift.ToArchivalStatus(&c.HistoryArchivalStatus),
 		HistoryArchivalURI:       c.HistoryArchivalURI,
@@ -216,7 +216,7 @@ func (m *metadataManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig)
 		badBinaries.Binaries = map[string]*shared.BadBinaryInfo{}
 	}
 	return DomainConfig{
-		Retention:                common.DurationToInt32(ic.Retention, 24*time.Hour),
+		Retention:                common.DurationToDays(ic.Retention),
 		EmitMetric:               ic.EmitMetric,
 		HistoryArchivalStatus:    *thrift.FromArchivalStatus(&ic.HistoryArchivalStatus),
 		HistoryArchivalURI:       ic.HistoryArchivalURI,
