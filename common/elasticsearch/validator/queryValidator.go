@@ -45,33 +45,9 @@ func NewQueryValidator(validSearchAttributes dynamicconfig.MapPropertyFn) *Visib
 	}
 }
 
-// ValidateListRequestForQuery validate that search attributes in listRequest query is legal,
-// and add prefix for custom keys
-func (qv *VisibilityQueryValidator) ValidateListRequestForQuery(listRequest *workflow.ListWorkflowExecutionsRequest) error {
-	whereClause := listRequest.GetQuery()
-	newQuery, err := qv.validateListOrCountRequestForQuery(whereClause)
-	if err != nil {
-		return err
-	}
-	listRequest.Query = common.StringPtr(newQuery)
-	return nil
-}
-
-// ValidateCountRequestForQuery validate that search attributes in countRequest query is legal,
-// and add prefix for custom keys
-func (qv *VisibilityQueryValidator) ValidateCountRequestForQuery(countRequest *workflow.CountWorkflowExecutionsRequest) error {
-	whereClause := countRequest.GetQuery()
-	newQuery, err := qv.validateListOrCountRequestForQuery(whereClause)
-	if err != nil {
-		return err
-	}
-	countRequest.Query = common.StringPtr(newQuery)
-	return nil
-}
-
-// validateListOrCountRequestForQuery valid sql for visibility API
-// it also adds attr prefix for customized fields
-func (qv *VisibilityQueryValidator) validateListOrCountRequestForQuery(whereClause string) (string, error) {
+// ValidateQuery validates that search attributes in the query are legal.
+// Adds attr prefix for customized fields and returns modified query.
+func (qv *VisibilityQueryValidator) ValidateQuery(whereClause string) (string, error) {
 	if len(whereClause) != 0 {
 		// Build a placeholder query that allows us to easily parse the contents of the where clause.
 		// IMPORTANT: This query is never executed, it is just used to parse and validate whereClause

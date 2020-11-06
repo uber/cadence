@@ -2861,7 +2861,8 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}, scope)
 	}
 
-	if err := wh.visibilityQueryValidator.ValidateListRequestForQuery(listRequest); err != nil {
+	validatedQuery, err := wh.visibilityQueryValidator.ValidateQuery(listRequest.GetQuery())
+	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -2876,7 +2877,7 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 		Domain:        domain,
 		PageSize:      int(listRequest.GetPageSize()),
 		NextPageToken: listRequest.NextPageToken,
-		Query:         listRequest.GetQuery(),
+		Query:         validatedQuery,
 	}
 	persistenceResp, err := wh.GetVisibilityManager().ListWorkflowExecutions(ctx, req)
 	if err != nil {
@@ -2928,7 +2929,8 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}, scope)
 	}
 
-	if err := wh.visibilityQueryValidator.ValidateListRequestForQuery(listRequest); err != nil {
+	validatedQuery, err := wh.visibilityQueryValidator.ValidateQuery(listRequest.GetQuery())
+	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -2943,7 +2945,7 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 		Domain:        domain,
 		PageSize:      int(listRequest.GetPageSize()),
 		NextPageToken: listRequest.NextPageToken,
-		Query:         listRequest.GetQuery(),
+		Query:         validatedQuery,
 	}
 	persistenceResp, err := wh.GetVisibilityManager().ScanWorkflowExecutions(ctx, req)
 	if err != nil {
@@ -2986,7 +2988,8 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if err := wh.visibilityQueryValidator.ValidateCountRequestForQuery(countRequest); err != nil {
+	validatedQuery, err := wh.visibilityQueryValidator.ValidateQuery(countRequest.GetQuery())
+	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -2999,7 +3002,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 	req := &persistence.CountWorkflowExecutionsRequest{
 		DomainUUID: domainID,
 		Domain:     domain,
-		Query:      countRequest.GetQuery(),
+		Query:      validatedQuery,
 	}
 	persistenceResp, err := wh.GetVisibilityManager().CountWorkflowExecutions(ctx, req)
 	if err != nil {
