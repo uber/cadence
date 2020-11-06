@@ -498,7 +498,7 @@ type (
 		// The info for clean up data in background
 		Info string
 		// The branch to be appended
-		BranchInfo workflow.HistoryBranch
+		BranchInfo types.HistoryBranch
 		// The first eventID becomes the nodeID to be appended
 		NodeID int64
 		// The events to be appended
@@ -535,7 +535,7 @@ type (
 	// InternalForkHistoryBranchRequest is used to fork a history branch
 	InternalForkHistoryBranchRequest struct {
 		// The base branch to fork from
-		ForkBranchInfo workflow.HistoryBranch
+		ForkBranchInfo types.HistoryBranch
 		// The nodeID to fork from, the new branch will start from ( inclusive ), the base branch will stop at(exclusive)
 		ForkNodeID int64
 		// branchID of the new branch
@@ -549,13 +549,13 @@ type (
 	// InternalForkHistoryBranchResponse is the response to ForkHistoryBranchRequest
 	InternalForkHistoryBranchResponse struct {
 		// branchInfo to represent the new branch
-		NewBranchInfo workflow.HistoryBranch
+		NewBranchInfo types.HistoryBranch
 	}
 
 	// InternalDeleteHistoryBranchRequest is used to remove a history branch
 	InternalDeleteHistoryBranchRequest struct {
 		// branch to be deleted
-		BranchInfo workflow.HistoryBranch
+		BranchInfo types.HistoryBranch
 		// Used in sharded data stores to identify which shard to use
 		ShardID int
 	}
@@ -617,7 +617,7 @@ type (
 	// InternalGetHistoryTreeResponse is the response to GetHistoryTree
 	InternalGetHistoryTreeResponse struct {
 		// all branches of a tree
-		Branches []*workflow.HistoryBranch
+		Branches []*types.HistoryBranch
 	}
 
 	// InternalVisibilityWorkflowExecutionInfo is visibility info for internal response

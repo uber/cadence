@@ -24,6 +24,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/uber/cadence/.gen/go/shared"
 )
 
@@ -80,7 +82,7 @@ func ReadFullPageV2EventsByBatch(
 }
 
 // GetBeginNodeID gets node id from last ancestor
-func GetBeginNodeID(bi shared.HistoryBranch) int64 {
+func GetBeginNodeID(bi types.HistoryBranch) int64 {
 	if len(bi.Ancestors) == 0 {
 		// root branch
 		return 1
