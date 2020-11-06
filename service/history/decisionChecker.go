@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 )
@@ -515,7 +516,8 @@ func (v *decisionAttrValidator) validateUpsertWorkflowSearchAttributes(
 		return &workflow.BadRequestError{Message: "IndexedFields is empty on decision."}
 	}
 
-	return v.searchAttributesValidator.ValidateSearchAttributes(attributes.GetSearchAttributes(), domainName)
+	err := v.searchAttributesValidator.ValidateSearchAttributes(thrift.ToSearchAttributes(attributes.GetSearchAttributes()), domainName)
+	return thrift.FromError(err)
 }
 
 func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes(
@@ -562,7 +564,8 @@ func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes
 	if err != nil {
 		return err
 	}
-	return v.searchAttributesValidator.ValidateSearchAttributes(attributes.GetSearchAttributes(), domainEntry.GetInfo().Name)
+	err = v.searchAttributesValidator.ValidateSearchAttributes(thrift.ToSearchAttributes(attributes.GetSearchAttributes()), domainEntry.GetInfo().Name)
+	return thrift.FromError(err)
 }
 
 func (v *decisionAttrValidator) validateStartChildExecutionAttributes(

@@ -27,10 +27,10 @@ import (
 
 	"github.com/xwb1989/sqlparser"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 // VisibilityQueryValidator for sql query validation
@@ -62,26 +62,26 @@ func (qv *VisibilityQueryValidator) ValidateQuery(whereClause string) (string, e
 
 		stmt, err := sqlparser.Parse(placeholderQuery)
 		if err != nil {
-			return "", &workflow.BadRequestError{Message: "Invalid query."}
+			return "", &types.BadRequestError{Message: "Invalid query."}
 		}
 
 		sel, ok := stmt.(*sqlparser.Select)
 		if !ok {
-			return "", &workflow.BadRequestError{Message: "Invalid select query."}
+			return "", &types.BadRequestError{Message: "Invalid select query."}
 		}
 		buf := sqlparser.NewTrackedBuffer(nil)
 		// validate where expr
 		if sel.Where != nil {
 			err = qv.validateWhereExpr(sel.Where.Expr)
 			if err != nil {
-				return "", &workflow.BadRequestError{Message: err.Error()}
+				return "", &types.BadRequestError{Message: err.Error()}
 			}
 			sel.Where.Expr.Format(buf)
 		}
 		// validate order by
 		err = qv.validateOrderByExpr(sel.OrderBy)
 		if err != nil {
-			return "", &workflow.BadRequestError{Message: err.Error()}
+			return "", &types.BadRequestError{Message: err.Error()}
 		}
 		sel.OrderBy.Format(buf)
 

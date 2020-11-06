@@ -1796,7 +1796,8 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errRequestIDTooLong, scope)
 	}
 
-	if err := wh.searchAttributesValidator.ValidateSearchAttributes(startRequest.SearchAttributes, domainName); err != nil {
+	if err := wh.searchAttributesValidator.ValidateSearchAttributes(thrift.ToSearchAttributes(startRequest.SearchAttributes), domainName); err != nil {
+		err = thrift.FromError(err)
 		return nil, wh.error(err, scope)
 	}
 
@@ -2265,7 +2266,8 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if err := wh.searchAttributesValidator.ValidateSearchAttributes(signalWithStartRequest.SearchAttributes, domainName); err != nil {
+	if err := wh.searchAttributesValidator.ValidateSearchAttributes(thrift.ToSearchAttributes(signalWithStartRequest.SearchAttributes), domainName); err != nil {
+		err = thrift.FromError(err)
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2863,6 +2865,7 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 
 	validatedQuery, err := wh.visibilityQueryValidator.ValidateQuery(listRequest.GetQuery())
 	if err != nil {
+		err = thrift.FromError(err)
 		return nil, wh.error(err, scope)
 	}
 
@@ -2931,6 +2934,7 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 
 	validatedQuery, err := wh.visibilityQueryValidator.ValidateQuery(listRequest.GetQuery())
 	if err != nil {
+		err = thrift.FromError(err)
 		return nil, wh.error(err, scope)
 	}
 
@@ -2990,6 +2994,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 
 	validatedQuery, err := wh.visibilityQueryValidator.ValidateQuery(countRequest.GetQuery())
 	if err != nil {
+		err = thrift.FromError(err)
 		return nil, wh.error(err, scope)
 	}
 
