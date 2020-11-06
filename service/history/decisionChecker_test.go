@@ -519,10 +519,10 @@ func (s *decisionAttrValidatorSuite) TestValidateTaskListName() {
 		{"", taskList("/__cadence_sys"), taskList("/__cadence_sys"), false},
 		{"", nil, &workflow.TaskList{}, true},
 		{"", taskList(""), taskList(""), true},
-		{"", taskList(reservedTaskListPrefix), taskList(reservedTaskListPrefix), true},
-		{"tl-1", taskList(reservedTaskListPrefix), taskList(reservedTaskListPrefix), true},
-		{"", taskList(reservedTaskListPrefix + "tl-1"), taskList(reservedTaskListPrefix + "tl-1"), true},
-		{"tl-1", taskList(reservedTaskListPrefix + "tl-1"), taskList(reservedTaskListPrefix + "tl-1"), true},
+		{"", taskList(common.ReservedTaskListPrefix), taskList(common.ReservedTaskListPrefix), true},
+		{"tl-1", taskList(common.ReservedTaskListPrefix), taskList(common.ReservedTaskListPrefix), true},
+		{"", taskList(common.ReservedTaskListPrefix + "tl-1"), taskList(common.ReservedTaskListPrefix + "tl-1"), true},
+		{"tl-1", taskList(common.ReservedTaskListPrefix + "tl-1"), taskList(common.ReservedTaskListPrefix + "tl-1"), true},
 	}
 
 	for _, tc := range testCases {
