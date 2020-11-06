@@ -1189,7 +1189,7 @@ func (c *contextImpl) ReapplyEvents(
 			Message: fmt.Sprintf("cannot find cluster config %v to do reapply", activeCluster),
 		}
 	}
-	return sourceCluster.ReapplyEvents(
+	err = sourceCluster.ReapplyEvents(
 		ctx,
 		&types.ReapplyEventsRequest{
 			DomainName:        common.StringPtr(domainEntry.GetInfo().Name),
@@ -1197,6 +1197,7 @@ func (c *contextImpl) ReapplyEvents(
 			Events:            thrift.ToDataBlob(reapplyEventsDataBlob.ToThrift()),
 		},
 	)
+	return thrift.FromError(err)
 }
 
 func (c *contextImpl) isPersistenceTimeoutError(

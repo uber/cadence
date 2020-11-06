@@ -23,12 +23,11 @@ package admin
 import (
 	"context"
 
-	"github.com/uber/cadence/common/types/mapper/thrift"
-
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type thriftClient struct {

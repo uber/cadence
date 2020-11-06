@@ -28,8 +28,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/types/mapper/thrift"
-
 	"go.uber.org/cadence/.gen/go/shared"
 
 	"github.com/uber/cadence/.gen/go/replicator"
@@ -43,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
