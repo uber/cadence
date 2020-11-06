@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,23 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package host
+package elasticsearch
 
 import (
-	"flag"
+	"time"
 )
 
-// TestFlags contains the feature flags for integration tests
-var TestFlags struct {
-	FrontendAddr          string
-	PersistenceType       string
-	SQLPluginName         string
-	TestClusterConfigFile string
-}
+const unknownStatusCode = -1
 
-func init() {
-	flag.StringVar(&TestFlags.FrontendAddr, "frontendAddress", "", "host:port for cadence frontend service")
-	flag.StringVar(&TestFlags.PersistenceType, "persistenceType", "cassandra", "type of persistence store - [cassandra or sql]")
-	flag.StringVar(&TestFlags.SQLPluginName, "sqlPluginName", "mysql", "type of sql store - [mysql or postgres]")
-	flag.StringVar(&TestFlags.TestClusterConfigFile, "TestClusterConfigFile", "", "test cluster config file location")
-}
+// TODO https://github.com/uber/cadence/issues/3686
+const oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)

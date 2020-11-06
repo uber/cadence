@@ -75,14 +75,15 @@ var keys = map[Key]string{
 	EnableAuthorization:                 "system.enableAuthorization",
 
 	// size limit
-	BlobSizeLimitError:     "limit.blobSize.error",
-	BlobSizeLimitWarn:      "limit.blobSize.warn",
-	HistorySizeLimitError:  "limit.historySize.error",
-	HistorySizeLimitWarn:   "limit.historySize.warn",
-	HistoryCountLimitError: "limit.historyCount.error",
-	HistoryCountLimitWarn:  "limit.historyCount.warn",
-	MaxIDLengthLimit:       "limit.maxIDLength",
-	MaxIDLengthWarnLimit:   "limit.maxIDWarnLength",
+	BlobSizeLimitError:      "limit.blobSize.error",
+	BlobSizeLimitWarn:       "limit.blobSize.warn",
+	HistorySizeLimitError:   "limit.historySize.error",
+	HistorySizeLimitWarn:    "limit.historySize.warn",
+	HistoryCountLimitError:  "limit.historyCount.error",
+	HistoryCountLimitWarn:   "limit.historyCount.warn",
+	MaxIDLengthLimit:        "limit.maxIDLength",
+	MaxIDLengthWarnLimit:    "limit.maxIDWarnLength",
+	MaxRawTaskListNameLimit: "limit.maxRawTaskListNameLength",
 
 	// frontend settings
 	FrontendPersistenceMaxQPS:                   "frontend.persistenceMaxQPS",
@@ -410,6 +411,8 @@ const (
 	// MaxIDLengthWarnLimit is the warn length limit for various IDs, including: Domain, TaskList, WorkflowID, ActivityID, TimerID,
 	// WorkflowType, ActivityType, SignalName, MarkerName, ErrorReason/FailureReason/CancelCause, Identity, RequestID
 	MaxIDLengthWarnLimit
+	// MaxRawTaskListNameLimit is the max length of user provided task list name (non-sticky and non-scalable)
+	MaxRawTaskListNameLimit
 
 	// key for frontend
 

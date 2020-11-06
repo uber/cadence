@@ -97,6 +97,9 @@ func (r *branchManagerImpl) prepareVersionHistory(
 	}
 
 	localVersionHistories := r.mutableState.GetVersionHistories()
+	if localVersionHistories == nil {
+		return false, 0, execution.ErrMissingVersionHistories
+	}
 	versionHistory, err := localVersionHistories.GetVersionHistory(versionHistoryIndex)
 	if err != nil {
 		return false, 0, err
@@ -151,7 +154,9 @@ func (r *branchManagerImpl) flushBufferedEvents(
 ) (int, *persistence.VersionHistoryItem, error) {
 
 	localVersionHistories := r.mutableState.GetVersionHistories()
-
+	if localVersionHistories == nil {
+		return 0, nil, execution.ErrMissingVersionHistories
+	}
 	versionHistoryIndex, lcaVersionHistoryItem, err := localVersionHistories.FindLCAVersionHistoryIndexAndItem(
 		incomingVersionHistory,
 	)
@@ -249,7 +254,11 @@ func (r *branchManagerImpl) createNewBranch(
 	if err := newVersionHistory.SetBranchToken(resp.NewBranchToken); err != nil {
 		return 0, err
 	}
-	branchChanged, newIndex, err := r.mutableState.GetVersionHistories().AddVersionHistory(
+	versionHistory := r.mutableState.GetVersionHistories()
+	if versionHistory == nil {
+		return 0, execution.ErrMissingVersionHistories
+	}
+	branchChanged, newIndex, err := versionHistory.AddVersionHistory(
 		newVersionHistory,
 	)
 	if err != nil {
