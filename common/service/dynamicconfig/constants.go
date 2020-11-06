@@ -135,6 +135,7 @@ var keys = map[Key]string{
 	MatchingForwarderMaxRatePerSecond:       "matching.forwarderMaxRatePerSecond",
 	MatchingForwarderMaxChildrenPerNode:     "matching.forwarderMaxChildrenPerNode",
 	MatchingShutdownDrainDuration:           "matching.shutdownDrainDuration",
+	MatchingErrorInjectionRate:              "matching.ErrorInjectionRate",
 
 	// history settings
 	HistoryRPS:                                            "history.rps",
@@ -512,6 +513,8 @@ const (
 	MatchingForwarderMaxChildrenPerNode
 	// MatchingShutdownDrainDuration is the duration of traffic drain during shutdown
 	MatchingShutdownDrainDuration
+	// MatchingErrorInjectionRate is the rate for injecting random error in matching client
+	MatchingErrorInjectionRate
 
 	// key for history
 
