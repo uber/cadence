@@ -171,34 +171,40 @@ func (r *workflowResetterImpl) getBaseBranchToken(
 		baseWorkflow.GetReleaseFn()(retError)
 	}()
 
-	baseVersionHistories := baseWorkflow.GetMutableState().GetVersionHistories()
-	if baseVersionHistories == nil {
-		return nil, execution.ErrMissingVersionHistories
-	}
-	index, err := baseVersionHistories.FindFirstVersionHistoryIndexByItem(
-		persistence.NewVersionHistoryItem(baseLastEventID, baseLastEventVersion),
-	)
-	if err != nil {
-		// the base event and incoming event are from different branch
-		// only re-replicate the gap on the incoming branch
-		// the base branch event will eventually arrived
-		return nil, newNDCRetryTaskErrorWithHint(
-			resendOnResetWorkflowMessage,
-			r.domainID,
-			r.workflowID,
-			r.newRunID,
-			nil,
-			nil,
-			common.Int64Ptr(incomingFirstEventID),
-			common.Int64Ptr(incomingFirstEventVersion),
-		)
-	}
-
-	baseVersionHistory, err := baseVersionHistories.GetVersionHistory(index)
+	mutableState := baseWorkflow.GetMutableState()
+	branchToken, err := mutableState.GetCurrentBranchToken()
 	if err != nil {
 		return nil, err
 	}
-	return baseVersionHistory.GetBranchToken(), nil
+	baseVersionHistories := mutableState.GetVersionHistories()
+	if baseVersionHistories != nil {
+
+		index, err := baseVersionHistories.FindFirstVersionHistoryIndexByItem(
+			persistence.NewVersionHistoryItem(baseLastEventID, baseLastEventVersion),
+		)
+		if err != nil {
+			// the base event and incoming event are from different branch
+			// only re-replicate the gap on the incoming branch
+			// the base branch event will eventually arrived
+			return nil, newNDCRetryTaskErrorWithHint(
+				resendOnResetWorkflowMessage,
+				r.domainID,
+				r.workflowID,
+				r.newRunID,
+				nil,
+				nil,
+				common.Int64Ptr(incomingFirstEventID),
+				common.Int64Ptr(incomingFirstEventVersion),
+			)
+		}
+
+		baseVersionHistory, err := baseVersionHistories.GetVersionHistory(index)
+		if err != nil {
+			return nil, err
+		}
+		branchToken = baseVersionHistory.GetBranchToken()
+	}
+	return branchToken, nil
 }
 
 func (r *workflowResetterImpl) getResetBranchToken(

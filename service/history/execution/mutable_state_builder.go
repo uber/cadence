@@ -115,6 +115,8 @@ type (
 
 		executionInfo    *persistence.WorkflowExecutionInfo // Workflow mutable state info.
 		versionHistories *persistence.VersionHistories
+		// TODO: remove this struct after all 2DC workflows complete
+		replicationState *persistence.ReplicationState
 		hBuilder         *HistoryBuilder
 
 		// in memory only attributes
@@ -324,6 +326,8 @@ func (e *mutableStateBuilder) Load(
 	e.stateInDB = state.ExecutionInfo.State
 	e.nextEventIDInDB = state.ExecutionInfo.NextEventID
 	e.versionHistories = state.VersionHistories
+	// TODO: remove this after all 2DC workflows complete
+	e.replicationState = state.ReplicationState
 	e.checksum = state.Checksum
 
 	if len(state.Checksum.Value) > 0 {
@@ -549,6 +553,11 @@ func (e *mutableStateBuilder) GetStartVersion() (int64, error) {
 }
 
 func (e *mutableStateBuilder) GetLastWriteVersion() (int64, error) {
+
+	// TODO: remove this after all 2DC workflows complete
+	if e.replicationState != nil {
+		return e.replicationState.LastWriteVersion, nil
+	}
 
 	if e.versionHistories != nil {
 		versionHistory, err := e.versionHistories.GetCurrentVersionHistory()

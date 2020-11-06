@@ -355,6 +355,7 @@ workflow_state = ? ` +
 		`and task_id = ? ` +
 		`IF range_id = ?`
 
+	// TODO: remove replication_state after all 2DC workflows complete
 	templateGetWorkflowExecutionQuery = `SELECT execution, replication_state, activity_map, timer_map, ` +
 		`child_executions_map, request_cancel_map, signal_map, signal_requested, buffered_events_list, ` +
 		`buffered_replication_tasks_map, version_histories, version_histories_encoding, checksum ` +
@@ -950,8 +951,8 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 func (d *cassandraPersistence) GetWorkflowExecution(
 	_ context.Context,
 	request *p.InternalGetWorkflowExecutionRequest,
-) (
-	*p.InternalGetWorkflowExecutionResponse, error) {
+) (*p.InternalGetWorkflowExecutionResponse, error) {
+
 	execution := request.Execution
 	query := d.session.Query(templateGetWorkflowExecutionQuery,
 		d.shardID,
@@ -984,6 +985,9 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 	info := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
 	state.ExecutionInfo = info
 	state.VersionHistories = p.NewDataBlob(result["version_histories"].([]byte), common.EncodingType(result["version_histories_encoding"].(string)))
+	// TODO: remove this after all 2DC workflows complete
+	replicationState := createReplicationState(result["replication_state"].(map[string]interface{}))
+	state.ReplicationState = replicationState
 
 	activityInfos := make(map[int64]*p.InternalActivityInfo)
 	aMap := result["activity_map"].(map[int64]map[string]interface{})
@@ -2382,6 +2386,7 @@ func newShardOwnershipLostError(
 	}
 }
 
+// TODO: remove this after all 2DC workflows complete
 func createReplicationState(
 	result map[string]interface{},
 ) *p.ReplicationState {

@@ -348,6 +348,7 @@ type (
 
 	// ReplicationState represents mutable state information for global domains.
 	// This information is used by replication protocol when applying events from remote clusters
+	// TODO: remove this struct after all 2DC workflows complete
 	ReplicationState struct {
 		CurrentVersion      int64
 		StartVersion        int64
@@ -656,6 +657,7 @@ type (
 		ExecutionStats      *ExecutionStats
 		BufferedEvents      []*workflow.HistoryEvent
 		VersionHistories    *VersionHistories
+		ReplicationState    *ReplicationState // TODO: remove this after all 2DC workflows complete
 		Checksum            checksum.Checksum
 	}
 

@@ -44,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
+	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -393,9 +394,17 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *r.ReplicationTask
 		common.IsServiceBusyError,
 	)
 
-	if err == nil || common.IsServiceBusyError(err) {
-		// skip DLQ if the err is service busy error or no error
+	switch {
+	case err == nil:
+		return nil
+	case common.IsServiceBusyError(err):
 		return err
+	case err == execution.ErrMissingVersionHistories:
+		// skip the workflow without version histories
+		p.logger.Warn("Encounter workflow withour version histories")
+		return nil
+	default:
+		//handle error
 	}
 
 	// handle error to DLQ
