@@ -160,7 +160,7 @@ func HistoryScavengerActivity(
 ) (history.ScavengerHeartbeatDetails, error) {
 
 	ctx := activityCtx.Value(scannerContextKey).(scannerContext)
-	rps := ctx.cfg.PersistenceMaxQPS()
+	rps := ctx.cfg.ScannerPersistenceMaxQPS()
 
 	hbd := history.ScavengerHeartbeatDetails{}
 	if activity.HasHeartbeatDetails(activityCtx) {

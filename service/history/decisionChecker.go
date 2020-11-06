@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 )
@@ -65,8 +66,6 @@ type (
 )
 
 const (
-	reservedTaskListPrefix = "/__cadence_sys/"
-
 	maximumScheduleToStartTimeoutForRetryInSeconds = 1800 // 30 minutes
 )
 
@@ -517,7 +516,8 @@ func (v *decisionAttrValidator) validateUpsertWorkflowSearchAttributes(
 		return &workflow.BadRequestError{Message: "IndexedFields is empty on decision."}
 	}
 
-	return v.searchAttributesValidator.ValidateSearchAttributes(attributes.GetSearchAttributes(), domainName)
+	err := v.searchAttributesValidator.ValidateSearchAttributes(thrift.ToSearchAttributes(attributes.GetSearchAttributes()), domainName)
+	return thrift.FromError(err)
 }
 
 func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes(
@@ -564,7 +564,8 @@ func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes
 	if err != nil {
 		return err
 	}
-	return v.searchAttributesValidator.ValidateSearchAttributes(attributes.GetSearchAttributes(), domainEntry.GetInfo().Name)
+	err = v.searchAttributesValidator.ValidateSearchAttributes(thrift.ToSearchAttributes(attributes.GetSearchAttributes()), domainEntry.GetInfo().Name)
+	return thrift.FromError(err)
 }
 
 func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
@@ -657,9 +658,9 @@ func (v *decisionAttrValidator) validatedTaskList(
 		}
 	}
 
-	if strings.HasPrefix(name, reservedTaskListPrefix) {
+	if strings.HasPrefix(name, common.ReservedTaskListPrefix) {
 		return taskList, &workflow.BadRequestError{
-			Message: fmt.Sprintf("task list name cannot start with reserved prefix %v", reservedTaskListPrefix),
+			Message: fmt.Sprintf("task list name cannot start with reserved prefix %v", common.ReservedTaskListPrefix),
 		}
 	}
 

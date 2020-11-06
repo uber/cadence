@@ -172,6 +172,9 @@ func (r *workflowResetterImpl) getBaseBranchToken(
 	}()
 
 	baseVersionHistories := baseWorkflow.GetMutableState().GetVersionHistories()
+	if baseVersionHistories == nil {
+		return nil, execution.ErrMissingVersionHistories
+	}
 	index, err := baseVersionHistories.FindFirstVersionHistoryIndexByItem(
 		persistence.NewVersionHistoryItem(baseLastEventID, baseLastEventVersion),
 	)

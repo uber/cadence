@@ -28,7 +28,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/olivere/elastic"
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/.gen/go/admin"
@@ -42,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
+	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -97,6 +97,7 @@ type (
 		domainDLQHandler      domain.DLQMessageHandler
 		domainFailoverWatcher domain.FailoverWatcher
 		eventSerializder      persistence.PayloadSerializer
+		esClient              elasticsearch.GenericClient
 	}
 
 	getWorkflowRawHistoryV2Token struct {
@@ -149,6 +150,7 @@ func NewAdminHandler(
 			resource.GetLogger(),
 		),
 		eventSerializder: persistence.NewPayloadSerializer(),
+		esClient:         params.ESClient,
 	}
 }
 
@@ -220,7 +222,7 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 			return adh.error(&gen.BadRequestError{Message: fmt.Sprintf("Unknown value type, %v", v)}, scope)
 		}
 		err := adh.params.ESClient.PutMapping(ctx, index, definition.Attr, k, valueType)
-		if elastic.IsNotFound(err) {
+		if adh.esClient.IsNotFoundError(err) {
 			err = adh.params.ESClient.CreateIndex(ctx, index)
 			if err != nil {
 				return adh.error(&gen.InternalServiceError{Message: fmt.Sprintf("Failed to create ES index, err: %v", err)}, scope)
