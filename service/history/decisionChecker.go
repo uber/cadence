@@ -65,8 +65,6 @@ type (
 )
 
 const (
-	reservedTaskListPrefix = "/__cadence_sys/"
-
 	maximumScheduleToStartTimeoutForRetryInSeconds = 1800 // 30 minutes
 )
 
@@ -657,9 +655,9 @@ func (v *decisionAttrValidator) validatedTaskList(
 		}
 	}
 
-	if strings.HasPrefix(name, reservedTaskListPrefix) {
+	if strings.HasPrefix(name, common.ReservedTaskListPrefix) {
 		return taskList, &workflow.BadRequestError{
-			Message: fmt.Sprintf("task list name cannot start with reserved prefix %v", reservedTaskListPrefix),
+			Message: fmt.Sprintf("task list name cannot start with reserved prefix %v", common.ReservedTaskListPrefix),
 		}
 	}
 

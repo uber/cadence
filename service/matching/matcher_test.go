@@ -33,6 +33,7 @@ import (
 	gen "github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -60,7 +61,7 @@ func (t *MatcherTestSuite) SetupTest() {
 	t.controller = gomock.NewController(t.T())
 	t.client = matching.NewMockClient(t.controller)
 	cfg := NewConfig(dynamicconfig.NewNopCollection())
-	t.taskList = newTestTaskListID(uuid.New(), taskListPartitionPrefix+"tl0/1", persistence.TaskListTypeDecision)
+	t.taskList = newTestTaskListID(uuid.New(), common.ReservedTaskListPrefix+"tl0/1", persistence.TaskListTypeDecision)
 	tlCfg, err := newTaskListConfig(t.taskList, cfg, t.newDomainCache())
 	t.NoError(err)
 	tlCfg.forwarderConfig = forwarderConfig{
