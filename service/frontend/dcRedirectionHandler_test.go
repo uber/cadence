@@ -24,16 +24,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/uber/cadence/client/frontend"
-	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/cluster"
@@ -41,6 +38,8 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
