@@ -49,7 +49,7 @@ const (
 type (
 	// Config defines the configuration for scanner
 	Config struct {
-		// ScannerPersistenceMaxQPS the max rate of calls to persistence
+		// ScannerPersistenceMaxQPS the max rate of calls to persistence 
 		// Right now is being used by historyScanner to determine the rate of persistence API calls
 		ScannerPersistenceMaxQPS dynamicconfig.IntPropertyFn
 		// Persistence contains the persistence configuration
