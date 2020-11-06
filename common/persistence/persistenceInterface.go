@@ -738,8 +738,7 @@ type (
 
 	// InternalDomainConfig describes the domain configuration
 	InternalDomainConfig struct {
-		// NOTE: this retention is in days, not in seconds
-		Retention                int32
+		Retention                time.Duration
 		EmitMetric               bool                 // deprecated
 		ArchivalBucket           string               // deprecated
 		ArchivalStatus           types.ArchivalStatus // deprecated
@@ -758,7 +757,7 @@ type (
 		IsGlobalDomain    bool
 		ConfigVersion     int64
 		FailoverVersion   int64
-		LastUpdatedTime   int64
+		LastUpdatedTime   time.Time
 	}
 
 	// InternalGetDomainResponse is the response for GetDomain
@@ -771,8 +770,8 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
-		FailoverEndTime             *int64
-		LastUpdatedTime             int64
+		FailoverEndTime             *time.Time
+		LastUpdatedTime             time.Time
 		NotificationVersion         int64
 	}
 
@@ -785,8 +784,8 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
-		FailoverEndTime             *int64
-		LastUpdatedTime             int64
+		FailoverEndTime             *time.Time
+		LastUpdatedTime             time.Time
 		NotificationVersion         int64
 	}
 
