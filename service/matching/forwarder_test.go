@@ -33,16 +33,18 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	gen "github.com/uber/cadence/.gen/go/matching"
-	"github.com/uber/cadence/.gen/go/matching/matchingservicetest"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type ForwarderTestSuite struct {
 	suite.Suite
 	controller *gomock.Controller
-	client     *matchingservicetest.MockClient
+	client     *matching.MockClient
 	fwdr       *Forwarder
 	cfg        *forwarderConfig
 	taskList   *taskListID
@@ -54,7 +56,7 @@ func TestForwarderSuite(t *testing.T) {
 
 func (t *ForwarderTestSuite) SetupTest() {
 	t.controller = gomock.NewController(t.T())
-	t.client = matchingservicetest.NewMockClient(t.controller)
+	t.client = matching.NewMockClient(t.controller)
 	t.cfg = &forwarderConfig{
 		ForwarderMaxOutstandingPolls: func() int { return 1 },
 		ForwarderMaxRatePerSecond:    func() int { return 2 },
@@ -83,8 +85,8 @@ func (t *ForwarderTestSuite) TestForwardDecisionTask() {
 
 	var request *gen.AddDecisionTaskRequest
 	t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.AddDecisionTaskRequest) {
-			request = arg1
+		func(arg0 context.Context, arg1 *types.AddDecisionTaskRequest) {
+			request = thrift.FromAddDecisionTaskRequest(arg1)
 		},
 	).Return(nil).Times(1)
 
@@ -107,8 +109,8 @@ func (t *ForwarderTestSuite) TestForwardActivityTask() {
 
 	var request *gen.AddActivityTaskRequest
 	t.client.EXPECT().AddActivityTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.AddActivityTaskRequest) {
-			request = arg1
+		func(arg0 context.Context, arg1 *types.AddActivityTaskRequest) {
+			request = thrift.FromAddActivityTaskRequest(arg1)
 		},
 	).Return(nil).Times(1)
 
@@ -157,17 +159,17 @@ func (t *ForwarderTestSuite) TestForwardQueryTask() {
 	resp := &shared.QueryWorkflowResponse{}
 	var request *gen.QueryWorkflowRequest
 	t.client.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.QueryWorkflowRequest) {
-			request = arg1
+		func(arg0 context.Context, arg1 *types.MatchingQueryWorkflowRequest) {
+			request = thrift.FromMatchingQueryWorkflowRequest(arg1)
 		},
-	).Return(resp, nil).Times(1)
+	).Return(thrift.ToQueryWorkflowResponse(resp), nil).Times(1)
 
 	gotResp, err := t.fwdr.ForwardQueryTask(context.Background(), task)
 	t.NoError(err)
 	t.Equal(t.taskList.Parent(20), request.TaskList.GetName())
 	t.Equal(t.fwdr.taskListKind, request.TaskList.GetKind())
 	t.True(task.query.request.QueryRequest == request.QueryRequest)
-	t.True(resp == gotResp)
+	t.Equal(resp, gotResp)
 }
 
 func (t *ForwarderTestSuite) TestForwardQueryTaskRateNotEnforced() {
@@ -175,7 +177,7 @@ func (t *ForwarderTestSuite) TestForwardQueryTaskRateNotEnforced() {
 	task := newInternalQueryTask("id1", &gen.QueryWorkflowRequest{})
 	resp := &shared.QueryWorkflowResponse{}
 	rps := 2
-	t.client.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(resp, nil).Times(rps + 1)
+	t.client.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(thrift.ToQueryWorkflowResponse(resp), nil).Times(rps + 1)
 	for i := 0; i < rps; i++ {
 		_, err := t.fwdr.ForwardQueryTask(context.Background(), task)
 		t.NoError(err)
@@ -205,10 +207,10 @@ func (t *ForwarderTestSuite) TestForwardPollForDecision() {
 
 	var request *gen.PollForDecisionTaskRequest
 	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.PollForDecisionTaskRequest) {
-			request = arg1
+		func(arg0 context.Context, arg1 *types.MatchingPollForDecisionTaskRequest) {
+			request = thrift.FromMatchingPollForDecisionTaskRequest(arg1)
 		},
-	).Return(resp, nil).Times(1)
+	).Return(thrift.ToMatchingPollForDecisionTaskResponse(resp), nil).Times(1)
 
 	task, err := t.fwdr.ForwardPoll(ctx)
 	t.NoError(err)
@@ -219,7 +221,7 @@ func (t *ForwarderTestSuite) TestForwardPollForDecision() {
 	t.Equal("id1", request.GetPollRequest().GetIdentity())
 	t.Equal(t.taskList.Parent(20), request.GetPollRequest().GetTaskList().GetName())
 	t.Equal(t.fwdr.taskListKind, request.GetPollRequest().GetTaskList().GetKind())
-	t.True(resp == task.pollForDecisionResponse())
+	t.Equal(resp, task.pollForDecisionResponse())
 	t.Nil(task.pollForActivityResponse())
 }
 
@@ -233,10 +235,10 @@ func (t *ForwarderTestSuite) TestForwardPollForActivity() {
 
 	var request *gen.PollForActivityTaskRequest
 	t.client.EXPECT().PollForActivityTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *gen.PollForActivityTaskRequest) {
-			request = arg1
+		func(arg0 context.Context, arg1 *types.MatchingPollForActivityTaskRequest) {
+			request = thrift.FromMatchingPollForActivityTaskRequest(arg1)
 		},
-	).Return(resp, nil).Times(1)
+	).Return(thrift.ToPollForActivityTaskResponse(resp), nil).Times(1)
 
 	task, err := t.fwdr.ForwardPoll(ctx)
 	t.NoError(err)
@@ -247,7 +249,7 @@ func (t *ForwarderTestSuite) TestForwardPollForActivity() {
 	t.Equal("id1", request.GetPollRequest().GetIdentity())
 	t.Equal(t.taskList.Parent(20), request.GetPollRequest().GetTaskList().GetName())
 	t.Equal(t.fwdr.taskListKind, request.GetPollRequest().GetTaskList().GetKind())
-	t.True(resp == task.pollForActivityResponse())
+	t.Equal(resp, task.pollForActivityResponse())
 	t.Nil(task.pollForDecisionResponse())
 }
 

@@ -424,6 +424,12 @@ func main() {
 			DuplicatePrefix: "History",
 			MapperAdditions: historyMapperAdditions,
 		},
+		{
+			ThriftPackage:   "github.com/uber/cadence/.gen/go/matching",
+			TypesFile:       "common/types/matching.go",
+			MapperFile:      "common/types/mapper/thrift/matching.go",
+			DuplicatePrefix: "Matching",
+		},
 	}
 
 	for _, p := range packages {
@@ -444,6 +450,9 @@ func main() {
 		for _, name := range pkg.Scope().Names() {
 			obj := pkg.Scope().Lookup(name)
 			t := newType(obj.Type())
+			if _, isConst := obj.(*types.Const); isConst {
+				continue
+			}
 			if count, ok := allNames[t.Name]; ok {
 				allNames[t.Name] = count + 1
 			} else {

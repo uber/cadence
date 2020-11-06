@@ -545,21 +545,13 @@ func (c *elasticV6) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit
 		return nil
 	}
 
-	memo, err := c.serializer.DeserializeVisibilityMemo(p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)))
-	if err != nil {
-		c.logger.Error("failed to deserialize memo",
-			tag.WorkflowID(source.WorkflowID),
-			tag.WorkflowRunID(source.RunID),
-			tag.Error(err))
-	}
-
 	record := &p.InternalVisibilityWorkflowExecutionInfo{
 		WorkflowID:       source.WorkflowID,
 		RunID:            source.RunID,
 		TypeName:         source.WorkflowType,
 		StartTime:        time.Unix(0, source.StartTime),
 		ExecutionTime:    time.Unix(0, source.ExecutionTime),
-		Memo:             thrift.ToMemo(memo),
+		Memo:             p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
 		TaskList:         source.TaskList,
 		SearchAttributes: source.Attr,
 	}

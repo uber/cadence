@@ -353,6 +353,7 @@ func (r *transactionManagerImpl) backfillWorkflowEventsReapply(
 			targetWorkflow,
 			EventsReapplicationResetWorkflowReason,
 			targetWorkflowEvents.Events,
+			false,
 		); err != nil {
 			return 0, execution.TransactionPolicyActive, err
 		}
