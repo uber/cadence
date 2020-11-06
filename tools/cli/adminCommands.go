@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	cassp "github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/tools/cassandra"
 )
 
@@ -218,7 +219,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		prettyPrintJSONObject(branchInfo)
 		histV2 := cassp.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
 		err = histV2.DeleteHistoryBranch(ctx, &persistence.InternalDeleteHistoryBranchRequest{
-			BranchInfo: branchInfo,
+			BranchInfo: *thrift.ToHistoryBranch(&branchInfo),
 			ShardID:    shardIDInt,
 		})
 		if err != nil {

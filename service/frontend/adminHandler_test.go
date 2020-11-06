@@ -472,6 +472,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 	esClient := &esmock.GenericClient{}
 	defer func() { esClient.AssertExpectations(s.T()) }()
 	handler.params.ESClient = esClient
+	handler.esClient = esClient
 
 	mockValidAttr := map[string]interface{}{
 		"testkey": shared.IndexedValueTypeKeyword,
@@ -534,6 +535,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 
 	esClient.On("PutMapping", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(errors.New("error"))
+	esClient.On("IsNotFoundError", mock.Anything).Return(false)
 	esErrorTest := test{
 		Name: "es error",
 		Request: &admin.AddSearchAttributeRequest{
