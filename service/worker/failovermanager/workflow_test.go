@@ -29,10 +29,10 @@ import (
 	"github.com/golang/mock/gomock"
 	"go.uber.org/cadence/worker"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/types"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -209,7 +209,7 @@ func (s *failoverWorkflowTestSuite) assertQueryState(env *testsuite.TestWorkflow
 	s.Equal(expectedState, res.State)
 }
 
-var clusters = []*shared.ClusterReplicationConfiguration{
+var clusters = []*types.ClusterReplicationConfiguration{
 	{
 		ClusterName: common.StringPtr("c1"),
 	},
@@ -221,21 +221,21 @@ var clusters = []*shared.ClusterReplicationConfiguration{
 func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 
 	tests := []struct {
-		domain        *shared.DescribeDomainResponse
+		domain        *types.DescribeDomainResponse
 		sourceCluster string
 		expected      bool
 	}{
 		{
-			domain: &shared.DescribeDomainResponse{
+			domain: &types.DescribeDomainResponse{
 				IsGlobalDomain: common.BoolPtr(false),
 			},
 			sourceCluster: "c1",
 			expected:      false,
 		},
 		{
-			domain: &shared.DescribeDomainResponse{
+			domain: &types.DescribeDomainResponse{
 				IsGlobalDomain: common.BoolPtr(true),
-				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
 					ActiveClusterName: common.StringPtr("c1"),
 					Clusters:          clusters,
 				},
@@ -244,9 +244,9 @@ func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 			expected:      false,
 		},
 		{
-			domain: &shared.DescribeDomainResponse{
+			domain: &types.DescribeDomainResponse{
 				IsGlobalDomain: common.BoolPtr(true),
-				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
 					ActiveClusterName: common.StringPtr("c2"),
 					Clusters:          clusters,
 				},
@@ -255,13 +255,13 @@ func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 			expected:      false,
 		},
 		{
-			domain: &shared.DescribeDomainResponse{
+			domain: &types.DescribeDomainResponse{
 				IsGlobalDomain: common.BoolPtr(true),
-				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
 					ActiveClusterName: common.StringPtr("c2"),
 					Clusters:          clusters,
 				},
-				DomainInfo: &shared.DomainInfo{
+				DomainInfo: &types.DomainInfo{
 					Data: map[string]string{
 						common.DomainDataKeyForManagedFailover: "true",
 					},
@@ -296,14 +296,14 @@ func (s *failoverWorkflowTestSuite) TestGetDomainsActivity() {
 	defer controller.Finish()
 	defer mockResource.Finish(s.T())
 
-	domains := &shared.ListDomainsResponse{
-		Domains: []*shared.DescribeDomainResponse{
+	domains := &types.ListDomainsResponse{
+		Domains: []*types.DescribeDomainResponse{
 			{
-				DomainInfo: &shared.DomainInfo{
+				DomainInfo: &types.DomainInfo{
 					Name: common.StringPtr("d1"),
 					Data: map[string]string{common.DomainDataKeyForManagedFailover: "true"},
 				},
-				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
 					ActiveClusterName: common.StringPtr("c1"),
 					Clusters:          clusters,
 				},
@@ -329,35 +329,35 @@ func (s *failoverWorkflowTestSuite) TestGetDomainsActivity_WithTargetDomains() {
 	defer controller.Finish()
 	defer mockResource.Finish(s.T())
 
-	domains := &shared.ListDomainsResponse{
-		Domains: []*shared.DescribeDomainResponse{
+	domains := &types.ListDomainsResponse{
+		Domains: []*types.DescribeDomainResponse{
 			{
-				DomainInfo: &shared.DomainInfo{
+				DomainInfo: &types.DomainInfo{
 					Name: common.StringPtr("d1"),
 					Data: map[string]string{common.DomainDataKeyForManagedFailover: "true"},
 				},
-				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
 					ActiveClusterName: common.StringPtr("c1"),
 					Clusters:          clusters,
 				},
 				IsGlobalDomain: common.BoolPtr(true),
 			},
 			{
-				DomainInfo: &shared.DomainInfo{
+				DomainInfo: &types.DomainInfo{
 					Name: common.StringPtr("d2"),
 					Data: map[string]string{common.DomainDataKeyForManagedFailover: "true"},
 				},
-				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
 					ActiveClusterName: common.StringPtr("c1"),
 					Clusters:          clusters,
 				},
 				IsGlobalDomain: common.BoolPtr(true),
 			},
 			{
-				DomainInfo: &shared.DomainInfo{
+				DomainInfo: &types.DomainInfo{
 					Name: common.StringPtr("d3"),
 				},
-				ReplicationConfiguration: &shared.DomainReplicationConfiguration{
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
 					ActiveClusterName: common.StringPtr("c1"),
 					Clusters:          clusters,
 				},
@@ -406,14 +406,14 @@ func (s *failoverWorkflowTestSuite) TestFailoverActivity_Error() {
 
 	domains := []string{"d1", "d2"}
 	targetCluster := "c2"
-	replicationConfig := &shared.DomainReplicationConfiguration{
+	replicationConfig := &types.DomainReplicationConfiguration{
 		ActiveClusterName: common.StringPtr(targetCluster),
 	}
-	updateRequest1 := &shared.UpdateDomainRequest{
+	updateRequest1 := &types.UpdateDomainRequest{
 		Name:                     common.StringPtr("d1"),
 		ReplicationConfiguration: replicationConfig,
 	}
-	updateRequest2 := &shared.UpdateDomainRequest{
+	updateRequest2 := &types.UpdateDomainRequest{
 		Name:                     common.StringPtr("d2"),
 		ReplicationConfiguration: replicationConfig,
 	}

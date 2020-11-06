@@ -33,10 +33,6 @@ import (
 	"github.com/uber/cadence/common/service/config"
 )
 
-const (
-	emptyFailoverEndTime = int64(0)
-)
-
 type (
 	nosqlDomainManager struct {
 		nosqlManager
@@ -82,7 +78,7 @@ func (m *nosqlDomainManager) CreateDomain(
 		FailoverVersion:             request.FailoverVersion,
 		FailoverNotificationVersion: p.InitialFailoverNotificationVersion,
 		PreviousFailoverVersion:     common.InitialPreviousFailoverVersion,
-		FailoverEndTime:             emptyFailoverEndTime,
+		FailoverEndTime:             nil,
 		IsGlobalDomain:              request.IsGlobalDomain,
 		LastUpdatedTime:             request.LastUpdatedTime,
 	}
@@ -105,10 +101,6 @@ func (m *nosqlDomainManager) UpdateDomain(
 	ctx context.Context,
 	request *p.InternalUpdateDomainRequest,
 ) error {
-	failoverEndTime := emptyFailoverEndTime
-	if request.FailoverEndTime != nil {
-		failoverEndTime = *request.FailoverEndTime
-	}
 	config, err := m.toNoSQLInternalDomainConfig(request.Config)
 	if err != nil {
 		return err
@@ -122,7 +114,7 @@ func (m *nosqlDomainManager) UpdateDomain(
 		FailoverVersion:             request.FailoverVersion,
 		FailoverNotificationVersion: request.FailoverNotificationVersion,
 		PreviousFailoverVersion:     request.PreviousFailoverVersion,
-		FailoverEndTime:             failoverEndTime,
+		FailoverEndTime:             request.FailoverEndTime,
 		NotificationVersion:         request.NotificationVersion,
 	}
 
@@ -180,13 +172,6 @@ func (m *nosqlDomainManager) GetDomain(
 	row.ReplicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, row.ReplicationConfig.ActiveClusterName)
 	row.ReplicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, row.ReplicationConfig.Clusters)
 
-	// Note: to make it nullable
-	var responseFailoverEndTime *int64
-	if row.FailoverEndTime > emptyFailoverEndTime {
-		domainFailoverEndTime := row.FailoverEndTime
-		responseFailoverEndTime = common.Int64Ptr(domainFailoverEndTime)
-	}
-
 	domainConfig, err := m.fromNoSQLInternalDomainConfig(row.Config)
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
@@ -203,7 +188,7 @@ func (m *nosqlDomainManager) GetDomain(
 		FailoverVersion:             row.FailoverVersion,
 		FailoverNotificationVersion: row.FailoverNotificationVersion,
 		PreviousFailoverVersion:     row.PreviousFailoverVersion,
-		FailoverEndTime:             responseFailoverEndTime,
+		FailoverEndTime:             row.FailoverEndTime,
 		NotificationVersion:         row.NotificationVersion,
 		LastUpdatedTime:             row.LastUpdatedTime,
 	}, nil
@@ -225,12 +210,6 @@ func (m *nosqlDomainManager) ListDomains(
 		row.ReplicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, row.ReplicationConfig.ActiveClusterName)
 		row.ReplicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, row.ReplicationConfig.Clusters)
 
-		// Note: to make it nullable
-		var domainFailoverEndTime *int64
-		if row.FailoverEndTime > emptyFailoverEndTime {
-			domainFailoverEndTime = common.Int64Ptr(row.FailoverEndTime)
-		}
-
 		domainConfig, err := m.fromNoSQLInternalDomainConfig(row.Config)
 		if err != nil {
 			return nil, &workflow.InternalServiceError{
@@ -247,7 +226,7 @@ func (m *nosqlDomainManager) ListDomains(
 			FailoverVersion:             row.FailoverVersion,
 			FailoverNotificationVersion: row.FailoverNotificationVersion,
 			PreviousFailoverVersion:     row.PreviousFailoverVersion,
-			FailoverEndTime:             domainFailoverEndTime,
+			FailoverEndTime:             row.FailoverEndTime,
 			NotificationVersion:         row.NotificationVersion,
 			LastUpdatedTime:             row.LastUpdatedTime,
 		})

@@ -1071,9 +1071,9 @@ func (p *queueRateLimitedPersistenceClient) DeleteMessagesBefore(
 func (p *queueRateLimitedPersistenceClient) EnqueueMessageToDLQ(
 	ctx context.Context,
 	message []byte,
-) (int64, error) {
+) error {
 	if ok := p.rateLimiter.Allow(); !ok {
-		return emptyMessageID, ErrPersistenceLimitExceeded
+		return ErrPersistenceLimitExceeded
 	}
 
 	return p.persistence.EnqueueMessageToDLQ(ctx, message)
@@ -1125,6 +1125,16 @@ func (p *queueRateLimitedPersistenceClient) GetDLQAckLevels(
 	}
 
 	return p.persistence.GetDLQAckLevels(ctx)
+}
+
+func (p *queueRateLimitedPersistenceClient) GetDLQSize(
+	ctx context.Context,
+) (int64, error) {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return 0, ErrPersistenceLimitExceeded
+	}
+
+	return p.persistence.GetDLQSize(ctx)
 }
 
 func (p *queueRateLimitedPersistenceClient) DeleteMessageFromDLQ(

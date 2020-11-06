@@ -256,5 +256,6 @@ var (
 	StoreOperationRangeDeleteMessagesFromDLQ = storeOperation("range-delete-messages-from-dlq")
 	StoreOperationUpdateDLQAckLevel          = storeOperation("update-dlq-ack-level")
 	StoreOperationGetDLQAckLevels            = storeOperation("get-dlq-ack-levels")
+	StoreOperationGetDLQSize                 = storeOperation("get-dlq-size")
 	StoreOperationDeleteMessageFromDLQ       = storeOperation("delete-message-from-dlq")
 )

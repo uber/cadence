@@ -38,8 +38,17 @@ func NewGenericClient(
 	visibilityConfig *config.VisibilityConfig,
 	logger log.Logger,
 ) (GenericClient, error) {
-	// TODO hardcoded to V6 for now
-	return newV6Client(connectConfig, visibilityConfig, logger)
+	if connectConfig.Version == "" {
+		connectConfig.Version = "v6"
+	}
+	switch connectConfig.Version {
+	case "v6":
+		return newV6Client(connectConfig, visibilityConfig, logger)
+	case "v7":
+		return newV7Client(connectConfig, visibilityConfig, logger)
+	default:
+		return nil, fmt.Errorf("not supported ElasticSearch version: %v", connectConfig.Version)
+	}
 }
 
 type (
@@ -65,6 +74,8 @@ type (
 		PutMapping(ctx context.Context, index, root, key, valueType string) error
 		// CreateIndex creates a new index
 		CreateIndex(ctx context.Context, index string) error
+
+		IsNotFoundError(err error) bool
 	}
 
 	// SearchRequest is request for Search

@@ -100,7 +100,7 @@ type (
 		taskMgr                       persistence.TaskManager
 		visibilityMgr                 persistence.VisibilityManager
 		executionMgrFactory           persistence.ExecutionManagerFactory
-		domainReplicationQueue        persistence.DomainReplicationQueue
+		domainReplicationQueue        domain.ReplicationQueue
 		shutdownCh                    chan struct{}
 		shutdownWG                    sync.WaitGroup
 		clusterNo                     int // cluster number
@@ -137,7 +137,7 @@ type (
 		ExecutionMgrFactory           persistence.ExecutionManagerFactory
 		TaskMgr                       persistence.TaskManager
 		VisibilityMgr                 persistence.VisibilityManager
-		DomainReplicationQueue        persistence.DomainReplicationQueue
+		DomainReplicationQueue        domain.ReplicationQueue
 		Logger                        log.Logger
 		ClusterNo                     int
 		ArchiverMetadata              carchiver.ArchivalMetadata

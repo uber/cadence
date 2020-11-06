@@ -2015,14 +2015,13 @@ func (p *queueErrorInjectionPersistenceClient) DeleteMessagesBefore(
 func (p *queueErrorInjectionPersistenceClient) EnqueueMessageToDLQ(
 	ctx context.Context,
 	message []byte,
-) (int64, error) {
+) error {
 	fakeErr := generateFakeError(p.errorRate)
 
-	var response int64
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		response, persistenceErr = p.persistence.EnqueueMessageToDLQ(ctx, message)
+		persistenceErr = p.persistence.EnqueueMessageToDLQ(ctx, message)
 	}
 
 	if fakeErr != nil {
@@ -2032,9 +2031,9 @@ func (p *queueErrorInjectionPersistenceClient) EnqueueMessageToDLQ(
 			tag.Bool(forwardCall),
 			tag.StoreError(persistenceErr),
 		)
-		return emptyMessageID, fakeErr
+		return fakeErr
 	}
-	return response, persistenceErr
+	return persistenceErr
 }
 
 func (p *queueErrorInjectionPersistenceClient) ReadMessagesFromDLQ(
@@ -2136,6 +2135,30 @@ func (p *queueErrorInjectionPersistenceClient) GetDLQAckLevels(
 			tag.StoreError(persistenceErr),
 		)
 		return nil, fakeErr
+	}
+	return response, persistenceErr
+}
+
+func (p *queueErrorInjectionPersistenceClient) GetDLQSize(
+	ctx context.Context,
+) (int64, error) {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var response int64
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		response, persistenceErr = p.persistence.GetDLQSize(ctx)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationGetDLQSize,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return 0, fakeErr
 	}
 	return response, persistenceErr
 }

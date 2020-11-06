@@ -27,10 +27,10 @@ import (
 
 	"github.com/xwb1989/sqlparser"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 // VisibilityQueryValidator for sql query validation
@@ -45,33 +45,9 @@ func NewQueryValidator(validSearchAttributes dynamicconfig.MapPropertyFn) *Visib
 	}
 }
 
-// ValidateListRequestForQuery validate that search attributes in listRequest query is legal,
-// and add prefix for custom keys
-func (qv *VisibilityQueryValidator) ValidateListRequestForQuery(listRequest *workflow.ListWorkflowExecutionsRequest) error {
-	whereClause := listRequest.GetQuery()
-	newQuery, err := qv.validateListOrCountRequestForQuery(whereClause)
-	if err != nil {
-		return err
-	}
-	listRequest.Query = common.StringPtr(newQuery)
-	return nil
-}
-
-// ValidateCountRequestForQuery validate that search attributes in countRequest query is legal,
-// and add prefix for custom keys
-func (qv *VisibilityQueryValidator) ValidateCountRequestForQuery(countRequest *workflow.CountWorkflowExecutionsRequest) error {
-	whereClause := countRequest.GetQuery()
-	newQuery, err := qv.validateListOrCountRequestForQuery(whereClause)
-	if err != nil {
-		return err
-	}
-	countRequest.Query = common.StringPtr(newQuery)
-	return nil
-}
-
-// validateListOrCountRequestForQuery valid sql for visibility API
-// it also adds attr prefix for customized fields
-func (qv *VisibilityQueryValidator) validateListOrCountRequestForQuery(whereClause string) (string, error) {
+// ValidateQuery validates that search attributes in the query are legal.
+// Adds attr prefix for customized fields and returns modified query.
+func (qv *VisibilityQueryValidator) ValidateQuery(whereClause string) (string, error) {
 	if len(whereClause) != 0 {
 		// Build a placeholder query that allows us to easily parse the contents of the where clause.
 		// IMPORTANT: This query is never executed, it is just used to parse and validate whereClause
@@ -86,26 +62,26 @@ func (qv *VisibilityQueryValidator) validateListOrCountRequestForQuery(whereClau
 
 		stmt, err := sqlparser.Parse(placeholderQuery)
 		if err != nil {
-			return "", &workflow.BadRequestError{Message: "Invalid query."}
+			return "", &types.BadRequestError{Message: "Invalid query."}
 		}
 
 		sel, ok := stmt.(*sqlparser.Select)
 		if !ok {
-			return "", &workflow.BadRequestError{Message: "Invalid select query."}
+			return "", &types.BadRequestError{Message: "Invalid select query."}
 		}
 		buf := sqlparser.NewTrackedBuffer(nil)
 		// validate where expr
 		if sel.Where != nil {
 			err = qv.validateWhereExpr(sel.Where.Expr)
 			if err != nil {
-				return "", &workflow.BadRequestError{Message: err.Error()}
+				return "", &types.BadRequestError{Message: err.Error()}
 			}
 			sel.Where.Expr.Format(buf)
 		}
 		// validate order by
 		err = qv.validateOrderByExpr(sel.OrderBy)
 		if err != nil {
-			return "", &workflow.BadRequestError{Message: err.Error()}
+			return "", &types.BadRequestError{Message: err.Error()}
 		}
 		sel.OrderBy.Format(buf)
 

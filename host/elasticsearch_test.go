@@ -26,7 +26,6 @@ package host
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -34,7 +33,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/olivere/elastic"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -43,6 +41,8 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/environment"
+	"github.com/uber/cadence/host/esUtils"
 )
 
 const (
@@ -56,7 +56,7 @@ type elasticsearchIntegrationSuite struct {
 	// not merely log an error
 	*require.Assertions
 	IntegrationBase
-	esClient *elastic.Client
+	esClient esUtils.ESClient
 
 	testSearchAttributeKey string
 	testSearchAttributeVal string
@@ -64,17 +64,17 @@ type elasticsearchIntegrationSuite struct {
 
 // This cluster use customized threshold for history config
 func (s *elasticsearchIntegrationSuite) SetupSuite() {
-	s.setupSuite("testdata/integration_elasticsearch_cluster.yaml")
-	s.esClient = CreateESClient(s.Suite, s.testClusterConfig.ESConfig.URL.String())
-	PutIndexTemplate(s.Suite, s.esClient, "testdata/es_index_template.json", "test-visibility-template")
+	s.setupSuite("testdata/integration_elasticsearch_" + environment.GetESVersion() + "_cluster.yaml")
+	s.esClient = esUtils.CreateESClient(s.Suite, s.testClusterConfig.ESConfig.URL.String(), environment.GetESVersion())
+	s.esClient.PutIndexTemplate(s.Suite, "testdata/es_"+environment.GetESVersion()+"_index_template.json", "test-visibility-template")
 	indexName := s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName]
-	CreateIndex(s.Suite, s.esClient, indexName)
+	s.esClient.CreateIndex(s.Suite, indexName)
 	s.putIndexSettings(indexName, defaultTestValueOfESIndexMaxResultWindow)
 }
 
 func (s *elasticsearchIntegrationSuite) TearDownSuite() {
 	s.tearDownSuite()
-	DeleteIndex(s.Suite, s.esClient, s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName])
+	s.esClient.DeleteIndex(s.Suite, s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName])
 }
 
 func (s *elasticsearchIntegrationSuite) SetupTest() {
@@ -1077,18 +1077,16 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey()
 }
 
 func (s *elasticsearchIntegrationSuite) putIndexSettings(indexName string, maxResultWindowSize int) {
-	_, err := s.esClient.IndexPutSettings(indexName).
-		BodyString(fmt.Sprintf(`{"max_result_window" : %d}`, defaultTestValueOfESIndexMaxResultWindow)).
-		Do(context.Background())
+	err := s.esClient.PutMaxResultWindow(indexName, maxResultWindowSize)
 	s.Require().NoError(err)
-	s.verifyMaxResultWindowSize(indexName, defaultTestValueOfESIndexMaxResultWindow)
+	s.verifyMaxResultWindowSize(indexName, maxResultWindowSize)
 }
 
 func (s *elasticsearchIntegrationSuite) verifyMaxResultWindowSize(indexName string, targetSize int) {
 	for i := 0; i < numOfRetry; i++ {
-		settings, err := s.esClient.IndexGetSettings(indexName).Do(context.Background())
+		currentWindow, err := s.esClient.GetMaxResultWindow(indexName)
 		s.Require().NoError(err)
-		if settings[indexName].Settings["index"].(map[string]interface{})["max_result_window"].(string) == strconv.Itoa(targetSize) {
+		if currentWindow == strconv.Itoa(targetSize) {
 			return
 		}
 		time.Sleep(waitTimeInMs * time.Millisecond)
