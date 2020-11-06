@@ -28,7 +28,6 @@ import (
 	publicservicetest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
 
 	"github.com/uber/cadence/.gen/go/admin/adminservicetest"
-	"github.com/uber/cadence/.gen/go/cadence/workflowservicetest"
 	"github.com/uber/cadence/.gen/go/history/historyservicetest"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
@@ -83,11 +82,11 @@ type (
 		// internal services clients
 
 		SDKClient            *publicservicetest.MockClient
-		FrontendClient       *workflowservicetest.MockClient
+		FrontendClient       *frontend.MockClient
 		MatchingClient       *matching.MockClient
 		HistoryClient        *historyservicetest.MockClient
 		RemoteAdminClient    *adminservicetest.MockClient
-		RemoteFrontendClient *workflowservicetest.MockClient
+		RemoteFrontendClient *frontend.MockClient
 		ClientBean           *client.MockBean
 
 		// persistence clients
@@ -127,10 +126,10 @@ func NewTest(
 	}
 	logger := loggerimpl.NewLogger(zapLogger)
 
-	frontendClient := workflowservicetest.NewMockClient(controller)
+	frontendClient := frontend.NewMockClient(controller)
 	matchingClient := matching.NewMockClient(controller)
 	historyClient := historyservicetest.NewMockClient(controller)
-	remoteFrontendClient := workflowservicetest.NewMockClient(controller)
+	remoteFrontendClient := frontend.NewMockClient(controller)
 	remoteAdminClient := adminservicetest.NewMockClient(controller)
 	clientBean := client.NewMockBean(controller)
 	clientBean.EXPECT().GetFrontendClient().Return(frontendClient).AnyTimes()
