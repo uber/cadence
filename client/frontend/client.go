@@ -27,7 +27,6 @@ import (
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 )
@@ -649,7 +648,7 @@ func (c *clientImpl) createLongPollContext(parent context.Context) (context.Cont
 	return context.WithTimeout(parent, c.longPollTimeout)
 }
 
-func (c *clientImpl) getRandomClient() (workflowserviceclient.Interface, error) {
+func (c *clientImpl) getRandomClient() (Client, error) {
 	// generate a random shard key to do load balancing
 	key := uuid.New()
 	client, err := c.clients.GetClientForKey(key)
@@ -657,7 +656,7 @@ func (c *clientImpl) getRandomClient() (workflowserviceclient.Interface, error) 
 		return nil, err
 	}
 
-	return client.(workflowserviceclient.Interface), nil
+	return client.(Client), nil
 }
 
 func (c *clientImpl) GetClusterInfo(

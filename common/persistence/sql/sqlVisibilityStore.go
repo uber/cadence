@@ -30,18 +30,15 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
 	sqlVisibilityStore struct {
 		sqlStore
-		serializer p.PayloadSerializer
 	}
 
 	visibilityPageToken struct {
@@ -61,7 +58,6 @@ func NewSQLVisibilityStore(cfg config.SQL, logger log.Logger) (p.VisibilityStore
 			db:     db,
 			logger: logger,
 		},
-		serializer: p.NewPayloadSerializer(),
 	}, nil
 }
 
@@ -69,7 +65,6 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(
 	ctx context.Context,
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
-	memo := s.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	_, err := s.db.InsertIntoVisibility(ctx, &sqlplugin.VisibilityRow{
 		DomainID:         request.DomainUUID,
 		WorkflowID:       request.WorkflowID,
@@ -77,8 +72,8 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(
 		StartTime:        time.Unix(0, request.StartTimestamp),
 		ExecutionTime:    time.Unix(0, request.ExecutionTimestamp),
 		WorkflowTypeName: request.WorkflowTypeName,
-		Memo:             memo.Data,
-		Encoding:         string(memo.GetEncoding()),
+		Memo:             request.Memo.Data,
+		Encoding:         string(request.Memo.GetEncoding()),
 	})
 
 	return err
@@ -88,7 +83,6 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(
 	ctx context.Context,
 	request *p.InternalRecordWorkflowExecutionClosedRequest,
 ) error {
-	memo := s.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	closeTime := time.Unix(0, request.CloseTimestamp)
 	result, err := s.db.ReplaceIntoVisibility(ctx, &sqlplugin.VisibilityRow{
 		DomainID:         request.DomainUUID,
@@ -100,8 +94,8 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(
 		CloseTime:        &closeTime,
 		CloseStatus:      common.Int32Ptr(int32(*thrift.FromWorkflowExecutionCloseStatus(&request.Status))),
 		HistoryLength:    &request.HistoryLength,
-		Memo:             memo.Data,
-		Encoding:         string(memo.GetEncoding()),
+		Memo:             request.Memo.Data,
+		Encoding:         string(request.Memo.GetEncoding()),
 	})
 	if err != nil {
 		return err
@@ -320,20 +314,13 @@ func (s *sqlVisibilityStore) rowToInfo(row *sqlplugin.VisibilityRow) *p.Internal
 	if row.ExecutionTime.UnixNano() == 0 {
 		row.ExecutionTime = row.StartTime
 	}
-	memo, err := s.serializer.DeserializeVisibilityMemo(p.NewDataBlob(row.Memo, common.EncodingType(row.Encoding)))
-	if err != nil {
-		s.logger.Error("failed to deserialize memo",
-			tag.WorkflowID(row.WorkflowID),
-			tag.WorkflowRunID(row.RunID),
-			tag.Error(err))
-	}
 	info := &p.InternalVisibilityWorkflowExecutionInfo{
 		WorkflowID:    row.WorkflowID,
 		RunID:         row.RunID,
 		TypeName:      row.WorkflowTypeName,
 		StartTime:     row.StartTime,
 		ExecutionTime: row.ExecutionTime,
-		Memo:          thrift.ToMemo(memo),
+		Memo:          p.NewDataBlob(row.Memo, common.EncodingType(row.Encoding)),
 	}
 	if row.CloseStatus != nil {
 		status := workflow.WorkflowExecutionCloseStatus(*row.CloseStatus)
@@ -396,20 +383,4 @@ func (s *sqlVisibilityStore) deserializePageToken(data []byte) (*visibilityPageT
 func (s *sqlVisibilityStore) serializePageToken(token *visibilityPageToken) ([]byte, error) {
 	data, err := json.Marshal(token)
 	return data, err
-}
-
-func (s *sqlVisibilityStore) serializeMemo(visibilityMemo *types.Memo, domainID, wID, rID string) *p.DataBlob {
-	memo, err := s.serializer.SerializeVisibilityMemo(thrift.FromMemo(visibilityMemo), common.EncodingTypeThriftRW)
-	if err != nil {
-		s.logger.WithTags(
-			tag.WorkflowDomainID(domainID),
-			tag.WorkflowID(wID),
-			tag.WorkflowRunID(rID),
-			tag.Error(err)).
-			Error("Unable to encode visibility memo")
-	}
-	if memo == nil {
-		return &p.DataBlob{}
-	}
-	return memo
 }

@@ -229,10 +229,6 @@ func (s *TestBase) Setup() {
 		},
 	}
 	transferPQS := history.ProcessingQueueStates{transferPQSMap}
-	transferPQSBlob, _ := s.PayloadSerializer.SerializeProcessingQueueStates(
-		&transferPQS,
-		common.EncodingTypeThriftRW,
-	)
 	timerPQSMap := map[string][]*history.ProcessingQueueState{
 		s.ClusterMetadata.GetCurrentClusterName(): {
 			&history.ProcessingQueueState{
@@ -244,10 +240,6 @@ func (s *TestBase) Setup() {
 		},
 	}
 	timerPQS := history.ProcessingQueueStates{StatesByCluster: timerPQSMap}
-	timerPQSBlob, _ := s.PayloadSerializer.SerializeProcessingQueueStates(
-		&timerPQS,
-		common.EncodingTypeThriftRW,
-	)
 
 	s.ShardInfo = &p.ShardInfo{
 		ShardID:                       shardID,
@@ -257,8 +249,8 @@ func (s *TestBase) Setup() {
 		TimerAckLevel:                 time.Time{},
 		ClusterTimerAckLevel:          map[string]time.Time{clusterName: time.Time{}},
 		ClusterTransferAckLevel:       map[string]int64{clusterName: 0},
-		TransferProcessingQueueStates: transferPQSBlob,
-		TimerProcessingQueueStates:    timerPQSBlob,
+		TransferProcessingQueueStates: &transferPQS,
+		TimerProcessingQueueStates:    &timerPQS,
 	}
 
 	s.TaskIDGenerator = &TestTransferTaskIDGenerator{}
