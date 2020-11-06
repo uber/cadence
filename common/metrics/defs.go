@@ -1690,7 +1690,7 @@ const (
 	CadenceShardSuccessGauge
 	CadenceShardFailureGauge
 
-	DomainReplicationQueueSizeCounter
+	DomainReplicationQueueSizeGauge
 	DomainReplicationQueueSizeErrorCount
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
@@ -2164,7 +2164,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		},
 		CadenceShardSuccessGauge:             {metricName: "cadence_shard_success", metricType: Gauge},
 		CadenceShardFailureGauge:             {metricName: "cadence_shard_failure", metricType: Gauge},
-		DomainReplicationQueueSizeCounter:    {metricName: "domain_replication_queue_size", metricType: Counter},
+		DomainReplicationQueueSizeGauge:      {metricName: "domain_replication_queue_size", metricType: Gauge},
 		DomainReplicationQueueSizeErrorCount: {metricName: "domain_replication_queue_failed", metricType: Counter},
 	},
 	History: {

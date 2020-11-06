@@ -238,7 +238,7 @@ func (db *cdb) SelectQueueMetadata(
 	}, nil
 }
 
-func (db *cdb) SelectQueueSize(
+func (db *cdb) GetQueueSize(
 	ctx context.Context,
 	queueType persistence.QueueType,
 ) (int64, error) {

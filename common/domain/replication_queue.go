@@ -47,7 +47,7 @@ const (
 
 var _ ReplicationQueue = (*replicationQueueImpl)(nil)
 
-// NewReplicationQueue creates a new DomainReplicationQueue instance
+// NewReplicationQueue creates a new ReplicationQueue instance
 func NewReplicationQueue(
 	queue persistence.QueueManager,
 	clusterName string,
@@ -347,9 +347,9 @@ func (q *replicationQueueImpl) emitDLQSize() {
 			}
 			q.metricsClient.Scope(
 				metrics.DomainReplicationQueueScope,
-			).AddCounter(
-				metrics.DomainReplicationQueueSizeCounter,
-				size,
+			).UpdateGauge(
+				metrics.DomainReplicationQueueSizeGauge,
+				float64(size),
 			)
 		}
 	}

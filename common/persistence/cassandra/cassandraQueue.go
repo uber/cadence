@@ -305,17 +305,9 @@ func (q *nosqlQueue) GetDLQSize(
 	ctx context.Context,
 ) (int64, error) {
 
-	size, err := q.db.SelectQueueSize(ctx, q.getDLQTypeFromQueueType())
+	size, err := q.db.GetQueueSize(ctx, q.getDLQTypeFromQueueType())
 	if err != nil {
-		switch {
-		case q.db.IsThrottlingError(err):
-			return size, &shared.ServiceBusyError{Message: "GetDLQSize operation failed with transient error."}
-		default:
-			return size, &shared.InternalServiceError{
-				Message: fmt.Sprintf("GetDLQSize operation failed. Error %v", err),
-			}
-
-		}
+		return 0, convertCommonErrors(q.db, "GetDLQSize", err)
 	}
 	return size, err
 }
