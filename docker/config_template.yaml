@@ -81,7 +81,9 @@ persistence:
         {{- if eq $es "true" }}
         es-visibility:
             elasticsearch:
-                version: { { default .Env.ES_VERSION "" } }
+                version: {{ default .Env.ES_VERSION "" }}
+                username: {{ default .Env.ES_USER "" }}
+                password: {{ default .Env.ES_PWD "" }}
                 url:
                     scheme: "http"
                     host: "{{ default .Env.ES_SEEDS "" }}:9200"
