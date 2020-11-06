@@ -924,6 +924,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
 			FailedRequest: failRequest,
 		})
+		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -1426,6 +1427,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
 			FailedRequest: failRequest,
 		})
+		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}

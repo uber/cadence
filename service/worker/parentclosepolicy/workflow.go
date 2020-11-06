@@ -22,6 +22,7 @@ package parentclosepolicy
 
 import (
 	"context"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"time"
 
 	"go.uber.org/cadence"
@@ -122,6 +123,7 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 					Identity: common.StringPtr(processorWFTypeName),
 				},
 			})
+			err = thrift.FromError(err)
 		case shared.ParentClosePolicyRequestCancel:
 			err = client.RequestCancelWorkflowExecution(nil, &types.HistoryRequestCancelWorkflowExecutionRequest{
 				DomainUUID: common.StringPtr(request.DomainUUID),
@@ -134,6 +136,7 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 					Identity: common.StringPtr(processorWFTypeName),
 				},
 			})
+			err = thrift.FromError(err)
 		}
 
 		if err != nil {
