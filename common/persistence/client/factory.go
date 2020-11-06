@@ -57,8 +57,8 @@ type (
 		NewExecutionManager(shardID int) (p.ExecutionManager, error)
 		// NewVisibilityManager returns a new visibility manager
 		NewVisibilityManager() (p.VisibilityManager, error)
-		// NewDomainReplicationQueue returns a new queue for domain replication
-		NewDomainReplicationQueue() (p.DomainReplicationQueue, error)
+		// NewDomainReplicationQueueManager returns a new queue for domain replication
+		NewDomainReplicationQueueManager() (p.QueueManager, error)
 	}
 	// DataStoreFactory is a low level interface to be implemented by a datastore
 	// Examples of datastores are cassandra, mysql etc
@@ -262,7 +262,7 @@ func (f *factoryImpl) NewVisibilityManager() (p.VisibilityManager, error) {
 	return result, nil
 }
 
-func (f *factoryImpl) NewDomainReplicationQueue() (p.DomainReplicationQueue, error) {
+func (f *factoryImpl) NewDomainReplicationQueueManager() (p.QueueManager, error) {
 	ds := f.datastores[storeTypeQueue]
 	store, err := ds.factory.NewQueue(p.DomainReplicationQueueType)
 	if err != nil {
@@ -277,7 +277,7 @@ func (f *factoryImpl) NewDomainReplicationQueue() (p.DomainReplicationQueue, err
 		result = p.NewQueuePersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
 
-	return p.NewDomainReplicationQueue(result, f.clusterName, f.metricsClient, f.logger), nil
+	return result, nil
 }
 
 // Close closes this factory

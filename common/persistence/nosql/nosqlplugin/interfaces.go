@@ -103,6 +103,8 @@ type (
 		UpdateQueueMetadataCas(ctx context.Context, row QueueMetadataRow) error
 		// Read a QueueMetadata
 		SelectQueueMetadata(ctx context.Context, queueType persistence.QueueType) (*QueueMetadataRow, error)
+		// GetQueueSize return the queue size
+		GetQueueSize(ctx context.Context, queueType persistence.QueueType) (int64, error)
 	}
 
 	// domainCRUD is for domain + domain metadata storage system

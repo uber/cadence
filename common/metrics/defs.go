@@ -272,6 +272,8 @@ const (
 	PersistenceUpdateDLQAckLevelScope
 	// PersistenceGetDLQAckLevelScope tracks GetDLQAckLevel calls made by service to persistence layer
 	PersistenceGetDLQAckLevelScope
+	// PersistenceGetDLQSizeScope tracks GetDLQSize calls made by service to persistence layer
+	PersistenceGetDLQSizeScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientDescribeHistoryHostScope tracks RPC calls to history service
@@ -595,8 +597,6 @@ const (
 	PersistenceGetHistoryTreeScope
 	// PersistenceGetAllHistoryTreeBranchesScope tracks GetHistoryTree calls made by service to persistence layer
 	PersistenceGetAllHistoryTreeBranchesScope
-	// PersistenceDomainReplicationQueueScope is the metrics scope for domain replication queue
-	PersistenceDomainReplicationQueueScope
 
 	// ClusterMetadataArchivalConfigScope tracks ArchivalConfig calls to ClusterMetadata
 	ClusterMetadataArchivalConfigScope
@@ -662,6 +662,8 @@ const (
 
 	// DomainFailoverScope is used in domain failover processor
 	DomainFailoverScope
+	// DomainReplicationQueueScope is used in domainreplication queue
+	DomainReplicationQueueScope
 
 	NumCommonScopes
 )
@@ -1160,7 +1162,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetAckLevelScope:                              {operation: "GetAckLevel"},
 		PersistenceUpdateDLQAckLevelScope:                        {operation: "UpdateDLQAckLevel"},
 		PersistenceGetDLQAckLevelScope:                           {operation: "GetDLQAckLevel"},
-		PersistenceDomainReplicationQueueScope:                   {operation: "DomainReplicationQueue"},
+		PersistenceGetDLQSizeScope:                               {operation: "GetDLQSize"},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 
@@ -1349,7 +1351,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		BlobstoreClientDeleteScope:          {operation: "BlobstoreClientDelete", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 		BlobstoreClientDirectoryExistsScope: {operation: "BlobstoreClientDirectoryExists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 
-		DomainFailoverScope: {operation: "DomainFailover"},
+		DomainFailoverScope:         {operation: "DomainFailover"},
+		DomainReplicationQueueScope: {operation: "DomainReplicationQueue"},
 	},
 	// Frontend Scope Names
 	Frontend: {
@@ -1661,10 +1664,6 @@ const (
 	MatchingClientForwardedCounter
 	MatchingClientInvalidTaskListName
 
-	DomainReplicationTaskAckLevelGauge
-	DomainReplicationDLQAckLevelGauge
-	DomainReplicationDLQMaxLevelGauge
-
 	// common metrics that are emitted per task list
 	CadenceRequestsPerTaskList
 	CadenceFailuresPerTaskList
@@ -1690,6 +1689,9 @@ const (
 
 	CadenceShardSuccessGauge
 	CadenceShardFailureGauge
+
+	DomainReplicationQueueSizeGauge
+	DomainReplicationQueueSizeErrorCount
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -2096,10 +2098,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		MatchingClientForwardedCounter:                            {metricName: "forwarded", metricType: Counter},
 		MatchingClientInvalidTaskListName:                         {metricName: "invalid_task_list_name", metricType: Counter},
 
-		DomainReplicationTaskAckLevelGauge: {metricName: "domain_replication_task_ack_level", metricType: Gauge},
-		DomainReplicationDLQAckLevelGauge:  {metricName: "domain_dlq_ack_level", metricType: Gauge},
-		DomainReplicationDLQMaxLevelGauge:  {metricName: "domain_dlq_max_level", metricType: Gauge},
-
 		// per task list common metrics
 
 		CadenceRequestsPerTaskList: {
@@ -2165,8 +2163,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceErrRemoteSyncMatchFailedPerTaskListCounter: {
 			metricName: "cadence_errors_remote_syncmatch_failed_per_tl", metricRollupName: "cadence_errors_remote_syncmatch_failed", metricType: Counter,
 		},
-		CadenceShardSuccessGauge: {metricName: "cadence_shard_success", metricType: Gauge},
-		CadenceShardFailureGauge: {metricName: "cadence_shard_failure", metricType: Gauge},
+		CadenceShardSuccessGauge:             {metricName: "cadence_shard_success", metricType: Gauge},
+		CadenceShardFailureGauge:             {metricName: "cadence_shard_failure", metricType: Gauge},
+		DomainReplicationQueueSizeGauge:      {metricName: "domain_replication_queue_size", metricType: Gauge},
+		DomainReplicationQueueSizeErrorCount: {metricName: "domain_replication_queue_failed", metricType: Counter},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
