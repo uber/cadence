@@ -174,7 +174,7 @@ writerLoop:
 				r, err := w.tlMgr.db.CreateTasks(tasks)
 				if err != nil {
 					w.logger.Error("Persistent store operation failure",
-						tag.StoreOperationCreateTask,
+						tag.StoreOperationCreateTasks,
 						tag.Error(err),
 						tag.WorkflowTaskListName(w.taskListID.name),
 						tag.WorkflowTaskListType(w.taskListID.taskType),
