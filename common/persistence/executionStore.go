@@ -82,6 +82,7 @@ func (m *executionManagerImpl) GetWorkflowExecution(
 			RequestCancelInfos: response.State.RequestCancelInfos,
 			SignalInfos:        response.State.SignalInfos,
 			SignalRequestedIDs: response.State.SignalRequestedIDs,
+			ReplicationState:   response.State.ReplicationState, // TODO: remove this after all 2DC workflows complete
 			Checksum:           response.State.Checksum,
 		},
 	}

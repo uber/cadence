@@ -77,6 +77,8 @@ var (
 	ErrMissingChildWorkflowInitiatedEvent = &workflow.InternalServiceError{Message: "unable to get child workflow initiated event"}
 	// ErrEventsAfterWorkflowFinish is the error indicating server error trying to write events after workflow finish event
 	ErrEventsAfterWorkflowFinish = &workflow.InternalServiceError{Message: "error validating last event being workflow finish event"}
+	// ErrMissingVersionHistories is the error indicating cadence failed to process 2dc workflow type.
+	ErrMissingVersionHistories = &workflow.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
 )
 
 type (
@@ -114,6 +116,8 @@ type (
 
 		executionInfo    *persistence.WorkflowExecutionInfo // Workflow mutable state info.
 		versionHistories *persistence.VersionHistories
+		// TODO: remove this struct after all 2DC workflows complete
+		replicationState *persistence.ReplicationState
 		hBuilder         *HistoryBuilder
 
 		// in memory only attributes
@@ -323,6 +327,8 @@ func (e *mutableStateBuilder) Load(
 	e.stateInDB = state.ExecutionInfo.State
 	e.nextEventIDInDB = state.ExecutionInfo.NextEventID
 	e.versionHistories = state.VersionHistories
+	// TODO: remove this after all 2DC workflows complete
+	e.replicationState = state.ReplicationState
 	e.checksum = state.Checksum
 
 	if len(state.Checksum.Value) > 0 {
@@ -548,6 +554,11 @@ func (e *mutableStateBuilder) GetStartVersion() (int64, error) {
 }
 
 func (e *mutableStateBuilder) GetLastWriteVersion() (int64, error) {
+
+	// TODO: remove this after all 2DC workflows complete
+	if e.replicationState != nil {
+		return e.replicationState.LastWriteVersion, nil
+	}
 
 	if e.versionHistories != nil {
 		versionHistory, err := e.versionHistories.GetCurrentVersionHistory()

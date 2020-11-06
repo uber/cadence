@@ -127,11 +127,11 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			TimeLimitPerArchivalIteration: dc.GetDurationProperty(dynamicconfig.WorkerTimeLimitPerArchivalIteration, archiver.MaxArchivalIterationTimeout()),
 		},
 		ScannerCfg: &scanner.Config{
-			PersistenceMaxQPS:      dc.GetIntProperty(dynamicconfig.ScannerPersistenceMaxQPS, 100),
-			Persistence:            &params.PersistenceConfig,
-			ClusterMetadata:        params.ClusterMetadata,
-			TaskListScannerEnabled: dc.GetBoolProperty(dynamicconfig.TaskListScannerEnabled, true),
-			HistoryScannerEnabled:  dc.GetBoolProperty(dynamicconfig.HistoryScannerEnabled, true),
+			ScannerPersistenceMaxQPS: dc.GetIntProperty(dynamicconfig.ScannerPersistenceMaxQPS, 5),
+			Persistence:              &params.PersistenceConfig,
+			ClusterMetadata:          params.ClusterMetadata,
+			TaskListScannerEnabled:   dc.GetBoolProperty(dynamicconfig.TaskListScannerEnabled, true),
+			HistoryScannerEnabled:    dc.GetBoolProperty(dynamicconfig.HistoryScannerEnabled, false),
 			ConcreteExecutionScannerConfig: &executions.ScannerWorkflowDynamicConfig{
 				Enabled:                 dc.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerEnabled, false),
 				Concurrency:             dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerConcurrency, 25),

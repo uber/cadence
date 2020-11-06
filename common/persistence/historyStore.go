@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -97,8 +98,9 @@ func (m *historyV2ManagerImpl) ForkHistoryBranch(
 			Message: err.Error(),
 		}
 	}
+
 	req := &InternalForkHistoryBranchRequest{
-		ForkBranchInfo: forkBranch,
+		ForkBranchInfo: *thrift.ToHistoryBranch(&forkBranch),
 		ForkNodeID:     request.ForkNodeID,
 		NewBranchID:    uuid.New(),
 		Info:           request.Info,
@@ -110,7 +112,7 @@ func (m *historyV2ManagerImpl) ForkHistoryBranch(
 		return nil, err
 	}
 
-	token, err := m.thriftEncoder.Encode(&resp.NewBranchInfo)
+	token, err := m.thriftEncoder.Encode(thrift.FromHistoryBranch(&resp.NewBranchInfo))
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +142,7 @@ func (m *historyV2ManagerImpl) DeleteHistoryBranch(
 		}
 	}
 	req := &InternalDeleteHistoryBranchRequest{
-		BranchInfo: branch,
+		BranchInfo: *thrift.ToHistoryBranch(&branch),
 		ShardID:    shardID,
 	}
 
@@ -169,8 +171,12 @@ func (m *historyV2ManagerImpl) GetHistoryTree(
 	if err != nil {
 		return nil, err
 	}
+	var branches []*workflow.HistoryBranch
+	for _, b := range resp.Branches {
+		branches = append(branches, thrift.FromHistoryBranch(b))
+	}
 	return &GetHistoryTreeResponse{
-		Branches: resp.Branches,
+		Branches: branches,
 	}, nil
 }
 
@@ -235,7 +241,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(
 	req := &InternalAppendHistoryNodesRequest{
 		IsNewBranch:   request.IsNewBranch,
 		Info:          request.Info,
-		BranchInfo:    branch,
+		BranchInfo:    *thrift.ToHistoryBranch(&branch),
 		NodeID:        nodeID,
 		Events:        blob,
 		TransactionID: request.TransactionID,

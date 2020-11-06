@@ -56,6 +56,7 @@ type (
 			currentWorkflow execution.Workflow,
 			resetReason string,
 			additionalReapplyEvents []*shared.HistoryEvent,
+			skipSignalReapply bool,
 		) error
 	}
 
@@ -107,6 +108,7 @@ func (r *workflowResetterImpl) ResetWorkflow(
 	currentWorkflow execution.Workflow,
 	resetReason string,
 	additionalReapplyEvents []*shared.HistoryEvent,
+	skipSignalReapply bool,
 ) (retError error) {
 
 	domainEntry, err := r.domainCache.GetDomainByID(domainID)
@@ -142,6 +144,7 @@ func (r *workflowResetterImpl) ResetWorkflow(
 		resetWorkflowVersion,
 		resetReason,
 		additionalReapplyEvents,
+		skipSignalReapply,
 	)
 	if err != nil {
 		return err
@@ -170,6 +173,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 	resetWorkflowVersion int64,
 	resetReason string,
 	additionalReapplyEvents []*shared.HistoryEvent,
+	skipSignalReapply bool,
 ) (execution.Workflow, error) {
 
 	resetWorkflow, err := r.replayResetWorkflow(
@@ -234,19 +238,26 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 		return nil, err
 	}
 
-	if err := r.reapplyContinueAsNewWorkflowEvents(
-		ctx,
-		resetMutableState,
-		domainID,
-		workflowID,
-		baseRunID,
-		baseBranchToken,
-		baseRebuildLastEventID+1,
-		baseNextEventID,
-	); err != nil {
-		return nil, err
+	// TODO right now only signals are eligible for reapply, so we can directly skip the whole reapply process
+	// for the sake of performance. In the future, if there are other events that need to be reapplied, remove this check
+	// For example, we may want to re-apply activity/timer results for https://github.com/uber/cadence/issues/2934
+	if !skipSignalReapply {
+		if err := r.reapplyResetAndContinueAsNewWorkflowEvents(
+			ctx,
+			resetMutableState,
+			domainID,
+			workflowID,
+			baseRunID,
+			baseBranchToken,
+			baseRebuildLastEventID+1,
+			baseNextEventID,
+		); err != nil {
+			return nil, err
+		}
+
 	}
 
+	// NOTE: this is reapplying events that are passing into the API that we shouldn't skip
 	if err := r.reapplyEvents(resetMutableState, additionalReapplyEvents); err != nil {
 		return nil, err
 	}
@@ -448,7 +459,7 @@ func (r *workflowResetterImpl) terminateWorkflow(
 	)
 }
 
-func (r *workflowResetterImpl) reapplyContinueAsNewWorkflowEvents(
+func (r *workflowResetterImpl) reapplyResetAndContinueAsNewWorkflowEvents(
 	ctx ctx.Context,
 	resetMutableState execution.MutableState,
 	domainID string,

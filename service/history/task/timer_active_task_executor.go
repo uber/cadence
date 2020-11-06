@@ -24,7 +24,6 @@ import (
 	"context"
 	"fmt"
 
-	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -32,6 +31,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -432,24 +433,25 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 		}
 	}
 
-	execution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(task.WorkflowID),
-		RunId:      common.StringPtr(task.RunID)}
-	taskList := &workflow.TaskList{
+	execution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(task.WorkflowID),
+		RunID:      common.StringPtr(task.RunID)}
+	taskList := &types.TaskList{
 		Name: common.StringPtr(activityInfo.TaskList),
 	}
 	scheduleToStartTimeout := activityInfo.ScheduleToStartTimeout
 
 	release(nil) // release earlier as we don't need the lock anymore
 
-	return t.shard.GetService().GetMatchingClient().AddActivityTask(ctx, &m.AddActivityTaskRequest{
+	err = t.shard.GetService().GetMatchingClient().AddActivityTask(ctx, &types.AddActivityTaskRequest{
 		DomainUUID:                    common.StringPtr(targetDomainID),
 		SourceDomainUUID:              common.StringPtr(domainID),
 		Execution:                     &execution,
 		TaskList:                      taskList,
-		ScheduleId:                    common.Int64Ptr(scheduledID),
+		ScheduleID:                    common.Int64Ptr(scheduledID),
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
 	})
+	return thrift.FromError(err)
 }
 
 func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(

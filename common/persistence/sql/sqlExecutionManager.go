@@ -298,6 +298,14 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 		Memo:                               info.GetMemo(),
 	}
 
+	// TODO: remove this after all 2DC workflows complete
+	if info.LastWriteEventID != nil {
+		state.ReplicationState = &p.ReplicationState{}
+		state.ReplicationState.StartVersion = info.GetStartVersion()
+		state.ReplicationState.LastWriteVersion = execution.LastWriteVersion
+		state.ReplicationState.LastWriteEventID = info.GetLastWriteEventID()
+	}
+
 	if info.GetVersionHistories() != nil {
 		state.VersionHistories = p.NewDataBlob(
 			info.GetVersionHistories(),

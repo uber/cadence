@@ -31,9 +31,8 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/matching"
-	"github.com/uber/cadence/.gen/go/matching/matchingservicetest"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -42,6 +41,8 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/engine"
@@ -60,7 +61,7 @@ type (
 		mockShard           *shard.TestContext
 		mockEngine          *engine.MockEngine
 		mockDomainCache     *cache.MockDomainCache
-		mockMatchingClient  *matchingservicetest.MockClient
+		mockMatchingClient  *matching.MockClient
 		mockClusterMetadata *cluster.MockMetadata
 
 		mockExecutionMgr *mocks.ExecutionManager
@@ -1126,14 +1127,14 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Fire() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockMatchingClient.EXPECT().AddActivityTask(
 		gomock.Any(),
-		&matching.AddActivityTaskRequest{
+		&types.AddActivityTaskRequest{
 			DomainUUID:       common.StringPtr(activityInfo.DomainID),
 			SourceDomainUUID: common.StringPtr(activityInfo.DomainID),
-			Execution:        &workflowExecution,
-			TaskList: &workflow.TaskList{
+			Execution:        thrift.ToWorkflowExecution(&workflowExecution),
+			TaskList: &types.TaskList{
 				Name: common.StringPtr(activityInfo.TaskList),
 			},
-			ScheduleId:                    common.Int64Ptr(activityInfo.ScheduleID),
+			ScheduleID:                    common.Int64Ptr(activityInfo.ScheduleID),
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(activityInfo.ScheduleToStartTimeout),
 		},
 	).Return(nil).Times(1)

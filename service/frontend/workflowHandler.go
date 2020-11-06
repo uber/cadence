@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -52,6 +53,8 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -62,6 +65,8 @@ const (
 const (
 	// HealthStatusOK is used when this node is healthy and rpc requests are allowed
 	HealthStatusOK HealthStatus = iota + 1
+	// HealthStatusWarmingUp is used when the rpc handler is warming up
+	HealthStatusWarmingUp
 	// HealthStatusShuttingDown is used when the rpc handler is shutting down
 	HealthStatusShuttingDown
 )
@@ -138,6 +143,7 @@ var (
 	errWorkflowIDTooLong   = &gen.BadRequestError{Message: "WorkflowID length exceeds limit."}
 	errSignalNameTooLong   = &gen.BadRequestError{Message: "SignalName length exceeds limit."}
 	errTaskListTooLong     = &gen.BadRequestError{Message: "TaskList length exceeds limit."}
+	errRawTaskListTooLong  = &gen.BadRequestError{Message: "Raw TaskList length exceeds limit."}
 	errRequestIDTooLong    = &gen.BadRequestError{Message: "RequestID length exceeds limit."}
 	errIdentityTooLong     = &gen.BadRequestError{Message: "Identity length exceeds limit."}
 
@@ -154,7 +160,7 @@ func NewWorkflowHandler(
 	return &WorkflowHandler{
 		Resource:        resource,
 		config:          config,
-		healthStatus:    int32(HealthStatusOK),
+		healthStatus:    int32(HealthStatusWarmingUp),
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		rateLimiter: quotas.NewMultiStageRateLimiter(
 			func() float64 {
@@ -195,6 +201,20 @@ func NewWorkflowHandler(
 
 // Start starts the handler
 func (wh *WorkflowHandler) Start() {
+	// TODO: Get warmup duration from config. Even better, run proactive checks such as probing downstream connections.
+	const warmUpDuration = 30 * time.Second
+
+	warmupTimer := time.NewTimer(warmUpDuration)
+	go func() {
+		<-warmupTimer.C
+		wh.GetLogger().Warn("Service warmup duration has elapsed.")
+		if atomic.CompareAndSwapInt32(&wh.healthStatus, int32(HealthStatusWarmingUp), int32(HealthStatusOK)) {
+			wh.GetLogger().Warn("Warmup time has elapsed. Service is healthy.")
+		} else {
+			status := HealthStatus(atomic.LoadInt32(&wh.healthStatus))
+			wh.GetLogger().Warn(fmt.Sprintf("Warmup time has elapsed. Service status is: %v", status.String()))
+		}
+	}()
 }
 
 // Stop stops the handler
@@ -216,6 +236,11 @@ func (wh *WorkflowHandler) isShuttingDown() bool {
 func (wh *WorkflowHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
 	status := HealthStatus(atomic.LoadInt32(&wh.healthStatus))
 	msg := status.String()
+
+	if status != HealthStatusOK {
+		wh.GetLogger().Warn(fmt.Sprintf("Service status is: %v", msg))
+	}
+
 	return &health.HealthStatus{
 		Ok:  status == HealthStatusOK,
 		Msg: &msg,
@@ -465,13 +490,13 @@ func (wh *WorkflowHandler) PollForActivityTask(
 
 	pollerID := uuid.New()
 	op := func() error {
-		var err error
-		resp, err = wh.GetMatchingClient().PollForActivityTask(ctx, &m.PollForActivityTaskRequest{
+		clientResp, err := wh.GetMatchingClient().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
 			DomainUUID:  common.StringPtr(domainID),
 			PollerID:    common.StringPtr(pollerID),
-			PollRequest: pollRequest,
+			PollRequest: thrift.ToPollForActivityTaskRequest(pollRequest),
 		})
-		return err
+		resp = thrift.FromPollForActivityTaskResponse(clientResp)
+		return thrift.FromError(err)
 	}
 
 	err = backoff.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
@@ -558,13 +583,13 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	pollerID := uuid.New()
 	var matchingResp *m.PollForDecisionTaskResponse
 	op := func() error {
-		var err error
-		matchingResp, err = wh.GetMatchingClient().PollForDecisionTask(ctx, &m.PollForDecisionTaskRequest{
+		clientResp, err := wh.GetMatchingClient().PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{
 			DomainUUID:  common.StringPtr(domainID),
 			PollerID:    common.StringPtr(pollerID),
-			PollRequest: pollRequest,
+			PollRequest: thrift.ToPollForDecisionTaskRequest(pollRequest),
 		})
-		return err
+		matchingResp = thrift.FromMatchingPollForDecisionTaskResponse(clientResp)
+		return thrift.FromError(err)
 	}
 
 	err = backoff.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
@@ -618,12 +643,13 @@ func (wh *WorkflowHandler) cancelOutstandingPoll(ctx context.Context, err error,
 	if ctx.Err() == context.Canceled {
 		// Our rpc stack does not propagates context cancellation to the other service.  Lets make an explicit
 		// call to matching to notify this poller is gone to prevent any tasks being dispatched to zombie pollers.
-		err = wh.GetMatchingClient().CancelOutstandingPoll(context.Background(), &m.CancelOutstandingPollRequest{
+		err = wh.GetMatchingClient().CancelOutstandingPoll(context.Background(), &types.CancelOutstandingPollRequest{
 			DomainUUID:   common.StringPtr(domainID),
 			TaskListType: common.Int32Ptr(taskListType),
-			TaskList:     taskList,
+			TaskList:     thrift.ToTaskList(taskList),
 			PollerID:     common.StringPtr(pollerID),
 		})
+		err = thrift.FromError(err)
 		// We can not do much if this call fails.  Just log the error and move on
 		if err != nil {
 			wh.GetLogger().Warn("Failed to cancel outstanding poller.",
@@ -1679,7 +1705,8 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 		CompletedRequest: completeRequest,
 	}
 
-	err = wh.GetMatchingClient().RespondQueryTaskCompleted(ctx, matchingRequest)
+	err = wh.GetMatchingClient().RespondQueryTaskCompleted(ctx, thrift.ToMatchingRespondQueryTaskCompletedRequest(matchingRequest))
+	err = thrift.FromError(err)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -1769,7 +1796,8 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errRequestIDTooLong, scope)
 	}
 
-	if err := wh.searchAttributesValidator.ValidateSearchAttributes(startRequest.SearchAttributes, domainName); err != nil {
+	if err := wh.searchAttributesValidator.ValidateSearchAttributes(thrift.ToSearchAttributes(startRequest.SearchAttributes), domainName); err != nil {
+		err = thrift.FromError(err)
 		return nil, wh.error(err, scope)
 	}
 
@@ -2238,7 +2266,8 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if err := wh.searchAttributesValidator.ValidateSearchAttributes(signalWithStartRequest.SearchAttributes, domainName); err != nil {
+	if err := wh.searchAttributesValidator.ValidateSearchAttributes(thrift.ToSearchAttributes(signalWithStartRequest.SearchAttributes), domainName); err != nil {
+		err = thrift.FromError(err)
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2834,7 +2863,9 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}, scope)
 	}
 
-	if err := wh.visibilityQueryValidator.ValidateListRequestForQuery(listRequest); err != nil {
+	validatedQuery, err := wh.visibilityQueryValidator.ValidateQuery(listRequest.GetQuery())
+	if err != nil {
+		err = thrift.FromError(err)
 		return nil, wh.error(err, scope)
 	}
 
@@ -2849,7 +2880,7 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 		Domain:        domain,
 		PageSize:      int(listRequest.GetPageSize()),
 		NextPageToken: listRequest.NextPageToken,
-		Query:         listRequest.GetQuery(),
+		Query:         validatedQuery,
 	}
 	persistenceResp, err := wh.GetVisibilityManager().ListWorkflowExecutions(ctx, req)
 	if err != nil {
@@ -2901,7 +2932,9 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}, scope)
 	}
 
-	if err := wh.visibilityQueryValidator.ValidateListRequestForQuery(listRequest); err != nil {
+	validatedQuery, err := wh.visibilityQueryValidator.ValidateQuery(listRequest.GetQuery())
+	if err != nil {
+		err = thrift.FromError(err)
 		return nil, wh.error(err, scope)
 	}
 
@@ -2916,7 +2949,7 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 		Domain:        domain,
 		PageSize:      int(listRequest.GetPageSize()),
 		NextPageToken: listRequest.NextPageToken,
-		Query:         listRequest.GetQuery(),
+		Query:         validatedQuery,
 	}
 	persistenceResp, err := wh.GetVisibilityManager().ScanWorkflowExecutions(ctx, req)
 	if err != nil {
@@ -2959,7 +2992,9 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if err := wh.visibilityQueryValidator.ValidateCountRequestForQuery(countRequest); err != nil {
+	validatedQuery, err := wh.visibilityQueryValidator.ValidateQuery(countRequest.GetQuery())
+	if err != nil {
+		err = thrift.FromError(err)
 		return nil, wh.error(err, scope)
 	}
 
@@ -2972,7 +3007,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 	req := &persistence.CountWorkflowExecutionsRequest{
 		DomainUUID: domainID,
 		Domain:     domain,
-		Query:      countRequest.GetQuery(),
+		Query:      validatedQuery,
 	}
 	persistenceResp, err := wh.GetVisibilityManager().CountWorkflowExecutions(ctx, req)
 	if err != nil {
@@ -3070,6 +3105,10 @@ func (wh *WorkflowHandler) QueryWorkflow(
 
 	if wh.config.DisallowQuery(queryRequest.GetDomain()) {
 		return nil, wh.error(errQueryDisallowedForDomain, scope, getWfIDRunIDTags(wfExecution)...)
+	}
+
+	if ok := wh.allow(queryRequest); !ok {
+		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
@@ -3223,10 +3262,12 @@ func (wh *WorkflowHandler) DescribeTaskList(
 		return nil, err
 	}
 
-	response, err := wh.GetMatchingClient().DescribeTaskList(ctx, &m.DescribeTaskListRequest{
+	clientResp, err := wh.GetMatchingClient().DescribeTaskList(ctx, &types.MatchingDescribeTaskListRequest{
 		DomainUUID:  common.StringPtr(domainID),
-		DescRequest: request,
+		DescRequest: thrift.ToDescribeTaskListRequest(request),
 	})
+	response := thrift.FromDescribeTaskListResponse(clientResp)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -3264,10 +3305,12 @@ func (wh *WorkflowHandler) ListTaskListPartitions(
 		return nil, err
 	}
 
-	resp, err := wh.GetMatchingClient().ListTaskListPartitions(ctx, &m.ListTaskListPartitionsRequest{
+	clientResp, err := wh.GetMatchingClient().ListTaskListPartitions(ctx, &types.MatchingListTaskListPartitionsRequest{
 		Domain:   request.Domain,
-		TaskList: request.TaskList,
+		TaskList: thrift.ToTaskList(request.TaskList),
 	})
+	resp = thrift.FromListTaskListPartitionsResponse(clientResp)
+	err = thrift.FromError(err)
 	return resp, err
 }
 
@@ -3517,7 +3560,14 @@ func (wh *WorkflowHandler) validateTaskList(t *gen.TaskList, scope metrics.Scope
 	if !wh.validIDLength(t.GetName(), scope, domain) {
 		return wh.error(errTaskListTooLong, scope)
 	}
+	if wh.isRawListList(t) && len(t.GetName()) > wh.config.MaxRawTaskListNameLimit(domain) {
+		return wh.error(errRawTaskListTooLong, scope)
+	}
 	return nil
+}
+
+func (wh *WorkflowHandler) isRawListList(t *gen.TaskList) bool {
+	return t.GetKind() != gen.TaskListKindSticky && !strings.HasPrefix(t.GetName(), common.ReservedTaskListPrefix)
 }
 
 func (wh *WorkflowHandler) validateExecutionAndEmitMetrics(w *gen.WorkflowExecution, scope metrics.Scope) error {
@@ -3734,7 +3784,7 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 ) error {
 
 	clusterMetadata := wh.GetClusterMetadata()
-	respChan := make(chan *gen.DescribeDomainResponse, len(clusterMetadata.GetAllClusterInfo()))
+	respChan := make(chan *types.DescribeDomainResponse, len(clusterMetadata.GetAllClusterInfo()))
 	wg := &sync.WaitGroup{}
 
 	describeDomain := func(
@@ -3745,7 +3795,7 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 		defer wg.Done()
 		resp, _ := client.DescribeDomain(
 			ctx,
-			&gen.DescribeDomainRequest{
+			&types.DescribeDomainRequest{
 				Name: domainName,
 			},
 		)
@@ -3934,6 +3984,8 @@ func (hs HealthStatus) String() string {
 	switch hs {
 	case HealthStatusOK:
 		return "OK"
+	case HealthStatusWarmingUp:
+		return "WarmingUp"
 	case HealthStatusShuttingDown:
 		return "ShuttingDown"
 	default:
