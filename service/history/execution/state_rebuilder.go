@@ -151,30 +151,29 @@ func (r *stateRebuilderImpl) Rebuild(
 		return nil, 0, err
 	}
 	rebuildVersionHistories := rebuiltMutableState.GetVersionHistories()
-	if rebuildVersionHistories == nil {
-		return nil, 0, ErrMissingVersionHistories
-	}
-	currentVersionHistory, err := rebuildVersionHistories.GetCurrentVersionHistory()
-	if err != nil {
-		return nil, 0, err
-	}
-	lastItem, err := currentVersionHistory.GetLastItem()
-	if err != nil {
-		return nil, 0, err
-	}
-	if !lastItem.Equals(persistence.NewVersionHistoryItem(
-		baseLastEventID,
-		baseLastEventVersion,
-	)) {
-		return nil, 0, &shared.BadRequestError{Message: fmt.Sprintf(
-			"nDCStateRebuilder unable to rebuild mutable state to event ID: %v, version: %v, "+
-				"baseLastEventID + baseLastEventVersion is not the same as the last event of the last "+
-				"batch, event ID: %v, version :%v ,typicaly because of attemptting to rebuild to a middle of a batch",
+	if rebuildVersionHistories != nil {
+		currentVersionHistory, err := rebuildVersionHistories.GetCurrentVersionHistory()
+		if err != nil {
+			return nil, 0, err
+		}
+		lastItem, err := currentVersionHistory.GetLastItem()
+		if err != nil {
+			return nil, 0, err
+		}
+		if !lastItem.Equals(persistence.NewVersionHistoryItem(
 			baseLastEventID,
 			baseLastEventVersion,
-			lastItem.EventID,
-			lastItem.Version,
-		)}
+		)) {
+			return nil, 0, &shared.BadRequestError{Message: fmt.Sprintf(
+				"nDCStateRebuilder unable to rebuild mutable state to event ID: %v, version: %v, "+
+					"baseLastEventID + baseLastEventVersion is not the same as the last event of the last "+
+					"batch, event ID: %v, version :%v ,typicaly because of attemptting to rebuild to a middle of a batch",
+				baseLastEventID,
+				baseLastEventVersion,
+				lastItem.EventID,
+				lastItem.Version,
+			)}
+		}
 	}
 
 	// close rebuilt mutable state transaction clearing all generated tasks, etc.

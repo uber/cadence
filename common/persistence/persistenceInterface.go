@@ -311,6 +311,7 @@ type (
 	InternalWorkflowMutableState struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
 		VersionHistories *DataBlob
+		ReplicationState *ReplicationState // TODO: remove this after all 2DC workflows complete
 		ActivityInfos    map[int64]*InternalActivityInfo
 
 		TimerInfos          map[string]*TimerInfo
