@@ -178,12 +178,11 @@ func (q *sqlQueue) GetAckLevels(
 func (q *sqlQueue) EnqueueMessageToDLQ(
 	ctx context.Context,
 	messagePayload []byte,
-) (int64, error) {
+) error {
 
-	var lastMessageID int64
 	err := q.txExecute(ctx, "EnqueueMessageToDLQ", func(tx sqlplugin.Tx) error {
 		var err error
-		lastMessageID, err = tx.GetLastEnqueuedMessageIDForUpdate(ctx, q.getDLQTypeFromQueueType())
+		lastMessageID, err := tx.GetLastEnqueuedMessageIDForUpdate(ctx, q.getDLQTypeFromQueueType())
 		if err != nil {
 			if err == sql.ErrNoRows {
 				lastMessageID = -1
@@ -195,9 +194,9 @@ func (q *sqlQueue) EnqueueMessageToDLQ(
 		return err
 	})
 	if err != nil {
-		return emptyMessageID, &workflow.InternalServiceError{Message: err.Error()}
+		return &workflow.InternalServiceError{Message: err.Error()}
 	}
-	return lastMessageID + 1, nil
+	return nil
 }
 
 func (q *sqlQueue) ReadMessagesFromDLQ(
@@ -316,6 +315,13 @@ func (q *sqlQueue) GetDLQAckLevels(
 ) (map[string]int64, error) {
 
 	return q.db.GetAckLevels(ctx, q.getDLQTypeFromQueueType(), false)
+}
+
+func (q *sqlQueue) GetDLQSize(
+	ctx context.Context,
+) (int64, error) {
+
+	return q.db.GetQueueSize(ctx, q.getDLQTypeFromQueueType())
 }
 
 func (q *sqlQueue) getDLQTypeFromQueueType() persistence.QueueType {

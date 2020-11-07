@@ -26,6 +26,7 @@ import (
 
 	"go.uber.org/yarpc"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
@@ -249,7 +250,7 @@ func (c *metricClient) emitForwardedFromStats(
 	if taskList == nil {
 		return
 	}
-	isChildPartition := strings.HasPrefix(taskList.GetName(), taskListPartitionPrefix)
+	isChildPartition := strings.HasPrefix(taskList.GetName(), common.ReservedTaskListPrefix)
 	switch {
 	case forwardedFrom != "":
 		c.metricsClient.IncCounter(scope, metrics.MatchingClientForwardedCounter)

@@ -31,9 +31,9 @@ import (
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -318,7 +318,7 @@ func validateTargetAndSourceCluster(targetCluster, sourceCluster string) error {
 	return nil
 }
 
-func shouldFailover(domain *shared.DescribeDomainResponse, sourceCluster string) bool {
+func shouldFailover(domain *types.DescribeDomainResponse, sourceCluster string) bool {
 	if !domain.GetIsGlobalDomain() {
 		return false
 	}
@@ -327,7 +327,7 @@ func shouldFailover(domain *shared.DescribeDomainResponse, sourceCluster string)
 	return isDomainTarget && isDomainFailoverManagedByCadence(domain)
 }
 
-func isDomainFailoverManagedByCadence(domain *shared.DescribeDomainResponse) bool {
+func isDomainFailoverManagedByCadence(domain *types.DescribeDomainResponse) bool {
 	domainData := domain.DomainInfo.GetData()
 	return strings.ToLower(strings.TrimSpace(domainData[common.DomainDataKeyForManagedFailover])) == "true"
 }
@@ -338,9 +338,9 @@ func getClient(ctx context.Context) frontend.Client {
 	return feClient
 }
 
-func getAllDomains(ctx context.Context, targetDomains []string) ([]*shared.DescribeDomainResponse, error) {
+func getAllDomains(ctx context.Context, targetDomains []string) ([]*types.DescribeDomainResponse, error) {
 	feClient := getClient(ctx)
-	var res []*shared.DescribeDomainResponse
+	var res []*types.DescribeDomainResponse
 
 	isTargetDomainsProvided := len(targetDomains) > 0
 	targetDomainsSet := make(map[string]struct{})
@@ -353,7 +353,7 @@ func getAllDomains(ctx context.Context, targetDomains []string) ([]*shared.Descr
 	pagesize := int32(200)
 	var token []byte
 	for more := true; more; more = len(token) > 0 {
-		listRequest := &shared.ListDomainsRequest{
+		listRequest := &types.ListDomainsRequest{
 			PageSize:      common.Int32Ptr(pagesize),
 			NextPageToken: token,
 		}
@@ -385,10 +385,10 @@ func FailoverActivity(ctx context.Context, params *FailoverActivityParams) (*Fai
 	var successDomains []string
 	var failedDomains []string
 	for _, domain := range domains {
-		replicationConfig := &shared.DomainReplicationConfiguration{
+		replicationConfig := &types.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(params.TargetCluster),
 		}
-		updateRequest := &shared.UpdateDomainRequest{
+		updateRequest := &types.UpdateDomainRequest{
 			Name:                     common.StringPtr(domain),
 			ReplicationConfiguration: replicationConfig,
 		}

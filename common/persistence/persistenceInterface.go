@@ -25,11 +25,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/common/types"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -179,12 +178,13 @@ type (
 		DeleteMessagesBefore(ctx context.Context, messageID int64) error
 		UpdateAckLevel(ctx context.Context, messageID int64, clusterName string) error
 		GetAckLevels(ctx context.Context) (map[string]int64, error)
-		EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) (int64, error)
+		EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) error
 		ReadMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*InternalQueueMessage, []byte, error)
 		DeleteMessageFromDLQ(ctx context.Context, messageID int64) error
 		RangeDeleteMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64) error
 		UpdateDLQAckLevel(ctx context.Context, messageID int64, clusterName string) error
 		GetDLQAckLevels(ctx context.Context) (map[string]int64, error)
+		GetDLQSize(ctx context.Context) (int64, error)
 	}
 
 	// InternalQueueMessage is the message that stores in the queue
@@ -311,6 +311,7 @@ type (
 	InternalWorkflowMutableState struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
 		VersionHistories *DataBlob
+		ReplicationState *ReplicationState // TODO: remove this after all 2DC workflows complete
 		ActivityInfos    map[int64]*InternalActivityInfo
 
 		TimerInfos          map[string]*TimerInfo
@@ -498,7 +499,7 @@ type (
 		// The info for clean up data in background
 		Info string
 		// The branch to be appended
-		BranchInfo workflow.HistoryBranch
+		BranchInfo types.HistoryBranch
 		// The first eventID becomes the nodeID to be appended
 		NodeID int64
 		// The events to be appended
@@ -535,7 +536,7 @@ type (
 	// InternalForkHistoryBranchRequest is used to fork a history branch
 	InternalForkHistoryBranchRequest struct {
 		// The base branch to fork from
-		ForkBranchInfo workflow.HistoryBranch
+		ForkBranchInfo types.HistoryBranch
 		// The nodeID to fork from, the new branch will start from ( inclusive ), the base branch will stop at(exclusive)
 		ForkNodeID int64
 		// branchID of the new branch
@@ -549,13 +550,13 @@ type (
 	// InternalForkHistoryBranchResponse is the response to ForkHistoryBranchRequest
 	InternalForkHistoryBranchResponse struct {
 		// branchInfo to represent the new branch
-		NewBranchInfo workflow.HistoryBranch
+		NewBranchInfo types.HistoryBranch
 	}
 
 	// InternalDeleteHistoryBranchRequest is used to remove a history branch
 	InternalDeleteHistoryBranchRequest struct {
 		// branch to be deleted
-		BranchInfo workflow.HistoryBranch
+		BranchInfo types.HistoryBranch
 		// Used in sharded data stores to identify which shard to use
 		ShardID int
 	}
@@ -617,7 +618,7 @@ type (
 	// InternalGetHistoryTreeResponse is the response to GetHistoryTree
 	InternalGetHistoryTreeResponse struct {
 		// all branches of a tree
-		Branches []*workflow.HistoryBranch
+		Branches []*types.HistoryBranch
 	}
 
 	// InternalVisibilityWorkflowExecutionInfo is visibility info for internal response
@@ -738,8 +739,7 @@ type (
 
 	// InternalDomainConfig describes the domain configuration
 	InternalDomainConfig struct {
-		// NOTE: this retention is in days, not in seconds
-		Retention                int32
+		Retention                time.Duration
 		EmitMetric               bool                 // deprecated
 		ArchivalBucket           string               // deprecated
 		ArchivalStatus           types.ArchivalStatus // deprecated
@@ -758,7 +758,7 @@ type (
 		IsGlobalDomain    bool
 		ConfigVersion     int64
 		FailoverVersion   int64
-		LastUpdatedTime   int64
+		LastUpdatedTime   time.Time
 	}
 
 	// InternalGetDomainResponse is the response for GetDomain
@@ -771,8 +771,8 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
-		FailoverEndTime             *int64
-		LastUpdatedTime             int64
+		FailoverEndTime             *time.Time
+		LastUpdatedTime             time.Time
 		NotificationVersion         int64
 	}
 
@@ -785,8 +785,8 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
-		FailoverEndTime             *int64
-		LastUpdatedTime             int64
+		FailoverEndTime             *time.Time
+		LastUpdatedTime             time.Time
 		NotificationVersion         int64
 	}
 

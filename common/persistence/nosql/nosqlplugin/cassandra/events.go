@@ -26,11 +26,14 @@ import (
 	"sort"
 	"time"
 
+	p "github.com/uber/cadence/common/persistence"
+
+	"github.com/uber/cadence/common/types"
+
 	"github.com/gocql/gocql"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
@@ -78,7 +81,7 @@ func (db *cdb) InsertIntoHistoryTreeAndNode(ctx context.Context, treeRow *nosqlp
 		// Note: for perf, prefer using batch for inserting more than one records
 		batch := db.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 		batch.Query(v2templateInsertTree,
-			treeRow.TreeID, treeRow.BranchID, ancs, treeRow.CreateTimestampMilliseconds, treeRow.Info)
+			treeRow.TreeID, treeRow.BranchID, ancs, p.UnixNanoToDBTimestamp(treeRow.CreateTimestamp.UnixNano()), treeRow.Info)
 		batch.Query(v2templateUpsertData,
 			nodeRow.TreeID, nodeRow.BranchID, nodeRow.NodeID, nodeRow.TxnID, nodeRow.Data, nodeRow.DataEncoding)
 		err = db.session.ExecuteBatch(batch)
@@ -86,7 +89,7 @@ func (db *cdb) InsertIntoHistoryTreeAndNode(ctx context.Context, treeRow *nosqlp
 		var query *gocql.Query
 		if treeRow != nil {
 			query = db.session.Query(v2templateInsertTree,
-				treeRow.TreeID, treeRow.BranchID, ancs, treeRow.CreateTimestampMilliseconds, treeRow.Info).WithContext(ctx)
+				treeRow.TreeID, treeRow.BranchID, ancs, p.UnixNanoToDBTimestamp(treeRow.CreateTimestamp.UnixNano()), treeRow.Info).WithContext(ctx)
 		}
 		if nodeRow != nil {
 			query = db.session.Query(v2templateUpsertData,
@@ -147,14 +150,11 @@ func (db *cdb) SelectAllHistoryTrees(ctx context.Context, nextPageToken []byte, 
 	}
 	pagingToken := iter.PageState()
 
-	// Ideally we should just use int64. But we have been using time.Time for a long time.
-	// I am not sure using a int64 will behave the same.
-	// Therefore, here still using a time.Time to read, and then convert to int64
 	createTime := time.Time{}
 	var rows []*nosqlplugin.HistoryTreeRow
 	row := &nosqlplugin.HistoryTreeRow{}
 	for iter.Scan(&row.TreeID, &row.BranchID, &createTime, &row.Info) {
-		row.CreateTimestampMilliseconds = p.UnixNanoToDBTimestamp(createTime.UnixNano())
+		row.CreateTimestamp = time.Unix(0, p.DBTimestampToUnixNano(p.UnixNanoToDBTimestamp(createTime.UnixNano())))
 		rows = append(rows, row)
 		row = &nosqlplugin.HistoryTreeRow{}
 	}
@@ -216,11 +216,11 @@ func (db *cdb) SelectFromHistoryTree(ctx context.Context, filter *nosqlplugin.Hi
 
 func parseBranchAncestors(
 	ancestors []map[string]interface{},
-) []*shared.HistoryBranchRange {
+) []*types.HistoryBranchRange {
 
-	ans := make([]*shared.HistoryBranchRange, 0, len(ancestors))
+	ans := make([]*types.HistoryBranchRange, 0, len(ancestors))
 	for _, e := range ancestors {
-		an := &shared.HistoryBranchRange{}
+		an := &types.HistoryBranchRange{}
 		for k, v := range e {
 			switch k {
 			case "branch_id":

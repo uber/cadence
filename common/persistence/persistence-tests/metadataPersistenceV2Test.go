@@ -110,6 +110,7 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 	isGlobalDomain := false
 	configVersion := int64(0)
 	failoverVersion := int64(0)
+	lastUpdateTime := int64(100)
 
 	resp0, err0 := m.CreateDomain(
 		ctx,
@@ -134,6 +135,7 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 		isGlobalDomain,
 		configVersion,
 		failoverVersion,
+		lastUpdateTime,
 	)
 	m.NoError(err0)
 	m.NotNil(resp0)
@@ -166,7 +168,7 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 	m.True(resp1.ReplicationConfig.Clusters[0].ClusterName == cluster.TestCurrentClusterName)
 	m.Equal(p.InitialFailoverNotificationVersion, resp1.FailoverNotificationVersion)
 	m.Nil(resp1.FailoverEndTime)
-	m.NotEqual(0, resp1.LastUpdatedTime)
+	m.Equal(lastUpdateTime, resp1.LastUpdatedTime)
 
 	resp2, err2 := m.CreateDomain(
 		ctx,
@@ -190,6 +192,7 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 		isGlobalDomain,
 		configVersion,
 		failoverVersion,
+		0,
 	)
 	m.Error(err2)
 	m.IsType(&gen.DomainAlreadyExistsError{}, err2)
@@ -268,6 +271,7 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 		isGlobalDomain,
 		configVersion,
 		failoverVersion,
+		0,
 	)
 	m.NoError(err1)
 	m.NotNil(resp1)
@@ -412,6 +416,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 				isGlobalDomain,
 				configVersion,
 				failoverVersion,
+				0,
 			)
 			if err1 == nil {
 				atomic.AddInt32(&successCount, 1)
@@ -512,6 +517,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 		isGlobalDomain,
 		configVersion,
 		failoverVersion,
+		0,
 	)
 	m.NoError(err1)
 	m.Equal(id, resp1.ID)
@@ -671,6 +677,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 		isGlobalDomain,
 		configVersion,
 		failoverVersion,
+		0,
 	)
 	m.NoError(err1)
 	m.Equal(id, resp1.ID)
@@ -927,6 +934,7 @@ func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 		isGlobalDomain,
 		configVersion,
 		failoverVersion,
+		0,
 	)
 	m.NoError(err1)
 	m.Equal(id, resp1.ID)
@@ -974,6 +982,7 @@ func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 		isGlobalDomain,
 		configVersion,
 		failoverVersion,
+		0,
 	)
 	m.NoError(err6)
 	m.Equal(id, resp6.ID)
@@ -1103,6 +1112,7 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 			domain.IsGlobalDomain,
 			domain.ConfigVersion,
 			domain.FailoverVersion,
+			0,
 		)
 		m.NoError(err)
 	}
@@ -1141,6 +1151,7 @@ func (m *MetadataPersistenceSuiteV2) CreateDomain(
 	isGlobaldomain bool,
 	configVersion int64,
 	failoverVersion int64,
+	lastUpdateTime int64,
 ) (*p.CreateDomainResponse, error) {
 
 	return m.MetadataManager.CreateDomain(ctx, &p.CreateDomainRequest{
@@ -1150,6 +1161,7 @@ func (m *MetadataPersistenceSuiteV2) CreateDomain(
 		IsGlobalDomain:    isGlobaldomain,
 		ConfigVersion:     configVersion,
 		FailoverVersion:   failoverVersion,
+		LastUpdatedTime:   lastUpdateTime,
 	})
 }
 

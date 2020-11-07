@@ -75,7 +75,7 @@ func (q *queueManager) GetAckLevels(ctx context.Context) (map[string]int64, erro
 	return q.persistence.GetAckLevels(ctx)
 }
 
-func (q *queueManager) EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) (int64, error) {
+func (q *queueManager) EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) error {
 	return q.persistence.EnqueueMessageToDLQ(ctx, messagePayload)
 }
 
@@ -105,6 +105,10 @@ func (q *queueManager) UpdateDLQAckLevel(ctx context.Context, messageID int64, c
 
 func (q *queueManager) GetDLQAckLevels(ctx context.Context) (map[string]int64, error) {
 	return q.persistence.GetDLQAckLevels(ctx)
+}
+
+func (q *queueManager) GetDLQSize(ctx context.Context) (int64, error) {
+	return q.persistence.GetDLQSize(ctx)
 }
 
 func (q *queueManager) fromInternalQueueMessage(message *InternalQueueMessage) *QueueMessage {

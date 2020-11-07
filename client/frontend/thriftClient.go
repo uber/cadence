@@ -26,7 +26,8 @@ import (
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type thriftClient struct {
@@ -38,154 +39,192 @@ func NewThriftClient(c workflowserviceclient.Interface) Client {
 	return thriftClient{c}
 }
 
-func (t thriftClient) CountWorkflowExecutions(ctx context.Context, request *shared.CountWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*shared.CountWorkflowExecutionsResponse, error) {
-	return t.c.CountWorkflowExecutions(ctx, request, opts...)
+func (t thriftClient) CountWorkflowExecutions(ctx context.Context, request *types.CountWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*types.CountWorkflowExecutionsResponse, error) {
+	response, err := t.c.CountWorkflowExecutions(ctx, thrift.FromCountWorkflowExecutionsRequest(request), opts...)
+	return thrift.ToCountWorkflowExecutionsResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) DeprecateDomain(ctx context.Context, request *shared.DeprecateDomainRequest, opts ...yarpc.CallOption) error {
-	return t.c.DeprecateDomain(ctx, request, opts...)
+func (t thriftClient) DeprecateDomain(ctx context.Context, request *types.DeprecateDomainRequest, opts ...yarpc.CallOption) error {
+	err := t.c.DeprecateDomain(ctx, thrift.FromDeprecateDomainRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) DescribeDomain(ctx context.Context, request *shared.DescribeDomainRequest, opts ...yarpc.CallOption) (*shared.DescribeDomainResponse, error) {
-	return t.c.DescribeDomain(ctx, request, opts...)
+func (t thriftClient) DescribeDomain(ctx context.Context, request *types.DescribeDomainRequest, opts ...yarpc.CallOption) (*types.DescribeDomainResponse, error) {
+	response, err := t.c.DescribeDomain(ctx, thrift.FromDescribeDomainRequest(request), opts...)
+	return thrift.ToDescribeDomainResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) DescribeTaskList(ctx context.Context, request *shared.DescribeTaskListRequest, opts ...yarpc.CallOption) (*shared.DescribeTaskListResponse, error) {
-	return t.c.DescribeTaskList(ctx, request, opts...)
+func (t thriftClient) DescribeTaskList(ctx context.Context, request *types.DescribeTaskListRequest, opts ...yarpc.CallOption) (*types.DescribeTaskListResponse, error) {
+	response, err := t.c.DescribeTaskList(ctx, thrift.FromDescribeTaskListRequest(request), opts...)
+	return thrift.ToDescribeTaskListResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) DescribeWorkflowExecution(ctx context.Context, request *shared.DescribeWorkflowExecutionRequest, opts ...yarpc.CallOption) (*shared.DescribeWorkflowExecutionResponse, error) {
-	return t.c.DescribeWorkflowExecution(ctx, request, opts...)
+func (t thriftClient) DescribeWorkflowExecution(ctx context.Context, request *types.DescribeWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.DescribeWorkflowExecutionResponse, error) {
+	response, err := t.c.DescribeWorkflowExecution(ctx, thrift.FromDescribeWorkflowExecutionRequest(request), opts...)
+	return thrift.ToDescribeWorkflowExecutionResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) GetClusterInfo(ctx context.Context, opts ...yarpc.CallOption) (*shared.ClusterInfo, error) {
-	return t.c.GetClusterInfo(ctx, opts...)
+func (t thriftClient) GetClusterInfo(ctx context.Context, opts ...yarpc.CallOption) (*types.ClusterInfo, error) {
+	response, err := t.c.GetClusterInfo(ctx, opts...)
+	return thrift.ToClusterInfo(response), thrift.ToError(err)
 }
 
-func (t thriftClient) GetSearchAttributes(ctx context.Context, opts ...yarpc.CallOption) (*shared.GetSearchAttributesResponse, error) {
-	return t.c.GetSearchAttributes(ctx, opts...)
+func (t thriftClient) GetSearchAttributes(ctx context.Context, opts ...yarpc.CallOption) (*types.GetSearchAttributesResponse, error) {
+	response, err := t.c.GetSearchAttributes(ctx, opts...)
+	return thrift.ToGetSearchAttributesResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) GetWorkflowExecutionHistory(ctx context.Context, request *shared.GetWorkflowExecutionHistoryRequest, opts ...yarpc.CallOption) (*shared.GetWorkflowExecutionHistoryResponse, error) {
-	return t.c.GetWorkflowExecutionHistory(ctx, request, opts...)
+func (t thriftClient) GetWorkflowExecutionHistory(ctx context.Context, request *types.GetWorkflowExecutionHistoryRequest, opts ...yarpc.CallOption) (*types.GetWorkflowExecutionHistoryResponse, error) {
+	response, err := t.c.GetWorkflowExecutionHistory(ctx, thrift.FromGetWorkflowExecutionHistoryRequest(request), opts...)
+	return thrift.ToGetWorkflowExecutionHistoryResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) ListArchivedWorkflowExecutions(ctx context.Context, request *shared.ListArchivedWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*shared.ListArchivedWorkflowExecutionsResponse, error) {
-	return t.c.ListArchivedWorkflowExecutions(ctx, request, opts...)
+func (t thriftClient) ListArchivedWorkflowExecutions(ctx context.Context, request *types.ListArchivedWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*types.ListArchivedWorkflowExecutionsResponse, error) {
+	response, err := t.c.ListArchivedWorkflowExecutions(ctx, thrift.FromListArchivedWorkflowExecutionsRequest(request), opts...)
+	return thrift.ToListArchivedWorkflowExecutionsResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) ListClosedWorkflowExecutions(ctx context.Context, request *shared.ListClosedWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*shared.ListClosedWorkflowExecutionsResponse, error) {
-	return t.c.ListClosedWorkflowExecutions(ctx, request, opts...)
+func (t thriftClient) ListClosedWorkflowExecutions(ctx context.Context, request *types.ListClosedWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*types.ListClosedWorkflowExecutionsResponse, error) {
+	response, err := t.c.ListClosedWorkflowExecutions(ctx, thrift.FromListClosedWorkflowExecutionsRequest(request), opts...)
+	return thrift.ToListClosedWorkflowExecutionsResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) ListDomains(ctx context.Context, request *shared.ListDomainsRequest, opts ...yarpc.CallOption) (*shared.ListDomainsResponse, error) {
-	return t.c.ListDomains(ctx, request, opts...)
+func (t thriftClient) ListDomains(ctx context.Context, request *types.ListDomainsRequest, opts ...yarpc.CallOption) (*types.ListDomainsResponse, error) {
+	response, err := t.c.ListDomains(ctx, thrift.FromListDomainsRequest(request), opts...)
+	return thrift.ToListDomainsResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) ListOpenWorkflowExecutions(ctx context.Context, request *shared.ListOpenWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*shared.ListOpenWorkflowExecutionsResponse, error) {
-	return t.c.ListOpenWorkflowExecutions(ctx, request, opts...)
+func (t thriftClient) ListOpenWorkflowExecutions(ctx context.Context, request *types.ListOpenWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*types.ListOpenWorkflowExecutionsResponse, error) {
+	response, err := t.c.ListOpenWorkflowExecutions(ctx, thrift.FromListOpenWorkflowExecutionsRequest(request), opts...)
+	return thrift.ToListOpenWorkflowExecutionsResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) ListTaskListPartitions(ctx context.Context, request *shared.ListTaskListPartitionsRequest, opts ...yarpc.CallOption) (*shared.ListTaskListPartitionsResponse, error) {
-	return t.c.ListTaskListPartitions(ctx, request, opts...)
+func (t thriftClient) ListTaskListPartitions(ctx context.Context, request *types.ListTaskListPartitionsRequest, opts ...yarpc.CallOption) (*types.ListTaskListPartitionsResponse, error) {
+	response, err := t.c.ListTaskListPartitions(ctx, thrift.FromListTaskListPartitionsRequest(request), opts...)
+	return thrift.ToListTaskListPartitionsResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) ListWorkflowExecutions(ctx context.Context, request *shared.ListWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*shared.ListWorkflowExecutionsResponse, error) {
-	return t.c.ListWorkflowExecutions(ctx, request, opts...)
+func (t thriftClient) ListWorkflowExecutions(ctx context.Context, request *types.ListWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*types.ListWorkflowExecutionsResponse, error) {
+	response, err := t.c.ListWorkflowExecutions(ctx, thrift.FromListWorkflowExecutionsRequest(request), opts...)
+	return thrift.ToListWorkflowExecutionsResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) PollForActivityTask(ctx context.Context, request *shared.PollForActivityTaskRequest, opts ...yarpc.CallOption) (*shared.PollForActivityTaskResponse, error) {
-	return t.c.PollForActivityTask(ctx, request, opts...)
+func (t thriftClient) PollForActivityTask(ctx context.Context, request *types.PollForActivityTaskRequest, opts ...yarpc.CallOption) (*types.PollForActivityTaskResponse, error) {
+	response, err := t.c.PollForActivityTask(ctx, thrift.FromPollForActivityTaskRequest(request), opts...)
+	return thrift.ToPollForActivityTaskResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) PollForDecisionTask(ctx context.Context, request *shared.PollForDecisionTaskRequest, opts ...yarpc.CallOption) (*shared.PollForDecisionTaskResponse, error) {
-	return t.c.PollForDecisionTask(ctx, request, opts...)
+func (t thriftClient) PollForDecisionTask(ctx context.Context, request *types.PollForDecisionTaskRequest, opts ...yarpc.CallOption) (*types.PollForDecisionTaskResponse, error) {
+	response, err := t.c.PollForDecisionTask(ctx, thrift.FromPollForDecisionTaskRequest(request), opts...)
+	return thrift.ToPollForDecisionTaskResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) QueryWorkflow(ctx context.Context, request *shared.QueryWorkflowRequest, opts ...yarpc.CallOption) (*shared.QueryWorkflowResponse, error) {
-	return t.c.QueryWorkflow(ctx, request, opts...)
+func (t thriftClient) QueryWorkflow(ctx context.Context, request *types.QueryWorkflowRequest, opts ...yarpc.CallOption) (*types.QueryWorkflowResponse, error) {
+	response, err := t.c.QueryWorkflow(ctx, thrift.FromQueryWorkflowRequest(request), opts...)
+	return thrift.ToQueryWorkflowResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) RecordActivityTaskHeartbeat(ctx context.Context, request *shared.RecordActivityTaskHeartbeatRequest, opts ...yarpc.CallOption) (*shared.RecordActivityTaskHeartbeatResponse, error) {
-	return t.c.RecordActivityTaskHeartbeat(ctx, request, opts...)
+func (t thriftClient) RecordActivityTaskHeartbeat(ctx context.Context, request *types.RecordActivityTaskHeartbeatRequest, opts ...yarpc.CallOption) (*types.RecordActivityTaskHeartbeatResponse, error) {
+	response, err := t.c.RecordActivityTaskHeartbeat(ctx, thrift.FromRecordActivityTaskHeartbeatRequest(request), opts...)
+	return thrift.ToRecordActivityTaskHeartbeatResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) RecordActivityTaskHeartbeatByID(ctx context.Context, request *shared.RecordActivityTaskHeartbeatByIDRequest, opts ...yarpc.CallOption) (*shared.RecordActivityTaskHeartbeatResponse, error) {
-	return t.c.RecordActivityTaskHeartbeatByID(ctx, request, opts...)
+func (t thriftClient) RecordActivityTaskHeartbeatByID(ctx context.Context, request *types.RecordActivityTaskHeartbeatByIDRequest, opts ...yarpc.CallOption) (*types.RecordActivityTaskHeartbeatResponse, error) {
+	response, err := t.c.RecordActivityTaskHeartbeatByID(ctx, thrift.FromRecordActivityTaskHeartbeatByIDRequest(request), opts...)
+	return thrift.ToRecordActivityTaskHeartbeatResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) RegisterDomain(ctx context.Context, request *shared.RegisterDomainRequest, opts ...yarpc.CallOption) error {
-	return t.c.RegisterDomain(ctx, request, opts...)
+func (t thriftClient) RegisterDomain(ctx context.Context, request *types.RegisterDomainRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RegisterDomain(ctx, thrift.FromRegisterDomainRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) RequestCancelWorkflowExecution(ctx context.Context, request *shared.RequestCancelWorkflowExecutionRequest, opts ...yarpc.CallOption) error {
-	return t.c.RequestCancelWorkflowExecution(ctx, request, opts...)
+func (t thriftClient) RequestCancelWorkflowExecution(ctx context.Context, request *types.RequestCancelWorkflowExecutionRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RequestCancelWorkflowExecution(ctx, thrift.FromRequestCancelWorkflowExecutionRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) ResetStickyTaskList(ctx context.Context, request *shared.ResetStickyTaskListRequest, opts ...yarpc.CallOption) (*shared.ResetStickyTaskListResponse, error) {
-	return t.c.ResetStickyTaskList(ctx, request, opts...)
+func (t thriftClient) ResetStickyTaskList(ctx context.Context, request *types.ResetStickyTaskListRequest, opts ...yarpc.CallOption) (*types.ResetStickyTaskListResponse, error) {
+	response, err := t.c.ResetStickyTaskList(ctx, thrift.FromResetStickyTaskListRequest(request), opts...)
+	return thrift.ToResetStickyTaskListResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) ResetWorkflowExecution(ctx context.Context, request *shared.ResetWorkflowExecutionRequest, opts ...yarpc.CallOption) (*shared.ResetWorkflowExecutionResponse, error) {
-	return t.c.ResetWorkflowExecution(ctx, request, opts...)
+func (t thriftClient) ResetWorkflowExecution(ctx context.Context, request *types.ResetWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.ResetWorkflowExecutionResponse, error) {
+	response, err := t.c.ResetWorkflowExecution(ctx, thrift.FromResetWorkflowExecutionRequest(request), opts...)
+	return thrift.ToResetWorkflowExecutionResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) RespondActivityTaskCanceled(ctx context.Context, request *shared.RespondActivityTaskCanceledRequest, opts ...yarpc.CallOption) error {
-	return t.c.RespondActivityTaskCanceled(ctx, request, opts...)
+func (t thriftClient) RespondActivityTaskCanceled(ctx context.Context, request *types.RespondActivityTaskCanceledRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RespondActivityTaskCanceled(ctx, thrift.FromRespondActivityTaskCanceledRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) RespondActivityTaskCanceledByID(ctx context.Context, request *shared.RespondActivityTaskCanceledByIDRequest, opts ...yarpc.CallOption) error {
-	return t.c.RespondActivityTaskCanceledByID(ctx, request, opts...)
+func (t thriftClient) RespondActivityTaskCanceledByID(ctx context.Context, request *types.RespondActivityTaskCanceledByIDRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RespondActivityTaskCanceledByID(ctx, thrift.FromRespondActivityTaskCanceledByIDRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) RespondActivityTaskCompleted(ctx context.Context, request *shared.RespondActivityTaskCompletedRequest, opts ...yarpc.CallOption) error {
-	return t.c.RespondActivityTaskCompleted(ctx, request, opts...)
+func (t thriftClient) RespondActivityTaskCompleted(ctx context.Context, request *types.RespondActivityTaskCompletedRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RespondActivityTaskCompleted(ctx, thrift.FromRespondActivityTaskCompletedRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) RespondActivityTaskCompletedByID(ctx context.Context, request *shared.RespondActivityTaskCompletedByIDRequest, opts ...yarpc.CallOption) error {
-	return t.c.RespondActivityTaskCompletedByID(ctx, request, opts...)
+func (t thriftClient) RespondActivityTaskCompletedByID(ctx context.Context, request *types.RespondActivityTaskCompletedByIDRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RespondActivityTaskCompletedByID(ctx, thrift.FromRespondActivityTaskCompletedByIDRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) RespondActivityTaskFailed(ctx context.Context, request *shared.RespondActivityTaskFailedRequest, opts ...yarpc.CallOption) error {
-	return t.c.RespondActivityTaskFailed(ctx, request, opts...)
+func (t thriftClient) RespondActivityTaskFailed(ctx context.Context, request *types.RespondActivityTaskFailedRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RespondActivityTaskFailed(ctx, thrift.FromRespondActivityTaskFailedRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) RespondActivityTaskFailedByID(ctx context.Context, request *shared.RespondActivityTaskFailedByIDRequest, opts ...yarpc.CallOption) error {
-	return t.c.RespondActivityTaskFailedByID(ctx, request, opts...)
+func (t thriftClient) RespondActivityTaskFailedByID(ctx context.Context, request *types.RespondActivityTaskFailedByIDRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RespondActivityTaskFailedByID(ctx, thrift.FromRespondActivityTaskFailedByIDRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) RespondDecisionTaskCompleted(ctx context.Context, request *shared.RespondDecisionTaskCompletedRequest, opts ...yarpc.CallOption) (*shared.RespondDecisionTaskCompletedResponse, error) {
-	return t.c.RespondDecisionTaskCompleted(ctx, request, opts...)
+func (t thriftClient) RespondDecisionTaskCompleted(ctx context.Context, request *types.RespondDecisionTaskCompletedRequest, opts ...yarpc.CallOption) (*types.RespondDecisionTaskCompletedResponse, error) {
+	response, err := t.c.RespondDecisionTaskCompleted(ctx, thrift.FromRespondDecisionTaskCompletedRequest(request), opts...)
+	return thrift.ToRespondDecisionTaskCompletedResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) RespondDecisionTaskFailed(ctx context.Context, request *shared.RespondDecisionTaskFailedRequest, opts ...yarpc.CallOption) error {
-	return t.c.RespondDecisionTaskFailed(ctx, request, opts...)
+func (t thriftClient) RespondDecisionTaskFailed(ctx context.Context, request *types.RespondDecisionTaskFailedRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RespondDecisionTaskFailed(ctx, thrift.FromRespondDecisionTaskFailedRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) RespondQueryTaskCompleted(ctx context.Context, request *shared.RespondQueryTaskCompletedRequest, opts ...yarpc.CallOption) error {
-	return t.c.RespondQueryTaskCompleted(ctx, request, opts...)
+func (t thriftClient) RespondQueryTaskCompleted(ctx context.Context, request *types.RespondQueryTaskCompletedRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RespondQueryTaskCompleted(ctx, thrift.FromRespondQueryTaskCompletedRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) ScanWorkflowExecutions(ctx context.Context, request *shared.ListWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*shared.ListWorkflowExecutionsResponse, error) {
-	return t.c.ScanWorkflowExecutions(ctx, request, opts...)
+func (t thriftClient) ScanWorkflowExecutions(ctx context.Context, request *types.ListWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*types.ListWorkflowExecutionsResponse, error) {
+	response, err := t.c.ScanWorkflowExecutions(ctx, thrift.FromListWorkflowExecutionsRequest(request), opts...)
+	return thrift.ToListWorkflowExecutionsResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) SignalWithStartWorkflowExecution(ctx context.Context, request *shared.SignalWithStartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*shared.StartWorkflowExecutionResponse, error) {
-	return t.c.SignalWithStartWorkflowExecution(ctx, request, opts...)
+func (t thriftClient) SignalWithStartWorkflowExecution(ctx context.Context, request *types.SignalWithStartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	response, err := t.c.SignalWithStartWorkflowExecution(ctx, thrift.FromSignalWithStartWorkflowExecutionRequest(request), opts...)
+	return thrift.ToStartWorkflowExecutionResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) SignalWorkflowExecution(ctx context.Context, request *shared.SignalWorkflowExecutionRequest, opts ...yarpc.CallOption) error {
-	return t.c.SignalWorkflowExecution(ctx, request, opts...)
+func (t thriftClient) SignalWorkflowExecution(ctx context.Context, request *types.SignalWorkflowExecutionRequest, opts ...yarpc.CallOption) error {
+	err := t.c.SignalWorkflowExecution(ctx, thrift.FromSignalWorkflowExecutionRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) StartWorkflowExecution(ctx context.Context, request *shared.StartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*shared.StartWorkflowExecutionResponse, error) {
-	return t.c.StartWorkflowExecution(ctx, request, opts...)
+func (t thriftClient) StartWorkflowExecution(ctx context.Context, request *types.StartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	response, err := t.c.StartWorkflowExecution(ctx, thrift.FromStartWorkflowExecutionRequest(request), opts...)
+	return thrift.ToStartWorkflowExecutionResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) TerminateWorkflowExecution(ctx context.Context, request *shared.TerminateWorkflowExecutionRequest, opts ...yarpc.CallOption) error {
-	return t.c.TerminateWorkflowExecution(ctx, request, opts...)
+func (t thriftClient) TerminateWorkflowExecution(ctx context.Context, request *types.TerminateWorkflowExecutionRequest, opts ...yarpc.CallOption) error {
+	err := t.c.TerminateWorkflowExecution(ctx, thrift.FromTerminateWorkflowExecutionRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) UpdateDomain(ctx context.Context, request *shared.UpdateDomainRequest, opts ...yarpc.CallOption) (*shared.UpdateDomainResponse, error) {
-	return t.c.UpdateDomain(ctx, request, opts...)
+func (t thriftClient) UpdateDomain(ctx context.Context, request *types.UpdateDomainRequest, opts ...yarpc.CallOption) (*types.UpdateDomainResponse, error) {
+	response, err := t.c.UpdateDomain(ctx, thrift.FromUpdateDomainRequest(request), opts...)
+	return thrift.ToUpdateDomainResponse(response), thrift.ToError(err)
 }
