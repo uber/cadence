@@ -48,7 +48,7 @@ type (
 		logger       log.Logger
 	}
 
-	historyV2PersistenceClient struct {
+	historyPersistenceClient struct {
 		metricClient metrics.Client
 		persistence  HistoryManager
 		logger       log.Logger
@@ -76,7 +76,7 @@ type (
 var _ ShardManager = (*shardPersistenceClient)(nil)
 var _ ExecutionManager = (*workflowExecutionPersistenceClient)(nil)
 var _ TaskManager = (*taskPersistenceClient)(nil)
-var _ HistoryManager = (*historyV2PersistenceClient)(nil)
+var _ HistoryManager = (*historyPersistenceClient)(nil)
 var _ MetadataManager = (*metadataPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityPersistenceClient)(nil)
 var _ QueueManager = (*queuePersistenceClient)(nil)
@@ -120,13 +120,13 @@ func NewTaskPersistenceMetricsClient(
 	}
 }
 
-// NewHistoryV2PersistenceMetricsClient creates a HistoryManager client to manage workflow execution history
-func NewHistoryV2PersistenceMetricsClient(
+// NewHistoryPersistenceMetricsClient creates a HistoryManager client to manage workflow execution history
+func NewHistoryPersistenceMetricsClient(
 	persistence HistoryManager,
 	metricClient metrics.Client,
 	logger log.Logger,
 ) HistoryManager {
-	return &historyV2PersistenceClient{
+	return &historyPersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
 		logger:       logger,
@@ -1305,16 +1305,16 @@ func (p *visibilityPersistenceClient) Close() {
 	p.persistence.Close()
 }
 
-func (p *historyV2PersistenceClient) GetName() string {
+func (p *historyPersistenceClient) GetName() string {
 	return p.persistence.GetName()
 }
 
-func (p *historyV2PersistenceClient) Close() {
+func (p *historyPersistenceClient) Close() {
 	p.persistence.Close()
 }
 
 // AppendHistoryNodes add(or override) a node to a history branch
-func (p *historyV2PersistenceClient) AppendHistoryNodes(
+func (p *historyPersistenceClient) AppendHistoryNodes(
 	ctx context.Context,
 	request *AppendHistoryNodesRequest,
 ) (*AppendHistoryNodesResponse, error) {
@@ -1329,7 +1329,7 @@ func (p *historyV2PersistenceClient) AppendHistoryNodes(
 }
 
 // ReadHistoryBranch returns history node data for a branch
-func (p *historyV2PersistenceClient) ReadHistoryBranch(
+func (p *historyPersistenceClient) ReadHistoryBranch(
 	ctx context.Context,
 	request *ReadHistoryBranchRequest,
 ) (*ReadHistoryBranchResponse, error) {
@@ -1344,7 +1344,7 @@ func (p *historyV2PersistenceClient) ReadHistoryBranch(
 }
 
 // ReadHistoryBranchByBatch returns history node data for a branch ByBatch
-func (p *historyV2PersistenceClient) ReadHistoryBranchByBatch(
+func (p *historyPersistenceClient) ReadHistoryBranchByBatch(
 	ctx context.Context,
 	request *ReadHistoryBranchRequest,
 ) (*ReadHistoryBranchByBatchResponse, error) {
@@ -1359,7 +1359,7 @@ func (p *historyV2PersistenceClient) ReadHistoryBranchByBatch(
 }
 
 // ReadRawHistoryBranch returns history node raw data for a branch ByBatch
-func (p *historyV2PersistenceClient) ReadRawHistoryBranch(
+func (p *historyPersistenceClient) ReadRawHistoryBranch(
 	ctx context.Context,
 	request *ReadHistoryBranchRequest,
 ) (*ReadRawHistoryBranchResponse, error) {
@@ -1374,7 +1374,7 @@ func (p *historyV2PersistenceClient) ReadRawHistoryBranch(
 }
 
 // ForkHistoryBranch forks a new branch from a old branch
-func (p *historyV2PersistenceClient) ForkHistoryBranch(
+func (p *historyPersistenceClient) ForkHistoryBranch(
 	ctx context.Context,
 	request *ForkHistoryBranchRequest,
 ) (*ForkHistoryBranchResponse, error) {
@@ -1389,7 +1389,7 @@ func (p *historyV2PersistenceClient) ForkHistoryBranch(
 }
 
 // DeleteHistoryBranch removes a branch
-func (p *historyV2PersistenceClient) DeleteHistoryBranch(
+func (p *historyPersistenceClient) DeleteHistoryBranch(
 	ctx context.Context,
 	request *DeleteHistoryBranchRequest,
 ) error {
@@ -1403,7 +1403,7 @@ func (p *historyV2PersistenceClient) DeleteHistoryBranch(
 	return err
 }
 
-func (p *historyV2PersistenceClient) GetAllHistoryTreeBranches(
+func (p *historyPersistenceClient) GetAllHistoryTreeBranches(
 	ctx context.Context,
 	request *GetAllHistoryTreeBranchesRequest,
 ) (*GetAllHistoryTreeBranchesResponse, error) {
@@ -1418,7 +1418,7 @@ func (p *historyV2PersistenceClient) GetAllHistoryTreeBranches(
 }
 
 // GetHistoryTree returns all branch information of a tree
-func (p *historyV2PersistenceClient) GetHistoryTree(
+func (p *historyPersistenceClient) GetHistoryTree(
 	ctx context.Context,
 	request *GetHistoryTreeRequest,
 ) (*GetHistoryTreeResponse, error) {
@@ -1432,7 +1432,7 @@ func (p *historyV2PersistenceClient) GetHistoryTree(
 	return response, err
 }
 
-func (p *historyV2PersistenceClient) updateErrorMetric(scope int, err error) {
+func (p *historyPersistenceClient) updateErrorMetric(scope int, err error) {
 	switch err.(type) {
 	case *workflow.EntityNotExistsError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrEntityNotExistsCounter)
@@ -1451,7 +1451,10 @@ func (p *historyV2PersistenceClient) updateErrorMetric(scope int, err error) {
 	}
 }
 
-func (p *queuePersistenceClient) EnqueueMessage(ctx context.Context, message []byte) error {
+func (p *queuePersistenceClient) EnqueueMessage(
+	ctx context.Context,
+	message []byte,
+) error {
 	p.metricClient.IncCounter(metrics.PersistenceEnqueueMessageScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceEnqueueMessageScope, metrics.PersistenceLatency)
@@ -1465,7 +1468,11 @@ func (p *queuePersistenceClient) EnqueueMessage(ctx context.Context, message []b
 	return err
 }
 
-func (p *queuePersistenceClient) ReadMessages(ctx context.Context, lastMessageID int64, maxCount int) ([]*QueueMessage, error) {
+func (p *queuePersistenceClient) ReadMessages(
+	ctx context.Context,
+	lastMessageID int64,
+	maxCount int,
+) ([]*QueueMessage, error) {
 	p.metricClient.IncCounter(metrics.PersistenceReadQueueMessagesScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceReadQueueMessagesScope, metrics.PersistenceLatency)
@@ -1479,7 +1486,11 @@ func (p *queuePersistenceClient) ReadMessages(ctx context.Context, lastMessageID
 	return result, err
 }
 
-func (p *queuePersistenceClient) UpdateAckLevel(ctx context.Context, messageID int64, clusterName string) error {
+func (p *queuePersistenceClient) UpdateAckLevel(
+	ctx context.Context,
+	messageID int64,
+	clusterName string,
+) error {
 	p.metricClient.IncCounter(metrics.PersistenceUpdateAckLevelScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceUpdateAckLevelScope, metrics.PersistenceLatency)
@@ -1493,7 +1504,9 @@ func (p *queuePersistenceClient) UpdateAckLevel(ctx context.Context, messageID i
 	return err
 }
 
-func (p *queuePersistenceClient) GetAckLevels(ctx context.Context) (map[string]int64, error) {
+func (p *queuePersistenceClient) GetAckLevels(
+	ctx context.Context,
+) (map[string]int64, error) {
 	p.metricClient.IncCounter(metrics.PersistenceGetAckLevelScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceGetAckLevelScope, metrics.PersistenceLatency)
@@ -1507,7 +1520,10 @@ func (p *queuePersistenceClient) GetAckLevels(ctx context.Context) (map[string]i
 	return result, err
 }
 
-func (p *queuePersistenceClient) DeleteMessagesBefore(ctx context.Context, messageID int64) error {
+func (p *queuePersistenceClient) DeleteMessagesBefore(
+	ctx context.Context,
+	messageID int64,
+) error {
 	p.metricClient.IncCounter(metrics.PersistenceDeleteQueueMessagesScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceDeleteQueueMessagesScope, metrics.PersistenceLatency)
@@ -1521,7 +1537,10 @@ func (p *queuePersistenceClient) DeleteMessagesBefore(ctx context.Context, messa
 	return err
 }
 
-func (p *queuePersistenceClient) EnqueueMessageToDLQ(ctx context.Context, message []byte) error {
+func (p *queuePersistenceClient) EnqueueMessageToDLQ(
+	ctx context.Context,
+	message []byte,
+) error {
 	p.metricClient.IncCounter(metrics.PersistenceEnqueueMessageToDLQScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceEnqueueMessageToDLQScope, metrics.PersistenceLatency)
@@ -1535,7 +1554,13 @@ func (p *queuePersistenceClient) EnqueueMessageToDLQ(ctx context.Context, messag
 	return err
 }
 
-func (p *queuePersistenceClient) ReadMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*QueueMessage, []byte, error) {
+func (p *queuePersistenceClient) ReadMessagesFromDLQ(
+	ctx context.Context,
+	firstMessageID int64,
+	lastMessageID int64,
+	pageSize int,
+	pageToken []byte,
+) ([]*QueueMessage, []byte, error) {
 	p.metricClient.IncCounter(metrics.PersistenceReadQueueMessagesFromDLQScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceReadQueueMessagesFromDLQScope, metrics.PersistenceLatency)
@@ -1549,7 +1574,10 @@ func (p *queuePersistenceClient) ReadMessagesFromDLQ(ctx context.Context, firstM
 	return result, token, err
 }
 
-func (p *queuePersistenceClient) DeleteMessageFromDLQ(ctx context.Context, messageID int64) error {
+func (p *queuePersistenceClient) DeleteMessageFromDLQ(
+	ctx context.Context,
+	messageID int64,
+) error {
 	p.metricClient.IncCounter(metrics.PersistenceDeleteQueueMessageFromDLQScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceDeleteQueueMessageFromDLQScope, metrics.PersistenceLatency)
@@ -1563,7 +1591,11 @@ func (p *queuePersistenceClient) DeleteMessageFromDLQ(ctx context.Context, messa
 	return err
 }
 
-func (p *queuePersistenceClient) RangeDeleteMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64) error {
+func (p *queuePersistenceClient) RangeDeleteMessagesFromDLQ(
+	ctx context.Context,
+	firstMessageID int64,
+	lastMessageID int64,
+) error {
 	p.metricClient.IncCounter(metrics.PersistenceRangeDeleteMessagesFromDLQScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceRangeDeleteMessagesFromDLQScope, metrics.PersistenceLatency)
@@ -1577,7 +1609,11 @@ func (p *queuePersistenceClient) RangeDeleteMessagesFromDLQ(ctx context.Context,
 	return err
 }
 
-func (p *queuePersistenceClient) UpdateDLQAckLevel(ctx context.Context, messageID int64, clusterName string) error {
+func (p *queuePersistenceClient) UpdateDLQAckLevel(
+	ctx context.Context,
+	messageID int64,
+	clusterName string,
+) error {
 	p.metricClient.IncCounter(metrics.PersistenceUpdateDLQAckLevelScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceUpdateDLQAckLevelScope, metrics.PersistenceLatency)
@@ -1591,7 +1627,9 @@ func (p *queuePersistenceClient) UpdateDLQAckLevel(ctx context.Context, messageI
 	return err
 }
 
-func (p *queuePersistenceClient) GetDLQAckLevels(ctx context.Context) (map[string]int64, error) {
+func (p *queuePersistenceClient) GetDLQAckLevels(
+	ctx context.Context,
+) (map[string]int64, error) {
 	p.metricClient.IncCounter(metrics.PersistenceGetDLQAckLevelScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceGetDLQAckLevelScope, metrics.PersistenceLatency)
@@ -1605,7 +1643,9 @@ func (p *queuePersistenceClient) GetDLQAckLevels(ctx context.Context) (map[strin
 	return result, err
 }
 
-func (p *queuePersistenceClient) GetDLQSize(ctx context.Context) (int64, error) {
+func (p *queuePersistenceClient) GetDLQSize(
+	ctx context.Context,
+) (int64, error) {
 	p.metricClient.IncCounter(metrics.PersistenceGetDLQSizeScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceGetDLQSizeScope, metrics.PersistenceLatency)

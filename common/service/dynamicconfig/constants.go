@@ -64,6 +64,7 @@ var keys = map[Key]string{
 	EnableDomainNotActiveAutoForwarding: "system.enableDomainNotActiveAutoForwarding",
 	EnableGracefulFailover:              "system.enableGracefulFailover",
 	TransactionSizeLimit:                "system.transactionSizeLimit",
+	PersistenceErrorInjectionRate:       "system.persistenceErrorInjectionRate",
 	MinRetentionDays:                    "system.minRetentionDays",
 	MaxDecisionStartToCloseSeconds:      "system.maxDecisionStartToCloseSeconds",
 	DisallowQuery:                       "system.disallowQuery",
@@ -381,6 +382,8 @@ const (
 	EnableGracefulFailover
 	// TransactionSizeLimit is the largest allowed transaction size to persistence
 	TransactionSizeLimit
+	// PersistenceErrorInjectionRate is the rate for injecting random error in persistence
+	PersistenceErrorInjectionRate
 	// MinRetentionDays is the minimal allowed retention days for domain
 	MinRetentionDays
 	// MaxDecisionStartToCloseSeconds is the minimal allowed decision start to close timeout in seconds

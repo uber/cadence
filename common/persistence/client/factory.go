@@ -26,12 +26,11 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence/serialization"
-
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/config"
@@ -152,6 +151,9 @@ func (f *factoryImpl) NewTaskManager() (p.TaskManager, error) {
 		return nil, err
 	}
 	result := p.NewTaskManager(store)
+	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
+		result = p.NewTaskPersistenceErrorInjectionClient(result, errorRate, f.logger)
+	}
 	if ds.ratelimit != nil {
 		result = p.NewTaskPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
@@ -169,6 +171,9 @@ func (f *factoryImpl) NewShardManager() (p.ShardManager, error) {
 		return nil, err
 	}
 	result := p.NewShardManager(store)
+	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
+		result = p.NewShardPersistenceErrorInjectionClient(result, errorRate, f.logger)
+	}
 	if ds.ratelimit != nil {
 		result = p.NewShardPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
@@ -186,11 +191,14 @@ func (f *factoryImpl) NewHistoryManager() (p.HistoryManager, error) {
 		return nil, err
 	}
 	result := p.NewHistoryV2ManagerImpl(store, f.logger, f.config.TransactionSizeLimit)
+	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
+		result = p.NewHistoryPersistenceErrorInjectionClient(result, errorRate, f.logger)
+	}
 	if ds.ratelimit != nil {
-		result = p.NewHistoryV2PersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
+		result = p.NewHistoryPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewHistoryV2PersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = p.NewHistoryPersistenceMetricsClient(result, f.metricsClient, f.logger)
 	}
 	return result, nil
 }
@@ -204,8 +212,10 @@ func (f *factoryImpl) NewMetadataManager() (p.MetadataManager, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	result := p.NewMetadataManagerImpl(store, f.logger)
+	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
+		result = p.NewMetadataPersistenceErrorInjectionClient(result, errorRate, f.logger)
+	}
 	if ds.ratelimit != nil {
 		result = p.NewMetadataPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
@@ -223,6 +233,9 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 		return nil, err
 	}
 	result := p.NewExecutionManagerImpl(store, f.logger)
+	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
+		result = p.NewWorkflowExecutionPersistenceErrorInjectionClient(result, errorRate, f.logger)
+	}
 	if ds.ratelimit != nil {
 		result = p.NewWorkflowExecutionPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
@@ -247,8 +260,10 @@ func (f *factoryImpl) NewVisibilityManager() (p.VisibilityManager, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	result := p.NewVisibilityManagerImpl(store, f.logger)
+	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
+		result = p.NewVisibilityPersistenceErrorInjectionClient(result, errorRate, f.logger)
+	}
 	if ds.ratelimit != nil {
 		result = p.NewVisibilityPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
@@ -268,8 +283,10 @@ func (f *factoryImpl) NewDomainReplicationQueueManager() (p.QueueManager, error)
 	if err != nil {
 		return nil, err
 	}
-
 	result := p.NewQueueManager(store)
+	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
+		result = p.NewQueuePersistenceErrorInjectionClient(result, errorRate, f.logger)
+	}
 	if ds.ratelimit != nil {
 		result = p.NewQueuePersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
