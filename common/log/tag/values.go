@@ -259,3 +259,16 @@ var (
 	StoreOperationGetDLQSize                 = storeOperation("get-dlq-size")
 	StoreOperationDeleteMessageFromDLQ       = storeOperation("delete-message-from-dlq")
 )
+
+// Pre-defined values for TagSysClientOperation
+var (
+	MatchingClientOperationAddActivityTask        = clientOperation("matching-add-activity-task")
+	MatchingClientOperationAddDecisionTask        = clientOperation("matching-add-decision-task")
+	MatchingClientOperationPollForActivityTask    = clientOperation("matching-poll-for-activity-task")
+	MatchingClientOperationPollForDecisionTask    = clientOperation("matching-poll-for-decision-task")
+	MatchingClientOperationQueryWorkflow          = clientOperation("matching-query-wf")
+	MatchingClientOperationQueryTaskCompleted     = clientOperation("matching-query-task-completed")
+	MatchingClientOperationCancelOutstandingPoll  = clientOperation("matching-cancel-outstanding-poll")
+	MatchingClientOperationDescribeTaskList       = clientOperation("matching-describe-task-list")
+	MatchingClientOperationListTaskListPartitions = clientOperation("matching-list-task-list-partitions")
+)

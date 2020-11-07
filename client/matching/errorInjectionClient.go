@@ -63,12 +63,18 @@ func (c *errorInjectionClient) AddActivityTask(
 	fakeErr := errors.GenerateFakeError(c.errorRate)
 
 	var clientErr error
-	if errors.ShouldForwardCall(fakeErr) {
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
 		clientErr = c.client.AddActivityTask(ctx, addRequest, opts...)
 	}
 
 	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr, tag.Error(fakeErr))
+		c.logger.Error(msgInjectedFakeErr,
+			tag.MatchingClientOperationAddActivityTask,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
 		return fakeErr
 	}
 	return clientErr
@@ -82,12 +88,18 @@ func (c *errorInjectionClient) AddDecisionTask(
 	fakeErr := errors.GenerateFakeError(c.errorRate)
 
 	var clientErr error
-	if errors.ShouldForwardCall(fakeErr) {
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
 		clientErr = c.client.AddDecisionTask(ctx, addRequest, opts...)
 	}
 
 	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr, tag.Error(fakeErr))
+		c.logger.Error(msgInjectedFakeErr,
+			tag.MatchingClientOperationAddDecisionTask,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
 		return fakeErr
 	}
 	return clientErr
@@ -102,12 +114,18 @@ func (c *errorInjectionClient) PollForActivityTask(
 
 	var resp *types.PollForActivityTaskResponse
 	var clientErr error
-	if errors.ShouldForwardCall(fakeErr) {
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
 		resp, clientErr = c.client.PollForActivityTask(ctx, pollRequest, opts...)
 	}
 
 	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr, tag.Error(fakeErr))
+		c.logger.Error(msgInjectedFakeErr,
+			tag.MatchingClientOperationPollForActivityTask,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
 		return nil, fakeErr
 	}
 	return resp, clientErr
@@ -122,12 +140,18 @@ func (c *errorInjectionClient) PollForDecisionTask(
 
 	var resp *types.MatchingPollForDecisionTaskResponse
 	var clientErr error
-	if errors.ShouldForwardCall(fakeErr) {
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
 		resp, clientErr = c.client.PollForDecisionTask(ctx, pollRequest, opts...)
 	}
 
 	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr, tag.Error(fakeErr))
+		c.logger.Error(msgInjectedFakeErr,
+			tag.MatchingClientOperationPollForDecisionTask,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
 		return nil, fakeErr
 	}
 	return resp, clientErr
@@ -142,12 +166,18 @@ func (c *errorInjectionClient) QueryWorkflow(
 
 	var resp *types.QueryWorkflowResponse
 	var clientErr error
-	if errors.ShouldForwardCall(fakeErr) {
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
 		resp, clientErr = c.client.QueryWorkflow(ctx, queryRequest, opts...)
 	}
 
 	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr, tag.Error(fakeErr))
+		c.logger.Error(msgInjectedFakeErr,
+			tag.MatchingClientOperationQueryWorkflow,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
 		return nil, fakeErr
 	}
 	return resp, clientErr
@@ -161,12 +191,18 @@ func (c *errorInjectionClient) RespondQueryTaskCompleted(
 	fakeErr := errors.GenerateFakeError(c.errorRate)
 
 	var clientErr error
-	if errors.ShouldForwardCall(fakeErr) {
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
 		clientErr = c.client.RespondQueryTaskCompleted(ctx, request, opts...)
 	}
 
 	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr, tag.Error(fakeErr))
+		c.logger.Error(msgInjectedFakeErr,
+			tag.MatchingClientOperationQueryTaskCompleted,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
 		return fakeErr
 	}
 	return clientErr
@@ -180,12 +216,18 @@ func (c *errorInjectionClient) CancelOutstandingPoll(
 	fakeErr := errors.GenerateFakeError(c.errorRate)
 
 	var clientErr error
-	if errors.ShouldForwardCall(fakeErr) {
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
 		clientErr = c.client.CancelOutstandingPoll(ctx, request, opts...)
 	}
 
 	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr, tag.Error(fakeErr))
+		c.logger.Error(msgInjectedFakeErr,
+			tag.MatchingClientOperationCancelOutstandingPoll,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
 		return fakeErr
 	}
 	return clientErr
@@ -200,12 +242,18 @@ func (c *errorInjectionClient) DescribeTaskList(
 
 	var resp *types.DescribeTaskListResponse
 	var clientErr error
-	if errors.ShouldForwardCall(fakeErr) {
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
 		resp, clientErr = c.client.DescribeTaskList(ctx, request, opts...)
 	}
 
 	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr, tag.Error(fakeErr))
+		c.logger.Error(msgInjectedFakeErr,
+			tag.MatchingClientOperationDescribeTaskList,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
 		return nil, fakeErr
 	}
 	return resp, clientErr
@@ -220,12 +268,18 @@ func (c *errorInjectionClient) ListTaskListPartitions(
 
 	var resp *types.ListTaskListPartitionsResponse
 	var clientErr error
-	if errors.ShouldForwardCall(fakeErr) {
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
 		resp, clientErr = c.client.ListTaskListPartitions(ctx, request, opts...)
 	}
 
 	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr, tag.Error(fakeErr))
+		c.logger.Error(msgInjectedFakeErr,
+			tag.MatchingClientOperationListTaskListPartitions,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
 		return nil, fakeErr
 	}
 	return resp, clientErr

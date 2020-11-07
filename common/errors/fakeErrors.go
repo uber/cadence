@@ -48,12 +48,21 @@ var (
 	}
 )
 
-// ShouldForwardCall checks if the call should be forward to the underlying
-// client despite the fake error generated
+// ShouldForwardCall determines if the call should be forward to the underlying
+// client given the fake error generated
 func ShouldForwardCall(
 	err error,
 ) bool {
-	return err == nil || err == ErrFakeTimeout || err == ErrFakeUnhandled
+	if err == nil {
+		return true
+	}
+
+	if err == ErrFakeTimeout || err == ErrFakeUnhandled {
+		// forward the call with 50% chance
+		return rand.Intn(2) == 0
+	}
+
+	return false
 }
 
 // GenerateFakeError generates a random fake error
