@@ -262,8 +262,24 @@ var (
 
 // Pre-defined values for TagSysClientOperation
 var (
-	AdminClientOperationAddSearchAttribute  = clientOperation("admin-add-search-attribute")
-	AdminClientOperationDescribeHistoryHost = clientOperation("admin-describe-history-host")
+	AdminClientOperationAddSearchAttribute               = clientOperation("admin-add-search-attribute")
+	AdminClientOperationDescribeHistoryHost              = clientOperation("admin-describe-history-host")
+	AdminClientOperationRemoveTask                       = clientOperation("admin-remove-task")
+	AdminClientOperationCloseShard                       = clientOperation("admin-close-shard")
+	AdminClientOperationResetQueue                       = clientOperation("admin-reset-queue")
+	AdminClientOperationDescribeQueue                    = clientOperation("admin-describe-queue")
+	AdminClientOperationDescribeWorkflowExecution        = clientOperation("admin-describe-wf-execution")
+	AdminClientOperationGetWorkflowExecutionRawHistoryV2 = clientOperation("admin-get-wf-execution-raw-history-v2")
+	AdminClientOperationDescribeCluster                  = clientOperation("admin-describe-cluster")
+	AdminClientOperationGetReplicationMessages           = clientOperation("admin-get-replication-messsages")
+	AdminClientOperationGetDomainReplicationMessages     = clientOperation("admin-get-domain-replication-messsages")
+	AdminClientOperationGetDLQReplicationMessages        = clientOperation("admin-get-dlq-replication-messsages")
+	AdminClientOperationReapplyEvents                    = clientOperation("admin-reapply-events")
+	AdminClientOperationReadDLQMessages                  = clientOperation("admin-read-dlq-messsages")
+	AdminClientOperationPurgeDLQMessages                 = clientOperation("admin-purge-dlq-messsages")
+	AdminClientOperationMergeDLQMessages                 = clientOperation("admin-merge-dlq-messsages")
+	AdminClientOperationRefreshWorkflowTasks             = clientOperation("admin-refresh-wf-tasks")
+	AdminClientOperationResendReplicationTasks           = clientOperation("admin-resend-replication-tasks")
 
 	FrontendClientOperationDeprecateDomain                  = clientOperation("frontend-deprecate-domain")
 	FrontendClientOperationDescribeDomain                   = clientOperation("frontend-describe-domain")

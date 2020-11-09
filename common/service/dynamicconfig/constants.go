@@ -86,6 +86,9 @@ var keys = map[Key]string{
 	MaxIDLengthWarnLimit:    "limit.maxIDWarnLength",
 	MaxRawTaskListNameLimit: "limit.maxRawTaskListNameLength",
 
+	// admin settings
+	AdminErrorInjectionRate: "admin.errorInjectionRate",
+
 	// frontend settings
 	FrontendPersistenceMaxQPS:                   "frontend.persistenceMaxQPS",
 	FrontendPersistenceGlobalMaxQPS:             "frontend.persistenceGlobalMaxQPS",
@@ -114,7 +117,7 @@ var keys = map[Key]string{
 	VisibilityArchivalQueryMaxQPS:               "frontend.visibilityArchivalQueryMaxQPS",
 	DomainFailoverRefreshInterval:               "frontend.domainFailoverRefreshInterval",
 	DomainFailoverRefreshTimerJitterCoefficient: "frontend.domainFailoverRefreshTimerJitterCoefficient",
-	FrontendErrorInjectionRate:                  "frontend.ErrorInjectionRate",
+	FrontendErrorInjectionRate:                  "frontend.errorInjectionRate",
 
 	// matching settings
 	MatchingRPS:                             "matching.rps",
@@ -138,7 +141,7 @@ var keys = map[Key]string{
 	MatchingForwarderMaxRatePerSecond:       "matching.forwarderMaxRatePerSecond",
 	MatchingForwarderMaxChildrenPerNode:     "matching.forwarderMaxChildrenPerNode",
 	MatchingShutdownDrainDuration:           "matching.shutdownDrainDuration",
-	MatchingErrorInjectionRate:              "matching.ErrorInjectionRate",
+	MatchingErrorInjectionRate:              "matching.errorInjectionRate",
 
 	// history settings
 	HistoryRPS:                                            "history.rps",
@@ -418,6 +421,11 @@ const (
 	MaxIDLengthWarnLimit
 	// MaxRawTaskListNameLimit is the max length of user provided task list name (non-sticky and non-scalable)
 	MaxRawTaskListNameLimit
+
+	// key for admin
+
+	// AdminErrorInjectionRate is the rate for injecting random error in admin client
+	AdminErrorInjectionRate
 
 	// key for frontend
 

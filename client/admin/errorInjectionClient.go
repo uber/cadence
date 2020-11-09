@@ -23,10 +23,6 @@ package admin
 import (
 	"context"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -61,7 +57,7 @@ func NewErrorInjectionClient(
 
 func (c *errorInjectionClient) AddSearchAttribute(
 	ctx context.Context,
-	request *admin.AddSearchAttributeRequest,
+	request *types.AddSearchAttributeRequest,
 	opts ...yarpc.CallOption,
 ) error {
 	fakeErr := errors.GenerateFakeError(c.errorRate)
@@ -86,9 +82,9 @@ func (c *errorInjectionClient) AddSearchAttribute(
 
 func (c *errorInjectionClient) DescribeHistoryHost(
 	ctx context.Context,
-	request *shared.DescribeHistoryHostRequest,
+	request *types.DescribeHistoryHostRequest,
 	opts ...yarpc.CallOption,
-) (*shared.DescribeHistoryHostResponse, error) {
+) (*types.DescribeHistoryHostResponse, error) {
 	fakeErr := errors.GenerateFakeError(c.errorRate)
 
 	var resp *types.DescribeHistoryHostResponse
@@ -112,224 +108,408 @@ func (c *errorInjectionClient) DescribeHistoryHost(
 
 func (c *errorInjectionClient) RemoveTask(
 	ctx context.Context,
-	request *shared.RemoveTaskRequest,
+	request *types.RemoveTaskRequest,
 	opts ...yarpc.CallOption,
 ) error {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
 
-	op := func() error {
-		return c.client.RemoveTask(ctx, request, opts...)
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		clientErr = c.client.RemoveTask(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationRemoveTask,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
+		return fakeErr
+	}
+	return clientErr
 }
 
 func (c *errorInjectionClient) CloseShard(
 	ctx context.Context,
-	request *shared.CloseShardRequest,
+	request *types.CloseShardRequest,
 	opts ...yarpc.CallOption,
 ) error {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
 
-	op := func() error {
-		return c.client.CloseShard(ctx, request, opts...)
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		clientErr = c.client.CloseShard(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationCloseShard,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
+		return fakeErr
+	}
+	return clientErr
 }
 
 func (c *errorInjectionClient) ResetQueue(
 	ctx context.Context,
-	request *shared.ResetQueueRequest,
+	request *types.ResetQueueRequest,
 	opts ...yarpc.CallOption,
 ) error {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
 
-	op := func() error {
-		return c.client.ResetQueue(ctx, request, opts...)
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		clientErr = c.client.ResetQueue(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationResetQueue,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
+		return fakeErr
+	}
+	return clientErr
 }
 
 func (c *errorInjectionClient) DescribeQueue(
 	ctx context.Context,
-	request *shared.DescribeQueueRequest,
+	request *types.DescribeQueueRequest,
 	opts ...yarpc.CallOption,
-) (*shared.DescribeQueueResponse, error) {
+) (*types.DescribeQueueResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
 
-	var resp *shared.DescribeQueueResponse
-	op := func() error {
-		var err error
-		resp, err = c.client.DescribeQueue(ctx, request, opts...)
-		return err
+	var resp *types.DescribeQueueResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.DescribeQueue(ctx, request, opts...)
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
-	return resp, err
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationDescribeQueue,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
 }
 
 func (c *errorInjectionClient) DescribeWorkflowExecution(
 	ctx context.Context,
-	request *admin.DescribeWorkflowExecutionRequest,
+	request *types.AdminDescribeWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) (*admin.DescribeWorkflowExecutionResponse, error) {
+) (*types.AdminDescribeWorkflowExecutionResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
 
-	var resp *admin.DescribeWorkflowExecutionResponse
-	op := func() error {
-		var err error
-		resp, err = c.client.DescribeWorkflowExecution(ctx, request, opts...)
-		return err
+	var resp *types.AdminDescribeWorkflowExecutionResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.DescribeWorkflowExecution(ctx, request, opts...)
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
-	return resp, err
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationDescribeWorkflowExecution,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
 }
 
 func (c *errorInjectionClient) GetWorkflowExecutionRawHistoryV2(
 	ctx context.Context,
-	request *admin.GetWorkflowExecutionRawHistoryV2Request,
+	request *types.GetWorkflowExecutionRawHistoryV2Request,
 	opts ...yarpc.CallOption,
-) (*admin.GetWorkflowExecutionRawHistoryV2Response, error) {
+) (*types.GetWorkflowExecutionRawHistoryV2Response, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
 
-	var resp *admin.GetWorkflowExecutionRawHistoryV2Response
-	op := func() error {
-		var err error
-		resp, err = c.client.GetWorkflowExecutionRawHistoryV2(ctx, request, opts...)
-		return err
+	var resp *types.GetWorkflowExecutionRawHistoryV2Response
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.GetWorkflowExecutionRawHistoryV2(ctx, request, opts...)
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
-	return resp, err
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationGetWorkflowExecutionRawHistoryV2,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
 }
 
 func (c *errorInjectionClient) DescribeCluster(
 	ctx context.Context,
 	opts ...yarpc.CallOption,
-) (*admin.DescribeClusterResponse, error) {
+) (*types.DescribeClusterResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
 
-	var resp *admin.DescribeClusterResponse
-	op := func() error {
-		var err error
-		resp, err = c.client.DescribeCluster(ctx, opts...)
-		return err
+	var resp *types.DescribeClusterResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.DescribeCluster(ctx, opts...)
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
-	return resp, err
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationDescribeCluster,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
 }
 
 func (c *errorInjectionClient) GetReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetReplicationMessagesRequest,
+	request *types.GetReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetReplicationMessagesResponse, error) {
-	var resp *replicator.GetReplicationMessagesResponse
-	op := func() error {
-		var err error
-		resp, err = c.client.GetReplicationMessages(ctx, request, opts...)
-		return err
+) (*types.GetReplicationMessagesResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.GetReplicationMessagesResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.GetReplicationMessages(ctx, request, opts...)
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
-	return resp, err
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationGetReplicationMessages,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
 }
 
 func (c *errorInjectionClient) GetDomainReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetDomainReplicationMessagesRequest,
+	request *types.GetDomainReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetDomainReplicationMessagesResponse, error) {
-	var resp *replicator.GetDomainReplicationMessagesResponse
-	op := func() error {
-		var err error
-		resp, err = c.client.GetDomainReplicationMessages(ctx, request, opts...)
-		return err
+) (*types.GetDomainReplicationMessagesResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.GetDomainReplicationMessagesResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.GetDomainReplicationMessages(ctx, request, opts...)
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
-	return resp, err
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationGetDomainReplicationMessages,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
 }
 
 func (c *errorInjectionClient) GetDLQReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetDLQReplicationMessagesRequest,
+	request *types.GetDLQReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetDLQReplicationMessagesResponse, error) {
-	var resp *replicator.GetDLQReplicationMessagesResponse
-	op := func() error {
-		var err error
-		resp, err = c.client.GetDLQReplicationMessages(ctx, request, opts...)
-		return err
+) (*types.GetDLQReplicationMessagesResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.GetDLQReplicationMessagesResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.GetDLQReplicationMessages(ctx, request, opts...)
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
-	return resp, err
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationGetDLQReplicationMessages,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
 }
 
 func (c *errorInjectionClient) ReapplyEvents(
 	ctx context.Context,
-	request *shared.ReapplyEventsRequest,
+	request *types.ReapplyEventsRequest,
 	opts ...yarpc.CallOption,
 ) error {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
 
-	op := func() error {
-		return c.client.ReapplyEvents(ctx, request, opts...)
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		clientErr = c.client.ReapplyEvents(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationReapplyEvents,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
+		return fakeErr
+	}
+	return clientErr
 }
 
 func (c *errorInjectionClient) ReadDLQMessages(
 	ctx context.Context,
-	request *replicator.ReadDLQMessagesRequest,
+	request *types.ReadDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.ReadDLQMessagesResponse, error) {
+) (*types.ReadDLQMessagesResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
 
-	var resp *replicator.ReadDLQMessagesResponse
-	op := func() error {
-		var err error
-		resp, err = c.client.ReadDLQMessages(ctx, request, opts...)
-		return err
+	var resp *types.ReadDLQMessagesResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.ReadDLQMessages(ctx, request, opts...)
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
-	return resp, err
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationReadDLQMessages,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
 }
 
 func (c *errorInjectionClient) PurgeDLQMessages(
 	ctx context.Context,
-	request *replicator.PurgeDLQMessagesRequest,
+	request *types.PurgeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
 ) error {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
 
-	op := func() error {
-		return c.client.PurgeDLQMessages(ctx, request, opts...)
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		clientErr = c.client.PurgeDLQMessages(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationPurgeDLQMessages,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
+		return fakeErr
+	}
+	return clientErr
 }
 
 func (c *errorInjectionClient) MergeDLQMessages(
 	ctx context.Context,
-	request *replicator.MergeDLQMessagesRequest,
+	request *types.MergeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.MergeDLQMessagesResponse, error) {
+) (*types.MergeDLQMessagesResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
 
-	var resp *replicator.MergeDLQMessagesResponse
-	op := func() error {
-		var err error
-		resp, err = c.client.MergeDLQMessages(ctx, request, opts...)
-		return err
+	var resp *types.MergeDLQMessagesResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.MergeDLQMessages(ctx, request, opts...)
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
-	return resp, err
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationMergeDLQMessages,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
 }
 
 func (c *errorInjectionClient) RefreshWorkflowTasks(
 	ctx context.Context,
-	request *shared.RefreshWorkflowTasksRequest,
+	request *types.RefreshWorkflowTasksRequest,
 	opts ...yarpc.CallOption,
 ) error {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
 
-	op := func() error {
-		return c.client.RefreshWorkflowTasks(ctx, request, opts...)
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		clientErr = c.client.RefreshWorkflowTasks(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationRefreshWorkflowTasks,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
+		return fakeErr
+	}
+	return clientErr
 }
 
 func (c *errorInjectionClient) ResendReplicationTasks(
 	ctx context.Context,
-	request *admin.ResendReplicationTasksRequest,
+	request *types.ResendReplicationTasksRequest,
 	opts ...yarpc.CallOption,
 ) error {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
 
-	op := func() error {
-		return c.client.ResendReplicationTasks(ctx, request, opts...)
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		clientErr = c.client.ResendReplicationTasks(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationResendReplicationTasks,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(clientErr),
+		)
+		return fakeErr
+	}
+	return clientErr
 }

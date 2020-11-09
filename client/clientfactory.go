@@ -223,6 +223,9 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndDispatcher(
 	}
 
 	client := admin.NewClient(timeout, largeTimeout, common.NewClientCache(keyResolver, clientProvider))
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate, 0)(); errorRate != 0 {
+		client = admin.NewErrorInjectionClient(client, errorRate, cf.logger)
+	}
 	if cf.metricsClient != nil {
 		client = admin.NewMetricClient(client, cf.metricsClient)
 	}
