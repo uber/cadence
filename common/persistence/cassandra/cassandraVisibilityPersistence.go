@@ -222,7 +222,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 	_ context.Context,
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
-	ttl := request.WorkflowTimeout + openExecutionTTLBuffer
+	ttl := int64(request.WorkflowTimeout.Seconds()) + openExecutionTTLBuffer
 	var query *gocql.Query
 
 	if ttl > maxCassandraTTL {
@@ -231,8 +231,8 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 			domainPartition,
 			request.WorkflowID,
 			request.RunID,
-			p.UnixNanoToDBTimestamp(request.StartTimestamp),
-			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
+			p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp.UnixNano()),
 			request.WorkflowTypeName,
 			request.Memo.Data,
 			string(request.Memo.GetEncoding()),
@@ -244,8 +244,8 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 			domainPartition,
 			request.WorkflowID,
 			request.RunID,
-			p.UnixNanoToDBTimestamp(request.StartTimestamp),
-			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
+			p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp.UnixNano()),
 			request.WorkflowTypeName,
 			request.Memo.Data,
 			string(request.Memo.GetEncoding()),
@@ -253,7 +253,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 			ttl,
 		)
 	}
-	query = query.WithTimestamp(p.UnixNanoToDBTimestamp(request.StartTimestamp))
+	query = query.WithTimestamp(p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()))
 	err := query.Exec()
 	if err != nil {
 		return convertCommonErrors(nil, "RecordWorkflowExecutionStarted", err)
@@ -272,7 +272,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 	batch.Query(templateDeleteWorkflowExecutionStarted,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.StartTimestamp),
+		p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()),
 		request.RunID,
 	)
 
@@ -284,15 +284,15 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 		retention = defaultCloseTTLSeconds
 	}
 
-	if retention > maxCassandraTTL {
+	if int64(retention.Seconds()) > maxCassandraTTL {
 		batch.Query(templateCreateWorkflowExecutionClosed,
 			request.DomainUUID,
 			domainPartition,
 			request.WorkflowID,
 			request.RunID,
-			p.UnixNanoToDBTimestamp(request.StartTimestamp),
-			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
-			p.UnixNanoToDBTimestamp(request.CloseTimestamp),
+			p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.CloseTimestamp.UnixNano()),
 			request.WorkflowTypeName,
 			*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 			request.HistoryLength,
@@ -306,9 +306,9 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			domainPartition,
 			request.WorkflowID,
 			request.RunID,
-			p.UnixNanoToDBTimestamp(request.StartTimestamp),
-			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
-			p.UnixNanoToDBTimestamp(request.CloseTimestamp),
+			p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.CloseTimestamp.UnixNano()),
 			request.WorkflowTypeName,
 			*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 			request.HistoryLength,
@@ -322,9 +322,9 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			domainPartition,
 			request.WorkflowID,
 			request.RunID,
-			p.UnixNanoToDBTimestamp(request.StartTimestamp),
-			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
-			p.UnixNanoToDBTimestamp(request.CloseTimestamp),
+			p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.CloseTimestamp.UnixNano()),
 			request.WorkflowTypeName,
 			*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 			request.HistoryLength,
@@ -339,9 +339,9 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			domainPartition,
 			request.WorkflowID,
 			request.RunID,
-			p.UnixNanoToDBTimestamp(request.StartTimestamp),
-			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
-			p.UnixNanoToDBTimestamp(request.CloseTimestamp),
+			p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.CloseTimestamp.UnixNano()),
 			request.WorkflowTypeName,
 			*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 			request.HistoryLength,
@@ -359,10 +359,10 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 	// CloseTimestamp can be before StartTimestamp, meaning using CloseTimestamp
 	// can cause the deletion of open visibility record to be ignored.
 	queryTimeStamp := request.CloseTimestamp
-	if queryTimeStamp < request.StartTimestamp {
-		queryTimeStamp = request.StartTimestamp + time.Second.Nanoseconds()
+	if queryTimeStamp.Before(request.StartTimestamp) {
+		queryTimeStamp = request.StartTimestamp.Add(time.Second)
 	}
-	batch = batch.WithTimestamp(p.UnixNanoToDBTimestamp(queryTimeStamp))
+	batch = batch.WithTimestamp(p.UnixNanoToDBTimestamp(queryTimeStamp.UnixNano()))
 	err := v.session.ExecuteBatch(batch)
 	if err != nil {
 		return convertCommonErrors(nil, "RecordWorkflowExecutionClosed", err)
@@ -387,8 +387,8 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
 	query := v.session.Query(templateGetOpenWorkflowExecutions,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime)).Consistency(v.lowConslevel)
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano())).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
@@ -425,8 +425,8 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutions(
 	query := v.session.Query(templateGetClosedWorkflowExecutions,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime)).Consistency(v.lowConslevel)
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano())).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
@@ -460,8 +460,8 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByType(
 	query := v.session.Query(templateGetOpenWorkflowExecutionsByType,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime),
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
 		request.WorkflowTypeName).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -499,8 +499,8 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByType(
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByType,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime),
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
 		request.WorkflowTypeName).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -535,8 +535,8 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByWorkflowID(
 	query := v.session.Query(templateGetOpenWorkflowExecutionsByID,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime),
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
 		request.WorkflowID).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -574,8 +574,8 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByWorkflowI
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByID,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime),
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
 		request.WorkflowID).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -613,8 +613,8 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByStatus(
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByStatus,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime),
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
 		*thrift.FromWorkflowExecutionCloseStatus(&request.Status)).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -712,8 +712,8 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsOrderByClos
 	query := v.session.Query(templateGetClosedWorkflowExecutionsV2,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime)).Consistency(v.lowConslevel)
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano())).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
@@ -747,8 +747,8 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByTypeOrder
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByTypeV2,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime),
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
 		request.WorkflowTypeName).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -783,8 +783,8 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByWorkflowI
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByIDV2,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime),
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
 		request.WorkflowID).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
@@ -819,8 +819,8 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByStatusOrd
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByStatusV2,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime),
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
 		request.Status).Consistency(v.lowConslevel)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {

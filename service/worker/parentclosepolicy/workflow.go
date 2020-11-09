@@ -24,6 +24,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/uber/cadence/common/types/mapper/thrift"
+
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
