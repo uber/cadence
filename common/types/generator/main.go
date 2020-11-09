@@ -29,6 +29,8 @@ import (
 	"html/template"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -301,17 +303,30 @@ func newNamedType(n *types.Named) Type {
 	t.ThriftPackage = pkg.Name()
 	t.FullThriftPackage = pkg.Path()
 	if t.IsPrimitive {
+		type enumConst struct {
+			label string
+			value int
+		}
+		enumConsts := []enumConst{}
 		for _, name := range pkg.Scope().Names() {
 			enumValue := pkg.Scope().Lookup(name)
 			if isEnumValue(enumValue, n) {
-				t.EnumValues = append(t.EnumValues, enumValue.Name())
+				c := enumValue.(*types.Const)
+				val, _ := strconv.Atoi(c.Val().String())
+				enumConsts = append(enumConsts, enumConst{enumValue.Name(), val})
 			}
 		}
-		if len(t.EnumValues) > 0 {
+		if len(enumConsts) > 0 {
 			t.IsPrimitive = false
 			t.IsEnum = true
 			if _, ok := enumPointerExceptions[t.Name]; !ok {
 				t.IsPointer = true
+			}
+			sort.Slice(enumConsts, func(i, j int) bool {
+				return enumConsts[i].value < enumConsts[j].value
+			})
+			for _, c := range enumConsts {
+				t.EnumValues = append(t.EnumValues, c.label)
 			}
 		}
 	}
@@ -433,8 +448,8 @@ func main() {
 			TypesFile:       "common/types/admin.go",
 			MapperFile:      "common/types/mapper/thrift/admin.go",
 			DuplicatePrefix: "Admin",
-    },
-    {
+		},
+		{
 			ThriftPackage:   "github.com/uber/cadence/.gen/go/matching",
 			TypesFile:       "common/types/matching.go",
 			MapperFile:      "common/types/mapper/thrift/matching.go",
