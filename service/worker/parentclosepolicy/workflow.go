@@ -22,18 +22,19 @@ package parentclosepolicy
 
 import (
 	"context"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"time"
 
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
 
-	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -110,30 +111,32 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 			//no-op
 			continue
 		case shared.ParentClosePolicyTerminate:
-			err = client.TerminateWorkflowExecution(nil, &h.TerminateWorkflowExecutionRequest{
+			err = client.TerminateWorkflowExecution(nil, &types.HistoryTerminateWorkflowExecutionRequest{
 				DomainUUID: common.StringPtr(request.DomainUUID),
-				TerminateRequest: &shared.TerminateWorkflowExecutionRequest{
+				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
 					Domain: common.StringPtr(request.DomainName),
-					WorkflowExecution: &shared.WorkflowExecution{
-						WorkflowId: common.StringPtr(execution.WorkflowID),
-						RunId:      common.StringPtr(execution.RunID),
+					WorkflowExecution: &types.WorkflowExecution{
+						WorkflowID: common.StringPtr(execution.WorkflowID),
+						RunID:      common.StringPtr(execution.RunID),
 					},
 					Reason:   common.StringPtr("by parent close policy"),
 					Identity: common.StringPtr(processorWFTypeName),
 				},
 			})
+			err = thrift.FromError(err)
 		case shared.ParentClosePolicyRequestCancel:
-			err = client.RequestCancelWorkflowExecution(nil, &h.RequestCancelWorkflowExecutionRequest{
+			err = client.RequestCancelWorkflowExecution(nil, &types.HistoryRequestCancelWorkflowExecutionRequest{
 				DomainUUID: common.StringPtr(request.DomainUUID),
-				CancelRequest: &shared.RequestCancelWorkflowExecutionRequest{
+				CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
 					Domain: common.StringPtr(request.DomainName),
-					WorkflowExecution: &shared.WorkflowExecution{
-						WorkflowId: common.StringPtr(execution.WorkflowID),
-						RunId:      common.StringPtr(execution.RunID),
+					WorkflowExecution: &types.WorkflowExecution{
+						WorkflowID: common.StringPtr(execution.WorkflowID),
+						RunID:      common.StringPtr(execution.RunID),
 					},
 					Identity: common.StringPtr(processorWFTypeName),
 				},
 			})
+			err = thrift.FromError(err)
 		}
 
 		if err != nil {

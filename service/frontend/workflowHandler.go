@@ -727,25 +727,28 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 		tag.BlobSizeViolationOperation("RecordActivityTaskHeartbeat"),
 	); err != nil {
 		// heartbeat details exceed size limit, we would fail the activity immediately with explicit error reason
-		failRequest := &gen.RespondActivityTaskFailedRequest{
+		failRequest := &types.RespondActivityTaskFailedRequest{
 			TaskToken: heartbeatRequest.TaskToken,
 			Reason:    common.StringPtr(common.FailureReasonHeartbeatExceedsLimit),
 			Details:   heartbeatRequest.Details[0:sizeLimitError],
 			Identity:  heartbeatRequest.Identity,
 		}
-		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &h.RespondActivityTaskFailedRequest{
+		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
 			FailedRequest: failRequest,
 		})
+		err = thrift.FromError(err)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
 		resp = &gen.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(true)}
 	} else {
-		resp, err = wh.GetHistoryClient().RecordActivityTaskHeartbeat(ctx, &h.RecordActivityTaskHeartbeatRequest{
+		clientResp, err := wh.GetHistoryClient().RecordActivityTaskHeartbeat(ctx, &types.HistoryRecordActivityTaskHeartbeatRequest{
 			DomainUUID:       common.StringPtr(taskToken.DomainID),
-			HeartbeatRequest: heartbeatRequest,
+			HeartbeatRequest: thrift.ToRecordActivityTaskHeartbeatRequest(heartbeatRequest),
 		})
+		resp = thrift.FromRecordActivityTaskHeartbeatResponse(clientResp)
+		err = thrift.FromError(err)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -833,16 +836,17 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 		tag.BlobSizeViolationOperation("RecordActivityTaskHeartbeatByID"),
 	); err != nil {
 		// heartbeat details exceed size limit, we would fail the activity immediately with explicit error reason
-		failRequest := &gen.RespondActivityTaskFailedRequest{
+		failRequest := &types.RespondActivityTaskFailedRequest{
 			TaskToken: token,
 			Reason:    common.StringPtr(common.FailureReasonHeartbeatExceedsLimit),
 			Details:   heartbeatRequest.Details[0:sizeLimitError],
 			Identity:  heartbeatRequest.Identity,
 		}
-		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &h.RespondActivityTaskFailedRequest{
+		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
 			FailedRequest: failRequest,
 		})
+		err = thrift.FromError(err)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -854,10 +858,12 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 			Identity:  heartbeatRequest.Identity,
 		}
 
-		resp, err = wh.GetHistoryClient().RecordActivityTaskHeartbeat(ctx, &h.RecordActivityTaskHeartbeatRequest{
+		clientResp, err := wh.GetHistoryClient().RecordActivityTaskHeartbeat(ctx, &types.HistoryRecordActivityTaskHeartbeatRequest{
 			DomainUUID:       common.StringPtr(taskToken.DomainID),
-			HeartbeatRequest: req,
+			HeartbeatRequest: thrift.ToRecordActivityTaskHeartbeatRequest(req),
 		})
+		resp = thrift.FromRecordActivityTaskHeartbeatResponse(clientResp)
+		err = thrift.FromError(err)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -931,24 +937,26 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 		tag.BlobSizeViolationOperation("RespondActivityTaskCompleted"),
 	); err != nil {
 		// result exceeds blob size limit, we would record it as failure
-		failRequest := &gen.RespondActivityTaskFailedRequest{
+		failRequest := &types.RespondActivityTaskFailedRequest{
 			TaskToken: completeRequest.TaskToken,
 			Reason:    common.StringPtr(common.FailureReasonCompleteResultExceedsLimit),
 			Details:   completeRequest.Result[0:sizeLimitError],
 			Identity:  completeRequest.Identity,
 		}
-		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &h.RespondActivityTaskFailedRequest{
+		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
 			FailedRequest: failRequest,
 		})
+		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
 	} else {
-		err = wh.GetHistoryClient().RespondActivityTaskCompleted(ctx, &h.RespondActivityTaskCompletedRequest{
+		err = wh.GetHistoryClient().RespondActivityTaskCompleted(ctx, &types.HistoryRespondActivityTaskCompletedRequest{
 			DomainUUID:      common.StringPtr(taskToken.DomainID),
-			CompleteRequest: completeRequest,
+			CompleteRequest: thrift.ToRespondActivityTaskCompletedRequest(completeRequest),
 		})
+		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -1039,30 +1047,32 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 		tag.BlobSizeViolationOperation("RespondActivityTaskCompletedByID"),
 	); err != nil {
 		// result exceeds blob size limit, we would record it as failure
-		failRequest := &gen.RespondActivityTaskFailedRequest{
+		failRequest := &types.RespondActivityTaskFailedRequest{
 			TaskToken: token,
 			Reason:    common.StringPtr(common.FailureReasonCompleteResultExceedsLimit),
 			Details:   completeRequest.Result[0:sizeLimitError],
 			Identity:  completeRequest.Identity,
 		}
-		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &h.RespondActivityTaskFailedRequest{
+		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
 			FailedRequest: failRequest,
 		})
+		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
 	} else {
-		req := &gen.RespondActivityTaskCompletedRequest{
+		req := &types.RespondActivityTaskCompletedRequest{
 			TaskToken: token,
 			Result:    completeRequest.Result,
 			Identity:  completeRequest.Identity,
 		}
 
-		err = wh.GetHistoryClient().RespondActivityTaskCompleted(ctx, &h.RespondActivityTaskCompletedRequest{
+		err = wh.GetHistoryClient().RespondActivityTaskCompleted(ctx, &types.HistoryRespondActivityTaskCompletedRequest{
 			DomainUUID:      common.StringPtr(taskToken.DomainID),
 			CompleteRequest: req,
 		})
+		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -1141,10 +1151,11 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 		failedRequest.Details = failedRequest.Details[0:sizeLimitError]
 	}
 
-	err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &h.RespondActivityTaskFailedRequest{
+	err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
 		DomainUUID:    common.StringPtr(taskToken.DomainID),
-		FailedRequest: failedRequest,
+		FailedRequest: thrift.ToRespondActivityTaskFailedRequest(failedRequest),
 	})
+	err = thrift.FromError(err)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -1236,17 +1247,18 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 		failedRequest.Details = failedRequest.Details[0:sizeLimitError]
 	}
 
-	req := &gen.RespondActivityTaskFailedRequest{
+	req := &types.RespondActivityTaskFailedRequest{
 		TaskToken: token,
 		Reason:    failedRequest.Reason,
 		Details:   failedRequest.Details,
 		Identity:  failedRequest.Identity,
 	}
 
-	err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &h.RespondActivityTaskFailedRequest{
+	err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
 		DomainUUID:    common.StringPtr(taskToken.DomainID),
 		FailedRequest: req,
 	})
+	err = thrift.FromError(err)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -1319,24 +1331,26 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 		tag.BlobSizeViolationOperation("RespondActivityTaskCanceled"),
 	); err != nil {
 		// details exceeds blob size limit, we would record it as failure
-		failRequest := &gen.RespondActivityTaskFailedRequest{
+		failRequest := &types.RespondActivityTaskFailedRequest{
 			TaskToken: cancelRequest.TaskToken,
 			Reason:    common.StringPtr(common.FailureReasonCancelDetailsExceedsLimit),
 			Details:   cancelRequest.Details[0:sizeLimitError],
 			Identity:  cancelRequest.Identity,
 		}
-		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &h.RespondActivityTaskFailedRequest{
+		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
 			FailedRequest: failRequest,
 		})
+		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
 	} else {
-		err = wh.GetHistoryClient().RespondActivityTaskCanceled(ctx, &h.RespondActivityTaskCanceledRequest{
+		err = wh.GetHistoryClient().RespondActivityTaskCanceled(ctx, &types.HistoryRespondActivityTaskCanceledRequest{
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
-			CancelRequest: cancelRequest,
+			CancelRequest: thrift.ToRespondActivityTaskCanceledRequest(cancelRequest),
 		})
+		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -1426,16 +1440,17 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 		tag.BlobSizeViolationOperation("RespondActivityTaskCanceledByID"),
 	); err != nil {
 		// details exceeds blob size limit, we would record it as failure
-		failRequest := &gen.RespondActivityTaskFailedRequest{
+		failRequest := &types.RespondActivityTaskFailedRequest{
 			TaskToken: token,
 			Reason:    common.StringPtr(common.FailureReasonCancelDetailsExceedsLimit),
 			Details:   cancelRequest.Details[0:sizeLimitError],
 			Identity:  cancelRequest.Identity,
 		}
-		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &h.RespondActivityTaskFailedRequest{
+		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
 			FailedRequest: failRequest,
 		})
+		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -1446,10 +1461,11 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 			Identity:  cancelRequest.Identity,
 		}
 
-		err = wh.GetHistoryClient().RespondActivityTaskCanceled(ctx, &h.RespondActivityTaskCanceledRequest{
+		err = wh.GetHistoryClient().RespondActivityTaskCanceled(ctx, &types.HistoryRespondActivityTaskCanceledRequest{
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
-			CancelRequest: req,
+			CancelRequest: thrift.ToRespondActivityTaskCanceledRequest(req),
 		})
+		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -1505,10 +1521,12 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		return nil, errShuttingDown
 	}
 
-	histResp, err := wh.GetHistoryClient().RespondDecisionTaskCompleted(ctx, &h.RespondDecisionTaskCompletedRequest{
+	clientResp, err := wh.GetHistoryClient().RespondDecisionTaskCompleted(ctx, &types.HistoryRespondDecisionTaskCompletedRequest{
 		DomainUUID:      common.StringPtr(taskToken.DomainID),
-		CompleteRequest: completeRequest},
+		CompleteRequest: thrift.ToRespondDecisionTaskCompletedRequest(completeRequest)},
 	)
+	histResp := thrift.FromHistoryRespondDecisionTaskCompletedResponse(clientResp)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -1613,10 +1631,11 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 		failedRequest.Details = failedRequest.Details[0:sizeLimitError]
 	}
 
-	err = wh.GetHistoryClient().RespondDecisionTaskFailed(ctx, &h.RespondDecisionTaskFailedRequest{
+	err = wh.GetHistoryClient().RespondDecisionTaskFailed(ctx, &types.HistoryRespondDecisionTaskFailedRequest{
 		DomainUUID:    common.StringPtr(taskToken.DomainID),
-		FailedRequest: failedRequest,
+		FailedRequest: thrift.ToRespondDecisionTaskFailedRequest(failedRequest),
 	})
+	err = thrift.FromError(err)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -1831,8 +1850,9 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	}
 
 	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
-	resp, err = wh.GetHistoryClient().StartWorkflowExecution(ctx, common.CreateHistoryStartWorkflowRequest(domainID, startRequest))
-
+	clientResp, err := wh.GetHistoryClient().StartWorkflowExecution(ctx, thrift.ToHistoryStartWorkflowExecutionRequest(common.CreateHistoryStartWorkflowRequest(domainID, startRequest)))
+	resp = thrift.FromStartWorkflowExecutionResponse(clientResp)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -1913,12 +1933,14 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		expectedNextEventID int64,
 		currentBranchToken []byte,
 	) ([]byte, string, int64, int64, bool, error) {
-		response, err := wh.GetHistoryClient().PollMutableState(ctx, &h.PollMutableStateRequest{
+		clientResp, err := wh.GetHistoryClient().PollMutableState(ctx, &types.PollMutableStateRequest{
 			DomainUUID:          common.StringPtr(domainUUID),
-			Execution:           execution,
-			ExpectedNextEventId: common.Int64Ptr(expectedNextEventID),
+			Execution:           thrift.ToWorkflowExecution(execution),
+			ExpectedNextEventID: common.Int64Ptr(expectedNextEventID),
 			CurrentBranchToken:  currentBranchToken,
 		})
+		response := thrift.FromPollMutableStateResponse(clientResp)
+		err = thrift.FromError(err)
 
 		if err != nil {
 			return nil, "", 0, 0, false, err
@@ -2157,10 +2179,11 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	err = wh.GetHistoryClient().SignalWorkflowExecution(ctx, &h.SignalWorkflowExecutionRequest{
+	err = wh.GetHistoryClient().SignalWorkflowExecution(ctx, &types.HistorySignalWorkflowExecutionRequest{
 		DomainUUID:    common.StringPtr(domainID),
-		SignalRequest: signalRequest,
+		SignalRequest: thrift.ToSignalWorkflowExecutionRequest(signalRequest),
 	})
+	err = thrift.FromError(err)
 	if err != nil {
 		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
@@ -2306,10 +2329,12 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	resp, err = wh.GetHistoryClient().SignalWithStartWorkflowExecution(ctx, &h.SignalWithStartWorkflowExecutionRequest{
+	clientResp, err := wh.GetHistoryClient().SignalWithStartWorkflowExecution(ctx, &types.HistorySignalWithStartWorkflowExecutionRequest{
 		DomainUUID:             common.StringPtr(domainID),
-		SignalWithStartRequest: signalWithStartRequest,
+		SignalWithStartRequest: thrift.ToSignalWithStartWorkflowExecutionRequest(signalWithStartRequest),
 	})
+	resp = thrift.FromStartWorkflowExecutionResponse(clientResp)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
@@ -2359,10 +2384,11 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	err = wh.GetHistoryClient().TerminateWorkflowExecution(ctx, &h.TerminateWorkflowExecutionRequest{
+	err = wh.GetHistoryClient().TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
 		DomainUUID:       common.StringPtr(domainID),
-		TerminateRequest: terminateRequest,
+		TerminateRequest: thrift.ToTerminateWorkflowExecutionRequest(terminateRequest),
 	})
+	err = thrift.FromError(err)
 	if err != nil {
 		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
@@ -2412,10 +2438,12 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	resp, err = wh.GetHistoryClient().ResetWorkflowExecution(ctx, &h.ResetWorkflowExecutionRequest{
+	clientResp, err := wh.GetHistoryClient().ResetWorkflowExecution(ctx, &types.HistoryResetWorkflowExecutionRequest{
 		DomainUUID:   common.StringPtr(domainID),
-		ResetRequest: resetRequest,
+		ResetRequest: thrift.ToResetWorkflowExecutionRequest(resetRequest),
 	})
+	resp = thrift.FromResetWorkflowExecutionResponse(clientResp)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
@@ -2464,10 +2492,11 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	err = wh.GetHistoryClient().RequestCancelWorkflowExecution(ctx, &h.RequestCancelWorkflowExecutionRequest{
+	err = wh.GetHistoryClient().RequestCancelWorkflowExecution(ctx, &types.HistoryRequestCancelWorkflowExecutionRequest{
 		DomainUUID:    common.StringPtr(domainID),
-		CancelRequest: cancelRequest,
+		CancelRequest: thrift.ToRequestCancelWorkflowExecutionRequest(cancelRequest),
 	})
+	err = thrift.FromError(err)
 	if err != nil {
 		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
@@ -3077,10 +3106,11 @@ func (wh *WorkflowHandler) ResetStickyTaskList(
 		return nil, wh.error(err, scope)
 	}
 
-	_, err = wh.GetHistoryClient().ResetStickyTaskList(ctx, &h.ResetStickyTaskListRequest{
+	_, err = wh.GetHistoryClient().ResetStickyTaskList(ctx, &types.HistoryResetStickyTaskListRequest{
 		DomainUUID: common.StringPtr(domainID),
-		Execution:  resetRequest.Execution,
+		Execution:  thrift.ToWorkflowExecution(resetRequest.Execution),
 	})
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -3155,11 +3185,13 @@ func (wh *WorkflowHandler) QueryWorkflow(
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	req := &h.QueryWorkflowRequest{
+	req := &types.HistoryQueryWorkflowRequest{
 		DomainUUID: common.StringPtr(domainID),
-		Request:    queryRequest,
+		Request:    thrift.ToQueryWorkflowRequest(queryRequest),
 	}
-	hResponse, err := wh.GetHistoryClient().QueryWorkflow(ctx, req)
+	clientResp, err := wh.GetHistoryClient().QueryWorkflow(ctx, req)
+	hResponse := thrift.FromHistoryQueryWorkflowResponse(clientResp)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
@@ -3206,10 +3238,12 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(
 		return nil, err
 	}
 
-	response, err := wh.GetHistoryClient().DescribeWorkflowExecution(ctx, &h.DescribeWorkflowExecutionRequest{
+	clientResp, err := wh.GetHistoryClient().DescribeWorkflowExecution(ctx, &types.HistoryDescribeWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
-		Request:    request,
+		Request:    thrift.ToDescribeWorkflowExecutionRequest(request),
 	})
+	response := thrift.FromDescribeWorkflowExecutionResponse(clientResp)
+	err = thrift.FromError(err)
 
 	if err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
@@ -3844,7 +3878,8 @@ func (wh *WorkflowHandler) historyArchived(ctx context.Context, request *gen.Get
 		DomainUUID: common.StringPtr(domainID),
 		Execution:  request.Execution,
 	}
-	_, err := wh.GetHistoryClient().GetMutableState(ctx, getMutableStateRequest)
+	_, err := wh.GetHistoryClient().GetMutableState(ctx, thrift.ToGetMutableStateRequest(getMutableStateRequest))
+	err = thrift.FromError(err)
 	if err == nil {
 		return false
 	}

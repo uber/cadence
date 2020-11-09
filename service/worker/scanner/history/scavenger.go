@@ -27,14 +27,15 @@ import (
 	"go.uber.org/cadence/activity"
 	"golang.org/x/time/rate"
 
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -50,7 +51,7 @@ type (
 	// Scavenger is the type that holds the state for history scavenger daemon
 	Scavenger struct {
 		db       p.HistoryManager
-		client   historyserviceclient.Interface
+		client   history.Client
 		hbd      ScavengerHeartbeatDetails
 		rps      int
 		limiter  *rate.Limiter
@@ -93,7 +94,7 @@ const (
 func NewScavenger(
 	db p.HistoryManager,
 	rps int,
-	client historyserviceclient.Interface,
+	client history.Client,
 	hbd ScavengerHeartbeatDetails,
 	metricsClient metrics.Client,
 	logger log.Logger,
@@ -231,13 +232,14 @@ func (s *Scavenger) startTaskProcessor(
 
 			// this checks if the mutableState still exists
 			// if not then the history branch is garbage, we need to delete the history branch
-			_, err = s.client.DescribeMutableState(ctx, &history.DescribeMutableStateRequest{
+			_, err = s.client.DescribeMutableState(ctx, &types.DescribeMutableStateRequest{
 				DomainUUID: common.StringPtr(task.domainID),
-				Execution: &shared.WorkflowExecution{
-					WorkflowId: common.StringPtr(task.workflowID),
-					RunId:      common.StringPtr(task.runID),
+				Execution: &types.WorkflowExecution{
+					WorkflowID: common.StringPtr(task.workflowID),
+					RunID:      common.StringPtr(task.runID),
 				},
 			})
+			err = thrift.FromError(err)
 
 			if err != nil {
 				if _, ok := err.(*shared.EntityNotExistsError); ok {

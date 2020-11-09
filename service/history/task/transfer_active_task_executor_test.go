@@ -32,8 +32,8 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/history/historyservicetest"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	hclient "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
@@ -48,6 +48,7 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	dc "github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/engine"
@@ -68,8 +69,8 @@ type (
 		mockShard           *shard.TestContext
 		mockEngine          *engine.MockEngine
 		mockDomainCache     *cache.MockDomainCache
+		mockHistoryClient   *hclient.MockClient
 		mockMatchingClient  *matching.MockClient
-		mockHistoryClient   *historyservicetest.MockClient
 		mockClusterMetadata *cluster.MockMetadata
 
 		mockVisibilityMgr           *mocks.VisibilityManager
@@ -680,12 +681,12 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent() 
 
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockHistoryClient.EXPECT().RecordChildExecutionCompleted(gomock.Any(), &history.RecordChildExecutionCompletedRequest{
+	s.mockHistoryClient.EXPECT().RecordChildExecutionCompleted(gomock.Any(), &types.RecordChildExecutionCompletedRequest{
 		DomainUUID:         common.StringPtr(parentDomainID),
-		WorkflowExecution:  &parentExecution,
-		InitiatedId:        common.Int64Ptr(parentInitiatedID),
-		CompletedExecution: &workflowExecution,
-		CompletionEvent:    event,
+		WorkflowExecution:  thrift.ToWorkflowExecution(&parentExecution),
+		InitiatedID:        common.Int64Ptr(parentInitiatedID),
+		CompletedExecution: thrift.ToWorkflowExecution(&workflowExecution),
+		CompletionEvent:    thrift.ToHistoryEvent(event),
 	}).Return(nil).AnyTimes()
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything, mock.Anything).Return(nil).Once()
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
@@ -1358,13 +1359,13 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Success() {
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.version).Return(cluster.TestCurrentClusterName).AnyTimes()
 
-	s.mockHistoryClient.EXPECT().RemoveSignalMutableState(gomock.Any(), &history.RemoveSignalMutableStateRequest{
+	s.mockHistoryClient.EXPECT().RemoveSignalMutableState(gomock.Any(), &types.RemoveSignalMutableStateRequest{
 		DomainUUID: common.StringPtr(transferTask.TargetDomainID),
-		WorkflowExecution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(transferTask.TargetWorkflowID),
-			RunId:      common.StringPtr(transferTask.TargetRunID),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(transferTask.TargetWorkflowID),
+			RunID:      common.StringPtr(transferTask.TargetRunID),
 		},
-		RequestId: common.StringPtr(si.SignalRequestID),
+		RequestID: common.StringPtr(si.SignalRequestID),
 	}).Return(nil).Times(1)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
@@ -1581,15 +1582,15 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 		transferTask,
 		mutableState,
 		ci,
-	)).Return(&workflow.StartWorkflowExecutionResponse{RunId: common.StringPtr(childRunID)}, nil).Times(1)
+	)).Return(&types.StartWorkflowExecutionResponse{RunID: common.StringPtr(childRunID)}, nil).Times(1)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.version).Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockHistoryClient.EXPECT().ScheduleDecisionTask(gomock.Any(), &history.ScheduleDecisionTaskRequest{
+	s.mockHistoryClient.EXPECT().ScheduleDecisionTask(gomock.Any(), &types.ScheduleDecisionTaskRequest{
 		DomainUUID: common.StringPtr(constants.TestChildDomainID),
-		WorkflowExecution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(childWorkflowID),
-			RunId:      common.StringPtr(childRunID),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(childWorkflowID),
+			RunID:      common.StringPtr(childRunID),
 		},
 		IsFirstDecision: common.BoolPtr(true),
 	}).Return(nil).Times(1)
@@ -1758,11 +1759,11 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockHistoryClient.EXPECT().ScheduleDecisionTask(gomock.Any(), &history.ScheduleDecisionTaskRequest{
+	s.mockHistoryClient.EXPECT().ScheduleDecisionTask(gomock.Any(), &types.ScheduleDecisionTaskRequest{
 		DomainUUID: common.StringPtr(constants.TestChildDomainID),
-		WorkflowExecution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(childWorkflowID),
-			RunId:      common.StringPtr(childRunID),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(childWorkflowID),
+			RunID:      common.StringPtr(childRunID),
 		},
 		IsFirstDecision: common.BoolPtr(true),
 	}).Return(nil).Times(1)
@@ -2061,27 +2062,27 @@ func (s *transferActiveTaskExecutorSuite) createRequestCancelWorkflowExecutionRe
 	targetDomainName string,
 	task *persistence.TransferTaskInfo,
 	rci *persistence.RequestCancelInfo,
-) *history.RequestCancelWorkflowExecutionRequest {
+) *types.HistoryRequestCancelWorkflowExecutionRequest {
 
-	sourceExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(task.WorkflowID),
-		RunId:      common.StringPtr(task.RunID),
+	sourceExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(task.WorkflowID),
+		RunID:      common.StringPtr(task.RunID),
 	}
-	targetExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(task.TargetWorkflowID),
-		RunId:      common.StringPtr(task.TargetRunID),
+	targetExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(task.TargetWorkflowID),
+		RunID:      common.StringPtr(task.TargetRunID),
 	}
 
-	return &history.RequestCancelWorkflowExecutionRequest{
+	return &types.HistoryRequestCancelWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(task.TargetDomainID),
-		CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
+		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
 			Domain:            common.StringPtr(targetDomainName),
 			WorkflowExecution: &targetExecution,
 			Identity:          common.StringPtr(identityHistoryService),
 			// Use the same request ID to dedupe RequestCancelWorkflowExecution calls
-			RequestId: common.StringPtr(rci.CancelRequestID),
+			RequestID: common.StringPtr(rci.CancelRequestID),
 		},
-		ExternalInitiatedEventId:  common.Int64Ptr(task.ScheduleID),
+		ExternalInitiatedEventID:  common.Int64Ptr(task.ScheduleID),
 		ExternalWorkflowExecution: &sourceExecution,
 		ChildWorkflowOnly:         common.BoolPtr(task.TargetChildWorkflowOnly),
 	}
@@ -2091,26 +2092,26 @@ func (s *transferActiveTaskExecutorSuite) createSignalWorkflowExecutionRequest(
 	targetDomainName string,
 	task *persistence.TransferTaskInfo,
 	si *persistence.SignalInfo,
-) *history.SignalWorkflowExecutionRequest {
+) *types.HistorySignalWorkflowExecutionRequest {
 
-	sourceExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(task.WorkflowID),
-		RunId:      common.StringPtr(task.RunID),
+	sourceExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(task.WorkflowID),
+		RunID:      common.StringPtr(task.RunID),
 	}
-	targetExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(task.TargetWorkflowID),
-		RunId:      common.StringPtr(task.TargetRunID),
+	targetExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(task.TargetWorkflowID),
+		RunID:      common.StringPtr(task.TargetRunID),
 	}
 
-	return &history.SignalWorkflowExecutionRequest{
+	return &types.HistorySignalWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(task.TargetDomainID),
-		SignalRequest: &workflow.SignalWorkflowExecutionRequest{
+		SignalRequest: &types.SignalWorkflowExecutionRequest{
 			Domain:            common.StringPtr(targetDomainName),
 			WorkflowExecution: &targetExecution,
 			Identity:          common.StringPtr(identityHistoryService),
 			SignalName:        common.StringPtr(si.SignalName),
 			Input:             si.Input,
-			RequestId:         common.StringPtr(si.SignalRequestID),
+			RequestID:         common.StringPtr(si.SignalRequestID),
 			Control:           si.Control,
 		},
 		ExternalWorkflowExecution: &sourceExecution,
@@ -2124,35 +2125,35 @@ func (s *transferActiveTaskExecutorSuite) createChildWorkflowExecutionRequest(
 	task *persistence.TransferTaskInfo,
 	mutableState execution.MutableState,
 	ci *persistence.ChildExecutionInfo,
-) *history.StartWorkflowExecutionRequest {
+) *types.HistoryStartWorkflowExecutionRequest {
 
 	event, err := mutableState.GetChildExecutionInitiatedEvent(context.Background(), task.ScheduleID)
 	s.NoError(err)
-	attributes := event.StartChildWorkflowExecutionInitiatedEventAttributes
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(task.WorkflowID),
-		RunId:      common.StringPtr(task.RunID),
+	attributes := thrift.ToStartChildWorkflowExecutionInitiatedEventAttributes(event.StartChildWorkflowExecutionInitiatedEventAttributes)
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(task.WorkflowID),
+		RunID:      common.StringPtr(task.RunID),
 	}
 	now := time.Now()
-	return &history.StartWorkflowExecutionRequest{
+	return &types.HistoryStartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(task.TargetDomainID),
-		StartRequest: &workflow.StartWorkflowExecutionRequest{
+		StartRequest: &types.StartWorkflowExecutionRequest{
 			Domain:                              common.StringPtr(childDomainName),
-			WorkflowId:                          attributes.WorkflowId,
+			WorkflowID:                          attributes.WorkflowID,
 			WorkflowType:                        attributes.WorkflowType,
 			TaskList:                            attributes.TaskList,
 			Input:                               attributes.Input,
 			ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
 			TaskStartToCloseTimeoutSeconds:      attributes.TaskStartToCloseTimeoutSeconds,
 			// Use the same request ID to dedupe StartWorkflowExecution calls
-			RequestId:             common.StringPtr(ci.CreateRequestID),
-			WorkflowIdReusePolicy: attributes.WorkflowIdReusePolicy,
+			RequestID:             common.StringPtr(ci.CreateRequestID),
+			WorkflowIDReusePolicy: attributes.WorkflowIDReusePolicy,
 		},
-		ParentExecutionInfo: &history.ParentExecutionInfo{
+		ParentExecutionInfo: &types.ParentExecutionInfo{
 			DomainUUID:  common.StringPtr(task.DomainID),
 			Domain:      common.StringPtr(constants.TestDomainName),
 			Execution:   &workflowExecution,
-			InitiatedId: common.Int64Ptr(task.ScheduleID),
+			InitiatedID: common.Int64Ptr(task.ScheduleID),
 		},
 		FirstDecisionTaskBackoffSeconds: common.Int32Ptr(
 			backoff.GetBackoffForNextScheduleInSeconds(attributes.GetCronSchedule(), now, now),

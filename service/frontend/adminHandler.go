@@ -33,7 +33,6 @@ import (
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
 	h "github.com/uber/cadence/.gen/go/history"
-	hist "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -50,6 +49,8 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 var _ adminserviceserver.Interface = (*adminHandlerImpl)(nil)
@@ -264,10 +265,12 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	domainID, err := adh.GetDomainCache().GetDomainID(request.GetDomain())
 
 	historyAddr := historyHost.GetAddress()
-	resp2, err := adh.GetHistoryClient().DescribeMutableState(ctx, &hist.DescribeMutableStateRequest{
+	clientResp, err := adh.GetHistoryClient().DescribeMutableState(ctx, &types.DescribeMutableStateRequest{
 		DomainUUID: &domainID,
-		Execution:  request.Execution,
+		Execution:  thrift.ToWorkflowExecution(request.Execution),
 	})
+	resp2 := thrift.FromDescribeMutableStateResponse(clientResp)
+	err = thrift.FromError(err)
 	if err != nil {
 		return &admin.DescribeWorkflowExecutionResponse{}, err
 	}
@@ -292,7 +295,8 @@ func (adh *adminHandlerImpl) RemoveTask(
 	if request == nil || request.ShardID == nil || request.Type == nil || request.TaskID == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
-	err := adh.GetHistoryClient().RemoveTask(ctx, request)
+	err := adh.GetHistoryClient().RemoveTask(ctx, thrift.ToRemoveTaskRequest(request))
+	err = thrift.FromError(err)
 	return err
 }
 
@@ -309,7 +313,8 @@ func (adh *adminHandlerImpl) CloseShard(
 	if request == nil || request.ShardID == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
-	err := adh.GetHistoryClient().CloseShard(ctx, request)
+	err := adh.GetHistoryClient().CloseShard(ctx, thrift.ToCloseShardRequest(request))
+	err = thrift.FromError(err)
 	return err
 }
 
@@ -330,7 +335,8 @@ func (adh *adminHandlerImpl) ResetQueue(
 		return adh.error(errClusterNameNotSet, scope)
 	}
 
-	err := adh.GetHistoryClient().ResetQueue(ctx, request)
+	err := adh.GetHistoryClient().ResetQueue(ctx, thrift.ToResetQueueRequest(request))
+	err = thrift.FromError(err)
 	return err
 }
 
@@ -351,8 +357,8 @@ func (adh *adminHandlerImpl) DescribeQueue(
 		return nil, adh.error(errClusterNameNotSet, scope)
 	}
 
-	resp, err := adh.GetHistoryClient().DescribeQueue(ctx, request)
-	return resp, err
+	clientResp, err := adh.GetHistoryClient().DescribeQueue(ctx, thrift.ToDescribeQueueRequest(request))
+	return thrift.FromDescribeQueueResponse(clientResp), thrift.FromError(err)
 }
 
 // DescribeHistoryHost returns information about the internal states of a history host
@@ -375,8 +381,8 @@ func (adh *adminHandlerImpl) DescribeHistoryHost(
 		}
 	}
 
-	resp, err := adh.GetHistoryClient().DescribeHistoryHost(ctx, request)
-	return resp, err
+	clientResp, err := adh.GetHistoryClient().DescribeHistoryHost(ctx, thrift.ToDescribeHistoryHostRequest(request))
+	return thrift.FromDescribeHistoryHostResponse(clientResp), thrift.FromError(err)
 }
 
 // GetWorkflowExecutionRawHistoryV2 - retrieves the history of workflow execution
@@ -404,10 +410,12 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 	var pageToken *getWorkflowRawHistoryV2Token
 	var targetVersionHistory *persistence.VersionHistory
 	if request.NextPageToken == nil {
-		response, err := adh.GetHistoryClient().GetMutableState(ctx, &h.GetMutableStateRequest{
+		clientResp, err := adh.GetHistoryClient().GetMutableState(ctx, &types.GetMutableStateRequest{
 			DomainUUID: common.StringPtr(domainID),
-			Execution:  execution,
+			Execution:  thrift.ToWorkflowExecution(execution),
 		})
+		response := thrift.FromGetMutableStateResponse(clientResp)
+		err = thrift.FromError(err)
 		if err != nil {
 			return nil, adh.error(err, scope)
 		}
@@ -590,7 +598,9 @@ func (adh *adminHandlerImpl) GetReplicationMessages(
 		return nil, adh.error(errClusterNameNotSet, scope)
 	}
 
-	resp, err = adh.GetHistoryRawClient().GetReplicationMessages(ctx, request)
+	clientResp, err := adh.GetHistoryRawClient().GetReplicationMessages(ctx, thrift.ToGetReplicationMessagesRequest(request))
+	resp = thrift.FromGetReplicationMessagesResponse(clientResp)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -677,7 +687,9 @@ func (adh *adminHandlerImpl) GetDLQReplicationMessages(
 		return nil, adh.error(errEmptyReplicationInfo, scope)
 	}
 
-	resp, err = adh.GetHistoryClient().GetDLQReplicationMessages(ctx, request)
+	clientResp, err := adh.GetHistoryClient().GetDLQReplicationMessages(ctx, thrift.ToGetDLQReplicationMessagesRequest(request))
+	resp = thrift.FromGetDLQReplicationMessagesResponse(clientResp)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -714,10 +726,11 @@ func (adh *adminHandlerImpl) ReapplyEvents(
 		return adh.error(err, scope)
 	}
 
-	err = adh.GetHistoryClient().ReapplyEvents(ctx, &h.ReapplyEventsRequest{
+	err = adh.GetHistoryClient().ReapplyEvents(ctx, &types.HistoryReapplyEventsRequest{
 		DomainUUID: common.StringPtr(domainEntry.GetInfo().ID),
-		Request:    request,
+		Request:    thrift.ToReapplyEventsRequest(request),
 	})
+	err = thrift.FromError(err)
 	if err != nil {
 		return adh.error(err, scope)
 	}
@@ -755,7 +768,8 @@ func (adh *adminHandlerImpl) ReadDLQMessages(
 	var op func() error
 	switch request.GetType() {
 	case replicator.DLQTypeReplication:
-		return adh.GetHistoryClient().ReadDLQMessages(ctx, request)
+		clientResp, err := adh.GetHistoryClient().ReadDLQMessages(ctx, thrift.ToReadDLQMessagesRequest(request))
+		return thrift.FromReadDLQMessagesResponse(clientResp), thrift.FromError(err)
 	case replicator.DLQTypeDomain:
 		op = func() error {
 			select {
@@ -810,7 +824,8 @@ func (adh *adminHandlerImpl) PurgeDLQMessages(
 	var op func() error
 	switch request.GetType() {
 	case replicator.DLQTypeReplication:
-		return adh.GetHistoryClient().PurgeDLQMessages(ctx, request)
+		err = adh.GetHistoryClient().PurgeDLQMessages(ctx, thrift.ToPurgeDLQMessagesRequest(request))
+		return thrift.FromError(err)
 	case replicator.DLQTypeDomain:
 		op = func() error {
 			select {
@@ -860,7 +875,8 @@ func (adh *adminHandlerImpl) MergeDLQMessages(
 	var op func() error
 	switch request.GetType() {
 	case replicator.DLQTypeReplication:
-		return adh.GetHistoryClient().MergeDLQMessages(ctx, request)
+		clientResp, err := adh.GetHistoryClient().MergeDLQMessages(ctx, thrift.ToMergeDLQMessagesRequest(request))
+		return thrift.FromMergeDLQMessagesResponse(clientResp), thrift.FromError(err)
 	case replicator.DLQTypeDomain:
 
 		op = func() error {
@@ -911,10 +927,11 @@ func (adh *adminHandlerImpl) RefreshWorkflowTasks(
 		return adh.error(err, scope)
 	}
 
-	err = adh.GetHistoryClient().RefreshWorkflowTasks(ctx, &h.RefreshWorkflowTasksRequest{
+	err = adh.GetHistoryClient().RefreshWorkflowTasks(ctx, &types.HistoryRefreshWorkflowTasksRequest{
 		DomainUIID: common.StringPtr(domainEntry.GetInfo().ID),
-		Request:    request,
+		Request:    thrift.ToRefreshWorkflowTasksRequest(request),
 	})
+	err = thrift.FromError(err)
 	if err != nil {
 		return adh.error(err, scope)
 	}
@@ -937,7 +954,8 @@ func (adh *adminHandlerImpl) ResendReplicationTasks(
 		adh.GetDomainCache(),
 		adh.GetRemoteAdminClient(request.GetRemoteCluster()),
 		func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
-			return adh.GetHistoryClient().ReplicateEventsV2(ctx, request)
+			err := adh.GetHistoryClient().ReplicateEventsV2(ctx, thrift.ToReplicateEventsV2Request(request))
+			return thrift.FromError(err)
 		},
 		adh.eventSerializder,
 		nil,

@@ -25,10 +25,8 @@ import (
 
 	"go.uber.org/yarpc"
 
-	h "github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
 )
 
 var _ Client = (*metricClient)(nil)
@@ -48,8 +46,8 @@ func NewMetricClient(client Client, metricsClient metrics.Client) Client {
 
 func (c *metricClient) StartWorkflowExecution(
 	context context.Context,
-	request *h.StartWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) (*shared.StartWorkflowExecutionResponse, error) {
+	request *types.HistoryStartWorkflowExecutionRequest,
+	opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientStartWorkflowExecutionScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientStartWorkflowExecutionScope, metrics.CadenceClientLatency)
@@ -65,9 +63,9 @@ func (c *metricClient) StartWorkflowExecution(
 
 func (c *metricClient) DescribeHistoryHost(
 	context context.Context,
-	request *shared.DescribeHistoryHostRequest,
+	request *types.DescribeHistoryHostRequest,
 	opts ...yarpc.CallOption,
-) (*shared.DescribeHistoryHostResponse, error) {
+) (*types.DescribeHistoryHostResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientDescribeHistoryHostScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientDescribeHistoryHostScope, metrics.CadenceClientLatency)
@@ -83,7 +81,7 @@ func (c *metricClient) DescribeHistoryHost(
 
 func (c *metricClient) RemoveTask(
 	context context.Context,
-	request *shared.RemoveTaskRequest,
+	request *types.RemoveTaskRequest,
 	opts ...yarpc.CallOption,
 ) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientRemoveTaskScope, metrics.CadenceClientRequests)
@@ -101,7 +99,7 @@ func (c *metricClient) RemoveTask(
 
 func (c *metricClient) CloseShard(
 	context context.Context,
-	request *shared.CloseShardRequest,
+	request *types.CloseShardRequest,
 	opts ...yarpc.CallOption,
 ) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientCloseShardScope, metrics.CadenceClientRequests)
@@ -119,7 +117,7 @@ func (c *metricClient) CloseShard(
 
 func (c *metricClient) ResetQueue(
 	context context.Context,
-	request *shared.ResetQueueRequest,
+	request *types.ResetQueueRequest,
 	opts ...yarpc.CallOption,
 ) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientResetQueueScope, metrics.CadenceClientRequests)
@@ -137,9 +135,9 @@ func (c *metricClient) ResetQueue(
 
 func (c *metricClient) DescribeQueue(
 	context context.Context,
-	request *shared.DescribeQueueRequest,
+	request *types.DescribeQueueRequest,
 	opts ...yarpc.CallOption,
-) (*shared.DescribeQueueResponse, error) {
+) (*types.DescribeQueueResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientDescribeQueueScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientDescribeQueueScope, metrics.CadenceClientLatency)
@@ -155,9 +153,9 @@ func (c *metricClient) DescribeQueue(
 
 func (c *metricClient) DescribeMutableState(
 	context context.Context,
-	request *h.DescribeMutableStateRequest,
+	request *types.DescribeMutableStateRequest,
 	opts ...yarpc.CallOption,
-) (*h.DescribeMutableStateResponse, error) {
+) (*types.DescribeMutableStateResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientDescribeMutableStateScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientDescribeMutableStateScope, metrics.CadenceClientLatency)
@@ -173,8 +171,8 @@ func (c *metricClient) DescribeMutableState(
 
 func (c *metricClient) GetMutableState(
 	context context.Context,
-	request *h.GetMutableStateRequest,
-	opts ...yarpc.CallOption) (*h.GetMutableStateResponse, error) {
+	request *types.GetMutableStateRequest,
+	opts ...yarpc.CallOption) (*types.GetMutableStateResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientGetMutableStateScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientGetMutableStateScope, metrics.CadenceClientLatency)
@@ -190,8 +188,8 @@ func (c *metricClient) GetMutableState(
 
 func (c *metricClient) PollMutableState(
 	context context.Context,
-	request *h.PollMutableStateRequest,
-	opts ...yarpc.CallOption) (*h.PollMutableStateResponse, error) {
+	request *types.PollMutableStateRequest,
+	opts ...yarpc.CallOption) (*types.PollMutableStateResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientPollMutableStateScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientPollMutableStateScope, metrics.CadenceClientLatency)
@@ -207,8 +205,8 @@ func (c *metricClient) PollMutableState(
 
 func (c *metricClient) ResetStickyTaskList(
 	context context.Context,
-	request *h.ResetStickyTaskListRequest,
-	opts ...yarpc.CallOption) (*h.ResetStickyTaskListResponse, error) {
+	request *types.HistoryResetStickyTaskListRequest,
+	opts ...yarpc.CallOption) (*types.HistoryResetStickyTaskListResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientResetStickyTaskListScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientResetStickyTaskListScope, metrics.CadenceClientLatency)
@@ -224,8 +222,8 @@ func (c *metricClient) ResetStickyTaskList(
 
 func (c *metricClient) DescribeWorkflowExecution(
 	context context.Context,
-	request *h.DescribeWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) (*shared.DescribeWorkflowExecutionResponse, error) {
+	request *types.HistoryDescribeWorkflowExecutionRequest,
+	opts ...yarpc.CallOption) (*types.DescribeWorkflowExecutionResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientDescribeWorkflowExecutionScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientDescribeWorkflowExecutionScope, metrics.CadenceClientLatency)
@@ -241,8 +239,8 @@ func (c *metricClient) DescribeWorkflowExecution(
 
 func (c *metricClient) RecordDecisionTaskStarted(
 	context context.Context,
-	request *h.RecordDecisionTaskStartedRequest,
-	opts ...yarpc.CallOption) (*h.RecordDecisionTaskStartedResponse, error) {
+	request *types.RecordDecisionTaskStartedRequest,
+	opts ...yarpc.CallOption) (*types.RecordDecisionTaskStartedResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientRecordDecisionTaskStartedScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientRecordDecisionTaskStartedScope, metrics.CadenceClientLatency)
@@ -258,8 +256,8 @@ func (c *metricClient) RecordDecisionTaskStarted(
 
 func (c *metricClient) RecordActivityTaskStarted(
 	context context.Context,
-	request *h.RecordActivityTaskStartedRequest,
-	opts ...yarpc.CallOption) (*h.RecordActivityTaskStartedResponse, error) {
+	request *types.RecordActivityTaskStartedRequest,
+	opts ...yarpc.CallOption) (*types.RecordActivityTaskStartedResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientRecordActivityTaskStartedScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientRecordActivityTaskStartedScope, metrics.CadenceClientLatency)
@@ -275,8 +273,8 @@ func (c *metricClient) RecordActivityTaskStarted(
 
 func (c *metricClient) RespondDecisionTaskCompleted(
 	context context.Context,
-	request *h.RespondDecisionTaskCompletedRequest,
-	opts ...yarpc.CallOption) (*h.RespondDecisionTaskCompletedResponse, error) {
+	request *types.HistoryRespondDecisionTaskCompletedRequest,
+	opts ...yarpc.CallOption) (*types.HistoryRespondDecisionTaskCompletedResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientRespondDecisionTaskCompletedScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientRespondDecisionTaskCompletedScope, metrics.CadenceClientLatency)
@@ -292,7 +290,7 @@ func (c *metricClient) RespondDecisionTaskCompleted(
 
 func (c *metricClient) RespondDecisionTaskFailed(
 	context context.Context,
-	request *h.RespondDecisionTaskFailedRequest,
+	request *types.HistoryRespondDecisionTaskFailedRequest,
 	opts ...yarpc.CallOption) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientRespondDecisionTaskFailedScope, metrics.CadenceClientRequests)
 
@@ -309,7 +307,7 @@ func (c *metricClient) RespondDecisionTaskFailed(
 
 func (c *metricClient) RespondActivityTaskCompleted(
 	context context.Context,
-	request *h.RespondActivityTaskCompletedRequest,
+	request *types.HistoryRespondActivityTaskCompletedRequest,
 	opts ...yarpc.CallOption) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientRespondActivityTaskCompletedScope, metrics.CadenceClientRequests)
 
@@ -326,7 +324,7 @@ func (c *metricClient) RespondActivityTaskCompleted(
 
 func (c *metricClient) RespondActivityTaskFailed(
 	context context.Context,
-	request *h.RespondActivityTaskFailedRequest,
+	request *types.HistoryRespondActivityTaskFailedRequest,
 	opts ...yarpc.CallOption) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientRespondActivityTaskFailedScope, metrics.CadenceClientRequests)
 
@@ -343,7 +341,7 @@ func (c *metricClient) RespondActivityTaskFailed(
 
 func (c *metricClient) RespondActivityTaskCanceled(
 	context context.Context,
-	request *h.RespondActivityTaskCanceledRequest,
+	request *types.HistoryRespondActivityTaskCanceledRequest,
 	opts ...yarpc.CallOption) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientRespondActivityTaskCanceledScope, metrics.CadenceClientRequests)
 
@@ -360,8 +358,8 @@ func (c *metricClient) RespondActivityTaskCanceled(
 
 func (c *metricClient) RecordActivityTaskHeartbeat(
 	context context.Context,
-	request *h.RecordActivityTaskHeartbeatRequest,
-	opts ...yarpc.CallOption) (*shared.RecordActivityTaskHeartbeatResponse, error) {
+	request *types.HistoryRecordActivityTaskHeartbeatRequest,
+	opts ...yarpc.CallOption) (*types.RecordActivityTaskHeartbeatResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientRecordActivityTaskHeartbeatScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientRecordActivityTaskHeartbeatScope, metrics.CadenceClientLatency)
@@ -377,7 +375,7 @@ func (c *metricClient) RecordActivityTaskHeartbeat(
 
 func (c *metricClient) RequestCancelWorkflowExecution(
 	context context.Context,
-	request *h.RequestCancelWorkflowExecutionRequest,
+	request *types.HistoryRequestCancelWorkflowExecutionRequest,
 	opts ...yarpc.CallOption) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientRequestCancelWorkflowExecutionScope, metrics.CadenceClientRequests)
 
@@ -394,7 +392,7 @@ func (c *metricClient) RequestCancelWorkflowExecution(
 
 func (c *metricClient) SignalWorkflowExecution(
 	context context.Context,
-	request *h.SignalWorkflowExecutionRequest,
+	request *types.HistorySignalWorkflowExecutionRequest,
 	opts ...yarpc.CallOption) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientSignalWorkflowExecutionScope, metrics.CadenceClientRequests)
 
@@ -411,8 +409,8 @@ func (c *metricClient) SignalWorkflowExecution(
 
 func (c *metricClient) SignalWithStartWorkflowExecution(
 	context context.Context,
-	request *h.SignalWithStartWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) (*shared.StartWorkflowExecutionResponse, error) {
+	request *types.HistorySignalWithStartWorkflowExecutionRequest,
+	opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientSignalWithStartWorkflowExecutionScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientSignalWithStartWorkflowExecutionScope, metrics.CadenceClientLatency)
@@ -428,7 +426,7 @@ func (c *metricClient) SignalWithStartWorkflowExecution(
 
 func (c *metricClient) RemoveSignalMutableState(
 	context context.Context,
-	request *h.RemoveSignalMutableStateRequest,
+	request *types.RemoveSignalMutableStateRequest,
 	opts ...yarpc.CallOption) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientRemoveSignalMutableStateScope, metrics.CadenceClientRequests)
 
@@ -445,7 +443,7 @@ func (c *metricClient) RemoveSignalMutableState(
 
 func (c *metricClient) TerminateWorkflowExecution(
 	context context.Context,
-	request *h.TerminateWorkflowExecutionRequest,
+	request *types.HistoryTerminateWorkflowExecutionRequest,
 	opts ...yarpc.CallOption) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientTerminateWorkflowExecutionScope, metrics.CadenceClientRequests)
 
@@ -462,8 +460,8 @@ func (c *metricClient) TerminateWorkflowExecution(
 
 func (c *metricClient) ResetWorkflowExecution(
 	context context.Context,
-	request *h.ResetWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) (*shared.ResetWorkflowExecutionResponse, error) {
+	request *types.HistoryResetWorkflowExecutionRequest,
+	opts ...yarpc.CallOption) (*types.ResetWorkflowExecutionResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientResetWorkflowExecutionScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientResetWorkflowExecutionScope, metrics.CadenceClientLatency)
@@ -479,7 +477,7 @@ func (c *metricClient) ResetWorkflowExecution(
 
 func (c *metricClient) ScheduleDecisionTask(
 	context context.Context,
-	request *h.ScheduleDecisionTaskRequest,
+	request *types.ScheduleDecisionTaskRequest,
 	opts ...yarpc.CallOption) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientScheduleDecisionTaskScope, metrics.CadenceClientRequests)
 
@@ -496,7 +494,7 @@ func (c *metricClient) ScheduleDecisionTask(
 
 func (c *metricClient) RecordChildExecutionCompleted(
 	context context.Context,
-	request *h.RecordChildExecutionCompletedRequest,
+	request *types.RecordChildExecutionCompletedRequest,
 	opts ...yarpc.CallOption) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientRecordChildExecutionCompletedScope, metrics.CadenceClientRequests)
 
@@ -513,7 +511,7 @@ func (c *metricClient) RecordChildExecutionCompleted(
 
 func (c *metricClient) ReplicateEventsV2(
 	context context.Context,
-	request *h.ReplicateEventsV2Request,
+	request *types.ReplicateEventsV2Request,
 	opts ...yarpc.CallOption) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientReplicateEventsV2Scope, metrics.CadenceClientRequests)
 
@@ -530,7 +528,7 @@ func (c *metricClient) ReplicateEventsV2(
 
 func (c *metricClient) SyncShardStatus(
 	context context.Context,
-	request *h.SyncShardStatusRequest,
+	request *types.SyncShardStatusRequest,
 	opts ...yarpc.CallOption) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientSyncShardStatusScope, metrics.CadenceClientRequests)
 
@@ -547,7 +545,7 @@ func (c *metricClient) SyncShardStatus(
 
 func (c *metricClient) SyncActivity(
 	context context.Context,
-	request *h.SyncActivityRequest,
+	request *types.SyncActivityRequest,
 	opts ...yarpc.CallOption) error {
 	c.metricsClient.IncCounter(metrics.HistoryClientSyncActivityScope, metrics.CadenceClientRequests)
 
@@ -564,9 +562,9 @@ func (c *metricClient) SyncActivity(
 
 func (c *metricClient) GetReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetReplicationMessagesRequest,
+	request *types.GetReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetReplicationMessagesResponse, error) {
+) (*types.GetReplicationMessagesResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientGetReplicationTasksScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientGetReplicationTasksScope, metrics.CadenceClientLatency)
@@ -582,9 +580,9 @@ func (c *metricClient) GetReplicationMessages(
 
 func (c *metricClient) GetDLQReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetDLQReplicationMessagesRequest,
+	request *types.GetDLQReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetDLQReplicationMessagesResponse, error) {
+) (*types.GetDLQReplicationMessagesResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientGetDLQReplicationTasksScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientGetDLQReplicationTasksScope, metrics.CadenceClientLatency)
@@ -600,9 +598,9 @@ func (c *metricClient) GetDLQReplicationMessages(
 
 func (c *metricClient) QueryWorkflow(
 	ctx context.Context,
-	request *h.QueryWorkflowRequest,
+	request *types.HistoryQueryWorkflowRequest,
 	opts ...yarpc.CallOption,
-) (*h.QueryWorkflowResponse, error) {
+) (*types.HistoryQueryWorkflowResponse, error) {
 	c.metricsClient.IncCounter(metrics.HistoryClientQueryWorkflowScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientQueryWorkflowScope, metrics.CadenceClientLatency)
@@ -618,7 +616,7 @@ func (c *metricClient) QueryWorkflow(
 
 func (c *metricClient) ReapplyEvents(
 	ctx context.Context,
-	request *h.ReapplyEventsRequest,
+	request *types.HistoryReapplyEventsRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -635,9 +633,9 @@ func (c *metricClient) ReapplyEvents(
 
 func (c *metricClient) ReadDLQMessages(
 	ctx context.Context,
-	request *replicator.ReadDLQMessagesRequest,
+	request *types.ReadDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.ReadDLQMessagesResponse, error) {
+) (*types.ReadDLQMessagesResponse, error) {
 
 	c.metricsClient.IncCounter(metrics.HistoryClientReadDLQMessagesScope, metrics.CadenceClientRequests)
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientReadDLQMessagesScope, metrics.CadenceClientLatency)
@@ -652,7 +650,7 @@ func (c *metricClient) ReadDLQMessages(
 
 func (c *metricClient) PurgeDLQMessages(
 	ctx context.Context,
-	request *replicator.PurgeDLQMessagesRequest,
+	request *types.PurgeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -669,9 +667,9 @@ func (c *metricClient) PurgeDLQMessages(
 
 func (c *metricClient) MergeDLQMessages(
 	ctx context.Context,
-	request *replicator.MergeDLQMessagesRequest,
+	request *types.MergeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.MergeDLQMessagesResponse, error) {
+) (*types.MergeDLQMessagesResponse, error) {
 
 	c.metricsClient.IncCounter(metrics.HistoryClientMergeDLQMessagesScope, metrics.CadenceClientRequests)
 	sw := c.metricsClient.StartTimer(metrics.HistoryClientMergeDLQMessagesScope, metrics.CadenceClientLatency)
@@ -686,7 +684,7 @@ func (c *metricClient) MergeDLQMessages(
 
 func (c *metricClient) RefreshWorkflowTasks(
 	ctx context.Context,
-	request *h.RefreshWorkflowTasksRequest,
+	request *types.HistoryRefreshWorkflowTasksRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -703,7 +701,7 @@ func (c *metricClient) RefreshWorkflowTasks(
 
 func (c *metricClient) NotifyFailoverMarkers(
 	ctx context.Context,
-	request *h.NotifyFailoverMarkersRequest,
+	request *types.NotifyFailoverMarkersRequest,
 	opts ...yarpc.CallOption,
 ) error {
 

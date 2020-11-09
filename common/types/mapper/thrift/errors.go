@@ -21,6 +21,7 @@
 package thrift
 
 import (
+	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/types"
 )
@@ -64,6 +65,10 @@ func FromError(err error) error {
 		return FromServiceBusyError(e)
 	case *types.WorkflowExecutionAlreadyStartedError:
 		return FromWorkflowExecutionAlreadyStartedError(e)
+	case *types.ShardOwnershipLostError:
+		return FromShardOwnershipLostError(e)
+	case *types.EventAlreadyStartedError:
+		return FromEventAlreadyStartedError(e)
 	default:
 		return err
 	}
@@ -108,6 +113,10 @@ func ToError(err error) error {
 		return ToServiceBusyError(e)
 	case *shared.WorkflowExecutionAlreadyStartedError:
 		return ToWorkflowExecutionAlreadyStartedError(e)
+	case *history.ShardOwnershipLostError:
+		return ToShardOwnershipLostError(e)
+	case *history.EventAlreadyStartedError:
+		return ToEventAlreadyStartedError(e)
 	default:
 		return err
 	}

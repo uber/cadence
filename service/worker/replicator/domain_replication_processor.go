@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -145,7 +146,9 @@ func (p *domainReplicationProcessor) fetchDomainReplicationTasks() {
 		LastRetrievedMessageId: common.Int64Ptr(p.lastRetrievedMessageID),
 		LastProcessedMessageId: common.Int64Ptr(p.lastProcessedMessageID),
 	}
-	response, err := p.remotePeer.GetDomainReplicationMessages(ctx, request)
+	clientResp, err := p.remotePeer.GetDomainReplicationMessages(ctx, thrift.ToGetDomainReplicationMessagesRequest(request))
+	response := thrift.FromGetDomainReplicationMessagesResponse(clientResp)
+	err = thrift.FromError(err)
 	defer cancel()
 
 	if err != nil {

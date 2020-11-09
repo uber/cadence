@@ -37,6 +37,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/reset"
@@ -330,19 +332,20 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	if replyToParentWorkflow {
 		recordChildCompletionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 		defer cancel()
-		err = t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &h.RecordChildExecutionCompletedRequest{
+		err = t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &types.RecordChildExecutionCompletedRequest{
 			DomainUUID: common.StringPtr(parentDomainID),
-			WorkflowExecution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(parentWorkflowID),
-				RunId:      common.StringPtr(parentRunID),
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: common.StringPtr(parentWorkflowID),
+				RunID:      common.StringPtr(parentRunID),
 			},
-			InitiatedId: common.Int64Ptr(initiatedID),
-			CompletedExecution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(task.WorkflowID),
-				RunId:      common.StringPtr(task.RunID),
+			InitiatedID: common.Int64Ptr(initiatedID),
+			CompletedExecution: &types.WorkflowExecution{
+				WorkflowID: common.StringPtr(task.WorkflowID),
+				RunID:      common.StringPtr(task.RunID),
 			},
-			CompletionEvent: completionEvent,
+			CompletionEvent: thrift.ToHistoryEvent(completionEvent),
 		})
+		err = thrift.FromError(err)
 
 		// Check to see if the error is non-transient, in which case reset the error and continue with processing
 		switch err.(type) {
@@ -555,14 +558,15 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 	// remove signalRequestedID from target workflow, after Signal detail is removed from source workflow
 	removeSignalCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 	defer cancel()
-	return t.historyClient.RemoveSignalMutableState(removeSignalCtx, &h.RemoveSignalMutableStateRequest{
+	err = t.historyClient.RemoveSignalMutableState(removeSignalCtx, &types.RemoveSignalMutableStateRequest{
 		DomainUUID: common.StringPtr(task.TargetDomainID),
-		WorkflowExecution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(task.TargetWorkflowID),
-			RunId:      common.StringPtr(task.TargetRunID),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(task.TargetWorkflowID),
+			RunID:      common.StringPtr(task.TargetRunID),
 		},
-		RequestId: common.StringPtr(signalInfo.SignalRequestID),
+		RequestID: common.StringPtr(signalInfo.SignalRequestID),
 	})
+	return thrift.FromError(err)
 }
 
 func (t *transferActiveTaskExecutor) processStartChildExecution(
@@ -970,11 +974,12 @@ func (t *transferActiveTaskExecutor) createFirstDecisionTask(
 
 	scheduleDecisionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 	defer cancel()
-	err := t.historyClient.ScheduleDecisionTask(scheduleDecisionCtx, &h.ScheduleDecisionTaskRequest{
+	err := t.historyClient.ScheduleDecisionTask(scheduleDecisionCtx, &types.ScheduleDecisionTaskRequest{
 		DomainUUID:        common.StringPtr(domainID),
-		WorkflowExecution: execution,
+		WorkflowExecution: thrift.ToWorkflowExecution(execution),
 		IsFirstDecision:   common.BoolPtr(true),
 	})
+	err = thrift.FromError(err)
 
 	if err != nil {
 		if _, ok := err.(*workflow.EntityNotExistsError); ok {
@@ -1204,7 +1209,8 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionWithRetry(
 	requestCancelCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 	defer cancel()
 	op := func() error {
-		return t.historyClient.RequestCancelWorkflowExecution(requestCancelCtx, request)
+		err := t.historyClient.RequestCancelWorkflowExecution(requestCancelCtx, thrift.ToHistoryRequestCancelWorkflowExecutionRequest(request))
+		return thrift.FromError(err)
 	}
 
 	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
@@ -1250,7 +1256,8 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionWithRetry(
 	signalCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 	defer cancel()
 	op := func() error {
-		return t.historyClient.SignalWorkflowExecution(signalCtx, request)
+		err := t.historyClient.SignalWorkflowExecution(signalCtx, thrift.ToHistorySignalWorkflowExecutionRequest(request))
+		return thrift.FromError(err)
 	}
 
 	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
@@ -1308,7 +1315,9 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 	var response *workflow.StartWorkflowExecutionResponse
 	var err error
 	op := func() error {
-		response, err = t.historyClient.StartWorkflowExecution(startWorkflowCtx, request)
+		clientResp, err := t.historyClient.StartWorkflowExecution(startWorkflowCtx, thrift.ToHistoryStartWorkflowExecutionRequest(request))
+		response = thrift.FromStartWorkflowExecutionResponse(clientResp)
+		err = thrift.FromError(err)
 		return err
 	}
 
@@ -1471,31 +1480,33 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 		return nil
 
 	case workflow.ParentClosePolicyTerminate:
-		return t.historyClient.TerminateWorkflowExecution(ctx, &h.TerminateWorkflowExecutionRequest{
+		err := t.historyClient.TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
-			TerminateRequest: &workflow.TerminateWorkflowExecutionRequest{
+			TerminateRequest: &types.TerminateWorkflowExecutionRequest{
 				Domain: common.StringPtr(domainName),
-				WorkflowExecution: &workflow.WorkflowExecution{
-					WorkflowId: common.StringPtr(childInfo.StartedWorkflowID),
-					RunId:      common.StringPtr(childInfo.StartedRunID),
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: common.StringPtr(childInfo.StartedWorkflowID),
+					RunID:      common.StringPtr(childInfo.StartedRunID),
 				},
 				Reason:   common.StringPtr("by parent close policy"),
 				Identity: common.StringPtr(identityHistoryService),
 			},
 		})
+		return thrift.FromError(err)
 
 	case workflow.ParentClosePolicyRequestCancel:
-		return t.historyClient.RequestCancelWorkflowExecution(ctx, &h.RequestCancelWorkflowExecutionRequest{
+		err := t.historyClient.RequestCancelWorkflowExecution(ctx, &types.HistoryRequestCancelWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
-			CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
+			CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
 				Domain: common.StringPtr(domainName),
-				WorkflowExecution: &workflow.WorkflowExecution{
-					WorkflowId: common.StringPtr(childInfo.StartedWorkflowID),
-					RunId:      common.StringPtr(childInfo.StartedRunID),
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: common.StringPtr(childInfo.StartedWorkflowID),
+					RunID:      common.StringPtr(childInfo.StartedRunID),
 				},
 				Identity: common.StringPtr(identityHistoryService),
 			},
 		})
+		return thrift.FromError(err)
 
 	default:
 		return &workflow.InternalServiceError{

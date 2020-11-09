@@ -30,13 +30,15 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/admin/adminservicetest"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -50,7 +52,7 @@ type (
 		mockShard        *shard.TestContext
 		config           *config.Config
 		mockClientBean   *client.MockBean
-		adminClient      *adminservicetest.MockClient
+		adminClient      *admin.MockClient
 		clusterMetadata  *cluster.MockMetadata
 		executionManager *mocks.ExecutionManager
 		shardManager     *mocks.ShardManager
@@ -144,7 +146,7 @@ func (s *dlqHandlerSuite) TestReadMessages_OK() {
 	s.mockClientBean.EXPECT().GetRemoteAdminClient(s.sourceCluster).Return(s.adminClient).AnyTimes()
 	s.adminClient.EXPECT().
 		GetDLQReplicationMessages(ctx, gomock.Any()).
-		Return(&replicator.GetDLQReplicationMessagesResponse{}, nil)
+		Return(&types.GetDLQReplicationMessagesResponse{}, nil)
 	tasks, token, err := s.messageHandler.ReadMessages(ctx, s.sourceCluster, lastMessageID, pageSize, pageToken)
 	s.NoError(err)
 	s.Nil(token)
@@ -200,9 +202,9 @@ func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 	}
 	s.adminClient.EXPECT().
 		GetDLQReplicationMessages(ctx, gomock.Any()).
-		Return(&replicator.GetDLQReplicationMessagesResponse{
-			ReplicationTasks: []*replicator.ReplicationTask{
-				replicationTask,
+		Return(&types.GetDLQReplicationMessagesResponse{
+			ReplicationTasks: []*types.ReplicationTask{
+				thrift.ToReplicationTask(replicationTask),
 			},
 		}, nil)
 	s.taskExecutor.EXPECT().execute(replicationTask, true).Return(0, nil).Times(1)
