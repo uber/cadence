@@ -25,10 +25,8 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/types"
 )
 
 var _ Client = (*retryableClient)(nil)
@@ -50,7 +48,7 @@ func NewRetryableClient(client Client, policy backoff.RetryPolicy, isRetryable b
 
 func (c *retryableClient) AddSearchAttribute(
 	ctx context.Context,
-	request *admin.AddSearchAttributeRequest,
+	request *types.AddSearchAttributeRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -62,11 +60,11 @@ func (c *retryableClient) AddSearchAttribute(
 
 func (c *retryableClient) DescribeHistoryHost(
 	ctx context.Context,
-	request *shared.DescribeHistoryHostRequest,
+	request *types.DescribeHistoryHostRequest,
 	opts ...yarpc.CallOption,
-) (*shared.DescribeHistoryHostResponse, error) {
+) (*types.DescribeHistoryHostResponse, error) {
 
-	var resp *shared.DescribeHistoryHostResponse
+	var resp *types.DescribeHistoryHostResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.DescribeHistoryHost(ctx, request, opts...)
@@ -78,7 +76,7 @@ func (c *retryableClient) DescribeHistoryHost(
 
 func (c *retryableClient) RemoveTask(
 	ctx context.Context,
-	request *shared.RemoveTaskRequest,
+	request *types.RemoveTaskRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -90,7 +88,7 @@ func (c *retryableClient) RemoveTask(
 
 func (c *retryableClient) CloseShard(
 	ctx context.Context,
-	request *shared.CloseShardRequest,
+	request *types.CloseShardRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -102,7 +100,7 @@ func (c *retryableClient) CloseShard(
 
 func (c *retryableClient) ResetQueue(
 	ctx context.Context,
-	request *shared.ResetQueueRequest,
+	request *types.ResetQueueRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -114,11 +112,11 @@ func (c *retryableClient) ResetQueue(
 
 func (c *retryableClient) DescribeQueue(
 	ctx context.Context,
-	request *shared.DescribeQueueRequest,
+	request *types.DescribeQueueRequest,
 	opts ...yarpc.CallOption,
-) (*shared.DescribeQueueResponse, error) {
+) (*types.DescribeQueueResponse, error) {
 
-	var resp *shared.DescribeQueueResponse
+	var resp *types.DescribeQueueResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.DescribeQueue(ctx, request, opts...)
@@ -130,11 +128,11 @@ func (c *retryableClient) DescribeQueue(
 
 func (c *retryableClient) DescribeWorkflowExecution(
 	ctx context.Context,
-	request *admin.DescribeWorkflowExecutionRequest,
+	request *types.AdminDescribeWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) (*admin.DescribeWorkflowExecutionResponse, error) {
+) (*types.AdminDescribeWorkflowExecutionResponse, error) {
 
-	var resp *admin.DescribeWorkflowExecutionResponse
+	var resp *types.AdminDescribeWorkflowExecutionResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.DescribeWorkflowExecution(ctx, request, opts...)
@@ -146,11 +144,11 @@ func (c *retryableClient) DescribeWorkflowExecution(
 
 func (c *retryableClient) GetWorkflowExecutionRawHistoryV2(
 	ctx context.Context,
-	request *admin.GetWorkflowExecutionRawHistoryV2Request,
+	request *types.GetWorkflowExecutionRawHistoryV2Request,
 	opts ...yarpc.CallOption,
-) (*admin.GetWorkflowExecutionRawHistoryV2Response, error) {
+) (*types.GetWorkflowExecutionRawHistoryV2Response, error) {
 
-	var resp *admin.GetWorkflowExecutionRawHistoryV2Response
+	var resp *types.GetWorkflowExecutionRawHistoryV2Response
 	op := func() error {
 		var err error
 		resp, err = c.client.GetWorkflowExecutionRawHistoryV2(ctx, request, opts...)
@@ -163,9 +161,9 @@ func (c *retryableClient) GetWorkflowExecutionRawHistoryV2(
 func (c *retryableClient) DescribeCluster(
 	ctx context.Context,
 	opts ...yarpc.CallOption,
-) (*admin.DescribeClusterResponse, error) {
+) (*types.DescribeClusterResponse, error) {
 
-	var resp *admin.DescribeClusterResponse
+	var resp *types.DescribeClusterResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.DescribeCluster(ctx, opts...)
@@ -177,10 +175,10 @@ func (c *retryableClient) DescribeCluster(
 
 func (c *retryableClient) GetReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetReplicationMessagesRequest,
+	request *types.GetReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetReplicationMessagesResponse, error) {
-	var resp *replicator.GetReplicationMessagesResponse
+) (*types.GetReplicationMessagesResponse, error) {
+	var resp *types.GetReplicationMessagesResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.GetReplicationMessages(ctx, request, opts...)
@@ -192,10 +190,10 @@ func (c *retryableClient) GetReplicationMessages(
 
 func (c *retryableClient) GetDomainReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetDomainReplicationMessagesRequest,
+	request *types.GetDomainReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetDomainReplicationMessagesResponse, error) {
-	var resp *replicator.GetDomainReplicationMessagesResponse
+) (*types.GetDomainReplicationMessagesResponse, error) {
+	var resp *types.GetDomainReplicationMessagesResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.GetDomainReplicationMessages(ctx, request, opts...)
@@ -207,10 +205,10 @@ func (c *retryableClient) GetDomainReplicationMessages(
 
 func (c *retryableClient) GetDLQReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetDLQReplicationMessagesRequest,
+	request *types.GetDLQReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetDLQReplicationMessagesResponse, error) {
-	var resp *replicator.GetDLQReplicationMessagesResponse
+) (*types.GetDLQReplicationMessagesResponse, error) {
+	var resp *types.GetDLQReplicationMessagesResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.GetDLQReplicationMessages(ctx, request, opts...)
@@ -222,7 +220,7 @@ func (c *retryableClient) GetDLQReplicationMessages(
 
 func (c *retryableClient) ReapplyEvents(
 	ctx context.Context,
-	request *shared.ReapplyEventsRequest,
+	request *types.ReapplyEventsRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -234,11 +232,11 @@ func (c *retryableClient) ReapplyEvents(
 
 func (c *retryableClient) ReadDLQMessages(
 	ctx context.Context,
-	request *replicator.ReadDLQMessagesRequest,
+	request *types.ReadDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.ReadDLQMessagesResponse, error) {
+) (*types.ReadDLQMessagesResponse, error) {
 
-	var resp *replicator.ReadDLQMessagesResponse
+	var resp *types.ReadDLQMessagesResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.ReadDLQMessages(ctx, request, opts...)
@@ -250,7 +248,7 @@ func (c *retryableClient) ReadDLQMessages(
 
 func (c *retryableClient) PurgeDLQMessages(
 	ctx context.Context,
-	request *replicator.PurgeDLQMessagesRequest,
+	request *types.PurgeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -262,11 +260,11 @@ func (c *retryableClient) PurgeDLQMessages(
 
 func (c *retryableClient) MergeDLQMessages(
 	ctx context.Context,
-	request *replicator.MergeDLQMessagesRequest,
+	request *types.MergeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.MergeDLQMessagesResponse, error) {
+) (*types.MergeDLQMessagesResponse, error) {
 
-	var resp *replicator.MergeDLQMessagesResponse
+	var resp *types.MergeDLQMessagesResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.MergeDLQMessages(ctx, request, opts...)
@@ -278,7 +276,7 @@ func (c *retryableClient) MergeDLQMessages(
 
 func (c *retryableClient) RefreshWorkflowTasks(
 	ctx context.Context,
-	request *shared.RefreshWorkflowTasksRequest,
+	request *types.RefreshWorkflowTasksRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -290,7 +288,7 @@ func (c *retryableClient) RefreshWorkflowTasks(
 
 func (c *retryableClient) ResendReplicationTasks(
 	ctx context.Context,
-	request *admin.ResendReplicationTasksRequest,
+	request *types.ResendReplicationTasksRequest,
 	opts ...yarpc.CallOption,
 ) error {
 

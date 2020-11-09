@@ -27,10 +27,8 @@ import (
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 var _ Client = (*clientImpl)(nil)
@@ -63,7 +61,7 @@ func NewClient(
 
 func (c *clientImpl) AddSearchAttribute(
 	ctx context.Context,
-	request *admin.AddSearchAttributeRequest,
+	request *types.AddSearchAttributeRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -79,9 +77,9 @@ func (c *clientImpl) AddSearchAttribute(
 
 func (c *clientImpl) DescribeHistoryHost(
 	ctx context.Context,
-	request *shared.DescribeHistoryHostRequest,
+	request *types.DescribeHistoryHostRequest,
 	opts ...yarpc.CallOption,
-) (*shared.DescribeHistoryHostResponse, error) {
+) (*types.DescribeHistoryHostResponse, error) {
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
@@ -95,7 +93,7 @@ func (c *clientImpl) DescribeHistoryHost(
 
 func (c *clientImpl) RemoveTask(
 	ctx context.Context,
-	request *shared.RemoveTaskRequest,
+	request *types.RemoveTaskRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -111,7 +109,7 @@ func (c *clientImpl) RemoveTask(
 
 func (c *clientImpl) CloseShard(
 	ctx context.Context,
-	request *shared.CloseShardRequest,
+	request *types.CloseShardRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -127,7 +125,7 @@ func (c *clientImpl) CloseShard(
 
 func (c *clientImpl) ResetQueue(
 	ctx context.Context,
-	request *shared.ResetQueueRequest,
+	request *types.ResetQueueRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -143,9 +141,9 @@ func (c *clientImpl) ResetQueue(
 
 func (c *clientImpl) DescribeQueue(
 	ctx context.Context,
-	request *shared.DescribeQueueRequest,
+	request *types.DescribeQueueRequest,
 	opts ...yarpc.CallOption,
-) (*shared.DescribeQueueResponse, error) {
+) (*types.DescribeQueueResponse, error) {
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
@@ -159,9 +157,9 @@ func (c *clientImpl) DescribeQueue(
 
 func (c *clientImpl) DescribeWorkflowExecution(
 	ctx context.Context,
-	request *admin.DescribeWorkflowExecutionRequest,
+	request *types.AdminDescribeWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) (*admin.DescribeWorkflowExecutionResponse, error) {
+) (*types.AdminDescribeWorkflowExecutionResponse, error) {
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
@@ -175,9 +173,9 @@ func (c *clientImpl) DescribeWorkflowExecution(
 
 func (c *clientImpl) GetWorkflowExecutionRawHistoryV2(
 	ctx context.Context,
-	request *admin.GetWorkflowExecutionRawHistoryV2Request,
+	request *types.GetWorkflowExecutionRawHistoryV2Request,
 	opts ...yarpc.CallOption,
-) (*admin.GetWorkflowExecutionRawHistoryV2Response, error) {
+) (*types.GetWorkflowExecutionRawHistoryV2Response, error) {
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
@@ -192,7 +190,7 @@ func (c *clientImpl) GetWorkflowExecutionRawHistoryV2(
 func (c *clientImpl) DescribeCluster(
 	ctx context.Context,
 	opts ...yarpc.CallOption,
-) (*admin.DescribeClusterResponse, error) {
+) (*types.DescribeClusterResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
 	if err != nil {
@@ -205,9 +203,9 @@ func (c *clientImpl) DescribeCluster(
 
 func (c *clientImpl) GetReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetReplicationMessagesRequest,
+	request *types.GetReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetReplicationMessagesResponse, error) {
+) (*types.GetReplicationMessagesResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
 	if err != nil {
@@ -220,9 +218,9 @@ func (c *clientImpl) GetReplicationMessages(
 
 func (c *clientImpl) GetDomainReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetDomainReplicationMessagesRequest,
+	request *types.GetDomainReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetDomainReplicationMessagesResponse, error) {
+) (*types.GetDomainReplicationMessagesResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
 	if err != nil {
@@ -235,9 +233,9 @@ func (c *clientImpl) GetDomainReplicationMessages(
 
 func (c *clientImpl) GetDLQReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetDLQReplicationMessagesRequest,
+	request *types.GetDLQReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetDLQReplicationMessagesResponse, error) {
+) (*types.GetDLQReplicationMessagesResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
 	if err != nil {
@@ -250,7 +248,7 @@ func (c *clientImpl) GetDLQReplicationMessages(
 
 func (c *clientImpl) ReapplyEvents(
 	ctx context.Context,
-	request *shared.ReapplyEventsRequest,
+	request *types.ReapplyEventsRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -266,9 +264,9 @@ func (c *clientImpl) ReapplyEvents(
 
 func (c *clientImpl) ReadDLQMessages(
 	ctx context.Context,
-	request *replicator.ReadDLQMessagesRequest,
+	request *types.ReadDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.ReadDLQMessagesResponse, error) {
+) (*types.ReadDLQMessagesResponse, error) {
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
@@ -282,7 +280,7 @@ func (c *clientImpl) ReadDLQMessages(
 
 func (c *clientImpl) PurgeDLQMessages(
 	ctx context.Context,
-	request *replicator.PurgeDLQMessagesRequest,
+	request *types.PurgeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -298,9 +296,9 @@ func (c *clientImpl) PurgeDLQMessages(
 
 func (c *clientImpl) MergeDLQMessages(
 	ctx context.Context,
-	request *replicator.MergeDLQMessagesRequest,
+	request *types.MergeDLQMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.MergeDLQMessagesResponse, error) {
+) (*types.MergeDLQMessagesResponse, error) {
 
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getRandomClient()
@@ -315,7 +313,7 @@ func (c *clientImpl) MergeDLQMessages(
 
 func (c *clientImpl) RefreshWorkflowTasks(
 	ctx context.Context,
-	request *shared.RefreshWorkflowTasksRequest,
+	request *types.RefreshWorkflowTasksRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -331,7 +329,7 @@ func (c *clientImpl) RefreshWorkflowTasks(
 
 func (c *clientImpl) ResendReplicationTasks(
 	ctx context.Context,
-	request *admin.ResendReplicationTasksRequest,
+	request *types.ResendReplicationTasksRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
