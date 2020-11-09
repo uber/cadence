@@ -64,7 +64,9 @@ func workflowListFilterType(listFilterType string) Tag {
 // general
 
 // WorkflowError returns tag for WorkflowError
-func WorkflowError(error error) Tag { return newErrorTag("wf-error", error) }
+func WorkflowError(error error) Tag {
+	return newErrorTag("wf-error", error)
+}
 
 // WorkflowTimeoutType returns tag for WorkflowTimeoutType
 func WorkflowTimeoutType(timeoutType int64) Tag {
@@ -306,7 +308,7 @@ func operationResult(operationResult string) Tag {
 
 // ErrorType returns tag for ErrorType
 func errorType(errorType string) Tag {
-	return newPredefinedStringTag("error", errorType)
+	return newPredefinedStringTag("error-type", errorType)
 }
 
 // Shardupdate returns tag for Shardupdate
@@ -384,6 +386,11 @@ func MetricScope(metricScope int) Tag {
 // StoreType returns tag for StoreType
 func StoreType(storeType string) Tag {
 	return newPredefinedStringTag("store-type", storeType)
+}
+
+// StoreError returns tag for StoreError
+func StoreError(storeErr error) Tag {
+	return newErrorTag("store-error", storeErr)
 }
 
 // DetailInfo returns tag for DetailInfo

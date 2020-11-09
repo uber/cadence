@@ -145,6 +145,7 @@ func (s *workflowResetterSuite) TestResetWorkflow_NoError() {
 	newBranchToken := []byte("other random branch token")
 
 	s.mockBaseMutableState.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
+	s.mockBaseMutableState.EXPECT().GetCurrentBranchToken().Return(branchToken, nil).AnyTimes()
 
 	mockBaseWorkflowReleaseFnCalled := false
 	mockBaseWorkflowReleaseFn := func(err error) {
@@ -220,6 +221,7 @@ func (s *workflowResetterSuite) TestResetWorkflow_Error() {
 	incomingFirstEventVersion := baseVersion + 3
 
 	s.mockBaseMutableState.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
+	s.mockBaseMutableState.EXPECT().GetCurrentBranchToken().Return(branchToken, nil).AnyTimes()
 
 	mockBaseWorkflowReleaseFn := func(err error) {
 	}

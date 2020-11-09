@@ -43,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	pes "github.com/uber/cadence/common/persistence/elasticsearch"
@@ -175,6 +176,14 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 
 	pConfig := testBase.Config()
 	pConfig.NumHistoryShards = options.HistoryConfig.NumHistoryShards
+	scope := tally.NewTestScope("integration-test", nil)
+	metricsClient := metrics.NewClient(scope, metrics.ServiceIdx(0))
+	domainReplicationQueue := domain.NewReplicationQueue(
+		testBase.DomainReplicationQueueMgr,
+		options.ClusterMetadata.CurrentClusterName,
+		metricsClient,
+		logger,
+	)
 	cadenceParams := &CadenceParams{
 		ClusterMetadata:               clusterMetadata,
 		PersistenceConfig:             pConfig,
@@ -184,7 +193,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		ShardMgr:                      testBase.ShardMgr,
 		HistoryV2Mgr:                  testBase.HistoryV2Mgr,
 		ExecutionMgrFactory:           testBase.ExecutionMgrFactory,
-		DomainReplicationQueue:        testBase.DomainReplicationQueue,
+		DomainReplicationQueue:        domainReplicationQueue,
 		TaskMgr:                       testBase.TaskMgr,
 		VisibilityMgr:                 visibilityMgr,
 		Logger:                        logger,

@@ -25,29 +25,29 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
+
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -package admin github.com/uber/cadence/client/admin Client
 
 // Client is the interface exposed by admin service client
 type Client interface {
-	AddSearchAttribute(context.Context, *admin.AddSearchAttributeRequest, ...yarpc.CallOption) error
-	CloseShard(context.Context, *shared.CloseShardRequest, ...yarpc.CallOption) error
-	DescribeCluster(context.Context, ...yarpc.CallOption) (*admin.DescribeClusterResponse, error)
-	DescribeHistoryHost(context.Context, *shared.DescribeHistoryHostRequest, ...yarpc.CallOption) (*shared.DescribeHistoryHostResponse, error)
-	DescribeQueue(context.Context, *shared.DescribeQueueRequest, ...yarpc.CallOption) (*shared.DescribeQueueResponse, error)
-	DescribeWorkflowExecution(context.Context, *admin.DescribeWorkflowExecutionRequest, ...yarpc.CallOption) (*admin.DescribeWorkflowExecutionResponse, error)
-	GetDLQReplicationMessages(context.Context, *replicator.GetDLQReplicationMessagesRequest, ...yarpc.CallOption) (*replicator.GetDLQReplicationMessagesResponse, error)
-	GetDomainReplicationMessages(context.Context, *replicator.GetDomainReplicationMessagesRequest, ...yarpc.CallOption) (*replicator.GetDomainReplicationMessagesResponse, error)
-	GetReplicationMessages(context.Context, *replicator.GetReplicationMessagesRequest, ...yarpc.CallOption) (*replicator.GetReplicationMessagesResponse, error)
-	GetWorkflowExecutionRawHistoryV2(context.Context, *admin.GetWorkflowExecutionRawHistoryV2Request, ...yarpc.CallOption) (*admin.GetWorkflowExecutionRawHistoryV2Response, error)
-	MergeDLQMessages(context.Context, *replicator.MergeDLQMessagesRequest, ...yarpc.CallOption) (*replicator.MergeDLQMessagesResponse, error)
-	PurgeDLQMessages(context.Context, *replicator.PurgeDLQMessagesRequest, ...yarpc.CallOption) error
-	ReadDLQMessages(context.Context, *replicator.ReadDLQMessagesRequest, ...yarpc.CallOption) (*replicator.ReadDLQMessagesResponse, error)
-	ReapplyEvents(context.Context, *shared.ReapplyEventsRequest, ...yarpc.CallOption) error
-	RefreshWorkflowTasks(context.Context, *shared.RefreshWorkflowTasksRequest, ...yarpc.CallOption) error
-	RemoveTask(context.Context, *shared.RemoveTaskRequest, ...yarpc.CallOption) error
-	ResendReplicationTasks(context.Context, *admin.ResendReplicationTasksRequest, ...yarpc.CallOption) error
-	ResetQueue(context.Context, *shared.ResetQueueRequest, ...yarpc.CallOption) error
+	AddSearchAttribute(context.Context, *types.AddSearchAttributeRequest, ...yarpc.CallOption) error
+	CloseShard(context.Context, *types.CloseShardRequest, ...yarpc.CallOption) error
+	DescribeCluster(context.Context, ...yarpc.CallOption) (*types.DescribeClusterResponse, error)
+	DescribeHistoryHost(context.Context, *types.DescribeHistoryHostRequest, ...yarpc.CallOption) (*types.DescribeHistoryHostResponse, error)
+	DescribeQueue(context.Context, *types.DescribeQueueRequest, ...yarpc.CallOption) (*types.DescribeQueueResponse, error)
+	DescribeWorkflowExecution(context.Context, *types.AdminDescribeWorkflowExecutionRequest, ...yarpc.CallOption) (*types.AdminDescribeWorkflowExecutionResponse, error)
+	GetDLQReplicationMessages(context.Context, *types.GetDLQReplicationMessagesRequest, ...yarpc.CallOption) (*types.GetDLQReplicationMessagesResponse, error)
+	GetDomainReplicationMessages(context.Context, *types.GetDomainReplicationMessagesRequest, ...yarpc.CallOption) (*types.GetDomainReplicationMessagesResponse, error)
+	GetReplicationMessages(context.Context, *types.GetReplicationMessagesRequest, ...yarpc.CallOption) (*types.GetReplicationMessagesResponse, error)
+	GetWorkflowExecutionRawHistoryV2(context.Context, *types.GetWorkflowExecutionRawHistoryV2Request, ...yarpc.CallOption) (*types.GetWorkflowExecutionRawHistoryV2Response, error)
+	MergeDLQMessages(context.Context, *types.MergeDLQMessagesRequest, ...yarpc.CallOption) (*types.MergeDLQMessagesResponse, error)
+	PurgeDLQMessages(context.Context, *types.PurgeDLQMessagesRequest, ...yarpc.CallOption) error
+	ReadDLQMessages(context.Context, *types.ReadDLQMessagesRequest, ...yarpc.CallOption) (*types.ReadDLQMessagesResponse, error)
+	ReapplyEvents(context.Context, *types.ReapplyEventsRequest, ...yarpc.CallOption) error
+	RefreshWorkflowTasks(context.Context, *types.RefreshWorkflowTasksRequest, ...yarpc.CallOption) error
+	RemoveTask(context.Context, *types.RemoveTaskRequest, ...yarpc.CallOption) error
+	ResendReplicationTasks(context.Context, *types.ResendReplicationTasksRequest, ...yarpc.CallOption) error
+	ResetQueue(context.Context, *types.ResetQueueRequest, ...yarpc.CallOption) error
 }

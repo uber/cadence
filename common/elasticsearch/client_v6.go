@@ -76,10 +76,14 @@ type (
 	}
 )
 
-// TODO https://github.com/uber/cadence/issues/3686
-const oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
+func (c *elasticV6) IsNotFoundError(err error) bool {
+	if elastic.IsNotFound(err) {
+		return true
+	}
+	return false
+}
 
-// NewWrapperClient returns a new implementation of Client
+// newV6Client returns a new implementation of GenericClient
 func newV6Client(
 	connectConfig *config.ElasticSearchConfig,
 	visibilityConfig *config.VisibilityConfig,
@@ -200,7 +204,7 @@ func (c *elasticV6) RunBulkProcessor(ctx context.Context, parameters *BulkProces
 	}
 
 	afterFunc := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
-		gerr := convertToGenericError(err)
+		gerr := convertV6ErrorToGenericError(err)
 		parameters.AfterFunc(
 			executionId,
 			fromV6ToGenericBulkableRequests(requests),
@@ -220,9 +224,7 @@ func (c *elasticV6) RunBulkProcessor(ctx context.Context, parameters *BulkProces
 	})
 }
 
-const unknownStatusCode = -1
-
-func convertToGenericError(err error) *GenericError {
+func convertV6ErrorToGenericError(err error) *GenericError {
 	if err == nil {
 		return nil
 	}

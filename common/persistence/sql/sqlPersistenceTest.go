@@ -97,6 +97,7 @@ func (s *TestCluster) Config() config.Persistence {
 			"test": {SQL: &cfg},
 		},
 		TransactionSizeLimit: dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
+		ErrorInjectionRate:   dynamicconfig.GetFloatPropertyFn(0),
 	}
 }
 

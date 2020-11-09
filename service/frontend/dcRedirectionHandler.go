@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 var _ Handler = (*DCRedirectionHandlerImpl)(nil)
@@ -181,7 +182,9 @@ func (handler *DCRedirectionHandlerImpl) DescribeTaskList(
 			resp, err = handler.frontendHandler.DescribeTaskList(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.DescribeTaskList(ctx, request)
+			response, err := remoteClient.DescribeTaskList(ctx, thrift.ToDescribeTaskListRequest(request))
+			resp = thrift.FromDescribeTaskListResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -211,7 +214,9 @@ func (handler *DCRedirectionHandlerImpl) DescribeWorkflowExecution(
 			resp, err = handler.frontendHandler.DescribeWorkflowExecution(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.DescribeWorkflowExecution(ctx, request)
+			response, err := remoteClient.DescribeWorkflowExecution(ctx, thrift.ToDescribeWorkflowExecutionRequest(request))
+			resp = thrift.FromDescribeWorkflowExecutionResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -241,7 +246,9 @@ func (handler *DCRedirectionHandlerImpl) GetWorkflowExecutionHistory(
 			resp, err = handler.frontendHandler.GetWorkflowExecutionHistory(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.GetWorkflowExecutionHistory(ctx, request)
+			response, err := remoteClient.GetWorkflowExecutionHistory(ctx, thrift.ToGetWorkflowExecutionHistoryRequest(request))
+			resp = thrift.FromGetWorkflowExecutionHistoryResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -271,7 +278,9 @@ func (handler *DCRedirectionHandlerImpl) ListArchivedWorkflowExecutions(
 			resp, err = handler.frontendHandler.ListArchivedWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.ListArchivedWorkflowExecutions(ctx, request)
+			response, err := remoteClient.ListArchivedWorkflowExecutions(ctx, thrift.ToListArchivedWorkflowExecutionsRequest(request))
+			resp = thrift.FromListArchivedWorkflowExecutionsResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -301,7 +310,9 @@ func (handler *DCRedirectionHandlerImpl) ListClosedWorkflowExecutions(
 			resp, err = handler.frontendHandler.ListClosedWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.ListClosedWorkflowExecutions(ctx, request)
+			response, err := remoteClient.ListClosedWorkflowExecutions(ctx, thrift.ToListClosedWorkflowExecutionsRequest(request))
+			resp = thrift.FromListClosedWorkflowExecutionsResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -331,7 +342,9 @@ func (handler *DCRedirectionHandlerImpl) ListOpenWorkflowExecutions(
 			resp, err = handler.frontendHandler.ListOpenWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.ListOpenWorkflowExecutions(ctx, request)
+			response, err := remoteClient.ListOpenWorkflowExecutions(ctx, thrift.ToListOpenWorkflowExecutionsRequest(request))
+			resp = thrift.FromListOpenWorkflowExecutionsResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -361,7 +374,9 @@ func (handler *DCRedirectionHandlerImpl) ListWorkflowExecutions(
 			resp, err = handler.frontendHandler.ListWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.ListWorkflowExecutions(ctx, request)
+			response, err := remoteClient.ListWorkflowExecutions(ctx, thrift.ToListWorkflowExecutionsRequest(request))
+			resp = thrift.FromListWorkflowExecutionsResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -390,7 +405,9 @@ func (handler *DCRedirectionHandlerImpl) ScanWorkflowExecutions(
 			resp, err = handler.frontendHandler.ScanWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.ScanWorkflowExecutions(ctx, request)
+			response, err := remoteClient.ScanWorkflowExecutions(ctx, thrift.ToListWorkflowExecutionsRequest(request))
+			resp = thrift.FromListWorkflowExecutionsResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -420,7 +437,9 @@ func (handler *DCRedirectionHandlerImpl) CountWorkflowExecutions(
 			resp, err = handler.frontendHandler.CountWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.CountWorkflowExecutions(ctx, request)
+			response, err := remoteClient.CountWorkflowExecutions(ctx, thrift.ToCountWorkflowExecutionsRequest(request))
+			resp = thrift.FromCountWorkflowExecutionsResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -465,7 +484,9 @@ func (handler *DCRedirectionHandlerImpl) PollForActivityTask(
 			resp, err = handler.frontendHandler.PollForActivityTask(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.PollForActivityTask(ctx, request)
+			response, err := remoteClient.PollForActivityTask(ctx, thrift.ToPollForActivityTaskRequest(request))
+			resp = thrift.FromPollForActivityTaskResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -495,7 +516,9 @@ func (handler *DCRedirectionHandlerImpl) PollForDecisionTask(
 			resp, err = handler.frontendHandler.PollForDecisionTask(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.PollForDecisionTask(ctx, request)
+			response, err := remoteClient.PollForDecisionTask(ctx, thrift.ToPollForDecisionTaskRequest(request))
+			resp = thrift.FromPollForDecisionTaskResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -529,7 +552,9 @@ func (handler *DCRedirectionHandlerImpl) QueryWorkflow(
 			// 2. If eventual consistency was requested then the results from running out of local dc will be fine.
 			if request.GetQueryConsistencyLevel() == shared.QueryConsistencyLevelStrong {
 				remoteClient := handler.GetRemoteFrontendClient(targetDC)
-				resp, err = remoteClient.QueryWorkflow(ctx, request)
+				response, err := remoteClient.QueryWorkflow(ctx, thrift.ToQueryWorkflowRequest(request))
+				resp = thrift.FromQueryWorkflowResponse(response)
+				err = thrift.FromError(err)
 			} else {
 				resp, err = handler.frontendHandler.QueryWorkflow(ctx, request)
 			}
@@ -567,7 +592,9 @@ func (handler *DCRedirectionHandlerImpl) RecordActivityTaskHeartbeat(
 			resp, err = handler.frontendHandler.RecordActivityTaskHeartbeat(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.RecordActivityTaskHeartbeat(ctx, request)
+			response, err := remoteClient.RecordActivityTaskHeartbeat(ctx, thrift.ToRecordActivityTaskHeartbeatRequest(request))
+			resp = thrift.FromRecordActivityTaskHeartbeatResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -597,7 +624,9 @@ func (handler *DCRedirectionHandlerImpl) RecordActivityTaskHeartbeatByID(
 			resp, err = handler.frontendHandler.RecordActivityTaskHeartbeatByID(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.RecordActivityTaskHeartbeatByID(ctx, request)
+			response, err := remoteClient.RecordActivityTaskHeartbeatByID(ctx, thrift.ToRecordActivityTaskHeartbeatByIDRequest(request))
+			resp = thrift.FromRecordActivityTaskHeartbeatResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -627,7 +656,8 @@ func (handler *DCRedirectionHandlerImpl) RequestCancelWorkflowExecution(
 			err = handler.frontendHandler.RequestCancelWorkflowExecution(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RequestCancelWorkflowExecution(ctx, request)
+			err = remoteClient.RequestCancelWorkflowExecution(ctx, thrift.ToRequestCancelWorkflowExecutionRequest(request))
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -657,7 +687,9 @@ func (handler *DCRedirectionHandlerImpl) ResetStickyTaskList(
 			resp, err = handler.frontendHandler.ResetStickyTaskList(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.ResetStickyTaskList(ctx, request)
+			response, err := remoteClient.ResetStickyTaskList(ctx, thrift.ToResetStickyTaskListRequest(request))
+			resp = thrift.FromResetStickyTaskListResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -687,7 +719,9 @@ func (handler *DCRedirectionHandlerImpl) ResetWorkflowExecution(
 			resp, err = handler.frontendHandler.ResetWorkflowExecution(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.ResetWorkflowExecution(ctx, request)
+			response, err := remoteClient.ResetWorkflowExecution(ctx, thrift.ToResetWorkflowExecutionRequest(request))
+			resp = thrift.FromResetWorkflowExecutionResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -722,7 +756,8 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCanceled(
 			err = handler.frontendHandler.RespondActivityTaskCanceled(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RespondActivityTaskCanceled(ctx, request)
+			err = remoteClient.RespondActivityTaskCanceled(ctx, thrift.ToRespondActivityTaskCanceledRequest(request))
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -752,7 +787,8 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCanceledByID(
 			err = handler.frontendHandler.RespondActivityTaskCanceledByID(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RespondActivityTaskCanceledByID(ctx, request)
+			err = remoteClient.RespondActivityTaskCanceledByID(ctx, thrift.ToRespondActivityTaskCanceledByIDRequest(request))
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -787,7 +823,8 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCompleted(
 			err = handler.frontendHandler.RespondActivityTaskCompleted(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RespondActivityTaskCompleted(ctx, request)
+			err = remoteClient.RespondActivityTaskCompleted(ctx, thrift.ToRespondActivityTaskCompletedRequest(request))
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -817,7 +854,8 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskCompletedByID(
 			err = handler.frontendHandler.RespondActivityTaskCompletedByID(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RespondActivityTaskCompletedByID(ctx, request)
+			err = remoteClient.RespondActivityTaskCompletedByID(ctx, thrift.ToRespondActivityTaskCompletedByIDRequest(request))
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -852,7 +890,8 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskFailed(
 			err = handler.frontendHandler.RespondActivityTaskFailed(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RespondActivityTaskFailed(ctx, request)
+			err = remoteClient.RespondActivityTaskFailed(ctx, thrift.ToRespondActivityTaskFailedRequest(request))
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -882,7 +921,8 @@ func (handler *DCRedirectionHandlerImpl) RespondActivityTaskFailedByID(
 			err = handler.frontendHandler.RespondActivityTaskFailedByID(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RespondActivityTaskFailedByID(ctx, request)
+			err = remoteClient.RespondActivityTaskFailedByID(ctx, thrift.ToRespondActivityTaskFailedByIDRequest(request))
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -917,7 +957,9 @@ func (handler *DCRedirectionHandlerImpl) RespondDecisionTaskCompleted(
 			resp, err = handler.frontendHandler.RespondDecisionTaskCompleted(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.RespondDecisionTaskCompleted(ctx, request)
+			response, err := remoteClient.RespondDecisionTaskCompleted(ctx, thrift.ToRespondDecisionTaskCompletedRequest(request))
+			resp = thrift.FromRespondDecisionTaskCompletedResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -952,7 +994,8 @@ func (handler *DCRedirectionHandlerImpl) RespondDecisionTaskFailed(
 			err = handler.frontendHandler.RespondDecisionTaskFailed(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RespondDecisionTaskFailed(ctx, request)
+			err = remoteClient.RespondDecisionTaskFailed(ctx, thrift.ToRespondDecisionTaskFailedRequest(request))
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -987,7 +1030,8 @@ func (handler *DCRedirectionHandlerImpl) RespondQueryTaskCompleted(
 			err = handler.frontendHandler.RespondQueryTaskCompleted(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RespondQueryTaskCompleted(ctx, request)
+			err = remoteClient.RespondQueryTaskCompleted(ctx, thrift.ToRespondQueryTaskCompletedRequest(request))
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -1017,7 +1061,9 @@ func (handler *DCRedirectionHandlerImpl) SignalWithStartWorkflowExecution(
 			resp, err = handler.frontendHandler.SignalWithStartWorkflowExecution(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.SignalWithStartWorkflowExecution(ctx, request)
+			response, err := remoteClient.SignalWithStartWorkflowExecution(ctx, thrift.ToSignalWithStartWorkflowExecutionRequest(request))
+			resp = thrift.FromStartWorkflowExecutionResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -1047,7 +1093,8 @@ func (handler *DCRedirectionHandlerImpl) SignalWorkflowExecution(
 			err = handler.frontendHandler.SignalWorkflowExecution(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.SignalWorkflowExecution(ctx, request)
+			err = remoteClient.SignalWorkflowExecution(ctx, thrift.ToSignalWorkflowExecutionRequest(request))
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -1076,7 +1123,9 @@ func (handler *DCRedirectionHandlerImpl) StartWorkflowExecution(
 			resp, err = handler.frontendHandler.StartWorkflowExecution(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.StartWorkflowExecution(ctx, request)
+			response, err := remoteClient.StartWorkflowExecution(ctx, thrift.ToStartWorkflowExecutionRequest(request))
+			resp = thrift.FromStartWorkflowExecutionResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -1106,7 +1155,8 @@ func (handler *DCRedirectionHandlerImpl) TerminateWorkflowExecution(
 			err = handler.frontendHandler.TerminateWorkflowExecution(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.TerminateWorkflowExecution(ctx, request)
+			err = remoteClient.TerminateWorkflowExecution(ctx, thrift.ToTerminateWorkflowExecutionRequest(request))
+			err = thrift.FromError(err)
 		}
 		return err
 	})
@@ -1136,7 +1186,9 @@ func (handler *DCRedirectionHandlerImpl) ListTaskListPartitions(
 			resp, err = handler.frontendHandler.ListTaskListPartitions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.ListTaskListPartitions(ctx, request)
+			response, err := remoteClient.ListTaskListPartitions(ctx, thrift.ToListTaskListPartitionsRequest(request))
+			resp = thrift.FromListTaskListPartitionsResponse(response)
+			err = thrift.FromError(err)
 		}
 		return err
 	})

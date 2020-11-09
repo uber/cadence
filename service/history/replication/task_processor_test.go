@@ -31,12 +31,12 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/.gen/go/admin/adminservicetest"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyservicetest"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -63,7 +63,7 @@ type (
 		taskFetcher      *MockTaskFetcher
 		mockDomainCache  *cache.MockDomainCache
 		mockClientBean   *client.MockBean
-		adminClient      *adminservicetest.MockClient
+		adminClient      *admin.MockClient
 		clusterMetadata  *cluster.MockMetadata
 		executionManager *mocks.ExecutionManager
 		requestChan      chan *request

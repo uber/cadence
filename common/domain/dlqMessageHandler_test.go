@@ -34,7 +34,6 @@ import (
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -45,7 +44,7 @@ type (
 		controller *gomock.Controller
 
 		mockReplicationTaskExecutor *MockReplicationTaskExecutor
-		mockReplicationQueue        *persistence.MockDomainReplicationQueue
+		mockReplicationQueue        *MockReplicationQueue
 		dlqMessageHandler           *dlqMessageHandlerImpl
 	}
 )
@@ -69,7 +68,7 @@ func (s *dlqMessageHandlerSuite) SetupTest() {
 	zapLogger, err := zap.NewDevelopment()
 	s.Require().NoError(err)
 	s.mockReplicationTaskExecutor = NewMockReplicationTaskExecutor(s.controller)
-	s.mockReplicationQueue = persistence.NewMockDomainReplicationQueue(s.controller)
+	s.mockReplicationQueue = NewMockReplicationQueue(s.controller)
 
 	logger := loggerimpl.NewLogger(zapLogger)
 	s.dlqMessageHandler = NewDLQMessageHandler(

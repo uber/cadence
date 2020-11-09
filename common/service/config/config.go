@@ -142,6 +142,8 @@ type (
 		VisibilityConfig *VisibilityConfig `yaml:"-" json:"-"`
 		// TransactionSizeLimit is the largest allowed transaction size
 		TransactionSizeLimit dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
+		// ErrorInjectionRate is the the rate for injecting random error
+		ErrorInjectionRate dynamicconfig.FloatPropertyFn `yaml:"-" json:"-"`
 	}
 
 	// DataStore is the configuration for a single datastore

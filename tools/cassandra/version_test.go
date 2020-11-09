@@ -90,6 +90,7 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 			"visibility": {Cassandra: &visibilityCfg},
 		},
 		TransactionSizeLimit: dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
+		ErrorInjectionRate:   dynamicconfig.GetFloatPropertyFn(0),
 	}
 	s.NoError(VerifyCompatibleVersion(cfg))
 }

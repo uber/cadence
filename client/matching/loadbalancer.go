@@ -25,6 +25,7 @@ import (
 	"math/rand"
 	"strings"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 )
@@ -63,10 +64,6 @@ type (
 		nWritePartitions dynamicconfig.IntPropertyFnWithTaskListInfoFilters
 		domainIDToName   func(string) (string, error)
 	}
-)
-
-const (
-	taskListPartitionPrefix = "/__cadence_sys/"
 )
 
 // NewLoadBalancer returns an instance of matching load balancer that
@@ -112,7 +109,7 @@ func (lb *defaultLoadBalancer) pickPartition(
 		return taskList.GetName()
 	}
 
-	if strings.HasPrefix(taskList.GetName(), taskListPartitionPrefix) {
+	if strings.HasPrefix(taskList.GetName(), common.ReservedTaskListPrefix) {
 		// this should never happen when forwardedFrom is empty
 		return taskList.GetName()
 	}
@@ -132,5 +129,5 @@ func (lb *defaultLoadBalancer) pickPartition(
 		return taskList.GetName()
 	}
 
-	return fmt.Sprintf("%v%v/%v", taskListPartitionPrefix, taskList.GetName(), p)
+	return fmt.Sprintf("%v%v/%v", common.ReservedTaskListPrefix, taskList.GetName(), p)
 }

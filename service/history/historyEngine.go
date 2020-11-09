@@ -2535,16 +2535,24 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	resetRunID := uuid.New()
 	baseRebuildLastEventID := request.GetDecisionFinishEventId() - 1
 	baseVersionHistories := baseMutableState.GetVersionHistories()
-	baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
+	baseCurrentBranchToken, err := baseMutableState.GetCurrentBranchToken()
 	if err != nil {
 		return nil, err
 	}
-	baseRebuildLastEventVersion, err := baseCurrentVersionHistory.GetEventVersion(baseRebuildLastEventID)
-	if err != nil {
-		return nil, err
-	}
-	baseCurrentBranchToken := baseCurrentVersionHistory.GetBranchToken()
+	baseRebuildLastEventVersion := baseMutableState.GetCurrentVersion()
 	baseNextEventID := baseMutableState.GetNextEventID()
+
+	if baseVersionHistories != nil {
+		baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
+		if err != nil {
+			return nil, err
+		}
+		baseRebuildLastEventVersion, err = baseCurrentVersionHistory.GetEventVersion(baseRebuildLastEventID)
+		if err != nil {
+			return nil, err
+		}
+		baseCurrentBranchToken = baseCurrentVersionHistory.GetBranchToken()
+	}
 
 	if err := e.workflowResetter.ResetWorkflow(
 		ctx,
@@ -3163,6 +3171,9 @@ func (e *historyEngineImpl) ReapplyEvents(
 				}
 
 				baseVersionHistories := mutableState.GetVersionHistories()
+				if baseVersionHistories == nil {
+					return nil, execution.ErrMissingVersionHistories
+				}
 				baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
 				if err != nil {
 					return nil, err

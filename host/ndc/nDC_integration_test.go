@@ -40,7 +40,6 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/admin/adminservicetest"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
@@ -53,6 +52,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	test "github.com/uber/cadence/common/testing"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/host"
 )
@@ -120,12 +121,12 @@ func (s *nDCIntegrationTestSuite) SetupSuite() {
 	s.standByTaskID = 0
 	s.mockAdminClient = make(map[string]adminClient.Client)
 	controller := gomock.NewController(s.T())
-	mockStandbyClient := adminservicetest.NewMockClient(controller)
+	mockStandbyClient := adminClient.NewMockClient(controller)
 	mockStandbyClient.EXPECT().GetReplicationMessages(gomock.Any(), gomock.Any()).DoAndReturn(s.GetReplicationMessagesMock).AnyTimes()
-	mockOtherClient := adminservicetest.NewMockClient(controller)
+	mockOtherClient := adminClient.NewMockClient(controller)
 	mockOtherClient.EXPECT().GetReplicationMessages(gomock.Any(), gomock.Any()).Return(
-		&replicator.GetReplicationMessagesResponse{
-			MessagesByShard: make(map[int32]*replicator.ReplicationMessages),
+		&types.GetReplicationMessagesResponse{
+			MessagesByShard: make(map[int32]*types.ReplicationMessages),
 		}, nil).AnyTimes()
 	s.mockAdminClient["standby"] = mockStandbyClient
 	s.mockAdminClient["other"] = mockOtherClient
@@ -144,33 +145,35 @@ func (s *nDCIntegrationTestSuite) SetupSuite() {
 
 func (s *nDCIntegrationTestSuite) GetReplicationMessagesMock(
 	ctx context.Context,
-	request *replicator.GetReplicationMessagesRequest,
+	request *types.GetReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
-) (*replicator.GetReplicationMessagesResponse, error) {
+) (*types.GetReplicationMessagesResponse, error) {
 	select {
-	case task := <-s.standByReplicationTasksChan:
+	case t := <-s.standByReplicationTasksChan:
+		task := thrift.ToReplicationTask(t)
 		taskID := atomic.AddInt64(&s.standByTaskID, 1)
-		task.SourceTaskId = common.Int64Ptr(taskID)
-		tasks := []*replicator.ReplicationTask{task}
+		task.SourceTaskID = common.Int64Ptr(taskID)
+		tasks := []*types.ReplicationTask{task}
 		for len(s.standByReplicationTasksChan) > 0 {
-			task = <-s.standByReplicationTasksChan
+			t = <-s.standByReplicationTasksChan
+			task := thrift.ToReplicationTask(t)
 			taskID := atomic.AddInt64(&s.standByTaskID, 1)
-			task.SourceTaskId = common.Int64Ptr(taskID)
+			task.SourceTaskID = common.Int64Ptr(taskID)
 			tasks = append(tasks, task)
 		}
 
-		replicationMessage := &replicator.ReplicationMessages{
+		replicationMessage := &types.ReplicationMessages{
 			ReplicationTasks:       tasks,
-			LastRetrievedMessageId: tasks[len(tasks)-1].SourceTaskId,
+			LastRetrievedMessageID: tasks[len(tasks)-1].SourceTaskID,
 			HasMore:                common.BoolPtr(true),
 		}
 
-		return &replicator.GetReplicationMessagesResponse{
-			MessagesByShard: map[int32]*replicator.ReplicationMessages{0: replicationMessage},
+		return &types.GetReplicationMessagesResponse{
+			MessagesByShard: map[int32]*types.ReplicationMessages{0: replicationMessage},
 		}, nil
 	default:
-		return &replicator.GetReplicationMessagesResponse{
-			MessagesByShard: make(map[int32]*replicator.ReplicationMessages),
+		return &types.GetReplicationMessagesResponse{
+			MessagesByShard: make(map[int32]*types.ReplicationMessages),
 		}, nil
 	}
 }
@@ -978,7 +981,7 @@ func (s *nDCIntegrationTestSuite) TestEventsReapply_ZombieWorkflow() {
 	s.generator = test.InitializeHistoryEventGenerator(s.domainName, version)
 
 	// verify two batches of zombie workflow are call reapply API
-	s.mockAdminClient["standby"].(*adminservicetest.MockClient).EXPECT().ReapplyEvents(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+	s.mockAdminClient["standby"].(*adminClient.MockClient).EXPECT().ReapplyEvents(gomock.Any(), gomock.Any()).Return(nil).Times(2)
 	for i := 0; i < 2 && s.generator.HasNextVertex(); i++ {
 		events := s.generator.GetNextVertices()
 		historyEvents := &shared.History{}
@@ -1076,7 +1079,7 @@ func (s *nDCIntegrationTestSuite) TestEventsReapply_UpdateNonCurrentBranch() {
 		historyClient,
 	)
 
-	s.mockAdminClient["standby"].(*adminservicetest.MockClient).EXPECT().ReapplyEvents(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	s.mockAdminClient["standby"].(*adminClient.MockClient).EXPECT().ReapplyEvents(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 	// Handcraft a stale signal event
 	baseBranchLastEventBatch := baseBranch[len(baseBranch)-1].GetEvents()
 	baseBranchLastEvent := baseBranchLastEventBatch[len(baseBranchLastEventBatch)-1]
@@ -1803,6 +1806,6 @@ func (s *nDCIntegrationTestSuite) createContext() context.Context {
 }
 
 func (s *nDCIntegrationTestSuite) setupRemoteFrontendClients() {
-	s.mockAdminClient["standby"].(*adminservicetest.MockClient).EXPECT().ReapplyEvents(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	s.mockAdminClient["other"].(*adminservicetest.MockClient).EXPECT().ReapplyEvents(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	s.mockAdminClient["standby"].(*adminClient.MockClient).EXPECT().ReapplyEvents(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	s.mockAdminClient["other"].(*adminClient.MockClient).EXPECT().ReapplyEvents(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 }

@@ -58,6 +58,7 @@ type Config struct {
 	GlobalDomainRPS                 dynamicconfig.IntPropertyFnWithDomainFilter
 	MaxIDLengthLimit                dynamicconfig.IntPropertyFnWithDomainFilter
 	MaxIDLengthWarnLimit            dynamicconfig.IntPropertyFn
+	MaxRawTaskListNameLimit         dynamicconfig.IntPropertyFnWithDomainFilter
 	EnableClientVersionCheck        dynamicconfig.BoolPropertyFn
 	DisallowQuery                   dynamicconfig.BoolPropertyFnWithDomainFilter
 	ShutdownDrainDuration           dynamicconfig.DurationPropertyFn
@@ -112,7 +113,8 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		MaxDomainRPSPerInstance:                     dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxDomainRPSPerInstance, 1200),
 		GlobalDomainRPS:                             dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainRPS, 0),
 		MaxIDLengthLimit:                            dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxIDLengthLimit, 1000),
-		MaxIDLengthWarnLimit:                        dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit, 150),
+		MaxIDLengthWarnLimit:                        dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit, 128),
+		MaxRawTaskListNameLimit:                     dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxRawTaskListNameLimit, 1000),
 		HistoryMgrNumConns:                          dc.GetIntProperty(dynamicconfig.FrontendHistoryMgrNumConns, 10),
 		EnableAdminProtection:                       dc.GetBoolProperty(dynamicconfig.EnableAdminProtection, false),
 		AdminOperationToken:                         dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),

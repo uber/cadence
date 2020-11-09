@@ -127,11 +127,11 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			TimeLimitPerArchivalIteration: dc.GetDurationProperty(dynamicconfig.WorkerTimeLimitPerArchivalIteration, archiver.MaxArchivalIterationTimeout()),
 		},
 		ScannerCfg: &scanner.Config{
-			PersistenceMaxQPS:      dc.GetIntProperty(dynamicconfig.ScannerPersistenceMaxQPS, 100),
-			Persistence:            &params.PersistenceConfig,
-			ClusterMetadata:        params.ClusterMetadata,
-			TaskListScannerEnabled: dc.GetBoolProperty(dynamicconfig.TaskListScannerEnabled, true),
-			HistoryScannerEnabled:  dc.GetBoolProperty(dynamicconfig.HistoryScannerEnabled, true),
+			ScannerPersistenceMaxQPS: dc.GetIntProperty(dynamicconfig.ScannerPersistenceMaxQPS, 5),
+			Persistence:              &params.PersistenceConfig,
+			ClusterMetadata:          params.ClusterMetadata,
+			TaskListScannerEnabled:   dc.GetBoolProperty(dynamicconfig.TaskListScannerEnabled, true),
+			HistoryScannerEnabled:    dc.GetBoolProperty(dynamicconfig.HistoryScannerEnabled, false),
 			ConcreteExecutionScannerConfig: &executions.ScannerWorkflowDynamicConfig{
 				Enabled:                 dc.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerEnabled, false),
 				Concurrency:             dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerConcurrency, 25),
@@ -197,6 +197,7 @@ func (s *Service) Start() {
 	logger.Info("worker starting", tag.ComponentWorker)
 
 	s.Resource.Start()
+	s.Resource.GetDomainReplicationQueue().Start()
 
 	s.ensureDomainExists(common.SystemLocalDomainName)
 	s.startScanner()
@@ -234,6 +235,7 @@ func (s *Service) Stop() {
 	close(s.stopC)
 
 	s.Resource.Stop()
+	s.Resource.GetDomainReplicationQueue().Stop()
 
 	s.params.Logger.Info("worker stopped", tag.ComponentWorker)
 }

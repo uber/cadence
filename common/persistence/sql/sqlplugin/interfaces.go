@@ -736,6 +736,7 @@ type (
 		InsertAckLevel(ctx context.Context, queueType persistence.QueueType, messageID int64, clusterName string) error
 		UpdateAckLevels(ctx context.Context, queueType persistence.QueueType, clusterAckLevels map[string]int64) error
 		GetAckLevels(ctx context.Context, queueType persistence.QueueType, forUpdate bool) (map[string]int64, error)
+		GetQueueSize(ctx context.Context, queueType persistence.QueueType) (int64, error)
 
 		// The follow provide information about the underlying sql crud implementation
 		SupportsTTL() bool
