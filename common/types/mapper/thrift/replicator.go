@@ -32,11 +32,11 @@ func FromDLQType(t *types.DLQType) *replicator.DLQType {
 		return nil
 	}
 	switch *t {
-	case types.DLQTypeDomain:
-		v := replicator.DLQTypeDomain
-		return &v
 	case types.DLQTypeReplication:
 		v := replicator.DLQTypeReplication
+		return &v
+	case types.DLQTypeDomain:
+		v := replicator.DLQTypeDomain
 		return &v
 	}
 	panic("unexpected enum value")
@@ -48,11 +48,11 @@ func ToDLQType(t *replicator.DLQType) *types.DLQType {
 		return nil
 	}
 	switch *t {
-	case replicator.DLQTypeDomain:
-		v := types.DLQTypeDomain
-		return &v
 	case replicator.DLQTypeReplication:
 		v := types.DLQTypeReplication
+		return &v
+	case replicator.DLQTypeDomain:
+		v := types.DLQTypeDomain
 		return &v
 	}
 	panic("unexpected enum value")
@@ -559,11 +559,14 @@ func FromReplicationTaskType(t *types.ReplicationTaskType) *replicator.Replicati
 	case types.ReplicationTaskTypeDomain:
 		v := replicator.ReplicationTaskTypeDomain
 		return &v
-	case types.ReplicationTaskTypeFailoverMarker:
-		v := replicator.ReplicationTaskTypeFailoverMarker
-		return &v
 	case types.ReplicationTaskTypeHistory:
 		v := replicator.ReplicationTaskTypeHistory
+		return &v
+	case types.ReplicationTaskTypeSyncShardStatus:
+		v := replicator.ReplicationTaskTypeSyncShardStatus
+		return &v
+	case types.ReplicationTaskTypeSyncActivity:
+		v := replicator.ReplicationTaskTypeSyncActivity
 		return &v
 	case types.ReplicationTaskTypeHistoryMetadata:
 		v := replicator.ReplicationTaskTypeHistoryMetadata
@@ -571,11 +574,8 @@ func FromReplicationTaskType(t *types.ReplicationTaskType) *replicator.Replicati
 	case types.ReplicationTaskTypeHistoryV2:
 		v := replicator.ReplicationTaskTypeHistoryV2
 		return &v
-	case types.ReplicationTaskTypeSyncActivity:
-		v := replicator.ReplicationTaskTypeSyncActivity
-		return &v
-	case types.ReplicationTaskTypeSyncShardStatus:
-		v := replicator.ReplicationTaskTypeSyncShardStatus
+	case types.ReplicationTaskTypeFailoverMarker:
+		v := replicator.ReplicationTaskTypeFailoverMarker
 		return &v
 	}
 	panic("unexpected enum value")
@@ -590,11 +590,14 @@ func ToReplicationTaskType(t *replicator.ReplicationTaskType) *types.Replication
 	case replicator.ReplicationTaskTypeDomain:
 		v := types.ReplicationTaskTypeDomain
 		return &v
-	case replicator.ReplicationTaskTypeFailoverMarker:
-		v := types.ReplicationTaskTypeFailoverMarker
-		return &v
 	case replicator.ReplicationTaskTypeHistory:
 		v := types.ReplicationTaskTypeHistory
+		return &v
+	case replicator.ReplicationTaskTypeSyncShardStatus:
+		v := types.ReplicationTaskTypeSyncShardStatus
+		return &v
+	case replicator.ReplicationTaskTypeSyncActivity:
+		v := types.ReplicationTaskTypeSyncActivity
 		return &v
 	case replicator.ReplicationTaskTypeHistoryMetadata:
 		v := types.ReplicationTaskTypeHistoryMetadata
@@ -602,11 +605,8 @@ func ToReplicationTaskType(t *replicator.ReplicationTaskType) *types.Replication
 	case replicator.ReplicationTaskTypeHistoryV2:
 		v := types.ReplicationTaskTypeHistoryV2
 		return &v
-	case replicator.ReplicationTaskTypeSyncActivity:
-		v := types.ReplicationTaskTypeSyncActivity
-		return &v
-	case replicator.ReplicationTaskTypeSyncShardStatus:
-		v := types.ReplicationTaskTypeSyncShardStatus
+	case replicator.ReplicationTaskTypeFailoverMarker:
+		v := types.ReplicationTaskTypeFailoverMarker
 		return &v
 	}
 	panic("unexpected enum value")
