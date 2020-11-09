@@ -1135,8 +1135,8 @@ func (v *MatchingRespondQueryTaskCompletedRequest) GetCompletedRequest() (o *Res
 type TaskSource int32
 
 const (
-	// TaskSourceDbBacklog is an option for TaskSource
-	TaskSourceDbBacklog TaskSource = iota
 	// TaskSourceHistory is an option for TaskSource
-	TaskSourceHistory
+	TaskSourceHistory TaskSource = iota
+	// TaskSourceDbBacklog is an option for TaskSource
+	TaskSourceDbBacklog
 )

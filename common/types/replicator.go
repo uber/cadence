@@ -24,10 +24,10 @@ package types
 type DLQType int32
 
 const (
-	// DLQTypeDomain is an option for DLQType
-	DLQTypeDomain DLQType = iota
 	// DLQTypeReplication is an option for DLQType
-	DLQTypeReplication
+	DLQTypeReplication DLQType = iota
+	// DLQTypeDomain is an option for DLQType
+	DLQTypeDomain
 )
 
 // DomainOperation is an internal type (TBD...)
@@ -730,18 +730,18 @@ type ReplicationTaskType int32
 const (
 	// ReplicationTaskTypeDomain is an option for ReplicationTaskType
 	ReplicationTaskTypeDomain ReplicationTaskType = iota
-	// ReplicationTaskTypeFailoverMarker is an option for ReplicationTaskType
-	ReplicationTaskTypeFailoverMarker
 	// ReplicationTaskTypeHistory is an option for ReplicationTaskType
 	ReplicationTaskTypeHistory
+	// ReplicationTaskTypeSyncShardStatus is an option for ReplicationTaskType
+	ReplicationTaskTypeSyncShardStatus
+	// ReplicationTaskTypeSyncActivity is an option for ReplicationTaskType
+	ReplicationTaskTypeSyncActivity
 	// ReplicationTaskTypeHistoryMetadata is an option for ReplicationTaskType
 	ReplicationTaskTypeHistoryMetadata
 	// ReplicationTaskTypeHistoryV2 is an option for ReplicationTaskType
 	ReplicationTaskTypeHistoryV2
-	// ReplicationTaskTypeSyncActivity is an option for ReplicationTaskType
-	ReplicationTaskTypeSyncActivity
-	// ReplicationTaskTypeSyncShardStatus is an option for ReplicationTaskType
-	ReplicationTaskTypeSyncShardStatus
+	// ReplicationTaskTypeFailoverMarker is an option for ReplicationTaskType
+	ReplicationTaskTypeFailoverMarker
 )
 
 // ReplicationToken is an internal type (TBD...)
