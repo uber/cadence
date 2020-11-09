@@ -433,8 +433,8 @@ func main() {
 			TypesFile:       "common/types/admin.go",
 			MapperFile:      "common/types/mapper/thrift/admin.go",
 			DuplicatePrefix: "Admin",
-    },
-    {
+		},
+		{
 			ThriftPackage:   "github.com/uber/cadence/.gen/go/matching",
 			TypesFile:       "common/types/matching.go",
 			MapperFile:      "common/types/mapper/thrift/matching.go",
