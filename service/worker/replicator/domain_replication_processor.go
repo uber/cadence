@@ -40,7 +40,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -60,7 +59,7 @@ func newDomainReplicationProcessor(
 	taskExecutor domain.ReplicationTaskExecutor,
 	hostInfo *membership.HostInfo,
 	serviceResolver membership.ServiceResolver,
-	domainReplicationQueue persistence.DomainReplicationQueue,
+	domainReplicationQueue domain.ReplicationQueue,
 	replicationMaxRetry time.Duration,
 ) *domainReplicationProcessor {
 	retryPolicy := backoff.NewExponentialRetryPolicy(taskProcessorErrorRetryWait)
@@ -98,7 +97,7 @@ type (
 		lastProcessedMessageID int64
 		lastRetrievedMessageID int64
 		done                   chan struct{}
-		domainReplicationQueue persistence.DomainReplicationQueue
+		domainReplicationQueue domain.ReplicationQueue
 	}
 )
 

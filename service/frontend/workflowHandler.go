@@ -3784,7 +3784,7 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 ) error {
 
 	clusterMetadata := wh.GetClusterMetadata()
-	respChan := make(chan *gen.DescribeDomainResponse, len(clusterMetadata.GetAllClusterInfo()))
+	respChan := make(chan *types.DescribeDomainResponse, len(clusterMetadata.GetAllClusterInfo()))
 	wg := &sync.WaitGroup{}
 
 	describeDomain := func(
@@ -3795,7 +3795,7 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 		defer wg.Done()
 		resp, _ := client.DescribeDomain(
 			ctx,
-			&gen.DescribeDomainRequest{
+			&types.DescribeDomainRequest{
 				Name: domainName,
 			},
 		)

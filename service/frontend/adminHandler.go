@@ -157,7 +157,6 @@ func NewAdminHandler(
 // Start starts the handler
 func (adh *adminHandlerImpl) Start() {
 
-	adh.Resource.GetDomainReplicationQueue().Start()
 	if adh.config.EnableGracefulFailover() {
 		adh.domainFailoverWatcher.Start()
 	}
@@ -165,8 +164,6 @@ func (adh *adminHandlerImpl) Start() {
 
 // Stop stops the handler
 func (adh *adminHandlerImpl) Stop() {
-	// Calling stop if the queue does not start is ok
-	adh.Resource.GetDomainReplicationQueue().Stop()
 	adh.domainFailoverWatcher.Stop()
 }
 

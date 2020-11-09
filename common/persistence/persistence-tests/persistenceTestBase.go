@@ -32,7 +32,6 @@ import (
 	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -71,23 +70,23 @@ type (
 	// TestBase wraps the base setup needed to create workflows over persistence layer.
 	TestBase struct {
 		suite.Suite
-		ShardMgr               p.ShardManager
-		ExecutionMgrFactory    client.Factory
-		ExecutionManager       p.ExecutionManager
-		TaskMgr                p.TaskManager
-		HistoryV2Mgr           p.HistoryManager
-		MetadataManager        p.MetadataManager
-		VisibilityMgr          p.VisibilityManager
-		DomainReplicationQueue p.DomainReplicationQueue
-		ShardInfo              *p.ShardInfo
-		TaskIDGenerator        TransferTaskIDGenerator
-		ClusterMetadata        cluster.Metadata
-		ReadLevel              int64
-		ReplicationReadLevel   int64
-		DefaultTestCluster     PersistenceTestCluster
-		VisibilityTestCluster  PersistenceTestCluster
-		Logger                 log.Logger
-		PayloadSerializer      p.PayloadSerializer
+		ShardMgr                  p.ShardManager
+		ExecutionMgrFactory       client.Factory
+		ExecutionManager          p.ExecutionManager
+		TaskMgr                   p.TaskManager
+		HistoryV2Mgr              p.HistoryManager
+		MetadataManager           p.MetadataManager
+		VisibilityMgr             p.VisibilityManager
+		DomainReplicationQueueMgr p.QueueManager
+		ShardInfo                 *p.ShardInfo
+		TaskIDGenerator           TransferTaskIDGenerator
+		ClusterMetadata           cluster.Metadata
+		ReadLevel                 int64
+		ReplicationReadLevel      int64
+		DefaultTestCluster        PersistenceTestCluster
+		VisibilityTestCluster     PersistenceTestCluster
+		Logger                    log.Logger
+		PayloadSerializer         p.PayloadSerializer
 	}
 
 	// PersistenceTestCluster exposes management operations on a database
@@ -258,9 +257,9 @@ func (s *TestBase) Setup() {
 	err = s.ShardMgr.CreateShard(context.Background(), &p.CreateShardRequest{ShardInfo: s.ShardInfo})
 	s.fatalOnError("CreateShard", err)
 
-	queue, err := factory.NewDomainReplicationQueue()
+	queue, err := factory.NewDomainReplicationQueueManager()
 	s.fatalOnError("Create DomainReplicationQueue", err)
-	s.DomainReplicationQueue = queue
+	s.DomainReplicationQueueMgr = queue
 }
 
 func (s *TestBase) fatalOnError(msg string, err error) {
@@ -1745,7 +1744,7 @@ func (g *TestTransferTaskIDGenerator) GenerateTransferTaskID() (int64, error) {
 // Publish is a utility method to add messages to the queue
 func (s *TestBase) Publish(
 	ctx context.Context,
-	message interface{},
+	messagePayload []byte,
 ) error {
 
 	retryPolicy := backoff.NewExponentialRetryPolicy(100 * time.Millisecond)
@@ -1754,7 +1753,7 @@ func (s *TestBase) Publish(
 
 	return backoff.Retry(
 		func() error {
-			return s.DomainReplicationQueue.Publish(ctx, message)
+			return s.DomainReplicationQueueMgr.EnqueueMessage(ctx, messagePayload)
 		},
 		retryPolicy,
 		func(e error) bool {
@@ -1772,9 +1771,9 @@ func (s *TestBase) GetReplicationMessages(
 	ctx context.Context,
 	lastMessageID int64,
 	maxCount int,
-) ([]*replicator.ReplicationTask, int64, error) {
+) ([]*p.QueueMessage, error) {
 
-	return s.DomainReplicationQueue.GetReplicationMessages(ctx, lastMessageID, maxCount)
+	return s.DomainReplicationQueueMgr.ReadMessages(ctx, lastMessageID, maxCount)
 }
 
 // UpdateAckLevel updates replication queue ack level
@@ -1784,20 +1783,20 @@ func (s *TestBase) UpdateAckLevel(
 	clusterName string,
 ) error {
 
-	return s.DomainReplicationQueue.UpdateAckLevel(ctx, lastProcessedMessageID, clusterName)
+	return s.DomainReplicationQueueMgr.UpdateAckLevel(ctx, lastProcessedMessageID, clusterName)
 }
 
 // GetAckLevels returns replication queue ack levels
 func (s *TestBase) GetAckLevels(
 	ctx context.Context,
 ) (map[string]int64, error) {
-	return s.DomainReplicationQueue.GetAckLevels(ctx)
+	return s.DomainReplicationQueueMgr.GetAckLevels(ctx)
 }
 
 // PublishToDomainDLQ is a utility method to add messages to the domain DLQ
 func (s *TestBase) PublishToDomainDLQ(
 	ctx context.Context,
-	message interface{},
+	messagePayload []byte,
 ) error {
 
 	retryPolicy := backoff.NewExponentialRetryPolicy(100 * time.Millisecond)
@@ -1806,7 +1805,7 @@ func (s *TestBase) PublishToDomainDLQ(
 
 	return backoff.Retry(
 		func() error {
-			return s.DomainReplicationQueue.PublishToDLQ(ctx, message)
+			return s.DomainReplicationQueueMgr.EnqueueMessageToDLQ(ctx, messagePayload)
 		},
 		retryPolicy,
 		func(e error) bool {
@@ -1821,9 +1820,9 @@ func (s *TestBase) GetMessagesFromDomainDLQ(
 	lastMessageID int64,
 	pageSize int,
 	pageToken []byte,
-) ([]*replicator.ReplicationTask, []byte, error) {
+) ([]*p.QueueMessage, []byte, error) {
 
-	return s.DomainReplicationQueue.GetMessagesFromDLQ(
+	return s.DomainReplicationQueueMgr.ReadMessagesFromDLQ(
 		ctx,
 		firstMessageID,
 		lastMessageID,
@@ -1836,16 +1835,24 @@ func (s *TestBase) GetMessagesFromDomainDLQ(
 func (s *TestBase) UpdateDomainDLQAckLevel(
 	ctx context.Context,
 	lastProcessedMessageID int64,
+	clusterName string,
 ) error {
 
-	return s.DomainReplicationQueue.UpdateDLQAckLevel(ctx, lastProcessedMessageID)
+	return s.DomainReplicationQueueMgr.UpdateDLQAckLevel(ctx, lastProcessedMessageID, clusterName)
 }
 
 // GetDomainDLQAckLevel returns domain dlq ack level
 func (s *TestBase) GetDomainDLQAckLevel(
 	ctx context.Context,
+) (map[string]int64, error) {
+	return s.DomainReplicationQueueMgr.GetDLQAckLevels(ctx)
+}
+
+// GetDomainDLQSize returns domain dlq size
+func (s *TestBase) GetDomainDLQSize(
+	ctx context.Context,
 ) (int64, error) {
-	return s.DomainReplicationQueue.GetDLQAckLevel(ctx)
+	return s.DomainReplicationQueueMgr.GetDLQSize(ctx)
 }
 
 // DeleteMessageFromDomainDLQ deletes one message from domain DLQ
@@ -1854,7 +1861,7 @@ func (s *TestBase) DeleteMessageFromDomainDLQ(
 	messageID int64,
 ) error {
 
-	return s.DomainReplicationQueue.DeleteMessageFromDLQ(ctx, messageID)
+	return s.DomainReplicationQueueMgr.DeleteMessageFromDLQ(ctx, messageID)
 }
 
 // RangeDeleteMessagesFromDomainDLQ deletes messages from domain DLQ
@@ -1864,7 +1871,7 @@ func (s *TestBase) RangeDeleteMessagesFromDomainDLQ(
 	lastMessageID int64,
 ) error {
 
-	return s.DomainReplicationQueue.RangeDeleteMessagesFromDLQ(ctx, firstMessageID, lastMessageID)
+	return s.DomainReplicationQueueMgr.RangeDeleteMessagesFromDLQ(ctx, firstMessageID, lastMessageID)
 }
 
 // GenerateTransferTaskIDs helper

@@ -197,6 +197,7 @@ func (s *Service) Start() {
 	logger.Info("worker starting", tag.ComponentWorker)
 
 	s.Resource.Start()
+	s.Resource.GetDomainReplicationQueue().Start()
 
 	s.ensureDomainExists(common.SystemLocalDomainName)
 	s.startScanner()
@@ -234,6 +235,7 @@ func (s *Service) Stop() {
 	close(s.stopC)
 
 	s.Resource.Stop()
+	s.Resource.GetDomainReplicationQueue().Stop()
 
 	s.params.Logger.Info("worker stopped", tag.ComponentWorker)
 }

@@ -111,15 +111,15 @@ func (q *nosqlQueue) EnqueueMessage(
 func (q *nosqlQueue) EnqueueMessageToDLQ(
 	ctx context.Context,
 	messagePayload []byte,
-) (int64, error) {
+) error {
 	// Use negative queue type as the dlq type
 	lastMessageID, err := q.getLastMessageID(ctx, q.getDLQTypeFromQueueType())
 	if err != nil {
-		return emptyMessageID, err
+		return err
 	}
 
-	// Use negative queue type as the dlq type
-	return q.tryEnqueue(ctx, q.getDLQTypeFromQueueType(), lastMessageID+1, messagePayload)
+	_, err = q.tryEnqueue(ctx, q.getDLQTypeFromQueueType(), lastMessageID+1, messagePayload)
+	return err
 }
 
 func (q *nosqlQueue) tryEnqueue(
@@ -299,6 +299,17 @@ func (q *nosqlQueue) GetDLQAckLevels(
 	}
 
 	return queueMetadata.ClusterAckLevels, nil
+}
+
+func (q *nosqlQueue) GetDLQSize(
+	ctx context.Context,
+) (int64, error) {
+
+	size, err := q.db.GetQueueSize(ctx, q.getDLQTypeFromQueueType())
+	if err != nil {
+		return 0, convertCommonErrors(q.db, "GetDLQSize", err)
+	}
+	return size, err
 }
 
 func (q *nosqlQueue) getQueueMetadata(
