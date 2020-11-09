@@ -26,7 +26,6 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
-
 	"github.com/uber/cadence/common/persistence/serialization"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
