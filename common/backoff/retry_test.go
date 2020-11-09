@@ -105,6 +105,8 @@ func (s *RetrySuite) TestRetryFailed_ReturnPreviousError() {
 
 	policy := NewExponentialRetryPolicy(1 * time.Millisecond)
 	policy.SetMaximumInterval(5 * time.Millisecond)
+	// Note that this is retry attempts(maybe it should be renamed to SetMaximumRetryAttempts),
+	// so the total attempts is 5+1=6
 	policy.SetMaximumAttempts(5)
 
 	err := Retry(op, policy, nil)
