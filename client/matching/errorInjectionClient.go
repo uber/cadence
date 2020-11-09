@@ -43,6 +43,7 @@ type errorInjectionClient struct {
 	logger    log.Logger
 }
 
+// NewErrorInjectionClient creates a new instance of Client that injects fake error
 func NewErrorInjectionClient(
 	client Client,
 	errorRate float64,

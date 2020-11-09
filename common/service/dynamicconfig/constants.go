@@ -114,6 +114,7 @@ var keys = map[Key]string{
 	VisibilityArchivalQueryMaxQPS:               "frontend.visibilityArchivalQueryMaxQPS",
 	DomainFailoverRefreshInterval:               "frontend.domainFailoverRefreshInterval",
 	DomainFailoverRefreshTimerJitterCoefficient: "frontend.domainFailoverRefreshTimerJitterCoefficient",
+	FrontendErrorInjectionRate:                  "frontend.ErrorInjectionRate",
 
 	// matching settings
 	MatchingRPS:                             "matching.rps",
@@ -474,6 +475,9 @@ const (
 	DomainFailoverRefreshInterval
 	// DomainFailoverRefreshTimerJitterCoefficient is the jitter for domain failover refresh timer jitter
 	DomainFailoverRefreshTimerJitterCoefficient
+
+	// FrontendErrorInjectionRate is the rate for injecting random error in frontend client
+	FrontendErrorInjectionRate
 
 	// key for matching
 
