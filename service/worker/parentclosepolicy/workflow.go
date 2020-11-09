@@ -22,8 +22,9 @@ package parentclosepolicy
 
 import (
 	"context"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"time"
+
+	"github.com/uber/cadence/common/types/mapper/thrift"
 
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"

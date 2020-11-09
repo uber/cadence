@@ -23,11 +23,12 @@ package admin
 import (
 	"context"
 
+	"go.uber.org/yarpc"
+
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
-	"go.uber.org/yarpc"
 )
 
 var _ Client = (*errorInjectionClient)(nil)
