@@ -112,3 +112,11 @@ func (err WorkflowExecutionAlreadyStartedError) Error() string {
 		err.RunID,
 	)
 }
+
+func (err ShardOwnershipLostError) Error() string {
+	return fmt.Sprintf("ShardOwnershipLostError{Message: %v, Owner: %v}", err.Message, err.Owner)
+}
+
+func (err EventAlreadyStartedError) Error() string {
+	return fmt.Sprintf("EventAlreadyStartedError{Message: %v}", err.Message)
+}

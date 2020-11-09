@@ -301,7 +301,8 @@ func NewEngineWithShardContext(
 		common.IsServiceBusyError,
 	)
 	resendFunc := func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
-		return historyRetryableClient.ReplicateEventsV2(ctx, request)
+		err := historyRetryableClient.ReplicateEventsV2(ctx, thrift.ToReplicateEventsV2Request(request))
+		return thrift.FromError(err)
 	}
 	for _, replicationTaskFetcher := range replicationTaskFetchers.GetFetchers() {
 		sourceCluster := replicationTaskFetcher.GetSourceCluster()
