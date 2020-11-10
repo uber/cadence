@@ -75,9 +75,10 @@ func (c *Collection) logValue(
 	cmpValueEquals func(interface{}, interface{}) bool,
 ) {
 	loadedValue, loaded := c.keys.LoadOrStore(key, value)
-	if !loaded || !cmpValueEquals(loadedValue, value) {
+	// If not loaded before, then print the log for the first loaded 
+	if !loaded {
 		c.logger.Info("Get dynamic config",
-			tag.Name(key.String()), tag.Value(value), tag.DefaultValue(defaultValue))
+			tag.Name(key.String()), tag.Value(loadedValue), tag.DefaultValue(defaultValue))
 	}
 }
 
