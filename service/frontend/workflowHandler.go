@@ -1546,13 +1546,13 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 			ScheduleAttempt: histResp.StartedResponse.GetAttempt(),
 		}
 		token, _ := wh.tokenSerializer.Serialize(taskToken)
-		workflowExecution := &gen.WorkflowExecution{
-			WorkflowId: common.StringPtr(taskToken.WorkflowID),
-			RunId:      common.StringPtr(taskToken.RunID),
+		workflowExecution := &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(taskToken.WorkflowID),
+			RunID:      common.StringPtr(taskToken.RunID),
 		}
-		matchingResp := common.CreateMatchingPollForDecisionTaskResponse(histResp.StartedResponse, workflowExecution, token)
+		matchingResp := common.CreateMatchingPollForDecisionTaskResponse(thrift.ToRecordDecisionTaskStartedResponse(histResp.StartedResponse), workflowExecution, token)
 
-		newDecisionTask, err := wh.createPollForDecisionTaskResponse(ctx, scope, taskToken.DomainID, matchingResp, matchingResp.GetBranchToken())
+		newDecisionTask, err := wh.createPollForDecisionTaskResponse(ctx, scope, taskToken.DomainID, thrift.FromMatchingPollForDecisionTaskResponse(matchingResp), matchingResp.GetBranchToken())
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}

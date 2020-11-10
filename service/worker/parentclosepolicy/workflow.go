@@ -22,7 +22,6 @@ package parentclosepolicy
 
 import (
 	"context"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"time"
 
 	"go.uber.org/cadence"
@@ -35,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
