@@ -74,7 +74,7 @@ func (c *errorInjectionClient) AddSearchAttribute(
 			tag.AdminClientOperationAddSearchAttribute,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -100,7 +100,7 @@ func (c *errorInjectionClient) DescribeHistoryHost(
 			tag.AdminClientOperationDescribeHistoryHost,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -125,7 +125,7 @@ func (c *errorInjectionClient) RemoveTask(
 			tag.AdminClientOperationRemoveTask,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -150,7 +150,7 @@ func (c *errorInjectionClient) CloseShard(
 			tag.AdminClientOperationCloseShard,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -175,7 +175,7 @@ func (c *errorInjectionClient) ResetQueue(
 			tag.AdminClientOperationResetQueue,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -201,7 +201,7 @@ func (c *errorInjectionClient) DescribeQueue(
 			tag.AdminClientOperationDescribeQueue,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -227,7 +227,7 @@ func (c *errorInjectionClient) DescribeWorkflowExecution(
 			tag.AdminClientOperationDescribeWorkflowExecution,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -253,7 +253,7 @@ func (c *errorInjectionClient) GetWorkflowExecutionRawHistoryV2(
 			tag.AdminClientOperationGetWorkflowExecutionRawHistoryV2,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -278,7 +278,7 @@ func (c *errorInjectionClient) DescribeCluster(
 			tag.AdminClientOperationDescribeCluster,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -304,7 +304,7 @@ func (c *errorInjectionClient) GetReplicationMessages(
 			tag.AdminClientOperationGetReplicationMessages,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -330,7 +330,7 @@ func (c *errorInjectionClient) GetDomainReplicationMessages(
 			tag.AdminClientOperationGetDomainReplicationMessages,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -356,7 +356,7 @@ func (c *errorInjectionClient) GetDLQReplicationMessages(
 			tag.AdminClientOperationGetDLQReplicationMessages,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -381,7 +381,7 @@ func (c *errorInjectionClient) ReapplyEvents(
 			tag.AdminClientOperationReapplyEvents,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -407,7 +407,7 @@ func (c *errorInjectionClient) ReadDLQMessages(
 			tag.AdminClientOperationReadDLQMessages,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -432,7 +432,7 @@ func (c *errorInjectionClient) PurgeDLQMessages(
 			tag.AdminClientOperationPurgeDLQMessages,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -458,7 +458,7 @@ func (c *errorInjectionClient) MergeDLQMessages(
 			tag.AdminClientOperationMergeDLQMessages,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -483,7 +483,7 @@ func (c *errorInjectionClient) RefreshWorkflowTasks(
 			tag.AdminClientOperationRefreshWorkflowTasks,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -508,7 +508,7 @@ func (c *errorInjectionClient) ResendReplicationTasks(
 			tag.AdminClientOperationResendReplicationTasks,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
