@@ -74,7 +74,7 @@ func (c *errorInjectionClient) AddActivityTask(
 			tag.MatchingClientOperationAddActivityTask,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -99,7 +99,7 @@ func (c *errorInjectionClient) AddDecisionTask(
 			tag.MatchingClientOperationAddDecisionTask,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -125,7 +125,7 @@ func (c *errorInjectionClient) PollForActivityTask(
 			tag.MatchingClientOperationPollForActivityTask,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -151,7 +151,7 @@ func (c *errorInjectionClient) PollForDecisionTask(
 			tag.MatchingClientOperationPollForDecisionTask,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -177,7 +177,7 @@ func (c *errorInjectionClient) QueryWorkflow(
 			tag.MatchingClientOperationQueryWorkflow,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -202,7 +202,7 @@ func (c *errorInjectionClient) RespondQueryTaskCompleted(
 			tag.MatchingClientOperationQueryTaskCompleted,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -227,7 +227,7 @@ func (c *errorInjectionClient) CancelOutstandingPoll(
 			tag.MatchingClientOperationCancelOutstandingPoll,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -253,7 +253,7 @@ func (c *errorInjectionClient) DescribeTaskList(
 			tag.MatchingClientOperationDescribeTaskList,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -279,7 +279,7 @@ func (c *errorInjectionClient) ListTaskListPartitions(
 			tag.MatchingClientOperationListTaskListPartitions,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
