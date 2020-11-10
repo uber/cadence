@@ -74,7 +74,7 @@ func (c *errorInjectionClient) DeprecateDomain(
 			tag.FrontendClientOperationDeprecateDomain,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -100,7 +100,7 @@ func (c *errorInjectionClient) DescribeDomain(
 			tag.FrontendClientOperationDescribeDomain,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -126,7 +126,7 @@ func (c *errorInjectionClient) DescribeTaskList(
 			tag.FrontendClientOperationDescribeTaskList,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -152,7 +152,7 @@ func (c *errorInjectionClient) DescribeWorkflowExecution(
 			tag.FrontendClientOperationDescribeWorkflowExecution,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -178,7 +178,7 @@ func (c *errorInjectionClient) GetWorkflowExecutionHistory(
 			tag.FrontendClientOperationDescribeWorkflowExecution,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -204,7 +204,7 @@ func (c *errorInjectionClient) ListArchivedWorkflowExecutions(
 			tag.FrontendClientOperationListArchivedWorkflowExecutions,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -230,7 +230,7 @@ func (c *errorInjectionClient) ListClosedWorkflowExecutions(
 			tag.FrontendClientOperationListClosedWorkflowExecutions,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -256,7 +256,7 @@ func (c *errorInjectionClient) ListDomains(
 			tag.FrontendClientOperationListClosedWorkflowExecutions,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -282,7 +282,7 @@ func (c *errorInjectionClient) ListOpenWorkflowExecutions(
 			tag.FrontendClientOperationListOpenWorkflowExecutions,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -308,7 +308,7 @@ func (c *errorInjectionClient) ListWorkflowExecutions(
 			tag.FrontendClientOperationListWorkflowExecutions,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -334,7 +334,7 @@ func (c *errorInjectionClient) ScanWorkflowExecutions(
 			tag.FrontendClientOperationScanWorkflowExecutions,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -360,7 +360,7 @@ func (c *errorInjectionClient) CountWorkflowExecutions(
 			tag.FrontendClientOperationCountWorkflowExecutions,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -385,7 +385,7 @@ func (c *errorInjectionClient) GetSearchAttributes(
 			tag.FrontendClientOperationGetSearchAttributes,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -411,7 +411,7 @@ func (c *errorInjectionClient) PollForActivityTask(
 			tag.FrontendClientOperationPollForActivityTask,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -437,7 +437,7 @@ func (c *errorInjectionClient) PollForDecisionTask(
 			tag.FrontendClientOperationPollForDecisionTask,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -463,7 +463,7 @@ func (c *errorInjectionClient) QueryWorkflow(
 			tag.FrontendClientOperationQueryWorkflow,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -489,7 +489,7 @@ func (c *errorInjectionClient) RecordActivityTaskHeartbeat(
 			tag.FrontendClientOperationRecordActivityTaskHeartbeat,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -515,7 +515,7 @@ func (c *errorInjectionClient) RecordActivityTaskHeartbeatByID(
 			tag.FrontendClientOperationRecordActivityTaskHeartbeatByID,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -540,7 +540,7 @@ func (c *errorInjectionClient) RegisterDomain(
 			tag.FrontendClientOperationRegisterDomain,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -565,7 +565,7 @@ func (c *errorInjectionClient) RequestCancelWorkflowExecution(
 			tag.FrontendClientOperationRequestCancelWorkflowExecution,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -591,7 +591,7 @@ func (c *errorInjectionClient) ResetStickyTaskList(
 			tag.FrontendClientOperationResetStickyTaskList,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -617,7 +617,7 @@ func (c *errorInjectionClient) ResetWorkflowExecution(
 			tag.FrontendClientOperationResetWorkflowExecution,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -642,7 +642,7 @@ func (c *errorInjectionClient) RespondActivityTaskCanceled(
 			tag.FrontendClientOperationRespondActivityTaskCanceled,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -667,7 +667,7 @@ func (c *errorInjectionClient) RespondActivityTaskCanceledByID(
 			tag.FrontendClientOperationRespondActivityTaskCanceledByID,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -692,7 +692,7 @@ func (c *errorInjectionClient) RespondActivityTaskCompleted(
 			tag.FrontendClientOperationRespondActivityTaskCompleted,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -717,7 +717,7 @@ func (c *errorInjectionClient) RespondActivityTaskCompletedByID(
 			tag.FrontendClientOperationRespondActivityTaskCompletedByID,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -742,7 +742,7 @@ func (c *errorInjectionClient) RespondActivityTaskFailed(
 			tag.FrontendClientOperationRespondActivityTaskFailed,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -767,7 +767,7 @@ func (c *errorInjectionClient) RespondActivityTaskFailedByID(
 			tag.FrontendClientOperationRespondActivityTaskFailedByID,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -793,7 +793,7 @@ func (c *errorInjectionClient) RespondDecisionTaskCompleted(
 			tag.FrontendClientOperationRespondDecisionTaskCompleted,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -818,7 +818,7 @@ func (c *errorInjectionClient) RespondDecisionTaskFailed(
 			tag.FrontendClientOperationRespondDecisionTaskFailed,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -843,7 +843,7 @@ func (c *errorInjectionClient) RespondQueryTaskCompleted(
 			tag.FrontendClientOperationRespondQueryTaskCompleted,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -869,7 +869,7 @@ func (c *errorInjectionClient) SignalWithStartWorkflowExecution(
 			tag.FrontendClientOperationSignalWithStartWorkflowExecution,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -894,7 +894,7 @@ func (c *errorInjectionClient) SignalWorkflowExecution(
 			tag.FrontendClientOperationSignalWorkflowExecution,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -920,7 +920,7 @@ func (c *errorInjectionClient) StartWorkflowExecution(
 			tag.FrontendClientOperationStartWorkflowExecution,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -945,7 +945,7 @@ func (c *errorInjectionClient) TerminateWorkflowExecution(
 			tag.FrontendClientOperationTerminateWorkflowExecution,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return fakeErr
 	}
@@ -971,7 +971,7 @@ func (c *errorInjectionClient) UpdateDomain(
 			tag.FrontendClientOperationUpdateDomain,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -996,7 +996,7 @@ func (c *errorInjectionClient) GetClusterInfo(
 			tag.FrontendClientOperationGetClusterInfo,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
@@ -1022,7 +1022,7 @@ func (c *errorInjectionClient) ListTaskListPartitions(
 			tag.FrontendClientOperationListTaskListPartitions,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
-			tag.StoreError(clientErr),
+			tag.ClientError(clientErr),
 		)
 		return nil, fakeErr
 	}
