@@ -223,8 +223,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 ) (*p.InternalGetWorkflowExecutionResponse, error) {
 
 	domainID := sqlplugin.MustParseUUID(request.DomainID)
-	runID := sqlplugin.MustParseUUID(*request.Execution.RunId)
-	wfID := *request.Execution.WorkflowId
+	runID := sqlplugin.MustParseUUID(*request.Execution.RunID)
+	wfID := *request.Execution.WorkflowID
 	execution, err := m.db.SelectFromExecutions(ctx, &sqlplugin.ExecutionsFilter{
 		ShardID: m.shardID, DomainID: domainID, WorkflowID: wfID, RunID: runID})
 
@@ -233,8 +233,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 			return nil, &workflow.EntityNotExistsError{
 				Message: fmt.Sprintf(
 					"Workflow execution not found.  WorkflowId: %v, RunId: %v",
-					request.Execution.GetWorkflowId(),
-					request.Execution.GetRunId(),
+					request.Execution.GetWorkflowID(),
+					request.Execution.GetRunID(),
 				),
 			}
 		}
@@ -256,8 +256,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 		NextEventID:                        execution.NextEventID,
 		TaskList:                           info.GetTaskList(),
 		WorkflowTypeName:                   info.GetWorkflowTypeName(),
-		WorkflowTimeout:                    info.GetWorkflowTimeoutSeconds(),
-		DecisionStartToCloseTimeout:        info.GetDecisionTaskTimeoutSeconds(),
+		WorkflowTimeout:                    common.SecondsToDuration(int64(info.GetWorkflowTimeoutSeconds())),
+		DecisionStartToCloseTimeout:        common.SecondsToDuration(int64(info.GetDecisionTaskTimeoutSeconds())),
 		State:                              int(info.GetState()),
 		CloseStatus:                        int(info.GetCloseStatus()),
 		LastFirstEventID:                   info.GetLastFirstEventID(),
@@ -269,10 +269,10 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 		DecisionScheduleID:                 info.GetDecisionScheduleID(),
 		DecisionStartedID:                  info.GetDecisionStartedID(),
 		DecisionRequestID:                  info.GetDecisionRequestID(),
-		DecisionTimeout:                    info.GetDecisionTimeout(),
+		DecisionTimeout:                    common.SecondsToDuration(int64(info.GetDecisionTimeout())),
 		DecisionAttempt:                    info.GetDecisionAttempt(),
-		DecisionStartedTimestamp:           info.GetDecisionStartedTimestampNanos(),
-		DecisionScheduledTimestamp:         info.GetDecisionScheduledTimestampNanos(),
+		DecisionStartedTimestamp:           time.Unix(0, info.GetDecisionStartedTimestampNanos()),
+		DecisionScheduledTimestamp:         time.Unix(0, info.GetDecisionScheduledTimestampNanos()),
 		DecisionOriginalScheduledTimestamp: info.GetDecisionOriginalScheduledTimestampNanos(),
 		StickyTaskList:                     info.GetStickyTaskList(),
 		StickyScheduleToStartTimeout:       int32(info.GetStickyScheduleToStartTimeout()),

@@ -23,6 +23,9 @@ package persistence
 
 import (
 	"context"
+	"time"
+
+	"github.com/uber/cadence/common/types/mapper/thrift"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -71,7 +74,7 @@ func (m *executionManagerImpl) GetWorkflowExecution(
 
 	internalRequest := &InternalGetWorkflowExecutionRequest{
 		DomainID:  request.DomainID,
-		Execution: request.Execution,
+		Execution: *thrift.ToWorkflowExecution(&request.Execution),
 	}
 	response, err := m.persistence.GetWorkflowExecution(ctx, internalRequest)
 	if err != nil {
@@ -141,8 +144,8 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(
 		CompletionEventBatchID:             info.CompletionEventBatchID,
 		TaskList:                           info.TaskList,
 		WorkflowTypeName:                   info.WorkflowTypeName,
-		WorkflowTimeout:                    info.WorkflowTimeout,
-		DecisionStartToCloseTimeout:        info.DecisionStartToCloseTimeout,
+		WorkflowTimeout:                    int32(info.WorkflowTimeout.Seconds()),
+		DecisionStartToCloseTimeout:        int32(info.DecisionStartToCloseTimeout.Seconds()),
 		ExecutionContext:                   info.ExecutionContext,
 		State:                              info.State,
 		CloseStatus:                        info.CloseStatus,
@@ -158,10 +161,10 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(
 		DecisionScheduleID:                 info.DecisionScheduleID,
 		DecisionStartedID:                  info.DecisionStartedID,
 		DecisionRequestID:                  info.DecisionRequestID,
-		DecisionTimeout:                    info.DecisionTimeout,
+		DecisionTimeout:                    int32(info.DecisionTimeout.Seconds()),
 		DecisionAttempt:                    info.DecisionAttempt,
-		DecisionStartedTimestamp:           info.DecisionStartedTimestamp,
-		DecisionScheduledTimestamp:         info.DecisionScheduledTimestamp,
+		DecisionStartedTimestamp:           info.DecisionStartedTimestamp.UnixNano(),
+		DecisionScheduledTimestamp:         info.DecisionScheduledTimestamp.UnixNano(),
 		DecisionOriginalScheduledTimestamp: info.DecisionOriginalScheduledTimestamp,
 		CancelRequested:                    info.CancelRequested,
 		CancelRequestID:                    info.CancelRequestID,
@@ -460,8 +463,8 @@ func (m *executionManagerImpl) SerializeExecutionInfo(
 		CompletionEvent:                    completionEvent,
 		TaskList:                           info.TaskList,
 		WorkflowTypeName:                   info.WorkflowTypeName,
-		WorkflowTimeout:                    info.WorkflowTimeout,
-		DecisionStartToCloseTimeout:        info.DecisionStartToCloseTimeout,
+		WorkflowTimeout:                    common.SecondsToDuration(int64(info.WorkflowTimeout)),
+		DecisionStartToCloseTimeout:        common.SecondsToDuration(int64(info.DecisionStartToCloseTimeout)),
 		ExecutionContext:                   info.ExecutionContext,
 		State:                              info.State,
 		CloseStatus:                        info.CloseStatus,
@@ -477,10 +480,10 @@ func (m *executionManagerImpl) SerializeExecutionInfo(
 		DecisionScheduleID:                 info.DecisionScheduleID,
 		DecisionStartedID:                  info.DecisionStartedID,
 		DecisionRequestID:                  info.DecisionRequestID,
-		DecisionTimeout:                    info.DecisionTimeout,
+		DecisionTimeout:                    common.SecondsToDuration(int64(info.DecisionTimeout)),
 		DecisionAttempt:                    info.DecisionAttempt,
-		DecisionStartedTimestamp:           info.DecisionStartedTimestamp,
-		DecisionScheduledTimestamp:         info.DecisionScheduledTimestamp,
+		DecisionStartedTimestamp:           time.Unix(0, info.DecisionStartedTimestamp),
+		DecisionScheduledTimestamp:         time.Unix(0, info.DecisionScheduledTimestamp),
 		DecisionOriginalScheduledTimestamp: info.DecisionOriginalScheduledTimestamp,
 		CancelRequested:                    info.CancelRequested,
 		CancelRequestID:                    info.CancelRequestID,

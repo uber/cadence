@@ -259,8 +259,8 @@ type (
 		CompletionEvent                    *DataBlob
 		TaskList                           string
 		WorkflowTypeName                   string
-		WorkflowTimeout                    int32
-		DecisionStartToCloseTimeout        int32
+		WorkflowTimeout                    time.Duration
+		DecisionStartToCloseTimeout        time.Duration
 		ExecutionContext                   []byte
 		State                              int
 		CloseStatus                        int
@@ -276,10 +276,11 @@ type (
 		DecisionScheduleID                 int64
 		DecisionStartedID                  int64
 		DecisionRequestID                  string
-		DecisionTimeout                    int32
+		DecisionTimeout                    time.Duration
 		DecisionAttempt                    int64
-		DecisionStartedTimestamp           int64
-		DecisionScheduledTimestamp         int64
+		DecisionStartedTimestamp           time.Time
+		DecisionScheduledTimestamp         time.Time
+		// TODO: start here...
 		DecisionOriginalScheduledTimestamp int64
 		CancelRequested                    bool
 		CancelRequestID                    string
@@ -514,7 +515,7 @@ type (
 	// InternalGetWorkflowExecutionRequest is used to retrieve the info of a workflow execution
 	InternalGetWorkflowExecutionRequest struct {
 		DomainID  string
-		Execution workflow.WorkflowExecution
+		Execution types.WorkflowExecution
 	}
 
 	// InternalGetWorkflowExecutionResponse is the response to GetWorkflowExecution for Persistence Interface
