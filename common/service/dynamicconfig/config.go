@@ -44,7 +44,7 @@ func NewCollection(
 	return &Collection{
 		client:        client,
 		logger:        logger,
-		keys:          &sync.Map{},
+		logKeys:       &sync.Map{},
 		errCount:      -1,
 		filterOptions: filterOptions,
 	}
@@ -56,7 +56,7 @@ func NewCollection(
 type Collection struct {
 	client        Client
 	logger        log.Logger
-	keys          *sync.Map // map of config Key to strongly typed value
+	logKeys       *sync.Map // map of config Keys for logging to capture changes
 	errCount      int64
 	filterOptions []FilterOption
 }
@@ -74,11 +74,19 @@ func (c *Collection) logValue(
 	value, defaultValue interface{},
 	cmpValueEquals func(interface{}, interface{}) bool,
 ) {
-	loadedValue, loaded := c.keys.LoadOrStore(key, value)
-	// If not loaded before, then print the log for the first loaded 
+	loadedValue, loaded := c.logKeys.LoadOrStore(key, value)
 	if !loaded {
-		c.logger.Info("Get dynamic config",
-			tag.Name(key.String()), tag.Value(loadedValue), tag.DefaultValue(defaultValue))
+		c.logger.Info("first loading dynamic config",
+			tag.Key(key.String()), tag.Value(value), tag.DefaultValue(defaultValue))
+	} else {
+		// it's loaded before, check if the value has changed
+		if !cmpValueEquals(loadedValue, value) {
+			c.logger.Info("dynamic config has changed",
+				tag.Key(key.String()), tag.Value(value), tag.DefaultValue(loadedValue))
+			// update the logKeys so that we can capture the changes again
+			// (ignore the racing condition here because it's just for logging, we need a lock if really need to solve it)
+			c.logKeys.Store(key, value)
+		}
 	}
 }
 
