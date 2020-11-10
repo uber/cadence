@@ -224,7 +224,6 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 ) error {
 	ttl := int64(request.WorkflowTimeout.Seconds()) + openExecutionTTLBuffer
 	var query *gocql.Query
-
 	if ttl > maxCassandraTTL {
 		query = v.session.Query(templateCreateWorkflowExecutionStarted,
 			request.DomainUUID,
@@ -281,9 +280,8 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 	// Find how long to keep the row
 	retention := request.RetentionSeconds
 	if retention == 0 {
-		retention = defaultCloseTTLSeconds
+		retention = defaultCloseTTLSeconds * time.Second
 	}
-
 	if int64(retention.Seconds()) > maxCassandraTTL {
 		batch.Query(templateCreateWorkflowExecutionClosed,
 			request.DomainUUID,
@@ -331,7 +329,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			request.Memo.Data,
 			string(request.Memo.GetEncoding()),
 			request.TaskList,
-			retention,
+			int64(retention.Seconds()),
 		)
 		// duplicate write to v2 to order by close time
 		batch.Query(templateCreateWorkflowExecutionClosedWithTTLV2,
@@ -348,7 +346,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			request.Memo.Data,
 			string(request.Memo.GetEncoding()),
 			request.TaskList,
-			retention,
+			int64(retention.Seconds()),
 		)
 	}
 
