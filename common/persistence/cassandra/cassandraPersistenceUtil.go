@@ -419,8 +419,8 @@ func createExecution(
 		completionEncoding,
 		executionInfo.TaskList,
 		executionInfo.WorkflowTypeName,
-		executionInfo.WorkflowTimeout,
-		executionInfo.DecisionStartToCloseTimeout,
+		int32(executionInfo.WorkflowTimeout.Seconds()),
+		int32(executionInfo.DecisionStartToCloseTimeout.Seconds()),
 		executionInfo.ExecutionContext,
 		executionInfo.State,
 		executionInfo.CloseStatus,
@@ -437,10 +437,10 @@ func createExecution(
 		executionInfo.DecisionScheduleID,
 		executionInfo.DecisionStartedID,
 		executionInfo.DecisionRequestID,
-		executionInfo.DecisionTimeout,
+		int32(executionInfo.DecisionTimeout.Seconds()),
 		executionInfo.DecisionAttempt,
-		executionInfo.DecisionStartedTimestamp,
-		executionInfo.DecisionScheduledTimestamp,
+		executionInfo.DecisionStartedTimestamp.UnixNano(),
+		executionInfo.DecisionScheduledTimestamp.UnixNano(),
 		executionInfo.DecisionOriginalScheduledTimestamp,
 		executionInfo.CancelRequested,
 		executionInfo.CancelRequestID,
@@ -534,8 +534,8 @@ func updateExecution(
 		completionEncoding,
 		executionInfo.TaskList,
 		executionInfo.WorkflowTypeName,
-		executionInfo.WorkflowTimeout,
-		executionInfo.DecisionStartToCloseTimeout,
+		int32(executionInfo.WorkflowTimeout.Seconds()),
+		int32(executionInfo.DecisionStartToCloseTimeout.Seconds()),
 		executionInfo.ExecutionContext,
 		executionInfo.State,
 		executionInfo.CloseStatus,
@@ -552,10 +552,10 @@ func updateExecution(
 		executionInfo.DecisionScheduleID,
 		executionInfo.DecisionStartedID,
 		executionInfo.DecisionRequestID,
-		executionInfo.DecisionTimeout,
+		int32(executionInfo.DecisionTimeout.Seconds()),
 		executionInfo.DecisionAttempt,
-		executionInfo.DecisionStartedTimestamp,
-		executionInfo.DecisionScheduledTimestamp,
+		executionInfo.DecisionStartedTimestamp.UnixNano(),
+		executionInfo.DecisionScheduledTimestamp.UnixNano(),
 		executionInfo.DecisionOriginalScheduledTimestamp,
 		executionInfo.CancelRequested,
 		executionInfo.CancelRequestID,
@@ -1575,9 +1575,9 @@ func createWorkflowExecutionInfo(
 		case "workflow_type_name":
 			info.WorkflowTypeName = v.(string)
 		case "workflow_timeout":
-			info.WorkflowTimeout = int32(v.(int))
+			info.WorkflowTimeout = common.SecondsToDuration(int64(v.(int)))
 		case "decision_task_timeout":
-			info.DecisionStartToCloseTimeout = int32(v.(int))
+			info.DecisionStartToCloseTimeout = common.SecondsToDuration(int64(v.(int)))
 		case "execution_context":
 			info.ExecutionContext = v.([]byte)
 		case "state":
@@ -1611,13 +1611,13 @@ func createWorkflowExecutionInfo(
 		case "decision_request_id":
 			info.DecisionRequestID = v.(string)
 		case "decision_timeout":
-			info.DecisionTimeout = int32(v.(int))
+			info.DecisionTimeout = common.SecondsToDuration(int64(v.(int)))
 		case "decision_attempt":
 			info.DecisionAttempt = v.(int64)
 		case "decision_timestamp":
-			info.DecisionStartedTimestamp = v.(int64)
+			info.DecisionStartedTimestamp = time.Unix(0, v.(int64))
 		case "decision_scheduled_timestamp":
-			info.DecisionScheduledTimestamp = v.(int64)
+			info.DecisionScheduledTimestamp = time.Unix(0, v.(int64))
 		case "decision_original_scheduled_timestamp":
 			info.DecisionOriginalScheduledTimestamp = v.(int64)
 		case "cancel_requested":
