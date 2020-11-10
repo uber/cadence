@@ -680,9 +680,9 @@ type (
 		WorkflowID         string
 		RunID              string
 		WorkflowTypeName   string
-		StartTimestamp     int64
-		ExecutionTimestamp int64
-		WorkflowTimeout    int64
+		StartTimestamp     time.Time
+		ExecutionTimestamp time.Time
+		WorkflowTimeout    time.Duration
 		TaskID             int64
 		Memo               *DataBlob
 		TaskList           string
@@ -695,16 +695,16 @@ type (
 		WorkflowID         string
 		RunID              string
 		WorkflowTypeName   string
-		StartTimestamp     int64
-		ExecutionTimestamp int64
+		StartTimestamp     time.Time
+		ExecutionTimestamp time.Time
 		TaskID             int64
 		Memo               *DataBlob
 		TaskList           string
 		SearchAttributes   map[string][]byte
-		CloseTimestamp     int64
+		CloseTimestamp     time.Time
 		Status             types.WorkflowExecutionCloseStatus
 		HistoryLength      int64
-		RetentionSeconds   int64
+		RetentionSeconds   time.Duration
 	}
 
 	// InternalUpsertWorkflowExecutionRequest is request to UpsertWorkflowExecution
@@ -713,9 +713,9 @@ type (
 		WorkflowID         string
 		RunID              string
 		WorkflowTypeName   string
-		StartTimestamp     int64
-		ExecutionTimestamp int64
-		WorkflowTimeout    int64
+		StartTimestamp     time.Time
+		ExecutionTimestamp time.Time
+		WorkflowTimeout    time.Duration
 		TaskID             int64
 		Memo               *DataBlob
 		TaskList           string
@@ -727,9 +727,9 @@ type (
 		DomainUUID string
 		Domain     string // domain name is not persisted, but used as config filter key
 		// The earliest end of the time range
-		EarliestTime int64
+		EarliestTime time.Time
 		// The latest end of the time range
-		LatestTime int64
+		LatestTime time.Time
 		// Maximum number of workflow executions per page
 		PageSize int
 		// Token to continue reading next page of workflow executions.
