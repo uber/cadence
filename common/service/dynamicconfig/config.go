@@ -76,7 +76,7 @@ func (c *Collection) logValue(
 ) {
 	loadedValue, loaded := c.keys.LoadOrStore(key, value)
 	if !loaded || !cmpValueEquals(loadedValue, value) {
-		c.logger.Debug("Get dynamic config",
+		c.logger.Info("Get dynamic config",
 			tag.Name(key.String()), tag.Value(value), tag.DefaultValue(defaultValue))
 	}
 }
