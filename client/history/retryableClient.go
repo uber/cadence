@@ -38,7 +38,11 @@ type retryableClient struct {
 }
 
 // NewRetryableClient creates a new instance of Client with retry policy
-func NewRetryableClient(client Client, policy backoff.RetryPolicy, isRetryable backoff.IsRetryable) Client {
+func NewRetryableClient(
+	client Client,
+	policy backoff.RetryPolicy,
+	isRetryable backoff.IsRetryable,
+) Client {
 	return &retryableClient{
 		client:      client,
 		policy:      policy,
@@ -49,7 +53,8 @@ func NewRetryableClient(client Client, policy backoff.RetryPolicy, isRetryable b
 func (c *retryableClient) StartWorkflowExecution(
 	ctx context.Context,
 	request *types.HistoryStartWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	opts ...yarpc.CallOption,
+) (*types.StartWorkflowExecutionResponse, error) {
 
 	var resp *types.StartWorkflowExecutionResponse
 	op := func() error {
@@ -65,7 +70,8 @@ func (c *retryableClient) StartWorkflowExecution(
 func (c *retryableClient) DescribeHistoryHost(
 	ctx context.Context,
 	request *types.DescribeHistoryHostRequest,
-	opts ...yarpc.CallOption) (*types.DescribeHistoryHostResponse, error) {
+	opts ...yarpc.CallOption,
+) (*types.DescribeHistoryHostResponse, error) {
 
 	var resp *types.DescribeHistoryHostResponse
 	op := func() error {
@@ -81,7 +87,8 @@ func (c *retryableClient) DescribeHistoryHost(
 func (c *retryableClient) CloseShard(
 	ctx context.Context,
 	request *types.CloseShardRequest,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		err := c.client.CloseShard(ctx, request, opts...)
@@ -127,7 +134,8 @@ func (c *retryableClient) DescribeQueue(
 func (c *retryableClient) RemoveTask(
 	ctx context.Context,
 	request *types.RemoveTaskRequest,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		err := c.client.RemoveTask(ctx, request, opts...)
@@ -141,7 +149,8 @@ func (c *retryableClient) RemoveTask(
 func (c *retryableClient) DescribeMutableState(
 	ctx context.Context,
 	request *types.DescribeMutableStateRequest,
-	opts ...yarpc.CallOption) (*types.DescribeMutableStateResponse, error) {
+	opts ...yarpc.CallOption,
+) (*types.DescribeMutableStateResponse, error) {
 
 	var resp *types.DescribeMutableStateResponse
 	op := func() error {
@@ -157,7 +166,8 @@ func (c *retryableClient) DescribeMutableState(
 func (c *retryableClient) GetMutableState(
 	ctx context.Context,
 	request *types.GetMutableStateRequest,
-	opts ...yarpc.CallOption) (*types.GetMutableStateResponse, error) {
+	opts ...yarpc.CallOption,
+) (*types.GetMutableStateResponse, error) {
 
 	var resp *types.GetMutableStateResponse
 	op := func() error {
@@ -173,7 +183,8 @@ func (c *retryableClient) GetMutableState(
 func (c *retryableClient) PollMutableState(
 	ctx context.Context,
 	request *types.PollMutableStateRequest,
-	opts ...yarpc.CallOption) (*types.PollMutableStateResponse, error) {
+	opts ...yarpc.CallOption,
+) (*types.PollMutableStateResponse, error) {
 
 	var resp *types.PollMutableStateResponse
 	op := func() error {
@@ -189,7 +200,8 @@ func (c *retryableClient) PollMutableState(
 func (c *retryableClient) ResetStickyTaskList(
 	ctx context.Context,
 	request *types.HistoryResetStickyTaskListRequest,
-	opts ...yarpc.CallOption) (*types.HistoryResetStickyTaskListResponse, error) {
+	opts ...yarpc.CallOption,
+) (*types.HistoryResetStickyTaskListResponse, error) {
 
 	var resp *types.HistoryResetStickyTaskListResponse
 	op := func() error {
@@ -205,7 +217,8 @@ func (c *retryableClient) ResetStickyTaskList(
 func (c *retryableClient) DescribeWorkflowExecution(
 	ctx context.Context,
 	request *types.HistoryDescribeWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) (*types.DescribeWorkflowExecutionResponse, error) {
+	opts ...yarpc.CallOption,
+) (*types.DescribeWorkflowExecutionResponse, error) {
 
 	var resp *types.DescribeWorkflowExecutionResponse
 	op := func() error {
@@ -221,7 +234,8 @@ func (c *retryableClient) DescribeWorkflowExecution(
 func (c *retryableClient) RecordDecisionTaskStarted(
 	ctx context.Context,
 	request *types.RecordDecisionTaskStartedRequest,
-	opts ...yarpc.CallOption) (*types.RecordDecisionTaskStartedResponse, error) {
+	opts ...yarpc.CallOption,
+) (*types.RecordDecisionTaskStartedResponse, error) {
 
 	var resp *types.RecordDecisionTaskStartedResponse
 	op := func() error {
@@ -237,7 +251,8 @@ func (c *retryableClient) RecordDecisionTaskStarted(
 func (c *retryableClient) RecordActivityTaskStarted(
 	ctx context.Context,
 	request *types.RecordActivityTaskStartedRequest,
-	opts ...yarpc.CallOption) (*types.RecordActivityTaskStartedResponse, error) {
+	opts ...yarpc.CallOption,
+) (*types.RecordActivityTaskStartedResponse, error) {
 
 	var resp *types.RecordActivityTaskStartedResponse
 	op := func() error {
@@ -253,7 +268,8 @@ func (c *retryableClient) RecordActivityTaskStarted(
 func (c *retryableClient) RespondDecisionTaskCompleted(
 	ctx context.Context,
 	request *types.HistoryRespondDecisionTaskCompletedRequest,
-	opts ...yarpc.CallOption) (*types.HistoryRespondDecisionTaskCompletedResponse, error) {
+	opts ...yarpc.CallOption,
+) (*types.HistoryRespondDecisionTaskCompletedResponse, error) {
 
 	var resp *types.HistoryRespondDecisionTaskCompletedResponse
 	op := func() error {
@@ -269,7 +285,8 @@ func (c *retryableClient) RespondDecisionTaskCompleted(
 func (c *retryableClient) RespondDecisionTaskFailed(
 	ctx context.Context,
 	request *types.HistoryRespondDecisionTaskFailedRequest,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		return c.client.RespondDecisionTaskFailed(ctx, request, opts...)
@@ -281,7 +298,8 @@ func (c *retryableClient) RespondDecisionTaskFailed(
 func (c *retryableClient) RespondActivityTaskCompleted(
 	ctx context.Context,
 	request *types.HistoryRespondActivityTaskCompletedRequest,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		return c.client.RespondActivityTaskCompleted(ctx, request, opts...)
@@ -293,7 +311,8 @@ func (c *retryableClient) RespondActivityTaskCompleted(
 func (c *retryableClient) RespondActivityTaskFailed(
 	ctx context.Context,
 	request *types.HistoryRespondActivityTaskFailedRequest,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		return c.client.RespondActivityTaskFailed(ctx, request, opts...)
@@ -305,7 +324,8 @@ func (c *retryableClient) RespondActivityTaskFailed(
 func (c *retryableClient) RespondActivityTaskCanceled(
 	ctx context.Context,
 	request *types.HistoryRespondActivityTaskCanceledRequest,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		return c.client.RespondActivityTaskCanceled(ctx, request, opts...)
@@ -317,7 +337,8 @@ func (c *retryableClient) RespondActivityTaskCanceled(
 func (c *retryableClient) RecordActivityTaskHeartbeat(
 	ctx context.Context,
 	request *types.HistoryRecordActivityTaskHeartbeatRequest,
-	opts ...yarpc.CallOption) (*types.RecordActivityTaskHeartbeatResponse, error) {
+	opts ...yarpc.CallOption,
+) (*types.RecordActivityTaskHeartbeatResponse, error) {
 
 	var resp *types.RecordActivityTaskHeartbeatResponse
 	op := func() error {
@@ -333,7 +354,8 @@ func (c *retryableClient) RecordActivityTaskHeartbeat(
 func (c *retryableClient) RequestCancelWorkflowExecution(
 	ctx context.Context,
 	request *types.HistoryRequestCancelWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		return c.client.RequestCancelWorkflowExecution(ctx, request, opts...)
@@ -345,7 +367,8 @@ func (c *retryableClient) RequestCancelWorkflowExecution(
 func (c *retryableClient) SignalWorkflowExecution(
 	ctx context.Context,
 	request *types.HistorySignalWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		return c.client.SignalWorkflowExecution(ctx, request, opts...)
@@ -357,7 +380,8 @@ func (c *retryableClient) SignalWorkflowExecution(
 func (c *retryableClient) SignalWithStartWorkflowExecution(
 	ctx context.Context,
 	request *types.HistorySignalWithStartWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	opts ...yarpc.CallOption,
+) (*types.StartWorkflowExecutionResponse, error) {
 
 	var resp *types.StartWorkflowExecutionResponse
 	op := func() error {
@@ -373,7 +397,8 @@ func (c *retryableClient) SignalWithStartWorkflowExecution(
 func (c *retryableClient) RemoveSignalMutableState(
 	ctx context.Context,
 	request *types.RemoveSignalMutableStateRequest,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		return c.client.RemoveSignalMutableState(ctx, request, opts...)
@@ -385,7 +410,8 @@ func (c *retryableClient) RemoveSignalMutableState(
 func (c *retryableClient) TerminateWorkflowExecution(
 	ctx context.Context,
 	request *types.HistoryTerminateWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		return c.client.TerminateWorkflowExecution(ctx, request, opts...)
@@ -397,7 +423,8 @@ func (c *retryableClient) TerminateWorkflowExecution(
 func (c *retryableClient) ResetWorkflowExecution(
 	ctx context.Context,
 	request *types.HistoryResetWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) (*types.ResetWorkflowExecutionResponse, error) {
+	opts ...yarpc.CallOption,
+) (*types.ResetWorkflowExecutionResponse, error) {
 
 	var resp *types.ResetWorkflowExecutionResponse
 	op := func() error {
@@ -413,7 +440,8 @@ func (c *retryableClient) ResetWorkflowExecution(
 func (c *retryableClient) ScheduleDecisionTask(
 	ctx context.Context,
 	request *types.ScheduleDecisionTaskRequest,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		return c.client.ScheduleDecisionTask(ctx, request, opts...)
@@ -425,7 +453,8 @@ func (c *retryableClient) ScheduleDecisionTask(
 func (c *retryableClient) RecordChildExecutionCompleted(
 	ctx context.Context,
 	request *types.RecordChildExecutionCompletedRequest,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		return c.client.RecordChildExecutionCompleted(ctx, request, opts...)
@@ -437,7 +466,8 @@ func (c *retryableClient) RecordChildExecutionCompleted(
 func (c *retryableClient) ReplicateEventsV2(
 	ctx context.Context,
 	request *types.ReplicateEventsV2Request,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		return c.client.ReplicateEventsV2(ctx, request, opts...)
@@ -449,7 +479,8 @@ func (c *retryableClient) ReplicateEventsV2(
 func (c *retryableClient) SyncShardStatus(
 	ctx context.Context,
 	request *types.SyncShardStatusRequest,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		return c.client.SyncShardStatus(ctx, request, opts...)
@@ -461,7 +492,8 @@ func (c *retryableClient) SyncShardStatus(
 func (c *retryableClient) SyncActivity(
 	ctx context.Context,
 	request *types.SyncActivityRequest,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		return c.client.SyncActivity(ctx, request, opts...)
