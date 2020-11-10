@@ -398,6 +398,11 @@ func StoreError(storeErr error) Tag {
 	return newErrorTag("store-error", storeErr)
 }
 
+// ClientError returns tag for ClientError
+func ClientError(clientErr error) Tag {
+	return newErrorTag("client-error", clientErr)
+}
+
 // DetailInfo returns tag for DetailInfo
 func DetailInfo(i string) Tag {
 	return newStringTag("detail-info", i)
