@@ -100,4 +100,4 @@ docker run -e CASSANDRA_SEEDS=10.x.x.x                  -- csv of cassandra serv
 Note that each env variable has a default value, so you don't have to specify it if the default works for you. 
 For more options to configure the docker, please refer to `config_template.yaml`.
 
-For <tag>, you may not use `auto-setup` images for production deployment. See the above explanation.
+For <tag>, you may not use `auto-setup` images for production deployment. See the above explanation. 
