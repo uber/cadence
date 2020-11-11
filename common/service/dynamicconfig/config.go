@@ -84,7 +84,7 @@ func (c *Collection) logValue(
 			c.logger.Info("Dynamic config has changed",
 				tag.Key(key.String()), tag.Value(value), tag.DefaultValue(loadedValue))
 			// update the logKeys so that we can capture the changes again
-			// (ignore the racing condition here because it's just for logging, we need a lock if really need to solve it)
+			// (ignore the racing condition here because it's just for logging, we need a lock if really need to solve it) 
 			c.logKeys.Store(key, value)
 		}
 	}
