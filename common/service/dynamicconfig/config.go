@@ -76,12 +76,12 @@ func (c *Collection) logValue(
 ) {
 	loadedValue, loaded := c.logKeys.LoadOrStore(key, value)
 	if !loaded {
-		c.logger.Info("first loading dynamic config",
+		c.logger.Info("First loading dynamic config",
 			tag.Key(key.String()), tag.Value(value), tag.DefaultValue(defaultValue))
 	} else {
 		// it's loaded before, check if the value has changed
 		if !cmpValueEquals(loadedValue, value) {
-			c.logger.Info("dynamic config has changed",
+			c.logger.Info("Dynamic config has changed",
 				tag.Key(key.String()), tag.Value(value), tag.DefaultValue(loadedValue))
 			// update the logKeys so that we can capture the changes again
 			// (ignore the racing condition here because it's just for logging, we need a lock if really need to solve it)
