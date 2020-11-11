@@ -1134,6 +1134,10 @@ func (v *MatchingRespondQueryTaskCompletedRequest) GetCompletedRequest() (o *Res
 // TaskSource is an internal type (TBD...)
 type TaskSource int32
 
+func (e TaskSource) Ptr() *TaskSource {
+	return &e
+}
+
 const (
 	// TaskSourceHistory is an option for TaskSource
 	TaskSourceHistory TaskSource = iota

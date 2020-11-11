@@ -450,6 +450,10 @@ func (v *ActivityType) GetName() (o string) {
 // ArchivalStatus is an internal type (TBD...)
 type ArchivalStatus int32
 
+func (e ArchivalStatus) Ptr() *ArchivalStatus {
+	return &e
+}
+
 const (
 	// ArchivalStatusDisabled is an option for ArchivalStatus
 	ArchivalStatusDisabled ArchivalStatus = iota
@@ -516,6 +520,10 @@ func (v *BadRequestError) GetMessage() (o string) {
 
 // CancelExternalWorkflowExecutionFailedCause is an internal type (TBD...)
 type CancelExternalWorkflowExecutionFailedCause int32
+
+func (e CancelExternalWorkflowExecutionFailedCause) Ptr() *CancelExternalWorkflowExecutionFailedCause {
+	return &e
+}
 
 const (
 	// CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution is an option for CancelExternalWorkflowExecutionFailedCause
@@ -719,6 +727,10 @@ func (v *ChildWorkflowExecutionCompletedEventAttributes) GetStartedEventID() (o 
 
 // ChildWorkflowExecutionFailedCause is an internal type (TBD...)
 type ChildWorkflowExecutionFailedCause int32
+
+func (e ChildWorkflowExecutionFailedCause) Ptr() *ChildWorkflowExecutionFailedCause {
+	return &e
+}
 
 const (
 	// ChildWorkflowExecutionFailedCauseWorkflowAlreadyRunning is an option for ChildWorkflowExecutionFailedCause
@@ -1033,6 +1045,10 @@ func (v *CompleteWorkflowExecutionDecisionAttributes) GetResult() (o []byte) {
 
 // ContinueAsNewInitiator is an internal type (TBD...)
 type ContinueAsNewInitiator int32
+
+func (e ContinueAsNewInitiator) Ptr() *ContinueAsNewInitiator {
+	return &e
+}
 
 const (
 	// ContinueAsNewInitiatorDecider is an option for ContinueAsNewInitiator
@@ -1443,6 +1459,10 @@ func (v *DecisionTaskCompletedEventAttributes) GetBinaryChecksum() (o string) {
 // DecisionTaskFailedCause is an internal type (TBD...)
 type DecisionTaskFailedCause int32
 
+func (e DecisionTaskFailedCause) Ptr() *DecisionTaskFailedCause {
+	return &e
+}
+
 const (
 	// DecisionTaskFailedCauseUnhandledDecision is an option for DecisionTaskFailedCause
 	DecisionTaskFailedCauseUnhandledDecision DecisionTaskFailedCause = iota
@@ -1681,6 +1701,10 @@ func (v *DecisionTaskTimedOutEventAttributes) GetTimeoutType() (o TimeoutType) {
 
 // DecisionType is an internal type (TBD...)
 type DecisionType int32
+
+func (e DecisionType) Ptr() *DecisionType {
+	return &e
+}
 
 const (
 	// DecisionTypeScheduleActivityTask is an option for DecisionType
@@ -2277,6 +2301,10 @@ func (v *DomainReplicationConfiguration) GetClusters() (o []*ClusterReplicationC
 // DomainStatus is an internal type (TBD...)
 type DomainStatus int32
 
+func (e DomainStatus) Ptr() *DomainStatus {
+	return &e
+}
+
 const (
 	// DomainStatusRegistered is an option for DomainStatus
 	DomainStatusRegistered DomainStatus = iota
@@ -2288,6 +2316,10 @@ const (
 
 // EncodingType is an internal type (TBD...)
 type EncodingType int32
+
+func (e EncodingType) Ptr() *EncodingType {
+	return &e
+}
 
 const (
 	// EncodingTypeThriftRW is an option for EncodingType
@@ -2329,6 +2361,10 @@ func (v *EntityNotExistsError) GetActiveCluster() (o string) {
 
 // EventType is an internal type (TBD...)
 type EventType int32
+
+func (e EventType) Ptr() *EventType {
+	return &e
+}
 
 const (
 	// EventTypeWorkflowExecutionStarted is an option for EventType
@@ -3148,6 +3184,10 @@ func (v *HistoryEvent) GetUpsertWorkflowSearchAttributesEventAttributes() (o *Up
 // HistoryEventFilterType is an internal type (TBD...)
 type HistoryEventFilterType int32
 
+func (e HistoryEventFilterType) Ptr() *HistoryEventFilterType {
+	return &e
+}
+
 const (
 	// HistoryEventFilterTypeAllEvent is an option for HistoryEventFilterType
 	HistoryEventFilterTypeAllEvent HistoryEventFilterType = iota
@@ -3157,6 +3197,10 @@ const (
 
 // IndexedValueType is an internal type (TBD...)
 type IndexedValueType int32
+
+func (e IndexedValueType) Ptr() *IndexedValueType {
+	return &e
+}
 
 const (
 	// IndexedValueTypeString is an option for IndexedValueType
@@ -3649,6 +3693,10 @@ func (v *Memo) GetFields() (o map[string][]byte) {
 // ParentClosePolicy is an internal type (TBD...)
 type ParentClosePolicy int32
 
+func (e ParentClosePolicy) Ptr() *ParentClosePolicy {
+	return &e
+}
+
 const (
 	// ParentClosePolicyAbandon is an option for ParentClosePolicy
 	ParentClosePolicyAbandon ParentClosePolicy = iota
@@ -3781,6 +3829,10 @@ func (v *PendingActivityInfo) GetLastFailureDetails() (o []byte) {
 
 // PendingActivityState is an internal type (TBD...)
 type PendingActivityState int32
+
+func (e PendingActivityState) Ptr() *PendingActivityState {
+	return &e
+}
 
 const (
 	// PendingActivityStateScheduled is an option for PendingActivityState
@@ -4232,6 +4284,10 @@ func (v *PollerInfo) GetRatePerSecond() (o float64) {
 // QueryConsistencyLevel is an internal type (TBD...)
 type QueryConsistencyLevel int32
 
+func (e QueryConsistencyLevel) Ptr() *QueryConsistencyLevel {
+	return &e
+}
+
 const (
 	// QueryConsistencyLevelEventual is an option for QueryConsistencyLevel
 	QueryConsistencyLevelEventual QueryConsistencyLevel = iota
@@ -4254,6 +4310,10 @@ func (v *QueryFailedError) GetMessage() (o string) {
 
 // QueryRejectCondition is an internal type (TBD...)
 type QueryRejectCondition int32
+
+func (e QueryRejectCondition) Ptr() *QueryRejectCondition {
+	return &e
+}
 
 const (
 	// QueryRejectConditionNotOpen is an option for QueryRejectCondition
@@ -4278,6 +4338,10 @@ func (v *QueryRejected) GetCloseStatus() (o WorkflowExecutionCloseStatus) {
 // QueryResultType is an internal type (TBD...)
 type QueryResultType int32
 
+func (e QueryResultType) Ptr() *QueryResultType {
+	return &e
+}
+
 const (
 	// QueryResultTypeAnswered is an option for QueryResultType
 	QueryResultTypeAnswered QueryResultType = iota
@@ -4287,6 +4351,10 @@ const (
 
 // QueryTaskCompletedType is an internal type (TBD...)
 type QueryTaskCompletedType int32
+
+func (e QueryTaskCompletedType) Ptr() *QueryTaskCompletedType {
+	return &e
+}
 
 const (
 	// QueryTaskCompletedTypeCompleted is an option for QueryTaskCompletedType
@@ -5988,6 +6056,10 @@ func (v *SignalExternalWorkflowExecutionDecisionAttributes) GetChildWorkflowOnly
 // SignalExternalWorkflowExecutionFailedCause is an internal type (TBD...)
 type SignalExternalWorkflowExecutionFailedCause int32
 
+func (e SignalExternalWorkflowExecutionFailedCause) Ptr() *SignalExternalWorkflowExecutionFailedCause {
+	return &e
+}
+
 const (
 	// SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution is an option for SignalExternalWorkflowExecutionFailedCause
 	SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution SignalExternalWorkflowExecutionFailedCause = iota
@@ -6992,6 +7064,10 @@ func (v *TaskList) GetKind() (o TaskListKind) {
 // TaskListKind is an internal type (TBD...)
 type TaskListKind int32
 
+func (e TaskListKind) Ptr() *TaskListKind {
+	return &e
+}
+
 const (
 	// TaskListKindNormal is an option for TaskListKind
 	TaskListKindNormal TaskListKind = iota
@@ -7086,6 +7162,10 @@ func (v *TaskListStatus) GetTaskIDBlock() (o *TaskIDBlock) {
 // TaskListType is an internal type (TBD...)
 type TaskListType int32
 
+func (e TaskListType) Ptr() *TaskListType {
+	return &e
+}
+
 const (
 	// TaskListTypeDecision is an option for TaskListType
 	TaskListTypeDecision TaskListType = iota
@@ -7144,6 +7224,10 @@ func (v *TerminateWorkflowExecutionRequest) GetIdentity() (o string) {
 
 // TimeoutType is an internal type (TBD...)
 type TimeoutType int32
+
+func (e TimeoutType) Ptr() *TimeoutType {
+	return &e
+}
 
 const (
 	// TimeoutTypeStartToClose is an option for TimeoutType
@@ -7658,6 +7742,10 @@ func (v *WorkflowExecutionCanceledEventAttributes) GetDetails() (o []byte) {
 
 // WorkflowExecutionCloseStatus is an internal type (TBD...)
 type WorkflowExecutionCloseStatus int32
+
+func (e WorkflowExecutionCloseStatus) Ptr() *WorkflowExecutionCloseStatus {
+	return &e
+}
 
 const (
 	// WorkflowExecutionCloseStatusCompleted is an option for WorkflowExecutionCloseStatus
@@ -8346,6 +8434,10 @@ func (v *WorkflowExecutionTimedOutEventAttributes) GetTimeoutType() (o TimeoutTy
 
 // WorkflowIDReusePolicy is an internal type (TBD...)
 type WorkflowIDReusePolicy int32
+
+func (e WorkflowIDReusePolicy) Ptr() *WorkflowIDReusePolicy {
+	return &e
+}
 
 const (
 	// WorkflowIDReusePolicyAllowDuplicateFailedOnly is an option for WorkflowIDReusePolicy

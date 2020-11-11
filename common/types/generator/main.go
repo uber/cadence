@@ -113,6 +113,10 @@ var enumTemplate = template.Must(template.New("enum type").Funcs(funcMap).Parse(
 // {{internal .Name}} is an internal type (TBD...)
 type {{internal .Name}} int32
 
+func (e {{internal .Name}}) Ptr() *{{internal .Name}} {
+	return &e
+}
+
 const ({{range $i, $v := .EnumValues}}
 	// {{internal .}} is an option for {{internal $.Name}}
 	{{internal .}}{{if eq $i 0}} {{internal $.Name}} = iota{{end}}{{end}}
