@@ -9,6 +9,8 @@ ES_VERSION="${ES_VERSION:-v6}"
 RF=${RF:-1}
 
 # cassandra env
+export CASSANDRA_USER="${CASSANDRA_USER:-cassandra}"
+export CASSANDRA_PASSWORD="${CASSANDRA_PASSWORD:-cassandra}"
 export KEYSPACE="${KEYSPACE:-cadence}"
 export VISIBILITY_KEYSPACE="${VISIBILITY_KEYSPACE:-cadence_visibility}"
 
@@ -82,7 +84,7 @@ setup_schema() {
 
 wait_for_cassandra() {
     server=`echo $CASSANDRA_SEEDS | awk -F ',' '{print $1}'`
-    until cqlsh --cqlversion=3.4.4 $server < /dev/null; do
+    until cqlsh -u $CASSANDRA_USER -p $CASSANDRA_PASSWORD --cqlversion=3.4.4 $server < /dev/null; do
         echo 'waiting for cassandra to start up'
         sleep 1
     done
