@@ -1,5 +1,5 @@
-# Cadence  
-[![Build Status](https://badge.buildkite.com/159887afd42000f11126f85237317d4090de97b26c287ebc40.svg?theme=github&branch=master)](https://buildkite.com/uberopensource/cadence-server) 
+# Cadence
+[![Build Status](https://badge.buildkite.com/159887afd42000f11126f85237317d4090de97b26c287ebc40.svg?theme=github&branch=master)](https://buildkite.com/uberopensource/cadence-server)
 [![Coverage Status](https://coveralls.io/repos/github/uber/cadence/badge.svg)](https://coveralls.io/github/uber/cadence)
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](http://t.uber.com/cadence-slack)
 
@@ -25,8 +25,12 @@ Try out [Cadence command-line tool](tools/cli/README.md) to perform various task
 
 ### Use Cadence Web
 
-Try out [Cadence Web UI](https://github.com/uber/cadence-web) to view your workflows on Cadence.  
+Try out [Cadence Web UI](https://github.com/uber/cadence-web) to view your workflows on Cadence.
 (This is already available at localhost:8088 if you run Cadence with docker compose)
+
+### Cadence docs
+
+If you have a suggestion or change you would like to make to [cadenceworkflow.io](https://cadenceworkflow.io) you can visit [Cadence Docs](https://github.com/uber/cadence-docs) and raise an Issue or Pull Request there.
 
 ## Contributing
 
