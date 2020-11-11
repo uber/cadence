@@ -450,6 +450,7 @@ func (v *ActivityType) GetName() (o string) {
 // ArchivalStatus is an internal type (TBD...)
 type ArchivalStatus int32
 
+// Ptr is a helper function for getting pointer value
 func (e ArchivalStatus) Ptr() *ArchivalStatus {
 	return &e
 }
@@ -521,6 +522,7 @@ func (v *BadRequestError) GetMessage() (o string) {
 // CancelExternalWorkflowExecutionFailedCause is an internal type (TBD...)
 type CancelExternalWorkflowExecutionFailedCause int32
 
+// Ptr is a helper function for getting pointer value
 func (e CancelExternalWorkflowExecutionFailedCause) Ptr() *CancelExternalWorkflowExecutionFailedCause {
 	return &e
 }
@@ -728,6 +730,7 @@ func (v *ChildWorkflowExecutionCompletedEventAttributes) GetStartedEventID() (o 
 // ChildWorkflowExecutionFailedCause is an internal type (TBD...)
 type ChildWorkflowExecutionFailedCause int32
 
+// Ptr is a helper function for getting pointer value
 func (e ChildWorkflowExecutionFailedCause) Ptr() *ChildWorkflowExecutionFailedCause {
 	return &e
 }
@@ -1046,6 +1049,7 @@ func (v *CompleteWorkflowExecutionDecisionAttributes) GetResult() (o []byte) {
 // ContinueAsNewInitiator is an internal type (TBD...)
 type ContinueAsNewInitiator int32
 
+// Ptr is a helper function for getting pointer value
 func (e ContinueAsNewInitiator) Ptr() *ContinueAsNewInitiator {
 	return &e
 }
@@ -1459,6 +1463,7 @@ func (v *DecisionTaskCompletedEventAttributes) GetBinaryChecksum() (o string) {
 // DecisionTaskFailedCause is an internal type (TBD...)
 type DecisionTaskFailedCause int32
 
+// Ptr is a helper function for getting pointer value
 func (e DecisionTaskFailedCause) Ptr() *DecisionTaskFailedCause {
 	return &e
 }
@@ -1702,6 +1707,7 @@ func (v *DecisionTaskTimedOutEventAttributes) GetTimeoutType() (o TimeoutType) {
 // DecisionType is an internal type (TBD...)
 type DecisionType int32
 
+// Ptr is a helper function for getting pointer value
 func (e DecisionType) Ptr() *DecisionType {
 	return &e
 }
@@ -2301,6 +2307,7 @@ func (v *DomainReplicationConfiguration) GetClusters() (o []*ClusterReplicationC
 // DomainStatus is an internal type (TBD...)
 type DomainStatus int32
 
+// Ptr is a helper function for getting pointer value
 func (e DomainStatus) Ptr() *DomainStatus {
 	return &e
 }
@@ -2317,6 +2324,7 @@ const (
 // EncodingType is an internal type (TBD...)
 type EncodingType int32
 
+// Ptr is a helper function for getting pointer value
 func (e EncodingType) Ptr() *EncodingType {
 	return &e
 }
@@ -2362,6 +2370,7 @@ func (v *EntityNotExistsError) GetActiveCluster() (o string) {
 // EventType is an internal type (TBD...)
 type EventType int32
 
+// Ptr is a helper function for getting pointer value
 func (e EventType) Ptr() *EventType {
 	return &e
 }
@@ -3184,6 +3193,7 @@ func (v *HistoryEvent) GetUpsertWorkflowSearchAttributesEventAttributes() (o *Up
 // HistoryEventFilterType is an internal type (TBD...)
 type HistoryEventFilterType int32
 
+// Ptr is a helper function for getting pointer value
 func (e HistoryEventFilterType) Ptr() *HistoryEventFilterType {
 	return &e
 }
@@ -3198,6 +3208,7 @@ const (
 // IndexedValueType is an internal type (TBD...)
 type IndexedValueType int32
 
+// Ptr is a helper function for getting pointer value
 func (e IndexedValueType) Ptr() *IndexedValueType {
 	return &e
 }
@@ -3693,6 +3704,7 @@ func (v *Memo) GetFields() (o map[string][]byte) {
 // ParentClosePolicy is an internal type (TBD...)
 type ParentClosePolicy int32
 
+// Ptr is a helper function for getting pointer value
 func (e ParentClosePolicy) Ptr() *ParentClosePolicy {
 	return &e
 }
@@ -3830,6 +3842,7 @@ func (v *PendingActivityInfo) GetLastFailureDetails() (o []byte) {
 // PendingActivityState is an internal type (TBD...)
 type PendingActivityState int32
 
+// Ptr is a helper function for getting pointer value
 func (e PendingActivityState) Ptr() *PendingActivityState {
 	return &e
 }
@@ -4284,6 +4297,7 @@ func (v *PollerInfo) GetRatePerSecond() (o float64) {
 // QueryConsistencyLevel is an internal type (TBD...)
 type QueryConsistencyLevel int32
 
+// Ptr is a helper function for getting pointer value
 func (e QueryConsistencyLevel) Ptr() *QueryConsistencyLevel {
 	return &e
 }
@@ -4311,6 +4325,7 @@ func (v *QueryFailedError) GetMessage() (o string) {
 // QueryRejectCondition is an internal type (TBD...)
 type QueryRejectCondition int32
 
+// Ptr is a helper function for getting pointer value
 func (e QueryRejectCondition) Ptr() *QueryRejectCondition {
 	return &e
 }
@@ -4338,6 +4353,7 @@ func (v *QueryRejected) GetCloseStatus() (o WorkflowExecutionCloseStatus) {
 // QueryResultType is an internal type (TBD...)
 type QueryResultType int32
 
+// Ptr is a helper function for getting pointer value
 func (e QueryResultType) Ptr() *QueryResultType {
 	return &e
 }
@@ -4352,6 +4368,7 @@ const (
 // QueryTaskCompletedType is an internal type (TBD...)
 type QueryTaskCompletedType int32
 
+// Ptr is a helper function for getting pointer value
 func (e QueryTaskCompletedType) Ptr() *QueryTaskCompletedType {
 	return &e
 }
@@ -6056,6 +6073,7 @@ func (v *SignalExternalWorkflowExecutionDecisionAttributes) GetChildWorkflowOnly
 // SignalExternalWorkflowExecutionFailedCause is an internal type (TBD...)
 type SignalExternalWorkflowExecutionFailedCause int32
 
+// Ptr is a helper function for getting pointer value
 func (e SignalExternalWorkflowExecutionFailedCause) Ptr() *SignalExternalWorkflowExecutionFailedCause {
 	return &e
 }
@@ -7064,6 +7082,7 @@ func (v *TaskList) GetKind() (o TaskListKind) {
 // TaskListKind is an internal type (TBD...)
 type TaskListKind int32
 
+// Ptr is a helper function for getting pointer value
 func (e TaskListKind) Ptr() *TaskListKind {
 	return &e
 }
@@ -7162,6 +7181,7 @@ func (v *TaskListStatus) GetTaskIDBlock() (o *TaskIDBlock) {
 // TaskListType is an internal type (TBD...)
 type TaskListType int32
 
+// Ptr is a helper function for getting pointer value
 func (e TaskListType) Ptr() *TaskListType {
 	return &e
 }
@@ -7225,6 +7245,7 @@ func (v *TerminateWorkflowExecutionRequest) GetIdentity() (o string) {
 // TimeoutType is an internal type (TBD...)
 type TimeoutType int32
 
+// Ptr is a helper function for getting pointer value
 func (e TimeoutType) Ptr() *TimeoutType {
 	return &e
 }
@@ -7743,6 +7764,7 @@ func (v *WorkflowExecutionCanceledEventAttributes) GetDetails() (o []byte) {
 // WorkflowExecutionCloseStatus is an internal type (TBD...)
 type WorkflowExecutionCloseStatus int32
 
+// Ptr is a helper function for getting pointer value
 func (e WorkflowExecutionCloseStatus) Ptr() *WorkflowExecutionCloseStatus {
 	return &e
 }
@@ -8435,6 +8457,7 @@ func (v *WorkflowExecutionTimedOutEventAttributes) GetTimeoutType() (o TimeoutTy
 // WorkflowIDReusePolicy is an internal type (TBD...)
 type WorkflowIDReusePolicy int32
 
+// Ptr is a helper function for getting pointer value
 func (e WorkflowIDReusePolicy) Ptr() *WorkflowIDReusePolicy {
 	return &e
 }

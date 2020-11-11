@@ -1134,6 +1134,7 @@ func (v *MatchingRespondQueryTaskCompletedRequest) GetCompletedRequest() (o *Res
 // TaskSource is an internal type (TBD...)
 type TaskSource int32
 
+// Ptr is a helper function for getting pointer value
 func (e TaskSource) Ptr() *TaskSource {
 	return &e
 }

@@ -23,6 +23,7 @@ package types
 // DLQType is an internal type (TBD...)
 type DLQType int32
 
+// Ptr is a helper function for getting pointer value
 func (e DLQType) Ptr() *DLQType {
 	return &e
 }
@@ -37,6 +38,7 @@ const (
 // DomainOperation is an internal type (TBD...)
 type DomainOperation int32
 
+// Ptr is a helper function for getting pointer value
 func (e DomainOperation) Ptr() *DomainOperation {
 	return &e
 }
@@ -735,6 +737,7 @@ func (v *ReplicationTaskInfo) GetScheduledID() (o int64) {
 // ReplicationTaskType is an internal type (TBD...)
 type ReplicationTaskType int32
 
+// Ptr is a helper function for getting pointer value
 func (e ReplicationTaskType) Ptr() *ReplicationTaskType {
 	return &e
 }
