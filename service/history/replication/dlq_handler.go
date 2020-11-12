@@ -185,6 +185,7 @@ func (r *dlqHandlerImpl) PurgeMessages(
 			InclusiveEndTaskID:   lastMessageID,
 		},
 	)
+	err = thrift.FromError(err)
 	if err != nil {
 		return err
 	}
@@ -233,6 +234,7 @@ func (r *dlqHandlerImpl) MergeMessages(
 			InclusiveEndTaskID:   lastMessageID,
 		},
 	)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, err
 	}

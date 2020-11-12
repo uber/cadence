@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 // Loader loads timer task information
@@ -262,6 +263,7 @@ func (cl *cassandraLoader) Load() []*persistence.TimerTaskInfo {
 
 			var err error
 			resp, err = ratelimitedClient.GetTimerIndexTasks(ctx, &req)
+			err = thrift.FromError(err)
 			return err
 		}
 

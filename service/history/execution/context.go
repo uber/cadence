@@ -1011,6 +1011,7 @@ func (c *contextImpl) getWorkflowExecutionWithRetry(
 	op := func() error {
 		var err error
 		resp, err = c.executionManager.GetWorkflowExecution(ctx, request)
+		err = thrift.FromError(err)
 
 		return err
 	}

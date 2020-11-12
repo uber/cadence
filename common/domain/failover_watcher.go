@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -181,12 +182,14 @@ func CleanPendingActiveState(
 	// and since we do not know which table will return the domain afterwards
 	// this call has to be made
 	metadata, err := metadataMgr.GetMetadata(context.Background())
+	err = thrift.FromError(err)
 	if err != nil {
 		return err
 	}
 	notificationVersion := metadata.NotificationVersion
 
 	getResponse, err := metadataMgr.GetDomain(context.Background(), &persistence.GetDomainRequest{ID: domainID})
+	err = thrift.FromError(err)
 	if err != nil {
 		return err
 	}
@@ -207,7 +210,8 @@ func CleanPendingActiveState(
 			NotificationVersion:         notificationVersion,
 		}
 		op := func() error {
-			return metadataMgr.UpdateDomain(context.Background(), updateReq)
+			err := metadataMgr.UpdateDomain(context.Background(), updateReq)
+			return thrift.FromError(err)
 		}
 		if err := backoff.Retry(
 			op,

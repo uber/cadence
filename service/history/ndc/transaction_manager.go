@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/reset"
 	"github.com/uber/cadence/service/history/shard"
@@ -396,6 +397,7 @@ func (r *transactionManagerImpl) checkWorkflowExists(
 			},
 		},
 	)
+	err = thrift.FromError(err)
 
 	switch err.(type) {
 	case nil:
@@ -420,6 +422,7 @@ func (r *transactionManagerImpl) getCurrentWorkflowRunID(
 			WorkflowID: workflowID,
 		},
 	)
+	err = thrift.FromError(err)
 
 	switch err.(type) {
 	case nil:

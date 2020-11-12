@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	exec "github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
@@ -312,6 +313,7 @@ func (t *taskAckManagerImpl) getEventsBlob(
 
 	for {
 		resp, err := t.historyManager.ReadRawHistoryBranch(ctx, req)
+		err = thrift.FromError(err)
 		if err != nil {
 			return nil, err
 		}
@@ -374,6 +376,7 @@ func (t *taskAckManagerImpl) readTasksWithBatchSize(
 			BatchSize:    batchSize,
 		},
 	)
+	err = thrift.FromError(err)
 
 	if err != nil {
 		return nil, false, err

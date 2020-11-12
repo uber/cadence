@@ -31,13 +31,13 @@ import (
 
 	"github.com/olivere/elastic"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -190,7 +190,7 @@ func (c *elasticV6) ScanByQuery(ctx context.Context, request *ScanByQueryRequest
 			}
 		}
 	} else if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ScanByQuery failed. Error: %v", err),
 		}
 	}
@@ -311,7 +311,7 @@ func (c *elasticV6) SearchForOneClosedExecution(
 	}
 	searchResult, err := c.search(ctx, params)
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("SearchForOneClosedExecution failed. Error: %v", err),
 		}
 	}

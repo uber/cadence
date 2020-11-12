@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/batcher"
 	"github.com/uber/cadence/service/worker/failovermanager"
@@ -350,6 +351,7 @@ func (s *Service) startFailoverManager() {
 
 func (s *Service) ensureDomainExists(domain string) {
 	_, err := s.GetMetadataManager().GetDomain(context.Background(), &persistence.GetDomainRequest{Name: domain})
+	err = thrift.FromError(err)
 	switch err.(type) {
 	case nil:
 		// noop

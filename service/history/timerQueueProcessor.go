@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/queue"
 	"github.com/uber/cadence/service/history/shard"
@@ -308,6 +309,7 @@ func (t *timerQueueProcessorImpl) completeTimers() error {
 			InclusiveBeginTimestamp: lowerAckLevel.VisibilityTimestamp,
 			ExclusiveEndTimestamp:   upperAckLevel.VisibilityTimestamp,
 		})
+		err = thrift.FromError(err)
 		if err != nil {
 			return err
 		}

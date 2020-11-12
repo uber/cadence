@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -281,6 +282,7 @@ func (s *BeanImpl) GetExecutionManager(
 	}
 
 	executionManager, err := s.executionManagerFactory.NewExecutionManager(shardID)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, err
 	}

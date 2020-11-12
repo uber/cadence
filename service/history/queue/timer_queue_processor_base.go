@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
@@ -488,6 +489,7 @@ func (t *timerQueueProcessorBase) getTimerTasks(
 	retryCount := t.shard.GetConfig().TimerProcessorGetFailureRetryCount()
 	for attempt := 0; attempt < retryCount; attempt++ {
 		response, err = t.shard.GetExecutionManager().GetTimerIndexTasks(context.Background(), request)
+		err = thrift.FromError(err)
 		if err == nil {
 			return response.Timers, response.NextPageToken, nil
 		}

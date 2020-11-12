@@ -2490,6 +2490,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		DomainID:   domainID,
 		WorkflowID: request.WorkflowExecution.GetWorkflowId(),
 	})
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, err
 	}
@@ -3402,6 +3403,7 @@ func (e *historyEngineImpl) loadWorkflow(
 				WorkflowID: workflowID,
 			},
 		)
+		err = thrift.FromError(err)
 		if err != nil {
 			workflowContext.getReleaseFn()(err)
 			return nil, err

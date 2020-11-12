@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 var (
@@ -142,6 +143,7 @@ func (d *handlerImpl) RegisterDomain(
 
 	// first check if the name is already registered as the local domain
 	_, err := d.metadataMgr.GetDomain(ctx, &persistence.GetDomainRequest{Name: registerRequest.GetName()})
+	err = thrift.FromError(err)
 	switch err.(type) {
 	case nil:
 		// domain already exists, cannot proceed
@@ -261,6 +263,7 @@ func (d *handlerImpl) RegisterDomain(
 	}
 
 	domainResponse, err := d.metadataMgr.CreateDomain(ctx, domainRequest)
+	err = thrift.FromError(err)
 	if err != nil {
 		return err
 	}
@@ -305,6 +308,7 @@ func (d *handlerImpl) ListDomains(
 		PageSize:      pageSize,
 		NextPageToken: listRequest.NextPageToken,
 	})
+	err = thrift.FromError(err)
 
 	if err != nil {
 		return nil, err
@@ -340,6 +344,7 @@ func (d *handlerImpl) DescribeDomain(
 		ID:   describeRequest.GetUUID(),
 	}
 	resp, err := d.metadataMgr.GetDomain(ctx, req)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, err
 	}
@@ -363,11 +368,13 @@ func (d *handlerImpl) UpdateDomain(
 	// and since we do not know which table will return the domain afterwards
 	// this call has to be made
 	metadata, err := d.metadataMgr.GetMetadata(ctx)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, err
 	}
 	notificationVersion := metadata.NotificationVersion
 	getResponse, err := d.metadataMgr.GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.GetName()})
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, err
 	}
@@ -539,6 +546,7 @@ func (d *handlerImpl) UpdateDomain(
 			NotificationVersion:         notificationVersion,
 		}
 		err = d.metadataMgr.UpdateDomain(ctx, updateReq)
+		err = thrift.FromError(err)
 		if err != nil {
 			return nil, err
 		}
@@ -590,11 +598,13 @@ func (d *handlerImpl) DeprecateDomain(
 	// and since we do not know which table will return the domain afterwards
 	// this call has to be made
 	metadata, err := d.metadataMgr.GetMetadata(ctx)
+	err = thrift.FromError(err)
 	if err != nil {
 		return err
 	}
 	notificationVersion := metadata.NotificationVersion
 	getResponse, err := d.metadataMgr.GetDomain(ctx, &persistence.GetDomainRequest{Name: deprecateRequest.GetName()})
+	err = thrift.FromError(err)
 	if err != nil {
 		return err
 	}
@@ -611,6 +621,7 @@ func (d *handlerImpl) DeprecateDomain(
 		NotificationVersion:         notificationVersion,
 	}
 	err = d.metadataMgr.UpdateDomain(ctx, updateReq)
+	err = thrift.FromError(err)
 	if err != nil {
 		return err
 	}

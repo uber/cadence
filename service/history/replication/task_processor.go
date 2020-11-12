@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/execution"
@@ -263,12 +264,13 @@ func (p *taskProcessorImpl) cleanupAckedReplicationTasks() error {
 		metrics.ReplicationTasksLag,
 		time.Duration(p.shard.GetTransferMaxReadLevel()-minAckLevel),
 	)
-	return p.shard.GetExecutionManager().RangeCompleteReplicationTask(
+	err := p.shard.GetExecutionManager().RangeCompleteReplicationTask(
 		context.Background(),
 		&persistence.RangeCompleteReplicationTaskRequest{
 			InclusiveEndTaskID: minAckLevel,
 		},
 	)
+	return thrift.FromError(err)
 }
 
 func (p *taskProcessorImpl) sendFetchMessageRequest() <-chan *r.ReplicationMessages {
@@ -474,6 +476,7 @@ func (p *taskProcessorImpl) putReplicationTaskToDLQ(replicationTask *r.Replicati
 	// The following is guaranteed to success or retry forever until processor is shutdown.
 	return backoff.Retry(func() error {
 		err := p.shard.GetExecutionManager().PutReplicationTaskToDLQ(context.Background(), request)
+		err = thrift.FromError(err)
 		if err != nil {
 			p.logger.Error("Failed to put replication task to DLQ.", tag.Error(err))
 			p.metricsClient.IncCounter(metrics.ReplicationTaskFetcherScope, metrics.ReplicationDLQFailed)
@@ -545,6 +548,7 @@ func (p *taskProcessorImpl) emitDLQSizeMetricsLoop() {
 		select {
 		case <-timer.C:
 			resp, err := p.shard.GetExecutionManager().GetReplicationDLQSize(context.Background(), staticRequest)
+			err = thrift.FromError(err)
 			timer.Reset(backoff.JitDuration(
 				dlqMetricsEmitTimerInterval,
 				dlqMetricsEmitTimerCoefficient,

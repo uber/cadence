@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
@@ -758,18 +759,21 @@ func (h *handlerImpl) RemoveTask(
 
 	switch taskType := common.TaskType(request.GetType()); taskType {
 	case common.TaskTypeTransfer:
-		return executionMgr.CompleteTransferTask(ctx, &persistence.CompleteTransferTaskRequest{
+		err = executionMgr.CompleteTransferTask(ctx, &persistence.CompleteTransferTaskRequest{
 			TaskID: request.GetTaskID(),
 		})
+		return thrift.FromError(err)
 	case common.TaskTypeTimer:
-		return executionMgr.CompleteTimerTask(ctx, &persistence.CompleteTimerTaskRequest{
+		err = executionMgr.CompleteTimerTask(ctx, &persistence.CompleteTimerTaskRequest{
 			VisibilityTimestamp: time.Unix(0, request.GetVisibilityTimestamp()),
 			TaskID:              request.GetTaskID(),
 		})
+		return thrift.FromError(err)
 	case common.TaskTypeReplication:
-		return executionMgr.CompleteReplicationTask(ctx, &persistence.CompleteReplicationTaskRequest{
+		err = executionMgr.CompleteReplicationTask(ctx, &persistence.CompleteReplicationTaskRequest{
 			TaskID: request.GetTaskID(),
 		})
+		return thrift.FromError(err)
 	default:
 		return errInvalidTaskType
 	}

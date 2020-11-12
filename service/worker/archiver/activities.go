@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -111,6 +112,7 @@ func deleteHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		BranchToken: request.BranchToken,
 		ShardID:     common.IntPtr(request.ShardID),
 	})
+	err = thrift.FromError(err)
 	if err == nil {
 		return nil
 	}

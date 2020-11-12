@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 )
 
@@ -247,6 +248,7 @@ func (e *cacheImpl) getHistoryEventFromStore(
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(shardID),
 	})
+	err = thrift.FromError(err)
 
 	if err != nil {
 		e.metricsClient.IncCounter(metrics.EventsCacheGetFromStoreScope, metrics.CacheFailures)

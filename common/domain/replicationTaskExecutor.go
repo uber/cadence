@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 var (
@@ -144,6 +145,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(
 	}
 
 	_, err = h.metadataManager.CreateDomain(ctx, request)
+	err = thrift.FromError(err)
 	if err != nil {
 		// SQL and Cassandra handle domain UUID collision differently
 		// here, whenever seeing a error replicating a domain
@@ -153,6 +155,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(
 		resp, getErr := h.metadataManager.GetDomain(ctx, &persistence.GetDomainRequest{
 			Name: task.Info.GetName(),
 		})
+		getErr = thrift.FromError(getErr)
 		switch getErr.(type) {
 		case nil:
 			if resp.Info.ID != task.GetID() {
@@ -169,6 +172,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(
 		resp, getErr = h.metadataManager.GetDomain(ctx, &persistence.GetDomainRequest{
 			ID: task.GetID(),
 		})
+		getErr = thrift.FromError(getErr)
 		switch getErr.(type) {
 		case nil:
 			if resp.Info.Name != task.Info.GetName() {
@@ -202,6 +206,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 
 	// first we need to get the current notification version since we need to it for conditional update
 	metadata, err := h.metadataManager.GetMetadata(ctx)
+	err = thrift.FromError(err)
 	if err != nil {
 		return err
 	}
@@ -212,6 +217,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 	resp, err := h.metadataManager.GetDomain(ctx, &persistence.GetDomainRequest{
 		Name: task.Info.GetName(),
 	})
+	err = thrift.FromError(err)
 	if err != nil {
 		if _, ok := err.(*shared.EntityNotExistsError); ok {
 			// this can happen if the create domain replication task is to processed.
@@ -270,7 +276,8 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 		return nil
 	}
 
-	return h.metadataManager.UpdateDomain(ctx, request)
+	err = h.metadataManager.UpdateDomain(ctx, request)
+	return thrift.FromError(err)
 }
 
 func (h *domainReplicationTaskExecutorImpl) validateDomainReplicationTask(task *replicator.DomainTaskAttributes) error {

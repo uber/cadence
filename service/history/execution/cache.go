@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -312,6 +313,7 @@ func (c *Cache) getCurrentExecutionWithRetry(
 	op := func() error {
 		var err error
 		response, err = c.executionManager.GetCurrentExecution(ctx, request)
+		err = thrift.FromError(err)
 
 		return err
 	}

@@ -26,6 +26,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/uber/cadence/common/types/mapper/thrift"
+
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -138,6 +140,7 @@ Loop:
 
 			ctx, cancel := context.WithTimeout(context.Background(), defaultTestPersistenceTimeout)
 			response, err := executionManager.GetReplicationTasksFromDLQ(ctx, request)
+			err = thrift.FromError(err)
 			cancel()
 			if err != nil {
 				continue Loop

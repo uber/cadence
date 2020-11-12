@@ -23,6 +23,8 @@ package tasklist
 import (
 	"time"
 
+	"github.com/uber/cadence/common/types/mapper/thrift"
+
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 	p "github.com/uber/cadence/common/persistence"
@@ -41,6 +43,7 @@ func (s *Scavenger) completeTasks(key *taskListKey, taskID int64, limit int) (in
 			TaskID:       taskID,
 			Limit:        limit,
 		})
+		err = thrift.FromError(err)
 		return err
 	})
 	return n, err
@@ -57,6 +60,7 @@ func (s *Scavenger) getTasks(key *taskListKey, batchSize int) (*p.GetTasksRespon
 			ReadLevel: -1, // get the first N tasks sorted by taskID
 			BatchSize: batchSize,
 		})
+		err = thrift.FromError(err)
 		return err
 	})
 	return resp, err
@@ -70,6 +74,7 @@ func (s *Scavenger) listTaskList(pageSize int, pageToken []byte) (*p.ListTaskLis
 			PageSize:  pageSize,
 			PageToken: pageToken,
 		})
+		err = thrift.FromError(err)
 		return err
 	})
 	return resp, err
@@ -78,12 +83,13 @@ func (s *Scavenger) listTaskList(pageSize int, pageToken []byte) (*p.ListTaskLis
 func (s *Scavenger) deleteTaskList(key *taskListKey, rangeID int64) error {
 	// retry only on service busy errors
 	return backoff.Retry(func() error {
-		return s.db.DeleteTaskList(s.ctx, &p.DeleteTaskListRequest{
+		err := s.db.DeleteTaskList(s.ctx, &p.DeleteTaskListRequest{
 			DomainID:     key.DomainID,
 			TaskListName: key.Name,
 			TaskListType: key.TaskType,
 			RangeID:      rangeID,
 		})
+		return thrift.FromError(err)
 	}, retryForeverPolicy, func(err error) bool {
 		_, ok := err.(*shared.ServiceBusyError)
 		return ok

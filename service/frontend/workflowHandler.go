@@ -3371,6 +3371,7 @@ func (wh *WorkflowHandler) getRawHistory(
 		NextPageToken: nextPageToken,
 		ShardID:       common.IntPtr(shardID),
 	})
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, nil, err
 	}

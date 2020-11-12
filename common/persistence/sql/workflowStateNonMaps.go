@@ -26,10 +26,9 @@ import (
 	"fmt"
 
 	"github.com/uber/cadence/common"
-
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+	"github.com/uber/cadence/common/types"
 )
 
 func updateSignalsRequested(
@@ -55,7 +54,7 @@ func updateSignalsRequested(
 			}
 		}
 		if _, err := tx.InsertIntoSignalsRequestedSets(ctx, rows); err != nil {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update signals requested. Failed to execute update query. Error: %v", err),
 			}
 		}
@@ -69,7 +68,7 @@ func updateSignalsRequested(
 			RunID:      runID,
 			SignalID:   &deleteSignalRequestID,
 		}); err != nil {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update signals requested. Failed to execute delete query. Error: %v", err),
 			}
 		}
@@ -94,7 +93,7 @@ func getSignalsRequested(
 		RunID:      runID,
 	})
 	if err != nil && err != sql.ErrNoRows {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get signals requested. Error: %v", err),
 		}
 	}
@@ -120,7 +119,7 @@ func deleteSignalsRequestedSet(
 		WorkflowID: workflowID,
 		RunID:      runID,
 	}); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to delete signals requested set. Error: %v", err),
 		}
 	}
@@ -150,7 +149,7 @@ func updateBufferedEvents(
 	}
 
 	if _, err := tx.InsertIntoBufferedEvents(ctx, []sqlplugin.BufferedEventsRow{row}); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("updateBufferedEvents operation failed. Error: %v", err),
 		}
 	}
@@ -173,7 +172,7 @@ func getBufferedEvents(
 		RunID:      runID,
 	})
 	if err != nil && err != sql.ErrNoRows {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("getBufferedEvents operation failed. Select failed: %v", err),
 		}
 	}
@@ -199,7 +198,7 @@ func deleteBufferedEvents(
 		WorkflowID: workflowID,
 		RunID:      runID,
 	}); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("updateBufferedEvents delete operation failed. Error: %v", err),
 		}
 	}

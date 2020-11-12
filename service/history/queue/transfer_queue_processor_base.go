@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
@@ -430,6 +431,7 @@ func (t *transferQueueProcessorBase) readTasks(
 			MaxReadLevel: maxReadLevel.(transferTaskKey).taskID,
 			BatchSize:    t.options.BatchSize(),
 		})
+		err = thrift.FromError(err)
 		return err
 	}
 

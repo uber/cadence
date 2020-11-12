@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+	"github.com/uber/cadence/common/types"
 )
 
 // TODO: Rename all SQL Managers to Stores
@@ -56,7 +57,7 @@ func (m *sqlStore) Close() {
 func (m *sqlStore) txExecute(ctx context.Context, operation string, f func(tx sqlplugin.Tx) error) error {
 	tx, err := m.db.BeginTx(ctx)
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("%s failed. Failed to start transaction. Error: %v", operation, err),
 		}
 	}
@@ -76,13 +77,13 @@ func (m *sqlStore) txExecute(ctx context.Context, operation string, f func(tx sq
 			*persistence.ShardOwnershipLostError:
 			return err
 		default:
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("%v: %v", operation, err),
 			}
 		}
 	}
 	if err := tx.Commit(); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("%s operation failed. Failed to commit transaction. Error: %v", operation, err),
 		}
 	}
@@ -94,7 +95,7 @@ func gobSerialize(x interface{}) ([]byte, error) {
 	e := gob.NewEncoder(&b)
 	err := e.Encode(x)
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("Error in serialization: %v", err),
 		}
 	}
@@ -107,7 +108,7 @@ func gobDeserialize(a []byte, x interface{}) error {
 	err := d.Decode(x)
 
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Error in deserialization: %v", err),
 		}
 	}

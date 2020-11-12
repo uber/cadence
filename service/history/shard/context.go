@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
@@ -620,6 +621,7 @@ Create_Loop:
 		request.RangeID = currentRangeID
 
 		response, err := s.executionManager.CreateWorkflowExecution(ctx, request)
+		err = thrift.FromError(err)
 		if err != nil {
 			switch err.(type) {
 			case *shared.WorkflowExecutionAlreadyStartedError,
@@ -732,6 +734,7 @@ Update_Loop:
 		request.RangeID = currentRangeID
 
 		resp, err := s.executionManager.UpdateWorkflowExecution(ctx, request)
+		err = thrift.FromError(err)
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
@@ -848,6 +851,7 @@ Conflict_Resolve_Loop:
 		currentRangeID := s.getRangeID()
 		request.RangeID = currentRangeID
 		err := s.executionManager.ConflictResolveWorkflowExecution(ctx, request)
+		err = thrift.FromError(err)
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
@@ -951,6 +955,7 @@ func (s *contextImpl) AppendHistoryV2Events(
 		}
 	}()
 	resp, err0 := s.GetHistoryManager().AppendHistoryNodes(ctx, request)
+	err0 = thrift.FromError(err0)
 	if resp != nil {
 		size = resp.Size
 	}
@@ -1118,6 +1123,7 @@ func (s *contextImpl) persistShardInfoLocked(
 		ShardInfo:       updatedShardInfo,
 		PreviousRangeID: s.shardInfo.RangeID,
 	})
+	err = thrift.FromError(err)
 
 	if err != nil {
 		// Shard is stolen, trigger history engine shutdown
@@ -1466,6 +1472,7 @@ func acquireShard(
 		resp, err := shardItem.GetShardManager().GetShard(context.Background(), &persistence.GetShardRequest{
 			ShardID: shardItem.shardID,
 		})
+		err = thrift.FromError(err)
 		if err == nil {
 			shardInfo = resp.ShardInfo
 			return nil
@@ -1480,7 +1487,8 @@ func acquireShard(
 			RangeID:          0,
 			TransferAckLevel: 0,
 		}
-		return shardItem.GetShardManager().CreateShard(context.Background(), &persistence.CreateShardRequest{ShardInfo: shardInfo})
+		err = shardItem.GetShardManager().CreateShard(context.Background(), &persistence.CreateShardRequest{ShardInfo: shardInfo})
+		return thrift.FromError(err)
 	}
 
 	err := backoff.Retry(getShard, retryPolicy, retryPredicate)

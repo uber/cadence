@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -82,6 +83,7 @@ func newESProcessorAndStart(config *Config, client es.GenericClient, processorNa
 		AfterFunc:     p.bulkAfterAction,
 	}
 	processor, err := client.RunBulkProcessor(context.Background(), params)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, err
 	}

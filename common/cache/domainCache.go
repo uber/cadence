@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 // ReplicationPolicy is the domain's replication policy,
@@ -430,6 +431,7 @@ func (c *domainCache) refreshDomainsLocked() error {
 	ctx, cancel := context.WithTimeout(context.Background(), domainCachePersistenceTimeout)
 	defer cancel()
 	metadata, err := c.metadataMgr.GetMetadata(ctx)
+	err = thrift.FromError(err)
 	if err != nil {
 		return err
 	}
@@ -443,6 +445,7 @@ func (c *domainCache) refreshDomainsLocked() error {
 		ctx, cancel := context.WithTimeout(context.Background(), domainCachePersistenceTimeout)
 		request.NextPageToken = token
 		response, err := c.metadataMgr.ListDomains(ctx, request)
+		err = thrift.FromError(err)
 		cancel()
 		if err != nil {
 			return err
@@ -521,6 +524,7 @@ func (c *domainCache) checkDomainExists(
 	defer cancel()
 
 	_, err := c.metadataMgr.GetDomain(ctx, &persistence.GetDomainRequest{Name: name, ID: id})
+	err = thrift.FromError(err)
 	return err
 }
 

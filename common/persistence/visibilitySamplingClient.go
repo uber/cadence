@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/tokenbucket"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -41,7 +42,7 @@ const (
 )
 
 // ErrPersistenceLimitExceededForList is the error indicating QPS limit reached for list visibility. 
-var ErrPersistenceLimitExceededForList = &workflow.ServiceBusyError{Message: "Persistence Max QPS Reached for List Operations."}
+var ErrPersistenceLimitExceededForList = &types.ServiceBusyError{Message: "Persistence Max QPS Reached for List Operations."}
 
 type visibilitySamplingClient struct {
 	rateLimitersForOpen   *domainToBucketMap

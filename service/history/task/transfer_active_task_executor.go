@@ -814,6 +814,7 @@ func (t *transferActiveTaskExecutor) processResetWorkflow(
 			DomainID:   task.DomainID,
 			WorkflowID: task.WorkflowID,
 		})
+		err = thrift.FromError(err)
 		if err != nil {
 			return err
 		}

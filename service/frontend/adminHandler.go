@@ -480,6 +480,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		NextPageToken: pageToken.PersistenceToken,
 		ShardID:       common.IntPtr(shardID),
 	})
+	err = thrift.FromError(err)
 	if err != nil {
 		if _, ok := err.(*gen.EntityNotExistsError); ok {
 			// when no events can be returned from DB, DB layer will return

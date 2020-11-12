@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -123,7 +124,8 @@ func (q *replicationQueueImpl) Publish(
 	if err != nil {
 		return fmt.Errorf("failed to encode message: %v", err)
 	}
-	return q.queue.EnqueueMessage(ctx, bytes)
+	err = q.queue.EnqueueMessage(ctx, bytes)
+	return thrift.FromError(err)
 }
 
 func (q *replicationQueueImpl) PublishToDLQ(
@@ -140,7 +142,8 @@ func (q *replicationQueueImpl) PublishToDLQ(
 		return fmt.Errorf("failed to encode message: %v", err)
 	}
 
-	return q.queue.EnqueueMessageToDLQ(ctx, bytes)
+	err = q.queue.EnqueueMessageToDLQ(ctx, bytes)
+	return thrift.FromError(err)
 }
 
 func (q *replicationQueueImpl) GetReplicationMessages(
@@ -150,6 +153,7 @@ func (q *replicationQueueImpl) GetReplicationMessages(
 ) ([]*replicator.ReplicationTask, int64, error) {
 
 	messages, err := q.queue.ReadMessages(ctx, lastMessageID, maxCount)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, lastMessageID, err
 	}
@@ -176,6 +180,7 @@ func (q *replicationQueueImpl) UpdateAckLevel(
 ) error {
 
 	err := q.queue.UpdateAckLevel(ctx, lastProcessedMessageID, clusterName)
+	err = thrift.FromError(err)
 	if err != nil {
 		return fmt.Errorf("failed to update ack level: %v", err)
 	}
@@ -191,7 +196,8 @@ func (q *replicationQueueImpl) UpdateAckLevel(
 func (q *replicationQueueImpl) GetAckLevels(
 	ctx context.Context,
 ) (map[string]int64, error) {
-	return q.queue.GetAckLevels(ctx)
+	result, err := q.queue.GetAckLevels(ctx)
+	return result, thrift.FromError(err)
 }
 
 func (q *replicationQueueImpl) GetMessagesFromDLQ(
@@ -203,6 +209,7 @@ func (q *replicationQueueImpl) GetMessagesFromDLQ(
 ) ([]*replicator.ReplicationTask, []byte, error) {
 
 	messages, token, err := q.queue.ReadMessagesFromDLQ(ctx, firstMessageID, lastMessageID, pageSize, pageToken)
+	err = thrift.FromError(err)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -228,11 +235,13 @@ func (q *replicationQueueImpl) UpdateDLQAckLevel(
 	lastProcessedMessageID int64,
 ) error {
 
-	if err := q.queue.UpdateDLQAckLevel(
+	err := q.queue.UpdateDLQAckLevel(
 		ctx,
 		lastProcessedMessageID,
 		localDomainReplicationCluster,
-	); err != nil {
+	)
+	err = thrift.FromError(err)
+	if err != nil {
 		return err
 	}
 
@@ -243,6 +252,7 @@ func (q *replicationQueueImpl) GetDLQAckLevel(
 	ctx context.Context,
 ) (int64, error) {
 	dlqMetadata, err := q.queue.GetDLQAckLevels(ctx)
+	err = thrift.FromError(err)
 	if err != nil {
 		return common.EmptyMessageID, err
 	}
@@ -260,11 +270,13 @@ func (q *replicationQueueImpl) RangeDeleteMessagesFromDLQ(
 	lastMessageID int64,
 ) error {
 
-	if err := q.queue.RangeDeleteMessagesFromDLQ(
+	err := q.queue.RangeDeleteMessagesFromDLQ(
 		ctx,
 		firstMessageID,
 		lastMessageID,
-	); err != nil {
+	)
+	err = thrift.FromError(err)
+	if err != nil {
 		return err
 	}
 
@@ -276,7 +288,8 @@ func (q *replicationQueueImpl) DeleteMessageFromDLQ(
 	messageID int64,
 ) error {
 
-	return q.queue.DeleteMessageFromDLQ(ctx, messageID)
+	err := q.queue.DeleteMessageFromDLQ(ctx, messageID)
+	return thrift.FromError(err)
 }
 
 func (q *replicationQueueImpl) purgeAckedMessages() error {
@@ -297,6 +310,7 @@ func (q *replicationQueueImpl) purgeAckedMessages() error {
 	}
 
 	err = q.queue.DeleteMessagesBefore(context.Background(), minAckLevel)
+	err = thrift.FromError(err)
 	if err != nil {
 		return fmt.Errorf("failed to purge messages: %v", err)
 	}
@@ -337,6 +351,7 @@ func (q *replicationQueueImpl) emitDLQSize() {
 			return
 		case <-ticker.C:
 			size, err := q.queue.GetDLQSize(context.Background())
+			err = thrift.FromError(err)
 			if err != nil {
 				q.logger.Warn("Failed to get DLQ size.", tag.Error(err))
 				q.metricsClient.Scope(

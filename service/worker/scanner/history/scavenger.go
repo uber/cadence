@@ -128,6 +128,7 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 			PageSize:      pageSize,
 			NextPageToken: s.hbd.NextPageToken,
 		})
+		err = thrift.FromError(err)
 		if err != nil {
 			return s.hbd, err
 		}
@@ -260,6 +261,7 @@ func (s *Scavenger) startTaskProcessor(
 						// we can fill any number here to let to code go through
 						ShardID: common.IntPtr(1),
 					})
+					err = thrift.FromError(err)
 					if err != nil {
 						respCh <- err
 						s.logger.Error("encounter error when deleting garbage history branch",
