@@ -335,7 +335,7 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 			s.Nil(err)
 		}
 
-		_, err = poller.PollAndProcessDecisionTask(true, false)
+		_, err = poller.PollAndProcessDecisionTask(false, false)
 		s.Nil(err)
 	}
 

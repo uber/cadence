@@ -682,7 +682,7 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	s.Equal(clusterName[0], updateResp.ReplicationConfiguration.GetActiveClusterName())
 	s.Equal(int64(10), updateResp.GetFailoverVersion())
 
-	_, err = poller1.PollAndProcessDecisionTask(true, false)
+	_, err = poller1.PollAndProcessDecisionTask(false, false)
 	s.logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 	s.True(workflowCompleted)
@@ -1494,7 +1494,7 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 
 	for i := 1; i < 20; i++ {
 		if !workflowCompleted {
-			_, err = poller2.PollAndProcessDecisionTask(true, false)
+			_, err = poller2.PollAndProcessDecisionTask(false, false)
 			s.Nil(err)
 			time.Sleep(time.Second)
 		}

@@ -138,7 +138,7 @@ func (s *integrationSuite) TestExternalRequestCancelWorkflowExecution() {
 	s.NotNil(err)
 	s.IsType(&workflow.CancellationAlreadyRequestedError{}, err)
 
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -320,7 +320,7 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution() {
 	s.Nil(err)
 
 	// Cancel the foreign workflow with this decision request.
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -488,7 +488,7 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution_UnKnownTar
 	s.Nil(err)
 
 	// Cancel the foreign workflow with this decision request.
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
