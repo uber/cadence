@@ -31,44 +31,44 @@ import (
 type nopClient struct{}
 
 func (mc *nopClient) GetValue(name Key, defaultValue interface{}) (interface{}, error) {
-	return nil, errors.New("unable to find key")
+	return nil, notFoundError
 }
 
 func (mc *nopClient) GetValueWithFilters(
 	name Key, filters map[Filter]interface{}, defaultValue interface{},
 ) (interface{}, error) {
-	return nil, errors.New("unable to find key")
+	return nil, notFoundError
 }
 
 func (mc *nopClient) GetIntValue(name Key, filters map[Filter]interface{}, defaultValue int) (int, error) {
-	return defaultValue, errors.New("unable to find key")
+	return defaultValue, notFoundError
 }
 
 func (mc *nopClient) GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
-	return defaultValue, errors.New("unable to find key")
+	return defaultValue, notFoundError
 }
 
 func (mc *nopClient) GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
 	if filters[DomainName] == "TestRawHistoryDomain" {
-		return true, errors.New("unable to find key")
+		return true, notFoundError
 	}
-	return defaultValue, errors.New("unable to find key")
+	return defaultValue, notFoundError
 }
 
 func (mc *nopClient) GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error) {
-	return defaultValue, errors.New("unable to find key")
+	return defaultValue, notFoundError
 }
 
 func (mc *nopClient) GetMapValue(
 	name Key, filters map[Filter]interface{}, defaultValue map[string]interface{},
 ) (map[string]interface{}, error) {
-	return defaultValue, errors.New("unable to find key")
+	return defaultValue, notFoundError
 }
 
 func (mc *nopClient) GetDurationValue(
 	name Key, filters map[Filter]interface{}, defaultValue time.Duration,
 ) (time.Duration, error) {
-	return defaultValue, errors.New("unable to find key")
+	return defaultValue, notFoundError
 }
 
 func (mc *nopClient) UpdateValue(name Key, value interface{}) error {
