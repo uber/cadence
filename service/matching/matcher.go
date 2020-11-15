@@ -200,7 +200,7 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask, logge
 			tag.CodeFlowTag(QueryCodeFlow),
 			tag.Timestamp(time.Now()),
 			tag.WorkflowID(task.query.request.GetQueryRequest().GetExecution().GetWorkflowId()),
-			tag.WorkflowRunID(task.query.request.GetQueryRequest().GetExecution().GetWorkflowId()))
+			tag.WorkflowRunID(task.query.request.GetQueryRequest().GetExecution().GetRunId()))
 	}
 
 	for {
@@ -211,7 +211,7 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask, logge
 					tag.CodeFlowTag(QueryCodeFlow),
 					tag.Timestamp(time.Now()),
 					tag.WorkflowID(task.query.request.GetQueryRequest().GetExecution().GetWorkflowId()),
-					tag.WorkflowRunID(task.query.request.GetQueryRequest().GetExecution().GetWorkflowId()))
+					tag.WorkflowRunID(task.query.request.GetQueryRequest().GetExecution().GetRunId()))
 			}
 			<-task.responseC
 			return nil, nil
@@ -234,7 +234,7 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask, logge
 					tag.CodeFlowTag(QueryCodeFlow),
 					tag.Timestamp(time.Now()),
 					tag.WorkflowID(task.query.request.GetQueryRequest().GetExecution().GetWorkflowId()),
-					tag.WorkflowRunID(task.query.request.GetQueryRequest().GetExecution().GetWorkflowId()))
+					tag.WorkflowRunID(task.query.request.GetQueryRequest().GetExecution().GetRunId()))
 			}
 			return nil, ctx.Err()
 		}
