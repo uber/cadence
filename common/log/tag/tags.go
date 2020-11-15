@@ -49,6 +49,10 @@ func Timestamp(timestamp time.Time) Tag {
 	return newTimeTag("timestamp", timestamp)
 }
 
+func CodeFlowTag(codeFlow string) Tag {
+	return newStringTag("code-flow", codeFlow)
+}
+
 ///////////////////  Workflow tags defined here: ( wf is short for workflow) ///////////////////
 
 // WorkflowAction returns tag for WorkflowAction

@@ -126,6 +126,10 @@ func newTaskListManager(
 	config *Config,
 ) (taskListManager, error) {
 
+	if taskList != nil && taskList.domainID == "8247c588-c909-4b69-aaad-7a89957a3259" && taskList.baseName == "fx-deployment-worker" {
+		e.logger.Info("andrew creating a new tasklist manager", tag.CodeFlowTag(TaskListManagerCodeFlow), tag.Timestamp(time.Now()))
+	}
+
 	taskListConfig, err := newTaskListConfig(taskList, config, e.domainCache)
 	if err != nil {
 		return nil, err
@@ -193,7 +197,24 @@ func (c *taskListManagerImpl) Start() error {
 	c.taskWriter.Start(c.rangeIDToTaskIDBlock(state.rangeID))
 	c.taskReader.Start()
 
+	if c.taskListID != nil && c.taskListID.baseName == "fx-deployment-worker" && c.taskListID.domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
+		go c.andrewStart()
+	}
+
 	return nil
+}
+
+func (c *taskListManagerImpl) andrewStart() {
+	for {
+		select {
+		case <-c.shutdownCh:
+			return
+		case <-time.After(30 * time.Second):
+			c.outstandingPollsLock.Lock()
+			c.logger.Info("andrew getting count of pollers", tag.CodeFlowTag(TaskListManagerCodeFlow), tag.Timestamp(time.Now()), tag.Counter(len(c.outstandingPollsMap)))
+			c.outstandingPollsLock.Unlock()
+		}
+	}
 }
 
 // Stops pump that fills up taskBuffer from persistence.
@@ -229,6 +250,9 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 
 		syncMatch, err = c.trySyncMatch(ctx, params)
 		if syncMatch {
+			if c.taskListID != nil && c.taskListID.baseName == "fx-deployment-worker" {
+				c.logger.Info("andrew successfully did sync match on add task", tag.Timestamp(time.Now()), tag.CodeFlowTag(DecisionCodeFlow))
+			}
 			return &persistence.CreateTasksResponse{}, err
 		}
 
@@ -262,7 +286,7 @@ func (c *taskListManagerImpl) DispatchQueryTask(
 ) (*s.QueryWorkflowResponse, error) {
 	c.startWG.Wait()
 	task := newInternalQueryTask(taskID, request)
-	return c.matcher.OfferQuery(ctx, task)
+	return c.matcher.OfferQuery(ctx, task, c.logger)
 }
 
 // GetTask blocks waiting for a task.
@@ -325,7 +349,7 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 		return c.matcher.PollForQuery(childCtx)
 	}
 
-	return c.matcher.Poll(childCtx)
+	return c.matcher.Poll(childCtx, pollerID, c.taskListID.baseName, c.logger, c.taskListID.domainID)
 }
 
 // GetAllPollerInfo returns all pollers that polled from this tasklist in last few minutes

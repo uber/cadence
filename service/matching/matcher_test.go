@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/log"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
@@ -91,7 +93,7 @@ func (t *MatcherTestSuite) TestLocalSyncMatch() {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		close(pollStarted)
-		task, err := t.matcher.Poll(ctx)
+		task, err := t.matcher.Poll(ctx, "", "", log.NewNoop(), "")
 		cancel()
 		if err == nil {
 			task.finish(nil)
@@ -127,7 +129,7 @@ func (t *MatcherTestSuite) testRemoteSyncMatch(taskSource gen.TaskSource) {
 			// so lets delay polling by a bit to verify that
 			time.Sleep(time.Millisecond * 10)
 		}
-		task, err := t.matcher.Poll(ctx)
+		task, err := t.matcher.Poll(ctx, "", "", log.NewNoop(), "")
 		cancel()
 		if err == nil && !task.isStarted() {
 			task.finish(nil)
@@ -138,7 +140,7 @@ func (t *MatcherTestSuite) testRemoteSyncMatch(taskSource gen.TaskSource) {
 	var remotePollResp gen.PollForDecisionTaskResponse
 	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).Do(
 		func(arg0 context.Context, arg1 *gen.PollForDecisionTaskRequest) {
-			task, err := t.rootMatcher.Poll(arg0)
+			task, err := t.rootMatcher.Poll(arg0, "", "", log.NewNoop(), "")
 			if err != nil {
 				remotePollErr = err
 			} else {
@@ -220,7 +222,7 @@ func (t *MatcherTestSuite) TestQueryLocalSyncMatch() {
 	time.Sleep(10 * time.Millisecond)
 	task := newInternalQueryTask(uuid.New(), &gen.QueryWorkflowRequest{})
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	resp, err := t.matcher.OfferQuery(ctx, task)
+	resp, err := t.matcher.OfferQuery(ctx, task, log.NewNoop())
 	cancel()
 	t.NoError(err)
 	t.Nil(resp)
@@ -265,11 +267,11 @@ func (t *MatcherTestSuite) TestQueryRemoteSyncMatch() {
 			task.forwardedFrom = req.GetForwardedFrom()
 			close(pollSigC)
 			time.Sleep(10 * time.Millisecond)
-			t.rootMatcher.OfferQuery(ctx, task)
+			t.rootMatcher.OfferQuery(ctx, task, log.NewNoop())
 		},
 	).Return(&shared.QueryWorkflowResponse{QueryResult: []byte("answer")}, nil)
 
-	result, err := t.matcher.OfferQuery(ctx, task)
+	result, err := t.matcher.OfferQuery(ctx, task, log.NewNoop())
 	cancel()
 	t.NotNil(req)
 	t.NoError(err)
@@ -309,7 +311,7 @@ func (t *MatcherTestSuite) TestQueryRemoteSyncMatchError() {
 		},
 	).Return(nil, errMatchingHostThrottle)
 
-	result, err := t.matcher.OfferQuery(ctx, task)
+	result, err := t.matcher.OfferQuery(ctx, task, log.NewNoop())
 	cancel()
 	t.NotNil(req)
 	t.NoError(err)
@@ -327,7 +329,7 @@ func (t *MatcherTestSuite) TestMustOfferLocalMatch() {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		close(pollStarted)
-		task, err := t.matcher.Poll(ctx)
+		task, err := t.matcher.Poll(ctx, "", "", log.NewNoop(), "")
 		cancel()
 		if err == nil {
 			task.finish(nil)
@@ -352,7 +354,7 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 		func(arg0 context.Context, arg1 *gen.PollForDecisionTaskRequest) {
 			<-pollSigC
 			time.Sleep(time.Millisecond * 500) // delay poll to verify that offer blocks on parent
-			task, err := t.rootMatcher.Poll(arg0)
+			task, err := t.rootMatcher.Poll(arg0, "", "", log.NewNoop(), "")
 			if err != nil {
 				remotePollErr = err
 			} else {
@@ -366,7 +368,7 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
-		t.matcher.Poll(ctx)
+		t.matcher.Poll(ctx, "", "", log.NewNoop(), "")
 		cancel()
 	}()
 
@@ -417,7 +419,7 @@ func (t *MatcherTestSuite) TestRemotePoll() {
 	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	task, err := t.matcher.Poll(ctx)
+	task, err := t.matcher.Poll(ctx, "", "", log.NewNoop(), "")
 	cancel()
 	t.NoError(err)
 	t.NotNil(req)

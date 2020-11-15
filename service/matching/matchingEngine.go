@@ -210,6 +210,12 @@ func (e *matchingEngineImpl) removeTaskListManager(id *taskListID) {
 	delete(e.taskLists, *id)
 }
 
+const (
+	DecisionCodeFlow        = "decision"
+	QueryCodeFlow           = "query"
+	TaskListManagerCodeFlow = "task-list-manager"
+)
+
 // AddDecisionTask either delivers task directly to waiting poller or save it into task list persistence.
 func (e *matchingEngineImpl) AddDecisionTask(
 	hCtx *handlerContext,
@@ -218,6 +224,10 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	domainID := request.GetDomainUUID()
 	taskListName := request.TaskList.GetName()
 	taskListKind := common.TaskListKindPtr(request.TaskList.GetKind())
+
+	if request.TaskList != nil && request.GetTaskList().GetName() == "fx-deployment-worker" && domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
+		e.logger.Info("andrew adding decision task", tag.Timestamp(time.Now()), tag.CodeFlowTag(DecisionCodeFlow))
+	}
 
 	e.logger.Debug(
 		fmt.Sprintf("Received AddDecisionTask for taskList=%v, WorkflowID=%v, RunID=%v, ScheduleToStartTimeout=%v",
@@ -244,12 +254,22 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		ScheduleToStartTimeout: request.GetScheduleToStartTimeoutSeconds(),
 		CreatedTime:            time.Now(),
 	}
-	return tlMgr.AddTask(hCtx.Context, addTaskParams{
+	res, err := tlMgr.AddTask(hCtx.Context, addTaskParams{
 		execution:     request.Execution,
 		taskInfo:      taskInfo,
 		source:        request.GetSource(),
 		forwardedFrom: request.GetForwardedFrom(),
 	})
+
+	if request.TaskList != nil && request.GetTaskList().GetName() == "fx-deployment-worker" && domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
+		if err != nil {
+			e.logger.Info("andrew got error adding decision task", tag.Timestamp(time.Now()), tag.CodeFlowTag(DecisionCodeFlow), tag.Error(err))
+		} else {
+			e.logger.Info("andrew successfully adding decision task", tag.Timestamp(time.Now()), tag.CodeFlowTag(DecisionCodeFlow))
+		}
+	}
+
+	return res, err
 }
 
 // AddActivityTask either delivers task directly to waiting poller or save it into task list persistence.
@@ -304,6 +324,15 @@ func (e *matchingEngineImpl) PollForDecisionTask(
 	request := req.PollRequest
 	taskListName := request.TaskList.GetName()
 	e.logger.Debug("Received PollForDecisionTask for taskList", tag.WorkflowTaskListName(taskListName))
+
+	if req.GetPollRequest() != nil &&
+		req.GetPollRequest().GetTaskList() != nil &&
+		req.GetPollRequest().GetTaskList().GetName() == "fx-deployment-worker" &&
+		domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
+
+		e.logger.Info("andrew got poll for decision task", tag.Timestamp(time.Now()), tag.CodeFlowTag(DecisionCodeFlow), tag.Name(req.GetPollerID()))
+	}
+
 pollLoop:
 	for {
 		err := common.IsValidContext(hCtx.Context)
@@ -319,13 +348,42 @@ pollLoop:
 			return nil, err
 		}
 		taskListKind := common.TaskListKindPtr(request.TaskList.GetKind())
+
+		if req.GetPollRequest() != nil &&
+			req.GetPollRequest().GetTaskList() != nil &&
+			req.GetPollRequest().GetTaskList().GetName() == "fx-deployment-worker" &&
+			domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
+
+			e.logger.Info("andrew poll for decision task about to get task",
+				tag.Timestamp(time.Now()), tag.CodeFlowTag(DecisionCodeFlow), tag.Name(req.GetPollerID()))
+		}
+
 		task, err := e.getTask(pollerCtx, taskList, nil, taskListKind)
 		if err != nil {
+
+			if req.GetPollRequest() != nil &&
+				req.GetPollRequest().GetTaskList() != nil &&
+				req.GetPollRequest().GetTaskList().GetName() == "fx-deployment-worker" &&
+				domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
+
+				e.logger.Info("andrew get task in poll for decision task returned error",
+					tag.Timestamp(time.Now()), tag.CodeFlowTag(DecisionCodeFlow), tag.Name(req.GetPollerID()), tag.Error(err))
+			}
+
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if err == ErrNoTasks || err == errPumpClosed {
 				return emptyPollForDecisionTaskResponse, nil
 			}
 			return nil, err
+		}
+
+		if req.GetPollRequest() != nil &&
+			req.GetPollRequest().GetTaskList() != nil &&
+			req.GetPollRequest().GetTaskList().GetName() == "fx-deployment-worker" &&
+			domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
+
+			e.logger.Info("andrew successfully got task in poll for decision task",
+				tag.Timestamp(time.Now()), tag.CodeFlowTag(DecisionCodeFlow), tag.Name(req.GetPollerID()), tag.Bool(task.isQuery()))
 		}
 
 		e.emitForwardedFromStats(hCtx.scope, task.isForwarded(), req.GetForwardedFrom())
@@ -468,6 +526,10 @@ func (e *matchingEngineImpl) QueryWorkflow(
 	taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
 	if err != nil {
 		return nil, err
+	}
+
+	if queryRequest.TaskList.GetName() == "fx-deployment-worker" && domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
+		e.logger.Info("andrew got query workflow", tag.Timestamp(time.Now()), tag.CodeFlowTag(QueryCodeFlow))
 	}
 
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
