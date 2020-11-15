@@ -125,11 +125,6 @@ func newTaskListManager(
 	taskListKind *s.TaskListKind,
 	config *Config,
 ) (taskListManager, error) {
-
-	if taskList != nil && taskList.domainID == "8247c588-c909-4b69-aaad-7a89957a3259" && taskList.baseName == "fx-deployment-worker" {
-		e.logger.Info("andrew creating a new tasklist manager", tag.CodeFlowTag(TaskListManagerCodeFlow), tag.Timestamp(time.Now()))
-	}
-
 	taskListConfig, err := newTaskListConfig(taskList, config, e.domainCache)
 	if err != nil {
 		return nil, err
@@ -137,6 +132,13 @@ func newTaskListManager(
 
 	if taskListKind == nil {
 		taskListKind = common.TaskListKindPtr(s.TaskListKindNormal)
+	}
+
+	if taskList != nil && taskList.domainID == "8247c588-c909-4b69-aaad-7a89957a3259" && taskList.baseName == "fx-deployment-worker" {
+		e.logger.Info("andrew creating a new tasklist manager",
+			tag.CodeFlowTag(TaskListManagerCodeFlow),
+			tag.Timestamp(time.Now()),
+			tag.WorkflowTaskListType(int(*taskListKind)))
 	}
 
 	db := newTaskListDB(e.taskManager, taskList.domainID, taskList.name, taskList.taskType, int(*taskListKind), e.logger)
@@ -211,7 +213,16 @@ func (c *taskListManagerImpl) andrewStart() {
 			return
 		case <-time.After(30 * time.Second):
 			c.outstandingPollsLock.Lock()
-			c.logger.Info("andrew getting count of pollers", tag.CodeFlowTag(TaskListManagerCodeFlow), tag.Timestamp(time.Now()), tag.Counter(len(c.outstandingPollsMap)))
+			c.logger.Info("andrew getting count of pollers",
+				tag.CodeFlowTag(TaskListManagerCodeFlow),
+				tag.Timestamp(time.Now()),
+				tag.Counter(len(c.outstandingPollsMap)))
+			for k := range c.outstandingPollsMap {
+				c.logger.Info("andrew got poller",
+					tag.CodeFlowTag(TaskListManagerCodeFlow),
+					tag.Timestamp(time.Now()),
+					tag.PollerID(k))
+			}
 			c.outstandingPollsLock.Unlock()
 		}
 	}
@@ -349,7 +360,7 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 		return c.matcher.PollForQuery(childCtx)
 	}
 
-	return c.matcher.Poll(childCtx, pollerID, c.taskListID.baseName, c.logger, c.taskListID.domainID)
+	return c.matcher.Poll(childCtx, pollerID, c.taskListID.baseName, c.logger, c.taskListID.domainID, identity)
 }
 
 // GetAllPollerInfo returns all pollers that polled from this tasklist in last few minutes

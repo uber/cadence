@@ -191,17 +191,27 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask, logge
 		task.query.request != nil &&
 		task.query.request.GetDomainUUID() == "8247c588-c909-4b69-aaad-7a89957a3259" &&
 		task.query.request.GetTaskList() != nil &&
-		task.query.request.GetTaskList().GetName() == "fx-deployment-worker"
+		task.query.request.GetTaskList().GetName() == "fx-deployment-worker" &&
+		task.query.request.GetQueryRequest() != nil &&
+		task.query.request.GetQueryRequest().GetExecution() != nil
 
 	if shouldLog {
-		logger.Info("andrew offer query about to try to push to channel", tag.CodeFlowTag(QueryCodeFlow), tag.Timestamp(time.Now()))
+		logger.Info("andrew offer query about to try to push to channel",
+			tag.CodeFlowTag(QueryCodeFlow),
+			tag.Timestamp(time.Now()),
+			tag.WorkflowID(task.query.request.GetQueryRequest().GetExecution().GetWorkflowId()),
+			tag.WorkflowRunID(task.query.request.GetQueryRequest().GetExecution().GetWorkflowId()))
 	}
 
 	for {
 		select {
 		case tm.queryTaskC <- task:
 			if shouldLog {
-				logger.Info("andrew successfully pushed to query channel", tag.CodeFlowTag(QueryCodeFlow), tag.Timestamp(time.Now()))
+				logger.Info("andrew successfully pushed to query channel",
+					tag.CodeFlowTag(QueryCodeFlow),
+					tag.Timestamp(time.Now()),
+					tag.WorkflowID(task.query.request.GetQueryRequest().GetExecution().GetWorkflowId()),
+					tag.WorkflowRunID(task.query.request.GetQueryRequest().GetExecution().GetWorkflowId()))
 			}
 			<-task.responseC
 			return nil, nil
@@ -220,7 +230,11 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask, logge
 			return nil, err
 		case <-ctx.Done():
 			if shouldLog {
-				logger.Info("andrew failed to push to query channel got context timeout", tag.CodeFlowTag(QueryCodeFlow), tag.Timestamp(time.Now()))
+				logger.Info("andrew failed to push to query channel got context timeout",
+					tag.CodeFlowTag(QueryCodeFlow),
+					tag.Timestamp(time.Now()),
+					tag.WorkflowID(task.query.request.GetQueryRequest().GetExecution().GetWorkflowId()),
+					tag.WorkflowRunID(task.query.request.GetQueryRequest().GetExecution().GetWorkflowId()))
 			}
 			return nil, ctx.Err()
 		}
@@ -286,28 +300,28 @@ forLoop:
 // Poll blocks until a task is found or context deadline is exceeded
 // On success, the returned task could be a query task or a regular task
 // Returns ErrNoTasks when context deadline is exceeded
-func (tm *TaskMatcher) Poll(ctx context.Context, pollerID string, taskListName string, logger log.Logger, domainID string) (*internalTask, error) {
+func (tm *TaskMatcher) Poll(ctx context.Context, pollerID string, taskListName string, logger log.Logger, domainID string, identity string) (*internalTask, error) {
 	// try local match first without blocking until context timeout
-	if task, err := tm.pollNonBlocking(ctx, tm.taskC, tm.queryTaskC, pollerID, taskListName, logger, domainID); err == nil {
+	if task, err := tm.pollNonBlocking(ctx, tm.taskC, tm.queryTaskC, pollerID, taskListName, logger, domainID, identity); err == nil {
 		return task, nil
 	}
 	// there is no local poller available to pickup this task. Now block waiting
 	// either for a local poller or a forwarding token to be available. When a
 	// forwarding token becomes available, send this poll to a parent partition
-	return tm.pollOrForward(ctx, tm.taskC, tm.queryTaskC, pollerID, taskListName, logger, domainID)
+	return tm.pollOrForward(ctx, tm.taskC, tm.queryTaskC, pollerID, taskListName, logger, domainID, identity)
 }
 
 // PollForQuery blocks until a *query* task is found or context deadline is exceeded
 // Returns ErrNoTasks when context deadline is exceeded
 func (tm *TaskMatcher) PollForQuery(ctx context.Context) (*internalTask, error) {
 	// try local match first without blocking until context timeout
-	if task, err := tm.pollNonBlocking(ctx, nil, tm.queryTaskC, "", "", log.NewNoop(), ""); err == nil {
+	if task, err := tm.pollNonBlocking(ctx, nil, tm.queryTaskC, "", "", log.NewNoop(), "", ""); err == nil {
 		return task, nil
 	}
 	// there is no local poller available to pickup this task. Now block waiting
 	// either for a local poller or a forwarding token to be available. When a
 	// forwarding token becomes available, send this poll to a parent partition
-	return tm.pollOrForward(ctx, nil, tm.queryTaskC, "", "", log.NewNoop(), "")
+	return tm.pollOrForward(ctx, nil, tm.queryTaskC, "", "", log.NewNoop(), "", "")
 }
 
 // UpdateRatelimit updates the task dispatch rate
@@ -337,6 +351,7 @@ func (tm *TaskMatcher) pollOrForward(
 	taskListName string,
 	logger log.Logger,
 	domainID string,
+	identity string,
 ) (*internalTask, error) {
 	select {
 	case task := <-taskC:
@@ -345,20 +360,32 @@ func (tm *TaskMatcher) pollOrForward(
 		}
 		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
 		if taskListName == "fx-deployment-worker" && domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
-			logger.Info("andrew poll blocking got non-query task", tag.Timestamp(time.Now()), tag.CodeFlowTag(DecisionCodeFlow), tag.Name(pollerID))
+			logger.Info("andrew poll blocking got non-query task",
+				tag.Timestamp(time.Now()),
+				tag.CodeFlowTag(DecisionCodeFlow),
+				tag.PollerID(pollerID),
+				tag.Name(identity))
 		}
 		return task, nil
 	case task := <-queryTaskC:
 		tm.scope().IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
 		if taskListName == "fx-deployment-worker" && domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
-			logger.Info("andrew poll blocking got query task", tag.Timestamp(time.Now()), tag.CodeFlowTag(DecisionCodeFlow), tag.Name(pollerID))
+			logger.Info("andrew poll blocking got query task",
+				tag.Timestamp(time.Now()),
+				tag.CodeFlowTag(DecisionCodeFlow),
+				tag.PollerID(pollerID),
+				tag.Name(identity))
 		}
 		return task, nil
 	case <-ctx.Done():
 		tm.scope().IncCounter(metrics.PollTimeoutPerTaskListCounter)
 		if taskListName == "fx-deployment-worker" && domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
-			logger.Info("andrew poll blocking got no task - got context timeout", tag.Timestamp(time.Now()), tag.CodeFlowTag(DecisionCodeFlow), tag.Name(pollerID))
+			logger.Info("andrew poll blocking got no task - got context timeout",
+				tag.Timestamp(time.Now()),
+				tag.CodeFlowTag(DecisionCodeFlow),
+				tag.PollerID(pollerID),
+				tag.Name(identity))
 		}
 		return nil, ErrNoTasks
 	case token := <-tm.fwdrPollReqTokenC():
@@ -401,6 +428,7 @@ func (tm *TaskMatcher) pollNonBlocking(
 	taskListName string,
 	logger log.Logger,
 	domainID string,
+	identity string,
 ) (*internalTask, error) {
 	select {
 	case task := <-taskC:
@@ -409,19 +437,31 @@ func (tm *TaskMatcher) pollNonBlocking(
 		}
 		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
 		if taskListName == "fx-deployment-worker" && domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
-			logger.Info("andrew poll non blocking got non-query task", tag.Timestamp(time.Now()), tag.CodeFlowTag(DecisionCodeFlow), tag.Name(pollerID))
+			logger.Info("andrew poll non blocking got non-query task",
+				tag.Timestamp(time.Now()),
+				tag.CodeFlowTag(DecisionCodeFlow),
+				tag.PollerID(pollerID),
+				tag.Name(identity))
 		}
 		return task, nil
 	case task := <-queryTaskC:
 		tm.scope().IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
 		if taskListName == "fx-deployment-worker" && domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
-			logger.Info("andrew poll non blocking got query task", tag.Timestamp(time.Now()), tag.CodeFlowTag(DecisionCodeFlow), tag.Name(pollerID))
+			logger.Info("andrew poll non blocking got query task",
+				tag.Timestamp(time.Now()),
+				tag.CodeFlowTag(DecisionCodeFlow),
+				tag.PollerID(pollerID),
+				tag.Name(identity))
 		}
 		return task, nil
 	default:
 		if taskListName == "fx-deployment-worker" && domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
-			logger.Info("andrew poll non blocking got no tasks", tag.Timestamp(time.Now()), tag.CodeFlowTag(DecisionCodeFlow), tag.Name(pollerID))
+			logger.Info("andrew poll non blocking got no tasks",
+				tag.Timestamp(time.Now()),
+				tag.CodeFlowTag(DecisionCodeFlow),
+				tag.PollerID(pollerID),
+				tag.Name(identity))
 		}
 		return nil, ErrNoTasks
 	}

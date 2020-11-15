@@ -93,7 +93,7 @@ func (t *MatcherTestSuite) TestLocalSyncMatch() {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		close(pollStarted)
-		task, err := t.matcher.Poll(ctx, "", "", log.NewNoop(), "")
+		task, err := t.matcher.Poll(ctx, "", "", log.NewNoop(), "", "")
 		cancel()
 		if err == nil {
 			task.finish(nil)
@@ -129,7 +129,7 @@ func (t *MatcherTestSuite) testRemoteSyncMatch(taskSource gen.TaskSource) {
 			// so lets delay polling by a bit to verify that
 			time.Sleep(time.Millisecond * 10)
 		}
-		task, err := t.matcher.Poll(ctx, "", "", log.NewNoop(), "")
+		task, err := t.matcher.Poll(ctx, "", "", log.NewNoop(), "", "")
 		cancel()
 		if err == nil && !task.isStarted() {
 			task.finish(nil)
@@ -140,7 +140,7 @@ func (t *MatcherTestSuite) testRemoteSyncMatch(taskSource gen.TaskSource) {
 	var remotePollResp gen.PollForDecisionTaskResponse
 	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).Do(
 		func(arg0 context.Context, arg1 *gen.PollForDecisionTaskRequest) {
-			task, err := t.rootMatcher.Poll(arg0, "", "", log.NewNoop(), "")
+			task, err := t.rootMatcher.Poll(arg0, "", "", log.NewNoop(), "", "")
 			if err != nil {
 				remotePollErr = err
 			} else {
@@ -329,7 +329,7 @@ func (t *MatcherTestSuite) TestMustOfferLocalMatch() {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		close(pollStarted)
-		task, err := t.matcher.Poll(ctx, "", "", log.NewNoop(), "")
+		task, err := t.matcher.Poll(ctx, "", "", log.NewNoop(), "", "")
 		cancel()
 		if err == nil {
 			task.finish(nil)
@@ -354,7 +354,7 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 		func(arg0 context.Context, arg1 *gen.PollForDecisionTaskRequest) {
 			<-pollSigC
 			time.Sleep(time.Millisecond * 500) // delay poll to verify that offer blocks on parent
-			task, err := t.rootMatcher.Poll(arg0, "", "", log.NewNoop(), "")
+			task, err := t.rootMatcher.Poll(arg0, "", "", log.NewNoop(), "", "")
 			if err != nil {
 				remotePollErr = err
 			} else {
@@ -368,7 +368,7 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
-		t.matcher.Poll(ctx, "", "", log.NewNoop(), "")
+		t.matcher.Poll(ctx, "", "", log.NewNoop(), "", "")
 		cancel()
 	}()
 
@@ -419,7 +419,7 @@ func (t *MatcherTestSuite) TestRemotePoll() {
 	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	task, err := t.matcher.Poll(ctx, "", "", log.NewNoop(), "")
+	task, err := t.matcher.Poll(ctx, "", "", log.NewNoop(), "", "")
 	cancel()
 	t.NoError(err)
 	t.NotNil(req)

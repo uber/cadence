@@ -53,6 +53,10 @@ func CodeFlowTag(codeFlow string) Tag {
 	return newStringTag("code-flow", codeFlow)
 }
 
+func PollerID(pollerID string) Tag {
+	return newStringTag("poller-id", pollerID)
+}
+
 ///////////////////  Workflow tags defined here: ( wf is short for workflow) ///////////////////
 
 // WorkflowAction returns tag for WorkflowAction
