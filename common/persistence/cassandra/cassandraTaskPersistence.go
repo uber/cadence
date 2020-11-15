@@ -134,15 +134,23 @@ const (
 		`and task_id = ? ` +
 		`IF range_id = ?`
 
-	templateUpdateTaskListQueryWithTTL = `INSERT INTO tasks (` +
+	templateUpdateTaskListQueryWithTTLPart1 = ` INSERT INTO tasks (` +
 		`domain_id, ` +
 		`task_list_name, ` +
 		`task_list_type, ` +
 		`type, ` +
-		`task_id, ` +
-		`range_id, ` +
-		`task_list ` +
-		`) VALUES (?, ?, ?, ?, ?, ?, ` + templateTaskListType + `) USING TTL ?`
+		`task_id ` +
+		`) VALUES (?, ?, ?, ?, ?) USING TTL ?`
+
+	templateUpdateTaskListQueryWithTTLPart2 = `UPDATE tasks USING TTL ? SET ` +
+		`range_id = ?, ` +
+		`task_list = ` + templateTaskListType + " " +
+		`WHERE domain_id = ? ` +
+		`and task_list_name = ? ` +
+		`and task_list_type = ? ` +
+		`and type = ? ` +
+		`and task_id = ? ` +
+		`IF range_id = ?`
 
 	templateDeleteTaskListQuery = `DELETE FROM tasks ` +
 		`WHERE domain_id = ? ` +
@@ -268,13 +276,23 @@ func (d *cassandraTaskPersistence) UpdateTaskList(
 ) (*p.UpdateTaskListResponse, error) {
 	tli := request.TaskListInfo
 
+	var applied bool
+	var err error
+	previous := make(map[string]interface{})
 	if tli.Kind == p.TaskListKindSticky { // if task_list is sticky, then update with TTL
-		query := d.session.Query(templateUpdateTaskListQueryWithTTL,
+		batch := d.session.NewBatch(gocql.LoggedBatch)
+		// part 1 is used to set TTL on primary key as UPDATE can't set TTL for primary key
+		batch.Query(templateUpdateTaskListQueryWithTTLPart1,
 			tli.DomainID,
 			&tli.Name,
 			tli.TaskType,
 			rowTypeTaskList,
 			taskListTaskID,
+			stickyTaskListTTL,
+		)
+		// part 2 is for CAS and setting TTL for the rest of the columns
+		batch.Query(templateUpdateTaskListQueryWithTTLPart2,
+			stickyTaskListTTL,
 			tli.RangeID,
 			tli.DomainID,
 			&tli.Name,
@@ -282,33 +300,33 @@ func (d *cassandraTaskPersistence) UpdateTaskList(
 			tli.AckLevel,
 			tli.Kind,
 			time.Now(),
-			stickyTaskListTTL,
+			tli.DomainID,
+			&tli.Name,
+			tli.TaskType,
+			rowTypeTaskList,
+			taskListTaskID,
+			tli.RangeID,
 		)
-		err := query.Exec()
-		if err != nil {
-			return nil, convertCommonErrors(nil, "UpdateTaskList", err)
-		}
-		return &p.UpdateTaskListResponse{}, nil
+		applied, _, err = d.session.MapExecuteBatchCAS(batch, previous)
+	} else {
+		query := d.session.Query(templateUpdateTaskListQuery,
+			tli.RangeID,
+			tli.DomainID,
+			&tli.Name,
+			tli.TaskType,
+			tli.AckLevel,
+			tli.Kind,
+			time.Now(),
+			tli.DomainID,
+			&tli.Name,
+			tli.TaskType,
+			rowTypeTaskList,
+			taskListTaskID,
+			tli.RangeID,
+		)
+		applied, err = query.MapScanCAS(previous)
 	}
 
-	query := d.session.Query(templateUpdateTaskListQuery,
-		tli.RangeID,
-		tli.DomainID,
-		&tli.Name,
-		tli.TaskType,
-		tli.AckLevel,
-		tli.Kind,
-		time.Now(),
-		tli.DomainID,
-		&tli.Name,
-		tli.TaskType,
-		rowTypeTaskList,
-		taskListTaskID,
-		tli.RangeID,
-	)
-
-	previous := make(map[string]interface{})
-	applied, err := query.MapScanCAS(previous)
 	if err != nil {
 		return nil, convertCommonErrors(nil, "UpdateTaskList", err)
 	}

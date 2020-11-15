@@ -35,8 +35,6 @@ const (
 	// (default range ID: initialRangeID == 1)
 	createTaskListQry = `INSERT ` + taskListCreatePart
 
-	replaceTaskListQry = `REPLACE ` + taskListCreatePart
-
 	updateTaskListQry = `UPDATE task_lists SET
 range_id = :range_id,
 data = :data,
@@ -122,11 +120,6 @@ func (mdb *db) InsertIntoTaskLists(ctx context.Context, row *sqlplugin.TaskLists
 	return mdb.conn.NamedExecContext(ctx, createTaskListQry, row)
 }
 
-// ReplaceIntoTaskLists replaces one or more rows in task_lists table
-func (mdb *db) ReplaceIntoTaskLists(ctx context.Context, row *sqlplugin.TaskListsRow) (sql.Result, error) {
-	return mdb.conn.NamedExecContext(ctx, replaceTaskListQry, row)
-}
-
 // UpdateTaskLists updates a row in task_lists table
 func (mdb *db) UpdateTaskLists(ctx context.Context, row *sqlplugin.TaskListsRow) (sql.Result, error) {
 	return mdb.conn.NamedExecContext(ctx, updateTaskListQry, row)
@@ -187,11 +180,6 @@ func (mdb *db) InsertIntoTasksWithTTL(_ context.Context, _ []sqlplugin.TasksRowW
 
 // InsertIntoTaskListsWithTTL is not supported in MySQL
 func (mdb *db) InsertIntoTaskListsWithTTL(_ context.Context, _ *sqlplugin.TaskListsRowWithTTL) (sql.Result, error) {
-	return nil, sqlplugin.ErrTTLNotSupported
-}
-
-// ReplaceIntoTaskListsWithTTL is not supported in MySQL
-func (mdb *db) ReplaceIntoTaskListsWithTTL(_ context.Context, _ *sqlplugin.TaskListsRowWithTTL) (sql.Result, error) {
 	return nil, sqlplugin.ErrTTLNotSupported
 }
 
