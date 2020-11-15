@@ -110,27 +110,15 @@ func updateActivityInfos(
 	}
 
 	for _, deleteInfo := range deleteInfos {
-		result, err := tx.DeleteFromActivityInfoMaps(ctx, &sqlplugin.ActivityInfoMapsFilter{
+		if _, err := tx.DeleteFromActivityInfoMaps(ctx, &sqlplugin.ActivityInfoMapsFilter{
 			ShardID:    int64(shardID),
 			DomainID:   domainID,
 			WorkflowID: workflowID,
 			RunID:      runID,
 			ScheduleID: &deleteInfo,
-		})
-		if err != nil {
+		}); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update activity info. Failed to execute delete query. Error: %v", err),
-			}
-		}
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update activity info. Failed to verify number of rows deleted. Error: %v", err),
-			}
-		}
-		if int(rowsAffected) != 1 {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update activity info. Deleted %v rows instead of 1", rowsAffected),
 			}
 		}
 	}
@@ -276,27 +264,15 @@ func updateTimerInfos(
 	}
 
 	for _, deleteInfo := range deleteInfos {
-		result, err := tx.DeleteFromTimerInfoMaps(ctx, &sqlplugin.TimerInfoMapsFilter{
+		if _, err := tx.DeleteFromTimerInfoMaps(ctx, &sqlplugin.TimerInfoMapsFilter{
 			ShardID:    int64(shardID),
 			DomainID:   domainID,
 			WorkflowID: workflowID,
 			RunID:      runID,
 			TimerID:    &deleteInfo,
-		})
-		if err != nil {
+		}); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update timer info. Failed to execute delete query. Error: %v", err),
-			}
-		}
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update timer info. Failed to verify number of rows deleted. Error: %v", err),
-			}
-		}
-		if int(rowsAffected) != 1 {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update timer info. Deleted %v rows instead of 1", rowsAffected),
 			}
 		}
 	}
@@ -555,27 +531,15 @@ func updateRequestCancelInfos(
 	}
 
 	for _, deleteInfo := range deleteInfos {
-		result, err := tx.DeleteFromRequestCancelInfoMaps(ctx, &sqlplugin.RequestCancelInfoMapsFilter{
+		if _, err := tx.DeleteFromRequestCancelInfoMaps(ctx, &sqlplugin.RequestCancelInfoMapsFilter{
 			ShardID:     int64(shardID),
 			DomainID:    domainID,
 			WorkflowID:  workflowID,
 			RunID:       runID,
 			InitiatedID: common.Int64Ptr(deleteInfo),
-		})
-		if err != nil {
+		}); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update request cancel info. Failed to execute delete query. Error: %v", err),
-			}
-		}
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update request cancel info. Failed to verify number of rows deleted. Error: %v", err),
-			}
-		}
-		if int(rowsAffected) != 1 {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update request cancel info. Deleted %v rows instead of 1", rowsAffected),
 			}
 		}
 	}
@@ -689,27 +653,15 @@ func updateSignalInfos(
 	}
 
 	for _, deleteInfo := range deleteInfos {
-		result, err := tx.DeleteFromSignalInfoMaps(ctx, &sqlplugin.SignalInfoMapsFilter{
+		if _, err := tx.DeleteFromSignalInfoMaps(ctx, &sqlplugin.SignalInfoMapsFilter{
 			ShardID:     int64(shardID),
 			DomainID:    domainID,
 			WorkflowID:  workflowID,
 			RunID:       runID,
 			InitiatedID: common.Int64Ptr(deleteInfo),
-		})
-		if err != nil {
+		}); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update signal info. Failed to execute delete query. Error: %v", err),
-			}
-		}
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update signal info. Failed to verify number of rows deleted. Error: %v", err),
-			}
-		}
-		if int(rowsAffected) != 1 {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("Failed to update signal info. Deleted %v rows instead of 1", rowsAffected),
 			}
 		}
 	}
