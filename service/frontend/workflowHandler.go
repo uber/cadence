@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -3099,12 +3098,21 @@ func (wh *WorkflowHandler) QueryWorkflow(
 		}
 	}
 
+	//if queryRequest.GetDomain() == "stateless-compute-platform-dca1" &&
+	//	queryRequest.GetQuery() != nil &&
+	//	!strings.HasPrefix(queryRequest.GetQuery().GetQueryType(), "andrew_test_") &&
+	//	wh.config.AndrewQuery() {
+	//	return nil, context.DeadlineExceeded
+	//}
+
 	if queryRequest.GetDomain() == "stateless-compute-platform-dca1" &&
-		queryRequest.GetQuery() != nil &&
-		!strings.HasPrefix(queryRequest.GetQuery().GetQueryType(), "andrew_test_") &&
+		queryRequest.GetExecution() != nil &&
+		queryRequest.GetExecution().GetWorkflowId() == "passport+production" &&
 		wh.config.AndrewQuery() {
 		return nil, context.DeadlineExceeded
 	}
+
+
 
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
