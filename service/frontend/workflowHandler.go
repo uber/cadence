@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -3075,6 +3076,12 @@ func (wh *WorkflowHandler) QueryWorkflow(
 
 	if wh.config.DisallowQuery(queryRequest.GetDomain()) {
 		return nil, wh.error(errQueryDisallowedForDomain, scope, getWfIDRunIDTags(wfExecution)...)
+	}
+
+	if queryRequest.GetDomain() == "stateless-compute-platform-dca1" &&
+		queryRequest.GetQuery() != nil &&
+		!strings.HasPrefix(queryRequest.GetQuery().GetQueryType(), "andrew_test_") {
+		return nil, context.DeadlineExceeded
 	}
 
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {

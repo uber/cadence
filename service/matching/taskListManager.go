@@ -69,7 +69,7 @@ type (
 		DispatchTask(ctx context.Context, task *internalTask) error
 		// DispatchQueryTask will dispatch query to local or remote poller. If forwarded then result or error is returned,
 		// if dispatched to local poller then nil and nil is returned.
-		DispatchQueryTask(ctx context.Context, taskID string, request *matching.QueryWorkflowRequest) (*s.QueryWorkflowResponse, error)
+		DispatchQueryTask(ctx context.Context, taskID string, request *matching.QueryWorkflowRequest, andrewUUID string) (*s.QueryWorkflowResponse, error)
 		CancelPoller(pollerID string)
 		GetAllPollerInfo() []*s.PollerInfo
 		// DescribeTaskList returns information about the target tasklist
@@ -294,10 +294,11 @@ func (c *taskListManagerImpl) DispatchQueryTask(
 	ctx context.Context,
 	taskID string,
 	request *matching.QueryWorkflowRequest,
+	andrewUUID string,
 ) (*s.QueryWorkflowResponse, error) {
 	c.startWG.Wait()
 	task := newInternalQueryTask(taskID, request)
-	return c.matcher.OfferQuery(ctx, task, c.logger)
+	return c.matcher.OfferQuery(ctx, task, c.logger, andrewUUID)
 }
 
 // GetTask blocks waiting for a task.

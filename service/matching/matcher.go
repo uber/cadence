@@ -177,7 +177,7 @@ func (tm *TaskMatcher) offerOrTimeout(ctx context.Context, task *internalTask) (
 // OfferQuery will either match task to local poller or will forward query task.
 // Local match is always attempted before forwarding is attempted. If local match occurs
 // response and error are both nil, if forwarding occurs then response or error is returned.
-func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask, logger log.Logger) (*shared.QueryWorkflowResponse, error) {
+func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask, logger log.Logger, andrewUUID string) (*shared.QueryWorkflowResponse, error) {
 	select {
 	case tm.queryTaskC <- task:
 		<-task.responseC
@@ -191,27 +191,27 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask, logge
 		task.query.request != nil &&
 		task.query.request.GetDomainUUID() == "8247c588-c909-4b69-aaad-7a89957a3259" &&
 		task.query.request.GetTaskList() != nil &&
-		task.query.request.GetTaskList().GetName() == "fx-deployment-worker" &&
-		task.query.request.GetQueryRequest() != nil &&
-		task.query.request.GetQueryRequest().GetExecution() != nil
+		task.query.request.GetTaskList().GetName() == "fx-deployment-worker"
 
+	// add unique ID here...
 	if shouldLog {
 		logger.Info("andrew offer query about to try to push to channel",
 			tag.CodeFlowTag(QueryCodeFlow),
 			tag.Timestamp(time.Now()),
-			tag.WorkflowID(task.query.request.GetQueryRequest().GetExecution().GetWorkflowId()),
-			tag.WorkflowRunID(task.query.request.GetQueryRequest().GetExecution().GetRunId()))
+			tag.QueryID(andrewUUID))
 	}
 
+	startTime := time.Now()
 	for {
 		select {
 		case tm.queryTaskC <- task:
 			if shouldLog {
+				queryPush := time.Now().Sub(startTime)
 				logger.Info("andrew successfully pushed to query channel",
 					tag.CodeFlowTag(QueryCodeFlow),
 					tag.Timestamp(time.Now()),
-					tag.WorkflowID(task.query.request.GetQueryRequest().GetExecution().GetWorkflowId()),
-					tag.WorkflowRunID(task.query.request.GetQueryRequest().GetExecution().GetRunId()))
+					tag.QueryID(andrewUUID),
+					tag.PollSeconds(int(queryPush.Seconds())))
 			}
 			<-task.responseC
 			return nil, nil
@@ -233,8 +233,7 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask, logge
 				logger.Info("andrew failed to push to query channel got context timeout",
 					tag.CodeFlowTag(QueryCodeFlow),
 					tag.Timestamp(time.Now()),
-					tag.WorkflowID(task.query.request.GetQueryRequest().GetExecution().GetWorkflowId()),
-					tag.WorkflowRunID(task.query.request.GetQueryRequest().GetExecution().GetRunId()))
+					tag.QueryID(andrewUUID))
 			}
 			return nil, ctx.Err()
 		}
@@ -353,39 +352,57 @@ func (tm *TaskMatcher) pollOrForward(
 	domainID string,
 	identity string,
 ) (*internalTask, error) {
+
+	shouldLog := taskListName == "fx-deployment-worker" && domainID == "8247c588-c909-4b69-aaad-7a89957a3259"
+	startTime := time.Now()
+
+	if shouldLog {
+		logger.Info("andrew about to poll blocking for task",
+			tag.Timestamp(time.Now()),
+			tag.CodeFlowTag(DecisionCodeFlow),
+			tag.PollerID(pollerID),
+			tag.Name(identity))
+	}
+
 	select {
 	case task := <-taskC:
 		if task.responseC != nil {
 			tm.scope().IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		}
 		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
-		if taskListName == "fx-deployment-worker" && domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
+		if shouldLog {
+			pollLat := time.Now().Sub(startTime)
 			logger.Info("andrew poll blocking got non-query task",
 				tag.Timestamp(time.Now()),
 				tag.CodeFlowTag(DecisionCodeFlow),
 				tag.PollerID(pollerID),
-				tag.Name(identity))
+				tag.Name(identity),
+				tag.PollSeconds(int(pollLat.Seconds())))
 		}
 		return task, nil
 	case task := <-queryTaskC:
 		tm.scope().IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
-		if taskListName == "fx-deployment-worker" && domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
+		if shouldLog {
+			pollLat := time.Now().Sub(startTime)
 			logger.Info("andrew poll blocking got query task",
 				tag.Timestamp(time.Now()),
 				tag.CodeFlowTag(DecisionCodeFlow),
 				tag.PollerID(pollerID),
-				tag.Name(identity))
+				tag.Name(identity),
+				tag.PollSeconds(int(pollLat.Seconds())))
 		}
 		return task, nil
 	case <-ctx.Done():
 		tm.scope().IncCounter(metrics.PollTimeoutPerTaskListCounter)
-		if taskListName == "fx-deployment-worker" && domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
+		if shouldLog {
+			pollLat := time.Now().Sub(startTime)
 			logger.Info("andrew poll blocking got no task - got context timeout",
 				tag.Timestamp(time.Now()),
 				tag.CodeFlowTag(DecisionCodeFlow),
 				tag.PollerID(pollerID),
-				tag.Name(identity))
+				tag.Name(identity),
+				tag.PollSeconds(int(pollLat.Seconds())))
 		}
 		return nil, ErrNoTasks
 	case token := <-tm.fwdrPollReqTokenC():

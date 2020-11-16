@@ -222,7 +222,7 @@ func (t *MatcherTestSuite) TestQueryLocalSyncMatch() {
 	time.Sleep(10 * time.Millisecond)
 	task := newInternalQueryTask(uuid.New(), &gen.QueryWorkflowRequest{})
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	resp, err := t.matcher.OfferQuery(ctx, task, log.NewNoop())
+	resp, err := t.matcher.OfferQuery(ctx, task, log.NewNoop(), "")
 	cancel()
 	t.NoError(err)
 	t.Nil(resp)
@@ -267,11 +267,11 @@ func (t *MatcherTestSuite) TestQueryRemoteSyncMatch() {
 			task.forwardedFrom = req.GetForwardedFrom()
 			close(pollSigC)
 			time.Sleep(10 * time.Millisecond)
-			t.rootMatcher.OfferQuery(ctx, task, log.NewNoop())
+			t.rootMatcher.OfferQuery(ctx, task, log.NewNoop(), "")
 		},
 	).Return(&shared.QueryWorkflowResponse{QueryResult: []byte("answer")}, nil)
 
-	result, err := t.matcher.OfferQuery(ctx, task, log.NewNoop())
+	result, err := t.matcher.OfferQuery(ctx, task, log.NewNoop(), "")
 	cancel()
 	t.NotNil(req)
 	t.NoError(err)
@@ -311,7 +311,7 @@ func (t *MatcherTestSuite) TestQueryRemoteSyncMatchError() {
 		},
 	).Return(nil, errMatchingHostThrottle)
 
-	result, err := t.matcher.OfferQuery(ctx, task, log.NewNoop())
+	result, err := t.matcher.OfferQuery(ctx, task, log.NewNoop(), "")
 	cancel()
 	t.NotNil(req)
 	t.NoError(err)

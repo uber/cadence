@@ -57,6 +57,10 @@ func PollerID(pollerID string) Tag {
 	return newStringTag("poller-id", pollerID)
 }
 
+func PollSeconds(pollSeconds int) Tag {
+	return newInt("poll-seconds", pollSeconds)
+}
+
 ///////////////////  Workflow tags defined here: ( wf is short for workflow) ///////////////////
 
 // WorkflowAction returns tag for WorkflowAction

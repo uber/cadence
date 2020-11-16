@@ -365,13 +365,14 @@ pollLoop:
 		}
 		taskListKind := common.TaskListKindPtr(request.TaskList.GetKind())
 
+		andrewStartTime := time.Now()
 		if req.GetPollRequest() != nil &&
 			req.GetPollRequest().GetTaskList() != nil &&
 			req.GetPollRequest().GetTaskList().GetName() == "fx-deployment-worker" &&
 			domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
 
 			e.logger.Info("andrew poll for decision task about to get task",
-				tag.Timestamp(time.Now()),
+				tag.Timestamp(andrewStartTime),
 				tag.CodeFlowTag(DecisionCodeFlow),
 				tag.Name(req.GetPollRequest().GetIdentity()),
 				tag.PollerID(pollerID))
@@ -385,12 +386,14 @@ pollLoop:
 				req.GetPollRequest().GetTaskList().GetName() == "fx-deployment-worker" &&
 				domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
 
+				pollLatency := time.Now().Sub(andrewStartTime)
 				e.logger.Info("andrew get task in poll for decision task returned error",
 					tag.Timestamp(time.Now()),
 					tag.CodeFlowTag(DecisionCodeFlow),
 					tag.Error(err),
 					tag.Name(req.GetPollRequest().GetIdentity()),
-					tag.PollerID(pollerID))
+					tag.PollerID(pollerID),
+					tag.PollSeconds(int(pollLatency.Seconds())))
 			}
 
 			// TODO: Is empty poll the best reply for errPumpClosed?
@@ -405,12 +408,15 @@ pollLoop:
 			req.GetPollRequest().GetTaskList().GetName() == "fx-deployment-worker" &&
 			domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
 
+			pollLatency := time.Now().Sub(andrewStartTime)
+
 			e.logger.Info("andrew successfully got task in poll for decision task",
 				tag.Timestamp(time.Now()),
 				tag.CodeFlowTag(DecisionCodeFlow),
 				tag.Bool(task.isQuery()),
 				tag.Name(req.GetPollRequest().GetIdentity()),
-				tag.PollerID(pollerID))
+				tag.PollerID(pollerID),
+				tag.PollSeconds(int(pollLatency.Seconds())))
 		}
 
 		e.emitForwardedFromStats(hCtx.scope, task.isForwarded(), req.GetForwardedFrom())
@@ -555,12 +561,14 @@ func (e *matchingEngineImpl) QueryWorkflow(
 		return nil, err
 	}
 
+	andrewUUID := uuid.New()
 	if queryRequest.TaskList.GetName() == "fx-deployment-worker" && domainID == "8247c588-c909-4b69-aaad-7a89957a3259" {
 		e.logger.Info("andrew got query workflow",
 			tag.Timestamp(time.Now()),
 			tag.CodeFlowTag(QueryCodeFlow),
 			tag.WorkflowID(queryRequest.GetQueryRequest().GetExecution().GetWorkflowId()),
-			tag.WorkflowRunID(queryRequest.GetQueryRequest().GetExecution().GetRunId()))
+			tag.WorkflowRunID(queryRequest.GetQueryRequest().GetExecution().GetRunId()),
+			tag.QueryID(andrewUUID))
 	}
 
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
@@ -568,7 +576,7 @@ func (e *matchingEngineImpl) QueryWorkflow(
 		return nil, err
 	}
 	taskID := uuid.New()
-	resp, err := tlMgr.DispatchQueryTask(hCtx.Context, taskID, queryRequest)
+	resp, err := tlMgr.DispatchQueryTask(hCtx.Context, taskID, queryRequest, andrewUUID)
 
 	// if get response or error it means that query task was handled by forwarding to another matching host
 	// this remote host's result can be returned directly
