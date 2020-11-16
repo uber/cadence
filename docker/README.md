@@ -51,6 +51,9 @@ docker-compose down
 docker-compose up
 ```
 
+Note that with `TARGET=auto-setup`, the images will setup all the DB/ElasticSearch schema during startup.
+By default, the image will not setup schema if you leave TARGET empty.
+
 Running cadence service with MySQL
 -----------------------------------------
 
@@ -76,20 +79,25 @@ Quickstart for production
 =========================
 In a typical production setting, dependencies (cassandra / statsd server) are
 managed / started independently of the cadence-server. To use the container in
-a production setting, use the following command:
-
+a production setting, use the following docker command:
 
 ```
 docker run -e CASSANDRA_SEEDS=10.x.x.x                  -- csv of cassandra server ipaddrs
+    -e CASSANDRA_USER=<username>                        -- Cassandra username
+    -e CASSANDRA_PASSWORD=<password>                    -- Cassandra password
     -e KEYSPACE=<keyspace>                              -- Cassandra keyspace
-    -e VISIBILITY_KEYSPACE=<visibility_keyspace>        -- Cassandra visibility keyspace
-    -e SKIP_SCHEMA_SETUP=true                           -- do not setup cassandra schema during startup
-    -e RINGPOP_SEEDS=10.x.x.x,10.x.x.x  \               -- csv of ipaddrs for gossip bootstrap
+    -e VISIBILITY_KEYSPACE=<visibility_keyspace>        -- Cassandra visibility keyspace, if using basic visibility 
+    -e KAFKA_SEEDS=10.x.x.x                             -- Kafka broker seed, if using ElasticSearch + Kafka for advanced visibility feature
+    -e ES_SEEDS=10.x.x.x                                -- ElasticSearch seed , if using ElasticSearch + Kafka for advanced visibility feature
+    -e RINGPOP_SEEDS=10.x.x.x,10.x.x.x                  -- csv of ipaddrs for gossip bootstrap
     -e STATSD_ENDPOINT=10.x.x.x:8125                    -- statsd server endpoint
-    -e NUM_HISTORY_SHARDS=1024  \                       -- Number of history shards
-    -e SERVICES=history,matching \                      -- Spinup only the provided services
-    -e LOG_LEVEL=debug,info \                           -- Logging level
-    -e DYNAMIC_CONFIG_FILE_PATH=config/foo.yaml         -- Dynamic config file to be watched
+    -e NUM_HISTORY_SHARDS=1024                          -- Number of history shards
+    -e SERVICES=history,matching                        -- Spinup only the provided services, separated by commas, options are frontend,history,matching and workers
+    -e LOG_LEVEL=debug,info                             -- Logging level
+    -e DYNAMIC_CONFIG_FILE_PATH=<dynamic_config_file>   -- Dynamic config file to be watched, default to /etc/cadence/config/dynamicconfig/development.yaml, but you can choose /etc/cadence/config/dynamicconfig/development_es.yaml if using ElasticSearch
     ubercadence/server:<tag>
 ```
+Note that each env variable has a default value, so you don't have to specify it if the default works for you. 
+For more options to configure the docker, please refer to `config_template.yaml`.
 
+For <tag>, you may not use `auto-setup` images for production deployment. See the above explanation. 

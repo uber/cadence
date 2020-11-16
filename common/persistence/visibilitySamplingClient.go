@@ -40,6 +40,9 @@ const (
 	numOfPriorityForList   = 1
 )
 
+// ErrPersistenceLimitExceededForList is the error indicating QPS limit reached for list visibility. 
+var ErrPersistenceLimitExceededForList = &workflow.ServiceBusyError{Message: "Persistence Max QPS Reached for List Operations."}
+
 type visibilitySamplingClient struct {
 	rateLimitersForOpen   *domainToBucketMap
 	rateLimitersForClosed *domainToBucketMap

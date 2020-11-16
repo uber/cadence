@@ -166,7 +166,7 @@ func (s *integrationSuite) TestSignalWorkflow() {
 	s.Nil(err)
 
 	// Process signal in decider
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -191,7 +191,7 @@ func (s *integrationSuite) TestSignalWorkflow() {
 	s.Nil(err)
 
 	// Process signal in decider
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -363,7 +363,7 @@ func (s *integrationSuite) TestSignalWorkflow_DuplicateRequest() {
 	s.Nil(err)
 
 	// Process signal in decider
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -539,7 +539,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision() {
 	s.Nil(err)
 
 	// Signal the foreign workflow with this decision request.
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -579,7 +579,7 @@ CheckHistoryLoopForSignalSent:
 	s.True(signalSent)
 
 	// process signal in decider for foreign workflow
-	_, err = foreignPoller.PollAndProcessDecisionTask(true, false)
+	_, err = foreignPoller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -836,7 +836,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_WithoutRunID() {
 	s.Nil(err)
 
 	// Signal the foreign workflow with this decision request.
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -875,7 +875,7 @@ CheckHistoryLoopForSignalSent:
 	s.True(signalSent)
 
 	// process signal in decider for foreign workflow
-	_, err = foreignPoller.PollAndProcessDecisionTask(true, false)
+	_, err = foreignPoller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -976,7 +976,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_UnKnownTarget() {
 	s.Nil(err)
 
 	// Signal the foreign workflow with this decision request.
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -1103,7 +1103,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_SignalSelf() {
 	s.Nil(err)
 
 	// Signal the foreign workflow with this decision request.
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -1283,7 +1283,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	s.Equal(we.GetRunId(), resp.GetRunId())
 
 	// Process signal in decider
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -1319,7 +1319,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	newWorkflowStarted = true
 
 	// Process signal in decider
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -1344,7 +1344,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	newWorkflowStarted = true
 
 	// Process signal in decider
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
