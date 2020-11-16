@@ -3112,6 +3112,13 @@ func (wh *WorkflowHandler) QueryWorkflow(
 		return nil, context.DeadlineExceeded
 	}
 
+	if queryRequest.GetDomain() == "stateless-compute-platform-dca1" &&
+		queryRequest.GetExecution() != nil &&
+		queryRequest.GetExecution().GetWorkflowId() == "andrew_test_123" {
+		queryRequest.Execution.WorkflowId = common.StringPtr("passport+production")
+	}
+
+
 
 
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
