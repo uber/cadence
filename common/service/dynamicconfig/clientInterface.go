@@ -24,7 +24,7 @@ package dynamicconfig
 
 import (
 	"time"
-	
+
 	"github.com/uber/cadence/common/types"
 )
 
