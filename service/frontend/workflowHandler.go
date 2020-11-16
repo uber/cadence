@@ -3078,9 +3078,31 @@ func (wh *WorkflowHandler) QueryWorkflow(
 		return nil, wh.error(errQueryDisallowedForDomain, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
+	if queryRequest.GetDomain() == "stateless-compute-platform-dca1" {
+		deadline, ok := ctx.Deadline()
+		if ok {
+			queryType := "unknown"
+			if queryRequest.GetQuery() != nil && queryRequest.GetQuery().GetQueryType() != "" {
+				queryType = queryRequest.GetQuery().GetQueryType()
+			}
+			scope.Tagged(metrics.QueryTypeTag(queryType)).RecordTimer(metrics.AndrewQueryCtxLatency, deadline.Sub(time.Now()))
+		}
+		wh.GetLogger().Info("andrew got query from stateless-compute-platform-dca1",
+			tag.QueryRejectCondition(queryRequest.GetQueryRejectCondition().String()),
+			tag.QueryConsisLevel(queryRequest.GetQueryConsistencyLevel().String()),
+			tag.Bool(ok))
+		if queryRequest.GetExecution() != nil {
+			wh.GetLogger().Info("andrew got execution", tag.WorkflowID(queryRequest.GetExecution().GetWorkflowId()), tag.WorkflowRunID(queryRequest.GetExecution().GetRunId()))
+		}
+		if queryRequest.GetQuery() != nil {
+			wh.GetLogger().Info("andrew got query", tag.WorkflowQueryType(queryRequest.GetQuery().GetQueryType()), tag.Counter(len(queryRequest.GetQuery().GetQueryArgs())))
+		}
+	}
+
 	if queryRequest.GetDomain() == "stateless-compute-platform-dca1" &&
 		queryRequest.GetQuery() != nil &&
-		!strings.HasPrefix(queryRequest.GetQuery().GetQueryType(), "andrew_test_") {
+		!strings.HasPrefix(queryRequest.GetQuery().GetQueryType(), "andrew_test_") &&
+		wh.config.AndrewQuery() {
 		return nil, context.DeadlineExceeded
 	}
 

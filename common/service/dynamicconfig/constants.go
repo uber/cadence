@@ -68,6 +68,7 @@ var keys = map[Key]string{
 	MinRetentionDays:                    "system.minRetentionDays",
 	MaxDecisionStartToCloseSeconds:      "system.maxDecisionStartToCloseSeconds",
 	DisallowQuery:                       "system.disallowQuery",
+	AndrewQuery:                         "system.andrewQuery",
 	EnableBatcher:                       "worker.enableBatcher",
 	EnableParentClosePolicyWorker:       "system.enableParentClosePolicyWorker",
 	EnableFailoverManager:               "system.enableFailoverManager",
@@ -384,6 +385,8 @@ const (
 	MaxDecisionStartToCloseSeconds
 	// DisallowQuery is the key to disallow query for a domain
 	DisallowQuery
+	// AndrewQuery
+	AndrewQuery
 	// EnablePriorityTaskProcessor is the key for enabling priority task processor
 	EnablePriorityTaskProcessor
 	// EnableAuthorization is the key to enable authorization for a domain

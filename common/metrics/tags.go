@@ -29,6 +29,7 @@ const (
 
 	instance      = "instance"
 	domain        = "domain"
+	queryType     = "query_type"
 	targetCluster = "target_cluster"
 	activeCluster = "active_cluster"
 	taskList      = "tasklist"
@@ -36,6 +37,7 @@ const (
 	activityType  = "activityType"
 	decisionType  = "decisionType"
 	invariantType = "invariantType"
+
 
 	domainAllValue = "all"
 	unknownValue   = "_unknown_"
@@ -49,6 +51,10 @@ type Tag interface {
 
 type (
 	domainTag struct {
+		value string
+	}
+
+	queryTypeTag struct {
 		value string
 	}
 
@@ -88,6 +94,18 @@ type (
 		value string
 	}
 )
+
+func QueryTypeTag(value string) Tag {
+	return queryTypeTag{value: value}
+}
+
+func (d queryTypeTag) Key() string {
+	return queryType
+}
+
+func (d queryTypeTag) Value() string {
+	return d.value
+}
 
 // DomainTag returns a new domain tag. For timers, this also ensures that we
 // dual emit the metric with the all tag. If a blank domain is provided then

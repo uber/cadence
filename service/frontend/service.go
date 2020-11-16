@@ -60,6 +60,7 @@ type Config struct {
 	EnableClientVersionCheck        dynamicconfig.BoolPropertyFn
 	MinRetentionDays                dynamicconfig.IntPropertyFn
 	DisallowQuery                   dynamicconfig.BoolPropertyFnWithDomainFilter
+	AndrewQuery                     dynamicconfig.BoolPropertyFn
 	ShutdownDrainDuration           dynamicconfig.DurationPropertyFn
 
 	// Persistence settings
@@ -136,6 +137,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		MinRetentionDays:                            dc.GetIntProperty(dynamicconfig.MinRetentionDays, domain.MinRetentionDays),
 		VisibilityArchivalQueryMaxPageSize:          dc.GetIntProperty(dynamicconfig.VisibilityArchivalQueryMaxPageSize, 10000),
 		DisallowQuery:                               dc.GetBoolPropertyFilteredByDomain(dynamicconfig.DisallowQuery, false),
+		AndrewQuery:                                 dc.GetBoolProperty(dynamicconfig.AndrewQuery, false),
 		SendRawWorkflowHistory:                      dc.GetBoolPropertyFilteredByDomain(dynamicconfig.SendRawWorkflowHistory, sendRawWorkflowHistory),
 	}
 }

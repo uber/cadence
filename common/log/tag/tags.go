@@ -158,6 +158,14 @@ func QueryID(queryID string) Tag {
 	return newStringTag("query-id", queryID)
 }
 
+func QueryRejectCondition(queryRejectCd string) Tag {
+	return newStringTag("query-reject-cd", queryRejectCd)
+}
+
+func QueryConsisLevel(queryConsisLevel string) Tag {
+	return newStringTag("query-consis-level", queryConsisLevel)
+}
+
 // BlobSizeViolationOperation returns tag for BlobSizeViolationOperation
 func BlobSizeViolationOperation(operation string) Tag {
 	return newStringTag("blob-size-violation-operation", operation)

@@ -1578,6 +1578,7 @@ const (
 	CadenceFailures
 	CadenceCriticalFailures
 	CadenceLatency
+	AndrewQueryCtxLatency
 	CadenceErrBadRequestCounter
 	CadenceErrDomainNotActiveCounter
 	CadenceErrServiceBusyCounter
@@ -2025,6 +2026,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceFailures:                                     {metricName: "cadence_errors", metricType: Counter},
 		CadenceCriticalFailures:                             {metricName: "cadence_errors_critical", metricType: Counter},
 		CadenceLatency:                                      {metricName: "cadence_latency", metricType: Timer},
+		AndrewQueryCtxLatency:                               {metricName: "andrew_query_ctx_latency", metricType: Timer},
 		CadenceErrBadRequestCounter:                         {metricName: "cadence_errors_bad_request", metricType: Counter},
 		CadenceErrDomainNotActiveCounter:                    {metricName: "cadence_errors_domain_not_active", metricType: Counter},
 		CadenceErrServiceBusyCounter:                        {metricName: "cadence_errors_service_busy", metricType: Counter},
