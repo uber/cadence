@@ -23,9 +23,8 @@
 package dynamicconfig
 
 import (
+	"github.com/uber/cadence/common/types"
 	"time"
-
-	"github.com/uber/cadence/.gen/go/shared"
 )
 
 // Client allows fetching values from a dynamic configuration system NOTE: This does not have async
@@ -48,6 +47,6 @@ type Client interface {
 	UpdateValue(name Key, value interface{}) error
 }
 
-var notFoundError = &shared.EntityNotExistsError{
+var notFoundError = &types.EntityNotExistsError{
 	Message: "unable to find key",
 }

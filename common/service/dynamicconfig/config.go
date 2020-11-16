@@ -26,10 +26,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
-
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -67,7 +66,7 @@ func (c *Collection) logError(key Key, err error) {
 	errCount := atomic.AddInt64(&c.errCount, 1)
 	if errCount%errCountLogThreshold == 0 {
 		// log only every 'x' errors to reduce mem allocs and to avoid log noise
-		if _, ok := err.(*shared.EntityNotExistsError); ok {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
 			c.logger.Info("dynamic config not set, use default value", tag.Key(key.String()))
 		} else {
 			c.logger.Warn("Failed to fetch key from dynamic config", tag.Key(key.String()), tag.Error(err))
