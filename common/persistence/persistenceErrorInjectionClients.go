@@ -25,16 +25,16 @@ import (
 	"errors"
 	"math/rand"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/types"
 )
 
 var (
 	// ErrFakeServiceBusy is a fake service busy error.
-	ErrFakeServiceBusy = &workflow.ServiceBusyError{Message: "Fake Service Busy Error."}
+	ErrFakeServiceBusy = &types.ServiceBusyError{Message: "Fake Service Busy Error."}
 	// ErrFakeInternalService is a fake internal service error.
-	ErrFakeInternalService = &workflow.InternalServiceError{Message: "Fake Internal Service Error."}
+	ErrFakeInternalService = &types.InternalServiceError{Message: "Fake Internal Service Error."}
 	// ErrFakeTimeout is a fake timeout error.
 	ErrFakeTimeout = &TimeoutError{Msg: "Fake Persistence Timeout Error."}
 	// ErrFakeUnhandled is a fake unhandled error.

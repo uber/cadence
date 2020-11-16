@@ -24,12 +24,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -335,7 +335,7 @@ func (q *nosqlQueue) updateQueueMetadata(
 	err := q.db.UpdateQueueMetadataCas(ctx, *metadata)
 	if err != nil {
 		if q.db.IsConditionFailedError(err) {
-			return &shared.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("UpdateQueueMetadata operation encounter concurrent write."),
 			}
 		}

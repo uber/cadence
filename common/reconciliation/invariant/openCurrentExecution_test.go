@@ -31,11 +31,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	c2 "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
+	"github.com/uber/cadence/common/types"
 )
 
 type OpenCurrentExecutionSuite struct {
@@ -102,7 +102,7 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 				},
 			},
 			getConcreteErr: nil,
-			getCurrentErr:  &shared.EntityNotExistsError{},
+			getCurrentErr:  &types.EntityNotExistsError{},
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeCorrupted,
 				InvariantName:   OpenCurrentExecution,

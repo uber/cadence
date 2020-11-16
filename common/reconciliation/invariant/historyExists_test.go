@@ -35,6 +35,7 @@ import (
 	c2 "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type HistoryExistsSuite struct {
@@ -71,7 +72,7 @@ func (s *HistoryExistsSuite) TestCheck() {
 			expectedResourcePopulated: false,
 		},
 		{
-			getExecErr:     &shared.EntityNotExistsError{},
+			getExecErr:     &types.EntityNotExistsError{},
 			getHistoryResp: &persistence.ReadHistoryBranchResponse{},
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeHealthy,
@@ -83,7 +84,7 @@ func (s *HistoryExistsSuite) TestCheck() {
 		{
 			getExecResp:    &persistence.GetWorkflowExecutionResponse{},
 			getHistoryResp: nil,
-			getHistoryErr:  &shared.EntityNotExistsError{Message: "got entity not exists error"},
+			getHistoryErr:  &types.EntityNotExistsError{Message: "got entity not exists error"},
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeCorrupted,
 				InvariantName:   HistoryExists,

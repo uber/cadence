@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -685,6 +686,6 @@ func Test_DomainCacheEntry_GetDomainNotActiveErr(t *testing.T) {
 	domainEntry.replicationConfig.ActiveClusterName = cluster.TestAlternativeClusterName
 	err := domainEntry.GetDomainNotActiveErr()
 	require.NotNil(t, err)
-	_, ok := err.(*shared.DomainNotActiveError)
+	_, ok := err.(*types.DomainNotActiveError)
 	require.True(t, ok)
 }

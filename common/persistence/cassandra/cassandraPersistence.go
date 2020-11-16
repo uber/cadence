@@ -28,11 +28,11 @@ import (
 
 	"github.com/gocql/gocql"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -934,7 +934,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
 		if cassandra.IsNotFoundError(err) {
-			return nil, &workflow.EntityNotExistsError{
+			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
 					*execution.WorkflowId, *execution.RunId),
 			}
@@ -1054,7 +1054,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 			newRunID := newExecutionInfo.RunID
 
 			if domainID != newDomainID {
-				return &workflow.InternalServiceError{
+				return &types.InternalServiceError{
 					Message: fmt.Sprintf("UpdateWorkflowExecution: cannot continue as new to another domain"),
 				}
 			}
@@ -1098,7 +1098,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 		}
 
 	default:
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("UpdateWorkflowExecution: unknown mode: %v", request.Mode),
 		}
 	}
@@ -1351,7 +1351,7 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 		}
 
 	default:
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("ConflictResolveWorkflowExecution: unknown mode: %v", request.Mode),
 		}
 	}
@@ -1499,7 +1499,7 @@ func (d *cassandraPersistence) assertNotCurrentExecution(
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}); err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); ok {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
 			// allow bypassing no current record
 			return nil
 		}
@@ -1573,7 +1573,7 @@ func (d *cassandraPersistence) GetCurrentExecution(
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
 		if cassandra.IsNotFoundError(err) {
-			return nil, &workflow.EntityNotExistsError{
+			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v",
 					request.WorkflowID),
 			}
@@ -1609,7 +1609,7 @@ func (d *cassandraPersistence) ListCurrentExecutions(
 
 	iter := query.Iter()
 	if iter == nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "ListCurrentExecutions operation failed. Not able to create query iterator.",
 		}
 	}
@@ -1676,7 +1676,7 @@ func (d *cassandraPersistence) ListConcreteExecutions(
 
 	iter := query.Iter()
 	if iter == nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "ListConcreteExecutions operation failed.  Not able to create query iterator.",
 		}
 	}
@@ -1725,7 +1725,7 @@ func (d *cassandraPersistence) GetTransferTasks(
 
 	iter := query.Iter()
 	if iter == nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "GetTransferTasks operation failed.  Not able to create query iterator.",
 		}
 	}
@@ -1775,7 +1775,7 @@ func (d *cassandraPersistence) populateGetReplicationTasksResponse(
 ) (*p.InternalGetReplicationTasksResponse, error) {
 	iter := query.Iter()
 	if iter == nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "GetReplicationTasks operation failed.  Not able to create query iterator.",
 		}
 	}
@@ -1953,7 +1953,7 @@ func (d *cassandraPersistence) GetTimerIndexTasks(
 
 	iter := query.Iter()
 	if iter == nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "GetTimerTasks operation failed.  Not able to create query iterator.",
 		}
 	}

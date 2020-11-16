@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
@@ -622,12 +623,12 @@ Create_Loop:
 		response, err := s.executionManager.CreateWorkflowExecution(ctx, request)
 		if err != nil {
 			switch err.(type) {
-			case *shared.WorkflowExecutionAlreadyStartedError,
+			case *types.WorkflowExecutionAlreadyStartedError,
 				*persistence.WorkflowExecutionAlreadyStartedError,
 				*persistence.CurrentWorkflowConditionFailedError,
-				*shared.ServiceBusyError,
+				*types.ServiceBusyError,
 				*persistence.TimeoutError,
-				*shared.LimitExceededError:
+				*types.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
 				{
@@ -735,8 +736,8 @@ Update_Loop:
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
-				*shared.ServiceBusyError,
-				*shared.LimitExceededError:
+				*types.ServiceBusyError,
+				*types.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
 				{
@@ -851,8 +852,8 @@ Conflict_Resolve_Loop:
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
-				*shared.ServiceBusyError,
-				*shared.LimitExceededError:
+				*types.ServiceBusyError,
+				*types.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
 				{
@@ -1470,7 +1471,7 @@ func acquireShard(
 			shardInfo = resp.ShardInfo
 			return nil
 		}
-		if _, ok := err.(*shared.EntityNotExistsError); !ok {
+		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			return err
 		}
 

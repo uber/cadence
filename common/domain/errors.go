@@ -21,20 +21,20 @@
 package domain
 
 import (
-	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 var (
 	// err indicating that this cluster is not the master, so cannot do domain registration or update
-	errNotMasterCluster                    = &workflow.BadRequestError{Message: "Cluster is not master cluster, cannot do domain registration or domain update."}
-	errCannotRemoveClustersFromDomain      = &workflow.BadRequestError{Message: "Cannot remove existing replicated clusters from a domain."}
-	errActiveClusterNotInClusters          = &workflow.BadRequestError{Message: "Active cluster is not contained in all clusters."}
-	errCannotDoDomainFailoverAndUpdate     = &workflow.BadRequestError{Message: "Cannot set active cluster to current cluster when other parameters are set."}
-	errCannotDoGracefulFailoverFromCluster = &workflow.BadRequestError{Message: "Cannot start the graceful failover from a to-be-passive cluster."}
-	errGracefulFailoverInActiveCluster     = &workflow.BadRequestError{Message: "Cannot start the graceful failover from an active cluster to an active cluster."}
-	errOngoingGracefulFailover             = &workflow.BadRequestError{Message: "Cannot start concurrent graceful failover."}
-	errInvalidGracefulFailover             = &workflow.BadRequestError{Message: "Cannot start graceful failover without updating active cluster or in local domain."}
+	errNotMasterCluster                    = &types.BadRequestError{Message: "Cluster is not master cluster, cannot do domain registration or domain update."}
+	errCannotRemoveClustersFromDomain      = &types.BadRequestError{Message: "Cannot remove existing replicated clusters from a domain."}
+	errActiveClusterNotInClusters          = &types.BadRequestError{Message: "Active cluster is not contained in all clusters."}
+	errCannotDoDomainFailoverAndUpdate     = &types.BadRequestError{Message: "Cannot set active cluster to current cluster when other parameters are set."}
+	errCannotDoGracefulFailoverFromCluster = &types.BadRequestError{Message: "Cannot start the graceful failover from a to-be-passive cluster."}
+	errGracefulFailoverInActiveCluster     = &types.BadRequestError{Message: "Cannot start the graceful failover from an active cluster to an active cluster."}
+	errOngoingGracefulFailover             = &types.BadRequestError{Message: "Cannot start concurrent graceful failover."}
+	errInvalidGracefulFailover             = &types.BadRequestError{Message: "Cannot start graceful failover without updating active cluster or in local domain."}
 
-	errInvalidRetentionPeriod = &workflow.BadRequestError{Message: "A valid retention period is not set on request."}
-	errInvalidArchivalConfig  = &workflow.BadRequestError{Message: "Invalid to enable archival without specifying a uri."}
+	errInvalidRetentionPeriod = &types.BadRequestError{Message: "A valid retention period is not set on request."}
+	errInvalidArchivalConfig  = &types.BadRequestError{Message: "Invalid to enable archival without specifying a uri."}
 )

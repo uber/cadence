@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -134,13 +135,13 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_RegisterDomainTask_Name
 	task.Info.Name = common.StringPtr(name)
 	err = s.domainReplicator.Execute(task)
 	s.NotNil(err)
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 
 	task.ID = common.StringPtr(id)
 	task.Info.Name = common.StringPtr("other random domain test name")
 	err = s.domainReplicator.Execute(task)
 	s.NotNil(err)
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 }
 
 func (s *domainReplicationTaskExecutorSuite) TestExecute_RegisterDomainTask() {

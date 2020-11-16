@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/engine"
@@ -144,7 +145,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
 			WorkflowId: common.StringPtr(workflowID),
 			RunId:      common.StringPtr(runID),
 		},
-	}).Return(nil, &shared.EntityNotExistsError{})
+	}).Return(nil, &types.EntityNotExistsError{})
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(
 			&persistence.DomainInfo{ID: domainID, Name: domainName},

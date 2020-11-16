@@ -26,13 +26,13 @@ import (
 
 	"github.com/gocql/gocql"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+	"github.com/uber/cadence/common/types"
 )
 
 func applyWorkflowMutationBatch(
@@ -398,7 +398,7 @@ func createExecution(
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
 
 	if versionHistories == nil {
-		return &workflow.InternalServiceError{Message: "encounter empty version histories in createExecution"}
+		return &types.InternalServiceError{Message: "encounter empty version histories in createExecution"}
 	}
 	versionHistoriesData, versionHistoriesEncoding := p.FromDataBlob(versionHistories)
 	batch.Query(templateCreateWorkflowExecutionWithVersionHistoriesQuery,
@@ -517,7 +517,7 @@ func updateExecution(
 
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
 	if versionHistories == nil {
-		return &workflow.InternalServiceError{Message: "encounter empty version histories in updateExecution"}
+		return &types.InternalServiceError{Message: "encounter empty version histories in updateExecution"}
 	}
 	// TODO also need to set the start / current / last write version
 	versionHistoriesData, versionHistoriesEncoding := p.FromDataBlob(versionHistories)
@@ -705,7 +705,7 @@ func createTransferTasks(
 			// No explicit property needs to be set
 
 		default:
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Unknow transfer type: %v", task.GetType()),
 			}
 		}
@@ -771,7 +771,7 @@ func createReplicationTasks(
 			version = task.GetVersion()
 
 		default:
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Unknow replication type: %v", task.GetType()),
 			}
 		}
@@ -847,7 +847,7 @@ func createTimerTasks(
 			// noop
 
 		default:
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Unknow timer type: %v", task.GetType()),
 			}
 		}
@@ -951,7 +951,7 @@ func createOrUpdateCurrentExecution(
 			state,
 		)
 	default:
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("unknown mode: %v", createMode),
 		}
 	}
@@ -2214,7 +2214,7 @@ func convertCommonErrors(
 	// TODO: remove all checks related db and cassandra.IsXXXError(err) after nosql refactoring is done
 
 	if db != nil && db.IsNotFoundError(err) || db == nil && cassandra.IsNotFoundError(err) {
-		return &shared.EntityNotExistsError{
+		return &types.EntityNotExistsError{
 			Message: fmt.Sprintf("%v failed. Error: %v ", operation, err),
 		}
 	}
@@ -2224,12 +2224,12 @@ func convertCommonErrors(
 	}
 
 	if db != nil && db.IsThrottlingError(err) || db == nil && cassandra.IsThrottlingError(err) {
-		return &shared.ServiceBusyError{
+		return &types.ServiceBusyError{
 			Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
 		}
 	}
 
-	return &shared.InternalServiceError{
+	return &types.InternalServiceError{
 		Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
 	}
 }

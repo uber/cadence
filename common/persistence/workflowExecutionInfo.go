@@ -23,7 +23,7 @@ package persistence
 import (
 	"fmt"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 // SetNextEventID sets the nextEventID
@@ -75,7 +75,7 @@ func (e *WorkflowExecutionInfo) UpdateWorkflowStateCloseStatus(
 			}
 
 		default:
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("unknown workflow state: %v", state),
 			}
 		}
@@ -100,7 +100,7 @@ func (e *WorkflowExecutionInfo) UpdateWorkflowStateCloseStatus(
 			}
 
 		default:
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("unknown workflow state: %v", state),
 			}
 		}
@@ -121,7 +121,7 @@ func (e *WorkflowExecutionInfo) UpdateWorkflowStateCloseStatus(
 			return e.createInvalidStateTransitionErr(e.State, state, closeStatus)
 
 		default:
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("unknown workflow state: %v", state),
 			}
 		}
@@ -148,12 +148,12 @@ func (e *WorkflowExecutionInfo) UpdateWorkflowStateCloseStatus(
 			}
 
 		default:
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("unknown workflow state: %v", state),
 			}
 		}
 	default:
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("unknown workflow state: %v", state),
 		}
 	}
@@ -170,7 +170,7 @@ func (e *WorkflowExecutionInfo) createInvalidStateTransitionErr(
 	targetState int,
 	targetCloseStatus int,
 ) error {
-	return &workflow.InternalServiceError{
+	return &types.InternalServiceError{
 		Message: fmt.Sprintf(invalidStateTransitionMsg, currentState, targetState, targetCloseStatus),
 	}
 }

@@ -31,12 +31,12 @@ import (
 
 	"github.com/dgryski/go-farm"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+	"github.com/uber/cadence/common/types"
 )
 
 type sqlTaskManager struct {
@@ -107,19 +107,19 @@ func (m *sqlTaskManager) LeaseTaskList(
 					TTL:          stickyTasksListsTTL,
 				}
 				if _, err := m.db.InsertIntoTaskListsWithTTL(ctx, &rowWithTTL); err != nil {
-					return nil, &workflow.InternalServiceError{
+					return nil, &types.InternalServiceError{
 						Message: fmt.Sprintf("LeaseTaskListWithTTL operation failed. Failed to make task list %v of type %v. Error: %v", request.TaskList, request.TaskType, err),
 					}
 				}
 			} else {
 				if _, err := m.db.InsertIntoTaskLists(ctx, &row); err != nil {
-					return nil, &workflow.InternalServiceError{
+					return nil, &types.InternalServiceError{
 						Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to make task list %v of type %v. Error: %v", request.TaskList, request.TaskType, err),
 					}
 				}
 			}
 		} else {
-			return nil, &workflow.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("LeaseTaskList operation failed. Failed to check if task list existed. Error: %v", err),
 			}
 		}
@@ -229,13 +229,13 @@ func (m *sqlTaskManager) UpdateTaskList(
 				TaskListsRow: *row,
 				TTL:          stickyTasksListsTTL,
 			}); err != nil {
-				return nil, &workflow.InternalServiceError{
+				return nil, &types.InternalServiceError{
 					Message: fmt.Sprintf("UpdateTaskList operation failed. Failed to make sticky task list. Error: %v", err),
 				}
 			}
 		} else {
 			if _, err := m.db.ReplaceIntoTaskLists(ctx, row); err != nil {
-				return nil, &workflow.InternalServiceError{
+				return nil, &types.InternalServiceError{
 					Message: fmt.Sprintf("UpdateTaskList operation failed. Failed to make sticky task list. Error: %v", err),
 				}
 			}
@@ -300,7 +300,7 @@ func (m *sqlTaskManager) ListTaskList(
 	pageToken := taskListPageToken{TaskType: math.MinInt16, DomainID: minUUID}
 	if request.PageToken != nil {
 		if err := gobDeserialize(request.PageToken, &pageToken); err != nil {
-			return nil, &workflow.InternalServiceError{Message: fmt.Sprintf("error deserializing page token: %v", err)}
+			return nil, &types.InternalServiceError{Message: fmt.Sprintf("error deserializing page token: %v", err)}
 		}
 	}
 	var err error
@@ -315,7 +315,7 @@ func (m *sqlTaskManager) ListTaskList(
 			PageSize:            &request.PageSize,
 		})
 		if err != nil {
-			return nil, &workflow.InternalServiceError{Message: err.Error()}
+			return nil, &types.InternalServiceError{Message: err.Error()}
 		}
 		if len(rows) > 0 {
 			break
@@ -338,7 +338,7 @@ func (m *sqlTaskManager) ListTaskList(
 	}
 
 	if err != nil {
-		return nil, &workflow.InternalServiceError{Message: fmt.Sprintf("error serializing nextPageToken:%v", err)}
+		return nil, &types.InternalServiceError{Message: fmt.Sprintf("error serializing nextPageToken:%v", err)}
 	}
 
 	resp := &persistence.ListTaskListResponse{
@@ -377,14 +377,14 @@ func (m *sqlTaskManager) DeleteTaskList(
 		RangeID:  &request.RangeID,
 	})
 	if err != nil {
-		return &workflow.InternalServiceError{Message: err.Error()}
+		return &types.InternalServiceError{Message: err.Error()}
 	}
 	nRows, err := result.RowsAffected()
 	if err != nil {
-		return &workflow.InternalServiceError{Message: fmt.Sprintf("rowsAffected returned error:%v", err)}
+		return &types.InternalServiceError{Message: fmt.Sprintf("rowsAffected returned error:%v", err)}
 	}
 	if nRows != 1 {
-		return &workflow.InternalServiceError{Message: fmt.Sprintf("delete failed: %v rows affected instead of 1", nRows)}
+		return &types.InternalServiceError{Message: fmt.Sprintf("delete failed: %v rows affected instead of 1", nRows)}
 	}
 	return nil
 }
@@ -488,7 +488,7 @@ func (m *sqlTaskManager) GetTasks(
 		PageSize:     &request.BatchSize,
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("GetTasks operation failed. Failed to get rows. Error: %v", err),
 		}
 	}
@@ -525,7 +525,7 @@ func (m *sqlTaskManager) CompleteTask(
 		TaskType:     int64(taskList.TaskType),
 		TaskID:       &taskID})
 	if err != nil && err != sql.ErrNoRows {
-		return &workflow.InternalServiceError{Message: err.Error()}
+		return &types.InternalServiceError{Message: err.Error()}
 	}
 	return nil
 }
@@ -542,11 +542,11 @@ func (m *sqlTaskManager) CompleteTasksLessThan(
 		Limit:                &request.Limit,
 	})
 	if err != nil {
-		return 0, &workflow.InternalServiceError{Message: err.Error()}
+		return 0, &types.InternalServiceError{Message: err.Error()}
 	}
 	nRows, err := result.RowsAffected()
 	if err != nil {
-		return 0, &workflow.InternalServiceError{
+		return 0, &types.InternalServiceError{
 			Message: fmt.Sprintf("rowsAffected returned error: %v", err),
 		}
 	}
@@ -562,7 +562,7 @@ func lockTaskList(ctx context.Context, tx sqlplugin.Tx, shardID int, domainID sq
 	rangeID, err := tx.LockTaskLists(ctx, &sqlplugin.TaskListsFilter{
 		ShardID: shardID, DomainID: &domainID, Name: &name, TaskType: common.Int64Ptr(int64(taskListType))})
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to lock task list. Error: %v", err),
 		}
 	}

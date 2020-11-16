@@ -27,12 +27,12 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -265,7 +265,7 @@ func (r *branchManagerImpl) createNewBranch(
 		return 0, err
 	}
 	if branchChanged {
-		return 0, &shared.BadRequestError{
+		return 0, &types.BadRequestError{
 			Message: "nDCBranchMgr encounter branch change during conflict resolution",
 		}
 	}

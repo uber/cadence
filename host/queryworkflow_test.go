@@ -33,7 +33,6 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/service/history"
 )
 
 func (s *integrationSuite) TestQueryWorkflow_Sticky() {
@@ -1347,5 +1346,6 @@ func (s *integrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
 		},
 	})
 	s.Nil(queryResp)
-	s.Equal(history.ErrQueryWorkflowBeforeFirstDecision, err)
+	s.IsType(&workflow.QueryFailedError{}, err)
+	s.Equal("workflow must handle at least one decision task before it can be queried", err.(*workflow.QueryFailedError).Message)
 }

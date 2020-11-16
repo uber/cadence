@@ -25,6 +25,7 @@ import (
 
 	s "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/types"
 )
 
 // Interfaces for the Visibility Store.
@@ -196,7 +197,7 @@ type (
 
 // NewOperationNotSupportErrorForVis create error for operation not support in visibility
 func NewOperationNotSupportErrorForVis() error {
-	return &s.BadRequestError{Message: "Operation not support. Please use on ElasticSearch"}
+	return &types.BadRequestError{Message: "Operation not support. Please use on ElasticSearch"}
 }
 
 // IsNopUpsertWorkflowRequest return whether upsert request should be no-op

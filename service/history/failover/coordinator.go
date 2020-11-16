@@ -311,7 +311,6 @@ func (c *coordinatorImpl) notifyRemoteCoordinator(
 				FailoverMarkerTokens: tokens,
 			},
 		)
-		err = thrift.FromError(err)
 		if err != nil {
 			c.metrics.IncCounter(metrics.FailoverMarkerScope, metrics.FailoverMarkerNotificationFailure)
 			c.logger.Error("Failed to notify failover markers", tag.Error(err))

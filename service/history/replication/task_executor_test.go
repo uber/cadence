@@ -43,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/shard"
@@ -126,13 +127,13 @@ func (s *taskExecutorSuite) TearDownTest() {
 }
 
 func (s *taskExecutorSuite) TestConvertRetryTaskV2Error_OK() {
-	err := &shared.RetryTaskV2Error{}
+	err := &types.RetryTaskV2Error{}
 	_, ok := s.taskHandler.convertRetryTaskV2Error(err)
 	s.True(ok)
 }
 
 func (s *taskExecutorSuite) TestConvertRetryTaskV2Error_NotOK() {
-	err := &shared.BadRequestError{}
+	err := &types.BadRequestError{}
 	_, ok := s.taskHandler.convertRetryTaskV2Error(err)
 	s.False(ok)
 }

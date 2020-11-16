@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -636,7 +637,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 		default:
-			return nil, &shared.BadRequestError{Message: "Unknown event type"}
+			return nil, &types.BadRequestError{Message: "Unknown event type"}
 		}
 	}
 

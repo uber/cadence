@@ -50,6 +50,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -310,7 +311,7 @@ func (s *historyArchiverSuite) TestArchive_Fail_TimeoutWhenReadingHistory() {
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next().Return(nil, &shared.ServiceBusyError{}),
+		historyIterator.EXPECT().Next().Return(nil, &types.ServiceBusyError{}),
 	)
 
 	historyArchiver := s.newTestHistoryArchiver(historyIterator)
@@ -477,7 +478,7 @@ func (s *historyArchiverSuite) TestGet_Fail_InvalidRequest() {
 	response, err := historyArchiver.Get(context.Background(), s.testArchivalURI, request)
 	s.Nil(response)
 	s.Error(err)
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 }
 
 func (s *historyArchiverSuite) TestGet_Fail_InvalidToken() {
@@ -494,7 +495,7 @@ func (s *historyArchiverSuite) TestGet_Fail_InvalidToken() {
 	response, err := historyArchiver.Get(context.Background(), URI, request)
 	s.Nil(response)
 	s.Error(err)
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 }
 
 func (s *historyArchiverSuite) TestGet_Fail_KeyNotExist() {
@@ -511,7 +512,7 @@ func (s *historyArchiverSuite) TestGet_Fail_KeyNotExist() {
 	response, err := historyArchiver.Get(context.Background(), URI, request)
 	s.Nil(response)
 	s.Error(err)
-	s.IsType(&shared.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *historyArchiverSuite) TestGet_Success_PickHighestVersion() {

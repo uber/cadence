@@ -32,7 +32,6 @@ import (
 
 	"github.com/gocql/gocql"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
@@ -107,7 +106,7 @@ func (db *cdb) SelectFromHistoryNode(ctx context.Context, filter *nosqlplugin.Hi
 
 	iter := query.PageSize(filter.PageSize).PageState(filter.NextPageToken).Iter()
 	if iter == nil {
-		return nil, nil, &shared.InternalServiceError{
+		return nil, nil, &types.InternalServiceError{
 			Message: "SelectFromHistoryNode operation failed.  Not able to create query iterator.",
 		}
 	}
@@ -144,7 +143,7 @@ func (db *cdb) SelectAllHistoryTrees(ctx context.Context, nextPageToken []byte, 
 
 	iter := query.PageSize(int(pageSize)).PageState(nextPageToken).Iter()
 	if iter == nil {
-		return nil, nil, &shared.InternalServiceError{
+		return nil, nil, &types.InternalServiceError{
 			Message: "SelectAllHistoryTrees operation failed.  Not able to create query iterator.",
 		}
 	}
@@ -174,7 +173,7 @@ func (db *cdb) SelectFromHistoryTree(ctx context.Context, filter *nosqlplugin.Hi
 	for {
 		iter = query.PageSize(100).PageState(pagingToken).Iter()
 		if iter == nil {
-			return nil, &shared.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: "SelectFromHistoryTree operation failed.  Not able to create query iterator.",
 			}
 		}

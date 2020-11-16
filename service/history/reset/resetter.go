@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -195,7 +196,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 
 	baseLastEventVersion := resetMutableState.GetCurrentVersion()
 	if baseLastEventVersion > resetWorkflowVersion {
-		return nil, &shared.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "workflowResetter encounter version mismatch.",
 		}
 	}
@@ -209,12 +210,12 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 	// TODO add checking of reset until event ID == decision task started ID + 1
 	decision, ok := resetMutableState.GetInFlightDecision()
 	if !ok || decision.StartedID+1 != resetMutableState.GetNextEventID() {
-		return nil, &shared.BadRequestError{
+		return nil, &types.BadRequestError{
 			Message: fmt.Sprintf("Can only reset workflow to DecisionTaskStarted + 1: %v", baseRebuildLastEventID+1),
 		}
 	}
 	if len(resetMutableState.GetPendingChildExecutionInfos()) > 0 {
-		return nil, &shared.BadRequestError{
+		return nil, &types.BadRequestError{
 			Message: fmt.Sprintf("Can only reset workflow with pending child workflows"),
 		}
 	}
@@ -301,7 +302,7 @@ func (r *workflowResetterImpl) persistToDB(
 		return err
 	}
 	if len(resetWorkflowEventsSeq) != 1 {
-		return &shared.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: "there should be EXACTLY one batch of events for reset",
 		}
 	}
@@ -401,7 +402,7 @@ func (r *workflowResetterImpl) failInflightActivity(
 		case common.TransientEventID:
 			// activity is started (with retry policy)
 			// should not encounter this case when rebuilding mutable state
-			return &shared.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: "workflowResetter encounter transient activity",
 			}
 		default:

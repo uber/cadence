@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -526,7 +527,7 @@ func (s *VisibilityPersistenceSuite) TestGetClosedExecution() {
 		Execution:  workflowExecution,
 	})
 	s.Error(err1)
-	_, ok := err1.(*gen.EntityNotExistsError)
+	_, ok := err1.(*types.EntityNotExistsError)
 	s.True(ok, "EntityNotExistsError")
 	s.Nil(closedResp)
 
@@ -566,7 +567,7 @@ func (s *VisibilityPersistenceSuite) TestClosedWithoutStarted() {
 		Execution:  workflowExecution,
 	})
 	s.Error(err0)
-	_, ok := err0.(*gen.EntityNotExistsError)
+	_, ok := err0.(*types.EntityNotExistsError)
 	s.True(ok, "EntityNotExistsError")
 	s.Nil(closedResp)
 

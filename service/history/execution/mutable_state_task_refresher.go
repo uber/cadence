@@ -26,12 +26,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
 )
@@ -266,7 +266,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForDecision(
 
 	decision, ok := mutableState.GetPendingDecision()
 	if !ok {
-		return &shared.InternalServiceError{Message: "it could be a bug, cannot get pending decision"}
+		return &types.InternalServiceError{Message: "it could be a bug, cannot get pending decision"}
 	}
 
 	// decision already started

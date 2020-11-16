@@ -20,7 +20,10 @@
 
 package types
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 func (err AccessDeniedError) Error() string {
 	return fmt.Sprintf("AccessDeniedError{Message: %v}", err.Message)
@@ -61,11 +64,15 @@ func (err DomainNotActiveError) Error() string {
 }
 
 func (err EntityNotExistsError) Error() string {
-	return fmt.Sprintf("EntityNotExistsError{Message: %v, CurrentCluster: %v, ActiveCluster: %v}",
-		err.Message,
-		err.CurrentCluster,
-		err.ActiveCluster,
-	)
+	fields := []string{}
+	fields = append(fields, fmt.Sprintf("Message: %v", err.Message))
+	if err.CurrentCluster != nil {
+		fields = append(fields, fmt.Sprintf("CurrentCluster: %v", err.CurrentCluster))
+	}
+	if err.ActiveCluster != nil {
+		fields = append(fields, fmt.Sprintf("ActiveCluster: %v", err.ActiveCluster))
+	}
+	return fmt.Sprintf("EntityNotExistsError{%s}", strings.Join(fields, ", "))
 }
 
 func (err InternalDataInconsistencyError) Error() string {
@@ -89,16 +96,30 @@ func (err RemoteSyncMatchedError) Error() string {
 }
 
 func (err RetryTaskV2Error) Error() string {
-	return fmt.Sprintf("RetryTaskV2Error{Message: %v, DomainId: %v, WorkflowId: %v, RunId: %v, StartEventId: %v, StartEventVersion: %v, EndEventId: %v, EndEventVersion: %v}",
-		err.Message,
-		err.DomainID,
-		err.WorkflowID,
-		err.RunID,
-		err.StartEventID,
-		err.StartEventVersion,
-		err.EndEventID,
-		err.EndEventVersion,
-	)
+	fields := []string{}
+	fields = append(fields, fmt.Sprintf("Message: %v", err.Message))
+	if err.DomainID != nil {
+		fields = append(fields, fmt.Sprintf("DomainID: %v", err.DomainID))
+	}
+	if err.WorkflowID != nil {
+		fields = append(fields, fmt.Sprintf("WorkflowID: %v", err.WorkflowID))
+	}
+	if err.RunID != nil {
+		fields = append(fields, fmt.Sprintf("RunID: %v", err.RunID))
+	}
+	if err.StartEventID != nil {
+		fields = append(fields, fmt.Sprintf("StartEventID: %v", err.StartEventID))
+	}
+	if err.StartEventVersion != nil {
+		fields = append(fields, fmt.Sprintf("StartEventVersion: %v", err.StartEventVersion))
+	}
+	if err.EndEventID != nil {
+		fields = append(fields, fmt.Sprintf("EndEventID: %v", err.EndEventID))
+	}
+	if err.EndEventVersion != nil {
+		fields = append(fields, fmt.Sprintf("EndEventVersion: %v", err.EndEventVersion))
+	}
+	return fmt.Sprintf("RetryTaskV2Error{%s}", strings.Join(fields, ", "))
 }
 
 func (err ServiceBusyError) Error() string {
@@ -106,15 +127,28 @@ func (err ServiceBusyError) Error() string {
 }
 
 func (err WorkflowExecutionAlreadyStartedError) Error() string {
-	return fmt.Sprintf("WorkflowExecutionAlreadyStartedError{Message: %v, StartRequestId: %v, RunId: %v}",
-		err.Message,
-		err.StartRequestID,
-		err.RunID,
-	)
+	fields := []string{}
+	if err.Message != nil {
+		fields = append(fields, fmt.Sprintf("Message: %v", err.Message))
+	}
+	if err.StartRequestID != nil {
+		fields = append(fields, fmt.Sprintf("StartRequestID: %v", err.StartRequestID))
+	}
+	if err.RunID != nil {
+		fields = append(fields, fmt.Sprintf("RunID: %v", err.RunID))
+	}
+	return fmt.Sprintf("WorkflowExecutionAlreadyStartedError{%s}", strings.Join(fields, ", "))
 }
 
 func (err ShardOwnershipLostError) Error() string {
-	return fmt.Sprintf("ShardOwnershipLostError{Message: %v, Owner: %v}", err.Message, err.Owner)
+	fields := []string{}
+	if err.Message != nil {
+		fields = append(fields, fmt.Sprintf("Message: %v", err.Message))
+	}
+	if err.Owner != nil {
+		fields = append(fields, fmt.Sprintf("StartRequestID: %v", err.Owner))
+	}
+	return fmt.Sprintf("ShardOwnershipLostError{%s}", strings.Join(fields, ", "))
 }
 
 func (err EventAlreadyStartedError) Error() string {

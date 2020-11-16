@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
@@ -37,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	t "github.com/uber/cadence/common/task"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/shard"
@@ -131,7 +131,7 @@ func (s *taskSuite) TestHandleErr_ErrEntityNotExists() {
 		return true, nil
 	})
 
-	err := &workflow.EntityNotExistsError{}
+	err := &types.EntityNotExistsError{}
 	s.NoError(taskBase.HandleErr(err))
 }
 
@@ -158,7 +158,7 @@ func (s *taskSuite) TestHandleErr_ErrDomainNotActive() {
 		return true, nil
 	})
 
-	err := &workflow.DomainNotActiveError{}
+	err := &types.DomainNotActiveError{}
 
 	taskBase.submitTime = time.Now().Add(-cache.DomainCacheRefreshInterval * time.Duration(2))
 	s.NoError(taskBase.HandleErr(err))

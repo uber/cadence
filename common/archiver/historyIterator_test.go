@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -643,7 +644,7 @@ func (s *HistoryIteratorSuite) constructMockHistoryV2Manager(batchInfo []int, re
 			PageSize:    testDefaultPersistencePageSize,
 			ShardID:     common.IntPtr(testShardID),
 		}
-		mockHistoryV2Manager.On("ReadHistoryBranchByBatch", mock.Anything, req).Return(nil, &shared.EntityNotExistsError{Message: "Reach the end"})
+		mockHistoryV2Manager.On("ReadHistoryBranchByBatch", mock.Anything, req).Return(nil, &types.EntityNotExistsError{Message: "Reach the end"})
 	}
 
 	return mockHistoryV2Manager
