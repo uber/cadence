@@ -165,7 +165,9 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		common.NewClientCache(keyResolver, clientProvider),
 		matching.NewLoadBalancer(domainIDToName, cf.dynConfig),
 	)
-
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.MatchingErrorInjectionRate, 0)(); errorRate != 0 {
+		client = matching.NewErrorInjectionClient(client, errorRate, cf.logger)
+	}
 	if cf.metricsClient != nil {
 		client = matching.NewMetricClient(client, cf.metricsClient)
 	}
