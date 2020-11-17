@@ -180,7 +180,7 @@ func newTaskPersistence(cfg config.Cassandra, logger log.Logger) (p.TaskStore, e
 
 // From TaskManager interface
 func (d *cassandraTaskPersistence) LeaseTaskList(
-	_ context.Context,
+	ctx context.Context,
 	request *p.LeaseTaskListRequest,
 ) (*p.LeaseTaskListResponse, error) {
 	if len(request.TaskList) == 0 {
@@ -195,7 +195,7 @@ func (d *cassandraTaskPersistence) LeaseTaskList(
 		request.TaskType,
 		rowTypeTaskList,
 		taskListTaskID,
-	)
+	).WithContext(ctx)
 	var rangeID, ackLevel int64
 	var tlDB map[string]interface{}
 	err := query.Scan(&rangeID, &tlDB)
@@ -214,7 +214,7 @@ func (d *cassandraTaskPersistence) LeaseTaskList(
 				0,
 				request.TaskListKind,
 				now,
-			)
+			).WithContext(ctx)
 		} else {
 			return nil, convertCommonErrors(nil, "LeaseTaskList", err)
 		}
@@ -244,7 +244,7 @@ func (d *cassandraTaskPersistence) LeaseTaskList(
 			rowTypeTaskList,
 			taskListTaskID,
 			rangeID,
-		)
+		).WithContext(ctx)
 	}
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
@@ -272,7 +272,7 @@ func (d *cassandraTaskPersistence) LeaseTaskList(
 
 // From TaskManager interface
 func (d *cassandraTaskPersistence) UpdateTaskList(
-	_ context.Context,
+	ctx context.Context,
 	request *p.UpdateTaskListRequest,
 ) (*p.UpdateTaskListResponse, error) {
 	tli := request.TaskListInfo
@@ -281,7 +281,7 @@ func (d *cassandraTaskPersistence) UpdateTaskList(
 	var err error
 	previous := make(map[string]interface{})
 	if tli.Kind == p.TaskListKindSticky { // if task_list is sticky, then update with TTL
-		batch := d.session.NewBatch(gocql.LoggedBatch)
+		batch := d.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 		// part 1 is used to set TTL on primary key as UPDATE can't set TTL for primary key
 		batch.Query(templateUpdateTaskListQueryWithTTLPart1,
 			tli.DomainID,
@@ -324,7 +324,7 @@ func (d *cassandraTaskPersistence) UpdateTaskList(
 			rowTypeTaskList,
 			taskListTaskID,
 			tli.RangeID,
-		)
+		).WithContext(ctx)
 		applied, err = query.MapScanCAS(previous)
 	}
 
@@ -348,7 +348,7 @@ func (d *cassandraTaskPersistence) UpdateTaskList(
 }
 
 func (d *cassandraTaskPersistence) ListTaskList(
-	_ context.Context,
+	ctx context.Context,
 	request *p.ListTaskListRequest,
 ) (*p.ListTaskListResponse, error) {
 	return nil, &workflow.InternalServiceError{
@@ -357,11 +357,17 @@ func (d *cassandraTaskPersistence) ListTaskList(
 }
 
 func (d *cassandraTaskPersistence) DeleteTaskList(
-	_ context.Context,
+	ctx context.Context,
 	request *p.DeleteTaskListRequest,
 ) error {
 	query := d.session.Query(templateDeleteTaskListQuery,
-		request.DomainID, request.TaskListName, request.TaskListType, rowTypeTaskList, taskListTaskID, request.RangeID)
+		request.DomainID,
+		request.TaskListName,
+		request.TaskListType,
+		rowTypeTaskList,
+		taskListTaskID,
+		request.RangeID,
+	).WithContext(ctx)
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
@@ -377,10 +383,10 @@ func (d *cassandraTaskPersistence) DeleteTaskList(
 
 // From TaskManager interface
 func (d *cassandraTaskPersistence) CreateTasks(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalCreateTasksRequest,
 ) (*p.CreateTasksResponse, error) {
-	batch := d.session.NewBatch(gocql.LoggedBatch)
+	batch := d.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 	domainID := request.TaskListInfo.DomainID
 	taskList := request.TaskListInfo.Name
 	taskListType := request.TaskListInfo.TaskType
@@ -457,7 +463,7 @@ func (d *cassandraTaskPersistence) CreateTasks(
 
 // From TaskManager interface
 func (d *cassandraTaskPersistence) GetTasks(
-	_ context.Context,
+	ctx context.Context,
 	request *p.GetTasksRequest,
 ) (*p.InternalGetTasksResponse, error) {
 	if request.MaxReadLevel == nil {
@@ -477,7 +483,7 @@ func (d *cassandraTaskPersistence) GetTasks(
 		rowTypeTask,
 		request.ReadLevel,
 		*request.MaxReadLevel,
-	).PageSize(request.BatchSize)
+	).PageSize(request.BatchSize).WithContext(ctx)
 
 	iter := query.Iter()
 	if iter == nil {
@@ -512,7 +518,7 @@ PopulateTasks:
 
 // From TaskManager interface
 func (d *cassandraTaskPersistence) CompleteTask(
-	_ context.Context,
+	ctx context.Context,
 	request *p.CompleteTaskRequest,
 ) error {
 	tli := request.TaskList
@@ -521,7 +527,8 @@ func (d *cassandraTaskPersistence) CompleteTask(
 		tli.Name,
 		tli.TaskType,
 		rowTypeTask,
-		request.TaskID)
+		request.TaskID,
+	).WithContext(ctx)
 
 	err := query.Exec()
 	if err != nil {
@@ -535,11 +542,16 @@ func (d *cassandraTaskPersistence) CompleteTask(
 // Limit request parameter i.e. either all tasks leq the task_id will be deleted or an error will
 // be returned to the caller
 func (d *cassandraTaskPersistence) CompleteTasksLessThan(
-	_ context.Context,
+	ctx context.Context,
 	request *p.CompleteTasksLessThanRequest,
 ) (int, error) {
 	query := d.session.Query(templateCompleteTasksLessThanQuery,
-		request.DomainID, request.TaskListName, request.TaskType, rowTypeTask, request.TaskID)
+		request.DomainID,
+		request.TaskListName,
+		request.TaskType,
+		rowTypeTask,
+		request.TaskID,
+	).WithContext(ctx)
 	err := query.Exec()
 	if err != nil {
 		return 0, convertCommonErrors(nil, "CompleteTasksLessThan", err)
