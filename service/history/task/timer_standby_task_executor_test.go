@@ -1,4 +1,5 @@
 // Copyright (c) 2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -706,13 +707,13 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Multiple_CanU
 				UpsertTimerInfos:          []*persistence.TimerInfo{},
 				DeleteTimerInfos:          []string{},
 				UpsertChildExecutionInfos: []*persistence.ChildExecutionInfo{},
-				DeleteChildExecutionInfo:  nil,
+				DeleteChildExecutionInfos: []int64{},
 				UpsertRequestCancelInfos:  []*persistence.RequestCancelInfo{},
-				DeleteRequestCancelInfo:   nil,
+				DeleteRequestCancelInfos:  []int64{},
 				UpsertSignalInfos:         []*persistence.SignalInfo{},
-				DeleteSignalInfo:          nil,
+				DeleteSignalInfos:         []int64{},
 				UpsertSignalRequestedIDs:  []string{},
-				DeleteSignalRequestedID:   "",
+				DeleteSignalRequestedIDs:  []string{},
 				NewBufferedEvents:         nil,
 				ClearBufferedEvents:       false,
 				VersionHistories:          mutableState.GetVersionHistories(),

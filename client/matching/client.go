@@ -65,7 +65,8 @@ func NewClient(
 func (c *clientImpl) AddActivityTask(
 	ctx context.Context,
 	request *types.AddActivityTaskRequest,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	partition := c.loadBalancer.PickWritePartition(
 		request.GetDomainUUID(),
@@ -86,7 +87,8 @@ func (c *clientImpl) AddActivityTask(
 func (c *clientImpl) AddDecisionTask(
 	ctx context.Context,
 	request *types.AddDecisionTaskRequest,
-	opts ...yarpc.CallOption) error {
+	opts ...yarpc.CallOption,
+) error {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	partition := c.loadBalancer.PickWritePartition(
 		request.GetDomainUUID(),
@@ -107,7 +109,8 @@ func (c *clientImpl) AddDecisionTask(
 func (c *clientImpl) PollForActivityTask(
 	ctx context.Context,
 	request *types.MatchingPollForActivityTaskRequest,
-	opts ...yarpc.CallOption) (*types.PollForActivityTaskResponse, error) {
+	opts ...yarpc.CallOption,
+) (*types.PollForActivityTaskResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	partition := c.loadBalancer.PickReadPartition(
 		request.GetDomainUUID(),
@@ -128,7 +131,8 @@ func (c *clientImpl) PollForActivityTask(
 func (c *clientImpl) PollForDecisionTask(
 	ctx context.Context,
 	request *types.MatchingPollForDecisionTaskRequest,
-	opts ...yarpc.CallOption) (*types.MatchingPollForDecisionTaskResponse, error) {
+	opts ...yarpc.CallOption,
+) (*types.MatchingPollForDecisionTaskResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	partition := c.loadBalancer.PickReadPartition(
 		request.GetDomainUUID(),
@@ -146,7 +150,11 @@ func (c *clientImpl) PollForDecisionTask(
 	return client.PollForDecisionTask(ctx, request, opts...)
 }
 
-func (c *clientImpl) QueryWorkflow(ctx context.Context, request *types.MatchingQueryWorkflowRequest, opts ...yarpc.CallOption) (*types.QueryWorkflowResponse, error) {
+func (c *clientImpl) QueryWorkflow(
+	ctx context.Context,
+	request *types.MatchingQueryWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (*types.QueryWorkflowResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	partition := c.loadBalancer.PickReadPartition(
 		request.GetDomainUUID(),
@@ -164,7 +172,11 @@ func (c *clientImpl) QueryWorkflow(ctx context.Context, request *types.MatchingQ
 	return client.QueryWorkflow(ctx, request, opts...)
 }
 
-func (c *clientImpl) RespondQueryTaskCompleted(ctx context.Context, request *types.MatchingRespondQueryTaskCompletedRequest, opts ...yarpc.CallOption) error {
+func (c *clientImpl) RespondQueryTaskCompleted(
+	ctx context.Context,
+	request *types.MatchingRespondQueryTaskCompletedRequest,
+	opts ...yarpc.CallOption,
+) error {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getClientForTasklist(request.TaskList.GetName())
 	if err != nil {
@@ -175,7 +187,11 @@ func (c *clientImpl) RespondQueryTaskCompleted(ctx context.Context, request *typ
 	return client.RespondQueryTaskCompleted(ctx, request, opts...)
 }
 
-func (c *clientImpl) CancelOutstandingPoll(ctx context.Context, request *types.CancelOutstandingPollRequest, opts ...yarpc.CallOption) error {
+func (c *clientImpl) CancelOutstandingPoll(
+	ctx context.Context,
+	request *types.CancelOutstandingPollRequest,
+	opts ...yarpc.CallOption,
+) error {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getClientForTasklist(request.TaskList.GetName())
 	if err != nil {
@@ -186,7 +202,11 @@ func (c *clientImpl) CancelOutstandingPoll(ctx context.Context, request *types.C
 	return client.CancelOutstandingPoll(ctx, request, opts...)
 }
 
-func (c *clientImpl) DescribeTaskList(ctx context.Context, request *types.MatchingDescribeTaskListRequest, opts ...yarpc.CallOption) (*types.DescribeTaskListResponse, error) {
+func (c *clientImpl) DescribeTaskList(
+	ctx context.Context,
+	request *types.MatchingDescribeTaskListRequest,
+	opts ...yarpc.CallOption,
+) (*types.DescribeTaskListResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getClientForTasklist(request.DescRequest.TaskList.GetName())
 	if err != nil {
@@ -197,7 +217,11 @@ func (c *clientImpl) DescribeTaskList(ctx context.Context, request *types.Matchi
 	return client.DescribeTaskList(ctx, request, opts...)
 }
 
-func (c *clientImpl) ListTaskListPartitions(ctx context.Context, request *types.MatchingListTaskListPartitionsRequest, opts ...yarpc.CallOption) (*types.ListTaskListPartitionsResponse, error) {
+func (c *clientImpl) ListTaskListPartitions(
+	ctx context.Context,
+	request *types.MatchingListTaskListPartitionsRequest,
+	opts ...yarpc.CallOption,
+) (*types.ListTaskListPartitionsResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	client, err := c.getClientForTasklist(request.TaskList.GetName())
 	if err != nil {
@@ -208,14 +232,18 @@ func (c *clientImpl) ListTaskListPartitions(ctx context.Context, request *types.
 	return client.ListTaskListPartitions(ctx, request, opts...)
 }
 
-func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {
+func (c *clientImpl) createContext(
+	parent context.Context,
+) (context.Context, context.CancelFunc) {
 	if parent == nil {
 		return context.WithTimeout(context.Background(), c.timeout)
 	}
 	return context.WithTimeout(parent, c.timeout)
 }
 
-func (c *clientImpl) createLongPollContext(parent context.Context) (context.Context, context.CancelFunc) {
+func (c *clientImpl) createLongPollContext(
+	parent context.Context,
+) (context.Context, context.CancelFunc) {
 	if parent == nil {
 		return context.WithTimeout(context.Background(), c.longPollTimeout)
 	}

@@ -1,4 +1,5 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -658,13 +659,13 @@ func (m *executionManagerImpl) SerializeWorkflowMutation(
 		UpsertTimerInfos:          input.UpsertTimerInfos,
 		DeleteTimerInfos:          input.DeleteTimerInfos,
 		UpsertChildExecutionInfos: serializedUpsertChildExecutionInfos,
-		DeleteChildExecutionInfo:  input.DeleteChildExecutionInfo,
+		DeleteChildExecutionInfos: input.DeleteChildExecutionInfos,
 		UpsertRequestCancelInfos:  input.UpsertRequestCancelInfos,
-		DeleteRequestCancelInfo:   input.DeleteRequestCancelInfo,
+		DeleteRequestCancelInfos:  input.DeleteRequestCancelInfos,
 		UpsertSignalInfos:         input.UpsertSignalInfos,
-		DeleteSignalInfo:          input.DeleteSignalInfo,
+		DeleteSignalInfos:         input.DeleteSignalInfos,
 		UpsertSignalRequestedIDs:  input.UpsertSignalRequestedIDs,
-		DeleteSignalRequestedID:   input.DeleteSignalRequestedID,
+		DeleteSignalRequestedIDs:  input.DeleteSignalRequestedIDs,
 		NewBufferedEvents:         serializedNewBufferedEvents,
 		ClearBufferedEvents:       input.ClearBufferedEvents,
 

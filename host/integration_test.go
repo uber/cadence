@@ -240,7 +240,7 @@ GetHistoryLoop:
 		Logger:          s.Logger,
 		T:               s.T(),
 	}
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 	// duplicate requests
@@ -270,7 +270,7 @@ GetHistoryLoop:
 	s.NotEqual(we3.GetRunId(), we4.GetRunId())
 
 	// complete workflow
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -545,7 +545,7 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 	}
 
 	s.False(workflowComplete)
-	_, err := poller.PollAndProcessDecisionTask(true, false)
+	_, err := poller.PollAndProcessDecisionTask(false, false)
 	s.Nil(err)
 	s.True(workflowComplete)
 }
@@ -725,7 +725,7 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 		s.Logger.Info("Calling Decision Task", tag.Counter(i))
 		var err error
 		if dropDecisionTask {
-			_, err = poller.PollAndProcessDecisionTask(true, true)
+			_, err = poller.PollAndProcessDecisionTask(false, true)
 		} else {
 			_, err = poller.PollAndProcessDecisionTaskWithAttempt(true, false, false, false, int64(1))
 		}
@@ -752,7 +752,7 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 	s.Logger.Info("Waiting for workflow to complete", tag.WorkflowRunID(*we.RunId))
 
 	s.False(workflowComplete)
-	_, err := poller.PollAndProcessDecisionTask(true, false)
+	_, err := poller.PollAndProcessDecisionTask(false, false)
 	s.Nil(err)
 	s.True(workflowComplete)
 }
@@ -1397,7 +1397,7 @@ func (s *integrationSuite) TestSequential_UserTimers() {
 	}
 
 	s.False(workflowComplete)
-	_, err := poller.PollAndProcessDecisionTask(true, false)
+	_, err := poller.PollAndProcessDecisionTask(false, false)
 	s.Nil(err)
 	s.True(workflowComplete)
 }
@@ -1494,7 +1494,7 @@ func (s *integrationSuite) TestRateLimitBufferedEvents() {
 	s.EqualError(err, "EntityNotExistsError{Message: Decision task not found.}")
 
 	// Process signal in decider
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -1613,7 +1613,7 @@ func (s *integrationSuite) TestBufferedEvents() {
 	s.Equal(histResp.History.Events[5].GetEventType(), workflow.EventTypeWorkflowExecutionSignaled)
 
 	// Process signal in decider
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 	s.NotNil(signalEvent)
@@ -1736,7 +1736,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 	s.Equal(0, len(dweResponse.PendingActivities))
 
 	// Process signal in decider
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Nil(err)
 	s.True(workflowComplete)
 
@@ -2500,7 +2500,7 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 	s.Nil(err, "failed to send signal to execution")
 
 	// process signal
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 	s.Equal(1, signalCount)
@@ -2770,7 +2770,7 @@ func (s *integrationSuite) TestTransientDecisionTimeout() {
 	s.Nil(err, "failed to send signal to execution")
 
 	// Drop decision task to cause a Decision Timeout
-	_, err = poller.PollAndProcessDecisionTask(true, true)
+	_, err = poller.PollAndProcessDecisionTask(false, true)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -2864,7 +2864,7 @@ func (s *integrationSuite) TestNoTransientDecisionAfterFlushBufferedEvents() {
 
 	// fist decision, this try to do a continue as new but there is a buffered event,
 	// so it will fail and create a new decision
-	_, err := poller.PollAndProcessDecisionTask(true, false)
+	_, err := poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("pollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 

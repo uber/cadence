@@ -1,4 +1,5 @@
 // Copyright (c) 2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -701,10 +702,21 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		}
 		newWorkflowSizeSize := newContext.GetHistorySize()
 		startEvents := newWorkflowEventsSeq[0]
-		eventsSize, err := c.PersistFirstWorkflowEvents(ctx, startEvents)
-		if err != nil {
-			return err
+		firstEventID := startEvents.Events[0].GetEventId()
+		var eventsSize int64
+		if firstEventID == common.FirstEventID {
+			eventsSize, err = c.PersistFirstWorkflowEvents(ctx, startEvents)
+			if err != nil {
+				return err
+			}
+		} else {
+			// NOTE: This is the case for reset workflow, reset workflow already inserted a branch record
+			eventsSize, err = c.PersistNonFirstWorkflowEvents(ctx, startEvents)
+			if err != nil {
+				return err
+			}
 		}
+
 		newWorkflowSizeSize += eventsSize
 		newContext.SetHistorySize(newWorkflowSizeSize)
 		newWorkflow.ExecutionStats = &persistence.ExecutionStats{

@@ -746,11 +746,11 @@ func (d *cassandraPersistence) GetShardID() int {
 }
 
 func (d *cassandraPersistence) CreateWorkflowExecution(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalCreateWorkflowExecutionRequest,
 ) (*p.CreateWorkflowExecutionResponse, error) {
 
-	batch := d.session.NewBatch(gocql.LoggedBatch)
+	batch := d.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 
 	newWorkflow := request.NewWorkflowSnapshot
 	executionInfo := newWorkflow.ExecutionInfo
@@ -917,7 +917,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 }
 
 func (d *cassandraPersistence) GetWorkflowExecution(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalGetWorkflowExecutionRequest,
 ) (*p.InternalGetWorkflowExecutionResponse, error) {
 
@@ -929,7 +929,8 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 		*execution.WorkflowId,
 		*execution.RunId,
 		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID)
+		rowTypeExecutionTaskID,
+	).WithContext(ctx)
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
@@ -1012,11 +1013,11 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 }
 
 func (d *cassandraPersistence) UpdateWorkflowExecution(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalUpdateWorkflowExecutionRequest,
 ) error {
 
-	batch := d.session.NewBatch(gocql.LoggedBatch)
+	batch := d.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 
 	updateWorkflow := request.UpdateWorkflowMutation
 	newWorkflow := request.NewWorkflowSnapshot
@@ -1038,6 +1039,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 	switch request.Mode {
 	case p.UpdateWorkflowModeBypassCurrent:
 		if err := d.assertNotCurrentExecution(
+			ctx,
 			domainID,
 			workflowID,
 			runID); err != nil {
@@ -1148,11 +1150,11 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 
 //TODO: update query with version histories
 func (d *cassandraPersistence) ResetWorkflowExecution(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalResetWorkflowExecutionRequest,
 ) error {
 
-	batch := d.session.NewBatch(gocql.LoggedBatch)
+	batch := d.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 
 	shardID := d.shardID
 
@@ -1261,10 +1263,10 @@ func (d *cassandraPersistence) ResetWorkflowExecution(
 }
 
 func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalConflictResolveWorkflowExecutionRequest,
 ) error {
-	batch := d.session.NewBatch(gocql.LoggedBatch)
+	batch := d.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 
 	currentWorkflow := request.CurrentWorkflowMutation
 	resetWorkflow := request.ResetWorkflowSnapshot
@@ -1289,6 +1291,7 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 	switch request.Mode {
 	case p.ConflictResolveWorkflowModeBypassCurrent:
 		if err := d.assertNotCurrentExecution(
+			ctx,
 			domainID,
 			workflowID,
 			resetWorkflow.ExecutionInfo.RunID); err != nil {
@@ -1490,12 +1493,13 @@ GetFailureReasonLoop:
 }
 
 func (d *cassandraPersistence) assertNotCurrentExecution(
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 	runID string,
 ) error {
 
-	if resp, err := d.GetCurrentExecution(context.TODO(), &p.GetCurrentExecutionRequest{
+	if resp, err := d.GetCurrentExecution(ctx, &p.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 	}); err != nil {
@@ -1514,7 +1518,7 @@ func (d *cassandraPersistence) assertNotCurrentExecution(
 }
 
 func (d *cassandraPersistence) DeleteWorkflowExecution(
-	_ context.Context,
+	ctx context.Context,
 	request *p.DeleteWorkflowExecutionRequest,
 ) error {
 	query := d.session.Query(templateDeleteWorkflowExecutionMutableStateQuery,
@@ -1524,7 +1528,8 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(
 		request.WorkflowID,
 		request.RunID,
 		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID)
+		rowTypeExecutionTaskID,
+	).WithContext(ctx)
 
 	err := query.Exec()
 	if err != nil {
@@ -1535,7 +1540,7 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(
 }
 
 func (d *cassandraPersistence) DeleteCurrentWorkflowExecution(
-	_ context.Context,
+	ctx context.Context,
 	request *p.DeleteCurrentWorkflowExecutionRequest,
 ) error {
 	query := d.session.Query(templateDeleteWorkflowExecutionCurrentRowQuery,
@@ -1546,7 +1551,8 @@ func (d *cassandraPersistence) DeleteCurrentWorkflowExecution(
 		permanentRunID,
 		defaultVisibilityTimestamp,
 		rowTypeExecutionTaskID,
-		request.RunID)
+		request.RunID,
+	).WithContext(ctx)
 
 	err := query.Exec()
 	if err != nil {
@@ -1557,7 +1563,7 @@ func (d *cassandraPersistence) DeleteCurrentWorkflowExecution(
 }
 
 func (d *cassandraPersistence) GetCurrentExecution(
-	_ context.Context,
+	ctx context.Context,
 	request *p.GetCurrentExecutionRequest,
 ) (*p.GetCurrentExecutionResponse,
 	error) {
@@ -1568,7 +1574,8 @@ func (d *cassandraPersistence) GetCurrentExecution(
 		request.WorkflowID,
 		permanentRunID,
 		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID)
+		rowTypeExecutionTaskID,
+	).WithContext(ctx)
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
@@ -1598,14 +1605,14 @@ func (d *cassandraPersistence) GetCurrentExecution(
 }
 
 func (d *cassandraPersistence) ListCurrentExecutions(
-	_ context.Context,
+	ctx context.Context,
 	request *p.ListCurrentExecutionsRequest,
 ) (*p.ListCurrentExecutionsResponse, error) {
 	query := d.session.Query(
 		templateListCurrentExecutionsQuery,
 		d.shardID,
 		rowTypeExecution,
-	).PageSize(request.PageSize).PageState(request.PageToken)
+	).PageSize(request.PageSize).PageState(request.PageToken).WithContext(ctx)
 
 	iter := query.Iter()
 	if iter == nil {
@@ -1641,7 +1648,7 @@ func (d *cassandraPersistence) ListCurrentExecutions(
 }
 
 func (d *cassandraPersistence) IsWorkflowExecutionExists(
-	_ context.Context,
+	ctx context.Context,
 	request *p.IsWorkflowExecutionExistsRequest,
 ) (*p.IsWorkflowExecutionExistsResponse, error) {
 	query := d.session.Query(templateIsWorkflowExecutionExistsQuery,
@@ -1651,7 +1658,8 @@ func (d *cassandraPersistence) IsWorkflowExecutionExists(
 		request.WorkflowID,
 		request.RunID,
 		defaultVisibilityTimestamp,
-		rowTypeExecutionTaskID)
+		rowTypeExecutionTaskID,
+	).WithContext(ctx)
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
@@ -1665,14 +1673,14 @@ func (d *cassandraPersistence) IsWorkflowExecutionExists(
 }
 
 func (d *cassandraPersistence) ListConcreteExecutions(
-	_ context.Context,
+	ctx context.Context,
 	request *p.ListConcreteExecutionsRequest,
 ) (*p.InternalListConcreteExecutionsResponse, error) {
 	query := d.session.Query(
 		templateListWorkflowExecutionQuery,
 		d.shardID,
 		rowTypeExecution,
-	).PageSize(request.PageSize).PageState(request.PageToken)
+	).PageSize(request.PageSize).PageState(request.PageToken).WithContext(ctx)
 
 	iter := query.Iter()
 	if iter == nil {
@@ -1707,7 +1715,7 @@ func (d *cassandraPersistence) ListConcreteExecutions(
 }
 
 func (d *cassandraPersistence) GetTransferTasks(
-	_ context.Context,
+	ctx context.Context,
 	request *p.GetTransferTasksRequest,
 ) (*p.GetTransferTasksResponse, error) {
 
@@ -1721,7 +1729,7 @@ func (d *cassandraPersistence) GetTransferTasks(
 		defaultVisibilityTimestamp,
 		request.ReadLevel,
 		request.MaxReadLevel,
-	).PageSize(request.BatchSize).PageState(request.NextPageToken)
+	).PageSize(request.BatchSize).PageState(request.NextPageToken).WithContext(ctx)
 
 	iter := query.Iter()
 	if iter == nil {
@@ -1751,7 +1759,7 @@ func (d *cassandraPersistence) GetTransferTasks(
 }
 
 func (d *cassandraPersistence) GetReplicationTasks(
-	_ context.Context,
+	ctx context.Context,
 	request *p.GetReplicationTasksRequest,
 ) (*p.InternalGetReplicationTasksResponse, error) {
 
@@ -1765,7 +1773,7 @@ func (d *cassandraPersistence) GetReplicationTasks(
 		defaultVisibilityTimestamp,
 		request.ReadLevel,
 		request.MaxReadLevel,
-	).PageSize(request.BatchSize).PageState(request.NextPageToken)
+	).PageSize(request.BatchSize).PageState(request.NextPageToken).WithContext(ctx)
 
 	return d.populateGetReplicationTasksResponse(query)
 }
@@ -1801,7 +1809,7 @@ func (d *cassandraPersistence) populateGetReplicationTasksResponse(
 }
 
 func (d *cassandraPersistence) CompleteTransferTask(
-	_ context.Context,
+	ctx context.Context,
 	request *p.CompleteTransferTaskRequest,
 ) error {
 	query := d.session.Query(templateCompleteTransferTaskQuery,
@@ -1811,7 +1819,8 @@ func (d *cassandraPersistence) CompleteTransferTask(
 		rowTypeTransferWorkflowID,
 		rowTypeTransferRunID,
 		defaultVisibilityTimestamp,
-		request.TaskID)
+		request.TaskID,
+	).WithContext(ctx)
 
 	err := query.Exec()
 	if err != nil {
@@ -1822,7 +1831,7 @@ func (d *cassandraPersistence) CompleteTransferTask(
 }
 
 func (d *cassandraPersistence) RangeCompleteTransferTask(
-	_ context.Context,
+	ctx context.Context,
 	request *p.RangeCompleteTransferTaskRequest,
 ) error {
 	query := d.session.Query(templateRangeCompleteTransferTaskQuery,
@@ -1834,7 +1843,7 @@ func (d *cassandraPersistence) RangeCompleteTransferTask(
 		defaultVisibilityTimestamp,
 		request.ExclusiveBeginTaskID,
 		request.InclusiveEndTaskID,
-	)
+	).WithContext(ctx)
 
 	err := query.Exec()
 	if err != nil {
@@ -1845,7 +1854,7 @@ func (d *cassandraPersistence) RangeCompleteTransferTask(
 }
 
 func (d *cassandraPersistence) CompleteReplicationTask(
-	_ context.Context,
+	ctx context.Context,
 	request *p.CompleteReplicationTaskRequest,
 ) error {
 	query := d.session.Query(templateCompleteReplicationTaskQuery,
@@ -1855,7 +1864,8 @@ func (d *cassandraPersistence) CompleteReplicationTask(
 		rowTypeReplicationWorkflowID,
 		rowTypeReplicationRunID,
 		defaultVisibilityTimestamp,
-		request.TaskID)
+		request.TaskID,
+	).WithContext(ctx)
 
 	err := query.Exec()
 	if err != nil {
@@ -1866,7 +1876,7 @@ func (d *cassandraPersistence) CompleteReplicationTask(
 }
 
 func (d *cassandraPersistence) RangeCompleteReplicationTask(
-	_ context.Context,
+	ctx context.Context,
 	request *p.RangeCompleteReplicationTaskRequest,
 ) error {
 
@@ -1878,7 +1888,7 @@ func (d *cassandraPersistence) RangeCompleteReplicationTask(
 		rowTypeReplicationRunID,
 		defaultVisibilityTimestamp,
 		request.InclusiveEndTaskID,
-	)
+	).WithContext(ctx)
 
 	err := query.Exec()
 	if err != nil {
@@ -1889,7 +1899,7 @@ func (d *cassandraPersistence) RangeCompleteReplicationTask(
 }
 
 func (d *cassandraPersistence) CompleteTimerTask(
-	_ context.Context,
+	ctx context.Context,
 	request *p.CompleteTimerTaskRequest,
 ) error {
 	ts := p.UnixNanoToDBTimestamp(request.VisibilityTimestamp.UnixNano())
@@ -1900,7 +1910,8 @@ func (d *cassandraPersistence) CompleteTimerTask(
 		rowTypeTimerWorkflowID,
 		rowTypeTimerRunID,
 		ts,
-		request.TaskID)
+		request.TaskID,
+	).WithContext(ctx)
 
 	err := query.Exec()
 	if err != nil {
@@ -1911,7 +1922,7 @@ func (d *cassandraPersistence) CompleteTimerTask(
 }
 
 func (d *cassandraPersistence) RangeCompleteTimerTask(
-	_ context.Context,
+	ctx context.Context,
 	request *p.RangeCompleteTimerTaskRequest,
 ) error {
 	start := p.UnixNanoToDBTimestamp(request.InclusiveBeginTimestamp.UnixNano())
@@ -1924,7 +1935,7 @@ func (d *cassandraPersistence) RangeCompleteTimerTask(
 		rowTypeTimerRunID,
 		start,
 		end,
-	)
+	).WithContext(ctx)
 
 	err := query.Exec()
 	if err != nil {
@@ -1935,7 +1946,7 @@ func (d *cassandraPersistence) RangeCompleteTimerTask(
 }
 
 func (d *cassandraPersistence) GetTimerIndexTasks(
-	_ context.Context,
+	ctx context.Context,
 	request *p.GetTimerIndexTasksRequest,
 ) (*p.GetTimerIndexTasksResponse, error) {
 	// Reading timer tasks need to be quorum level consistent, otherwise we could loose task
@@ -1949,7 +1960,7 @@ func (d *cassandraPersistence) GetTimerIndexTasks(
 		rowTypeTimerRunID,
 		minTimestamp,
 		maxTimestamp,
-	).PageSize(request.BatchSize).PageState(request.NextPageToken)
+	).PageSize(request.BatchSize).PageState(request.NextPageToken).WithContext(ctx)
 
 	iter := query.Iter()
 	if iter == nil {
@@ -1979,7 +1990,7 @@ func (d *cassandraPersistence) GetTimerIndexTasks(
 }
 
 func (d *cassandraPersistence) PutReplicationTaskToDLQ(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalPutReplicationTaskToDLQRequest,
 ) error {
 	task := request.TaskInfo
@@ -2006,7 +2017,8 @@ func (d *cassandraPersistence) PutReplicationTaskToDLQ(
 		task.NewRunBranchToken,
 		defaultVisibilityTimestamp,
 		defaultVisibilityTimestamp,
-		task.TaskID)
+		task.TaskID,
+	).WithContext(ctx)
 
 	err := query.Exec()
 	if err != nil {
@@ -2017,7 +2029,7 @@ func (d *cassandraPersistence) PutReplicationTaskToDLQ(
 }
 
 func (d *cassandraPersistence) GetReplicationTasksFromDLQ(
-	_ context.Context,
+	ctx context.Context,
 	request *p.GetReplicationTasksFromDLQRequest,
 ) (*p.InternalGetReplicationTasksFromDLQResponse, error) {
 	// Reading replication tasks need to be quorum level consistent, otherwise we could loose task
@@ -2030,13 +2042,13 @@ func (d *cassandraPersistence) GetReplicationTasksFromDLQ(
 		defaultVisibilityTimestamp,
 		request.ReadLevel,
 		request.MaxReadLevel,
-	).PageSize(request.BatchSize).PageState(request.NextPageToken)
+	).PageSize(request.BatchSize).PageState(request.NextPageToken).WithContext(ctx)
 
 	return d.populateGetReplicationTasksResponse(query)
 }
 
 func (d *cassandraPersistence) GetReplicationDLQSize(
-	_ context.Context,
+	ctx context.Context,
 	request *p.GetReplicationDLQSizeRequest,
 ) (*p.GetReplicationDLQSizeResponse, error) {
 
@@ -2047,7 +2059,7 @@ func (d *cassandraPersistence) GetReplicationDLQSize(
 		rowTypeDLQDomainID,
 		request.SourceClusterName,
 		rowTypeDLQRunID,
-	)
+	).WithContext(ctx)
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
@@ -2061,7 +2073,7 @@ func (d *cassandraPersistence) GetReplicationDLQSize(
 }
 
 func (d *cassandraPersistence) DeleteReplicationTaskFromDLQ(
-	_ context.Context,
+	ctx context.Context,
 	request *p.DeleteReplicationTaskFromDLQRequest,
 ) error {
 
@@ -2073,7 +2085,7 @@ func (d *cassandraPersistence) DeleteReplicationTaskFromDLQ(
 		rowTypeDLQRunID,
 		defaultVisibilityTimestamp,
 		request.TaskID,
-	)
+	).WithContext(ctx)
 
 	err := query.Exec()
 	if err != nil {
@@ -2084,7 +2096,7 @@ func (d *cassandraPersistence) DeleteReplicationTaskFromDLQ(
 }
 
 func (d *cassandraPersistence) RangeDeleteReplicationTaskFromDLQ(
-	_ context.Context,
+	ctx context.Context,
 	request *p.RangeDeleteReplicationTaskFromDLQRequest,
 ) error {
 
@@ -2097,7 +2109,7 @@ func (d *cassandraPersistence) RangeDeleteReplicationTaskFromDLQ(
 		defaultVisibilityTimestamp,
 		request.ExclusiveBeginTaskID,
 		request.InclusiveEndTaskID,
-	)
+	).WithContext(ctx)
 
 	err := query.Exec()
 	if err != nil {
@@ -2108,11 +2120,11 @@ func (d *cassandraPersistence) RangeDeleteReplicationTaskFromDLQ(
 }
 
 func (d *cassandraPersistence) CreateFailoverMarkerTasks(
-	_ context.Context,
+	ctx context.Context,
 	request *p.CreateFailoverMarkersRequest,
 ) error {
 
-	batch := d.session.NewBatch(gocql.LoggedBatch)
+	batch := d.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 	for _, task := range request.Markers {
 		t := []p.Task{task}
 		if err := createReplicationTasks(
