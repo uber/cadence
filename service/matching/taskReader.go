@@ -25,11 +25,11 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/matching"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 var epochStartTime = time.Unix(0, 0)
@@ -93,7 +93,7 @@ dispatchLoop:
 			if !ok { // Task list getTasks pump is shutdown
 				break dispatchLoop
 			}
-			task := newInternalTask(taskInfo, tr.tlMgr.completeTask, matching.TaskSourceDbBacklog, "", false)
+			task := newInternalTask(taskInfo, tr.tlMgr.completeTask, types.TaskSourceDbBacklog, "", false)
 			for {
 				err := tr.tlMgr.DispatchTask(tr.cancelCtx, task)
 				if err == nil {

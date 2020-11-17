@@ -23,6 +23,7 @@ package persistence
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -70,9 +71,9 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionStarted(
 		WorkflowID:         request.Execution.GetWorkflowId(),
 		RunID:              request.Execution.GetRunId(),
 		WorkflowTypeName:   request.WorkflowTypeName,
-		StartTimestamp:     request.StartTimestamp,
-		ExecutionTimestamp: request.ExecutionTimestamp,
-		WorkflowTimeout:    request.WorkflowTimeout,
+		StartTimestamp:     time.Unix(0, request.StartTimestamp),
+		ExecutionTimestamp: time.Unix(0, request.ExecutionTimestamp),
+		WorkflowTimeout:    common.SecondsToDuration(request.WorkflowTimeout),
 		TaskID:             request.TaskID,
 		TaskList:           request.TaskList,
 		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
@@ -90,16 +91,16 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(
 		WorkflowID:         request.Execution.GetWorkflowId(),
 		RunID:              request.Execution.GetRunId(),
 		WorkflowTypeName:   request.WorkflowTypeName,
-		StartTimestamp:     request.StartTimestamp,
-		ExecutionTimestamp: request.ExecutionTimestamp,
+		StartTimestamp:     time.Unix(0, request.StartTimestamp),
+		ExecutionTimestamp: time.Unix(0, request.ExecutionTimestamp),
 		TaskID:             request.TaskID,
 		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
 		TaskList:           request.TaskList,
 		SearchAttributes:   request.SearchAttributes,
-		CloseTimestamp:     request.CloseTimestamp,
+		CloseTimestamp:     time.Unix(0, request.CloseTimestamp),
 		Status:             *thrift.ToWorkflowExecutionCloseStatus(&request.Status),
 		HistoryLength:      request.HistoryLength,
-		RetentionSeconds:   request.RetentionSeconds,
+		RetentionSeconds:   common.SecondsToDuration(request.RetentionSeconds),
 	}
 	return v.persistence.RecordWorkflowExecutionClosed(ctx, req)
 }
@@ -113,8 +114,8 @@ func (v *visibilityManagerImpl) UpsertWorkflowExecution(
 		WorkflowID:         request.Execution.GetWorkflowId(),
 		RunID:              request.Execution.GetRunId(),
 		WorkflowTypeName:   request.WorkflowTypeName,
-		StartTimestamp:     request.StartTimestamp,
-		ExecutionTimestamp: request.ExecutionTimestamp,
+		StartTimestamp:     time.Unix(0, request.StartTimestamp),
+		ExecutionTimestamp: time.Unix(0, request.ExecutionTimestamp),
 		TaskID:             request.TaskID,
 		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowId(), request.Execution.GetRunId()),
 		TaskList:           request.TaskList,
@@ -385,8 +386,8 @@ func (v *visibilityManagerImpl) fromInternalListWorkflowExecutionsRequest(intern
 	return &ListWorkflowExecutionsRequest{
 		DomainUUID:    internalReq.DomainUUID,
 		Domain:        internalReq.Domain,
-		EarliestTime:  internalReq.EarliestTime,
-		LatestTime:    internalReq.LatestTime,
+		EarliestTime:  internalReq.EarliestTime.UnixNano(),
+		LatestTime:    internalReq.LatestTime.UnixNano(),
 		PageSize:      internalReq.PageSize,
 		NextPageToken: internalReq.NextPageToken,
 	}
@@ -399,8 +400,8 @@ func (v *visibilityManagerImpl) toInternalListWorkflowExecutionsRequest(req *Lis
 	return &InternalListWorkflowExecutionsRequest{
 		DomainUUID:    req.DomainUUID,
 		Domain:        req.Domain,
-		EarliestTime:  req.EarliestTime,
-		LatestTime:    req.LatestTime,
+		EarliestTime:  time.Unix(0, req.EarliestTime),
+		LatestTime:    time.Unix(0, req.LatestTime),
 		PageSize:      req.PageSize,
 		NextPageToken: req.NextPageToken,
 	}

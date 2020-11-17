@@ -27,10 +27,9 @@ import (
 
 	"golang.org/x/time/rate"
 
-	"github.com/uber/cadence/.gen/go/matching"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/types"
 )
 
 // TaskMatcher matches a task producer with a task consumer
@@ -137,7 +136,7 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *internalTask) (bool, err
 			token.release()
 		default:
 			if !tm.isForwardingAllowed() && // we are the root partition and forwarding is not possible
-				task.source == matching.TaskSourceDbBacklog && // task was from backlog (stored in db)
+				task.source == types.TaskSourceDbBacklog && // task was from backlog (stored in db)
 				task.isForwarded() { // task came from a child partition
 				// a forwarded backlog task from a child partition, block trying
 				// to match with a poller until ctx timeout
@@ -174,7 +173,7 @@ func (tm *TaskMatcher) offerOrTimeout(ctx context.Context, task *internalTask) (
 // OfferQuery will either match task to local poller or will forward query task.
 // Local match is always attempted before forwarding is attempted. If local match occurs
 // response and error are both nil, if forwarding occurs then response or error is returned.
-func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask) (*shared.QueryWorkflowResponse, error) {
+func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *internalTask) (*types.QueryWorkflowResponse, error) {
 	select {
 	case tm.queryTaskC <- task:
 		<-task.responseC

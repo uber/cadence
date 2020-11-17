@@ -33,9 +33,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/history/historyservicetest"
 	"github.com/uber/cadence/.gen/go/shared"
 	gen "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -68,7 +68,7 @@ type (
 		controller          *gomock.Controller
 		mockResource        *resource.Test
 		mockDomainCache     *cache.MockDomainCache
-		mockHistoryClient   *historyservicetest.MockClient
+		mockHistoryClient   *history.MockClient
 		mockClusterMetadata *cluster.MockMetadata
 
 		mockProducer           *mocks.KafkaProducer

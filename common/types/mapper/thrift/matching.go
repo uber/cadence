@@ -758,11 +758,11 @@ func FromTaskSource(t *types.TaskSource) *matching.TaskSource {
 		return nil
 	}
 	switch *t {
-	case types.TaskSourceDbBacklog:
-		v := matching.TaskSourceDbBacklog
-		return &v
 	case types.TaskSourceHistory:
 		v := matching.TaskSourceHistory
+		return &v
+	case types.TaskSourceDbBacklog:
+		v := matching.TaskSourceDbBacklog
 		return &v
 	}
 	panic("unexpected enum value")
@@ -774,11 +774,11 @@ func ToTaskSource(t *matching.TaskSource) *types.TaskSource {
 		return nil
 	}
 	switch *t {
-	case matching.TaskSourceDbBacklog:
-		v := types.TaskSourceDbBacklog
-		return &v
 	case matching.TaskSourceHistory:
 		v := types.TaskSourceHistory
+		return &v
+	case matching.TaskSourceDbBacklog:
+		v := types.TaskSourceDbBacklog
 		return &v
 	}
 	panic("unexpected enum value")

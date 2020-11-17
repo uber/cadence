@@ -126,7 +126,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 
 	clientProvider := func(clientKey string) (interface{}, error) {
 		dispatcher := cf.rpcFactory.CreateDispatcherForOutbound(historyCaller, common.HistoryServiceName, clientKey)
-		return historyserviceclient.New(dispatcher.ClientConfig(common.HistoryServiceName)), nil
+		return history.NewThriftClient(historyserviceclient.New(dispatcher.ClientConfig(common.HistoryServiceName))), nil
 	}
 
 	client := history.NewClient(cf.numberOfHistoryShards, timeout, common.NewClientCache(keyResolver, clientProvider), cf.logger)

@@ -29,7 +29,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	workflow "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
@@ -40,6 +39,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 )
 
@@ -296,20 +297,22 @@ func (c *coordinatorImpl) notifyRemoteCoordinator(
 ) {
 
 	if len(requestByMarker) > 0 {
-		var tokens []*workflow.FailoverMarkerToken
+		var tokens []*types.FailoverMarkerToken
 		for _, request := range requestByMarker {
-			tokens = append(tokens, &workflow.FailoverMarkerToken{
+			tokens = append(tokens, &types.FailoverMarkerToken{
 				ShardIDs:       request.shardIDs,
-				FailoverMarker: request.marker,
+				FailoverMarker: thrift.ToFailoverMarkerAttributes(request.marker),
 			})
 		}
 
-		if err := c.historyClient.NotifyFailoverMarkers(
+		err := c.historyClient.NotifyFailoverMarkers(
 			ctx.Background(),
-			&workflow.NotifyFailoverMarkersRequest{
+			&types.NotifyFailoverMarkersRequest{
 				FailoverMarkerTokens: tokens,
 			},
-		); err != nil {
+		)
+		err = thrift.FromError(err)
+		if err != nil {
 			c.metrics.IncCounter(metrics.FailoverMarkerScope, metrics.FailoverMarkerNotificationFailure)
 			c.logger.Error("Failed to notify failover markers", tag.Error(err))
 		}

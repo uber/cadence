@@ -450,6 +450,11 @@ func (v *ActivityType) GetName() (o string) {
 // ArchivalStatus is an internal type (TBD...)
 type ArchivalStatus int32
 
+// Ptr is a helper function for getting pointer value
+func (e ArchivalStatus) Ptr() *ArchivalStatus {
+	return &e
+}
+
 const (
 	// ArchivalStatusDisabled is an option for ArchivalStatus
 	ArchivalStatusDisabled ArchivalStatus = iota
@@ -516,6 +521,11 @@ func (v *BadRequestError) GetMessage() (o string) {
 
 // CancelExternalWorkflowExecutionFailedCause is an internal type (TBD...)
 type CancelExternalWorkflowExecutionFailedCause int32
+
+// Ptr is a helper function for getting pointer value
+func (e CancelExternalWorkflowExecutionFailedCause) Ptr() *CancelExternalWorkflowExecutionFailedCause {
+	return &e
+}
 
 const (
 	// CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution is an option for CancelExternalWorkflowExecutionFailedCause
@@ -719,6 +729,11 @@ func (v *ChildWorkflowExecutionCompletedEventAttributes) GetStartedEventID() (o 
 
 // ChildWorkflowExecutionFailedCause is an internal type (TBD...)
 type ChildWorkflowExecutionFailedCause int32
+
+// Ptr is a helper function for getting pointer value
+func (e ChildWorkflowExecutionFailedCause) Ptr() *ChildWorkflowExecutionFailedCause {
+	return &e
+}
 
 const (
 	// ChildWorkflowExecutionFailedCauseWorkflowAlreadyRunning is an option for ChildWorkflowExecutionFailedCause
@@ -1034,13 +1049,18 @@ func (v *CompleteWorkflowExecutionDecisionAttributes) GetResult() (o []byte) {
 // ContinueAsNewInitiator is an internal type (TBD...)
 type ContinueAsNewInitiator int32
 
+// Ptr is a helper function for getting pointer value
+func (e ContinueAsNewInitiator) Ptr() *ContinueAsNewInitiator {
+	return &e
+}
+
 const (
-	// ContinueAsNewInitiatorCronSchedule is an option for ContinueAsNewInitiator
-	ContinueAsNewInitiatorCronSchedule ContinueAsNewInitiator = iota
 	// ContinueAsNewInitiatorDecider is an option for ContinueAsNewInitiator
-	ContinueAsNewInitiatorDecider
+	ContinueAsNewInitiatorDecider ContinueAsNewInitiator = iota
 	// ContinueAsNewInitiatorRetryPolicy is an option for ContinueAsNewInitiator
 	ContinueAsNewInitiatorRetryPolicy
+	// ContinueAsNewInitiatorCronSchedule is an option for ContinueAsNewInitiator
+	ContinueAsNewInitiatorCronSchedule
 )
 
 // ContinueAsNewWorkflowExecutionDecisionAttributes is an internal type (TBD...)
@@ -1443,53 +1463,58 @@ func (v *DecisionTaskCompletedEventAttributes) GetBinaryChecksum() (o string) {
 // DecisionTaskFailedCause is an internal type (TBD...)
 type DecisionTaskFailedCause int32
 
+// Ptr is a helper function for getting pointer value
+func (e DecisionTaskFailedCause) Ptr() *DecisionTaskFailedCause {
+	return &e
+}
+
 const (
-	// DecisionTaskFailedCauseBadBinary is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseBadBinary DecisionTaskFailedCause = iota
-	// DecisionTaskFailedCauseBadCancelTimerAttributes is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseBadCancelTimerAttributes
-	// DecisionTaskFailedCauseBadCancelWorkflowExecutionAttributes is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseBadCancelWorkflowExecutionAttributes
-	// DecisionTaskFailedCauseBadCompleteWorkflowExecutionAttributes is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseBadCompleteWorkflowExecutionAttributes
-	// DecisionTaskFailedCauseBadContinueAsNewAttributes is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseBadContinueAsNewAttributes
-	// DecisionTaskFailedCauseBadFailWorkflowExecutionAttributes is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseBadFailWorkflowExecutionAttributes
-	// DecisionTaskFailedCauseBadRecordMarkerAttributes is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseBadRecordMarkerAttributes
-	// DecisionTaskFailedCauseBadRequestCancelActivityAttributes is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseBadRequestCancelActivityAttributes
-	// DecisionTaskFailedCauseBadRequestCancelExternalWorkflowExecutionAttributes is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseBadRequestCancelExternalWorkflowExecutionAttributes
+	// DecisionTaskFailedCauseUnhandledDecision is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseUnhandledDecision DecisionTaskFailedCause = iota
 	// DecisionTaskFailedCauseBadScheduleActivityAttributes is an option for DecisionTaskFailedCause
 	DecisionTaskFailedCauseBadScheduleActivityAttributes
-	// DecisionTaskFailedCauseBadSearchAttributes is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseBadSearchAttributes
-	// DecisionTaskFailedCauseBadSignalInputSize is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseBadSignalInputSize
+	// DecisionTaskFailedCauseBadRequestCancelActivityAttributes is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseBadRequestCancelActivityAttributes
+	// DecisionTaskFailedCauseBadStartTimerAttributes is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseBadStartTimerAttributes
+	// DecisionTaskFailedCauseBadCancelTimerAttributes is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseBadCancelTimerAttributes
+	// DecisionTaskFailedCauseBadRecordMarkerAttributes is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseBadRecordMarkerAttributes
+	// DecisionTaskFailedCauseBadCompleteWorkflowExecutionAttributes is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseBadCompleteWorkflowExecutionAttributes
+	// DecisionTaskFailedCauseBadFailWorkflowExecutionAttributes is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseBadFailWorkflowExecutionAttributes
+	// DecisionTaskFailedCauseBadCancelWorkflowExecutionAttributes is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseBadCancelWorkflowExecutionAttributes
+	// DecisionTaskFailedCauseBadRequestCancelExternalWorkflowExecutionAttributes is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseBadRequestCancelExternalWorkflowExecutionAttributes
+	// DecisionTaskFailedCauseBadContinueAsNewAttributes is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseBadContinueAsNewAttributes
+	// DecisionTaskFailedCauseStartTimerDuplicateID is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseStartTimerDuplicateID
+	// DecisionTaskFailedCauseResetStickyTasklist is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseResetStickyTasklist
+	// DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure
 	// DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes is an option for DecisionTaskFailedCause
 	DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes
 	// DecisionTaskFailedCauseBadStartChildExecutionAttributes is an option for DecisionTaskFailedCause
 	DecisionTaskFailedCauseBadStartChildExecutionAttributes
-	// DecisionTaskFailedCauseBadStartTimerAttributes is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseBadStartTimerAttributes
-	// DecisionTaskFailedCauseFailoverCloseDecision is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseFailoverCloseDecision
 	// DecisionTaskFailedCauseForceCloseDecision is an option for DecisionTaskFailedCause
 	DecisionTaskFailedCauseForceCloseDecision
-	// DecisionTaskFailedCauseResetStickyTasklist is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseResetStickyTasklist
+	// DecisionTaskFailedCauseFailoverCloseDecision is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseFailoverCloseDecision
+	// DecisionTaskFailedCauseBadSignalInputSize is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseBadSignalInputSize
 	// DecisionTaskFailedCauseResetWorkflow is an option for DecisionTaskFailedCause
 	DecisionTaskFailedCauseResetWorkflow
+	// DecisionTaskFailedCauseBadBinary is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseBadBinary
 	// DecisionTaskFailedCauseScheduleActivityDuplicateID is an option for DecisionTaskFailedCause
 	DecisionTaskFailedCauseScheduleActivityDuplicateID
-	// DecisionTaskFailedCauseStartTimerDuplicateID is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseStartTimerDuplicateID
-	// DecisionTaskFailedCauseUnhandledDecision is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseUnhandledDecision
-	// DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure is an option for DecisionTaskFailedCause
-	DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure
+	// DecisionTaskFailedCauseBadSearchAttributes is an option for DecisionTaskFailedCause
+	DecisionTaskFailedCauseBadSearchAttributes
 )
 
 // DecisionTaskFailedEventAttributes is an internal type (TBD...)
@@ -1682,31 +1707,36 @@ func (v *DecisionTaskTimedOutEventAttributes) GetTimeoutType() (o TimeoutType) {
 // DecisionType is an internal type (TBD...)
 type DecisionType int32
 
+// Ptr is a helper function for getting pointer value
+func (e DecisionType) Ptr() *DecisionType {
+	return &e
+}
+
 const (
-	// DecisionTypeCancelTimer is an option for DecisionType
-	DecisionTypeCancelTimer DecisionType = iota
-	// DecisionTypeCancelWorkflowExecution is an option for DecisionType
-	DecisionTypeCancelWorkflowExecution
-	// DecisionTypeCompleteWorkflowExecution is an option for DecisionType
-	DecisionTypeCompleteWorkflowExecution
-	// DecisionTypeContinueAsNewWorkflowExecution is an option for DecisionType
-	DecisionTypeContinueAsNewWorkflowExecution
-	// DecisionTypeFailWorkflowExecution is an option for DecisionType
-	DecisionTypeFailWorkflowExecution
-	// DecisionTypeRecordMarker is an option for DecisionType
-	DecisionTypeRecordMarker
+	// DecisionTypeScheduleActivityTask is an option for DecisionType
+	DecisionTypeScheduleActivityTask DecisionType = iota
 	// DecisionTypeRequestCancelActivityTask is an option for DecisionType
 	DecisionTypeRequestCancelActivityTask
-	// DecisionTypeRequestCancelExternalWorkflowExecution is an option for DecisionType
-	DecisionTypeRequestCancelExternalWorkflowExecution
-	// DecisionTypeScheduleActivityTask is an option for DecisionType
-	DecisionTypeScheduleActivityTask
-	// DecisionTypeSignalExternalWorkflowExecution is an option for DecisionType
-	DecisionTypeSignalExternalWorkflowExecution
-	// DecisionTypeStartChildWorkflowExecution is an option for DecisionType
-	DecisionTypeStartChildWorkflowExecution
 	// DecisionTypeStartTimer is an option for DecisionType
 	DecisionTypeStartTimer
+	// DecisionTypeCompleteWorkflowExecution is an option for DecisionType
+	DecisionTypeCompleteWorkflowExecution
+	// DecisionTypeFailWorkflowExecution is an option for DecisionType
+	DecisionTypeFailWorkflowExecution
+	// DecisionTypeCancelTimer is an option for DecisionType
+	DecisionTypeCancelTimer
+	// DecisionTypeCancelWorkflowExecution is an option for DecisionType
+	DecisionTypeCancelWorkflowExecution
+	// DecisionTypeRequestCancelExternalWorkflowExecution is an option for DecisionType
+	DecisionTypeRequestCancelExternalWorkflowExecution
+	// DecisionTypeRecordMarker is an option for DecisionType
+	DecisionTypeRecordMarker
+	// DecisionTypeContinueAsNewWorkflowExecution is an option for DecisionType
+	DecisionTypeContinueAsNewWorkflowExecution
+	// DecisionTypeStartChildWorkflowExecution is an option for DecisionType
+	DecisionTypeStartChildWorkflowExecution
+	// DecisionTypeSignalExternalWorkflowExecution is an option for DecisionType
+	DecisionTypeSignalExternalWorkflowExecution
 	// DecisionTypeUpsertWorkflowSearchAttributes is an option for DecisionType
 	DecisionTypeUpsertWorkflowSearchAttributes
 )
@@ -2277,23 +2307,33 @@ func (v *DomainReplicationConfiguration) GetClusters() (o []*ClusterReplicationC
 // DomainStatus is an internal type (TBD...)
 type DomainStatus int32
 
+// Ptr is a helper function for getting pointer value
+func (e DomainStatus) Ptr() *DomainStatus {
+	return &e
+}
+
 const (
-	// DomainStatusDeleted is an option for DomainStatus
-	DomainStatusDeleted DomainStatus = iota
+	// DomainStatusRegistered is an option for DomainStatus
+	DomainStatusRegistered DomainStatus = iota
 	// DomainStatusDeprecated is an option for DomainStatus
 	DomainStatusDeprecated
-	// DomainStatusRegistered is an option for DomainStatus
-	DomainStatusRegistered
+	// DomainStatusDeleted is an option for DomainStatus
+	DomainStatusDeleted
 )
 
 // EncodingType is an internal type (TBD...)
 type EncodingType int32
 
+// Ptr is a helper function for getting pointer value
+func (e EncodingType) Ptr() *EncodingType {
+	return &e
+}
+
 const (
-	// EncodingTypeJSON is an option for EncodingType
-	EncodingTypeJSON EncodingType = iota
 	// EncodingTypeThriftRW is an option for EncodingType
-	EncodingTypeThriftRW
+	EncodingTypeThriftRW EncodingType = iota
+	// EncodingTypeJSON is an option for EncodingType
+	EncodingTypeJSON
 )
 
 // EntityNotExistsError is an internal type (TBD...)
@@ -2330,91 +2370,96 @@ func (v *EntityNotExistsError) GetActiveCluster() (o string) {
 // EventType is an internal type (TBD...)
 type EventType int32
 
+// Ptr is a helper function for getting pointer value
+func (e EventType) Ptr() *EventType {
+	return &e
+}
+
 const (
-	// EventTypeActivityTaskCancelRequested is an option for EventType
-	EventTypeActivityTaskCancelRequested EventType = iota
-	// EventTypeActivityTaskCanceled is an option for EventType
-	EventTypeActivityTaskCanceled
-	// EventTypeActivityTaskCompleted is an option for EventType
-	EventTypeActivityTaskCompleted
-	// EventTypeActivityTaskFailed is an option for EventType
-	EventTypeActivityTaskFailed
-	// EventTypeActivityTaskScheduled is an option for EventType
-	EventTypeActivityTaskScheduled
-	// EventTypeActivityTaskStarted is an option for EventType
-	EventTypeActivityTaskStarted
-	// EventTypeActivityTaskTimedOut is an option for EventType
-	EventTypeActivityTaskTimedOut
-	// EventTypeCancelTimerFailed is an option for EventType
-	EventTypeCancelTimerFailed
-	// EventTypeChildWorkflowExecutionCanceled is an option for EventType
-	EventTypeChildWorkflowExecutionCanceled
-	// EventTypeChildWorkflowExecutionCompleted is an option for EventType
-	EventTypeChildWorkflowExecutionCompleted
-	// EventTypeChildWorkflowExecutionFailed is an option for EventType
-	EventTypeChildWorkflowExecutionFailed
-	// EventTypeChildWorkflowExecutionStarted is an option for EventType
-	EventTypeChildWorkflowExecutionStarted
-	// EventTypeChildWorkflowExecutionTerminated is an option for EventType
-	EventTypeChildWorkflowExecutionTerminated
-	// EventTypeChildWorkflowExecutionTimedOut is an option for EventType
-	EventTypeChildWorkflowExecutionTimedOut
-	// EventTypeDecisionTaskCompleted is an option for EventType
-	EventTypeDecisionTaskCompleted
-	// EventTypeDecisionTaskFailed is an option for EventType
-	EventTypeDecisionTaskFailed
+	// EventTypeWorkflowExecutionStarted is an option for EventType
+	EventTypeWorkflowExecutionStarted EventType = iota
+	// EventTypeWorkflowExecutionCompleted is an option for EventType
+	EventTypeWorkflowExecutionCompleted
+	// EventTypeWorkflowExecutionFailed is an option for EventType
+	EventTypeWorkflowExecutionFailed
+	// EventTypeWorkflowExecutionTimedOut is an option for EventType
+	EventTypeWorkflowExecutionTimedOut
 	// EventTypeDecisionTaskScheduled is an option for EventType
 	EventTypeDecisionTaskScheduled
 	// EventTypeDecisionTaskStarted is an option for EventType
 	EventTypeDecisionTaskStarted
+	// EventTypeDecisionTaskCompleted is an option for EventType
+	EventTypeDecisionTaskCompleted
 	// EventTypeDecisionTaskTimedOut is an option for EventType
 	EventTypeDecisionTaskTimedOut
-	// EventTypeExternalWorkflowExecutionCancelRequested is an option for EventType
-	EventTypeExternalWorkflowExecutionCancelRequested
-	// EventTypeExternalWorkflowExecutionSignaled is an option for EventType
-	EventTypeExternalWorkflowExecutionSignaled
-	// EventTypeMarkerRecorded is an option for EventType
-	EventTypeMarkerRecorded
+	// EventTypeDecisionTaskFailed is an option for EventType
+	EventTypeDecisionTaskFailed
+	// EventTypeActivityTaskScheduled is an option for EventType
+	EventTypeActivityTaskScheduled
+	// EventTypeActivityTaskStarted is an option for EventType
+	EventTypeActivityTaskStarted
+	// EventTypeActivityTaskCompleted is an option for EventType
+	EventTypeActivityTaskCompleted
+	// EventTypeActivityTaskFailed is an option for EventType
+	EventTypeActivityTaskFailed
+	// EventTypeActivityTaskTimedOut is an option for EventType
+	EventTypeActivityTaskTimedOut
+	// EventTypeActivityTaskCancelRequested is an option for EventType
+	EventTypeActivityTaskCancelRequested
 	// EventTypeRequestCancelActivityTaskFailed is an option for EventType
 	EventTypeRequestCancelActivityTaskFailed
-	// EventTypeRequestCancelExternalWorkflowExecutionFailed is an option for EventType
-	EventTypeRequestCancelExternalWorkflowExecutionFailed
-	// EventTypeRequestCancelExternalWorkflowExecutionInitiated is an option for EventType
-	EventTypeRequestCancelExternalWorkflowExecutionInitiated
-	// EventTypeSignalExternalWorkflowExecutionFailed is an option for EventType
-	EventTypeSignalExternalWorkflowExecutionFailed
-	// EventTypeSignalExternalWorkflowExecutionInitiated is an option for EventType
-	EventTypeSignalExternalWorkflowExecutionInitiated
-	// EventTypeStartChildWorkflowExecutionFailed is an option for EventType
-	EventTypeStartChildWorkflowExecutionFailed
-	// EventTypeStartChildWorkflowExecutionInitiated is an option for EventType
-	EventTypeStartChildWorkflowExecutionInitiated
-	// EventTypeTimerCanceled is an option for EventType
-	EventTypeTimerCanceled
-	// EventTypeTimerFired is an option for EventType
-	EventTypeTimerFired
+	// EventTypeActivityTaskCanceled is an option for EventType
+	EventTypeActivityTaskCanceled
 	// EventTypeTimerStarted is an option for EventType
 	EventTypeTimerStarted
-	// EventTypeUpsertWorkflowSearchAttributes is an option for EventType
-	EventTypeUpsertWorkflowSearchAttributes
+	// EventTypeTimerFired is an option for EventType
+	EventTypeTimerFired
+	// EventTypeCancelTimerFailed is an option for EventType
+	EventTypeCancelTimerFailed
+	// EventTypeTimerCanceled is an option for EventType
+	EventTypeTimerCanceled
 	// EventTypeWorkflowExecutionCancelRequested is an option for EventType
 	EventTypeWorkflowExecutionCancelRequested
 	// EventTypeWorkflowExecutionCanceled is an option for EventType
 	EventTypeWorkflowExecutionCanceled
-	// EventTypeWorkflowExecutionCompleted is an option for EventType
-	EventTypeWorkflowExecutionCompleted
-	// EventTypeWorkflowExecutionContinuedAsNew is an option for EventType
-	EventTypeWorkflowExecutionContinuedAsNew
-	// EventTypeWorkflowExecutionFailed is an option for EventType
-	EventTypeWorkflowExecutionFailed
+	// EventTypeRequestCancelExternalWorkflowExecutionInitiated is an option for EventType
+	EventTypeRequestCancelExternalWorkflowExecutionInitiated
+	// EventTypeRequestCancelExternalWorkflowExecutionFailed is an option for EventType
+	EventTypeRequestCancelExternalWorkflowExecutionFailed
+	// EventTypeExternalWorkflowExecutionCancelRequested is an option for EventType
+	EventTypeExternalWorkflowExecutionCancelRequested
+	// EventTypeMarkerRecorded is an option for EventType
+	EventTypeMarkerRecorded
 	// EventTypeWorkflowExecutionSignaled is an option for EventType
 	EventTypeWorkflowExecutionSignaled
-	// EventTypeWorkflowExecutionStarted is an option for EventType
-	EventTypeWorkflowExecutionStarted
 	// EventTypeWorkflowExecutionTerminated is an option for EventType
 	EventTypeWorkflowExecutionTerminated
-	// EventTypeWorkflowExecutionTimedOut is an option for EventType
-	EventTypeWorkflowExecutionTimedOut
+	// EventTypeWorkflowExecutionContinuedAsNew is an option for EventType
+	EventTypeWorkflowExecutionContinuedAsNew
+	// EventTypeStartChildWorkflowExecutionInitiated is an option for EventType
+	EventTypeStartChildWorkflowExecutionInitiated
+	// EventTypeStartChildWorkflowExecutionFailed is an option for EventType
+	EventTypeStartChildWorkflowExecutionFailed
+	// EventTypeChildWorkflowExecutionStarted is an option for EventType
+	EventTypeChildWorkflowExecutionStarted
+	// EventTypeChildWorkflowExecutionCompleted is an option for EventType
+	EventTypeChildWorkflowExecutionCompleted
+	// EventTypeChildWorkflowExecutionFailed is an option for EventType
+	EventTypeChildWorkflowExecutionFailed
+	// EventTypeChildWorkflowExecutionCanceled is an option for EventType
+	EventTypeChildWorkflowExecutionCanceled
+	// EventTypeChildWorkflowExecutionTimedOut is an option for EventType
+	EventTypeChildWorkflowExecutionTimedOut
+	// EventTypeChildWorkflowExecutionTerminated is an option for EventType
+	EventTypeChildWorkflowExecutionTerminated
+	// EventTypeSignalExternalWorkflowExecutionInitiated is an option for EventType
+	EventTypeSignalExternalWorkflowExecutionInitiated
+	// EventTypeSignalExternalWorkflowExecutionFailed is an option for EventType
+	EventTypeSignalExternalWorkflowExecutionFailed
+	// EventTypeExternalWorkflowExecutionSignaled is an option for EventType
+	EventTypeExternalWorkflowExecutionSignaled
+	// EventTypeUpsertWorkflowSearchAttributes is an option for EventType
+	EventTypeUpsertWorkflowSearchAttributes
 )
 
 // ExternalWorkflowExecutionCancelRequestedEventAttributes is an internal type (TBD...)
@@ -3148,6 +3193,11 @@ func (v *HistoryEvent) GetUpsertWorkflowSearchAttributesEventAttributes() (o *Up
 // HistoryEventFilterType is an internal type (TBD...)
 type HistoryEventFilterType int32
 
+// Ptr is a helper function for getting pointer value
+func (e HistoryEventFilterType) Ptr() *HistoryEventFilterType {
+	return &e
+}
+
 const (
 	// HistoryEventFilterTypeAllEvent is an option for HistoryEventFilterType
 	HistoryEventFilterTypeAllEvent HistoryEventFilterType = iota
@@ -3158,19 +3208,24 @@ const (
 // IndexedValueType is an internal type (TBD...)
 type IndexedValueType int32
 
+// Ptr is a helper function for getting pointer value
+func (e IndexedValueType) Ptr() *IndexedValueType {
+	return &e
+}
+
 const (
-	// IndexedValueTypeBool is an option for IndexedValueType
-	IndexedValueTypeBool IndexedValueType = iota
-	// IndexedValueTypeDatetime is an option for IndexedValueType
-	IndexedValueTypeDatetime
-	// IndexedValueTypeDouble is an option for IndexedValueType
-	IndexedValueTypeDouble
-	// IndexedValueTypeInt is an option for IndexedValueType
-	IndexedValueTypeInt
+	// IndexedValueTypeString is an option for IndexedValueType
+	IndexedValueTypeString IndexedValueType = iota
 	// IndexedValueTypeKeyword is an option for IndexedValueType
 	IndexedValueTypeKeyword
-	// IndexedValueTypeString is an option for IndexedValueType
-	IndexedValueTypeString
+	// IndexedValueTypeInt is an option for IndexedValueType
+	IndexedValueTypeInt
+	// IndexedValueTypeDouble is an option for IndexedValueType
+	IndexedValueTypeDouble
+	// IndexedValueTypeBool is an option for IndexedValueType
+	IndexedValueTypeBool
+	// IndexedValueTypeDatetime is an option for IndexedValueType
+	IndexedValueTypeDatetime
 )
 
 // InternalDataInconsistencyError is an internal type (TBD...)
@@ -3649,6 +3704,11 @@ func (v *Memo) GetFields() (o map[string][]byte) {
 // ParentClosePolicy is an internal type (TBD...)
 type ParentClosePolicy int32
 
+// Ptr is a helper function for getting pointer value
+func (e ParentClosePolicy) Ptr() *ParentClosePolicy {
+	return &e
+}
+
 const (
 	// ParentClosePolicyAbandon is an option for ParentClosePolicy
 	ParentClosePolicyAbandon ParentClosePolicy = iota
@@ -3782,13 +3842,18 @@ func (v *PendingActivityInfo) GetLastFailureDetails() (o []byte) {
 // PendingActivityState is an internal type (TBD...)
 type PendingActivityState int32
 
+// Ptr is a helper function for getting pointer value
+func (e PendingActivityState) Ptr() *PendingActivityState {
+	return &e
+}
+
 const (
-	// PendingActivityStateCancelRequested is an option for PendingActivityState
-	PendingActivityStateCancelRequested PendingActivityState = iota
 	// PendingActivityStateScheduled is an option for PendingActivityState
-	PendingActivityStateScheduled
+	PendingActivityStateScheduled PendingActivityState = iota
 	// PendingActivityStateStarted is an option for PendingActivityState
 	PendingActivityStateStarted
+	// PendingActivityStateCancelRequested is an option for PendingActivityState
+	PendingActivityStateCancelRequested
 )
 
 // PendingChildExecutionInfo is an internal type (TBD...)
@@ -4232,6 +4297,11 @@ func (v *PollerInfo) GetRatePerSecond() (o float64) {
 // QueryConsistencyLevel is an internal type (TBD...)
 type QueryConsistencyLevel int32
 
+// Ptr is a helper function for getting pointer value
+func (e QueryConsistencyLevel) Ptr() *QueryConsistencyLevel {
+	return &e
+}
+
 const (
 	// QueryConsistencyLevelEventual is an option for QueryConsistencyLevel
 	QueryConsistencyLevelEventual QueryConsistencyLevel = iota
@@ -4255,11 +4325,16 @@ func (v *QueryFailedError) GetMessage() (o string) {
 // QueryRejectCondition is an internal type (TBD...)
 type QueryRejectCondition int32
 
+// Ptr is a helper function for getting pointer value
+func (e QueryRejectCondition) Ptr() *QueryRejectCondition {
+	return &e
+}
+
 const (
-	// QueryRejectConditionNotCompletedCleanly is an option for QueryRejectCondition
-	QueryRejectConditionNotCompletedCleanly QueryRejectCondition = iota
 	// QueryRejectConditionNotOpen is an option for QueryRejectCondition
-	QueryRejectConditionNotOpen
+	QueryRejectConditionNotOpen QueryRejectCondition = iota
+	// QueryRejectConditionNotCompletedCleanly is an option for QueryRejectCondition
+	QueryRejectConditionNotCompletedCleanly
 )
 
 // QueryRejected is an internal type (TBD...)
@@ -4278,6 +4353,11 @@ func (v *QueryRejected) GetCloseStatus() (o WorkflowExecutionCloseStatus) {
 // QueryResultType is an internal type (TBD...)
 type QueryResultType int32
 
+// Ptr is a helper function for getting pointer value
+func (e QueryResultType) Ptr() *QueryResultType {
+	return &e
+}
+
 const (
 	// QueryResultTypeAnswered is an option for QueryResultType
 	QueryResultTypeAnswered QueryResultType = iota
@@ -4287,6 +4367,11 @@ const (
 
 // QueryTaskCompletedType is an internal type (TBD...)
 type QueryTaskCompletedType int32
+
+// Ptr is a helper function for getting pointer value
+func (e QueryTaskCompletedType) Ptr() *QueryTaskCompletedType {
+	return &e
+}
 
 const (
 	// QueryTaskCompletedTypeCompleted is an option for QueryTaskCompletedType
@@ -5988,6 +6073,11 @@ func (v *SignalExternalWorkflowExecutionDecisionAttributes) GetChildWorkflowOnly
 // SignalExternalWorkflowExecutionFailedCause is an internal type (TBD...)
 type SignalExternalWorkflowExecutionFailedCause int32
 
+// Ptr is a helper function for getting pointer value
+func (e SignalExternalWorkflowExecutionFailedCause) Ptr() *SignalExternalWorkflowExecutionFailedCause {
+	return &e
+}
+
 const (
 	// SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution is an option for SignalExternalWorkflowExecutionFailedCause
 	SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution SignalExternalWorkflowExecutionFailedCause = iota
@@ -6992,6 +7082,11 @@ func (v *TaskList) GetKind() (o TaskListKind) {
 // TaskListKind is an internal type (TBD...)
 type TaskListKind int32
 
+// Ptr is a helper function for getting pointer value
+func (e TaskListKind) Ptr() *TaskListKind {
+	return &e
+}
+
 const (
 	// TaskListKindNormal is an option for TaskListKind
 	TaskListKindNormal TaskListKind = iota
@@ -7086,11 +7181,16 @@ func (v *TaskListStatus) GetTaskIDBlock() (o *TaskIDBlock) {
 // TaskListType is an internal type (TBD...)
 type TaskListType int32
 
+// Ptr is a helper function for getting pointer value
+func (e TaskListType) Ptr() *TaskListType {
+	return &e
+}
+
 const (
-	// TaskListTypeActivity is an option for TaskListType
-	TaskListTypeActivity TaskListType = iota
 	// TaskListTypeDecision is an option for TaskListType
-	TaskListTypeDecision
+	TaskListTypeDecision TaskListType = iota
+	// TaskListTypeActivity is an option for TaskListType
+	TaskListTypeActivity
 )
 
 // TerminateWorkflowExecutionRequest is an internal type (TBD...)
@@ -7145,15 +7245,20 @@ func (v *TerminateWorkflowExecutionRequest) GetIdentity() (o string) {
 // TimeoutType is an internal type (TBD...)
 type TimeoutType int32
 
+// Ptr is a helper function for getting pointer value
+func (e TimeoutType) Ptr() *TimeoutType {
+	return &e
+}
+
 const (
-	// TimeoutTypeHeartbeat is an option for TimeoutType
-	TimeoutTypeHeartbeat TimeoutType = iota
-	// TimeoutTypeScheduleToClose is an option for TimeoutType
-	TimeoutTypeScheduleToClose
+	// TimeoutTypeStartToClose is an option for TimeoutType
+	TimeoutTypeStartToClose TimeoutType = iota
 	// TimeoutTypeScheduleToStart is an option for TimeoutType
 	TimeoutTypeScheduleToStart
-	// TimeoutTypeStartToClose is an option for TimeoutType
-	TimeoutTypeStartToClose
+	// TimeoutTypeScheduleToClose is an option for TimeoutType
+	TimeoutTypeScheduleToClose
+	// TimeoutTypeHeartbeat is an option for TimeoutType
+	TimeoutTypeHeartbeat
 )
 
 // TimerCanceledEventAttributes is an internal type (TBD...)
@@ -7659,17 +7764,22 @@ func (v *WorkflowExecutionCanceledEventAttributes) GetDetails() (o []byte) {
 // WorkflowExecutionCloseStatus is an internal type (TBD...)
 type WorkflowExecutionCloseStatus int32
 
+// Ptr is a helper function for getting pointer value
+func (e WorkflowExecutionCloseStatus) Ptr() *WorkflowExecutionCloseStatus {
+	return &e
+}
+
 const (
-	// WorkflowExecutionCloseStatusCanceled is an option for WorkflowExecutionCloseStatus
-	WorkflowExecutionCloseStatusCanceled WorkflowExecutionCloseStatus = iota
 	// WorkflowExecutionCloseStatusCompleted is an option for WorkflowExecutionCloseStatus
-	WorkflowExecutionCloseStatusCompleted
-	// WorkflowExecutionCloseStatusContinuedAsNew is an option for WorkflowExecutionCloseStatus
-	WorkflowExecutionCloseStatusContinuedAsNew
+	WorkflowExecutionCloseStatusCompleted WorkflowExecutionCloseStatus = iota
 	// WorkflowExecutionCloseStatusFailed is an option for WorkflowExecutionCloseStatus
 	WorkflowExecutionCloseStatusFailed
+	// WorkflowExecutionCloseStatusCanceled is an option for WorkflowExecutionCloseStatus
+	WorkflowExecutionCloseStatusCanceled
 	// WorkflowExecutionCloseStatusTerminated is an option for WorkflowExecutionCloseStatus
 	WorkflowExecutionCloseStatusTerminated
+	// WorkflowExecutionCloseStatusContinuedAsNew is an option for WorkflowExecutionCloseStatus
+	WorkflowExecutionCloseStatusContinuedAsNew
 	// WorkflowExecutionCloseStatusTimedOut is an option for WorkflowExecutionCloseStatus
 	WorkflowExecutionCloseStatusTimedOut
 )
@@ -8347,11 +8457,16 @@ func (v *WorkflowExecutionTimedOutEventAttributes) GetTimeoutType() (o TimeoutTy
 // WorkflowIDReusePolicy is an internal type (TBD...)
 type WorkflowIDReusePolicy int32
 
+// Ptr is a helper function for getting pointer value
+func (e WorkflowIDReusePolicy) Ptr() *WorkflowIDReusePolicy {
+	return &e
+}
+
 const (
-	// WorkflowIDReusePolicyAllowDuplicate is an option for WorkflowIDReusePolicy
-	WorkflowIDReusePolicyAllowDuplicate WorkflowIDReusePolicy = iota
 	// WorkflowIDReusePolicyAllowDuplicateFailedOnly is an option for WorkflowIDReusePolicy
-	WorkflowIDReusePolicyAllowDuplicateFailedOnly
+	WorkflowIDReusePolicyAllowDuplicateFailedOnly WorkflowIDReusePolicy = iota
+	// WorkflowIDReusePolicyAllowDuplicate is an option for WorkflowIDReusePolicy
+	WorkflowIDReusePolicyAllowDuplicate
 	// WorkflowIDReusePolicyRejectDuplicate is an option for WorkflowIDReusePolicy
 	WorkflowIDReusePolicyRejectDuplicate
 	// WorkflowIDReusePolicyTerminateIfRunning is an option for WorkflowIDReusePolicy

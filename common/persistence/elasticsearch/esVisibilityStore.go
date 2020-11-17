@@ -97,8 +97,8 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 		request.RunID,
 		request.WorkflowTypeName,
 		request.TaskList,
-		request.StartTimestamp,
-		request.ExecutionTimestamp,
+		request.StartTimestamp.UnixNano(),
+		request.ExecutionTimestamp.UnixNano(),
 		request.TaskID,
 		request.Memo.Data,
 		request.Memo.GetEncoding(),
@@ -117,9 +117,9 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 		request.WorkflowID,
 		request.RunID,
 		request.WorkflowTypeName,
-		request.StartTimestamp,
-		request.ExecutionTimestamp,
-		request.CloseTimestamp,
+		request.StartTimestamp.UnixNano(),
+		request.ExecutionTimestamp.UnixNano(),
+		request.CloseTimestamp.UnixNano(),
 		*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 		request.HistoryLength,
 		request.TaskID,
@@ -142,8 +142,8 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 		request.RunID,
 		request.WorkflowTypeName,
 		request.TaskList,
-		request.StartTimestamp,
-		request.ExecutionTimestamp,
+		request.StartTimestamp.UnixNano(),
+		request.ExecutionTimestamp.UnixNano(),
 		request.TaskID,
 		request.Memo.Data,
 		request.Memo.GetEncoding(),
@@ -157,8 +157,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutions(
 	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		startTime := rec.StartTime.UnixNano()
-		return request.EarliestTime <= startTime && startTime <= request.LatestTime
+		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
@@ -181,8 +180,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutions(
 	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		closeTime := rec.CloseTime.UnixNano()
-		return request.EarliestTime <= closeTime && closeTime <= request.LatestTime
+		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
@@ -205,8 +203,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByType(
 	request *p.InternalListWorkflowExecutionsByTypeRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		startTime := rec.StartTime.UnixNano()
-		return request.EarliestTime <= startTime && startTime <= request.LatestTime
+		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
@@ -232,8 +229,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByType(
 	request *p.InternalListWorkflowExecutionsByTypeRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		closeTime := rec.CloseTime.UnixNano()
-		return request.EarliestTime <= closeTime && closeTime <= request.LatestTime
+		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
@@ -259,8 +255,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 	request *p.InternalListWorkflowExecutionsByWorkflowIDRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		startTime := rec.StartTime.UnixNano()
-		return request.EarliestTime <= startTime && startTime <= request.LatestTime
+		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
@@ -286,8 +281,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 	request *p.InternalListWorkflowExecutionsByWorkflowIDRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		closeTime := rec.CloseTime.UnixNano()
-		return request.EarliestTime <= closeTime && closeTime <= request.LatestTime
+		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
@@ -313,8 +307,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 	request *p.InternalListClosedWorkflowExecutionsByStatusRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		closeTime := rec.CloseTime.UnixNano()
-		return request.EarliestTime <= closeTime && closeTime <= request.LatestTime
+		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{

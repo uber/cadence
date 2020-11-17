@@ -23,15 +23,25 @@ package types
 // DLQType is an internal type (TBD...)
 type DLQType int32
 
+// Ptr is a helper function for getting pointer value
+func (e DLQType) Ptr() *DLQType {
+	return &e
+}
+
 const (
-	// DLQTypeDomain is an option for DLQType
-	DLQTypeDomain DLQType = iota
 	// DLQTypeReplication is an option for DLQType
-	DLQTypeReplication
+	DLQTypeReplication DLQType = iota
+	// DLQTypeDomain is an option for DLQType
+	DLQTypeDomain
 )
 
 // DomainOperation is an internal type (TBD...)
 type DomainOperation int32
+
+// Ptr is a helper function for getting pointer value
+func (e DomainOperation) Ptr() *DomainOperation {
+	return &e
+}
 
 const (
 	// DomainOperationCreate is an option for DomainOperation
@@ -727,21 +737,26 @@ func (v *ReplicationTaskInfo) GetScheduledID() (o int64) {
 // ReplicationTaskType is an internal type (TBD...)
 type ReplicationTaskType int32
 
+// Ptr is a helper function for getting pointer value
+func (e ReplicationTaskType) Ptr() *ReplicationTaskType {
+	return &e
+}
+
 const (
 	// ReplicationTaskTypeDomain is an option for ReplicationTaskType
 	ReplicationTaskTypeDomain ReplicationTaskType = iota
-	// ReplicationTaskTypeFailoverMarker is an option for ReplicationTaskType
-	ReplicationTaskTypeFailoverMarker
 	// ReplicationTaskTypeHistory is an option for ReplicationTaskType
 	ReplicationTaskTypeHistory
+	// ReplicationTaskTypeSyncShardStatus is an option for ReplicationTaskType
+	ReplicationTaskTypeSyncShardStatus
+	// ReplicationTaskTypeSyncActivity is an option for ReplicationTaskType
+	ReplicationTaskTypeSyncActivity
 	// ReplicationTaskTypeHistoryMetadata is an option for ReplicationTaskType
 	ReplicationTaskTypeHistoryMetadata
 	// ReplicationTaskTypeHistoryV2 is an option for ReplicationTaskType
 	ReplicationTaskTypeHistoryV2
-	// ReplicationTaskTypeSyncActivity is an option for ReplicationTaskType
-	ReplicationTaskTypeSyncActivity
-	// ReplicationTaskTypeSyncShardStatus is an option for ReplicationTaskType
-	ReplicationTaskTypeSyncShardStatus
+	// ReplicationTaskTypeFailoverMarker is an option for ReplicationTaskType
+	ReplicationTaskTypeFailoverMarker
 )
 
 // ReplicationToken is an internal type (TBD...)

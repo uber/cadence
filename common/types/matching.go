@@ -1134,9 +1134,14 @@ func (v *MatchingRespondQueryTaskCompletedRequest) GetCompletedRequest() (o *Res
 // TaskSource is an internal type (TBD...)
 type TaskSource int32
 
+// Ptr is a helper function for getting pointer value
+func (e TaskSource) Ptr() *TaskSource {
+	return &e
+}
+
 const (
-	// TaskSourceDbBacklog is an option for TaskSource
-	TaskSourceDbBacklog TaskSource = iota
 	// TaskSourceHistory is an option for TaskSource
-	TaskSourceHistory
+	TaskSourceHistory TaskSource = iota
+	// TaskSourceDbBacklog is an option for TaskSource
+	TaskSourceDbBacklog
 )

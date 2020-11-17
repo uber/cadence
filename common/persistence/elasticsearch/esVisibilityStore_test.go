@@ -74,8 +74,8 @@ var (
 		DomainUUID:   testDomainID,
 		Domain:       testDomain,
 		PageSize:     testPageSize,
-		EarliestTime: testEarliestTime,
-		LatestTime:   testLatestTime,
+		EarliestTime: time.Unix(0, testEarliestTime),
+		LatestTime:   time.Unix(0, testLatestTime),
 	}
 	testSearchResult = &p.InternalListWorkflowExecutionsResponse{}
 	errTestESSearch  = errors.New("ES error")
@@ -121,8 +121,8 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 	request.WorkflowID = "wid"
 	request.RunID = "rid"
 	request.WorkflowTypeName = "wfType"
-	request.StartTimestamp = int64(123)
-	request.ExecutionTimestamp = int64(321)
+	request.StartTimestamp = time.Unix(0, int64(123))
+	request.ExecutionTimestamp = time.Unix(0, int64(321))
 	request.TaskID = int64(111)
 	memoBytes := []byte(`test bytes`)
 	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
@@ -134,8 +134,8 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 		s.Equal(request.RunID, input.GetRunID())
 		s.Equal(request.TaskID, input.GetVersion())
 		s.Equal(request.WorkflowTypeName, fields[es.WorkflowType].GetStringData())
-		s.Equal(request.StartTimestamp, fields[es.StartTime].GetIntData())
-		s.Equal(request.ExecutionTimestamp, fields[es.ExecutionTime].GetIntData())
+		s.Equal(request.StartTimestamp.UnixNano(), fields[es.StartTime].GetIntData())
+		s.Equal(request.ExecutionTimestamp.UnixNano(), fields[es.ExecutionTime].GetIntData())
 		s.Equal(memoBytes, fields[es.Memo].GetBinaryData())
 		s.Equal(string(common.EncodingTypeThriftRW), fields[es.Encoding].GetStringData())
 		return true
@@ -176,12 +176,12 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 	request.WorkflowID = "wid"
 	request.RunID = "rid"
 	request.WorkflowTypeName = "wfType"
-	request.StartTimestamp = int64(123)
-	request.ExecutionTimestamp = int64(321)
+	request.StartTimestamp = time.Unix(0, int64(123))
+	request.ExecutionTimestamp = time.Unix(0, int64(321))
 	request.TaskID = int64(111)
 	memoBytes := []byte(`test bytes`)
 	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
-	request.CloseTimestamp = int64(999)
+	request.CloseTimestamp = time.Unix(0, int64(999))
 	closeStatus := workflow.WorkflowExecutionCloseStatusTerminated
 	request.Status = *thrift.ToWorkflowExecutionCloseStatus(&closeStatus)
 	request.HistoryLength = int64(20)
@@ -192,11 +192,11 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 		s.Equal(request.RunID, input.GetRunID())
 		s.Equal(request.TaskID, input.GetVersion())
 		s.Equal(request.WorkflowTypeName, fields[es.WorkflowType].GetStringData())
-		s.Equal(request.StartTimestamp, fields[es.StartTime].GetIntData())
-		s.Equal(request.ExecutionTimestamp, fields[es.ExecutionTime].GetIntData())
+		s.Equal(request.StartTimestamp.UnixNano(), fields[es.StartTime].GetIntData())
+		s.Equal(request.ExecutionTimestamp.UnixNano(), fields[es.ExecutionTime].GetIntData())
 		s.Equal(memoBytes, fields[es.Memo].GetBinaryData())
 		s.Equal(string(common.EncodingTypeThriftRW), fields[es.Encoding].GetStringData())
-		s.Equal(request.CloseTimestamp, fields[es.CloseTime].GetIntData())
+		s.Equal(request.CloseTimestamp.UnixNano(), fields[es.CloseTime].GetIntData())
 		s.Equal(int64(closeStatus), fields[es.CloseStatus].GetIntData())
 		s.Equal(request.HistoryLength, fields[es.HistoryLength].GetIntData())
 		return true

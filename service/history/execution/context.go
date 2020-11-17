@@ -1,4 +1,5 @@
 // Copyright (c) 2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -36,6 +37,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -699,10 +702,21 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		}
 		newWorkflowSizeSize := newContext.GetHistorySize()
 		startEvents := newWorkflowEventsSeq[0]
-		eventsSize, err := c.PersistFirstWorkflowEvents(ctx, startEvents)
-		if err != nil {
-			return err
+		firstEventID := startEvents.Events[0].GetEventId()
+		var eventsSize int64
+		if firstEventID == common.FirstEventID {
+			eventsSize, err = c.PersistFirstWorkflowEvents(ctx, startEvents)
+			if err != nil {
+				return err
+			}
+		} else {
+			// NOTE: This is the case for reset workflow, reset workflow already inserted a branch record
+			eventsSize, err = c.PersistNonFirstWorkflowEvents(ctx, startEvents)
+			if err != nil {
+				return err
+			}
 		}
+
 		newWorkflowSizeSize += eventsSize
 		newContext.SetHistorySize(newWorkflowSizeSize)
 		newWorkflow.ExecutionStats = &persistence.ExecutionStats{
@@ -1151,9 +1165,9 @@ func (c *contextImpl) ReapplyEvents(
 
 	// Reapply events only reapply to the current run.
 	// The run id is only used for reapply event de-duplication
-	execution := &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
+	execution := &types.WorkflowExecution{
+		WorkflowID: common.StringPtr(workflowID),
+		RunID:      common.StringPtr(runID),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), defaultRemoteCallTimeout)
 	defer cancel()
@@ -1187,14 +1201,15 @@ func (c *contextImpl) ReapplyEvents(
 			Message: fmt.Sprintf("cannot find cluster config %v to do reapply", activeCluster),
 		}
 	}
-	return sourceCluster.ReapplyEvents(
+	err = sourceCluster.ReapplyEvents(
 		ctx,
-		&workflow.ReapplyEventsRequest{
+		&types.ReapplyEventsRequest{
 			DomainName:        common.StringPtr(domainEntry.GetInfo().Name),
 			WorkflowExecution: execution,
-			Events:            reapplyEventsDataBlob.ToThrift(),
+			Events:            thrift.ToDataBlob(reapplyEventsDataBlob.ToThrift()),
 		},
 	)
+	return thrift.FromError(err)
 }
 
 func (c *contextImpl) isPersistenceTimeoutError(

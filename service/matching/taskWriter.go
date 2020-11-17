@@ -24,10 +24,11 @@ import (
 	"errors"
 	"sync/atomic"
 
-	s "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -37,7 +38,7 @@ type (
 	}
 
 	writeTaskRequest struct {
-		execution  *s.WorkflowExecution
+		execution  *types.WorkflowExecution
 		taskInfo   *persistence.TaskInfo
 		responseCh chan<- *writeTaskResponse
 	}
@@ -92,7 +93,7 @@ func (w *taskWriter) isStopped() bool {
 	return atomic.LoadInt64(&w.stopped) == 1
 }
 
-func (w *taskWriter) appendTask(execution *s.WorkflowExecution,
+func (w *taskWriter) appendTask(execution *types.WorkflowExecution,
 	taskInfo *persistence.TaskInfo) (*persistence.CreateTasksResponse, error) {
 
 	if w.isStopped() {
@@ -165,7 +166,7 @@ writerLoop:
 				for i, req := range reqs {
 					tasks = append(tasks, &persistence.CreateTaskInfo{
 						TaskID:    taskIDs[i],
-						Execution: *req.execution,
+						Execution: *thrift.FromWorkflowExecution(req.execution),
 						Data:      req.taskInfo,
 					})
 					maxReadLevel = taskIDs[i]

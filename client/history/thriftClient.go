@@ -25,10 +25,9 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
-	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type thriftClient struct {
@@ -40,158 +39,197 @@ func NewThriftClient(c historyserviceclient.Interface) Client {
 	return thriftClient{c}
 }
 
-func (t thriftClient) CloseShard(ctx context.Context, request *shared.CloseShardRequest, opts ...yarpc.CallOption) error {
-	return t.c.CloseShard(ctx, request, opts...)
+func (t thriftClient) CloseShard(ctx context.Context, request *types.CloseShardRequest, opts ...yarpc.CallOption) error {
+	err := t.c.CloseShard(ctx, thrift.FromCloseShardRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) DescribeHistoryHost(ctx context.Context, request *shared.DescribeHistoryHostRequest, opts ...yarpc.CallOption) (*shared.DescribeHistoryHostResponse, error) {
-	return t.c.DescribeHistoryHost(ctx, request, opts...)
+func (t thriftClient) DescribeHistoryHost(ctx context.Context, request *types.DescribeHistoryHostRequest, opts ...yarpc.CallOption) (*types.DescribeHistoryHostResponse, error) {
+	response, err := t.c.DescribeHistoryHost(ctx, thrift.FromDescribeHistoryHostRequest(request), opts...)
+	return thrift.ToDescribeHistoryHostResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) DescribeMutableState(ctx context.Context, request *history.DescribeMutableStateRequest, opts ...yarpc.CallOption) (*history.DescribeMutableStateResponse, error) {
-	return t.c.DescribeMutableState(ctx, request, opts...)
+func (t thriftClient) DescribeMutableState(ctx context.Context, request *types.DescribeMutableStateRequest, opts ...yarpc.CallOption) (*types.DescribeMutableStateResponse, error) {
+	response, err := t.c.DescribeMutableState(ctx, thrift.FromDescribeMutableStateRequest(request), opts...)
+	return thrift.ToDescribeMutableStateResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) DescribeQueue(ctx context.Context, request *shared.DescribeQueueRequest, opts ...yarpc.CallOption) (*shared.DescribeQueueResponse, error) {
-	return t.c.DescribeQueue(ctx, request, opts...)
+func (t thriftClient) DescribeQueue(ctx context.Context, request *types.DescribeQueueRequest, opts ...yarpc.CallOption) (*types.DescribeQueueResponse, error) {
+	response, err := t.c.DescribeQueue(ctx, thrift.FromDescribeQueueRequest(request), opts...)
+	return thrift.ToDescribeQueueResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) DescribeWorkflowExecution(ctx context.Context, request *history.DescribeWorkflowExecutionRequest, opts ...yarpc.CallOption) (*shared.DescribeWorkflowExecutionResponse, error) {
-	return t.c.DescribeWorkflowExecution(ctx, request, opts...)
+func (t thriftClient) DescribeWorkflowExecution(ctx context.Context, request *types.HistoryDescribeWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.DescribeWorkflowExecutionResponse, error) {
+	response, err := t.c.DescribeWorkflowExecution(ctx, thrift.FromHistoryDescribeWorkflowExecutionRequest(request), opts...)
+	return thrift.ToDescribeWorkflowExecutionResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) GetDLQReplicationMessages(ctx context.Context, request *replicator.GetDLQReplicationMessagesRequest, opts ...yarpc.CallOption) (*replicator.GetDLQReplicationMessagesResponse, error) {
-	return t.c.GetDLQReplicationMessages(ctx, request, opts...)
+func (t thriftClient) GetDLQReplicationMessages(ctx context.Context, request *types.GetDLQReplicationMessagesRequest, opts ...yarpc.CallOption) (*types.GetDLQReplicationMessagesResponse, error) {
+	response, err := t.c.GetDLQReplicationMessages(ctx, thrift.FromGetDLQReplicationMessagesRequest(request), opts...)
+	return thrift.ToGetDLQReplicationMessagesResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) GetMutableState(ctx context.Context, request *history.GetMutableStateRequest, opts ...yarpc.CallOption) (*history.GetMutableStateResponse, error) {
-	return t.c.GetMutableState(ctx, request, opts...)
+func (t thriftClient) GetMutableState(ctx context.Context, request *types.GetMutableStateRequest, opts ...yarpc.CallOption) (*types.GetMutableStateResponse, error) {
+	response, err := t.c.GetMutableState(ctx, thrift.FromGetMutableStateRequest(request), opts...)
+	return thrift.ToGetMutableStateResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) GetReplicationMessages(ctx context.Context, request *replicator.GetReplicationMessagesRequest, opts ...yarpc.CallOption) (*replicator.GetReplicationMessagesResponse, error) {
-	return t.c.GetReplicationMessages(ctx, request, opts...)
+func (t thriftClient) GetReplicationMessages(ctx context.Context, request *types.GetReplicationMessagesRequest, opts ...yarpc.CallOption) (*types.GetReplicationMessagesResponse, error) {
+	response, err := t.c.GetReplicationMessages(ctx, thrift.FromGetReplicationMessagesRequest(request), opts...)
+	return thrift.ToGetReplicationMessagesResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) MergeDLQMessages(ctx context.Context, request *replicator.MergeDLQMessagesRequest, opts ...yarpc.CallOption) (*replicator.MergeDLQMessagesResponse, error) {
-	return t.c.MergeDLQMessages(ctx, request, opts...)
+func (t thriftClient) MergeDLQMessages(ctx context.Context, request *types.MergeDLQMessagesRequest, opts ...yarpc.CallOption) (*types.MergeDLQMessagesResponse, error) {
+	response, err := t.c.MergeDLQMessages(ctx, thrift.FromMergeDLQMessagesRequest(request), opts...)
+	return thrift.ToMergeDLQMessagesResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) NotifyFailoverMarkers(ctx context.Context, request *history.NotifyFailoverMarkersRequest, opts ...yarpc.CallOption) error {
-	return t.c.NotifyFailoverMarkers(ctx, request, opts...)
+func (t thriftClient) NotifyFailoverMarkers(ctx context.Context, request *types.NotifyFailoverMarkersRequest, opts ...yarpc.CallOption) error {
+	err := t.c.NotifyFailoverMarkers(ctx, thrift.FromNotifyFailoverMarkersRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) PollMutableState(ctx context.Context, request *history.PollMutableStateRequest, opts ...yarpc.CallOption) (*history.PollMutableStateResponse, error) {
-	return t.c.PollMutableState(ctx, request, opts...)
+func (t thriftClient) PollMutableState(ctx context.Context, request *types.PollMutableStateRequest, opts ...yarpc.CallOption) (*types.PollMutableStateResponse, error) {
+	response, err := t.c.PollMutableState(ctx, thrift.FromPollMutableStateRequest(request), opts...)
+	return thrift.ToPollMutableStateResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) PurgeDLQMessages(ctx context.Context, request *replicator.PurgeDLQMessagesRequest, opts ...yarpc.CallOption) error {
-	return t.c.PurgeDLQMessages(ctx, request, opts...)
+func (t thriftClient) PurgeDLQMessages(ctx context.Context, request *types.PurgeDLQMessagesRequest, opts ...yarpc.CallOption) error {
+	err := t.c.PurgeDLQMessages(ctx, thrift.FromPurgeDLQMessagesRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) QueryWorkflow(ctx context.Context, request *history.QueryWorkflowRequest, opts ...yarpc.CallOption) (*history.QueryWorkflowResponse, error) {
-	return t.c.QueryWorkflow(ctx, request, opts...)
+func (t thriftClient) QueryWorkflow(ctx context.Context, request *types.HistoryQueryWorkflowRequest, opts ...yarpc.CallOption) (*types.HistoryQueryWorkflowResponse, error) {
+	response, err := t.c.QueryWorkflow(ctx, thrift.FromHistoryQueryWorkflowRequest(request), opts...)
+	return thrift.ToHistoryQueryWorkflowResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) ReadDLQMessages(ctx context.Context, request *replicator.ReadDLQMessagesRequest, opts ...yarpc.CallOption) (*replicator.ReadDLQMessagesResponse, error) {
-	return t.c.ReadDLQMessages(ctx, request, opts...)
+func (t thriftClient) ReadDLQMessages(ctx context.Context, request *types.ReadDLQMessagesRequest, opts ...yarpc.CallOption) (*types.ReadDLQMessagesResponse, error) {
+	response, err := t.c.ReadDLQMessages(ctx, thrift.FromReadDLQMessagesRequest(request), opts...)
+	return thrift.ToReadDLQMessagesResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) ReapplyEvents(ctx context.Context, request *history.ReapplyEventsRequest, opts ...yarpc.CallOption) error {
-	return t.c.ReapplyEvents(ctx, request, opts...)
+func (t thriftClient) ReapplyEvents(ctx context.Context, request *types.HistoryReapplyEventsRequest, opts ...yarpc.CallOption) error {
+	err := t.c.ReapplyEvents(ctx, thrift.FromHistoryReapplyEventsRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) RecordActivityTaskHeartbeat(ctx context.Context, request *history.RecordActivityTaskHeartbeatRequest, opts ...yarpc.CallOption) (*shared.RecordActivityTaskHeartbeatResponse, error) {
-	return t.c.RecordActivityTaskHeartbeat(ctx, request, opts...)
+func (t thriftClient) RecordActivityTaskHeartbeat(ctx context.Context, request *types.HistoryRecordActivityTaskHeartbeatRequest, opts ...yarpc.CallOption) (*types.RecordActivityTaskHeartbeatResponse, error) {
+	response, err := t.c.RecordActivityTaskHeartbeat(ctx, thrift.FromHistoryRecordActivityTaskHeartbeatRequest(request), opts...)
+	return thrift.ToRecordActivityTaskHeartbeatResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) RecordActivityTaskStarted(ctx context.Context, request *history.RecordActivityTaskStartedRequest, opts ...yarpc.CallOption) (*history.RecordActivityTaskStartedResponse, error) {
-	return t.c.RecordActivityTaskStarted(ctx, request, opts...)
+func (t thriftClient) RecordActivityTaskStarted(ctx context.Context, request *types.RecordActivityTaskStartedRequest, opts ...yarpc.CallOption) (*types.RecordActivityTaskStartedResponse, error) {
+	response, err := t.c.RecordActivityTaskStarted(ctx, thrift.FromRecordActivityTaskStartedRequest(request), opts...)
+	return thrift.ToRecordActivityTaskStartedResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) RecordChildExecutionCompleted(ctx context.Context, request *history.RecordChildExecutionCompletedRequest, opts ...yarpc.CallOption) error {
-	return t.c.RecordChildExecutionCompleted(ctx, request, opts...)
+func (t thriftClient) RecordChildExecutionCompleted(ctx context.Context, request *types.RecordChildExecutionCompletedRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RecordChildExecutionCompleted(ctx, thrift.FromRecordChildExecutionCompletedRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) RecordDecisionTaskStarted(ctx context.Context, request *history.RecordDecisionTaskStartedRequest, opts ...yarpc.CallOption) (*history.RecordDecisionTaskStartedResponse, error) {
-	return t.c.RecordDecisionTaskStarted(ctx, request, opts...)
+func (t thriftClient) RecordDecisionTaskStarted(ctx context.Context, request *types.RecordDecisionTaskStartedRequest, opts ...yarpc.CallOption) (*types.RecordDecisionTaskStartedResponse, error) {
+	response, err := t.c.RecordDecisionTaskStarted(ctx, thrift.FromRecordDecisionTaskStartedRequest(request), opts...)
+	return thrift.ToRecordDecisionTaskStartedResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) RefreshWorkflowTasks(ctx context.Context, request *history.RefreshWorkflowTasksRequest, opts ...yarpc.CallOption) error {
-	return t.c.RefreshWorkflowTasks(ctx, request, opts...)
+func (t thriftClient) RefreshWorkflowTasks(ctx context.Context, request *types.HistoryRefreshWorkflowTasksRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RefreshWorkflowTasks(ctx, thrift.FromHistoryRefreshWorkflowTasksRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) RemoveSignalMutableState(ctx context.Context, request *history.RemoveSignalMutableStateRequest, opts ...yarpc.CallOption) error {
-	return t.c.RemoveSignalMutableState(ctx, request, opts...)
+func (t thriftClient) RemoveSignalMutableState(ctx context.Context, request *types.RemoveSignalMutableStateRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RemoveSignalMutableState(ctx, thrift.FromRemoveSignalMutableStateRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) RemoveTask(ctx context.Context, request *shared.RemoveTaskRequest, opts ...yarpc.CallOption) error {
-	return t.c.RemoveTask(ctx, request, opts...)
+func (t thriftClient) RemoveTask(ctx context.Context, request *types.RemoveTaskRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RemoveTask(ctx, thrift.FromRemoveTaskRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) ReplicateEventsV2(ctx context.Context, request *history.ReplicateEventsV2Request, opts ...yarpc.CallOption) error {
-	return t.c.ReplicateEventsV2(ctx, request, opts...)
+func (t thriftClient) ReplicateEventsV2(ctx context.Context, request *types.ReplicateEventsV2Request, opts ...yarpc.CallOption) error {
+	err := t.c.ReplicateEventsV2(ctx, thrift.FromReplicateEventsV2Request(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) RequestCancelWorkflowExecution(ctx context.Context, request *history.RequestCancelWorkflowExecutionRequest, opts ...yarpc.CallOption) error {
-	return t.c.RequestCancelWorkflowExecution(ctx, request, opts...)
+func (t thriftClient) RequestCancelWorkflowExecution(ctx context.Context, request *types.HistoryRequestCancelWorkflowExecutionRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RequestCancelWorkflowExecution(ctx, thrift.FromHistoryRequestCancelWorkflowExecutionRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) ResetQueue(ctx context.Context, request *shared.ResetQueueRequest, opts ...yarpc.CallOption) error {
-	return t.c.ResetQueue(ctx, request, opts...)
+func (t thriftClient) ResetQueue(ctx context.Context, request *types.ResetQueueRequest, opts ...yarpc.CallOption) error {
+	err := t.c.ResetQueue(ctx, thrift.FromResetQueueRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) ResetStickyTaskList(ctx context.Context, request *history.ResetStickyTaskListRequest, opts ...yarpc.CallOption) (*history.ResetStickyTaskListResponse, error) {
-	return t.c.ResetStickyTaskList(ctx, request, opts...)
+func (t thriftClient) ResetStickyTaskList(ctx context.Context, request *types.HistoryResetStickyTaskListRequest, opts ...yarpc.CallOption) (*types.HistoryResetStickyTaskListResponse, error) {
+	response, err := t.c.ResetStickyTaskList(ctx, thrift.FromHistoryResetStickyTaskListRequest(request), opts...)
+	return thrift.ToHistoryResetStickyTaskListResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) ResetWorkflowExecution(ctx context.Context, request *history.ResetWorkflowExecutionRequest, opts ...yarpc.CallOption) (*shared.ResetWorkflowExecutionResponse, error) {
-	return t.c.ResetWorkflowExecution(ctx, request, opts...)
+func (t thriftClient) ResetWorkflowExecution(ctx context.Context, request *types.HistoryResetWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.ResetWorkflowExecutionResponse, error) {
+	response, err := t.c.ResetWorkflowExecution(ctx, thrift.FromHistoryResetWorkflowExecutionRequest(request), opts...)
+	return thrift.ToResetWorkflowExecutionResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) RespondActivityTaskCanceled(ctx context.Context, request *history.RespondActivityTaskCanceledRequest, opts ...yarpc.CallOption) error {
-	return t.c.RespondActivityTaskCanceled(ctx, request, opts...)
+func (t thriftClient) RespondActivityTaskCanceled(ctx context.Context, request *types.HistoryRespondActivityTaskCanceledRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RespondActivityTaskCanceled(ctx, thrift.FromHistoryRespondActivityTaskCanceledRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) RespondActivityTaskCompleted(ctx context.Context, request *history.RespondActivityTaskCompletedRequest, opts ...yarpc.CallOption) error {
-	return t.c.RespondActivityTaskCompleted(ctx, request, opts...)
+func (t thriftClient) RespondActivityTaskCompleted(ctx context.Context, request *types.HistoryRespondActivityTaskCompletedRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RespondActivityTaskCompleted(ctx, thrift.FromHistoryRespondActivityTaskCompletedRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) RespondActivityTaskFailed(ctx context.Context, request *history.RespondActivityTaskFailedRequest, opts ...yarpc.CallOption) error {
-	return t.c.RespondActivityTaskFailed(ctx, request, opts...)
+func (t thriftClient) RespondActivityTaskFailed(ctx context.Context, request *types.HistoryRespondActivityTaskFailedRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RespondActivityTaskFailed(ctx, thrift.FromHistoryRespondActivityTaskFailedRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) RespondDecisionTaskCompleted(ctx context.Context, request *history.RespondDecisionTaskCompletedRequest, opts ...yarpc.CallOption) (*history.RespondDecisionTaskCompletedResponse, error) {
-	return t.c.RespondDecisionTaskCompleted(ctx, request, opts...)
+func (t thriftClient) RespondDecisionTaskCompleted(ctx context.Context, request *types.HistoryRespondDecisionTaskCompletedRequest, opts ...yarpc.CallOption) (*types.HistoryRespondDecisionTaskCompletedResponse, error) {
+	response, err := t.c.RespondDecisionTaskCompleted(ctx, thrift.FromHistoryRespondDecisionTaskCompletedRequest(request), opts...)
+	return thrift.ToHistoryRespondDecisionTaskCompletedResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) RespondDecisionTaskFailed(ctx context.Context, request *history.RespondDecisionTaskFailedRequest, opts ...yarpc.CallOption) error {
-	return t.c.RespondDecisionTaskFailed(ctx, request, opts...)
+func (t thriftClient) RespondDecisionTaskFailed(ctx context.Context, request *types.HistoryRespondDecisionTaskFailedRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RespondDecisionTaskFailed(ctx, thrift.FromHistoryRespondDecisionTaskFailedRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) ScheduleDecisionTask(ctx context.Context, request *history.ScheduleDecisionTaskRequest, opts ...yarpc.CallOption) error {
-	return t.c.ScheduleDecisionTask(ctx, request, opts...)
+func (t thriftClient) ScheduleDecisionTask(ctx context.Context, request *types.ScheduleDecisionTaskRequest, opts ...yarpc.CallOption) error {
+	err := t.c.ScheduleDecisionTask(ctx, thrift.FromScheduleDecisionTaskRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) SignalWithStartWorkflowExecution(ctx context.Context, request *history.SignalWithStartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*shared.StartWorkflowExecutionResponse, error) {
-	return t.c.SignalWithStartWorkflowExecution(ctx, request, opts...)
+func (t thriftClient) SignalWithStartWorkflowExecution(ctx context.Context, request *types.HistorySignalWithStartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	response, err := t.c.SignalWithStartWorkflowExecution(ctx, thrift.FromHistorySignalWithStartWorkflowExecutionRequest(request), opts...)
+	return thrift.ToStartWorkflowExecutionResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) SignalWorkflowExecution(ctx context.Context, request *history.SignalWorkflowExecutionRequest, opts ...yarpc.CallOption) error {
-	return t.c.SignalWorkflowExecution(ctx, request, opts...)
+func (t thriftClient) SignalWorkflowExecution(ctx context.Context, request *types.HistorySignalWorkflowExecutionRequest, opts ...yarpc.CallOption) error {
+	err := t.c.SignalWorkflowExecution(ctx, thrift.FromHistorySignalWorkflowExecutionRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) StartWorkflowExecution(ctx context.Context, request *history.StartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*shared.StartWorkflowExecutionResponse, error) {
-	return t.c.StartWorkflowExecution(ctx, request, opts...)
+func (t thriftClient) StartWorkflowExecution(ctx context.Context, request *types.HistoryStartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	response, err := t.c.StartWorkflowExecution(ctx, thrift.FromHistoryStartWorkflowExecutionRequest(request), opts...)
+	return thrift.ToStartWorkflowExecutionResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) SyncActivity(ctx context.Context, request *history.SyncActivityRequest, opts ...yarpc.CallOption) error {
-	return t.c.SyncActivity(ctx, request, opts...)
+func (t thriftClient) SyncActivity(ctx context.Context, request *types.SyncActivityRequest, opts ...yarpc.CallOption) error {
+	err := t.c.SyncActivity(ctx, thrift.FromSyncActivityRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) SyncShardStatus(ctx context.Context, request *history.SyncShardStatusRequest, opts ...yarpc.CallOption) error {
-	return t.c.SyncShardStatus(ctx, request, opts...)
+func (t thriftClient) SyncShardStatus(ctx context.Context, request *types.SyncShardStatusRequest, opts ...yarpc.CallOption) error {
+	err := t.c.SyncShardStatus(ctx, thrift.FromSyncShardStatusRequest(request), opts...)
+	return thrift.ToError(err)
 }
 
-func (t thriftClient) TerminateWorkflowExecution(ctx context.Context, request *history.TerminateWorkflowExecutionRequest, opts ...yarpc.CallOption) error {
-	return t.c.TerminateWorkflowExecution(ctx, request, opts...)
+func (t thriftClient) TerminateWorkflowExecution(ctx context.Context, request *types.HistoryTerminateWorkflowExecutionRequest, opts ...yarpc.CallOption) error {
+	err := t.c.TerminateWorkflowExecution(ctx, thrift.FromHistoryTerminateWorkflowExecutionRequest(request), opts...)
+	return thrift.ToError(err)
 }
