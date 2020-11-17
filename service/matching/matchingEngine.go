@@ -29,13 +29,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber/cadence/common/membership"
-
 	"github.com/pborman/uuid"
 
-	h "github.com/uber/cadence/.gen/go/history"
-	m "github.com/uber/cadence/.gen/go/matching"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
@@ -44,10 +39,10 @@ import (
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 // Implements matching.Engine
@@ -85,9 +80,9 @@ type (
 
 var (
 	// EmptyPollForDecisionTaskResponse is the response when there are no decision tasks to hand out
-	emptyPollForDecisionTaskResponse = &m.PollForDecisionTaskResponse{}
+	emptyPollForDecisionTaskResponse = &types.MatchingPollForDecisionTaskResponse{}
 	// EmptyPollForActivityTaskResponse is the response when there are no activity tasks to hand out
-	emptyPollForActivityTaskResponse   = &workflow.PollForActivityTaskResponse{}
+	emptyPollForActivityTaskResponse   = &types.PollForActivityTaskResponse{}
 	persistenceOperationRetryPolicy    = common.CreatePersistenceRetryPolicy()
 	historyServiceOperationRetryPolicy = common.CreateHistoryServiceRetryPolicy()
 
@@ -166,7 +161,7 @@ func (e *matchingEngineImpl) String() string {
 // Returns taskListManager for a task list. If not already cached gets new range from DB and
 // if successful creates one.
 func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID,
-	taskListKind *workflow.TaskListKind) (taskListManager, error) {
+	taskListKind *types.TaskListKind) (taskListManager, error) {
 	// The first check is an optimization so almost all requests will have a task list manager
 	// and return avoiding the write lock
 	e.taskListsLock.RLock()
@@ -215,17 +210,17 @@ func (e *matchingEngineImpl) removeTaskListManager(id *taskListID) {
 // AddDecisionTask either delivers task directly to waiting poller or save it into task list persistence.
 func (e *matchingEngineImpl) AddDecisionTask(
 	hCtx *handlerContext,
-	request *m.AddDecisionTaskRequest,
+	request *types.AddDecisionTaskRequest,
 ) (bool, error) {
 	domainID := request.GetDomainUUID()
 	taskListName := request.TaskList.GetName()
-	taskListKind := common.TaskListKindPtr(request.TaskList.GetKind())
+	taskListKind := request.TaskList.Kind
 
 	e.logger.Debug(
 		fmt.Sprintf("Received AddDecisionTask for taskList=%v, WorkflowID=%v, RunID=%v, ScheduleToStartTimeout=%v",
 			request.TaskList.GetName(),
-			request.Execution.GetWorkflowId(),
-			request.Execution.GetRunId(),
+			request.Execution.GetWorkflowID(),
+			request.Execution.GetRunID(),
 			request.GetScheduleToStartTimeoutSeconds()))
 
 	taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
@@ -240,9 +235,9 @@ func (e *matchingEngineImpl) AddDecisionTask(
 
 	taskInfo := &persistence.TaskInfo{
 		DomainID:               domainID,
-		RunID:                  request.Execution.GetRunId(),
-		WorkflowID:             request.Execution.GetWorkflowId(),
-		ScheduleID:             request.GetScheduleId(),
+		RunID:                  request.Execution.GetRunID(),
+		WorkflowID:             request.Execution.GetWorkflowID(),
+		ScheduleID:             request.GetScheduleID(),
 		ScheduleToStartTimeout: request.GetScheduleToStartTimeoutSeconds(),
 		CreatedTime:            time.Now(),
 	}
@@ -257,18 +252,18 @@ func (e *matchingEngineImpl) AddDecisionTask(
 // AddActivityTask either delivers task directly to waiting poller or save it into task list persistence.
 func (e *matchingEngineImpl) AddActivityTask(
 	hCtx *handlerContext,
-	request *m.AddActivityTaskRequest,
+	request *types.AddActivityTaskRequest,
 ) (bool, error) {
 	domainID := request.GetDomainUUID()
 	sourceDomainID := request.GetSourceDomainUUID()
 	taskListName := request.TaskList.GetName()
-	taskListKind := common.TaskListKindPtr(request.TaskList.GetKind())
+	taskListKind := request.TaskList.Kind
 
 	e.logger.Debug(
 		fmt.Sprintf("Received AddActivityTask for taskList=%v WorkflowID=%v, RunID=%v",
 			taskListName,
-			request.Execution.WorkflowId,
-			request.Execution.RunId))
+			request.Execution.WorkflowID,
+			request.Execution.RunID))
 
 	taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity)
 	if err != nil {
@@ -282,9 +277,9 @@ func (e *matchingEngineImpl) AddActivityTask(
 
 	taskInfo := &persistence.TaskInfo{
 		DomainID:               sourceDomainID,
-		RunID:                  request.Execution.GetRunId(),
-		WorkflowID:             request.Execution.GetWorkflowId(),
-		ScheduleID:             request.GetScheduleId(),
+		RunID:                  request.Execution.GetRunID(),
+		WorkflowID:             request.Execution.GetWorkflowID(),
+		ScheduleID:             request.GetScheduleID(),
 		ScheduleToStartTimeout: request.GetScheduleToStartTimeoutSeconds(),
 		CreatedTime:            time.Now(),
 	}
@@ -299,8 +294,8 @@ func (e *matchingEngineImpl) AddActivityTask(
 // PollForDecisionTask tries to get the decision task using exponential backoff.
 func (e *matchingEngineImpl) PollForDecisionTask(
 	hCtx *handlerContext,
-	req *m.PollForDecisionTaskRequest,
-) (*m.PollForDecisionTaskResponse, error) {
+	req *types.MatchingPollForDecisionTaskRequest,
+) (*types.MatchingPollForDecisionTaskResponse, error) {
 	domainID := req.GetDomainUUID()
 	pollerID := req.GetPollerID()
 	request := req.PollRequest
@@ -320,7 +315,7 @@ pollLoop:
 		if err != nil {
 			return nil, err
 		}
-		taskListKind := common.TaskListKindPtr(request.TaskList.GetKind())
+		taskListKind := request.TaskList.Kind
 		task, err := e.getTask(pollerCtx, taskList, nil, taskListKind)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
@@ -342,12 +337,10 @@ pollLoop:
 
 			// for query task, we don't need to update history to record decision task started. but we need to know
 			// the NextEventID so front end knows what are the history events to load for this decision task.
-			clientResp, err := e.historyService.GetMutableState(hCtx.Context, &types.GetMutableStateRequest{
+			mutableStateResp, err := e.historyService.GetMutableState(hCtx.Context, &types.GetMutableStateRequest{
 				DomainUUID: req.DomainUUID,
-				Execution:  thrift.ToWorkflowExecution(task.workflowExecution()),
+				Execution:  task.workflowExecution(),
 			})
-			mutableStateResp := thrift.FromGetMutableStateResponse(clientResp)
-			err = thrift.FromError(err)
 			if err != nil {
 				// will notify query client that the query task failed
 				e.deliverQueryResult(task.query.taskID, &queryResult{internalError: err}) //nolint:errcheck
@@ -359,9 +352,9 @@ pollLoop:
 			if len(mutableStateResp.StickyTaskList.GetName()) != 0 && supportsSticky {
 				isStickyEnabled = true
 			}
-			resp := &h.RecordDecisionTaskStartedResponse{
-				PreviousStartedEventId:    mutableStateResp.PreviousStartedEventId,
-				NextEventId:               mutableStateResp.NextEventId,
+			resp := &types.RecordDecisionTaskStartedResponse{
+				PreviousStartedEventID:    mutableStateResp.PreviousStartedEventID,
+				NextEventID:               mutableStateResp.NextEventID,
 				WorkflowType:              mutableStateResp.WorkflowType,
 				StickyExecutionEnabled:    common.BoolPtr(isStickyEnabled),
 				WorkflowExecutionTaskList: mutableStateResp.TaskList,
@@ -373,7 +366,7 @@ pollLoop:
 		resp, err := e.recordDecisionTaskStarted(hCtx.Context, request, task)
 		if err != nil {
 			switch err.(type) {
-			case *workflow.EntityNotExistsError, *h.EventAlreadyStartedError:
+			case *types.EntityNotExistsError, *types.EventAlreadyStartedError:
 				e.logger.Debug(fmt.Sprintf("Duplicated decision task taskList=%v, taskID=%v",
 					taskListName, task.event.TaskID))
 				task.finish(nil)
@@ -393,8 +386,8 @@ pollLoop:
 // error. Timeouts handled by the timer queue.
 func (e *matchingEngineImpl) PollForActivityTask(
 	hCtx *handlerContext,
-	req *m.PollForActivityTaskRequest,
-) (*workflow.PollForActivityTaskResponse, error) {
+	req *types.MatchingPollForActivityTaskRequest,
+) (*types.PollForActivityTaskResponse, error) {
 	domainID := req.GetDomainUUID()
 	pollerID := req.GetPollerID()
 	request := req.PollRequest
@@ -420,7 +413,7 @@ pollLoop:
 		// long-poll when frontend calls CancelOutstandingPoll API
 		pollerCtx := context.WithValue(hCtx.Context, pollerIDKey, pollerID)
 		pollerCtx = context.WithValue(pollerCtx, identityKey, request.GetIdentity())
-		taskListKind := common.TaskListKindPtr(request.TaskList.GetKind())
+		taskListKind := request.TaskList.Kind
 		task, err := e.getTask(pollerCtx, taskList, maxDispatch, taskListKind)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
@@ -440,7 +433,7 @@ pollLoop:
 		resp, err := e.recordActivityTaskStarted(hCtx.Context, request, task)
 		if err != nil {
 			switch err.(type) {
-			case *workflow.EntityNotExistsError, *h.EventAlreadyStartedError:
+			case *types.EntityNotExistsError, *types.EventAlreadyStartedError:
 				e.logger.Debug(fmt.Sprintf("Duplicated activity task taskList=%v, taskID=%v",
 					taskListName, task.event.TaskID))
 				task.finish(nil)
@@ -456,7 +449,7 @@ pollLoop:
 }
 
 type queryResult struct {
-	workerResponse *m.RespondQueryTaskCompletedRequest
+	workerResponse *types.MatchingRespondQueryTaskCompletedRequest
 	internalError  error
 }
 
@@ -464,11 +457,11 @@ type queryResult struct {
 // to be processed by worker, and then return the query result.
 func (e *matchingEngineImpl) QueryWorkflow(
 	hCtx *handlerContext,
-	queryRequest *m.QueryWorkflowRequest,
-) (*workflow.QueryWorkflowResponse, error) {
+	queryRequest *types.MatchingQueryWorkflowRequest,
+) (*types.QueryWorkflowResponse, error) {
 	domainID := queryRequest.GetDomainUUID()
 	taskListName := queryRequest.TaskList.GetName()
-	taskListKind := common.TaskListKindPtr(queryRequest.TaskList.GetKind())
+	taskListKind := queryRequest.TaskList.Kind
 	taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
 	if err != nil {
 		return nil, err
@@ -501,7 +494,7 @@ func (e *matchingEngineImpl) QueryWorkflow(
 
 		workerResponse := result.workerResponse
 		// if query was intended as consistent query check to see if worker supports consistent query
-		if queryRequest.GetQueryRequest().GetQueryConsistencyLevel() == workflow.QueryConsistencyLevelStrong {
+		if queryRequest.GetQueryRequest().GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong {
 			if err := e.versionChecker.SupportsConsistentQuery(
 				workerResponse.GetCompletedRequest().GetWorkerVersionInfo().GetImpl(),
 				workerResponse.GetCompletedRequest().GetWorkerVersionInfo().GetFeatureVersion()); err != nil {
@@ -510,19 +503,19 @@ func (e *matchingEngineImpl) QueryWorkflow(
 		}
 
 		switch workerResponse.GetCompletedRequest().GetCompletedType() {
-		case workflow.QueryTaskCompletedTypeCompleted:
-			return &workflow.QueryWorkflowResponse{QueryResult: workerResponse.GetCompletedRequest().GetQueryResult()}, nil
-		case workflow.QueryTaskCompletedTypeFailed:
-			return nil, &workflow.QueryFailedError{Message: workerResponse.GetCompletedRequest().GetErrorMessage()}
+		case types.QueryTaskCompletedTypeCompleted:
+			return &types.QueryWorkflowResponse{QueryResult: workerResponse.GetCompletedRequest().GetQueryResult()}, nil
+		case types.QueryTaskCompletedTypeFailed:
+			return nil, &types.QueryFailedError{Message: workerResponse.GetCompletedRequest().GetErrorMessage()}
 		default:
-			return nil, &workflow.InternalServiceError{Message: "unknown query completed type"}
+			return nil, &types.InternalServiceError{Message: "unknown query completed type"}
 		}
 	case <-hCtx.Done():
 		return nil, hCtx.Err()
 	}
 }
 
-func (e *matchingEngineImpl) RespondQueryTaskCompleted(hCtx *handlerContext, request *m.RespondQueryTaskCompletedRequest) error {
+func (e *matchingEngineImpl) RespondQueryTaskCompleted(hCtx *handlerContext, request *types.MatchingRespondQueryTaskCompletedRequest) error {
 	if err := e.deliverQueryResult(request.GetTaskID(), &queryResult{workerResponse: request}); err != nil {
 		hCtx.scope.IncCounter(metrics.RespondQueryTaskFailedPerTaskListCounter)
 		return err
@@ -533,7 +526,7 @@ func (e *matchingEngineImpl) RespondQueryTaskCompleted(hCtx *handlerContext, req
 func (e *matchingEngineImpl) deliverQueryResult(taskID string, queryResult *queryResult) error {
 	queryResultCh, ok := e.lockableQueryTaskMap.get(taskID)
 	if !ok {
-		return &workflow.InternalServiceError{Message: "query task not found, or already expired"}
+		return &types.InternalServiceError{Message: "query task not found, or already expired"}
 	}
 	queryResultCh <- queryResult
 	return nil
@@ -541,7 +534,7 @@ func (e *matchingEngineImpl) deliverQueryResult(taskID string, queryResult *quer
 
 func (e *matchingEngineImpl) CancelOutstandingPoll(
 	hCtx *handlerContext,
-	request *m.CancelOutstandingPollRequest,
+	request *types.CancelOutstandingPollRequest,
 ) error {
 	domainID := request.GetDomainUUID()
 	taskListType := int(request.GetTaskListType())
@@ -552,7 +545,7 @@ func (e *matchingEngineImpl) CancelOutstandingPoll(
 	if err != nil {
 		return err
 	}
-	taskListKind := common.TaskListKindPtr(request.TaskList.GetKind())
+	taskListKind := request.TaskList.Kind
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
 		return err
@@ -564,11 +557,11 @@ func (e *matchingEngineImpl) CancelOutstandingPoll(
 
 func (e *matchingEngineImpl) DescribeTaskList(
 	hCtx *handlerContext,
-	request *m.DescribeTaskListRequest,
-) (*workflow.DescribeTaskListResponse, error) {
+	request *types.MatchingDescribeTaskListRequest,
+) (*types.DescribeTaskListResponse, error) {
 	domainID := request.GetDomainUUID()
 	taskListType := persistence.TaskListTypeDecision
-	if request.DescRequest.GetTaskListType() == workflow.TaskListTypeActivity {
+	if request.DescRequest.GetTaskListType() == types.TaskListTypeActivity {
 		taskListType = persistence.TaskListTypeActivity
 	}
 	taskListName := request.DescRequest.TaskList.GetName()
@@ -576,7 +569,7 @@ func (e *matchingEngineImpl) DescribeTaskList(
 	if err != nil {
 		return nil, err
 	}
-	taskListKind := common.TaskListKindPtr(request.DescRequest.TaskList.GetKind())
+	taskListKind := request.DescRequest.TaskList.Kind
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
 		return nil, err
@@ -587,8 +580,8 @@ func (e *matchingEngineImpl) DescribeTaskList(
 
 func (e *matchingEngineImpl) ListTaskListPartitions(
 	hCtx *handlerContext,
-	request *m.ListTaskListPartitionsRequest,
-) (*workflow.ListTaskListPartitionsResponse, error) {
+	request *types.MatchingListTaskListPartitionsRequest,
+) (*types.ListTaskListPartitionsResponse, error) {
 	activityTaskListInfo, err := e.listTaskListPartitions(request, persistence.TaskListTypeActivity)
 	if err != nil {
 		return nil, err
@@ -597,7 +590,7 @@ func (e *matchingEngineImpl) ListTaskListPartitions(
 	if err != nil {
 		return nil, err
 	}
-	resp := &workflow.ListTaskListPartitionsResponse{
+	resp := &types.ListTaskListPartitionsResponse{
 		ActivityTaskListPartitions: activityTaskListInfo,
 		DecisionTaskListPartitions: decisionTaskListInfo,
 	}
@@ -606,9 +599,9 @@ func (e *matchingEngineImpl) ListTaskListPartitions(
 }
 
 func (e *matchingEngineImpl) listTaskListPartitions(
-	request *m.ListTaskListPartitionsRequest,
+	request *types.MatchingListTaskListPartitionsRequest,
 	taskListType int,
-) ([]*workflow.TaskListPartitionMetadata, error) {
+) ([]*types.TaskListPartitionMetadata, error) {
 	partitions, err := e.getAllPartitions(
 		request,
 		taskListType,
@@ -617,11 +610,11 @@ func (e *matchingEngineImpl) listTaskListPartitions(
 		return nil, err
 	}
 
-	var partitionHostInfo []*workflow.TaskListPartitionMetadata
+	var partitionHostInfo []*types.TaskListPartitionMetadata
 	for _, partition := range partitions {
 		host, _ := e.getHostInfo(partition)
 		partitionHostInfo = append(partitionHostInfo,
-			&workflow.TaskListPartitionMetadata{
+			&types.TaskListPartitionMetadata{
 				Key:           common.StringPtr(partition),
 				OwnerHostName: common.StringPtr(host),
 			})
@@ -638,7 +631,7 @@ func (e *matchingEngineImpl) getHostInfo(partitionKey string) (string, error) {
 }
 
 func (e *matchingEngineImpl) getAllPartitions(
-	request *m.ListTaskListPartitionsRequest,
+	request *types.MatchingListTaskListPartitionsRequest,
 	taskListType int,
 ) ([]string, error) {
 	var partitionKeys []string
@@ -667,7 +660,7 @@ func (e *matchingEngineImpl) getAllPartitions(
 
 // Loads a task from persistence and wraps it in a task context
 func (e *matchingEngineImpl) getTask(
-	ctx context.Context, taskList *taskListID, maxDispatchPerSecond *float64, taskListKind *workflow.TaskListKind,
+	ctx context.Context, taskList *taskListID, maxDispatchPerSecond *float64, taskListKind *types.TaskListKind,
 ) (*internalTask, error) {
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
@@ -691,9 +684,9 @@ func (e *matchingEngineImpl) unloadTaskList(id *taskListID) {
 // Populate the decision task response based on context and scheduled/started events.
 func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 	task *internalTask,
-	historyResponse *h.RecordDecisionTaskStartedResponse,
+	historyResponse *types.RecordDecisionTaskStartedResponse,
 	scope metrics.Scope,
-) *m.PollForDecisionTaskResponse {
+) *types.MatchingPollForDecisionTaskResponse {
 
 	var token []byte
 	if task.isQuery() {
@@ -710,7 +703,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 			DomainID:        task.event.DomainID,
 			WorkflowID:      task.event.WorkflowID,
 			RunID:           task.event.RunID,
-			ScheduleID:      historyResponse.GetScheduledEventId(),
+			ScheduleID:      historyResponse.GetScheduledEventID(),
 			ScheduleAttempt: historyResponse.GetAttempt(),
 		}
 		token, _ = e.tokenSerializer.Serialize(taskoken)
@@ -730,24 +723,24 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 // Populate the activity task response based on context and scheduled/started events.
 func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 	task *internalTask,
-	historyResponse *h.RecordActivityTaskStartedResponse,
+	historyResponse *types.RecordActivityTaskStartedResponse,
 	scope metrics.Scope,
-) *workflow.PollForActivityTaskResponse {
+) *types.PollForActivityTaskResponse {
 
 	scheduledEvent := historyResponse.ScheduledEvent
 	if scheduledEvent.ActivityTaskScheduledEventAttributes == nil {
 		panic("GetActivityTaskScheduledEventAttributes is not set")
 	}
 	attributes := scheduledEvent.ActivityTaskScheduledEventAttributes
-	if attributes.ActivityId == nil {
+	if attributes.ActivityID == nil {
 		panic("ActivityTaskScheduledEventAttributes.ActivityID is not set")
 	}
 	if task.responseC == nil {
 		scope.RecordTimer(metrics.AsyncMatchLatencyPerTaskList, time.Since(task.event.CreatedTime))
 	}
 
-	response := &workflow.PollForActivityTaskResponse{}
-	response.ActivityId = attributes.ActivityId
+	response := &types.PollForActivityTaskResponse{}
+	response.ActivityID = attributes.ActivityID
 	response.ActivityType = attributes.ActivityType
 	response.Header = attributes.Header
 	response.Input = attributes.Input
@@ -766,7 +759,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 		RunID:           task.event.RunID,
 		ScheduleID:      task.event.ScheduleID,
 		ScheduleAttempt: historyResponse.GetAttempt(),
-		ActivityID:      attributes.GetActivityId(),
+		ActivityID:      attributes.GetActivityID(),
 		ActivityType:    attributes.GetActivityType().GetName(),
 	}
 
@@ -780,27 +773,26 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 
 func (e *matchingEngineImpl) recordDecisionTaskStarted(
 	ctx context.Context,
-	pollReq *workflow.PollForDecisionTaskRequest,
+	pollReq *types.PollForDecisionTaskRequest,
 	task *internalTask,
-) (*h.RecordDecisionTaskStartedResponse, error) {
+) (*types.RecordDecisionTaskStartedResponse, error) {
 	request := &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        &task.event.DomainID,
-		WorkflowExecution: thrift.ToWorkflowExecution(task.workflowExecution()),
+		WorkflowExecution: task.workflowExecution(),
 		ScheduleID:        &task.event.ScheduleID,
 		TaskID:            &task.event.TaskID,
 		RequestID:         common.StringPtr(uuid.New()),
-		PollRequest:       thrift.ToPollForDecisionTaskRequest(pollReq),
+		PollRequest:       pollReq,
 	}
-	var resp *h.RecordDecisionTaskStartedResponse
+	var resp *types.RecordDecisionTaskStartedResponse
 	op := func() error {
-		clientResp, err := e.historyService.RecordDecisionTaskStarted(ctx, request)
-		resp = thrift.FromRecordDecisionTaskStartedResponse(clientResp)
-		err = thrift.FromError(err)
+		var err error
+		resp, err = e.historyService.RecordDecisionTaskStarted(ctx, request)
 		return err
 	}
 	err := backoff.Retry(op, historyServiceOperationRetryPolicy, func(err error) bool {
 		switch err.(type) {
-		case *workflow.EntityNotExistsError, *h.EventAlreadyStartedError:
+		case *types.EntityNotExistsError, *types.EventAlreadyStartedError:
 			return false
 		}
 		return true
@@ -810,27 +802,26 @@ func (e *matchingEngineImpl) recordDecisionTaskStarted(
 
 func (e *matchingEngineImpl) recordActivityTaskStarted(
 	ctx context.Context,
-	pollReq *workflow.PollForActivityTaskRequest,
+	pollReq *types.PollForActivityTaskRequest,
 	task *internalTask,
-) (*h.RecordActivityTaskStartedResponse, error) {
+) (*types.RecordActivityTaskStartedResponse, error) {
 	request := &types.RecordActivityTaskStartedRequest{
 		DomainUUID:        &task.event.DomainID,
-		WorkflowExecution: thrift.ToWorkflowExecution(task.workflowExecution()),
+		WorkflowExecution: task.workflowExecution(),
 		ScheduleID:        &task.event.ScheduleID,
 		TaskID:            &task.event.TaskID,
 		RequestID:         common.StringPtr(uuid.New()),
-		PollRequest:       thrift.ToPollForActivityTaskRequest(pollReq),
+		PollRequest:       pollReq,
 	}
-	var resp *h.RecordActivityTaskStartedResponse
+	var resp *types.RecordActivityTaskStartedResponse
 	op := func() error {
-		clientResp, err := e.historyService.RecordActivityTaskStarted(ctx, request)
-		resp = thrift.FromRecordActivityTaskStartedResponse(clientResp)
-		err = thrift.FromError(err)
+		var err error
+		resp, err = e.historyService.RecordActivityTaskStarted(ctx, request)
 		return err
 	}
 	err := backoff.Retry(op, historyServiceOperationRetryPolicy, func(err error) bool {
 		switch err.(type) {
-		case *workflow.EntityNotExistsError, *h.EventAlreadyStartedError:
+		case *types.EntityNotExistsError, *types.EventAlreadyStartedError:
 			return false
 		}
 		return true

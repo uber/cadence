@@ -131,7 +131,6 @@ func generateCredentialString(user string, password string) string {
 func registerTLSConfig(cfg *config.SQL) (sslParams url.Values, err error) {
 	sslParams = url.Values{}
 	if cfg.TLS != nil && cfg.TLS.Enabled {
-		sslParams.Set("ssl", "true")
 		sslParams.Set("sslmode", "require")
 		sslParams.Set("sslrootcert", cfg.TLS.CaFile)
 		sslParams.Set("sslkey", cfg.TLS.KeyFile)

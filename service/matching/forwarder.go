@@ -25,12 +25,10 @@ import (
 	"errors"
 	"sync/atomic"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -39,7 +37,7 @@ type (
 	Forwarder struct {
 		cfg          *forwarderConfig
 		taskListID   *taskListID
-		taskListKind shared.TaskListKind
+		taskListKind types.TaskListKind
 		client       matching.Client
 
 		// token channels that vend tokens necessary to make
@@ -91,7 +89,7 @@ var noopForwarderTokenC <-chan *ForwarderReqToken = make(chan *ForwarderReqToken
 func newForwarder(
 	cfg *forwarderConfig,
 	taskListID *taskListID,
-	kind shared.TaskListKind,
+	kind types.TaskListKind,
 	client matching.Client,
 ) *Forwarder {
 	rpsFunc := func() float64 { return float64(cfg.ForwarderMaxRatePerSecond()) }
@@ -111,7 +109,7 @@ func newForwarder(
 
 // ForwardTask forwards an activity or decision task to the parent task list partition if it exist
 func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) error {
-	if fwdr.taskListKind == shared.TaskListKindSticky {
+	if fwdr.taskListKind == types.TaskListKindSticky {
 		return errTaskListKind
 	}
 
@@ -130,28 +128,28 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) erro
 	case persistence.TaskListTypeDecision:
 		err = fwdr.client.AddDecisionTask(ctx, &types.AddDecisionTaskRequest{
 			DomainUUID: &task.event.DomainID,
-			Execution:  thrift.ToWorkflowExecution(task.workflowExecution()),
+			Execution:  task.workflowExecution(),
 			TaskList: &types.TaskList{
 				Name: &name,
-				Kind: thrift.ToTaskListKind(&fwdr.taskListKind),
+				Kind: &fwdr.taskListKind,
 			},
 			ScheduleID:                    &task.event.ScheduleID,
 			ScheduleToStartTimeoutSeconds: &task.event.ScheduleToStartTimeout,
-			Source:                        thrift.ToTaskSource(&task.source),
+			Source:                        &task.source,
 			ForwardedFrom:                 &fwdr.taskListID.name,
 		})
 	case persistence.TaskListTypeActivity:
 		err = fwdr.client.AddActivityTask(ctx, &types.AddActivityTaskRequest{
 			DomainUUID:       &fwdr.taskListID.domainID,
 			SourceDomainUUID: &task.event.DomainID,
-			Execution:        thrift.ToWorkflowExecution(task.workflowExecution()),
+			Execution:        task.workflowExecution(),
 			TaskList: &types.TaskList{
 				Name: &name,
-				Kind: thrift.ToTaskListKind(&fwdr.taskListKind),
+				Kind: &fwdr.taskListKind,
 			},
 			ScheduleID:                    &task.event.ScheduleID,
 			ScheduleToStartTimeoutSeconds: &task.event.ScheduleToStartTimeout,
-			Source:                        thrift.ToTaskSource(&task.source),
+			Source:                        &task.source,
 			ForwardedFrom:                 &fwdr.taskListID.name,
 		})
 	default:
@@ -165,9 +163,9 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) erro
 func (fwdr *Forwarder) ForwardQueryTask(
 	ctx context.Context,
 	task *internalTask,
-) (*shared.QueryWorkflowResponse, error) {
+) (*types.QueryWorkflowResponse, error) {
 
-	if fwdr.taskListKind == shared.TaskListKindSticky {
+	if fwdr.taskListKind == types.TaskListKindSticky {
 		return nil, errTaskListKind
 	}
 
@@ -180,18 +178,18 @@ func (fwdr *Forwarder) ForwardQueryTask(
 		DomainUUID: task.query.request.DomainUUID,
 		TaskList: &types.TaskList{
 			Name: &name,
-			Kind: thrift.ToTaskListKind(&fwdr.taskListKind),
+			Kind: &fwdr.taskListKind,
 		},
-		QueryRequest:  thrift.ToQueryWorkflowRequest(task.query.request.QueryRequest),
+		QueryRequest:  task.query.request.QueryRequest,
 		ForwardedFrom: &fwdr.taskListID.name,
 	})
 
-	return thrift.FromQueryWorkflowResponse(resp), fwdr.handleErr(err)
+	return resp, fwdr.handleErr(err)
 }
 
 // ForwardPoll forwards a poll request to parent task list partition if it exist
 func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
-	if fwdr.taskListKind == shared.TaskListKindSticky {
+	if fwdr.taskListKind == types.TaskListKindSticky {
 		return nil, errTaskListKind
 	}
 
@@ -211,7 +209,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 			PollRequest: &types.PollForDecisionTaskRequest{
 				TaskList: &types.TaskList{
 					Name: &name,
-					Kind: thrift.ToTaskListKind(&fwdr.taskListKind),
+					Kind: &fwdr.taskListKind,
 				},
 				Identity: &identity,
 			},
@@ -220,7 +218,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 		if err != nil {
 			return nil, fwdr.handleErr(err)
 		}
-		return newInternalStartedTask(&startedTaskInfo{decisionTaskInfo: thrift.FromMatchingPollForDecisionTaskResponse(resp)}), nil
+		return newInternalStartedTask(&startedTaskInfo{decisionTaskInfo: resp}), nil
 	case persistence.TaskListTypeActivity:
 		resp, err := fwdr.client.PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
 			DomainUUID: &fwdr.taskListID.domainID,
@@ -228,7 +226,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 			PollRequest: &types.PollForActivityTaskRequest{
 				TaskList: &types.TaskList{
 					Name: &name,
-					Kind: thrift.ToTaskListKind(&fwdr.taskListKind),
+					Kind: &fwdr.taskListKind,
 				},
 				Identity: &identity,
 			},
@@ -237,7 +235,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 		if err != nil {
 			return nil, fwdr.handleErr(err)
 		}
-		return newInternalStartedTask(&startedTaskInfo{activityTaskInfo: thrift.FromPollForActivityTaskResponse(resp)}), nil
+		return newInternalStartedTask(&startedTaskInfo{activityTaskInfo: resp}), nil
 	}
 
 	return nil, errInvalidTaskListType
@@ -269,8 +267,7 @@ func (fwdr *Forwarder) refreshTokenC(value *atomic.Value, curr *int32, maxLimit 
 }
 
 func (fwdr *Forwarder) handleErr(err error) error {
-	err = thrift.FromError(err)
-	if _, ok := err.(*shared.ServiceBusyError); ok {
+	if _, ok := err.(*types.ServiceBusyError); ok {
 		return errForwarderSlowDown
 	}
 	return err

@@ -25,8 +25,7 @@ import (
 	"sync"
 
 	"github.com/uber/cadence/common/metrics"
-
-	gen "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 type handlerContext struct {
@@ -39,7 +38,7 @@ var stickyTaskListMetricTag = metrics.TaskListTag("__sticky__")
 func newHandlerContext(
 	ctx context.Context,
 	domain string,
-	taskList *gen.TaskList,
+	taskList *types.TaskList,
 	metricsClient metrics.Client,
 	metricsScope int,
 ) *handlerContext {
@@ -52,7 +51,7 @@ func newHandlerContext(
 func newPerTaskListScope(
 	domain string,
 	taskListName string,
-	taskListKind gen.TaskListKind,
+	taskListKind types.TaskListKind,
 	client metrics.Client,
 	scopeIdx int,
 ) metrics.Scope {
@@ -61,10 +60,10 @@ func newPerTaskListScope(
 	if domain != "" {
 		domainTag = metrics.DomainTag(domain)
 	}
-	if taskListName != "" && taskListKind != gen.TaskListKindSticky {
+	if taskListName != "" && taskListKind != types.TaskListKindSticky {
 		taskListTag = metrics.TaskListTag(taskListName)
 	}
-	if taskListKind == gen.TaskListKindSticky {
+	if taskListKind == types.TaskListKindSticky {
 		taskListTag = stickyTaskListMetricTag
 	}
 	return client.Scope(scopeIdx, domainTag, taskListTag)
@@ -86,38 +85,38 @@ func (reqCtx *handlerContext) handleErr(err error) error {
 	scope := reqCtx.scope
 
 	switch err.(type) {
-	case *gen.InternalServiceError:
+	case *types.InternalServiceError:
 		scope.IncCounter(metrics.CadenceFailuresPerTaskList)
 		return err
-	case *gen.BadRequestError:
+	case *types.BadRequestError:
 		scope.IncCounter(metrics.CadenceErrBadRequestPerTaskListCounter)
 		return err
-	case *gen.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		scope.IncCounter(metrics.CadenceErrEntityNotExistsPerTaskListCounter)
 		return err
-	case *gen.WorkflowExecutionAlreadyStartedError:
+	case *types.WorkflowExecutionAlreadyStartedError:
 		scope.IncCounter(metrics.CadenceErrExecutionAlreadyStartedPerTaskListCounter)
 		return err
-	case *gen.DomainAlreadyExistsError:
+	case *types.DomainAlreadyExistsError:
 		scope.IncCounter(metrics.CadenceErrDomainAlreadyExistsPerTaskListCounter)
 		return err
-	case *gen.QueryFailedError:
+	case *types.QueryFailedError:
 		scope.IncCounter(metrics.CadenceErrQueryFailedPerTaskListCounter)
 		return err
-	case *gen.LimitExceededError:
+	case *types.LimitExceededError:
 		scope.IncCounter(metrics.CadenceErrLimitExceededPerTaskListCounter)
 		return err
-	case *gen.ServiceBusyError:
+	case *types.ServiceBusyError:
 		scope.IncCounter(metrics.CadenceErrServiceBusyPerTaskListCounter)
 		return err
-	case *gen.DomainNotActiveError:
+	case *types.DomainNotActiveError:
 		scope.IncCounter(metrics.CadenceErrDomainNotActivePerTaskListCounter)
 		return err
-	case *gen.RemoteSyncMatchedError:
+	case *types.RemoteSyncMatchedError:
 		scope.IncCounter(metrics.CadenceErrRemoteSyncMatchFailedPerTaskListCounter)
 		return err
 	default:
 		scope.IncCounter(metrics.CadenceFailuresPerTaskList)
-		return &gen.InternalServiceError{Message: err.Error()}
+		return &types.InternalServiceError{Message: err.Error()}
 	}
 }

@@ -26,33 +26,31 @@ import (
 	"time"
 
 	"github.com/uber/cadence/.gen/go/health"
-	m "github.com/uber/cadence/.gen/go/matching"
-	"github.com/uber/cadence/.gen/go/matching/matchingserviceserver"
-	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/types"
 )
 
-var _ matchingserviceserver.Interface = (*handlerImpl)(nil)
+var _ Handler = (*handlerImpl)(nil)
+
+//go:generate mockgen -copyright_file=../../LICENSE -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package matching github.com/uber/cadence/service/matching Handler
 
 type (
-	//go:generate mockgen -copyright_file=../../LICENSE -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package matching github.com/uber/cadence/service/matching Handler
-
 	// Handler interface for matching service
 	Handler interface {
 		Health(context.Context) (*health.HealthStatus, error)
-		AddActivityTask(context.Context, *m.AddActivityTaskRequest) error
-		AddDecisionTask(context.Context, *m.AddDecisionTaskRequest) error
-		CancelOutstandingPoll(context.Context, *m.CancelOutstandingPollRequest) error
-		DescribeTaskList(context.Context, *m.DescribeTaskListRequest) (*gen.DescribeTaskListResponse, error)
-		ListTaskListPartitions(context.Context, *m.ListTaskListPartitionsRequest) (*gen.ListTaskListPartitionsResponse, error)
-		PollForActivityTask(context.Context, *m.PollForActivityTaskRequest) (*gen.PollForActivityTaskResponse, error)
-		PollForDecisionTask(context.Context, *m.PollForDecisionTaskRequest) (*m.PollForDecisionTaskResponse, error)
-		QueryWorkflow(context.Context, *m.QueryWorkflowRequest) (*gen.QueryWorkflowResponse, error)
-		RespondQueryTaskCompleted(context.Context, *m.RespondQueryTaskCompletedRequest) error
+		AddActivityTask(context.Context, *types.AddActivityTaskRequest) error
+		AddDecisionTask(context.Context, *types.AddDecisionTaskRequest) error
+		CancelOutstandingPoll(context.Context, *types.CancelOutstandingPollRequest) error
+		DescribeTaskList(context.Context, *types.MatchingDescribeTaskListRequest) (*types.DescribeTaskListResponse, error)
+		ListTaskListPartitions(context.Context, *types.MatchingListTaskListPartitionsRequest) (*types.ListTaskListPartitionsResponse, error)
+		PollForActivityTask(context.Context, *types.MatchingPollForActivityTaskRequest) (*types.PollForActivityTaskResponse, error)
+		PollForDecisionTask(context.Context, *types.MatchingPollForDecisionTaskRequest) (*types.MatchingPollForDecisionTaskResponse, error)
+		QueryWorkflow(context.Context, *types.MatchingQueryWorkflowRequest) (*types.QueryWorkflowResponse, error)
+		RespondQueryTaskCompleted(context.Context, *types.MatchingRespondQueryTaskCompletedRequest) error
 	}
 
 	// handlerImpl is an implementation for matching service independent of wire protocol
@@ -68,7 +66,7 @@ type (
 )
 
 var (
-	errMatchingHostThrottle = &gen.ServiceBusyError{Message: "Matching host rps exceeded"}
+	errMatchingHostThrottle = &types.ServiceBusyError{Message: "Matching host rps exceeded"}
 )
 
 // NewHandler creates a thrift handler for the history service
@@ -120,7 +118,7 @@ func (h *handlerImpl) Health(ctx context.Context) (*health.HealthStatus, error) 
 func (h *handlerImpl) newHandlerContext(
 	ctx context.Context,
 	domainID string,
-	taskList *gen.TaskList,
+	taskList *types.TaskList,
 	scope int,
 ) *handlerContext {
 	return newHandlerContext(
@@ -135,7 +133,7 @@ func (h *handlerImpl) newHandlerContext(
 // AddActivityTask - adds an activity task.
 func (h *handlerImpl) AddActivityTask(
 	ctx context.Context,
-	request *m.AddActivityTaskRequest,
+	request *types.AddActivityTaskRequest,
 ) (retError error) {
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	startT := time.Now()
@@ -168,7 +166,7 @@ func (h *handlerImpl) AddActivityTask(
 // AddDecisionTask - adds a decision task.
 func (h *handlerImpl) AddDecisionTask(
 	ctx context.Context,
-	request *m.AddDecisionTaskRequest,
+	request *types.AddDecisionTaskRequest,
 ) (retError error) {
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	startT := time.Now()
@@ -200,8 +198,8 @@ func (h *handlerImpl) AddDecisionTask(
 // PollForActivityTask - long poll for an activity task.
 func (h *handlerImpl) PollForActivityTask(
 	ctx context.Context,
-	request *m.PollForActivityTaskRequest,
-) (resp *gen.PollForActivityTaskResponse, retError error) {
+	request *types.MatchingPollForActivityTaskRequest,
+) (resp *types.PollForActivityTaskResponse, retError error) {
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	hCtx := h.newHandlerContext(
 		ctx,
@@ -236,8 +234,8 @@ func (h *handlerImpl) PollForActivityTask(
 // PollForDecisionTask - long poll for a decision task.
 func (h *handlerImpl) PollForDecisionTask(
 	ctx context.Context,
-	request *m.PollForDecisionTaskRequest,
-) (resp *m.PollForDecisionTaskResponse, retError error) {
+	request *types.MatchingPollForDecisionTaskRequest,
+) (resp *types.MatchingPollForDecisionTaskResponse, retError error) {
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	hCtx := h.newHandlerContext(
 		ctx,
@@ -272,8 +270,8 @@ func (h *handlerImpl) PollForDecisionTask(
 // QueryWorkflow queries a given workflow synchronously and return the query result.
 func (h *handlerImpl) QueryWorkflow(
 	ctx context.Context,
-	request *m.QueryWorkflowRequest,
-) (resp *gen.QueryWorkflowResponse, retError error) {
+	request *types.MatchingQueryWorkflowRequest,
+) (resp *types.QueryWorkflowResponse, retError error) {
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	hCtx := h.newHandlerContext(
 		ctx,
@@ -300,7 +298,7 @@ func (h *handlerImpl) QueryWorkflow(
 // RespondQueryTaskCompleted responds a query task completed
 func (h *handlerImpl) RespondQueryTaskCompleted(
 	ctx context.Context,
-	request *m.RespondQueryTaskCompletedRequest,
+	request *types.MatchingRespondQueryTaskCompletedRequest,
 ) (retError error) {
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	hCtx := h.newHandlerContext(
@@ -322,7 +320,7 @@ func (h *handlerImpl) RespondQueryTaskCompleted(
 
 // CancelOutstandingPoll is used to cancel outstanding pollers
 func (h *handlerImpl) CancelOutstandingPoll(ctx context.Context,
-	request *m.CancelOutstandingPollRequest) (retError error) {
+	request *types.CancelOutstandingPollRequest) (retError error) {
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	hCtx := h.newHandlerContext(
 		ctx,
@@ -346,8 +344,8 @@ func (h *handlerImpl) CancelOutstandingPoll(ctx context.Context,
 // it will also return status of tasklist's ackManager (readLevel, ackLevel, backlogCountHint and taskIDBlock).
 func (h *handlerImpl) DescribeTaskList(
 	ctx context.Context,
-	request *m.DescribeTaskListRequest,
-) (resp *gen.DescribeTaskListResponse, retError error) {
+	request *types.MatchingDescribeTaskListRequest,
+) (resp *types.DescribeTaskListResponse, retError error) {
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	hCtx := h.newHandlerContext(
 		ctx,
@@ -370,8 +368,8 @@ func (h *handlerImpl) DescribeTaskList(
 // ListTaskListPartitions returns information about partitions for a taskList
 func (h *handlerImpl) ListTaskListPartitions(
 	ctx context.Context,
-	request *m.ListTaskListPartitionsRequest,
-) (resp *gen.ListTaskListPartitionsResponse, retError error) {
+	request *types.MatchingListTaskListPartitionsRequest,
+) (resp *types.ListTaskListPartitionsResponse, retError error) {
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	hCtx := newHandlerContext(
 		ctx,
