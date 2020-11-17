@@ -1,4 +1,5 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -81,7 +82,7 @@ func applyWorkflowMutationTx(
 		shardID,
 		parser); err != nil {
 		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Failed to update executions row. Erorr: %v", err),
+			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Failed to update executions row. Error: %v", err),
 		}
 	}
 
@@ -109,7 +110,8 @@ func applyWorkflowMutationTx(
 		domainID,
 		workflowID,
 		runID,
-		parser); err != nil {
+		parser,
+	); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -124,7 +126,8 @@ func applyWorkflowMutationTx(
 		domainID,
 		workflowID,
 		runID,
-		parser); err != nil {
+		parser,
+	); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -134,12 +137,13 @@ func applyWorkflowMutationTx(
 		ctx,
 		tx,
 		workflowMutation.UpsertChildExecutionInfos,
-		workflowMutation.DeleteChildExecutionInfo,
+		workflowMutation.DeleteChildExecutionInfos,
 		shardID,
 		domainID,
 		workflowID,
 		runID,
-		parser); err != nil {
+		parser,
+	); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -149,12 +153,13 @@ func applyWorkflowMutationTx(
 		ctx,
 		tx,
 		workflowMutation.UpsertRequestCancelInfos,
-		workflowMutation.DeleteRequestCancelInfo,
+		workflowMutation.DeleteRequestCancelInfos,
 		shardID,
 		domainID,
 		workflowID,
 		runID,
-		parser); err != nil {
+		parser,
+	); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -164,12 +169,13 @@ func applyWorkflowMutationTx(
 		ctx,
 		tx,
 		workflowMutation.UpsertSignalInfos,
-		workflowMutation.DeleteSignalInfo,
+		workflowMutation.DeleteSignalInfos,
 		shardID,
 		domainID,
 		workflowID,
 		runID,
-		parser); err != nil {
+		parser,
+	); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -179,11 +185,12 @@ func applyWorkflowMutationTx(
 		ctx,
 		tx,
 		workflowMutation.UpsertSignalRequestedIDs,
-		workflowMutation.DeleteSignalRequestedID,
+		workflowMutation.DeleteSignalRequestedIDs,
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+	); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -196,7 +203,8 @@ func applyWorkflowMutationTx(
 			shardID,
 			domainID,
 			workflowID,
-			runID); err != nil {
+			runID,
+		); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 			}
@@ -210,7 +218,8 @@ func applyWorkflowMutationTx(
 		shardID,
 		domainID,
 		workflowID,
-		runID); err != nil {
+		runID,
+	); err != nil {
 		return &workflow.InternalServiceError{
 			Message: fmt.Sprintf("applyWorkflowMutationTx failed. Error: %v", err),
 		}
@@ -433,7 +442,7 @@ func applyWorkflowSnapshotTxAsReset(
 		ctx,
 		tx,
 		workflowSnapshot.SignalRequestedIDs,
-		"",
+		nil,
 		shardID,
 		domainID,
 		workflowID,
@@ -579,7 +588,7 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 		ctx,
 		tx,
 		workflowSnapshot.SignalRequestedIDs,
-		"",
+		nil,
 		shardID,
 		domainID,
 		workflowID,
@@ -1046,80 +1055,82 @@ func createTimerTasks(
 	parser serialization.Parser,
 ) error {
 
-	if len(timerTasks) > 0 {
-		timerTasksRows := make([]sqlplugin.TimerTasksRow, len(timerTasks))
+	if len(timerTasks) == 0 {
+		return nil
+	}
 
-		for i, task := range timerTasks {
-			info := &sqlblobs.TimerTaskInfo{}
-			switch t := task.(type) {
-			case *p.DecisionTimeoutTask:
-				info.EventID = &t.EventID
-				info.TimeoutType = common.Int16Ptr(int16(t.TimeoutType))
-				info.ScheduleAttempt = &t.ScheduleAttempt
+	timerTasksRows := make([]sqlplugin.TimerTasksRow, len(timerTasks))
 
-			case *p.ActivityTimeoutTask:
-				info.EventID = &t.EventID
-				info.TimeoutType = common.Int16Ptr(int16(t.TimeoutType))
-				info.ScheduleAttempt = &t.Attempt
+	for i, task := range timerTasks {
+		info := &sqlblobs.TimerTaskInfo{}
+		switch t := task.(type) {
+		case *p.DecisionTimeoutTask:
+			info.EventID = &t.EventID
+			info.TimeoutType = common.Int16Ptr(int16(t.TimeoutType))
+			info.ScheduleAttempt = &t.ScheduleAttempt
 
-			case *p.UserTimerTask:
-				info.EventID = &t.EventID
+		case *p.ActivityTimeoutTask:
+			info.EventID = &t.EventID
+			info.TimeoutType = common.Int16Ptr(int16(t.TimeoutType))
+			info.ScheduleAttempt = &t.Attempt
 
-			case *p.ActivityRetryTimerTask:
-				info.EventID = &t.EventID
-				info.ScheduleAttempt = common.Int64Ptr(int64(t.Attempt))
+		case *p.UserTimerTask:
+			info.EventID = &t.EventID
 
-			case *p.WorkflowBackoffTimerTask:
-				info.EventID = &t.EventID
-				info.TimeoutType = common.Int16Ptr(int16(t.TimeoutType))
+		case *p.ActivityRetryTimerTask:
+			info.EventID = &t.EventID
+			info.ScheduleAttempt = common.Int64Ptr(int64(t.Attempt))
 
-			case *p.WorkflowTimeoutTask:
-				// noop
+		case *p.WorkflowBackoffTimerTask:
+			info.EventID = &t.EventID
+			info.TimeoutType = common.Int16Ptr(int16(t.TimeoutType))
 
-			case *p.DeleteHistoryEventTask:
-				// noop
+		case *p.WorkflowTimeoutTask:
+			// noop
 
-			default:
-				return &workflow.InternalServiceError{
-					Message: fmt.Sprintf("createTimerTasks failed. Unknown timer task: %v", task.GetType()),
-				}
+		case *p.DeleteHistoryEventTask:
+			// noop
+
+		default:
+			return &workflow.InternalServiceError{
+				Message: fmt.Sprintf("createTimerTasks failed. Unknown timer task: %v", task.GetType()),
 			}
-
-			info.DomainID = domainID
-			info.WorkflowID = &workflowID
-			info.RunID = runID
-			info.Version = common.Int64Ptr(task.GetVersion())
-			info.TaskType = common.Int16Ptr(int16(task.GetType()))
-
-			blob, err := parser.TimerTaskInfoToBlob(info)
-			if err != nil {
-				return err
-			}
-
-			timerTasksRows[i].ShardID = shardID
-			timerTasksRows[i].VisibilityTimestamp = task.GetVisibilityTimestamp()
-			timerTasksRows[i].TaskID = task.GetTaskID()
-			timerTasksRows[i].Data = blob.Data
-			timerTasksRows[i].DataEncoding = string(blob.Encoding)
 		}
 
-		result, err := tx.InsertIntoTimerTasks(ctx, timerTasksRows)
+		info.DomainID = domainID
+		info.WorkflowID = &workflowID
+		info.RunID = runID
+		info.Version = common.Int64Ptr(task.GetVersion())
+		info.TaskType = common.Int16Ptr(int16(task.GetType()))
+
+		blob, err := parser.TimerTaskInfoToBlob(info)
 		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("createTimerTasks failed. Error: %v", err),
-			}
-		}
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("createTimerTasks failed. Could not verify number of rows inserted. Error: %v", err),
-			}
+			return err
 		}
 
-		if int(rowsAffected) != len(timerTasks) {
-			return &workflow.InternalServiceError{
-				Message: fmt.Sprintf("createTimerTasks failed. Inserted %v instead of %v rows into timer_tasks. Error: %v", rowsAffected, len(timerTasks), err),
-			}
+		timerTasksRows[i].ShardID = shardID
+		timerTasksRows[i].VisibilityTimestamp = task.GetVisibilityTimestamp()
+		timerTasksRows[i].TaskID = task.GetTaskID()
+		timerTasksRows[i].Data = blob.Data
+		timerTasksRows[i].DataEncoding = string(blob.Encoding)
+	}
+
+	result, err := tx.InsertIntoTimerTasks(ctx, timerTasksRows)
+	if err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("createTimerTasks failed. Error: %v", err),
+		}
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("createTimerTasks failed. Could not verify number of rows inserted. Error: %v", err),
+		}
+	}
+
+	if int(rowsAffected) != len(timerTasks) {
+		return &workflow.InternalServiceError{
+			Message: fmt.Sprintf("createTimerTasks failed. Inserted %v instead of %v rows into timer_tasks. Error: %v", rowsAffected, len(timerTasks), err),
 		}
 	}
 

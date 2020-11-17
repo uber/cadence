@@ -1,4 +1,5 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -132,20 +133,11 @@ func (sc *statsComputer) computeMutableStateUpdateStats(req *InternalUpdateWorkf
 
 	deleteTimerInfoCount := len(req.UpdateWorkflowMutation.DeleteTimerInfos)
 
-	deleteChildInfoCount := 0
-	if req.UpdateWorkflowMutation.DeleteChildExecutionInfo != nil {
-		deleteChildInfoCount = 1
-	}
+	deleteChildInfoCount := len(req.UpdateWorkflowMutation.DeleteChildExecutionInfos)
 
-	deleteSignalInfoCount := 0
-	if req.UpdateWorkflowMutation.DeleteSignalInfo != nil {
-		deleteSignalInfoCount = 1
-	}
+	deleteSignalInfoCount := len(req.UpdateWorkflowMutation.DeleteSignalInfos)
 
-	deleteRequestCancelInfoCount := 0
-	if req.UpdateWorkflowMutation.DeleteRequestCancelInfo != nil {
-		deleteRequestCancelInfoCount = 1
-	}
+	deleteRequestCancelInfoCount := len(req.UpdateWorkflowMutation.DeleteRequestCancelInfos)
 
 	totalSize := executionInfoSize
 	totalSize += activityInfoSize
