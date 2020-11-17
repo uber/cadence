@@ -211,36 +211,8 @@ func (m *sqlTaskManager) UpdateTaskList(
 	}
 	if request.TaskListInfo.Kind == persistence.TaskListKindSticky {
 		tlInfo.ExpiryTimeNanos = common.Int64Ptr(stickyTaskListExpiry().UnixNano())
-		blob, err := m.parser.TaskListInfoToBlob(tlInfo)
-		if err != nil {
-			return nil, err
-		}
-		row := &sqlplugin.TaskListsRow{
-			ShardID:      shardID,
-			DomainID:     domainID,
-			RangeID:      request.TaskListInfo.RangeID,
-			Name:         request.TaskListInfo.Name,
-			TaskType:     int64(request.TaskListInfo.TaskType),
-			Data:         blob.Data,
-			DataEncoding: string(blob.Encoding),
-		}
-		if m.db.SupportsTTL() {
-			if _, err := m.db.ReplaceIntoTaskListsWithTTL(ctx, &sqlplugin.TaskListsRowWithTTL{
-				TaskListsRow: *row,
-				TTL:          stickyTasksListsTTL,
-			}); err != nil {
-				return nil, &workflow.InternalServiceError{
-					Message: fmt.Sprintf("UpdateTaskList operation failed. Failed to make sticky task list. Error: %v", err),
-				}
-			}
-		} else {
-			if _, err := m.db.ReplaceIntoTaskLists(ctx, row); err != nil {
-				return nil, &workflow.InternalServiceError{
-					Message: fmt.Sprintf("UpdateTaskList operation failed. Failed to make sticky task list. Error: %v", err),
-				}
-			}
-		}
 	}
+
 	var resp *persistence.UpdateTaskListResponse
 	blob, err := m.parser.TaskListInfoToBlob(tlInfo)
 	if err != nil {

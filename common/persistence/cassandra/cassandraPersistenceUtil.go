@@ -1,4 +1,5 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -88,7 +89,7 @@ func applyWorkflowMutationBatch(
 	if err := updateChildExecutionInfos(
 		batch,
 		workflowMutation.UpsertChildExecutionInfos,
-		workflowMutation.DeleteChildExecutionInfo,
+		workflowMutation.DeleteChildExecutionInfos,
 		shardID,
 		domainID,
 		workflowID,
@@ -100,7 +101,7 @@ func applyWorkflowMutationBatch(
 	updateRequestCancelInfos(
 		batch,
 		workflowMutation.UpsertRequestCancelInfos,
-		workflowMutation.DeleteRequestCancelInfo,
+		workflowMutation.DeleteRequestCancelInfos,
 		shardID,
 		domainID,
 		workflowID,
@@ -110,7 +111,7 @@ func applyWorkflowMutationBatch(
 	updateSignalInfos(
 		batch,
 		workflowMutation.UpsertSignalInfos,
-		workflowMutation.DeleteSignalInfo,
+		workflowMutation.DeleteSignalInfos,
 		shardID,
 		domainID,
 		workflowID,
@@ -120,7 +121,7 @@ func applyWorkflowMutationBatch(
 	updateSignalsRequested(
 		batch,
 		workflowMutation.UpsertSignalRequestedIDs,
-		workflowMutation.DeleteSignalRequestedID,
+		workflowMutation.DeleteSignalRequestedIDs,
 		shardID,
 		domainID,
 		workflowID,
@@ -340,7 +341,7 @@ func applyWorkflowSnapshotBatchAsNew(
 	updateSignalsRequested(
 		batch,
 		workflowSnapshot.SignalRequestedIDs,
-		"",
+		nil,
 		shardID,
 		domainID,
 		workflowID,
@@ -1089,14 +1090,14 @@ func updateTimerInfos(
 	runID string,
 ) {
 
-	for _, a := range timerInfos {
+	for _, timerInfo := range timerInfos {
 		batch.Query(templateUpdateTimerInfoQuery,
-			a.TimerID,
-			a.Version,
-			a.TimerID,
-			a.StartedID,
-			a.ExpiryTime,
-			a.TaskStatus,
+			timerInfo.TimerID,
+			timerInfo.Version,
+			timerInfo.TimerID,
+			timerInfo.StartedID,
+			timerInfo.ExpiryTime,
+			timerInfo.TaskStatus,
 			shardID,
 			rowTypeExecution,
 			domainID,
@@ -1106,9 +1107,9 @@ func updateTimerInfos(
 			rowTypeExecutionTaskID)
 	}
 
-	for _, t := range deleteInfos {
+	for _, deleteInfo := range deleteInfos {
 		batch.Query(templateDeleteTimerInfoQuery,
-			t,
+			deleteInfo,
 			shardID,
 			rowTypeExecution,
 			domainID,
@@ -1142,7 +1143,7 @@ func resetTimerInfos(
 func updateChildExecutionInfos(
 	batch *gocql.Batch,
 	childExecutionInfos []*p.InternalChildExecutionInfo,
-	deleteInfo *int64,
+	deleteInfos []int64,
 	shardID int,
 	domainID string,
 	workflowID string,
@@ -1185,10 +1186,10 @@ func updateChildExecutionInfos(
 			rowTypeExecutionTaskID)
 	}
 
-	// deleteInfo is the initiatedID for ChildInfo being deleted
-	if deleteInfo != nil {
+	// deleteInfos are the initiatedIDs for ChildInfo being deleted
+	for _, deleteInfo := range deleteInfos {
 		batch.Query(templateDeleteChildExecutionInfoQuery,
-			*deleteInfo,
+			deleteInfo,
 			shardID,
 			rowTypeExecution,
 			domainID,
@@ -1228,7 +1229,7 @@ func resetChildExecutionInfos(
 func updateRequestCancelInfos(
 	batch *gocql.Batch,
 	requestCancelInfos []*p.RequestCancelInfo,
-	deleteInfo *int64,
+	deleteInfos []int64,
 	shardID int,
 	domainID string,
 	workflowID string,
@@ -1251,10 +1252,10 @@ func updateRequestCancelInfos(
 			rowTypeExecutionTaskID)
 	}
 
-	// deleteInfo is the initiatedID for RequestCancelInfo being deleted
-	if deleteInfo != nil {
+	// deleteInfos are the initiatedIDs for RequestCancelInfo being deleted
+	for _, deleteInfo := range deleteInfos {
 		batch.Query(templateDeleteRequestCancelInfoQuery,
-			*deleteInfo,
+			deleteInfo,
 			shardID,
 			rowTypeExecution,
 			domainID,
@@ -1288,7 +1289,7 @@ func resetRequestCancelInfos(
 func updateSignalInfos(
 	batch *gocql.Batch,
 	signalInfos []*p.SignalInfo,
-	deleteInfo *int64,
+	deleteInfos []int64,
 	shardID int,
 	domainID string,
 	workflowID string,
@@ -1314,10 +1315,10 @@ func updateSignalInfos(
 			rowTypeExecutionTaskID)
 	}
 
-	// deleteInfo is the initiatedID for SignalInfo being deleted
-	if deleteInfo != nil {
+	// deleteInfos are the initiatedIDs for SignalInfo being deleted
+	for _, deleteInfo := range deleteInfos {
 		batch.Query(templateDeleteSignalInfoQuery,
-			*deleteInfo,
+			deleteInfo,
 			shardID,
 			rowTypeExecution,
 			domainID,
@@ -1351,7 +1352,7 @@ func resetSignalInfos(
 func updateSignalsRequested(
 	batch *gocql.Batch,
 	signalReqIDs []string,
-	deleteSignalReqID string,
+	deleteSignalReqIDs []string,
 	shardID int,
 	domainID string,
 	workflowID string,
@@ -1370,10 +1371,9 @@ func updateSignalsRequested(
 			rowTypeExecutionTaskID)
 	}
 
-	if deleteSignalReqID != "" {
-		req := []string{deleteSignalReqID} // for cassandra set binding
+	if len(deleteSignalReqIDs) > 0 {
 		batch.Query(templateDeleteWorkflowExecutionSignalRequestedQuery,
-			req,
+			deleteSignalReqIDs,
 			shardID,
 			rowTypeExecution,
 			domainID,

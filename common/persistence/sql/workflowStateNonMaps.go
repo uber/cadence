@@ -1,4 +1,5 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +37,7 @@ func updateSignalsRequested(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	signalRequestedIDs []string,
-	deleteSignalRequestID string,
+	deleteSignalRequestIDs []string,
 	shardID int,
 	domainID sqlplugin.UUID,
 	workflowID string,
@@ -61,13 +62,13 @@ func updateSignalsRequested(
 		}
 	}
 
-	if deleteSignalRequestID != "" {
+	for _, deldeleteSignalRequestID := range deleteSignalRequestIDs {
 		if _, err := tx.DeleteFromSignalsRequestedSets(ctx, &sqlplugin.SignalsRequestedSetsFilter{
 			ShardID:    int64(shardID),
 			DomainID:   domainID,
 			WorkflowID: workflowID,
 			RunID:      runID,
-			SignalID:   &deleteSignalRequestID,
+			SignalID:   common.StringPtr(deldeleteSignalRequestID),
 		}); err != nil {
 			return &workflow.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update signals requested. Failed to execute delete query. Error: %v", err),
