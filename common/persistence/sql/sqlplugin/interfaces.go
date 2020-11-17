@@ -555,13 +555,11 @@ type (
 		//     - {domainID, tasklistName, taskType, taskID}
 		//  to delete multiple rows
 		//    - {domainID, tasklistName, taskType, taskIDLessThanEquals, limit }
-		//    - this will delete upto limit number of tasks less than or equal to the given task id
+		//    - this will delete up to limit number of tasks less than or equal to the given task id
 		DeleteFromTasks(ctx context.Context, filter *TasksFilter) (sql.Result, error)
 
 		InsertIntoTaskLists(ctx context.Context, row *TaskListsRow) (sql.Result, error)
 		InsertIntoTaskListsWithTTL(ctx context.Context, row *TaskListsRowWithTTL) (sql.Result, error)
-		ReplaceIntoTaskLists(ctx context.Context, row *TaskListsRow) (sql.Result, error)
-		ReplaceIntoTaskListsWithTTL(ctx context.Context, row *TaskListsRowWithTTL) (sql.Result, error)
 		UpdateTaskLists(ctx context.Context, row *TaskListsRow) (sql.Result, error)
 		UpdateTaskListsWithTTL(ctx context.Context, row *TaskListsRowWithTTL) (sql.Result, error)
 		// SelectFromTaskLists returns one or more rows from task_lists table

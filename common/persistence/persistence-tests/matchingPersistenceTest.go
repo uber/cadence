@@ -390,14 +390,14 @@ func (s *MatchingPersistenceSuite) TestLeaseAndUpdateTaskListSticky() {
 		DomainID: domainID,
 		Name:     taskList,
 		TaskType: p.TaskListTypeDecision,
-		RangeID:  2,
+		RangeID:  tli.RangeID,
 		AckLevel: 0,
 		Kind:     p.TaskListKindSticky,
 	}
 	_, err = s.TaskMgr.UpdateTaskList(ctx, &p.UpdateTaskListRequest{
 		TaskListInfo: taskListInfo,
 	})
-	s.NoError(err) // because update with ttl doesn't check rangeID
+	s.NoError(err)
 }
 
 func (s *MatchingPersistenceSuite) deleteAllTaskList() {
