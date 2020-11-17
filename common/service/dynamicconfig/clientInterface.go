@@ -24,6 +24,8 @@ package dynamicconfig
 
 import (
 	"time"
+
+	"github.com/uber/cadence/common/types"
 )
 
 // Client allows fetching values from a dynamic configuration system NOTE: This does not have async
@@ -44,4 +46,8 @@ type Client interface {
 	) (time.Duration, error)
 	// UpdateValue takes value as map and updates by overriding. It doesn't support update with filters.
 	UpdateValue(name Key, value interface{}) error
+}
+
+var notFoundError = &types.EntityNotExistsError{
+	Message: "unable to find key",
 }
