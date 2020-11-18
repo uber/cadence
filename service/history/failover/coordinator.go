@@ -29,7 +29,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -59,8 +58,8 @@ type (
 	Coordinator interface {
 		common.Daemon
 
-		NotifyFailoverMarkers(shardID int32, markers []*replicator.FailoverMarkerAttributes)
-		ReceiveFailoverMarkers(shardIDs []int32, marker *replicator.FailoverMarkerAttributes)
+		NotifyFailoverMarkers(shardID int32, markers []*types.FailoverMarkerAttributes)
+		ReceiveFailoverMarkers(shardIDs []int32, marker *types.FailoverMarkerAttributes)
 	}
 
 	coordinatorImpl struct {
@@ -81,12 +80,12 @@ type (
 
 	notificationRequest struct {
 		shardID int32
-		markers []*replicator.FailoverMarkerAttributes
+		markers []*types.FailoverMarkerAttributes
 	}
 
 	receiveRequest struct {
 		shardIDs []int32
-		marker   *replicator.FailoverMarkerAttributes
+		marker   *types.FailoverMarkerAttributes
 	}
 
 	failoverRecord struct {
@@ -158,7 +157,7 @@ func (c *coordinatorImpl) Stop() {
 
 func (c *coordinatorImpl) NotifyFailoverMarkers(
 	shardID int32,
-	markers []*replicator.FailoverMarkerAttributes,
+	markers []*types.FailoverMarkerAttributes,
 ) {
 
 	c.notificationChan <- &notificationRequest{
@@ -169,7 +168,7 @@ func (c *coordinatorImpl) NotifyFailoverMarkers(
 
 func (c *coordinatorImpl) ReceiveFailoverMarkers(
 	shardIDs []int32,
-	marker *replicator.FailoverMarkerAttributes,
+	marker *types.FailoverMarkerAttributes,
 ) {
 
 	c.receiveChan <- &receiveRequest{
@@ -202,7 +201,7 @@ func (c *coordinatorImpl) notifyFailoverMarkerLoop() {
 		c.config.NotifyFailoverMarkerTimerJitterCoefficient(),
 	))
 	defer timer.Stop()
-	requestByMarker := make(map[*replicator.FailoverMarkerAttributes]*receiveRequest)
+	requestByMarker := make(map[*types.FailoverMarkerAttributes]*receiveRequest)
 
 	for {
 		select {
@@ -293,7 +292,7 @@ func (c *coordinatorImpl) cleanupInvalidMarkers() {
 }
 
 func (c *coordinatorImpl) notifyRemoteCoordinator(
-	requestByMarker map[*replicator.FailoverMarkerAttributes]*receiveRequest,
+	requestByMarker map[*types.FailoverMarkerAttributes]*receiveRequest,
 ) {
 
 	if len(requestByMarker) > 0 {
@@ -301,7 +300,7 @@ func (c *coordinatorImpl) notifyRemoteCoordinator(
 		for _, request := range requestByMarker {
 			tokens = append(tokens, &types.FailoverMarkerToken{
 				ShardIDs:       request.shardIDs,
-				FailoverMarker: thrift.ToFailoverMarkerAttributes(request.marker),
+				FailoverMarker: request.marker,
 			})
 		}
 
@@ -325,7 +324,7 @@ func (c *coordinatorImpl) notifyRemoteCoordinator(
 
 func aggregateNotificationRequests(
 	request *notificationRequest,
-	requestByMarker map[*replicator.FailoverMarkerAttributes]*receiveRequest,
+	requestByMarker map[*types.FailoverMarkerAttributes]*receiveRequest,
 ) {
 
 	for _, marker := range request.markers {
