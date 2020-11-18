@@ -424,6 +424,8 @@ func fixShard(
 		resources.GetBlobstoreClient(),
 		params.ResolvedFixerWorkflowConfig.BlobstoreFlushThreshold,
 		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
+		resources.GetDomainCache(),
+		ctx.FixerWorkflowDynamicConfig.AllowDomain,
 	)
 	report := fixer.Fix()
 	if report.Result.ControlFlowFailure != nil {

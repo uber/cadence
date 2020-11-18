@@ -28,6 +28,10 @@ import (
 
 	"github.com/pborman/uuid"
 
+	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/reconciliation/entity"
+	"github.com/uber/cadence/common/service/dynamicconfig"
+
 	"github.com/uber/cadence/common/blobstore"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
@@ -43,6 +47,8 @@ type (
 		fixedWriter      store.ExecutionWriter
 		invariantManager invariant.Manager
 		progressReportFn func()
+		domainCache      cache.DomainCache
+		allowDomain      dynamicconfig.BoolPropertyFnWithDomainFilter
 	}
 )
 
@@ -55,6 +61,8 @@ func NewFixer(
 	blobstoreClient blobstore.Client,
 	blobstoreFlushThreshold int,
 	progressReportFn func(),
+	domainCache cache.DomainCache,
+	allowDomain dynamicconfig.BoolPropertyFnWithDomainFilter,
 ) Fixer {
 	id := uuid.New()
 
@@ -67,6 +75,8 @@ func NewFixer(
 		fixedWriter:      store.NewBlobstoreWriter(id, store.FixedExtension, blobstoreClient, blobstoreFlushThreshold),
 		invariantManager: manager,
 		progressReportFn: progressReportFn,
+		domainCache:      domainCache,
+		allowDomain:      allowDomain,
 	}
 }
 
@@ -84,6 +94,30 @@ func (f *fixer) Fix() FixReport {
 				InfoDetails: err.Error(),
 			}
 			return result
+		}
+		domainName, err := f.domainCache.GetDomainID(soe.Execution.(entity.Entity).GetDomainID())
+		if err != nil {
+			result.Result.ControlFlowFailure = &ControlFlowFailure{
+				Info:        "failed to get domain name",
+				InfoDetails: err.Error(),
+			}
+			return result
+		}
+		if !f.allowDomain(domainName) {
+			if err := f.skippedWriter.Add(store.FixOutputEntity{
+				Execution: soe.Execution,
+				Input:     *soe,
+				Result: invariant.ManagerFixResult{
+					FixResultType: invariant.FixResultTypeSkipped,
+				},
+			}); err != nil {
+				result.Result.ControlFlowFailure = &ControlFlowFailure{
+					Info:        "blobstore add failed for skipped execution fix",
+					InfoDetails: err.Error(),
+				}
+				return result
+			}
+			result.Stats.SkippedCount++
 		}
 		fixResult := f.invariantManager.RunFixes(f.ctx, soe.Execution)
 		result.Stats.ExecutionCount++
