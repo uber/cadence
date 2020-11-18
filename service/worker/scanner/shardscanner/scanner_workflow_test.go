@@ -23,13 +23,13 @@
 package shardscanner
 
 import (
+	"context"
 	"testing"
-
-	"github.com/uber/cadence/common/pagination"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/cadence/testsuite"
 
+	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 )
@@ -100,7 +100,7 @@ func (s *workflowsSuite) TestGetBatchIndices() {
 	}
 }
 
-func (s *aggregatorsSuite) TestGetShardBatches() {
+func (s *workflowsSuite) TestGetShardBatches() {
 	var shards []int
 	for i := 5; i < 50; i += 2 {
 		shards = append(shards, i)
@@ -227,7 +227,12 @@ func (s *fixerWorkflowSuite) TestNewScannerHooks() {
 		{
 			name:    "manager is not provided",
 			manager: nil,
-			iterator: func(retryer persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) pagination.Iterator {
+			iterator: func(
+				ctx context.Context,
+				retryer persistence.Retryer,
+				params ScanShardActivityParams,
+				config ScannerConfig,
+			) pagination.Iterator {
 				return nil
 			},
 			wantErr: true,
@@ -236,6 +241,7 @@ func (s *fixerWorkflowSuite) TestNewScannerHooks() {
 		{
 			name: "iterator is not provided",
 			manager: func(
+				ctx context.Context,
 				retryer persistence.Retryer,
 				params ScanShardActivityParams,
 				config ScannerConfig,
@@ -247,10 +253,20 @@ func (s *fixerWorkflowSuite) TestNewScannerHooks() {
 		},
 		{
 			name: "both provided",
-			manager: func(retryer persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) invariant.Manager {
+			manager: func(
+				ctx context.Context,
+				retryer persistence.Retryer,
+				params ScanShardActivityParams,
+				config ScannerConfig,
+			) invariant.Manager {
 				return nil
 			},
-			iterator: func(retryer persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) pagination.Iterator {
+			iterator: func(
+				ctx context.Context,
+				retryer persistence.Retryer,
+				params ScanShardActivityParams,
+				config ScannerConfig,
+			) pagination.Iterator {
 				return nil
 			},
 			wantErr: false,

@@ -26,6 +26,9 @@ package executions
 
 import (
 	"context"
+	"strconv"
+
+	"github.com/uber/cadence/service/worker/scanner/shardscanner"
 
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
@@ -112,4 +115,21 @@ func (st ScanType) ToInvariants(collections []invariant.Collection) []InvariantF
 	default:
 		panic("unknown scan type")
 	}
+}
+
+// ParseCollections converts string based map to list of collections
+func ParseCollections(params shardscanner.CustomScannerConfig) []invariant.Collection {
+	var collections []invariant.Collection
+
+	for k, v := range params {
+		c, e := invariant.CollectionString(k)
+		if e != nil {
+			continue
+		}
+		enabled, err := strconv.ParseBool(v)
+		if enabled && err == nil {
+			collections = append(collections, c)
+		}
+	}
+	return collections
 }

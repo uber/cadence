@@ -245,6 +245,7 @@ type (
 		PageSize                dynamicconfig.IntPropertyFn
 		BlobstoreFlushThreshold dynamicconfig.IntPropertyFn
 		ActivityBatchSize       dynamicconfig.IntPropertyFn
+		AllowDomain             dynamicconfig.BoolPropertyFnWithDomainFilter
 	}
 
 	// ScannerConfig is the  config for ShardScanner workflow
