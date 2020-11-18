@@ -27,13 +27,14 @@ import (
 
 	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
 	// Handler is interface wrapping frontend handler
 	Handler interface {
 		Health(context.Context) (*health.HealthStatus, error)
-		CountWorkflowExecutions(context.Context, *shared.CountWorkflowExecutionsRequest) (*shared.CountWorkflowExecutionsResponse, error)
+		CountWorkflowExecutions(context.Context, *types.CountWorkflowExecutionsRequest) (*types.CountWorkflowExecutionsResponse, error)
 		DeprecateDomain(context.Context, *shared.DeprecateDomainRequest) error
 		DescribeDomain(context.Context, *shared.DescribeDomainRequest) (*shared.DescribeDomainResponse, error)
 		DescribeTaskList(context.Context, *shared.DescribeTaskListRequest) (*shared.DescribeTaskListResponse, error)
@@ -42,11 +43,11 @@ type (
 		GetSearchAttributes(context.Context) (*shared.GetSearchAttributesResponse, error)
 		GetWorkflowExecutionHistory(context.Context, *shared.GetWorkflowExecutionHistoryRequest) (*shared.GetWorkflowExecutionHistoryResponse, error)
 		ListArchivedWorkflowExecutions(context.Context, *shared.ListArchivedWorkflowExecutionsRequest) (*shared.ListArchivedWorkflowExecutionsResponse, error)
-		ListClosedWorkflowExecutions(context.Context, *shared.ListClosedWorkflowExecutionsRequest) (*shared.ListClosedWorkflowExecutionsResponse, error)
+		ListClosedWorkflowExecutions(context.Context, *types.ListClosedWorkflowExecutionsRequest) (*types.ListClosedWorkflowExecutionsResponse, error)
 		ListDomains(context.Context, *shared.ListDomainsRequest) (*shared.ListDomainsResponse, error)
-		ListOpenWorkflowExecutions(context.Context, *shared.ListOpenWorkflowExecutionsRequest) (*shared.ListOpenWorkflowExecutionsResponse, error)
+		ListOpenWorkflowExecutions(context.Context, *types.ListOpenWorkflowExecutionsRequest) (*types.ListOpenWorkflowExecutionsResponse, error)
 		ListTaskListPartitions(context.Context, *shared.ListTaskListPartitionsRequest) (*shared.ListTaskListPartitionsResponse, error)
-		ListWorkflowExecutions(context.Context, *shared.ListWorkflowExecutionsRequest) (*shared.ListWorkflowExecutionsResponse, error)
+		ListWorkflowExecutions(context.Context, *types.ListWorkflowExecutionsRequest) (*types.ListWorkflowExecutionsResponse, error)
 		PollForActivityTask(context.Context, *shared.PollForActivityTaskRequest) (*shared.PollForActivityTaskResponse, error)
 		PollForDecisionTask(context.Context, *shared.PollForDecisionTaskRequest) (*shared.PollForDecisionTaskResponse, error)
 		QueryWorkflow(context.Context, *shared.QueryWorkflowRequest) (*shared.QueryWorkflowResponse, error)
@@ -65,7 +66,7 @@ type (
 		RespondDecisionTaskCompleted(context.Context, *shared.RespondDecisionTaskCompletedRequest) (*shared.RespondDecisionTaskCompletedResponse, error)
 		RespondDecisionTaskFailed(context.Context, *shared.RespondDecisionTaskFailedRequest) error
 		RespondQueryTaskCompleted(context.Context, *shared.RespondQueryTaskCompletedRequest) error
-		ScanWorkflowExecutions(context.Context, *shared.ListWorkflowExecutionsRequest) (*shared.ListWorkflowExecutionsResponse, error)
+		ScanWorkflowExecutions(context.Context, *types.ListWorkflowExecutionsRequest) (*types.ListWorkflowExecutionsResponse, error)
 		SignalWithStartWorkflowExecution(context.Context, *shared.SignalWithStartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error)
 		SignalWorkflowExecution(context.Context, *shared.SignalWorkflowExecutionRequest) error
 		StartWorkflowExecution(context.Context, *shared.StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error)
