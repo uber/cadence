@@ -47,6 +47,7 @@ import (
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -1695,7 +1696,7 @@ func (s *TestBase) RangeCompleteTimerTask(ctx context.Context, inclusiveBeginTim
 }
 
 // CreateDecisionTask is a utility method to create a task
-func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, workflowExecution workflow.WorkflowExecution, taskList string,
+func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution, taskList string,
 	decisionScheduleID int64) (int64, error) {
 	leaseResponse, err := s.TaskMgr.LeaseTaskList(ctx, &p.LeaseTaskListRequest{
 		DomainID: domainID,
@@ -1713,8 +1714,8 @@ func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, work
 			Execution: workflowExecution,
 			Data: &p.TaskInfo{
 				DomainID:   domainID,
-				WorkflowID: *workflowExecution.WorkflowId,
-				RunID:      *workflowExecution.RunId,
+				WorkflowID: *workflowExecution.WorkflowID,
+				RunID:      *workflowExecution.RunID,
 				TaskID:     taskID,
 				ScheduleID: decisionScheduleID,
 			},
@@ -1734,7 +1735,7 @@ func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, work
 }
 
 // CreateActivityTasks is a utility method to create tasks
-func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, workflowExecution workflow.WorkflowExecution,
+func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution,
 	activities map[int64]string) ([]int64, error) {
 
 	taskLists := make(map[string]*p.TaskListInfo)
@@ -1760,8 +1761,8 @@ func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, wor
 				Execution: workflowExecution,
 				Data: &p.TaskInfo{
 					DomainID:               domainID,
-					WorkflowID:             *workflowExecution.WorkflowId,
-					RunID:                  *workflowExecution.RunId,
+					WorkflowID:             *workflowExecution.WorkflowID,
+					RunID:                  *workflowExecution.RunID,
 					TaskID:                 taskID,
 					ScheduleID:             activityScheduleID,
 					ScheduleToStartTimeout: defaultScheduleToStartTimeout,
