@@ -32,7 +32,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -216,13 +215,13 @@ func (s *TestBase) Setup() {
 	s.ReadLevel = 0
 	s.ReplicationReadLevel = 0
 
-	domainFilter := &history.DomainFilter{
+	domainFilter := &types.DomainFilter{
 		DomainIDs:    []string{},
 		ReverseMatch: common.BoolPtr(true),
 	}
-	transferPQSMap := map[string][]*history.ProcessingQueueState{
+	transferPQSMap := map[string][]*types.ProcessingQueueState{
 		s.ClusterMetadata.GetCurrentClusterName(): {
-			&history.ProcessingQueueState{
+			&types.ProcessingQueueState{
 				Level:        common.Int32Ptr(0),
 				AckLevel:     common.Int64Ptr(0),
 				MaxLevel:     common.Int64Ptr(0),
@@ -230,10 +229,10 @@ func (s *TestBase) Setup() {
 			},
 		},
 	}
-	transferPQS := history.ProcessingQueueStates{transferPQSMap}
-	timerPQSMap := map[string][]*history.ProcessingQueueState{
+	transferPQS := types.ProcessingQueueStates{transferPQSMap}
+	timerPQSMap := map[string][]*types.ProcessingQueueState{
 		s.ClusterMetadata.GetCurrentClusterName(): {
-			&history.ProcessingQueueState{
+			&types.ProcessingQueueState{
 				Level:        common.Int32Ptr(0),
 				AckLevel:     common.Int64Ptr(time.Now().UnixNano()),
 				MaxLevel:     common.Int64Ptr(time.Now().UnixNano()),
@@ -241,7 +240,7 @@ func (s *TestBase) Setup() {
 			},
 		},
 	}
-	timerPQS := history.ProcessingQueueStates{StatesByCluster: timerPQSMap}
+	timerPQS := types.ProcessingQueueStates{StatesByCluster: timerPQSMap}
 
 	s.ShardInfo = &p.ShardInfo{
 		ShardID:                       shardID,
