@@ -26,6 +26,7 @@ import (
 	"github.com/gocql/gocql"
 )
 
+// Definition of all Consistency levels
 const (
 	Any Consistency = iota
 	One
@@ -38,6 +39,7 @@ const (
 	LocalOne
 )
 
+// Definition of all SerialConsistency levels
 const (
 	Serial SerialConsistency = iota
 	LocalSerial

@@ -35,6 +35,7 @@ type (
 	}
 )
 
+// Definition of all BatchTypes
 const (
 	LoggedBatch BatchType = iota
 	UnloggedBatch

@@ -38,6 +38,7 @@ var (
 	defaultClient = client{}
 )
 
+// NewClient creates a default gocql client based on the open source gocql library.
 func NewClient() Client {
 	return defaultClient
 }
