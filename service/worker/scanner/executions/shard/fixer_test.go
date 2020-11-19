@@ -27,6 +27,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/service/dynamicconfig"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -88,7 +91,13 @@ func (s *FixerSuite) TestFix_Failure_NonFirstError() {
 			iteratorCallNumber++
 		}()
 		if iteratorCallNumber < 4 {
-			return &store.ScanOutputEntity{}, nil
+			return &store.ScanOutputEntity{
+				Execution: &entity.ConcreteExecution{
+					Execution: entity.Execution{
+						DomainID: "test_domain",
+					},
+				},
+			}, nil
 		}
 		return nil, fmt.Errorf("iterator got error on: %v", iteratorCallNumber)
 	}).Times(5)
@@ -98,12 +107,26 @@ func (s *FixerSuite) TestFix_Failure_NonFirstError() {
 	}).Times(4)
 	fixedWriter := store.NewMockExecutionWriter(s.controller)
 	fixedWriter.EXPECT().Add(gomock.Any()).Return(nil).Times(4)
+	domainCache := cache.NewMockDomainCache(s.controller)
+	domainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+		&persistence.DomainInfo{
+			Name: "test_domain",
+		},
+		nil,
+		false,
+		nil,
+		0,
+		nil,
+		nil),
+		nil).Times(4)
 	fixer := &fixer{
 		shardID:          0,
 		itr:              mockItr,
 		invariantManager: mockInvariantManager,
 		fixedWriter:      fixedWriter,
 		progressReportFn: func() {},
+		domainCache:      domainCache,
+		allowDomain:      dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 	}
 	result := fixer.Fix()
 	s.Equal(FixReport{
@@ -124,19 +147,39 @@ func (s *FixerSuite) TestFix_Failure_NonFirstError() {
 func (s *FixerSuite) TestFix_Failure_SkippedWriterError() {
 	mockItr := store.NewMockScanOutputIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
-	mockItr.EXPECT().Next().Return(&store.ScanOutputEntity{}, nil).Times(1)
+	mockItr.EXPECT().Next().Return(&store.ScanOutputEntity{
+		Execution: &entity.ConcreteExecution{
+			Execution: entity.Execution{
+				DomainID: "test_domain",
+			},
+		},
+	}, nil).Times(1)
 	mockInvariantManager := invariant.NewMockManager(s.controller)
 	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), gomock.Any()).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeSkipped,
 	}).Times(1)
 	skippedWriter := store.NewMockExecutionWriter(s.controller)
 	skippedWriter.EXPECT().Add(gomock.Any()).Return(errors.New("skipped writer error")).Times(1)
+	domainCache := cache.NewMockDomainCache(s.controller)
+	domainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+		&persistence.DomainInfo{
+			Name: "test_domain",
+		},
+		nil,
+		false,
+		nil,
+		0,
+		nil,
+		nil),
+		nil)
 	fixer := &fixer{
 		shardID:          0,
 		itr:              mockItr,
 		skippedWriter:    skippedWriter,
 		invariantManager: mockInvariantManager,
 		progressReportFn: func() {},
+		domainCache:      domainCache,
+		allowDomain:      dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 	}
 	result := fixer.Fix()
 	s.Equal(FixReport{
@@ -156,19 +199,39 @@ func (s *FixerSuite) TestFix_Failure_SkippedWriterError() {
 func (s *FixerSuite) TestFix_Failure_FailedWriterError() {
 	mockItr := store.NewMockScanOutputIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
-	mockItr.EXPECT().Next().Return(&store.ScanOutputEntity{}, nil).Times(1)
+	mockItr.EXPECT().Next().Return(&store.ScanOutputEntity{
+		Execution: &entity.ConcreteExecution{
+			Execution: entity.Execution{
+				DomainID: "test_domain",
+			},
+		},
+	}, nil).Times(1)
 	mockInvariantManager := invariant.NewMockManager(s.controller)
 	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), gomock.Any()).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeFailed,
 	}).Times(1)
 	failedWriter := store.NewMockExecutionWriter(s.controller)
 	failedWriter.EXPECT().Add(gomock.Any()).Return(errors.New("failed writer error")).Times(1)
+	domainCache := cache.NewMockDomainCache(s.controller)
+	domainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+		&persistence.DomainInfo{
+			Name: "test_domain",
+		},
+		nil,
+		false,
+		nil,
+		0,
+		nil,
+		nil),
+		nil)
 	fixer := &fixer{
 		shardID:          0,
 		itr:              mockItr,
 		failedWriter:     failedWriter,
 		invariantManager: mockInvariantManager,
 		progressReportFn: func() {},
+		domainCache:      domainCache,
+		allowDomain:      dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 	}
 	result := fixer.Fix()
 	s.Equal(FixReport{
@@ -188,19 +251,39 @@ func (s *FixerSuite) TestFix_Failure_FailedWriterError() {
 func (s *FixerSuite) TestFix_Failure_FixedWriterError() {
 	mockItr := store.NewMockScanOutputIterator(s.controller)
 	mockItr.EXPECT().HasNext().Return(true).Times(1)
-	mockItr.EXPECT().Next().Return(&store.ScanOutputEntity{}, nil).Times(1)
+	mockItr.EXPECT().Next().Return(&store.ScanOutputEntity{
+		Execution: &entity.ConcreteExecution{
+			Execution: entity.Execution{
+				DomainID: "test_domain",
+			},
+		},
+	}, nil).Times(1)
 	mockInvariantManager := invariant.NewMockManager(s.controller)
 	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), gomock.Any()).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeFixed,
 	}).Times(1)
 	fixedWriter := store.NewMockExecutionWriter(s.controller)
 	fixedWriter.EXPECT().Add(gomock.Any()).Return(errors.New("fixed writer error")).Times(1)
+	domainCache := cache.NewMockDomainCache(s.controller)
+	domainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+		&persistence.DomainInfo{
+			Name: "test_domain",
+		},
+		nil,
+		false,
+		nil,
+		0,
+		nil,
+		nil),
+		nil)
 	fixer := &fixer{
 		shardID:          0,
 		itr:              mockItr,
 		fixedWriter:      fixedWriter,
 		invariantManager: mockInvariantManager,
 		progressReportFn: func() {},
+		domainCache:      domainCache,
+		allowDomain:      dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 	}
 	result := fixer.Fix()
 	s.Equal(FixReport{
@@ -299,8 +382,8 @@ func (s *FixerSuite) TestFix_Success() {
 	mockItr := store.NewMockScanOutputIterator(s.controller)
 	iteratorCallNumber := 0
 	mockItr.EXPECT().HasNext().DoAndReturn(func() bool {
-		return iteratorCallNumber < 10
-	}).Times(11)
+		return iteratorCallNumber < 12
+	}).Times(13)
 	mockItr.EXPECT().Next().DoAndReturn(func() (*store.ScanOutputEntity, error) {
 		defer func() {
 			iteratorCallNumber++
@@ -308,41 +391,61 @@ func (s *FixerSuite) TestFix_Success() {
 		switch iteratorCallNumber {
 		case 0, 1, 2, 3:
 			return &store.ScanOutputEntity{
-				Execution: entity.Execution{
-					DomainID: "skipped",
+				Execution: &entity.ConcreteExecution{
+					Execution: entity.Execution{
+						DomainID: "skipped",
+					},
 				},
 			}, nil
 		case 4, 5:
 			return &store.ScanOutputEntity{
-				Execution: entity.Execution{
-					DomainID: "history_missing",
+				Execution: &entity.ConcreteExecution{
+					Execution: entity.Execution{
+						DomainID: "history_missing",
+					},
 				},
 			}, nil
 		case 6:
 			return &store.ScanOutputEntity{
-				Execution: entity.Execution{
-					DomainID: "first_history_event",
+				Execution: &entity.ConcreteExecution{
+					Execution: entity.Execution{
+						DomainID: "first_history_event",
+					},
 				},
 			}, nil
 		case 7:
 			return &store.ScanOutputEntity{
-				Execution: entity.Execution{
-					DomainID: "orphan_execution",
+				Execution: &entity.ConcreteExecution{
+					Execution: entity.Execution{
+						DomainID: "orphan_execution",
+					},
 				},
 			}, nil
 		case 8, 9:
 			return &store.ScanOutputEntity{
-				Execution: entity.Execution{
-					DomainID: "failed",
+				Execution: &entity.ConcreteExecution{
+					Execution: entity.Execution{
+						DomainID: "failed",
+					},
+				},
+			}, nil
+		case 10, 11:
+			return &store.ScanOutputEntity{
+				Execution: &entity.ConcreteExecution{
+					Execution: entity.Execution{
+						DomainID: "disallow_domain",
+					},
 				},
 			}, nil
 		default:
 			panic("should not get here")
 		}
-	}).Times(10)
+	}).Times(12)
 	mockInvariantManager := invariant.NewMockManager(s.controller)
-	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), entity.Execution{
-		DomainID: "skipped",
+	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), &entity.ConcreteExecution{
+		Execution: entity.Execution{
+			DomainID: "skipped",
+		},
 	}).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeSkipped,
 		FixResults: []invariant.FixResult{
@@ -359,8 +462,10 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(4)
-	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), entity.Execution{
-		DomainID: "history_missing",
+	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), &entity.ConcreteExecution{
+		Execution: entity.Execution{
+			DomainID: "history_missing",
+		},
 	}).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeFixed,
 		FixResults: []invariant.FixResult{
@@ -371,8 +476,10 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(2)
-	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), entity.Execution{
-		DomainID: "first_history_event",
+	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), &entity.ConcreteExecution{
+		Execution: entity.Execution{
+			DomainID: "first_history_event",
+		},
 	}).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeFixed,
 		FixResults: []invariant.FixResult{
@@ -386,9 +493,11 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(1)
-	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), entity.Execution{
-		DomainID: "orphan_execution",
-		State:    persistence.WorkflowStateCreated,
+	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), &entity.ConcreteExecution{
+		Execution: entity.Execution{
+			DomainID: "orphan_execution",
+			State:    persistence.WorkflowStateCreated,
+		},
 	}).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeFixed,
 		FixResults: []invariant.FixResult{
@@ -406,8 +515,10 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(1)
-	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), entity.Execution{
-		DomainID: "failed",
+	mockInvariantManager.EXPECT().RunFixes(gomock.Any(), &entity.ConcreteExecution{
+		Execution: entity.Execution{
+			DomainID: "failed",
+		},
 	}).Return(invariant.ManagerFixResult{
 		FixResultType: invariant.FixResultTypeFailed,
 		FixResults: []invariant.FixResult{
@@ -421,12 +532,16 @@ func (s *FixerSuite) TestFix_Success() {
 
 	mockFixedWriter := store.NewMockExecutionWriter(s.controller)
 	mockFixedWriter.EXPECT().Add(store.FixOutputEntity{
-		Execution: entity.Execution{
-			DomainID: "history_missing",
-		},
-		Input: store.ScanOutputEntity{
+		Execution: &entity.ConcreteExecution{
 			Execution: entity.Execution{
 				DomainID: "history_missing",
+			},
+		},
+		Input: store.ScanOutputEntity{
+			Execution: &entity.ConcreteExecution{
+				Execution: entity.Execution{
+					DomainID: "history_missing",
+				},
 			},
 		},
 		Result: invariant.ManagerFixResult{
@@ -441,12 +556,16 @@ func (s *FixerSuite) TestFix_Success() {
 		},
 	}).Times(2)
 	mockFixedWriter.EXPECT().Add(store.FixOutputEntity{
-		Execution: entity.Execution{
-			DomainID: "first_history_event",
-		},
-		Input: store.ScanOutputEntity{
+		Execution: &entity.ConcreteExecution{
 			Execution: entity.Execution{
 				DomainID: "first_history_event",
+			},
+		},
+		Input: store.ScanOutputEntity{
+			Execution: &entity.ConcreteExecution{
+				Execution: entity.Execution{
+					DomainID: "first_history_event",
+				},
 			},
 		},
 		Result: invariant.ManagerFixResult{
@@ -464,12 +583,16 @@ func (s *FixerSuite) TestFix_Success() {
 		},
 	}).Times(1)
 	mockFixedWriter.EXPECT().Add(store.FixOutputEntity{
-		Execution: entity.Execution{
-			DomainID: "orphan_execution",
-		},
-		Input: store.ScanOutputEntity{
+		Execution: &entity.ConcreteExecution{
 			Execution: entity.Execution{
 				DomainID: "orphan_execution",
+			},
+		},
+		Input: store.ScanOutputEntity{
+			Execution: &entity.ConcreteExecution{
+				Execution: entity.Execution{
+					DomainID: "orphan_execution",
+				},
 			},
 		},
 		Result: invariant.ManagerFixResult{
@@ -492,12 +615,16 @@ func (s *FixerSuite) TestFix_Success() {
 	}).Times(1)
 	mockFailedWriter := store.NewMockExecutionWriter(s.controller)
 	mockFailedWriter.EXPECT().Add(store.FixOutputEntity{
-		Execution: entity.Execution{
-			DomainID: "failed",
-		},
-		Input: store.ScanOutputEntity{
+		Execution: &entity.ConcreteExecution{
 			Execution: entity.Execution{
 				DomainID: "failed",
+			},
+		},
+		Input: store.ScanOutputEntity{
+			Execution: &entity.ConcreteExecution{
+				Execution: entity.Execution{
+					DomainID: "failed",
+				},
 			},
 		},
 		Result: invariant.ManagerFixResult{
@@ -513,12 +640,16 @@ func (s *FixerSuite) TestFix_Success() {
 	}).Times(2)
 	mockSkippedWriter := store.NewMockExecutionWriter(s.controller)
 	mockSkippedWriter.EXPECT().Add(store.FixOutputEntity{
-		Execution: entity.Execution{
-			DomainID: "skipped",
-		},
-		Input: store.ScanOutputEntity{
+		Execution: &entity.ConcreteExecution{
 			Execution: entity.Execution{
 				DomainID: "skipped",
+			},
+		},
+		Input: store.ScanOutputEntity{
+			Execution: &entity.ConcreteExecution{
+				Execution: entity.Execution{
+					DomainID: "skipped",
+				},
 			},
 		},
 		Result: invariant.ManagerFixResult{
@@ -538,13 +669,100 @@ func (s *FixerSuite) TestFix_Success() {
 			},
 		},
 	}).Times(4)
+	mockSkippedWriter.EXPECT().Add(store.FixOutputEntity{
+		Execution: &entity.ConcreteExecution{
+			Execution: entity.Execution{
+				DomainID: "disallow_domain",
+			},
+		},
+		Input: store.ScanOutputEntity{
+			Execution: &entity.ConcreteExecution{
+				Execution: entity.Execution{
+					DomainID: "disallow_domain",
+				},
+			},
+		},
+		Result: invariant.ManagerFixResult{
+			FixResultType: invariant.FixResultTypeSkipped,
+		},
+	}).Times(2)
 	mockSkippedWriter.EXPECT().Flush().Return(nil)
 	mockFailedWriter.EXPECT().Flush().Return(nil)
 	mockFixedWriter.EXPECT().Flush().Return(nil)
 	mockSkippedWriter.EXPECT().FlushedKeys().Return(&store.Keys{UUID: "skipped_keys_uuid"})
 	mockFailedWriter.EXPECT().FlushedKeys().Return(&store.Keys{UUID: "failed_keys_uuid"})
 	mockFixedWriter.EXPECT().FlushedKeys().Return(&store.Keys{UUID: "fixed_keys_uuid"})
+	domainCache := cache.NewMockDomainCache(s.controller)
+	domainCache.EXPECT().GetDomainByID("skipped").Return(cache.NewDomainCacheEntryForTest(
+		&persistence.DomainInfo{
+			Name: "skipped",
+		},
+		nil,
+		false,
+		nil,
+		0,
+		nil,
+		nil),
+		nil).Times(4)
+	domainCache.EXPECT().GetDomainByID("history_missing").Return(cache.NewDomainCacheEntryForTest(
+		&persistence.DomainInfo{
+			Name: "history_missing",
+		},
+		nil,
+		false,
+		nil,
+		0,
+		nil,
+		nil),
+		nil).Times(2)
+	domainCache.EXPECT().GetDomainByID("first_history_event").Return(cache.NewDomainCacheEntryForTest(
+		&persistence.DomainInfo{
+			Name: "first_history_event",
+		},
+		nil,
+		false,
+		nil,
+		0,
+		nil,
+		nil),
+		nil).Times(1)
+	domainCache.EXPECT().GetDomainByID("orphan_execution").Return(cache.NewDomainCacheEntryForTest(
+		&persistence.DomainInfo{
+			Name: "orphan_execution",
+		},
+		nil,
+		false,
+		nil,
+		0,
+		nil,
+		nil),
+		nil).Times(1)
+	domainCache.EXPECT().GetDomainByID("failed").Return(cache.NewDomainCacheEntryForTest(
+		&persistence.DomainInfo{
+			Name: "failed",
+		},
+		nil,
+		false,
+		nil,
+		0,
+		nil,
+		nil),
+		nil).Times(2)
+	domainCache.EXPECT().GetDomainByID("disallow_domain").Return(cache.NewDomainCacheEntryForTest(
+		&persistence.DomainInfo{
+			Name: "disallow_domain",
+		},
+		nil,
+		false,
+		nil,
+		0,
+		nil,
+		nil),
+		nil).Times(2)
 
+	allowDomain := func(domain string) bool {
+		return domain != "disallow_domain"
+	}
 	fixer := &fixer{
 		shardID:          0,
 		invariantManager: mockInvariantManager,
@@ -553,14 +771,16 @@ func (s *FixerSuite) TestFix_Success() {
 		fixedWriter:      mockFixedWriter,
 		itr:              mockItr,
 		progressReportFn: func() {},
+		domainCache:      domainCache,
+		allowDomain:      allowDomain,
 	}
 	result := fixer.Fix()
 	s.Equal(FixReport{
 		ShardID: 0,
 		Stats: FixStats{
-			ExecutionCount: 10,
+			ExecutionCount: 12,
 			FixedCount:     4,
-			SkippedCount:   4,
+			SkippedCount:   6,
 			FailedCount:    2,
 		},
 		Result: FixResult{
