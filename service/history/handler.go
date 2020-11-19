@@ -32,7 +32,6 @@ import (
 
 	"github.com/uber/cadence/.gen/go/health"
 	hist "github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/history/historyserviceserver"
 	r "github.com/uber/cadence/.gen/go/replicator"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -42,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
@@ -52,9 +52,9 @@ import (
 	"github.com/uber/cadence/service/history/task"
 )
 
-type (
-	//go:generate mockgen -copyright_file=../../LICENSE -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package history github.com/uber/cadence/service/history Handler
+//go:generate mockgen -copyright_file=../../LICENSE -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package history github.com/uber/cadence/service/history Handler
 
+type (
 	// Handler interface for history service
 	Handler interface {
 		Health(context.Context) (*health.HealthStatus, error)
@@ -67,7 +67,7 @@ type (
 		GetMutableState(context.Context, *hist.GetMutableStateRequest) (*hist.GetMutableStateResponse, error)
 		GetReplicationMessages(context.Context, *r.GetReplicationMessagesRequest) (*r.GetReplicationMessagesResponse, error)
 		MergeDLQMessages(context.Context, *r.MergeDLQMessagesRequest) (*r.MergeDLQMessagesResponse, error)
-		NotifyFailoverMarkers(context.Context, *hist.NotifyFailoverMarkersRequest) error
+		NotifyFailoverMarkers(context.Context, *types.NotifyFailoverMarkersRequest) error
 		PollMutableState(context.Context, *hist.PollMutableStateRequest) (*hist.PollMutableStateResponse, error)
 		PurgeDLQMessages(context.Context, *r.PurgeDLQMessagesRequest) error
 		QueryWorkflow(context.Context, *hist.QueryWorkflowRequest) (*hist.QueryWorkflowResponse, error)
@@ -116,7 +116,7 @@ type (
 	}
 )
 
-var _ historyserviceserver.Interface = (*handlerImpl)(nil)
+var _ Handler = (*handlerImpl)(nil)
 var _ shard.EngineFactory = (*handlerImpl)(nil)
 
 var (
@@ -1888,7 +1888,7 @@ func (h *handlerImpl) RefreshWorkflowTasks(
 // The coordinator decides when the failover finishes based on received failover marker.
 func (h *handlerImpl) NotifyFailoverMarkers(
 	ctx context.Context,
-	request *hist.NotifyFailoverMarkersRequest,
+	request *types.NotifyFailoverMarkersRequest,
 ) (retError error) {
 
 	scope := metrics.HistoryNotifyFailoverMarkersScope

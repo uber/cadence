@@ -38,6 +38,7 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	c "github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type VisibilitySamplingSuite struct {
@@ -51,9 +52,9 @@ type VisibilitySamplingSuite struct {
 var (
 	testDomainUUID        = "fb15e4b5-356f-466d-8c6d-a29223e5c536"
 	testDomain            = "test-domain-name"
-	testWorkflowExecution = gen.WorkflowExecution{
-		WorkflowId: common.StringPtr("visibility-workflow-test"),
-		RunId:      common.StringPtr("843f6fc7-102a-4c63-a2d4-7c653b01bf52"),
+	testWorkflowExecution = types.WorkflowExecution{
+		WorkflowID: common.StringPtr("visibility-workflow-test"),
+		RunID:      common.StringPtr("843f6fc7-102a-4c63-a2d4-7c653b01bf52"),
 	}
 	testWorkflowTypeName = "visibility-workflow"
 
@@ -110,14 +111,14 @@ func (s *VisibilitySamplingSuite) TestRecordWorkflowExecutionClosed() {
 		Domain:           testDomain,
 		Execution:        testWorkflowExecution,
 		WorkflowTypeName: testWorkflowTypeName,
-		Status:           gen.WorkflowExecutionCloseStatusCompleted,
+		Status:           types.WorkflowExecutionCloseStatusCompleted,
 	}
 	request2 := &p.RecordWorkflowExecutionClosedRequest{
 		DomainUUID:       testDomainUUID,
 		Domain:           testDomain,
 		Execution:        testWorkflowExecution,
 		WorkflowTypeName: testWorkflowTypeName,
-		Status:           gen.WorkflowExecutionCloseStatusFailed,
+		Status:           types.WorkflowExecutionCloseStatusFailed,
 	}
 
 	s.persistence.On("RecordWorkflowExecutionClosed", mock.Anything, request).Return(nil).Once()
@@ -230,7 +231,7 @@ func (s *VisibilitySamplingSuite) TestListOpenWorkflowExecutionsByWorkflowID() {
 	}
 	request := &p.ListWorkflowExecutionsByWorkflowIDRequest{
 		ListWorkflowExecutionsRequest: req,
-		WorkflowID:                    testWorkflowExecution.GetWorkflowId(),
+		WorkflowID:                    testWorkflowExecution.GetWorkflowID(),
 	}
 	s.persistence.On("ListOpenWorkflowExecutionsByWorkflowID", mock.Anything, request).Return(nil, nil).Once()
 	_, err := s.client.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
@@ -254,7 +255,7 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByWorkflowID()
 	}
 	request := &p.ListWorkflowExecutionsByWorkflowIDRequest{
 		ListWorkflowExecutionsRequest: req,
-		WorkflowID:                    testWorkflowExecution.GetWorkflowId(),
+		WorkflowID:                    testWorkflowExecution.GetWorkflowID(),
 	}
 	s.persistence.On("ListClosedWorkflowExecutionsByWorkflowID", mock.Anything, request).Return(nil, nil).Once()
 	_, err := s.client.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
@@ -278,7 +279,7 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByStatus() {
 	}
 	request := &p.ListClosedWorkflowExecutionsByStatusRequest{
 		ListWorkflowExecutionsRequest: req,
-		Status:                        gen.WorkflowExecutionCloseStatusFailed,
+		Status:                        types.WorkflowExecutionCloseStatusFailed,
 	}
 	s.persistence.On("ListClosedWorkflowExecutionsByStatus", mock.Anything, request).Return(nil, nil).Once()
 	_, err := s.client.ListClosedWorkflowExecutionsByStatus(ctx, request)

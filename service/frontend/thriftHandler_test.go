@@ -51,7 +51,7 @@ func TestThriftHandler(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("CountWorkflowExecutions", func(t *testing.T) {
-		h.EXPECT().CountWorkflowExecutions(ctx, &shared.CountWorkflowExecutionsRequest{}).Return(&shared.CountWorkflowExecutionsResponse{}, internalErr).Times(1)
+		h.EXPECT().CountWorkflowExecutions(ctx, &types.CountWorkflowExecutionsRequest{}).Return(&types.CountWorkflowExecutionsResponse{}, internalErr).Times(1)
 		resp, err := th.CountWorkflowExecutions(ctx, &shared.CountWorkflowExecutionsRequest{})
 		assert.Equal(t, shared.CountWorkflowExecutionsResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
@@ -104,7 +104,7 @@ func TestThriftHandler(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("ListClosedWorkflowExecutions", func(t *testing.T) {
-		h.EXPECT().ListClosedWorkflowExecutions(ctx, &shared.ListClosedWorkflowExecutionsRequest{}).Return(&shared.ListClosedWorkflowExecutionsResponse{}, internalErr).Times(1)
+		h.EXPECT().ListClosedWorkflowExecutions(ctx, &types.ListClosedWorkflowExecutionsRequest{}).Return(&types.ListClosedWorkflowExecutionsResponse{}, internalErr).Times(1)
 		resp, err := th.ListClosedWorkflowExecutions(ctx, &shared.ListClosedWorkflowExecutionsRequest{})
 		assert.Equal(t, shared.ListClosedWorkflowExecutionsResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
@@ -116,7 +116,7 @@ func TestThriftHandler(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("ListOpenWorkflowExecutions", func(t *testing.T) {
-		h.EXPECT().ListOpenWorkflowExecutions(ctx, &shared.ListOpenWorkflowExecutionsRequest{}).Return(&shared.ListOpenWorkflowExecutionsResponse{}, internalErr).Times(1)
+		h.EXPECT().ListOpenWorkflowExecutions(ctx, &types.ListOpenWorkflowExecutionsRequest{}).Return(&types.ListOpenWorkflowExecutionsResponse{}, internalErr).Times(1)
 		resp, err := th.ListOpenWorkflowExecutions(ctx, &shared.ListOpenWorkflowExecutionsRequest{})
 		assert.Equal(t, shared.ListOpenWorkflowExecutionsResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
@@ -128,7 +128,7 @@ func TestThriftHandler(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("ListWorkflowExecutions", func(t *testing.T) {
-		h.EXPECT().ListWorkflowExecutions(ctx, &shared.ListWorkflowExecutionsRequest{}).Return(&shared.ListWorkflowExecutionsResponse{}, internalErr).Times(1)
+		h.EXPECT().ListWorkflowExecutions(ctx, &types.ListWorkflowExecutionsRequest{}).Return(&types.ListWorkflowExecutionsResponse{}, internalErr).Times(1)
 		resp, err := th.ListWorkflowExecutions(ctx, &shared.ListWorkflowExecutionsRequest{})
 		assert.Equal(t, shared.ListWorkflowExecutionsResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
@@ -232,7 +232,7 @@ func TestThriftHandler(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("ScanWorkflowExecutions", func(t *testing.T) {
-		h.EXPECT().ScanWorkflowExecutions(ctx, &shared.ListWorkflowExecutionsRequest{}).Return(&shared.ListWorkflowExecutionsResponse{}, internalErr).Times(1)
+		h.EXPECT().ScanWorkflowExecutions(ctx, &types.ListWorkflowExecutionsRequest{}).Return(&types.ListWorkflowExecutionsResponse{}, internalErr).Times(1)
 		resp, err := th.ScanWorkflowExecutions(ctx, &shared.ListWorkflowExecutionsRequest{})
 		assert.Equal(t, shared.ListWorkflowExecutionsResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)

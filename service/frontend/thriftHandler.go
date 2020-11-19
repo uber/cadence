@@ -56,9 +56,9 @@ func (t ThriftHandler) Health(ctx context.Context) (response *health.HealthStatu
 }
 
 // CountWorkflowExecutions forwards request to the underlying handler
-func (t ThriftHandler) CountWorkflowExecutions(ctx context.Context, request *shared.CountWorkflowExecutionsRequest) (response *shared.CountWorkflowExecutionsResponse, err error) {
-	response, err = t.h.CountWorkflowExecutions(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) CountWorkflowExecutions(ctx context.Context, request *shared.CountWorkflowExecutionsRequest) (*shared.CountWorkflowExecutionsResponse, error) {
+	response, err := t.h.CountWorkflowExecutions(ctx, thrift.ToCountWorkflowExecutionsRequest(request))
+	return thrift.FromCountWorkflowExecutionsResponse(response), thrift.FromError(err)
 }
 
 // DeprecateDomain forwards request to the underlying handler
@@ -110,9 +110,9 @@ func (t ThriftHandler) ListArchivedWorkflowExecutions(ctx context.Context, reque
 }
 
 // ListClosedWorkflowExecutions forwards request to the underlying handler
-func (t ThriftHandler) ListClosedWorkflowExecutions(ctx context.Context, request *shared.ListClosedWorkflowExecutionsRequest) (response *shared.ListClosedWorkflowExecutionsResponse, err error) {
-	response, err = t.h.ListClosedWorkflowExecutions(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) ListClosedWorkflowExecutions(ctx context.Context, request *shared.ListClosedWorkflowExecutionsRequest) (*shared.ListClosedWorkflowExecutionsResponse, error) {
+	response, err := t.h.ListClosedWorkflowExecutions(ctx, thrift.ToListClosedWorkflowExecutionsRequest(request))
+	return thrift.FromListClosedWorkflowExecutionsResponse(response), thrift.FromError(err)
 }
 
 // ListDomains forwards request to the underlying handler
@@ -122,9 +122,9 @@ func (t ThriftHandler) ListDomains(ctx context.Context, request *shared.ListDoma
 }
 
 // ListOpenWorkflowExecutions forwards request to the underlying handler
-func (t ThriftHandler) ListOpenWorkflowExecutions(ctx context.Context, request *shared.ListOpenWorkflowExecutionsRequest) (response *shared.ListOpenWorkflowExecutionsResponse, err error) {
-	response, err = t.h.ListOpenWorkflowExecutions(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) ListOpenWorkflowExecutions(ctx context.Context, request *shared.ListOpenWorkflowExecutionsRequest) (*shared.ListOpenWorkflowExecutionsResponse, error) {
+	response, err := t.h.ListOpenWorkflowExecutions(ctx, thrift.ToListOpenWorkflowExecutionsRequest(request))
+	return thrift.FromListOpenWorkflowExecutionsResponse(response), thrift.FromError(err)
 }
 
 // ListTaskListPartitions forwards request to the underlying handler
@@ -134,9 +134,9 @@ func (t ThriftHandler) ListTaskListPartitions(ctx context.Context, request *shar
 }
 
 // ListWorkflowExecutions forwards request to the underlying handler
-func (t ThriftHandler) ListWorkflowExecutions(ctx context.Context, request *shared.ListWorkflowExecutionsRequest) (response *shared.ListWorkflowExecutionsResponse, err error) {
-	response, err = t.h.ListWorkflowExecutions(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) ListWorkflowExecutions(ctx context.Context, request *shared.ListWorkflowExecutionsRequest) (*shared.ListWorkflowExecutionsResponse, error) {
+	response, err := t.h.ListWorkflowExecutions(ctx, thrift.ToListWorkflowExecutionsRequest(request))
+	return thrift.FromListWorkflowExecutionsResponse(response), thrift.FromError(err)
 }
 
 // PollForActivityTask forwards request to the underlying handler
@@ -248,9 +248,9 @@ func (t ThriftHandler) RespondQueryTaskCompleted(ctx context.Context, request *s
 }
 
 // ScanWorkflowExecutions forwards request to the underlying handler
-func (t ThriftHandler) ScanWorkflowExecutions(ctx context.Context, request *shared.ListWorkflowExecutionsRequest) (response *shared.ListWorkflowExecutionsResponse, err error) {
-	response, err = t.h.ScanWorkflowExecutions(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) ScanWorkflowExecutions(ctx context.Context, request *shared.ListWorkflowExecutionsRequest) (*shared.ListWorkflowExecutionsResponse, error) {
+	response, err := t.h.ScanWorkflowExecutions(ctx, thrift.ToListWorkflowExecutionsRequest(request))
+	return thrift.FromListWorkflowExecutionsResponse(response), thrift.FromError(err)
 }
 
 // SignalWithStartWorkflowExecution forwards request to the underlying handler

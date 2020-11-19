@@ -1,4 +1,5 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -96,19 +97,19 @@ type (
 
 		pendingChildExecutionInfoIDs map[int64]*persistence.ChildExecutionInfo    // Initiated Event ID -> Child Execution Info
 		updateChildExecutionInfos    map[*persistence.ChildExecutionInfo]struct{} // Modified ChildExecution Infos since last update
-		deleteChildExecutionInfo     *int64                                       // Deleted ChildExecution Info since last update
+		deleteChildExecutionInfos    map[int64]struct{}                           // Deleted ChildExecution Infos since last update
 
 		pendingRequestCancelInfoIDs map[int64]*persistence.RequestCancelInfo    // Initiated Event ID -> RequestCancelInfo
 		updateRequestCancelInfos    map[*persistence.RequestCancelInfo]struct{} // Modified RequestCancel Infos since last update, for persistence update
-		deleteRequestCancelInfo     *int64                                      // Deleted RequestCancel Info since last update, for persistence update
+		deleteRequestCancelInfos    map[int64]struct{}                          // Deleted RequestCancel Infos since last update, for persistence update
 
 		pendingSignalInfoIDs map[int64]*persistence.SignalInfo    // Initiated Event ID -> SignalInfo
 		updateSignalInfos    map[*persistence.SignalInfo]struct{} // Modified SignalInfo since last update
-		deleteSignalInfo     *int64                               // Deleted SignalInfo since last update
+		deleteSignalInfos    map[int64]struct{}                   // Deleted SignalInfos since last update
 
 		pendingSignalRequestedIDs map[string]struct{} // Set of signaled requestIds
 		updateSignalRequestedIDs  map[string]struct{} // Set of signaled requestIds since last update
-		deleteSignalRequestedID   string              // Deleted signaled requestId
+		deleteSignalRequestedIDs  map[string]struct{} // Deleted signaled requestIds
 
 		bufferedEvents       []*workflow.HistoryEvent // buffered history events that are already persisted
 		updateBufferedEvents []*workflow.HistoryEvent // buffered history events that needs to be persisted
@@ -191,19 +192,19 @@ func newMutableStateBuilder(
 
 		updateChildExecutionInfos:    make(map[*persistence.ChildExecutionInfo]struct{}),
 		pendingChildExecutionInfoIDs: make(map[int64]*persistence.ChildExecutionInfo),
-		deleteChildExecutionInfo:     nil,
+		deleteChildExecutionInfos:    make(map[int64]struct{}),
 
 		updateRequestCancelInfos:    make(map[*persistence.RequestCancelInfo]struct{}),
 		pendingRequestCancelInfoIDs: make(map[int64]*persistence.RequestCancelInfo),
-		deleteRequestCancelInfo:     nil,
+		deleteRequestCancelInfos:    make(map[int64]struct{}),
 
 		updateSignalInfos:    make(map[*persistence.SignalInfo]struct{}),
 		pendingSignalInfoIDs: make(map[int64]*persistence.SignalInfo),
-		deleteSignalInfo:     nil,
+		deleteSignalInfos:    make(map[int64]struct{}),
 
 		updateSignalRequestedIDs:  make(map[string]struct{}),
 		pendingSignalRequestedIDs: make(map[string]struct{}),
-		deleteSignalRequestedID:   "",
+		deleteSignalRequestedIDs:  make(map[string]struct{}),
 
 		currentVersion:        domainEntry.GetFailoverVersion(),
 		hasBufferedEventsInDB: false,
@@ -1165,7 +1166,7 @@ func (e *mutableStateBuilder) DeletePendingChildExecution(
 		e.logDataInconsistency()
 	}
 
-	e.deleteChildExecutionInfo = common.Int64Ptr(initiatedEventID)
+	e.deleteChildExecutionInfos[initiatedEventID] = struct{}{}
 	return nil
 }
 
@@ -1185,7 +1186,7 @@ func (e *mutableStateBuilder) DeletePendingRequestCancel(
 		e.logDataInconsistency()
 	}
 
-	e.deleteRequestCancelInfo = common.Int64Ptr(initiatedEventID)
+	e.deleteRequestCancelInfos[initiatedEventID] = struct{}{}
 	return nil
 }
 
@@ -1205,7 +1206,7 @@ func (e *mutableStateBuilder) DeletePendingSignal(
 		e.logDataInconsistency()
 	}
 
-	e.deleteSignalInfo = common.Int64Ptr(initiatedEventID)
+	e.deleteSignalInfos[initiatedEventID] = struct{}{}
 	return nil
 }
 
@@ -1584,7 +1585,7 @@ func (e *mutableStateBuilder) DeleteSignalRequested(
 ) {
 
 	delete(e.pendingSignalRequestedIDs, requestID)
-	e.deleteSignalRequestedID = requestID
+	e.deleteSignalRequestedIDs[requestID] = struct{}{}
 }
 
 func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
@@ -3928,17 +3929,17 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		VersionHistories: e.versionHistories,
 
 		UpsertActivityInfos:       convertUpdateActivityInfos(e.updateActivityInfos),
-		DeleteActivityInfos:       convertDeleteActivityInfos(e.deleteActivityInfos),
+		DeleteActivityInfos:       convertInt64SetToSlice(e.deleteActivityInfos),
 		UpsertTimerInfos:          convertUpdateTimerInfos(e.updateTimerInfos),
-		DeleteTimerInfos:          convertDeleteTimerInfos(e.deleteTimerInfos),
+		DeleteTimerInfos:          convertStringSetToSlice(e.deleteTimerInfos),
 		UpsertChildExecutionInfos: convertUpdateChildExecutionInfos(e.updateChildExecutionInfos),
-		DeleteChildExecutionInfo:  e.deleteChildExecutionInfo,
+		DeleteChildExecutionInfos: convertInt64SetToSlice(e.deleteChildExecutionInfos),
 		UpsertRequestCancelInfos:  convertUpdateRequestCancelInfos(e.updateRequestCancelInfos),
-		DeleteRequestCancelInfo:   e.deleteRequestCancelInfo,
+		DeleteRequestCancelInfos:  convertInt64SetToSlice(e.deleteRequestCancelInfos),
 		UpsertSignalInfos:         convertUpdateSignalInfos(e.updateSignalInfos),
-		DeleteSignalInfo:          e.deleteSignalInfo,
-		UpsertSignalRequestedIDs:  convertSignalRequestedIDs(e.updateSignalRequestedIDs),
-		DeleteSignalRequestedID:   e.deleteSignalRequestedID,
+		DeleteSignalInfos:         convertInt64SetToSlice(e.deleteSignalInfos),
+		UpsertSignalRequestedIDs:  convertStringSetToSlice(e.updateSignalRequestedIDs),
+		DeleteSignalRequestedIDs:  convertStringSetToSlice(e.deleteSignalRequestedIDs),
 		NewBufferedEvents:         e.updateBufferedEvents,
 		ClearBufferedEvents:       e.clearBufferedEvents,
 
@@ -4018,7 +4019,7 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 		ChildExecutionInfos: convertPendingChildExecutionInfos(e.pendingChildExecutionInfoIDs),
 		RequestCancelInfos:  convertPendingRequestCancelInfos(e.pendingRequestCancelInfoIDs),
 		SignalInfos:         convertPendingSignalInfos(e.pendingSignalInfoIDs),
-		SignalRequestedIDs:  convertSignalRequestedIDs(e.pendingSignalRequestedIDs),
+		SignalRequestedIDs:  convertStringSetToSlice(e.pendingSignalRequestedIDs),
 
 		TransferTasks:    e.insertTransferTasks,
 		ReplicationTasks: e.insertReplicationTasks,
@@ -4107,16 +4108,16 @@ func (e *mutableStateBuilder) cleanupTransaction(
 	e.deleteTimerInfos = make(map[string]struct{})
 
 	e.updateChildExecutionInfos = make(map[*persistence.ChildExecutionInfo]struct{})
-	e.deleteChildExecutionInfo = nil
+	e.deleteChildExecutionInfos = make(map[int64]struct{})
 
 	e.updateRequestCancelInfos = make(map[*persistence.RequestCancelInfo]struct{})
-	e.deleteRequestCancelInfo = nil
+	e.deleteRequestCancelInfos = make(map[int64]struct{})
 
 	e.updateSignalInfos = make(map[*persistence.SignalInfo]struct{})
-	e.deleteSignalInfo = nil
+	e.deleteSignalInfos = make(map[int64]struct{})
 
 	e.updateSignalRequestedIDs = make(map[string]struct{})
-	e.deleteSignalRequestedID = ""
+	e.deleteSignalRequestedIDs = make(map[string]struct{})
 
 	e.clearBufferedEvents = false
 	if e.updateBufferedEvents != nil {

@@ -2507,8 +2507,8 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 // ListOpenWorkflowExecutions - retrieves info for open workflow executions in a domain
 func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 	ctx context.Context,
-	listRequest *gen.ListOpenWorkflowExecutionsRequest,
-) (resp *gen.ListOpenWorkflowExecutionsResponse, retError error) {
+	listRequest *types.ListOpenWorkflowExecutionsRequest,
+) (resp *types.ListOpenWorkflowExecutionsResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendListOpenWorkflowExecutionsScope, listRequest)
@@ -2588,7 +2588,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 				ctx,
 				&persistence.ListWorkflowExecutionsByWorkflowIDRequest{
 					ListWorkflowExecutionsRequest: baseReq,
-					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
+					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowID(),
 				})
 		}
 		wh.GetLogger().Debug("List open workflow with filter",
@@ -2615,7 +2615,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
-	resp = &gen.ListOpenWorkflowExecutionsResponse{}
+	resp = &types.ListOpenWorkflowExecutionsResponse{}
 	resp.Executions = persistenceResp.Executions
 	resp.NextPageToken = persistenceResp.NextPageToken
 	return resp, nil
@@ -2716,8 +2716,8 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 // ListClosedWorkflowExecutions - retrieves info for closed workflow executions in a domain
 func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 	ctx context.Context,
-	listRequest *gen.ListClosedWorkflowExecutionsRequest,
-) (resp *gen.ListClosedWorkflowExecutionsResponse, retError error) {
+	listRequest *types.ListClosedWorkflowExecutionsRequest,
+) (resp *types.ListClosedWorkflowExecutionsResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendListClosedWorkflowExecutionsScope, listRequest)
@@ -2805,7 +2805,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 				ctx,
 				&persistence.ListWorkflowExecutionsByWorkflowIDRequest{
 					ListWorkflowExecutionsRequest: baseReq,
-					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowId(),
+					WorkflowID:                    listRequest.ExecutionFilter.GetWorkflowID(),
 				},
 			)
 		}
@@ -2847,7 +2847,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
-	resp = &gen.ListClosedWorkflowExecutionsResponse{}
+	resp = &types.ListClosedWorkflowExecutionsResponse{}
 	resp.Executions = persistenceResp.Executions
 	resp.NextPageToken = persistenceResp.NextPageToken
 	return resp, nil
@@ -2856,8 +2856,8 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 // ListWorkflowExecutions - retrieves info for workflow executions in a domain
 func (wh *WorkflowHandler) ListWorkflowExecutions(
 	ctx context.Context,
-	listRequest *gen.ListWorkflowExecutionsRequest,
-) (resp *gen.ListWorkflowExecutionsResponse, retError error) {
+	listRequest *types.ListWorkflowExecutionsRequest,
+) (resp *types.ListWorkflowExecutionsResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendListWorkflowExecutionsScope, listRequest)
@@ -2916,7 +2916,7 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
-	resp = &gen.ListWorkflowExecutionsResponse{}
+	resp = &types.ListWorkflowExecutionsResponse{}
 	resp.Executions = persistenceResp.Executions
 	resp.NextPageToken = persistenceResp.NextPageToken
 	return resp, nil
@@ -2925,8 +2925,8 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 // ScanWorkflowExecutions - retrieves info for large amount of workflow executions in a domain without order
 func (wh *WorkflowHandler) ScanWorkflowExecutions(
 	ctx context.Context,
-	listRequest *gen.ListWorkflowExecutionsRequest,
-) (resp *gen.ListWorkflowExecutionsResponse, retError error) {
+	listRequest *types.ListWorkflowExecutionsRequest,
+) (resp *types.ListWorkflowExecutionsResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendScanWorkflowExecutionsScope, listRequest)
@@ -2985,7 +2985,7 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
-	resp = &gen.ListWorkflowExecutionsResponse{}
+	resp = &types.ListWorkflowExecutionsResponse{}
 	resp.Executions = persistenceResp.Executions
 	resp.NextPageToken = persistenceResp.NextPageToken
 	return resp, nil
@@ -2994,8 +2994,8 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 // CountWorkflowExecutions - count number of workflow executions in a domain
 func (wh *WorkflowHandler) CountWorkflowExecutions(
 	ctx context.Context,
-	countRequest *gen.CountWorkflowExecutionsRequest,
-) (resp *gen.CountWorkflowExecutionsResponse, retError error) {
+	countRequest *types.CountWorkflowExecutionsRequest,
+) (resp *types.CountWorkflowExecutionsResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendCountWorkflowExecutionsScope, countRequest)
@@ -3043,7 +3043,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
-	resp = &gen.CountWorkflowExecutionsResponse{
+	resp = &types.CountWorkflowExecutionsResponse{
 		Count: common.Int64Ptr(persistenceResp.Count),
 	}
 	return resp, nil

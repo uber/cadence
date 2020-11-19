@@ -1,4 +1,5 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -36,12 +37,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/uber/cadence/.gen/go/history"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/cluster"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -1436,7 +1437,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.assertChecksumsEqual(testWorkflowChecksum, state2.Checksum)
 	log.Infof("Workflow execution last updated: %v", info2.LastUpdatedTimestamp)
 
-	err5 := s.UpdateWorkflowExecutionWithRangeID(ctx, failedUpdateInfo, failedUpdateStats, versionHistories, []int64{int64(5)}, nil, int64(12345), int64(5), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "")
+	err5 := s.UpdateWorkflowExecutionWithRangeID(ctx, failedUpdateInfo, failedUpdateStats, versionHistories, []int64{int64(5)}, nil, int64(12345), int64(5), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	s.Error(err5, "expected non nil error.")
 	s.IsType(&p.ShardOwnershipLostError{}, err5)
 	log.Errorf("Conditional update failed with error: %v", err5)
@@ -1486,7 +1487,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	log.Infof("Workflow execution last updated: %v", info3.LastUpdatedTimestamp)
 
 	//update with incorrect rangeID and condition(next_event_id)
-	err7 := s.UpdateWorkflowExecutionWithRangeID(ctx, failedUpdateInfo, failedUpdateStats, versionHistories, []int64{int64(5)}, nil, int64(12345), int64(3), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "")
+	err7 := s.UpdateWorkflowExecutionWithRangeID(ctx, failedUpdateInfo, failedUpdateStats, versionHistories, []int64{int64(5)}, nil, int64(12345), int64(3), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	s.Error(err7, "expected non nil error.")
 	s.IsType(&p.ShardOwnershipLostError{}, err7)
 	log.Errorf("Conditional update failed with error: %v", err7)
@@ -2961,7 +2962,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateSignalRequested() {
 	s.True(ok)
 	s.NotNil(ri)
 
-	err2 = s.DeleteSignalsRequestedState(ctx, updatedInfo, updatedStats, versionHistories, int64(5), signalRequestedID)
+	err2 = s.DeleteSignalsRequestedState(ctx, updatedInfo, updatedStats, versionHistories, int64(5), []string{signalRequestedID, uuid.New()})
 	s.NoError(err2)
 
 	state, err2 = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
@@ -5178,14 +5179,14 @@ func timeComparator(t1, t2 time.Time, timeTolerance time.Duration) bool {
 	return false
 }
 
-func createTransferPQS(cluster1 string, level1 int32, ackLevel1 int64, cluster2 string, level2 int32, ackLevel2 int64) history.ProcessingQueueStates {
-	domainFilter := &history.DomainFilter{
+func createTransferPQS(cluster1 string, level1 int32, ackLevel1 int64, cluster2 string, level2 int32, ackLevel2 int64) types.ProcessingQueueStates {
+	domainFilter := &types.DomainFilter{
 		DomainIDs:    nil,
 		ReverseMatch: common.BoolPtr(true),
 	}
-	processingQueueStateMap := map[string][]*history.ProcessingQueueState{
+	processingQueueStateMap := map[string][]*types.ProcessingQueueState{
 		cluster1: {
-			&history.ProcessingQueueState{
+			&types.ProcessingQueueState{
 				Level:        common.Int32Ptr(level1),
 				AckLevel:     common.Int64Ptr(ackLevel1),
 				MaxLevel:     common.Int64Ptr(ackLevel1),
@@ -5193,7 +5194,7 @@ func createTransferPQS(cluster1 string, level1 int32, ackLevel1 int64, cluster2 
 			},
 		},
 		cluster2: {
-			&history.ProcessingQueueState{
+			&types.ProcessingQueueState{
 				Level:        common.Int32Ptr(level2),
 				AckLevel:     common.Int64Ptr(ackLevel2),
 				MaxLevel:     common.Int64Ptr(ackLevel2),
@@ -5201,17 +5202,17 @@ func createTransferPQS(cluster1 string, level1 int32, ackLevel1 int64, cluster2 
 			},
 		},
 	}
-	return history.ProcessingQueueStates{StatesByCluster: processingQueueStateMap}
+	return types.ProcessingQueueStates{StatesByCluster: processingQueueStateMap}
 }
 
-func createTimerPQS(cluster1 string, level1 int32, ackLevel1 time.Time, cluster2 string, level2 int32, ackLevel2 time.Time) history.ProcessingQueueStates {
-	domainFilter := &history.DomainFilter{
+func createTimerPQS(cluster1 string, level1 int32, ackLevel1 time.Time, cluster2 string, level2 int32, ackLevel2 time.Time) types.ProcessingQueueStates {
+	domainFilter := &types.DomainFilter{
 		DomainIDs:    []string{},
 		ReverseMatch: common.BoolPtr(true),
 	}
-	processingQueueStateMap := map[string][]*history.ProcessingQueueState{
+	processingQueueStateMap := map[string][]*types.ProcessingQueueState{
 		cluster1: {
-			&history.ProcessingQueueState{
+			&types.ProcessingQueueState{
 				Level:        common.Int32Ptr(level1),
 				AckLevel:     common.Int64Ptr(ackLevel1.UnixNano()),
 				MaxLevel:     common.Int64Ptr(ackLevel1.UnixNano()),
@@ -5219,7 +5220,7 @@ func createTimerPQS(cluster1 string, level1 int32, ackLevel1 time.Time, cluster2
 			},
 		},
 		cluster2: {
-			&history.ProcessingQueueState{
+			&types.ProcessingQueueState{
 				Level:        common.Int32Ptr(level2),
 				AckLevel:     common.Int64Ptr(ackLevel2.UnixNano()),
 				MaxLevel:     common.Int64Ptr(ackLevel2.UnixNano()),
@@ -5227,5 +5228,5 @@ func createTimerPQS(cluster1 string, level1 int32, ackLevel1 time.Time, cluster2
 			},
 		},
 	}
-	return history.ProcessingQueueStates{StatesByCluster: processingQueueStateMap}
+	return types.ProcessingQueueStates{StatesByCluster: processingQueueStateMap}
 }

@@ -1,4 +1,5 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -69,7 +70,7 @@ func convertUpdateActivityInfos(
 	return outputs
 }
 
-func convertDeleteActivityInfos(
+func convertInt64SetToSlice(
 	inputs map[int64]struct{},
 ) []int64 {
 
@@ -120,7 +121,7 @@ func convertUpdateTimerInfos(
 	return outputs
 }
 
-func convertDeleteTimerInfos(
+func convertStringSetToSlice(
 	inputs map[string]struct{},
 ) []string {
 
@@ -191,17 +192,6 @@ func convertUpdateSignalInfos(
 ) []*persistence.SignalInfo {
 
 	outputs := make([]*persistence.SignalInfo, 0, len(inputs))
-	for item := range inputs {
-		outputs = append(outputs, item)
-	}
-	return outputs
-}
-
-func convertSignalRequestedIDs(
-	inputs map[string]struct{},
-) []string {
-
-	outputs := make([]string, 0, len(inputs))
 	for item := range inputs {
 		outputs = append(outputs, item)
 	}

@@ -286,32 +286,37 @@ func WorkflowEventCount(eventCount int) Tag {
 ///////////////////  System tags defined here:  ///////////////////
 // Tags with pre-define values
 
-// Component returns tag for Component
+// component returns tag for component
 func component(component string) Tag {
 	return newPredefinedStringTag("component", component)
 }
 
-// Lifecycle returns tag for Lifecycle
+// lifecycle returns tag for lifecycle
 func lifecycle(lifecycle string) Tag {
 	return newPredefinedStringTag("lifecycle", lifecycle)
 }
 
-// StoreOperation returns tag for StoreOperation
+// storeOperation returns tag for storeOperation
 func storeOperation(storeOperation string) Tag {
 	return newPredefinedStringTag("store-operation", storeOperation)
 }
 
-// OperationResult returns tag for OperationResult
+// clientOperation returns tag for clientOperation
+func clientOperation(clientOperation string) Tag {
+	return newPredefinedStringTag("client-operation", clientOperation)
+}
+
+// operationResult returns tag for operationResult
 func operationResult(operationResult string) Tag {
 	return newPredefinedStringTag("operation-result", operationResult)
 }
 
-// ErrorType returns tag for ErrorType
+// errorType returns tag for errorType
 func errorType(errorType string) Tag {
 	return newPredefinedStringTag("error-type", errorType)
 }
 
-// Shardupdate returns tag for Shardupdate
+// shardupdate returns tag for shardupdate
 func shardupdate(shardupdate string) Tag {
 	return newPredefinedStringTag("shard-update", shardupdate)
 }
@@ -391,6 +396,11 @@ func StoreType(storeType string) Tag {
 // StoreError returns tag for StoreError
 func StoreError(storeErr error) Tag {
 	return newErrorTag("store-error", storeErr)
+}
+
+// ClientError returns tag for ClientError
+func ClientError(clientErr error) Tag {
+	return newErrorTag("client-error", clientErr)
 }
 
 // DetailInfo returns tag for DetailInfo

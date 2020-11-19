@@ -137,6 +137,7 @@ var keys = map[Key]string{
 	MatchingForwarderMaxRatePerSecond:       "matching.forwarderMaxRatePerSecond",
 	MatchingForwarderMaxChildrenPerNode:     "matching.forwarderMaxChildrenPerNode",
 	MatchingShutdownDrainDuration:           "matching.shutdownDrainDuration",
+	MatchingErrorInjectionRate:              "matching.ErrorInjectionRate",
 
 	// history settings
 	HistoryRPS:                                            "history.rps",
@@ -331,6 +332,8 @@ var keys = map[Key]string{
 	CurrentExecutionsScannerPersistencePageSize:              "worker.currentExecutionsPersistencePageSize",
 	CurrentExecutionsScannerInvariantCollectionHistory:       "worker.currentExecutionsScannerInvariantCollectionHistory",
 	CurrentExecutionsScannerInvariantCollectionMutableState:  "worker.currentExecutionsInvariantCollectionMutableState",
+	ConcreteExecutionFixerDomainAllow:                        "worker.concreteExecutionFixerDomainAllow",
+	CurrentExecutionFixerDomainAllow:                         "worker.currentExecutionFixerDomainAllow",
 }
 
 const (
@@ -518,6 +521,8 @@ const (
 	MatchingForwarderMaxChildrenPerNode
 	// MatchingShutdownDrainDuration is the duration of traffic drain during shutdown
 	MatchingShutdownDrainDuration
+	// MatchingErrorInjectionRate is the rate for injecting random error in matching client
+	MatchingErrorInjectionRate
 
 	// key for history
 
@@ -853,6 +858,10 @@ const (
 	CurrentExecutionsScannerInvariantCollectionHistory
 	// CurrentExecutionsScannerInvariantCollectionMutableState indicates if mutable state invariant checks should be run
 	CurrentExecutionsScannerInvariantCollectionMutableState
+	// ConcreteExecutionFixerDomainAllow indicates  which domains are allowed to be fixed by concrete fixer workflow
+	ConcreteExecutionFixerDomainAllow
+	// CurrentExecutionFixerDomainAllow indicates which domains are allowed to be fixed by current fixer workflow
+	CurrentExecutionFixerDomainAllow
 	// EnableBatcher decides whether start batcher in our worker
 	EnableBatcher
 	// EnableParentClosePolicyWorker decides whether or not enable system workers for processing parent close policy task

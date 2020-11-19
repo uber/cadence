@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -291,8 +292,8 @@ func (handler *DCRedirectionHandlerImpl) ListArchivedWorkflowExecutions(
 // ListClosedWorkflowExecutions API call
 func (handler *DCRedirectionHandlerImpl) ListClosedWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListClosedWorkflowExecutionsRequest,
-) (resp *shared.ListClosedWorkflowExecutionsResponse, retError error) {
+	request *types.ListClosedWorkflowExecutionsRequest,
+) (resp *types.ListClosedWorkflowExecutionsResponse, retError error) {
 
 	var apiName = "ListClosedWorkflowExecutions"
 	var err error
@@ -310,8 +311,7 @@ func (handler *DCRedirectionHandlerImpl) ListClosedWorkflowExecutions(
 			resp, err = handler.frontendHandler.ListClosedWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			response, err := remoteClient.ListClosedWorkflowExecutions(ctx, thrift.ToListClosedWorkflowExecutionsRequest(request))
-			resp = thrift.FromListClosedWorkflowExecutionsResponse(response)
+			resp, err = remoteClient.ListClosedWorkflowExecutions(ctx, request)
 			err = thrift.FromError(err)
 		}
 		return err
@@ -323,8 +323,8 @@ func (handler *DCRedirectionHandlerImpl) ListClosedWorkflowExecutions(
 // ListOpenWorkflowExecutions API call
 func (handler *DCRedirectionHandlerImpl) ListOpenWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListOpenWorkflowExecutionsRequest,
-) (resp *shared.ListOpenWorkflowExecutionsResponse, retError error) {
+	request *types.ListOpenWorkflowExecutionsRequest,
+) (resp *types.ListOpenWorkflowExecutionsResponse, retError error) {
 
 	var apiName = "ListOpenWorkflowExecutions"
 	var err error
@@ -342,8 +342,7 @@ func (handler *DCRedirectionHandlerImpl) ListOpenWorkflowExecutions(
 			resp, err = handler.frontendHandler.ListOpenWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			response, err := remoteClient.ListOpenWorkflowExecutions(ctx, thrift.ToListOpenWorkflowExecutionsRequest(request))
-			resp = thrift.FromListOpenWorkflowExecutionsResponse(response)
+			resp, err = remoteClient.ListOpenWorkflowExecutions(ctx, request)
 			err = thrift.FromError(err)
 		}
 		return err
@@ -355,8 +354,8 @@ func (handler *DCRedirectionHandlerImpl) ListOpenWorkflowExecutions(
 // ListWorkflowExecutions API call
 func (handler *DCRedirectionHandlerImpl) ListWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListWorkflowExecutionsRequest,
-) (resp *shared.ListWorkflowExecutionsResponse, retError error) {
+	request *types.ListWorkflowExecutionsRequest,
+) (resp *types.ListWorkflowExecutionsResponse, retError error) {
 
 	var apiName = "ListWorkflowExecutions"
 	var err error
@@ -374,8 +373,7 @@ func (handler *DCRedirectionHandlerImpl) ListWorkflowExecutions(
 			resp, err = handler.frontendHandler.ListWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			response, err := remoteClient.ListWorkflowExecutions(ctx, thrift.ToListWorkflowExecutionsRequest(request))
-			resp = thrift.FromListWorkflowExecutionsResponse(response)
+			resp, err = remoteClient.ListWorkflowExecutions(ctx, request)
 			err = thrift.FromError(err)
 		}
 		return err
@@ -387,8 +385,8 @@ func (handler *DCRedirectionHandlerImpl) ListWorkflowExecutions(
 // ScanWorkflowExecutions API call
 func (handler *DCRedirectionHandlerImpl) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListWorkflowExecutionsRequest,
-) (resp *shared.ListWorkflowExecutionsResponse, retError error) {
+	request *types.ListWorkflowExecutionsRequest,
+) (resp *types.ListWorkflowExecutionsResponse, retError error) {
 
 	var apiName = "ScanWorkflowExecutions"
 	var err error
@@ -405,8 +403,7 @@ func (handler *DCRedirectionHandlerImpl) ScanWorkflowExecutions(
 			resp, err = handler.frontendHandler.ScanWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			response, err := remoteClient.ScanWorkflowExecutions(ctx, thrift.ToListWorkflowExecutionsRequest(request))
-			resp = thrift.FromListWorkflowExecutionsResponse(response)
+			resp, err = remoteClient.ScanWorkflowExecutions(ctx, request)
 			err = thrift.FromError(err)
 		}
 		return err
@@ -418,8 +415,8 @@ func (handler *DCRedirectionHandlerImpl) ScanWorkflowExecutions(
 // CountWorkflowExecutions API call
 func (handler *DCRedirectionHandlerImpl) CountWorkflowExecutions(
 	ctx context.Context,
-	request *shared.CountWorkflowExecutionsRequest,
-) (resp *shared.CountWorkflowExecutionsResponse, retError error) {
+	request *types.CountWorkflowExecutionsRequest,
+) (resp *types.CountWorkflowExecutionsResponse, retError error) {
 
 	var apiName = "CountWorkflowExecutions"
 	var err error
@@ -437,8 +434,7 @@ func (handler *DCRedirectionHandlerImpl) CountWorkflowExecutions(
 			resp, err = handler.frontendHandler.CountWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			response, err := remoteClient.CountWorkflowExecutions(ctx, thrift.ToCountWorkflowExecutionsRequest(request))
-			resp = thrift.FromCountWorkflowExecutionsResponse(response)
+			resp, err = remoteClient.CountWorkflowExecutions(ctx, request)
 			err = thrift.FromError(err)
 		}
 		return err

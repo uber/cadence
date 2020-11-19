@@ -169,16 +169,16 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 	request := &persistence.RecordWorkflowExecutionStartedRequest{
 		DomainUUID: domainID,
 		Domain:     domain,
-		Execution: workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		Execution: types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 		WorkflowTypeName:   workflowTypeName,
 		StartTimestamp:     startTimeUnixNano,
 		ExecutionTimestamp: executionTimeUnixNano,
 		WorkflowTimeout:    int64(workflowTimeout),
 		TaskID:             taskID,
-		Memo:               visibilityMemo,
+		Memo:               thrift.ToMemo(visibilityMemo),
 		TaskList:           taskList,
 		SearchAttributes:   searchAttributes,
 	}
@@ -214,16 +214,16 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 	request := &persistence.UpsertWorkflowExecutionRequest{
 		DomainUUID: domainID,
 		Domain:     domain,
-		Execution: workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		Execution: types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 		WorkflowTypeName:   workflowTypeName,
 		StartTimestamp:     startTimeUnixNano,
 		ExecutionTimestamp: executionTimeUnixNano,
 		WorkflowTimeout:    int64(workflowTimeout),
 		TaskID:             taskID,
-		Memo:               visibilityMemo,
+		Memo:               thrift.ToMemo(visibilityMemo),
 		TaskList:           taskList,
 		SearchAttributes:   searchAttributes,
 	}
@@ -278,19 +278,19 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 		if err := t.visibilityMgr.RecordWorkflowExecutionClosed(ctx, &persistence.RecordWorkflowExecutionClosedRequest{
 			DomainUUID: domainID,
 			Domain:     domain,
-			Execution: workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(workflowID),
-				RunId:      common.StringPtr(runID),
+			Execution: types.WorkflowExecution{
+				WorkflowID: common.StringPtr(workflowID),
+				RunID:      common.StringPtr(runID),
 			},
 			WorkflowTypeName:   workflowTypeName,
 			StartTimestamp:     startTimeUnixNano,
 			ExecutionTimestamp: executionTimeUnixNano,
 			CloseTimestamp:     endTimeUnixNano,
-			Status:             closeStatus,
+			Status:             *thrift.ToWorkflowExecutionCloseStatus(&closeStatus),
 			HistoryLength:      historyLength,
 			RetentionSeconds:   retentionSeconds,
 			TaskID:             taskID,
-			Memo:               visibilityMemo,
+			Memo:               thrift.ToMemo(visibilityMemo),
 			TaskList:           taskList,
 			SearchAttributes:   searchAttributes,
 		}); err != nil {

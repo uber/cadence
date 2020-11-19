@@ -104,7 +104,7 @@ func TestThriftHandler(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("NotifyFailoverMarkers", func(t *testing.T) {
-		h.EXPECT().NotifyFailoverMarkers(ctx, &hist.NotifyFailoverMarkersRequest{}).Return(internalErr).Times(1)
+		h.EXPECT().NotifyFailoverMarkers(ctx, &types.NotifyFailoverMarkersRequest{}).Return(internalErr).Times(1)
 		err := th.NotifyFailoverMarkers(ctx, &hist.NotifyFailoverMarkersRequest{})
 		assert.Equal(t, expectedErr, err)
 	})
