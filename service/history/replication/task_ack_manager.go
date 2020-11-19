@@ -544,6 +544,13 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 			activityInfo *persistence.ActivityInfo,
 			versionHistories *persistence.VersionHistories,
 		) (*replicator.ReplicationTask, error) {
+			if versionHistories == nil {
+				t.logger.Error("encounter workflow without version histories",
+					tag.WorkflowDomainID(task.GetDomainID()),
+					tag.WorkflowID(task.GetWorkflowID()),
+					tag.WorkflowRunID(task.GetRunID()))
+				return nil, nil
+			}
 			versionHistoryItems, branchToken, err := getVersionHistoryItems(
 				versionHistories,
 				task.FirstEventID,
