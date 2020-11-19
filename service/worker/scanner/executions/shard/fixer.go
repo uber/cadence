@@ -29,8 +29,11 @@ import (
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -43,6 +46,8 @@ type (
 		fixedWriter      store.ExecutionWriter
 		invariantManager invariant.Manager
 		progressReportFn func()
+		domainCache      cache.DomainCache
+		allowDomain      dynamicconfig.BoolPropertyFnWithDomainFilter
 	}
 )
 
@@ -55,6 +60,8 @@ func NewFixer(
 	blobstoreClient blobstore.Client,
 	blobstoreFlushThreshold int,
 	progressReportFn func(),
+	domainCache cache.DomainCache,
+	allowDomain dynamicconfig.BoolPropertyFnWithDomainFilter,
 ) Fixer {
 	id := uuid.New()
 
@@ -67,6 +74,8 @@ func NewFixer(
 		fixedWriter:      store.NewBlobstoreWriter(id, store.FixedExtension, blobstoreClient, blobstoreFlushThreshold),
 		invariantManager: manager,
 		progressReportFn: progressReportFn,
+		domainCache:      domainCache,
+		allowDomain:      allowDomain,
 	}
 }
 
@@ -85,7 +94,23 @@ func (f *fixer) Fix() FixReport {
 			}
 			return result
 		}
-		fixResult := f.invariantManager.RunFixes(f.ctx, soe.Execution)
+		de, err := f.domainCache.GetDomainByID(soe.Execution.(entity.Entity).GetDomainID())
+		if err != nil {
+			result.Result.ControlFlowFailure = &ControlFlowFailure{
+				Info:        "failed to get domain name",
+				InfoDetails: err.Error(),
+			}
+			return result
+		}
+
+		var fixResult invariant.ManagerFixResult
+		if f.allowDomain(de.GetInfo().Name) {
+			fixResult = f.invariantManager.RunFixes(f.ctx, soe.Execution)
+		} else {
+			fixResult = invariant.ManagerFixResult{
+				FixResultType: invariant.FixResultTypeSkipped,
+			}
+		}
 		result.Stats.ExecutionCount++
 		foe := store.FixOutputEntity{
 			Execution: soe.Execution,
