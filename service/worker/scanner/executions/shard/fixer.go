@@ -94,7 +94,7 @@ func (f *fixer) Fix() FixReport {
 			}
 			return result
 		}
-		domainName, err := f.domainCache.GetDomainID(soe.Execution.(entity.Entity).GetDomainID())
+		de, err := f.domainCache.GetDomainByID(soe.Execution.(entity.Entity).GetDomainID())
 		if err != nil {
 			result.Result.ControlFlowFailure = &ControlFlowFailure{
 				Info:        "failed to get domain name",
@@ -104,7 +104,7 @@ func (f *fixer) Fix() FixReport {
 		}
 
 		var fixResult invariant.ManagerFixResult
-		if f.allowDomain(domainName) {
+		if f.allowDomain(de.GetInfo().Name) {
 			fixResult = f.invariantManager.RunFixes(f.ctx, soe.Execution)
 		} else {
 			fixResult = invariant.ManagerFixResult{
