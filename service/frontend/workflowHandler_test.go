@@ -49,6 +49,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 	dc "github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -150,14 +151,14 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(domainID, nil).AnyTimes()
 
 	// test list open by wid
-	listRequest := &shared.ListOpenWorkflowExecutionsRequest{
+	listRequest := &types.ListOpenWorkflowExecutionsRequest{
 		Domain: common.StringPtr(domain),
-		StartTimeFilter: &shared.StartTimeFilter{
+		StartTimeFilter: &types.StartTimeFilter{
 			EarliestTime: common.Int64Ptr(0),
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 		},
-		ExecutionFilter: &shared.WorkflowExecutionFilter{
-			WorkflowId: common.StringPtr("wid"),
+		ExecutionFilter: &types.WorkflowExecutionFilter{
+			WorkflowID: common.StringPtr("wid"),
 		},
 	}
 	_, err := wh.ListOpenWorkflowExecutions(context.Background(), listRequest)
@@ -166,7 +167,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 
 	// test list open by workflow type
 	listRequest.ExecutionFilter = nil
-	listRequest.TypeFilter = &shared.WorkflowTypeFilter{
+	listRequest.TypeFilter = &types.WorkflowTypeFilter{
 		Name: common.StringPtr("workflow-type"),
 	}
 	_, err = wh.ListOpenWorkflowExecutions(context.Background(), listRequest)
@@ -174,14 +175,14 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 	s.Equal(errNoPermission, err)
 
 	// test list close by wid
-	listRequest2 := &shared.ListClosedWorkflowExecutionsRequest{
+	listRequest2 := &types.ListClosedWorkflowExecutionsRequest{
 		Domain: common.StringPtr(domain),
-		StartTimeFilter: &shared.StartTimeFilter{
+		StartTimeFilter: &types.StartTimeFilter{
 			EarliestTime: common.Int64Ptr(0),
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 		},
-		ExecutionFilter: &shared.WorkflowExecutionFilter{
-			WorkflowId: common.StringPtr("wid"),
+		ExecutionFilter: &types.WorkflowExecutionFilter{
+			WorkflowID: common.StringPtr("wid"),
 		},
 	}
 	_, err = wh.ListClosedWorkflowExecutions(context.Background(), listRequest2)
@@ -190,7 +191,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 
 	// test list close by workflow type
 	listRequest2.ExecutionFilter = nil
-	listRequest2.TypeFilter = &shared.WorkflowTypeFilter{
+	listRequest2.TypeFilter = &types.WorkflowTypeFilter{
 		Name: common.StringPtr("workflow-type"),
 	}
 	_, err = wh.ListClosedWorkflowExecutions(context.Background(), listRequest2)
@@ -199,7 +200,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 
 	// test list close by workflow status
 	listRequest2.TypeFilter = nil
-	failedStatus := shared.WorkflowExecutionCloseStatusFailed
+	failedStatus := types.WorkflowExecutionCloseStatusFailed
 	listRequest2.StatusFilter = &failedStatus
 	_, err = wh.ListClosedWorkflowExecutions(context.Background(), listRequest2)
 	s.Error(err)
@@ -1185,7 +1186,7 @@ func (s *workflowHandlerSuite) TestListWorkflowExecutions() {
 	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
 	s.mockVisibilityMgr.On("ListWorkflowExecutions", mock.Anything, mock.Anything).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Once()
 
-	listRequest := &shared.ListWorkflowExecutionsRequest{
+	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   common.StringPtr(s.testDomain),
 		PageSize: common.Int32Ptr(int32(config.ESIndexMaxResultWindow())),
 	}
@@ -1214,7 +1215,7 @@ func (s *workflowHandlerSuite) TestScantWorkflowExecutions() {
 	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
 	s.mockVisibilityMgr.On("ScanWorkflowExecutions", mock.Anything, mock.Anything).Return(&persistence.ListWorkflowExecutionsResponse{}, nil).Once()
 
-	listRequest := &shared.ListWorkflowExecutionsRequest{
+	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   common.StringPtr(s.testDomain),
 		PageSize: common.Int32Ptr(int32(config.ESIndexMaxResultWindow())),
 	}
@@ -1242,7 +1243,7 @@ func (s *workflowHandlerSuite) TestCountWorkflowExecutions() {
 	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
 	s.mockVisibilityMgr.On("CountWorkflowExecutions", mock.Anything, mock.Anything).Return(&persistence.CountWorkflowExecutionsResponse{}, nil).Once()
 
-	countRequest := &shared.CountWorkflowExecutionsRequest{
+	countRequest := &types.CountWorkflowExecutionsRequest{
 		Domain: common.StringPtr(s.testDomain),
 	}
 	ctx := context.Background()

@@ -32,7 +32,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -47,6 +46,7 @@ import (
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -215,13 +215,13 @@ func (s *TestBase) Setup() {
 	s.ReadLevel = 0
 	s.ReplicationReadLevel = 0
 
-	domainFilter := &history.DomainFilter{
+	domainFilter := &types.DomainFilter{
 		DomainIDs:    []string{},
 		ReverseMatch: common.BoolPtr(true),
 	}
-	transferPQSMap := map[string][]*history.ProcessingQueueState{
+	transferPQSMap := map[string][]*types.ProcessingQueueState{
 		s.ClusterMetadata.GetCurrentClusterName(): {
-			&history.ProcessingQueueState{
+			&types.ProcessingQueueState{
 				Level:        common.Int32Ptr(0),
 				AckLevel:     common.Int64Ptr(0),
 				MaxLevel:     common.Int64Ptr(0),
@@ -229,10 +229,10 @@ func (s *TestBase) Setup() {
 			},
 		},
 	}
-	transferPQS := history.ProcessingQueueStates{transferPQSMap}
-	timerPQSMap := map[string][]*history.ProcessingQueueState{
+	transferPQS := types.ProcessingQueueStates{transferPQSMap}
+	timerPQSMap := map[string][]*types.ProcessingQueueState{
 		s.ClusterMetadata.GetCurrentClusterName(): {
-			&history.ProcessingQueueState{
+			&types.ProcessingQueueState{
 				Level:        common.Int32Ptr(0),
 				AckLevel:     common.Int64Ptr(time.Now().UnixNano()),
 				MaxLevel:     common.Int64Ptr(time.Now().UnixNano()),
@@ -240,7 +240,7 @@ func (s *TestBase) Setup() {
 			},
 		},
 	}
-	timerPQS := history.ProcessingQueueStates{StatesByCluster: timerPQSMap}
+	timerPQS := types.ProcessingQueueStates{StatesByCluster: timerPQSMap}
 
 	s.ShardInfo = &p.ShardInfo{
 		ShardID:                       shardID,
@@ -1695,7 +1695,7 @@ func (s *TestBase) RangeCompleteTimerTask(ctx context.Context, inclusiveBeginTim
 }
 
 // CreateDecisionTask is a utility method to create a task
-func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, workflowExecution workflow.WorkflowExecution, taskList string,
+func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution, taskList string,
 	decisionScheduleID int64) (int64, error) {
 	leaseResponse, err := s.TaskMgr.LeaseTaskList(ctx, &p.LeaseTaskListRequest{
 		DomainID: domainID,
@@ -1713,8 +1713,8 @@ func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, work
 			Execution: workflowExecution,
 			Data: &p.TaskInfo{
 				DomainID:   domainID,
-				WorkflowID: *workflowExecution.WorkflowId,
-				RunID:      *workflowExecution.RunId,
+				WorkflowID: *workflowExecution.WorkflowID,
+				RunID:      *workflowExecution.RunID,
 				TaskID:     taskID,
 				ScheduleID: decisionScheduleID,
 			},
@@ -1734,7 +1734,7 @@ func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, work
 }
 
 // CreateActivityTasks is a utility method to create tasks
-func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, workflowExecution workflow.WorkflowExecution,
+func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution,
 	activities map[int64]string) ([]int64, error) {
 
 	taskLists := make(map[string]*p.TaskListInfo)
@@ -1760,8 +1760,8 @@ func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, wor
 				Execution: workflowExecution,
 				Data: &p.TaskInfo{
 					DomainID:               domainID,
-					WorkflowID:             *workflowExecution.WorkflowId,
-					RunID:                  *workflowExecution.RunId,
+					WorkflowID:             *workflowExecution.WorkflowID,
+					RunID:                  *workflowExecution.RunID,
 					TaskID:                 taskID,
 					ScheduleID:             activityScheduleID,
 					ScheduleToStartTimeout: defaultScheduleToStartTimeout,

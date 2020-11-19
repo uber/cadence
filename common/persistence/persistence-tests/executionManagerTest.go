@@ -37,12 +37,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/uber/cadence/.gen/go/history"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/cluster"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -5179,14 +5179,14 @@ func timeComparator(t1, t2 time.Time, timeTolerance time.Duration) bool {
 	return false
 }
 
-func createTransferPQS(cluster1 string, level1 int32, ackLevel1 int64, cluster2 string, level2 int32, ackLevel2 int64) history.ProcessingQueueStates {
-	domainFilter := &history.DomainFilter{
+func createTransferPQS(cluster1 string, level1 int32, ackLevel1 int64, cluster2 string, level2 int32, ackLevel2 int64) types.ProcessingQueueStates {
+	domainFilter := &types.DomainFilter{
 		DomainIDs:    nil,
 		ReverseMatch: common.BoolPtr(true),
 	}
-	processingQueueStateMap := map[string][]*history.ProcessingQueueState{
+	processingQueueStateMap := map[string][]*types.ProcessingQueueState{
 		cluster1: {
-			&history.ProcessingQueueState{
+			&types.ProcessingQueueState{
 				Level:        common.Int32Ptr(level1),
 				AckLevel:     common.Int64Ptr(ackLevel1),
 				MaxLevel:     common.Int64Ptr(ackLevel1),
@@ -5194,7 +5194,7 @@ func createTransferPQS(cluster1 string, level1 int32, ackLevel1 int64, cluster2 
 			},
 		},
 		cluster2: {
-			&history.ProcessingQueueState{
+			&types.ProcessingQueueState{
 				Level:        common.Int32Ptr(level2),
 				AckLevel:     common.Int64Ptr(ackLevel2),
 				MaxLevel:     common.Int64Ptr(ackLevel2),
@@ -5202,17 +5202,17 @@ func createTransferPQS(cluster1 string, level1 int32, ackLevel1 int64, cluster2 
 			},
 		},
 	}
-	return history.ProcessingQueueStates{StatesByCluster: processingQueueStateMap}
+	return types.ProcessingQueueStates{StatesByCluster: processingQueueStateMap}
 }
 
-func createTimerPQS(cluster1 string, level1 int32, ackLevel1 time.Time, cluster2 string, level2 int32, ackLevel2 time.Time) history.ProcessingQueueStates {
-	domainFilter := &history.DomainFilter{
+func createTimerPQS(cluster1 string, level1 int32, ackLevel1 time.Time, cluster2 string, level2 int32, ackLevel2 time.Time) types.ProcessingQueueStates {
+	domainFilter := &types.DomainFilter{
 		DomainIDs:    []string{},
 		ReverseMatch: common.BoolPtr(true),
 	}
-	processingQueueStateMap := map[string][]*history.ProcessingQueueState{
+	processingQueueStateMap := map[string][]*types.ProcessingQueueState{
 		cluster1: {
-			&history.ProcessingQueueState{
+			&types.ProcessingQueueState{
 				Level:        common.Int32Ptr(level1),
 				AckLevel:     common.Int64Ptr(ackLevel1.UnixNano()),
 				MaxLevel:     common.Int64Ptr(ackLevel1.UnixNano()),
@@ -5220,7 +5220,7 @@ func createTimerPQS(cluster1 string, level1 int32, ackLevel1 time.Time, cluster2
 			},
 		},
 		cluster2: {
-			&history.ProcessingQueueState{
+			&types.ProcessingQueueState{
 				Level:        common.Int32Ptr(level2),
 				AckLevel:     common.Int64Ptr(ackLevel2.UnixNano()),
 				MaxLevel:     common.Int64Ptr(ackLevel2.UnixNano()),
@@ -5228,5 +5228,5 @@ func createTimerPQS(cluster1 string, level1 int32, ackLevel1 time.Time, cluster2
 			},
 		},
 	}
-	return history.ProcessingQueueStates{StatesByCluster: processingQueueStateMap}
+	return types.ProcessingQueueStates{StatesByCluster: processingQueueStateMap}
 }

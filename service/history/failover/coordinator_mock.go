@@ -31,7 +31,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	replicator "github.com/uber/cadence/.gen/go/replicator"
+	types "github.com/uber/cadence/common/types"
 )
 
 // MockCoordinator is a mock of Coordinator interface
@@ -82,7 +82,7 @@ func (mr *MockCoordinatorMockRecorder) Stop() *gomock.Call {
 }
 
 // NotifyFailoverMarkers mocks base method
-func (m *MockCoordinator) NotifyFailoverMarkers(shardID int32, markers []*replicator.FailoverMarkerAttributes) {
+func (m *MockCoordinator) NotifyFailoverMarkers(shardID int32, markers []*types.FailoverMarkerAttributes) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "NotifyFailoverMarkers", shardID, markers)
 }
@@ -94,7 +94,7 @@ func (mr *MockCoordinatorMockRecorder) NotifyFailoverMarkers(shardID, markers in
 }
 
 // ReceiveFailoverMarkers mocks base method
-func (m *MockCoordinator) ReceiveFailoverMarkers(shardIDs []int32, marker *replicator.FailoverMarkerAttributes) {
+func (m *MockCoordinator) ReceiveFailoverMarkers(shardIDs []int32, marker *types.FailoverMarkerAttributes) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "ReceiveFailoverMarkers", shardIDs, marker)
 }

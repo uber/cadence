@@ -25,6 +25,7 @@ import (
 
 	s "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/types"
 )
 
 // Interfaces for the Visibility Store.
@@ -39,13 +40,13 @@ type (
 	RecordWorkflowExecutionStartedRequest struct {
 		DomainUUID         string
 		Domain             string // not persisted, used as config filter key
-		Execution          s.WorkflowExecution
+		Execution          types.WorkflowExecution
 		WorkflowTypeName   string
 		StartTimestamp     int64
 		ExecutionTimestamp int64
 		WorkflowTimeout    int64 // not persisted, used for cassandra ttl
 		TaskID             int64 // not persisted, used as condition update version for ES
-		Memo               *s.Memo
+		Memo               *types.Memo
 		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
@@ -55,16 +56,16 @@ type (
 	RecordWorkflowExecutionClosedRequest struct {
 		DomainUUID         string
 		Domain             string // not persisted, used as config filter key
-		Execution          s.WorkflowExecution
+		Execution          types.WorkflowExecution
 		WorkflowTypeName   string
 		StartTimestamp     int64
 		ExecutionTimestamp int64
 		CloseTimestamp     int64
-		Status             s.WorkflowExecutionCloseStatus
+		Status             types.WorkflowExecutionCloseStatus
 		HistoryLength      int64
 		RetentionSeconds   int64
 		TaskID             int64 // not persisted, used as condition update version for ES
-		Memo               *s.Memo
+		Memo               *types.Memo
 		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
@@ -73,13 +74,13 @@ type (
 	UpsertWorkflowExecutionRequest struct {
 		DomainUUID         string
 		Domain             string // not persisted, used as config filter key
-		Execution          s.WorkflowExecution
+		Execution          types.WorkflowExecution
 		WorkflowTypeName   string
 		StartTimestamp     int64
 		ExecutionTimestamp int64
 		WorkflowTimeout    int64 // not persisted, used for cassandra ttl
 		TaskID             int64 // not persisted, used as condition update version for ES
-		Memo               *s.Memo
+		Memo               *types.Memo
 		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
@@ -112,7 +113,7 @@ type (
 
 	// ListWorkflowExecutionsResponse is the response to ListWorkflowExecutionsRequest
 	ListWorkflowExecutionsResponse struct {
-		Executions []*s.WorkflowExecutionInfo
+		Executions []*types.WorkflowExecutionInfo
 		// Token to read next page if there are more workflow executions beyond page size.
 		// Use this to set NextPageToken on ListWorkflowExecutionsRequest to read the next page.
 		NextPageToken []byte
@@ -148,19 +149,19 @@ type (
 	// have specific close status
 	ListClosedWorkflowExecutionsByStatusRequest struct {
 		ListWorkflowExecutionsRequest
-		Status s.WorkflowExecutionCloseStatus
+		Status types.WorkflowExecutionCloseStatus
 	}
 
 	// GetClosedWorkflowExecutionRequest is used retrieve the record for a specific execution
 	GetClosedWorkflowExecutionRequest struct {
 		DomainUUID string
 		Domain     string // domain name is not persisted, but used as config filter key
-		Execution  s.WorkflowExecution
+		Execution  types.WorkflowExecution
 	}
 
 	// GetClosedWorkflowExecutionResponse is the response to GetClosedWorkflowExecutionRequest
 	GetClosedWorkflowExecutionResponse struct {
-		Execution *s.WorkflowExecutionInfo
+		Execution *types.WorkflowExecutionInfo
 	}
 
 	// VisibilityDeleteWorkflowExecutionRequest contains the request params for DeleteWorkflowExecution call
