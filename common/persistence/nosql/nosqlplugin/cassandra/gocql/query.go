@@ -49,7 +49,7 @@ func (q *query) PageState(state []byte) Query {
 }
 
 func (q *query) Consistency(c Consistency) Query {
-	q.Query.Consistency(convertConsistency(c))
+	q.Query.Consistency(mustConvertConsistency(c))
 	return q
 }
 
@@ -57,9 +57,4 @@ func (q *query) WithContext(ctx context.Context) Query {
 	return &query{
 		Query: q.Query.WithContext(ctx),
 	}
-}
-
-func convertConsistency(c Consistency) gocql.Consistency {
-	// TODO
-	return gocql.One
 }
