@@ -30,8 +30,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -84,8 +82,8 @@ type (
 		UpdateTransferAckLevel(ackLevel int64) error
 		GetTransferClusterAckLevel(cluster string) int64
 		UpdateTransferClusterAckLevel(cluster string, ackLevel int64) error
-		GetTransferProcessingQueueStates(cluster string) []*history.ProcessingQueueState
-		UpdateTransferProcessingQueueStates(cluster string, states []*history.ProcessingQueueState) error
+		GetTransferProcessingQueueStates(cluster string) []*types.ProcessingQueueState
+		UpdateTransferProcessingQueueStates(cluster string, states []*types.ProcessingQueueState) error
 
 		GetReplicatorAckLevel() int64
 		UpdateReplicatorAckLevel(ackLevel int64) error
@@ -99,8 +97,8 @@ type (
 		UpdateTimerAckLevel(ackLevel time.Time) error
 		GetTimerClusterAckLevel(cluster string) time.Time
 		UpdateTimerClusterAckLevel(cluster string, ackLevel time.Time) error
-		GetTimerProcessingQueueStates(cluster string) []*history.ProcessingQueueState
-		UpdateTimerProcessingQueueStates(cluster string, states []*history.ProcessingQueueState) error
+		GetTimerProcessingQueueStates(cluster string) []*types.ProcessingQueueState
+		UpdateTimerProcessingQueueStates(cluster string, states []*types.ProcessingQueueState) error
 
 		UpdateTransferFailoverLevel(failoverID string, level persistence.TransferFailoverLevel) error
 		DeleteTransferFailoverLevel(failoverID string) error
@@ -119,8 +117,8 @@ type (
 		AppendHistoryV2Events(ctx context.Context, request *persistence.AppendHistoryNodesRequest, domainID string, execution shared.WorkflowExecution) (int, error)
 
 		ReplicateFailoverMarkers(ctx context.Context, makers []*persistence.FailoverMarkerTask) error
-		AddingPendingFailoverMarker(*replicator.FailoverMarkerAttributes) error
-		ValidateAndUpdateFailoverMarkers() ([]*replicator.FailoverMarkerAttributes, error)
+		AddingPendingFailoverMarker(*types.FailoverMarkerAttributes) error
+		ValidateAndUpdateFailoverMarkers() ([]*types.FailoverMarkerAttributes, error)
 	}
 
 	contextImpl struct {
@@ -144,10 +142,10 @@ type (
 		transferSequenceNumber        int64
 		maxTransferSequenceNumber     int64
 		transferMaxReadLevel          int64
-		timerMaxReadLevelMap          map[string]time.Time           // cluster -> timerMaxReadLevel
-		transferProcessingQueueStates *history.ProcessingQueueStates // deserialized shardInfo.TransferProcessingQueueStates
-		timerProcessingQueueStates    *history.ProcessingQueueStates // deserialized shardInfo.TimerProcessingQueueStates
-		pendingFailoverMarkers        []*replicator.FailoverMarkerAttributes
+		timerMaxReadLevelMap          map[string]time.Time         // cluster -> timerMaxReadLevel
+		transferProcessingQueueStates *types.ProcessingQueueStates // deserialized shardInfo.TransferProcessingQueueStates
+		timerProcessingQueueStates    *types.ProcessingQueueStates // deserialized shardInfo.TimerProcessingQueueStates
+		pendingFailoverMarkers        []*types.FailoverMarkerAttributes
 
 		// exist only in memory
 		remoteClusterCurrentTime map[string]time.Time
@@ -262,7 +260,7 @@ func (s *contextImpl) UpdateTransferClusterAckLevel(cluster string, ackLevel int
 	return s.updateShardInfoLocked()
 }
 
-func (s *contextImpl) GetTransferProcessingQueueStates(cluster string) []*history.ProcessingQueueState {
+func (s *contextImpl) GetTransferProcessingQueueStates(cluster string) []*types.ProcessingQueueState {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -282,19 +280,19 @@ func (s *contextImpl) GetTransferProcessingQueueStates(cluster string) []*histor
 
 	// otherwise, create default queue state based on existing ack level,
 	// which belongs to local cluster. this can happen if you add more cluster
-	return []*history.ProcessingQueueState{
+	return []*types.ProcessingQueueState{
 		{
 			Level:    common.Int32Ptr(0),
 			AckLevel: common.Int64Ptr(ackLevel),
 			MaxLevel: common.Int64Ptr(math.MaxInt64),
-			DomainFilter: &history.DomainFilter{
+			DomainFilter: &types.DomainFilter{
 				ReverseMatch: common.BoolPtr(true),
 			},
 		},
 	}
 }
 
-func (s *contextImpl) UpdateTransferProcessingQueueStates(cluster string, states []*history.ProcessingQueueState) error {
+func (s *contextImpl) UpdateTransferProcessingQueueStates(cluster string, states []*types.ProcessingQueueState) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -303,7 +301,7 @@ func (s *contextImpl) UpdateTransferProcessingQueueStates(cluster string, states
 	}
 
 	if s.transferProcessingQueueStates.StatesByCluster == nil {
-		s.transferProcessingQueueStates.StatesByCluster = make(map[string][]*history.ProcessingQueueState)
+		s.transferProcessingQueueStates.StatesByCluster = make(map[string][]*types.ProcessingQueueState)
 	}
 	s.transferProcessingQueueStates.StatesByCluster[cluster] = states
 	s.shardInfo.TransferProcessingQueueStates = s.transferProcessingQueueStates
@@ -429,7 +427,7 @@ func (s *contextImpl) UpdateTimerClusterAckLevel(cluster string, ackLevel time.T
 	return s.updateShardInfoLocked()
 }
 
-func (s *contextImpl) GetTimerProcessingQueueStates(cluster string) []*history.ProcessingQueueState {
+func (s *contextImpl) GetTimerProcessingQueueStates(cluster string) []*types.ProcessingQueueState {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -449,19 +447,19 @@ func (s *contextImpl) GetTimerProcessingQueueStates(cluster string) []*history.P
 
 	// otherwise, create default queue state based on existing ack level,
 	// which belongs to local cluster. this can happen if you add more cluster
-	return []*history.ProcessingQueueState{
+	return []*types.ProcessingQueueState{
 		{
 			Level:    common.Int32Ptr(0),
 			AckLevel: common.Int64Ptr(ackLevel.UnixNano()),
 			MaxLevel: common.Int64Ptr(math.MaxInt64),
-			DomainFilter: &history.DomainFilter{
+			DomainFilter: &types.DomainFilter{
 				ReverseMatch: common.BoolPtr(true),
 			},
 		},
 	}
 }
 
-func (s *contextImpl) UpdateTimerProcessingQueueStates(cluster string, states []*history.ProcessingQueueState) error {
+func (s *contextImpl) UpdateTimerProcessingQueueStates(cluster string, states []*types.ProcessingQueueState) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -470,7 +468,7 @@ func (s *contextImpl) UpdateTimerProcessingQueueStates(cluster string, states []
 	}
 
 	if s.timerProcessingQueueStates.StatesByCluster == nil {
-		s.timerProcessingQueueStates.StatesByCluster = make(map[string][]*history.ProcessingQueueState)
+		s.timerProcessingQueueStates.StatesByCluster = make(map[string][]*types.ProcessingQueueState)
 	}
 	s.timerProcessingQueueStates.StatesByCluster[cluster] = states
 	s.shardInfo.TimerProcessingQueueStates = s.timerProcessingQueueStates
@@ -1372,7 +1370,7 @@ Retry_Loop:
 }
 
 func (s *contextImpl) AddingPendingFailoverMarker(
-	marker *replicator.FailoverMarkerAttributes,
+	marker *types.FailoverMarkerAttributes,
 ) error {
 
 	domainEntry, err := s.GetDomainCache().GetDomainByID(marker.GetDomainID())
@@ -1396,9 +1394,9 @@ func (s *contextImpl) AddingPendingFailoverMarker(
 	return s.forceUpdateShardInfoLocked()
 }
 
-func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*replicator.FailoverMarkerAttributes, error) {
+func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*types.FailoverMarkerAttributes, error) {
 
-	completedFailoverMarkers := make(map[*replicator.FailoverMarkerAttributes]struct{})
+	completedFailoverMarkers := make(map[*types.FailoverMarkerAttributes]struct{})
 	s.RLock()
 	for _, marker := range s.pendingFailoverMarkers {
 		domainEntry, err := s.GetDomainCache().GetDomainByID(marker.GetDomainID())
@@ -1522,8 +1520,8 @@ func acquireShard(
 		return nil, err
 	}
 	if transferProcessingQueueStates == nil {
-		transferProcessingQueueStates = &history.ProcessingQueueStates{
-			StatesByCluster: make(map[string][]*history.ProcessingQueueState),
+		transferProcessingQueueStates = &types.ProcessingQueueStates{
+			StatesByCluster: make(map[string][]*types.ProcessingQueueState),
 		}
 	}
 	timerProcessingQueueStates := shardInfo.TimerProcessingQueueStates
@@ -1531,8 +1529,8 @@ func acquireShard(
 		return nil, err
 	}
 	if timerProcessingQueueStates == nil {
-		timerProcessingQueueStates = &history.ProcessingQueueStates{
-			StatesByCluster: make(map[string][]*history.ProcessingQueueState),
+		timerProcessingQueueStates = &types.ProcessingQueueStates{
+			StatesByCluster: make(map[string][]*types.ProcessingQueueState),
 		}
 	}
 
@@ -1553,7 +1551,7 @@ func acquireShard(
 		timerMaxReadLevelMap:           timerMaxReadLevelMap, // use ack to init read level
 		transferProcessingQueueStates:  transferProcessingQueueStates,
 		timerProcessingQueueStates:     timerProcessingQueueStates,
-		pendingFailoverMarkers:         []*replicator.FailoverMarkerAttributes{},
+		pendingFailoverMarkers:         []*types.FailoverMarkerAttributes{},
 		logger:                         shardItem.logger,
 		throttledLogger:                shardItem.throttledLogger,
 		previousShardOwnerWasDifferent: ownershipChanged,

@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -255,7 +256,7 @@ func (e *taskExecutorImpl) handleFailoverReplicationTask(
 ) error {
 	failoverAttributes := task.GetFailoverMarkerAttributes()
 	failoverAttributes.CreationTime = task.CreationTime
-	return e.shard.AddingPendingFailoverMarker(failoverAttributes)
+	return e.shard.AddingPendingFailoverMarker(thrift.ToFailoverMarkerAttributes(failoverAttributes))
 }
 
 func (e *taskExecutorImpl) filterTask(

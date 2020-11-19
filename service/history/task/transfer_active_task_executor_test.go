@@ -2038,9 +2038,9 @@ func (s *transferActiveTaskExecutorSuite) createRecordWorkflowExecutionStartedRe
 	mutableState execution.MutableState,
 	backoffSeconds int32,
 ) *persistence.RecordWorkflowExecutionStartedRequest {
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(task.WorkflowID),
-		RunId:      common.StringPtr(task.RunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(task.WorkflowID),
+		RunID:      common.StringPtr(task.RunID),
 	}
 	executionInfo := mutableState.GetExecutionInfo()
 	executionTimestamp := time.Unix(0, startEvent.GetTimestamp()).Add(time.Duration(backoffSeconds) * time.Second)
@@ -2168,9 +2168,9 @@ func (s *transferActiveTaskExecutorSuite) createUpsertWorkflowSearchAttributesRe
 	mutableState execution.MutableState,
 ) *persistence.UpsertWorkflowExecutionRequest {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(task.WorkflowID),
-		RunId:      common.StringPtr(task.RunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(task.WorkflowID),
+		RunID:      common.StringPtr(task.RunID),
 	}
 	executionInfo := mutableState.GetExecutionInfo()
 

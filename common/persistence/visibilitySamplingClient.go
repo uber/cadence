@@ -24,7 +24,6 @@ import (
 	"context"
 	"sync"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -116,8 +115,8 @@ func (p *visibilitySamplingClient) RecordWorkflowExecutionStarted(
 		tag.WorkflowDomainID(domainID),
 		tag.WorkflowDomainName(domain),
 		tag.WorkflowType(request.WorkflowTypeName),
-		tag.WorkflowID(request.Execution.GetWorkflowId()),
-		tag.WorkflowRunID(request.Execution.GetRunId()),
+		tag.WorkflowID(request.Execution.GetWorkflowID()),
+		tag.WorkflowRunID(request.Execution.GetRunID()),
 	)
 	p.metricClient.IncCounter(metrics.PersistenceRecordWorkflowExecutionStartedScope, metrics.PersistenceSampledCounter)
 	return nil
@@ -140,8 +139,8 @@ func (p *visibilitySamplingClient) RecordWorkflowExecutionClosed(
 		tag.WorkflowDomainID(domainID),
 		tag.WorkflowDomainName(domain),
 		tag.WorkflowType(request.WorkflowTypeName),
-		tag.WorkflowID(request.Execution.GetWorkflowId()),
-		tag.WorkflowRunID(request.Execution.GetRunId()),
+		tag.WorkflowID(request.Execution.GetWorkflowID()),
+		tag.WorkflowRunID(request.Execution.GetRunID()),
 	)
 	p.metricClient.IncCounter(metrics.PersistenceRecordWorkflowExecutionClosedScope, metrics.PersistenceSampledCounter)
 	return nil
@@ -163,8 +162,8 @@ func (p *visibilitySamplingClient) UpsertWorkflowExecution(
 		tag.WorkflowDomainID(domainID),
 		tag.WorkflowDomainName(domain),
 		tag.WorkflowType(request.WorkflowTypeName),
-		tag.WorkflowID(request.Execution.GetWorkflowId()),
-		tag.WorkflowRunID(request.Execution.GetRunId()),
+		tag.WorkflowID(request.Execution.GetWorkflowID()),
+		tag.WorkflowRunID(request.Execution.GetRunID()),
 	)
 	p.metricClient.IncCounter(metrics.PersistenceUpsertWorkflowExecutionScope, metrics.PersistenceSampledCounter)
 	return nil
@@ -313,7 +312,7 @@ func (p *visibilitySamplingClient) GetName() string {
 
 func getRequestPriority(request *RecordWorkflowExecutionClosedRequest) int {
 	priority := 0
-	if request.Status == workflow.WorkflowExecutionCloseStatusCompleted {
+	if request.Status == types.WorkflowExecutionCloseStatusCompleted {
 		priority = 1 // low priority for completed workflows
 	}
 	return priority

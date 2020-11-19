@@ -64,8 +64,8 @@ func (a *AccessControlledWorkflowHandler) Health(ctx context.Context) (*health.H
 // CountWorkflowExecutions API call
 func (a *AccessControlledWorkflowHandler) CountWorkflowExecutions(
 	ctx context.Context,
-	request *shared.CountWorkflowExecutionsRequest,
-) (*shared.CountWorkflowExecutionsResponse, error) {
+	request *types.CountWorkflowExecutionsRequest,
+) (*types.CountWorkflowExecutionsResponse, error) {
 
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendCountWorkflowExecutionsScope, request)
 
@@ -232,8 +232,8 @@ func (a *AccessControlledWorkflowHandler) ListArchivedWorkflowExecutions(
 // ListClosedWorkflowExecutions API call
 func (a *AccessControlledWorkflowHandler) ListClosedWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListClosedWorkflowExecutionsRequest,
-) (*shared.ListClosedWorkflowExecutionsResponse, error) {
+	request *types.ListClosedWorkflowExecutionsRequest,
+) (*types.ListClosedWorkflowExecutionsResponse, error) {
 
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendListClosedWorkflowExecutionsScope, request)
 
@@ -277,8 +277,8 @@ func (a *AccessControlledWorkflowHandler) ListDomains(
 // ListOpenWorkflowExecutions API call
 func (a *AccessControlledWorkflowHandler) ListOpenWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListOpenWorkflowExecutionsRequest,
-) (*shared.ListOpenWorkflowExecutionsResponse, error) {
+	request *types.ListOpenWorkflowExecutionsRequest,
+) (*types.ListOpenWorkflowExecutionsResponse, error) {
 
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendListOpenWorkflowExecutionsScope, request)
 
@@ -300,8 +300,8 @@ func (a *AccessControlledWorkflowHandler) ListOpenWorkflowExecutions(
 // ListWorkflowExecutions API call
 func (a *AccessControlledWorkflowHandler) ListWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListWorkflowExecutionsRequest,
-) (*shared.ListWorkflowExecutionsResponse, error) {
+	request *types.ListWorkflowExecutionsRequest,
+) (*types.ListWorkflowExecutionsResponse, error) {
 
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendListWorkflowExecutionsScope, request)
 
@@ -580,8 +580,8 @@ func (a *AccessControlledWorkflowHandler) RespondQueryTaskCompleted(
 // ScanWorkflowExecutions API call
 func (a *AccessControlledWorkflowHandler) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListWorkflowExecutionsRequest,
-) (*shared.ListWorkflowExecutionsResponse, error) {
+	request *types.ListWorkflowExecutionsRequest,
+) (*types.ListWorkflowExecutionsResponse, error) {
 
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendScanWorkflowExecutionsScope, request)
 
