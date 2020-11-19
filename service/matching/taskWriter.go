@@ -28,7 +28,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -166,7 +165,7 @@ writerLoop:
 				for i, req := range reqs {
 					tasks = append(tasks, &persistence.CreateTaskInfo{
 						TaskID:    taskIDs[i],
-						Execution: *thrift.FromWorkflowExecution(req.execution),
+						Execution: *req.execution,
 						Data:      req.taskInfo,
 					})
 					maxReadLevel = taskIDs[i]
