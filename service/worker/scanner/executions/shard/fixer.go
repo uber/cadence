@@ -102,23 +102,15 @@ func (f *fixer) Fix() FixReport {
 			}
 			return result
 		}
-		if !f.allowDomain(domainName) {
-			if err := f.skippedWriter.Add(store.FixOutputEntity{
-				Execution: soe.Execution,
-				Input:     *soe,
-				Result: invariant.ManagerFixResult{
-					FixResultType: invariant.FixResultTypeSkipped,
-				},
-			}); err != nil {
-				result.Result.ControlFlowFailure = &ControlFlowFailure{
-					Info:        "blobstore add failed for skipped execution fix",
-					InfoDetails: err.Error(),
-				}
-				return result
+
+		var fixResult invariant.ManagerFixResult
+		if f.allowDomain(domainName) {
+			fixResult = f.invariantManager.RunFixes(f.ctx, soe.Execution)
+		} else {
+			fixResult = invariant.ManagerFixResult{
+				FixResultType: invariant.FixResultTypeSkipped,
 			}
-			result.Stats.SkippedCount++
 		}
-		fixResult := f.invariantManager.RunFixes(f.ctx, soe.Execution)
 		result.Stats.ExecutionCount++
 		foe := store.FixOutputEntity{
 			Execution: soe.Execution,
