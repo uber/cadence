@@ -204,6 +204,7 @@ type (
 	}
 
 	// InternalCreateWorkflowExecutionRequest is used to write a new workflow execution
+	// FINISHED
 	InternalCreateWorkflowExecutionRequest struct {
 		RangeID int64
 
@@ -231,6 +232,7 @@ type (
 	InternalGetReplicationTasksFromDLQResponse = InternalGetReplicationTasksResponse
 
 	// InternalReplicationTaskInfo describes the replication task created for replication of history events
+	// FINISHED
 	InternalReplicationTaskInfo struct {
 		DomainID          string
 		WorkflowID        string
@@ -243,10 +245,11 @@ type (
 		ScheduledID       int64
 		BranchToken       []byte
 		NewRunBranchToken []byte
-		CreationTime      int64
+		CreationTime      time.Time
 	}
 
 	// InternalWorkflowExecutionInfo describes a workflow execution for Persistence Interface
+	// FINISHED
 	InternalWorkflowExecutionInfo struct {
 		DomainID                           string
 		WorkflowID                         string
@@ -280,12 +283,11 @@ type (
 		DecisionAttempt                    int64
 		DecisionStartedTimestamp           time.Time
 		DecisionScheduledTimestamp         time.Time
-		// TODO: start here...
-		DecisionOriginalScheduledTimestamp int64
+		DecisionOriginalScheduledTimestamp time.Time
 		CancelRequested                    bool
 		CancelRequestID                    string
 		StickyTaskList                     string
-		StickyScheduleToStartTimeout       int32
+		StickyScheduleToStartTimeout       time.Duration
 		ClientLibraryVersion               string
 		ClientFeatureVersion               string
 		ClientImpl                         string
@@ -293,15 +295,15 @@ type (
 		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
-		InitialInterval    int32
+		InitialInterval    time.Duration
 		BackoffCoefficient float64
-		MaximumInterval    int32
+		MaximumInterval    time.Duration
 		ExpirationTime     time.Time
 		MaximumAttempts    int32
 		NonRetriableErrors []string
 		BranchToken        []byte
 		CronSchedule       string
-		ExpirationSeconds  int32
+		ExpirationSeconds  time.Duration
 		Memo               map[string][]byte
 		SearchAttributes   map[string][]byte
 
@@ -327,6 +329,7 @@ type (
 	}
 
 	// InternalActivityInfo details  for Persistence Interface
+	// FINISHED
 	InternalActivityInfo struct {
 		Version                  int64
 		ScheduleID               int64
@@ -339,10 +342,10 @@ type (
 		ActivityID               string
 		RequestID                string
 		Details                  []byte
-		ScheduleToStartTimeout   int32
-		ScheduleToCloseTimeout   int32
-		StartToCloseTimeout      int32
-		HeartbeatTimeout         int32
+		ScheduleToStartTimeout   time.Duration
+		ScheduleToCloseTimeout   time.Duration
+		StartToCloseTimeout      time.Duration
+		HeartbeatTimeout         time.Duration
 		CancelRequested          bool
 		CancelRequestID          int64
 		LastHeartBeatUpdatedTime time.Time
@@ -353,9 +356,9 @@ type (
 		StartedIdentity    string
 		TaskList           string
 		HasRetryPolicy     bool
-		InitialInterval    int32
+		InitialInterval    time.Duration
 		BackoffCoefficient float64
-		MaximumInterval    int32
+		MaximumInterval    time.Duration
 		ExpirationTime     time.Time
 		MaximumAttempts    int32
 		NonRetriableErrors []string
@@ -367,6 +370,7 @@ type (
 	}
 
 	// InternalChildExecutionInfo has details for pending child executions for Persistence Interface
+	// FINISHED
 	InternalChildExecutionInfo struct {
 		Version               int64
 		InitiatedID           int64
@@ -379,10 +383,11 @@ type (
 		CreateRequestID       string
 		DomainName            string
 		WorkflowTypeName      string
-		ParentClosePolicy     workflow.ParentClosePolicy
+		ParentClosePolicy     types.ParentClosePolicy
 	}
 
 	// InternalUpdateWorkflowExecutionRequest is used to update a workflow execution for Persistence Interface
+	// FINISHED
 	InternalUpdateWorkflowExecutionRequest struct {
 		RangeID int64
 
@@ -394,6 +399,7 @@ type (
 	}
 
 	// InternalConflictResolveWorkflowExecutionRequest is used to reset workflow execution state for Persistence Interface
+	// FINISHED
 	InternalConflictResolveWorkflowExecutionRequest struct {
 		RangeID int64
 
@@ -410,6 +416,7 @@ type (
 	}
 
 	// InternalResetWorkflowExecutionRequest is used to reset workflow execution state for Persistence Interface
+	// FINISHED
 	InternalResetWorkflowExecutionRequest struct {
 		RangeID int64
 
@@ -429,6 +436,7 @@ type (
 	}
 
 	// InternalWorkflowMutation is used as generic workflow execution state mutation for Persistence Interface
+	// FINISHED
 	InternalWorkflowMutation struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
 		VersionHistories *DataBlob
@@ -460,6 +468,7 @@ type (
 	}
 
 	// InternalWorkflowSnapshot is used as generic workflow execution state snapshot for Persistence Interface
+	// FINISHED
 	InternalWorkflowSnapshot struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
 		VersionHistories *DataBlob
@@ -848,7 +857,7 @@ type (
 		RunID                  string
 		TaskID                 int64
 		ScheduleID             int64
-		ScheduleToStartTimeout int32
+		ScheduleToStartTimeout time.Duration
 		Expiry                 time.Time
 		CreatedTime            time.Time
 	}
