@@ -91,8 +91,9 @@ type (
 
 	// FixerContext is the resource that is available to activities under ConcreteFixerContextKey
 	FixerContext struct {
-		Resource resource.Resource
-		Scope    metrics.Scope
+		Resource                   resource.Resource
+		Scope                      metrics.Scope
+		FixerWorkflowDynamicConfig *FixerWorkflowDynamicConfig
 	}
 
 	// ScannerWorkflowParams are the parameters to the scan workflow
