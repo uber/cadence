@@ -377,7 +377,7 @@ func (m *sqlTaskManager) CreateTasks(
 		var expiryTime time.Time
 		var ttl time.Duration
 		if v.Data.ScheduleToStartTimeout.Seconds() > 0 {
-			ttl = time.Second * v.Data.ScheduleToStartTimeout
+			ttl = v.Data.ScheduleToStartTimeout
 			if m.db.SupportsTTL() {
 				maxAllowedTTL, err := m.db.MaxAllowedTTL()
 				if err != nil {
