@@ -86,6 +86,7 @@ func newV7Client(
 		elastic.SetURL(connectConfig.URL.String()),
 		elastic.SetRetrier(elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))),
 		elastic.SetDecoder(&elastic.NumberDecoder{}), // critical to ensure decode of int64 won't lose precise
+		elastic.SetSniff(false),
 	)
 	if err != nil {
 		return nil, err
