@@ -204,7 +204,6 @@ type (
 	}
 
 	// InternalCreateWorkflowExecutionRequest is used to write a new workflow execution
-	// FINISHED
 	InternalCreateWorkflowExecutionRequest struct {
 		RangeID int64
 
@@ -232,7 +231,6 @@ type (
 	InternalGetReplicationTasksFromDLQResponse = InternalGetReplicationTasksResponse
 
 	// InternalReplicationTaskInfo describes the replication task created for replication of history events
-	// FINISHED
 	InternalReplicationTaskInfo struct {
 		DomainID          string
 		WorkflowID        string
@@ -249,7 +247,6 @@ type (
 	}
 
 	// InternalWorkflowExecutionInfo describes a workflow execution for Persistence Interface
-	// FINISHED
 	InternalWorkflowExecutionInfo struct {
 		DomainID                           string
 		WorkflowID                         string
@@ -329,7 +326,6 @@ type (
 	}
 
 	// InternalActivityInfo details  for Persistence Interface
-	// FINISHED
 	InternalActivityInfo struct {
 		Version                  int64
 		ScheduleID               int64
@@ -370,7 +366,6 @@ type (
 	}
 
 	// InternalChildExecutionInfo has details for pending child executions for Persistence Interface
-	// FINISHED
 	InternalChildExecutionInfo struct {
 		Version               int64
 		InitiatedID           int64
@@ -387,7 +382,6 @@ type (
 	}
 
 	// InternalUpdateWorkflowExecutionRequest is used to update a workflow execution for Persistence Interface
-	// FINISHED
 	InternalUpdateWorkflowExecutionRequest struct {
 		RangeID int64
 
@@ -399,7 +393,6 @@ type (
 	}
 
 	// InternalConflictResolveWorkflowExecutionRequest is used to reset workflow execution state for Persistence Interface
-	// FINISHED
 	InternalConflictResolveWorkflowExecutionRequest struct {
 		RangeID int64
 
@@ -416,7 +409,6 @@ type (
 	}
 
 	// InternalResetWorkflowExecutionRequest is used to reset workflow execution state for Persistence Interface
-	// FINISHED
 	InternalResetWorkflowExecutionRequest struct {
 		RangeID int64
 
@@ -436,7 +428,6 @@ type (
 	}
 
 	// InternalWorkflowMutation is used as generic workflow execution state mutation for Persistence Interface
-	// FINISHED
 	InternalWorkflowMutation struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
 		VersionHistories *DataBlob
@@ -468,7 +459,6 @@ type (
 	}
 
 	// InternalWorkflowSnapshot is used as generic workflow execution state snapshot for Persistence Interface
-	// FINISHED
 	InternalWorkflowSnapshot struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
 		VersionHistories *DataBlob

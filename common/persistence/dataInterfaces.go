@@ -369,7 +369,6 @@ type (
 	}
 
 	// TransferTaskInfo describes a transfer task
-	// FINISHED
 	TransferTaskInfo struct {
 		DomainID                string
 		WorkflowID              string
@@ -705,7 +704,6 @@ type (
 	}
 
 	// TimerInfo details - metadata about user timer info.
-	// FINISHED
 	TimerInfo struct {
 		Version    int64
 		TimerID    string
@@ -731,7 +729,6 @@ type (
 	}
 
 	// RequestCancelInfo has details for pending external workflow cancellations
-	// FINISHED
 	RequestCancelInfo struct {
 		Version               int64
 		InitiatedEventBatchID int64
@@ -740,7 +737,6 @@ type (
 	}
 
 	// SignalInfo has details for pending external workflow signal
-	// FINISHED
 	SignalInfo struct {
 		Version               int64
 		InitiatedEventBatchID int64

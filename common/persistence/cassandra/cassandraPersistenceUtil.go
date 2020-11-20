@@ -25,8 +25,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/common/types"
-
 	"github.com/gocql/gocql"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -36,6 +34,7 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+	"github.com/uber/cadence/common/types"
 )
 
 func applyWorkflowMutationBatch(
