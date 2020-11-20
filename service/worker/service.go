@@ -154,6 +154,12 @@ func NewConfig(params *service.BootstrapParams) *Config {
 					InvariantCollectionHistory:      dc.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerInvariantCollectionHistory, false),
 				},
 			},
+			ConcreteExecutionFixerConfig: &executions.FixerWorkflowDynamicConfig{
+				AllowDomain: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.ConcreteExecutionFixerDomainAllow, false),
+			},
+			CurrentExecutionFixerConfig: &executions.FixerWorkflowDynamicConfig{
+				AllowDomain: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.CurrentExecutionFixerDomainAllow, false),
+			},
 		},
 		BatcherCfg: &batcher.Config{
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
