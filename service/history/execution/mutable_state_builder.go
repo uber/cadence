@@ -530,6 +530,11 @@ func (e *mutableStateBuilder) UpdateCurrentVersion(
 
 func (e *mutableStateBuilder) GetCurrentVersion() int64 {
 
+	// TODO: remove this after all 2DC workflows complete
+	if e.replicationState != nil {
+		return e.replicationState.CurrentVersion
+	}
+
 	if e.versionHistories != nil {
 		return e.currentVersion
 	}
