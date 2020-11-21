@@ -4346,6 +4346,10 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
 		return false, nil
 	}
 
+	if decision.Version == common.EmptyVersion && e.GetVersionHistories() == nil {
+		return false, nil
+	}
+
 	currentVersion := e.GetCurrentVersion()
 	lastWriteVersion, err := e.GetLastWriteVersion()
 	if err != nil {
