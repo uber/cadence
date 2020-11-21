@@ -29,10 +29,10 @@ services:
      - "7939:7939"
     environment:
       - "CASSANDRA_SEEDS=cassandra"
-      - "PROMETHEUS_ENDPOINT_0=127.0.0.1:8000"
-      - "PROMETHEUS_ENDPOINT_1=127.0.0.1:8001"
-      - "PROMETHEUS_ENDPOINT_2=127.0.0.1:8002"
-      - "PROMETHEUS_ENDPOINT_3=127.0.0.1:8003"
+      - "PROMETHEUS_ENDPOINT_0=0.0.0.0:8000"
+      - "PROMETHEUS_ENDPOINT_1=0.0.0.0:8001"
+      - "PROMETHEUS_ENDPOINT_2=0.0.0.0:8002"
+      - "PROMETHEUS_ENDPOINT_3=0.0.0.0:8003"
       - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml"
     depends_on:
       - cassandra
