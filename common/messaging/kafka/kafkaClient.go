@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package messaging
+package kafka
 
 import (
 	"crypto/tls"
@@ -26,16 +26,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
-
-	"github.com/uber/cadence/common/auth"
+	"time"
 
 	"github.com/Shopify/sarama"
-	uberKafkaClient "github.com/uber-go/kafka-client"
-	uberKafka "github.com/uber-go/kafka-client/kafka"
 	"github.com/uber-go/tally"
-	"go.uber.org/zap"
 
+	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 )
 
@@ -43,18 +41,21 @@ type (
 	// This is a default implementation of Client interface which makes use of uber-go/kafka-client as consumer
 	kafkaClient struct {
 		config        *KafkaConfig
-		tlsConfig     *tls.Config
-		client        uberKafkaClient.Client
 		metricsClient metrics.Client
 		logger        log.Logger
 	}
 )
 
-var _ Client = (*kafkaClient)(nil)
+var _ messaging.Client = (*kafkaClient)(nil)
 
 // NewKafkaClient is used to create an instance of KafkaClient
-func NewKafkaClient(kc *KafkaConfig, metricsClient metrics.Client, zLogger *zap.Logger, logger log.Logger, metricScope tally.Scope,
-	checkApp bool) Client {
+func NewKafkaClient(
+	kc *KafkaConfig,
+	metricsClient metrics.Client,
+	logger log.Logger,
+	_ tally.Scope,
+	checkApp bool,
+) messaging.Client {
 	kc.Validate(checkApp)
 
 	// mapping from cluster name to list of broker ip addresses
@@ -74,74 +75,54 @@ func NewKafkaClient(kc *KafkaConfig, metricsClient metrics.Client, zLogger *zap.
 		topicClusterAssignment[topic] = []string{cfg.Cluster}
 	}
 
-	client := uberKafkaClient.New(uberKafka.NewStaticNameResolver(topicClusterAssignment, brokers), zLogger, metricScope)
-
-	tlsConfig, err := CreateTLSConfig(kc.TLS)
-	if err != nil {
-		panic(fmt.Sprintf("Error creating Kafka TLS config %v", err))
-	}
-
 	return &kafkaClient{
 		config:        kc,
-		tlsConfig:     tlsConfig,
-		client:        client,
 		metricsClient: metricsClient,
 		logger:        logger,
 	}
 }
 
 // NewConsumer is used to create a Kafka consumer
-func (c *kafkaClient) NewConsumer(app, consumerName string, concurrency int) (Consumer, error) {
+func (c *kafkaClient) NewConsumer(app, consumerName string) (messaging.Consumer, error) {
 	topics := c.config.getTopicsForApplication(app)
-	kafkaClusterNameForTopic := c.config.getKafkaClusterForTopic(topics.Topic)
-	kafkaClusterNameForDLQTopic := c.config.getKafkaClusterForTopic(topics.DLQTopic)
+	saramaConfig := sarama.NewConfig()
+	// bellow config is copied from uber/kafka-client bo keep the same behavior
+	saramaConfig.Version = sarama.V0_10_2_0
+	saramaConfig.Consumer.Fetch.Default = 30 * 1024 * 1024 // 30MB.
+	saramaConfig.Consumer.Return.Errors = true
+	saramaConfig.Consumer.Offsets.CommitInterval = time.Second
+	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
+	saramaConfig.Consumer.MaxProcessingTime = 250 * time.Millisecond
 
-	topic := createUberKafkaTopic(topics.Topic, kafkaClusterNameForTopic)
-	dlq := createUberKafkaTopic(topics.DLQTopic, kafkaClusterNameForDLQTopic)
-
-	return c.newConsumerHelper(topic, dlq, consumerName, concurrency)
-}
-
-func createUberKafkaTopic(name, cluster string) *uberKafka.Topic {
-	return &uberKafka.Topic{
-		Name:    name,
-		Cluster: cluster,
-	}
-}
-
-func (c *kafkaClient) newConsumerHelper(topic, dlq *uberKafka.Topic, consumerName string, concurrency int) (Consumer, error) {
-	topicList := uberKafka.ConsumerTopicList{
-		uberKafka.ConsumerTopic{
-			Topic: *topic,
-			DLQ:   *dlq,
-		},
-	}
-	consumerConfig := uberKafka.NewConsumerConfig(consumerName, topicList)
-	consumerConfig.Concurrency = concurrency
-	consumerConfig.Offsets.Initial.Offset = uberKafka.OffsetOldest
-	consumerConfig.TLSConfig = c.tlsConfig
-
-	uConsumer, err := c.client.NewConsumer(consumerConfig)
+	err := c.initAuth(saramaConfig)
 	if err != nil {
 		return nil, err
 	}
-	return newKafkaConsumer(uConsumer, c.logger), nil
+
+	dlqProducer, err := c.newProducerByTopic(topics.DLQTopic)
+	if err != nil {
+		return nil, err
+	}
+
+	return newKafkaConsumer(dlqProducer, c.config, topics.Topic, consumerName, saramaConfig, c.metricsClient, c.logger)
 }
 
 // NewProducer is used to create a Kafka producer
-func (c *kafkaClient) NewProducer(app string) (Producer, error) {
+func (c *kafkaClient) NewProducer(app string) (messaging.Producer, error) {
 	topics := c.config.getTopicsForApplication(app)
-	return c.newProducerHelper(topics.Topic)
+	return c.newProducerByTopic(topics.Topic)
 }
 
-func (c *kafkaClient) newProducerHelper(topic string) (Producer, error) {
+func (c *kafkaClient) newProducerByTopic(topic string) (messaging.Producer, error) {
 	kafkaClusterName := c.config.getKafkaClusterForTopic(topic)
 	brokers := c.config.getBrokersForKafkaCluster(kafkaClusterName)
 
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
-	config.Net.TLS.Enable = c.tlsConfig != nil
-	config.Net.TLS.Config = c.tlsConfig
+	err := c.initAuth(config)
+	if err != nil {
+		return nil, err
+	}
 
 	producer, err := sarama.NewSyncProducer(brokers, config)
 	if err != nil {
@@ -150,13 +131,43 @@ func (c *kafkaClient) newProducerHelper(topic string) (Producer, error) {
 
 	if c.metricsClient != nil {
 		c.logger.Info("Create producer with metricsClient")
-		return NewMetricProducer(NewKafkaProducer(topic, producer, c.logger), c.metricsClient), nil
+		return messaging.NewMetricProducer(NewKafkaProducer(topic, producer, c.logger), c.metricsClient), nil
 	}
 	return NewKafkaProducer(topic, producer, c.logger), nil
 }
 
-// CreateTLSConfig return tls config
-func CreateTLSConfig(tlsConfig auth.TLS) (*tls.Config, error) {
+func (c *kafkaClient) initAuth(saramaConfig *sarama.Config) error {
+	tlsConfig, err := convertTLSConfig(c.config.TLS)
+	if err != nil {
+		panic(fmt.Sprintf("Error creating Kafka TLS config %v", err))
+	}
+
+	// TLS support
+	saramaConfig.Net.TLS.Enable = tlsConfig != nil
+	saramaConfig.Net.TLS.Config = tlsConfig
+
+	// SASL support
+	saramaConfig.Net.SASL.Enable = c.config.SASL.Enabled
+	saramaConfig.Net.SASL.User = c.config.SASL.User
+	saramaConfig.Net.SASL.Password = c.config.SASL.Password
+	saramaConfig.Net.SASL.Handshake = true
+
+	if c.config.SASL.Enabled {
+		if c.config.SASL.Algorithm == "sha512" {
+			saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &auth.XDGSCRAMClient{HashGeneratorFcn: auth.SHA512} }
+			saramaConfig.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA512
+		} else if c.config.SASL.Algorithm == "sha256" {
+			saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &auth.XDGSCRAMClient{HashGeneratorFcn: auth.SHA256} }
+			saramaConfig.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA256
+		} else {
+			return fmt.Errorf("invalid SHA algorithm %s: can be either sha256 or sha512", c.config.SASL.Algorithm)
+		}
+	}
+	return nil
+}
+
+// convertTLSConfig convert tls config
+func convertTLSConfig(tlsConfig auth.TLS) (*tls.Config, error) {
 	if !tlsConfig.Enabled {
 		return nil, nil
 	}

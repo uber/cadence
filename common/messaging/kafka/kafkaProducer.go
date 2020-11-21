@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package messaging
+package kafka
 
 import (
 	"context"
@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/messaging"
 )
 
 type (
@@ -41,10 +42,10 @@ type (
 	}
 )
 
-var _ Producer = (*kafkaProducer)(nil)
+var _ messaging.Producer = (*kafkaProducer)(nil)
 
 // NewKafkaProducer is used to create the Kafka based producer implementation
-func NewKafkaProducer(topic string, producer sarama.SyncProducer, logger log.Logger) Producer {
+func NewKafkaProducer(topic string, producer sarama.SyncProducer, logger log.Logger) messaging.Producer {
 	return &kafkaProducer{
 		topic:      topic,
 		producer:   producer,
@@ -54,6 +55,7 @@ func NewKafkaProducer(topic string, producer sarama.SyncProducer, logger log.Log
 }
 
 // Publish is used to send messages to other clusters through Kafka topic
+// TODO implement context when https://github.com/Shopify/sarama/issues/1849 is supported
 func (p *kafkaProducer) Publish(_ context.Context, msg interface{}) error {
 	message, err := p.getProducerMessage(msg)
 	if err != nil {
@@ -102,6 +104,13 @@ func (p *kafkaProducer) getProducerMessage(message interface{}) (*sarama.Produce
 			Value: sarama.ByteEncoder(payload),
 		}
 		return msg, nil
+	case *sarama.ConsumerMessage:
+		msg := &sarama.ProducerMessage{
+			Topic: p.topic,
+			Key:   sarama.ByteEncoder(message.Key),
+			Value: sarama.ByteEncoder(message.Value),
+		}
+		return msg, nil
 	default:
 		return nil, errors.New("unknown producer message type")
 	}
@@ -110,7 +119,7 @@ func (p *kafkaProducer) getProducerMessage(message interface{}) (*sarama.Produce
 func (p *kafkaProducer) convertErr(err error) error {
 	switch err {
 	case sarama.ErrMessageSizeTooLarge:
-		return ErrMessageSizeLimit
+		return messaging.ErrMessageSizeLimit
 	default:
 		return err
 	}
