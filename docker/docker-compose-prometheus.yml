@@ -45,3 +45,10 @@ services:
       - "8088:8088"
     depends_on:
       - cadence
+  grafana:
+    image: grafana/grafana
+    user: "1000"
+    depends_on:
+      - prometheus
+    ports:
+      - '3000:3000'
