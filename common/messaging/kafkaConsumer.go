@@ -172,7 +172,7 @@ func (h *consumerHandlerImpl) Cleanup(sarama.ConsumerGroupSession) error {
 func (h *consumerHandlerImpl) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	h.RLock()
 	defer h.RUnlock()
-	
+
 	// NOTE: Do not move the code below to a goroutine.
 	// The `ConsumeClaim` itself is called within a goroutine:
 	for message := range claim.Messages() {

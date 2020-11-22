@@ -67,7 +67,7 @@ func (pam *partitionAckManager) CompleteMessage(partitionID int32, messageID int
 	} else {
 		pam.logger.Fatal("complete an message that hasn't been added",
 			tag.KafkaPartition(partitionID),
-			tag.TaskID(messageID))
+			tag.KafkaOffset(messageID))
 		ackLevel = -1
 	}
 	return ackLevel
@@ -99,14 +99,14 @@ func (m *ackManager) addMessage(messageID int64) {
 	defer m.Unlock()
 	if m.readLevel >= messageID {
 		m.logger.Error("Next message ID is less than or equal to current read level. This should not happen",
-			tag.TaskID(messageID),
+			tag.KafkaOffset(messageID),
 			tag.ReadLevel(m.readLevel),
 			tag.KafkaPartition(m.partitionID))
 		return
 	}
 	if _, ok := m.outstandingMessages[messageID]; ok {
 		m.logger.Error("Already present in outstanding messages but hasn't added. This should not happen",
-			tag.TaskID(messageID),
+			tag.KafkaOffset(messageID),
 			tag.KafkaPartition(m.partitionID))
 		return
 	}
@@ -115,7 +115,7 @@ func (m *ackManager) addMessage(messageID int64) {
 		// because of ordering, the first messageID is the minimum to ack
 		m.ackLevel = messageID - 1
 		m.logger.Info("add first messageID in a session:",
-			tag.TaskID(messageID),
+			tag.KafkaOffset(messageID),
 			tag.KafkaPartition(m.partitionID),
 		)
 	}
@@ -130,7 +130,7 @@ func (m *ackManager) completeMessage(messageID int64) (ackLevel int64) {
 	} else {
 		m.logger.Warn("Duplicated completion for message",
 			tag.KafkaPartition(m.partitionID),
-			tag.TaskID(messageID))
+			tag.KafkaOffset(messageID))
 	}
 
 	// Update ackLevel
@@ -145,7 +145,7 @@ func (m *ackManager) completeMessage(messageID int64) (ackLevel int64) {
 		} else {
 			m.logger.Error("A message is probably skipped when adding message. This should not happen",
 				tag.KafkaPartition(m.partitionID),
-				tag.TaskID(current))
+				tag.KafkaOffset(current))
 		}
 	}
 	return m.ackLevel
