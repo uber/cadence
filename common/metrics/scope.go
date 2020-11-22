@@ -139,3 +139,23 @@ func (m *metricsScope) getBuckets(id int) tally.Buckets {
 func isDomainTagged(tag Tag) bool {
 	return tag.Key() == domain && tag.Value() != domainAllValue
 }
+
+// DomainGetter returns domain name
+type DomainGetter interface {
+	GetDomain() string
+}
+
+// GetMetricsScopeWithDomain returns a scope with domain tag
+func GetMetricsScopeWithDomain(
+	scope int,
+	d DomainGetter,
+	metricsClient Client,
+) Scope {
+	var metricsScope Scope
+	if d != nil {
+		metricsScope = metricsClient.Scope(scope).Tagged(DomainTag(d.GetDomain()))
+	} else {
+		metricsScope = metricsClient.Scope(scope).Tagged(DomainUnknownTag())
+	}
+	return metricsScope
+}

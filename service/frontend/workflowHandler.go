@@ -99,10 +99,6 @@ type (
 		BranchToken       []byte
 	}
 
-	domainGetter interface {
-		GetDomain() string
-	}
-
 	// HealthStatus is an enum that refers to the rpc handler health status
 	HealthStatus int32
 )
@@ -3510,8 +3506,8 @@ func (wh *WorkflowHandler) startRequestProfile(scope int) (metrics.Scope, metric
 }
 
 // startRequestProfileWithDomain initiates recording of request metrics and returns a domain tagged scope
-func (wh *WorkflowHandler) startRequestProfileWithDomain(scope int, d domainGetter) (metrics.Scope, metrics.Stopwatch) {
-	metricsScope := getMetricsScopeWithDomain(scope, d, wh.GetMetricsClient())
+func (wh *WorkflowHandler) startRequestProfileWithDomain(scope int, d metrics.DomainGetter) (metrics.Scope, metrics.Stopwatch) {
+	metricsScope := metrics.GetMetricsScopeWithDomain(scope, d, wh.GetMetricsClient())
 	sw := metricsScope.StartTimer(metrics.CadenceLatency)
 	metricsScope.IncCounter(metrics.CadenceRequests)
 	return metricsScope, sw
@@ -3964,7 +3960,7 @@ func (wh *WorkflowHandler) isListRequestPageSizeTooLarge(pageSize int32, domain 
 		pageSize > int32(wh.config.ESIndexMaxResultWindow())
 }
 
-func (wh *WorkflowHandler) allow(d domainGetter) bool {
+func (wh *WorkflowHandler) allow(d metrics.DomainGetter) bool {
 	domain := ""
 	if d != nil {
 		domain = d.GetDomain()

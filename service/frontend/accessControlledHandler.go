@@ -758,26 +758,12 @@ func (a *AccessControlledWorkflowHandler) isAuthorized(
 	return isAuth, nil
 }
 
-// getMetricsScopeWithDomain return metrics scope with domain tag
+// GetMetricsScopeWithDomain return metrics scope with domain tag
 func (a *AccessControlledWorkflowHandler) getMetricsScopeWithDomain(
 	scope int,
-	d domainGetter,
+	d metrics.DomainGetter,
 ) metrics.Scope {
-	return getMetricsScopeWithDomain(scope, d, a.GetMetricsClient())
-}
-
-func getMetricsScopeWithDomain(
-	scope int,
-	d domainGetter,
-	metricsClient metrics.Client,
-) metrics.Scope {
-	var metricsScope metrics.Scope
-	if d != nil {
-		metricsScope = metricsClient.Scope(scope).Tagged(metrics.DomainTag(d.GetDomain()))
-	} else {
-		metricsScope = metricsClient.Scope(scope).Tagged(metrics.DomainUnknownTag())
-	}
-	return metricsScope
+	return metrics.GetMetricsScopeWithDomain(scope, d, a.GetMetricsClient())
 }
 
 // getMetricsScopeWithDomainName is for XXXDomain APIs, whose request is not domainGetter
