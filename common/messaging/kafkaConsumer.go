@@ -40,14 +40,13 @@ type (
 		consumerGroup   sarama.ConsumerGroup
 		logger          log.Logger
 		msgChan         <-chan Message
-		doneC           chan struct{}
+		cancelFunc      context.CancelFunc
 	}
 
 	// consumerHandlerImpl represents a Sarama consumer group consumer
 	// It's for passing into sarama consumer group API
 	consumerHandlerImpl struct {
 		sync.RWMutex
-		//ready          chan bool
 		topic          string
 		currentSession sarama.ConsumerGroupSession
 		msgChan        chan<- Message
@@ -91,13 +90,13 @@ func newKafkaConsumer(
 		consumerGroup:   consumerGroup,
 		logger:          logger,
 		msgChan:         msgChan,
-		doneC:           make(chan struct{}),
 	}, nil
 }
 
 func (c *kafkaConsumer) Start() error {
 
 	ctx, cancel := context.WithCancel(context.Background())
+	c.cancelFunc = cancel
 
 	// consumer loop
 	go func() {
@@ -115,25 +114,13 @@ func (c *kafkaConsumer) Start() error {
 			}
 		}
 	}()
-
-	go func() {
-		for {
-			select {
-			case <-c.doneC:
-				cancel()
-				c.logger.Info("Stop consuming messages from channel")
-			}
-		}
-	}()
-
-	//<-c.consumerHandler.ready
 	return nil
 }
 
 // Stop stops the consumer
 func (c *kafkaConsumer) Stop() {
 	c.logger.Info("Stopping consumer")
-	close(c.doneC)
+	c.cancelFunc()
 	c.consumerHandler.stop()
 }
 
@@ -144,7 +131,6 @@ func (c *kafkaConsumer) Messages() <-chan Message {
 
 func newConsumerHandlerImpl(topic string, msgChan chan<- Message, logger log.Logger) *consumerHandlerImpl {
 	return &consumerHandlerImpl{
-		//ready:        make(chan bool),
 		topic:   topic,
 		logger:  logger,
 		msgChan: msgChan,
