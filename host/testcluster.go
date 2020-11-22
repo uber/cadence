@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/uber-go/tally"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/client"
 	adminClient "github.com/uber/cadence/client/admin"
@@ -281,7 +280,7 @@ func getMessagingClient(config *MessagingClientConfig, logger log.Logger) messag
 		return mocks.NewMockMessagingClient(&mocks.KafkaProducer{}, nil)
 	}
 	checkApp := len(config.KafkaConfig.Applications) != 0
-	return messaging.NewKafkaClient(config.KafkaConfig, nil, zap.NewNop(), logger, tally.NoopScope, checkApp)
+	return messaging.NewKafkaClient(config.KafkaConfig, nil, logger, tally.NoopScope, checkApp)
 }
 
 // TearDownCluster tears down the test cluster

@@ -21,51 +21,104 @@
 package messaging
 
 import (
-	uberKafka "github.com/uber-go/kafka-client/kafka"
+	"sync"
+
+	"github.com/Shopify/sarama"
+	"golang.org/x/net/context"
 
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 )
 
 const rcvBufferSize = 2 * 1024
 
 type (
-	// a wrapper of uberKafka.Consumer to let the compiler happy
+	// a wrapper of sarama consumer group for our consumer interface
 	kafkaConsumer struct {
-		uConsumer uberKafka.Consumer
+		topics          TopicList
+		consumerHandler *consumerHandlerImpl
+		consumerGroup   sarama.ConsumerGroup
+		logger          log.Logger
+		msgC            chan Message
+		doneC           chan struct{}
+	}
+
+	// consumerHandlerImpl represents a Sarama consumer group consumer
+	// It's for passing into sarama consumer group API
+	consumerHandlerImpl struct {
+		sync.RWMutex
+		topic          string
+		currentSession sarama.ConsumerGroupSession
+		messagesChan   chan Message
+		manager        *partitionAckManager
+		logger         log.Logger
+	}
+
+	messageImpl struct {
+		saramaMsg *sarama.ConsumerMessage
+		session   sarama.ConsumerGroupSession
+		handler   *consumerHandlerImpl
 		logger    log.Logger
-		msgC      chan Message
-		doneC     chan struct{}
 	}
 )
 
+var _ Message = (*messageImpl)(nil)
 var _ Consumer = (*kafkaConsumer)(nil)
 
-func newKafkaConsumer(uConsumer uberKafka.Consumer, logger log.Logger) Consumer {
-	return &kafkaConsumer{
-		uConsumer: uConsumer,
-		logger:    logger,
-		msgC:      make(chan Message, rcvBufferSize),
-		doneC:     make(chan struct{}),
+// TODO add metrics
+func newKafkaConsumer(
+	kafkaConfig *KafkaConfig,
+	topics TopicList,
+	consumerName string,
+	saramaConfig *sarama.Config,
+	logger log.Logger,
+) (Consumer, error) {
+	clusterName := kafkaConfig.getKafkaClusterForTopic(topics.Topic)
+	brokers := kafkaConfig.getBrokersForKafkaCluster(clusterName)
+	consumerGroup, err := sarama.NewConsumerGroup(brokers, consumerName, saramaConfig)
+	if err != nil {
+		return nil, err
 	}
+
+	msgChan := make(chan Message, rcvBufferSize)
+	consumerHandler := newConsumerHandlerImpl(topics.Topic, msgChan, logger)
+
+	return &kafkaConsumer{
+		topics: topics,
+
+		consumerHandler: consumerHandler,
+		consumerGroup:   consumerGroup,
+		logger:          logger,
+		msgC:            msgChan,
+		doneC:           make(chan struct{}),
+	}, nil
 }
 
 func (c *kafkaConsumer) Start() error {
-	if err := c.uConsumer.Start(); err != nil {
-		return err
-	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// consumer loop
 	go func() {
 		for {
-			select {
-			case <-c.doneC:
-				close(c.msgC)
-				c.logger.Info("Stop consuming messages from channel")
+			// `Consume` should be called inside an infinite loop, when a
+			// server-side rebalance happens, the consumer session will need to be
+			// recreated to get the new claims
+			if err := c.consumerGroup.Consume(ctx, []string{c.topics.Topic}, c.consumerHandler); err != nil {
+				c.logger.Error("Error from consumer: %v", tag.Error(err))
+			}
+			// check if context was cancelled, signaling that the consumer should stop
+			if ctx.Err() != nil {
+				c.logger.Info("context was cancel, stopping consumer loop")
 				return
-				// our Message interface is just a subset of Message interface in kafka-client so we don't need a wrapper here
-			case uMsg := <-c.uConsumer.Messages():
-				c.msgC <- uMsg
 			}
 		}
 	}()
+
+	<-c.doneC
+	close(c.msgC)
+	cancel()
+	c.logger.Info("Stop consuming messages from channel")
 	return nil
 }
 
@@ -73,10 +126,107 @@ func (c *kafkaConsumer) Start() error {
 func (c *kafkaConsumer) Stop() {
 	c.logger.Info("Stopping consumer")
 	close(c.doneC)
-	c.uConsumer.Stop()
 }
 
 // Messages return the message channel for this consumer
 func (c *kafkaConsumer) Messages() <-chan Message {
 	return c.msgC
+}
+
+func newConsumerHandlerImpl(topic string, msgChan chan Message, logger log.Logger) *consumerHandlerImpl {
+	return &consumerHandlerImpl{
+		topic:        topic,
+		logger:       logger,
+		messagesChan: msgChan,
+	}
+}
+
+// Setup is run at the beginning of a new session, before ConsumeClaim
+func (h *consumerHandlerImpl) Setup(session sarama.ConsumerGroupSession) error {
+	h.Lock()
+	defer h.Unlock()
+
+	h.currentSession = session
+	h.manager = newPartitionAckManager(h.logger)
+	h.logger.Info("start consumer group session", tag.Name(string(session.GenerationID())))
+	return nil
+}
+
+func (h *consumerHandlerImpl) getCurrentSession() sarama.ConsumerGroupSession {
+	h.RLock()
+	defer h.Unlock()
+
+	return h.currentSession
+}
+
+func (h *consumerHandlerImpl) completeMessage(message *messageImpl) {
+	h.RLock()
+	defer h.Unlock()
+
+	ackLevel := h.manager.CompleteMessage(message.Partition(), message.Offset())
+	h.currentSession.MarkOffset(h.topic, message.Partition(), ackLevel+1, "")
+}
+
+// Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited
+func (h *consumerHandlerImpl) Cleanup(sarama.ConsumerGroupSession) error {
+	return nil
+}
+
+// ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
+func (h *consumerHandlerImpl) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	// NOTE: Do not move the code below to a goroutine.
+	// The `ConsumeClaim` itself is called within a goroutine:
+	for message := range claim.Messages() {
+		h.messagesChan <- &messageImpl{
+			saramaMsg: message,
+			session:   session,
+			handler:   h,
+			logger:    h.logger,
+		}
+	}
+
+	return nil
+}
+
+func (m *messageImpl) Value() []byte {
+	return m.saramaMsg.Value
+}
+
+func (m *messageImpl) Partition() int32 {
+	return m.saramaMsg.Partition
+}
+
+func (m *messageImpl) Offset() int64 {
+	return m.saramaMsg.Offset
+}
+
+func (m *messageImpl) Ack() error {
+	if m.isFromPreviousSession() {
+		return nil
+	}
+	m.handler.completeMessage(m)
+	return nil
+}
+
+func (m *messageImpl) Nack() error {
+	// TODO publish to DLQ
+
+	if m.isFromPreviousSession() {
+		return nil
+	}
+	m.handler.completeMessage(m)
+	return nil
+}
+
+func (m *messageImpl) isFromPreviousSession() bool {
+	if m.session.GenerationID() != m.handler.getCurrentSession().GenerationID() {
+		m.logger.Warn("Skip message that is from a previous session",
+			tag.KafkaPartition(m.saramaMsg.Partition),
+			tag.KafkaOffset(m.saramaMsg.Offset),
+			tag.Name(string(m.session.GenerationID())),
+			tag.Value(m.handler.getCurrentSession().GenerationID()),
+		)
+		return true
+	}
+	return false
 }

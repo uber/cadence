@@ -26,15 +26,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
-
-	"github.com/uber/cadence/common/auth"
+	"time"
 
 	"github.com/Shopify/sarama"
-	uberKafkaClient "github.com/uber-go/kafka-client"
-	uberKafka "github.com/uber-go/kafka-client/kafka"
 	"github.com/uber-go/tally"
-	"go.uber.org/zap"
 
+	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 )
@@ -44,7 +41,6 @@ type (
 	kafkaClient struct {
 		config        *KafkaConfig
 		tlsConfig     *tls.Config
-		client        uberKafkaClient.Client
 		metricsClient metrics.Client
 		logger        log.Logger
 	}
@@ -53,8 +49,13 @@ type (
 var _ Client = (*kafkaClient)(nil)
 
 // NewKafkaClient is used to create an instance of KafkaClient
-func NewKafkaClient(kc *KafkaConfig, metricsClient metrics.Client, zLogger *zap.Logger, logger log.Logger, metricScope tally.Scope,
-	checkApp bool) Client {
+func NewKafkaClient(
+	kc *KafkaConfig,
+	metricsClient metrics.Client,
+	logger log.Logger,
+	_ tally.Scope,
+	checkApp bool,
+) Client {
 	kc.Validate(checkApp)
 
 	// mapping from cluster name to list of broker ip addresses
@@ -74,7 +75,7 @@ func NewKafkaClient(kc *KafkaConfig, metricsClient metrics.Client, zLogger *zap.
 		topicClusterAssignment[topic] = []string{cfg.Cluster}
 	}
 
-	client := uberKafkaClient.New(uberKafka.NewStaticNameResolver(topicClusterAssignment, brokers), zLogger, metricScope)
+	//client := uberKafkaClient.New(uberKafka.NewStaticNameResolver(topicClusterAssignment, brokers), zLogger, metricScope)
 
 	tlsConfig, err := CreateTLSConfig(kc.TLS)
 	if err != nil {
@@ -84,48 +85,24 @@ func NewKafkaClient(kc *KafkaConfig, metricsClient metrics.Client, zLogger *zap.
 	return &kafkaClient{
 		config:        kc,
 		tlsConfig:     tlsConfig,
-		client:        client,
 		metricsClient: metricsClient,
 		logger:        logger,
 	}
 }
 
 // NewConsumer is used to create a Kafka consumer
-func (c *kafkaClient) NewConsumer(app, consumerName string, concurrency int) (Consumer, error) {
+func (c *kafkaClient) NewConsumer(app, consumerName string, _ int) (Consumer, error) {
 	topics := c.config.getTopicsForApplication(app)
-	kafkaClusterNameForTopic := c.config.getKafkaClusterForTopic(topics.Topic)
-	kafkaClusterNameForDLQTopic := c.config.getKafkaClusterForTopic(topics.DLQTopic)
+	saramaConfig := sarama.NewConfig()
+	//bellow config is copied from uber/kafka-client bo keep the same behavior
+	saramaConfig.Version = sarama.V0_10_2_0
+	saramaConfig.Consumer.Fetch.Default = 30 * 1024 * 1024 // 30MB.
+	saramaConfig.Consumer.Return.Errors = true
+	saramaConfig.Consumer.Offsets.CommitInterval = time.Second
+	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
+	saramaConfig.Consumer.MaxProcessingTime = 250 * time.Millisecond
 
-	topic := createUberKafkaTopic(topics.Topic, kafkaClusterNameForTopic)
-	dlq := createUberKafkaTopic(topics.DLQTopic, kafkaClusterNameForDLQTopic)
-
-	return c.newConsumerHelper(topic, dlq, consumerName, concurrency)
-}
-
-func createUberKafkaTopic(name, cluster string) *uberKafka.Topic {
-	return &uberKafka.Topic{
-		Name:    name,
-		Cluster: cluster,
-	}
-}
-
-func (c *kafkaClient) newConsumerHelper(topic, dlq *uberKafka.Topic, consumerName string, concurrency int) (Consumer, error) {
-	topicList := uberKafka.ConsumerTopicList{
-		uberKafka.ConsumerTopic{
-			Topic: *topic,
-			DLQ:   *dlq,
-		},
-	}
-	consumerConfig := uberKafka.NewConsumerConfig(consumerName, topicList)
-	consumerConfig.Concurrency = concurrency
-	consumerConfig.Offsets.Initial.Offset = uberKafka.OffsetOldest
-	consumerConfig.TLSConfig = c.tlsConfig
-
-	uConsumer, err := c.client.NewConsumer(consumerConfig)
-	if err != nil {
-		return nil, err
-	}
-	return newKafkaConsumer(uConsumer, c.logger), nil
+	return newKafkaConsumer(c.config, topics, consumerName, saramaConfig, c.logger)
 }
 
 // NewProducer is used to create a Kafka producer

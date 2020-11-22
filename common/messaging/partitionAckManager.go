@@ -28,27 +28,27 @@ import (
 )
 
 // Used to convert out of order acks into ackLevel movement,
-// assuming reading messages is in order and continuous(no skipping).
+// assuming reading messages is in order and continuous(no skipping)
 type partitionAckManager struct {
 	sync.RWMutex
 	ackMgrs map[int32]*ackManager //map from partition to its ackManager
-	logger log.Logger
+	logger  log.Logger
 }
 
-func newPartitionAckManager(logger log.Logger) *partitionAckManager{
+func newPartitionAckManager(logger log.Logger) *partitionAckManager {
 	return &partitionAckManager{
-		logger: logger,
+		logger:  logger,
 		ackMgrs: make(map[int32]*ackManager),
 	}
 }
 
 // AddMessage mark a messageID as read and waiting for completion
-func (pam *partitionAckManager)AddMessage(partitionID int32, messageID int64){
+func (pam *partitionAckManager) AddMessage(partitionID int32, messageID int64) {
 	pam.RLock()
-	if am, ok := pam.ackMgrs[partitionID]; ok{
+	if am, ok := pam.ackMgrs[partitionID]; ok {
 		am.addMessage(messageID)
 		pam.Unlock()
-	}else{
+	} else {
 		pam.Unlock()
 		pam.Lock()
 		am := newAckManager(partitionID, pam.logger)
@@ -59,35 +59,35 @@ func (pam *partitionAckManager)AddMessage(partitionID int32, messageID int64){
 }
 
 // CompleteMessage complete the message
-func (pam *partitionAckManager)CompleteMessage(partitionID int32, messageID int64) (ackLevel int64){
+func (pam *partitionAckManager) CompleteMessage(partitionID int32, messageID int64) (ackLevel int64) {
 	pam.RLock()
 	defer pam.Unlock()
-	if am, ok := pam.ackMgrs[partitionID]; ok{
+	if am, ok := pam.ackMgrs[partitionID]; ok {
 		return am.completeMessage(messageID)
-	}else{
+	} else {
 		pam.logger.Fatal("complete an message that hasn't been added",
 			tag.KafkaPartition(partitionID),
-			tag.Value(messageID))
+			tag.TaskID(messageID))
 		return -1
 	}
 }
 
 type ackManager struct {
 	sync.RWMutex
-	partitionID      int32
+	partitionID         int32
 	outstandingMessages map[int64]bool // key->MessageID, value->(true for acked/completed, false->for non acked)
-	readLevel        int64          // Maximum MessageID inserted into outstandingMessages
-	ackLevel         int64          // Maximum MessageID below which all messages are acked
-	logger           log.Logger
+	readLevel           int64          // Maximum MessageID inserted into outstandingMessages
+	ackLevel            int64          // Maximum MessageID below which all messages are acked
+	logger              log.Logger
 }
 
 func newAckManager(partitionID int32, logger log.Logger) *ackManager {
 	return &ackManager{
-		partitionID: partitionID,
-		logger: logger,
+		partitionID:         partitionID,
+		logger:              logger,
 		outstandingMessages: make(map[int64]bool),
-		readLevel: -1,
-		ackLevel: -1,
+		readLevel:           -1,
+		ackLevel:            -1,
 	}
 }
 
@@ -97,20 +97,26 @@ func (m *ackManager) addMessage(messageID int64) {
 	m.Lock()
 	defer m.Unlock()
 	if m.readLevel >= messageID {
-		m.logger.Fatal("Next message ID is less than current read level.",
-			tag.Value(messageID),
+		m.logger.Error("Next message ID is less than or equal to current read level. This should not happen",
+			tag.TaskID(messageID),
 			tag.ReadLevel(m.readLevel),
 			tag.KafkaPartition(m.partitionID))
+		return
 	}
 	if _, ok := m.outstandingMessages[messageID]; ok {
-		m.logger.Fatal("Already present in outstanding messages",
-			tag.Value(messageID),
+		m.logger.Error("Already present in outstanding messages but hasn't added. This should not happen",
+			tag.TaskID(messageID),
 			tag.KafkaPartition(m.partitionID))
+		return
 	}
 	m.readLevel = messageID
-	if m.ackLevel == -1{
+	if m.ackLevel == -1 {
 		// because of ordering, the first messageID is the minimum to ack
 		m.ackLevel = messageID - 1
+		m.logger.Info("add first messageID in a session:",
+			tag.TaskID(messageID),
+			tag.KafkaPartition(m.partitionID),
+		)
 	}
 	m.outstandingMessages[messageID] = false // true is for acked
 }
@@ -120,7 +126,12 @@ func (m *ackManager) completeMessage(messageID int64) (ackLevel int64) {
 	defer m.Unlock()
 	if completed, ok := m.outstandingMessages[messageID]; ok && !completed {
 		m.outstandingMessages[messageID] = true
+	} else {
+		m.logger.Warn("Duplicated completion for message",
+			tag.KafkaPartition(m.partitionID),
+			tag.TaskID(messageID))
 	}
+
 	// Update ackLevel
 	for current := m.ackLevel + 1; current <= m.readLevel; current++ {
 		if acked, ok := m.outstandingMessages[current]; ok {
@@ -130,10 +141,10 @@ func (m *ackManager) completeMessage(messageID int64) (ackLevel int64) {
 			} else {
 				return m.ackLevel
 			}
-		} else{
-			m.logger.Fatal("a message is skipped when adding message",
+		} else {
+			m.logger.Error("A message is probably skipped when adding message. This should not happen",
 				tag.KafkaPartition(m.partitionID),
-				tag.Value(current))
+				tag.TaskID(current))
 		}
 	}
 	return m.ackLevel
