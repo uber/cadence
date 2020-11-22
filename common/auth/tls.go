@@ -25,6 +25,11 @@ type (
 	TLS struct {
 		Enabled bool `yaml:"enabled"`
 
+		// for Postgres: see more https://www.postgresql.org/docs/9.1/libpq-ssl.html
+		// default to require if Enable is true
+		// TODO: support MySQL/Cassandra as well
+		SSLMode string `yaml:"sslmode" `
+
 		// CertPath and KeyPath are optional depending on server
 		// config, but both fields must be omitted to avoid using a
 		// client certificate
