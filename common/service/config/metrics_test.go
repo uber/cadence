@@ -53,7 +53,7 @@ func (s *MetricsSuite) TestStatsd() {
 
 	config := new(Metrics)
 	config.Statsd = statsd
-	scope := config.NewScope(loggerimpl.NewNopLogger())
+	scope := config.NewScope(loggerimpl.NewNopLogger(), "test")
 	s.NotNil(scope)
 }
 
@@ -65,7 +65,7 @@ func (s *MetricsSuite) TestM3() {
 	}
 	config := new(Metrics)
 	config.M3 = m3
-	scope := config.NewScope(loggerimpl.NewNopLogger())
+	scope := config.NewScope(loggerimpl.NewNopLogger(), "test")
 	s.NotNil(scope)
 }
 
@@ -77,12 +77,12 @@ func (s *MetricsSuite) TestPrometheus() {
 	}
 	config := new(Metrics)
 	config.Prometheus = prom
-	scope := config.NewScope(loggerimpl.NewNopLogger())
+	scope := config.NewScope(loggerimpl.NewNopLogger(), "test")
 	s.NotNil(scope)
 }
 
 func (s *MetricsSuite) TestNoop() {
 	config := &Metrics{}
-	scope := config.NewScope(loggerimpl.NewNopLogger())
+	scope := config.NewScope(loggerimpl.NewNopLogger(), "test")
 	s.Equal(tally.NoopScope, scope)
 }

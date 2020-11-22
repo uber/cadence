@@ -42,7 +42,7 @@ type canaryRunner struct {
 func NewCanaryRunner(cfg *Config) (Runnable, error) {
 	logger := cfg.Log.NewZapLogger()
 
-	metricsScope := cfg.Metrics.NewScope(loggerimpl.NewLogger(logger))
+	metricsScope := cfg.Metrics.NewScope(loggerimpl.NewLogger(logger), "cadence-canary")
 
 	if cfg.Cadence.ServiceName == "" {
 		cfg.Cadence.ServiceName = CadenceServiceName
