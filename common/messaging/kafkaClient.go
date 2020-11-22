@@ -75,9 +75,7 @@ func NewKafkaClient(
 		topicClusterAssignment[topic] = []string{cfg.Cluster}
 	}
 
-	//client := uberKafkaClient.New(uberKafka.NewStaticNameResolver(topicClusterAssignment, brokers), zLogger, metricScope)
-
-	tlsConfig, err := CreateTLSConfig(kc.TLS)
+	tlsConfig, err := convertTLSConfig(kc.TLS)
 	if err != nil {
 		panic(fmt.Sprintf("Error creating Kafka TLS config %v", err))
 	}
@@ -94,16 +92,18 @@ func NewKafkaClient(
 func (c *kafkaClient) NewConsumer(app, consumerName string, _ int) (Consumer, error) {
 	topics := c.config.getTopicsForApplication(app)
 	saramaConfig := sarama.NewConfig()
-	//bellow config is copied from uber/kafka-client bo keep the same behavior
+	// bellow config is copied from uber/kafka-client bo keep the same behavior
 	saramaConfig.Version = sarama.V0_10_2_0
 	saramaConfig.Consumer.Fetch.Default = 30 * 1024 * 1024 // 30MB.
 	saramaConfig.Consumer.Return.Errors = true
 	saramaConfig.Consumer.Offsets.CommitInterval = time.Second
 	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
 	saramaConfig.Consumer.MaxProcessingTime = 250 * time.Millisecond
-	saramaConfig.Net.TLS.Enable = c.tlsConfig != nil
-	saramaConfig.Net.TLS.Config = c.tlsConfig
 
+	err := c.initAuth(saramaConfig)
+	if err != nil {
+		return nil, err
+	}
 	return newKafkaConsumer(c.config, topics, consumerName, saramaConfig, c.logger)
 }
 
@@ -119,8 +119,10 @@ func (c *kafkaClient) newProducerHelper(topic string) (Producer, error) {
 
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
-	config.Net.TLS.Enable = c.tlsConfig != nil
-	config.Net.TLS.Config = c.tlsConfig
+	err := c.initAuth(config)
+	if err != nil {
+		return nil, err
+	}
 
 	producer, err := sarama.NewSyncProducer(brokers, config)
 	if err != nil {
@@ -134,8 +136,31 @@ func (c *kafkaClient) newProducerHelper(topic string) (Producer, error) {
 	return NewKafkaProducer(topic, producer, c.logger), nil
 }
 
-// CreateTLSConfig return tls config
-func CreateTLSConfig(tlsConfig auth.TLS) (*tls.Config, error) {
+func (c *kafkaClient) initAuth(saramaConfig *sarama.Config) error {
+	// TLS support
+	saramaConfig.Net.TLS.Enable = c.tlsConfig != nil
+	saramaConfig.Net.TLS.Config = c.tlsConfig
+
+	// SASL support
+	saramaConfig.Net.SASL.Enable = c.config.SASL.Enabled
+	saramaConfig.Net.SASL.User = c.config.SASL.User
+	saramaConfig.Net.SASL.Password = c.config.SASL.Password
+	saramaConfig.Net.SASL.Handshake = true
+
+	if c.config.SASL.Algorithm == "sha512" {
+		saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &auth.XDGSCRAMClient{HashGeneratorFcn: auth.SHA512} }
+		saramaConfig.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA512
+	} else if c.config.SASL.Algorithm == "sha256" {
+		saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &auth.XDGSCRAMClient{HashGeneratorFcn: auth.SHA256} }
+		saramaConfig.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA256
+	} else {
+		return fmt.Errorf("invalid SHA algorithm %s: can be either sha256 or sha512", c.config.SASL.Algorithm)
+	}
+	return nil
+}
+
+// convertTLSConfig convert tls config
+func convertTLSConfig(tlsConfig auth.TLS) (*tls.Config, error) {
 	if !tlsConfig.Enabled {
 		return nil, nil
 	}
