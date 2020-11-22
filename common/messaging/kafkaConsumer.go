@@ -170,9 +170,13 @@ func (h *consumerHandlerImpl) Cleanup(sarama.ConsumerGroupSession) error {
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 func (h *consumerHandlerImpl) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	h.RLock()
+	defer h.RUnlock()
+	
 	// NOTE: Do not move the code below to a goroutine.
 	// The `ConsumeClaim` itself is called within a goroutine:
 	for message := range claim.Messages() {
+		h.manager.AddMessage(message.Partition, message.Offset)
 		h.msgChan <- &messageImpl{
 			saramaMsg: message,
 			session:   session,

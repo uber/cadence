@@ -63,13 +63,14 @@ func (pam *partitionAckManager) CompleteMessage(partitionID int32, messageID int
 	pam.RLock()
 	defer pam.RUnlock()
 	if am, ok := pam.ackMgrs[partitionID]; ok {
-		return am.completeMessage(messageID)
+		ackLevel = am.completeMessage(messageID)
 	} else {
 		pam.logger.Fatal("complete an message that hasn't been added",
 			tag.KafkaPartition(partitionID),
 			tag.TaskID(messageID))
-		return -1
+		ackLevel = -1
 	}
+	return ackLevel
 }
 
 type ackManager struct {

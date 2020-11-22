@@ -10,7 +10,6 @@ require (
 	github.com/aws/aws-sdk-go v1.34.13
 	github.com/benbjohnson/clock v0.0.0-20161215174838-7dc76406b6d3 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
-	github.com/bsm/sarama-cluster v2.1.13+incompatible // indirect
 	github.com/cactus/go-statsd-client v3.1.1+incompatible
 	github.com/cch123/elasticsql v0.0.0-20190321073543-a1a440758eb9
 	github.com/davecgh/go-spew v1.1.1
@@ -50,7 +49,6 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.5.1
 	github.com/uber-common/bark v1.2.1 // indirect
-	github.com/uber-go/kafka-client v0.2.3-0.20191018205945-8b3555b395f9
 	github.com/uber-go/tally v3.3.15+incompatible
 	github.com/uber/ringpop-go v0.8.5
 	github.com/uber/tchannel-go v1.16.0
@@ -64,6 +62,7 @@ require (
 	go.uber.org/thriftrw v1.20.2
 	go.uber.org/yarpc v1.42.0
 	go.uber.org/zap v1.12.0
+	golang.org/x/net v0.0.0-20200822124328-c89045814202
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	golang.org/x/tools v0.0.0-20200917221617-d56e4e40bc9d
