@@ -101,6 +101,8 @@ func (c *kafkaClient) NewConsumer(app, consumerName string, _ int) (Consumer, er
 	saramaConfig.Consumer.Offsets.CommitInterval = time.Second
 	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
 	saramaConfig.Consumer.MaxProcessingTime = 250 * time.Millisecond
+	saramaConfig.Net.TLS.Enable = c.tlsConfig != nil
+	saramaConfig.Net.TLS.Config = c.tlsConfig
 
 	return newKafkaConsumer(c.config, topics, consumerName, saramaConfig, c.logger)
 }
