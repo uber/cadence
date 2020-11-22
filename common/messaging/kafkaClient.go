@@ -40,7 +40,6 @@ type (
 	// This is a default implementation of Client interface which makes use of uber-go/kafka-client as consumer
 	kafkaClient struct {
 		config        *KafkaConfig
-		tlsConfig     *tls.Config
 		metricsClient metrics.Client
 		logger        log.Logger
 	}
@@ -75,14 +74,8 @@ func NewKafkaClient(
 		topicClusterAssignment[topic] = []string{cfg.Cluster}
 	}
 
-	tlsConfig, err := convertTLSConfig(kc.TLS)
-	if err != nil {
-		panic(fmt.Sprintf("Error creating Kafka TLS config %v", err))
-	}
-
 	return &kafkaClient{
 		config:        kc,
-		tlsConfig:     tlsConfig,
 		metricsClient: metricsClient,
 		logger:        logger,
 	}
@@ -137,9 +130,14 @@ func (c *kafkaClient) newProducerHelper(topic string) (Producer, error) {
 }
 
 func (c *kafkaClient) initAuth(saramaConfig *sarama.Config) error {
+	tlsConfig, err := convertTLSConfig(c.config.TLS)
+	if err != nil {
+		panic(fmt.Sprintf("Error creating Kafka TLS config %v", err))
+	}
+
 	// TLS support
-	saramaConfig.Net.TLS.Enable = c.tlsConfig != nil
-	saramaConfig.Net.TLS.Config = c.tlsConfig
+	saramaConfig.Net.TLS.Enable = tlsConfig != nil
+	saramaConfig.Net.TLS.Config = tlsConfig
 
 	// SASL support
 	saramaConfig.Net.SASL.Enable = c.config.SASL.Enabled
