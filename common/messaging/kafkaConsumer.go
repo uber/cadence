@@ -39,7 +39,7 @@ type (
 		consumerHandler *consumerHandlerImpl
 		consumerGroup   sarama.ConsumerGroup
 		logger          log.Logger
-		msgC            chan Message
+		msgChan         <-chan Message
 		doneC           chan struct{}
 	}
 
@@ -47,9 +47,10 @@ type (
 	// It's for passing into sarama consumer group API
 	consumerHandlerImpl struct {
 		sync.RWMutex
+		//ready          chan bool
 		topic          string
 		currentSession sarama.ConsumerGroupSession
-		messagesChan   chan Message
+		msgChan        chan<- Message
 		manager        *partitionAckManager
 		logger         log.Logger
 	}
@@ -89,7 +90,7 @@ func newKafkaConsumer(
 		consumerHandler: consumerHandler,
 		consumerGroup:   consumerGroup,
 		logger:          logger,
-		msgC:            msgChan,
+		msgChan:         msgChan,
 		doneC:           make(chan struct{}),
 	}, nil
 }
@@ -115,10 +116,17 @@ func (c *kafkaConsumer) Start() error {
 		}
 	}()
 
-	<-c.doneC
-	close(c.msgC)
-	cancel()
-	c.logger.Info("Stop consuming messages from channel")
+	go func() {
+		for {
+			select {
+			case <-c.doneC:
+				cancel()
+				c.logger.Info("Stop consuming messages from channel")
+			}
+		}
+	}()
+
+	//<-c.consumerHandler.ready
 	return nil
 }
 
@@ -126,18 +134,20 @@ func (c *kafkaConsumer) Start() error {
 func (c *kafkaConsumer) Stop() {
 	c.logger.Info("Stopping consumer")
 	close(c.doneC)
+	c.consumerHandler.stop()
 }
 
 // Messages return the message channel for this consumer
 func (c *kafkaConsumer) Messages() <-chan Message {
-	return c.msgC
+	return c.msgChan
 }
 
-func newConsumerHandlerImpl(topic string, msgChan chan Message, logger log.Logger) *consumerHandlerImpl {
+func newConsumerHandlerImpl(topic string, msgChan chan<- Message, logger log.Logger) *consumerHandlerImpl {
 	return &consumerHandlerImpl{
-		topic:        topic,
-		logger:       logger,
-		messagesChan: msgChan,
+		//ready:        make(chan bool),
+		topic:   topic,
+		logger:  logger,
+		msgChan: msgChan,
 	}
 }
 
@@ -154,14 +164,14 @@ func (h *consumerHandlerImpl) Setup(session sarama.ConsumerGroupSession) error {
 
 func (h *consumerHandlerImpl) getCurrentSession() sarama.ConsumerGroupSession {
 	h.RLock()
-	defer h.Unlock()
+	defer h.RUnlock()
 
 	return h.currentSession
 }
 
 func (h *consumerHandlerImpl) completeMessage(message *messageImpl) {
 	h.RLock()
-	defer h.Unlock()
+	defer h.RUnlock()
 
 	ackLevel := h.manager.CompleteMessage(message.Partition(), message.Offset())
 	h.currentSession.MarkOffset(h.topic, message.Partition(), ackLevel+1, "")
@@ -177,7 +187,7 @@ func (h *consumerHandlerImpl) ConsumeClaim(session sarama.ConsumerGroupSession, 
 	// NOTE: Do not move the code below to a goroutine.
 	// The `ConsumeClaim` itself is called within a goroutine:
 	for message := range claim.Messages() {
-		h.messagesChan <- &messageImpl{
+		h.msgChan <- &messageImpl{
 			saramaMsg: message,
 			session:   session,
 			handler:   h,
@@ -186,6 +196,10 @@ func (h *consumerHandlerImpl) ConsumeClaim(session sarama.ConsumerGroupSession, 
 	}
 
 	return nil
+}
+
+func (h *consumerHandlerImpl) stop() {
+	close(h.msgChan)
 }
 
 func (m *messageImpl) Value() []byte {

@@ -47,9 +47,9 @@ func (pam *partitionAckManager) AddMessage(partitionID int32, messageID int64) {
 	pam.RLock()
 	if am, ok := pam.ackMgrs[partitionID]; ok {
 		am.addMessage(messageID)
-		pam.Unlock()
+		pam.RUnlock()
 	} else {
-		pam.Unlock()
+		pam.RUnlock()
 		pam.Lock()
 		am := newAckManager(partitionID, pam.logger)
 		pam.ackMgrs[partitionID] = am
@@ -61,7 +61,7 @@ func (pam *partitionAckManager) AddMessage(partitionID int32, messageID int64) {
 // CompleteMessage complete the message
 func (pam *partitionAckManager) CompleteMessage(partitionID int32, messageID int64) (ackLevel int64) {
 	pam.RLock()
-	defer pam.Unlock()
+	defer pam.RUnlock()
 	if am, ok := pam.ackMgrs[partitionID]; ok {
 		return am.completeMessage(messageID)
 	} else {
