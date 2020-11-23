@@ -24,6 +24,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/uber/cadence/common/types/mapper/thrift"
+
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 
@@ -155,9 +157,9 @@ func archiveVisibilityActivity(ctx context.Context, request ArchiveRequest) (err
 		StartTimestamp:     request.StartTimestamp,
 		ExecutionTimestamp: request.ExecutionTimestamp,
 		CloseTimestamp:     request.CloseTimestamp,
-		CloseStatus:        request.CloseStatus,
+		CloseStatus:        *thrift.ToWorkflowExecutionCloseStatus(&request.CloseStatus),
 		HistoryLength:      request.HistoryLength,
-		Memo:               request.Memo,
+		Memo:               thrift.ToMemo(request.Memo),
 		SearchAttributes:   convertSearchAttributesToString(request.SearchAttributes),
 		HistoryArchivalURI: request.URI,
 	}, carchiver.GetNonRetriableErrorOption(errArchiveVisibilityNonRetriable))

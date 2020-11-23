@@ -27,6 +27,8 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/uber/cadence/common/types/mapper/thrift"
+
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	cclient "go.uber.org/cadence/client"
 
@@ -251,9 +253,9 @@ func (c *client) archiveVisibilityInline(ctx context.Context, request *ClientReq
 		StartTimestamp:     request.ArchiveRequest.StartTimestamp,
 		ExecutionTimestamp: request.ArchiveRequest.ExecutionTimestamp,
 		CloseTimestamp:     request.ArchiveRequest.CloseTimestamp,
-		CloseStatus:        request.ArchiveRequest.CloseStatus,
+		CloseStatus:        *thrift.ToWorkflowExecutionCloseStatus(&request.ArchiveRequest.CloseStatus),
 		HistoryLength:      request.ArchiveRequest.HistoryLength,
-		Memo:               request.ArchiveRequest.Memo,
+		Memo:               thrift.ToMemo(request.ArchiveRequest.Memo),
 		SearchAttributes:   convertSearchAttributesToString(request.ArchiveRequest.SearchAttributes),
 		HistoryArchivalURI: request.ArchiveRequest.URI,
 	})

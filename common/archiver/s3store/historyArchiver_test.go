@@ -50,6 +50,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -331,11 +332,11 @@ func (s *historyArchiverSuite) TestArchive_Fail_HistoryMutated() {
 	mockCtrl := gomock.NewController(s.T())
 	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
-	historyBatches := []*shared.History{
-		&shared.History{
-			Events: []*shared.HistoryEvent{
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(common.FirstEventID + 1),
+	historyBatches := []*types.History{
+		{
+			Events: []*types.HistoryEvent{
+				{
+					EventID:   common.Int64Ptr(common.FirstEventID + 1),
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   common.Int64Ptr(testCloseFailoverVersion + 1),
 				},
@@ -395,25 +396,25 @@ func (s *historyArchiverSuite) TestArchive_Success() {
 	mockCtrl := gomock.NewController(s.T())
 	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
-	historyBatches := []*shared.History{
-		&shared.History{
-			Events: []*shared.HistoryEvent{
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(common.FirstEventID + 1),
+	historyBatches := []*types.History{
+		{
+			Events: []*types.HistoryEvent{
+				{
+					EventID:   common.Int64Ptr(common.FirstEventID + 1),
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   common.Int64Ptr(testCloseFailoverVersion),
 				},
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(common.FirstEventID + 2),
+				{
+					EventID:   common.Int64Ptr(common.FirstEventID + 2),
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   common.Int64Ptr(testCloseFailoverVersion),
 				},
 			},
 		},
-		&shared.History{
-			Events: []*shared.HistoryEvent{
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(testNextEventID - 1),
+		{
+			Events: []*types.HistoryEvent{
+				{
+					EventID:   common.Int64Ptr(testNextEventID - 1),
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   common.Int64Ptr(testCloseFailoverVersion),
 				},
@@ -556,7 +557,7 @@ func (s *historyArchiverSuite) TestGet_Success_SmallPageSize() {
 		PageSize:             1,
 		CloseFailoverVersion: common.Int64Ptr(100),
 	}
-	combinedHistory := []*shared.History{}
+	combinedHistory := []*types.History{}
 
 	URI, err := archiver.NewURI(testBucketURI)
 	s.NoError(err)
@@ -637,11 +638,11 @@ func (s *historyArchiverSuite) setupHistoryDirectory() {
 			Header: &archiver.HistoryBlobHeader{
 				IsLast: common.BoolPtr(true),
 			},
-			Body: []*shared.History{
+			Body: []*types.History{
 				{
-					Events: []*shared.HistoryEvent{
-						&shared.HistoryEvent{
-							EventId:   common.Int64Ptr(testNextEventID - 1),
+					Events: []*types.HistoryEvent{
+						{
+							EventID:   common.Int64Ptr(testNextEventID - 1),
 							Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 							Version:   common.Int64Ptr(1),
 						},
@@ -656,16 +657,16 @@ func (s *historyArchiverSuite) setupHistoryDirectory() {
 			Header: &archiver.HistoryBlobHeader{
 				IsLast: common.BoolPtr(false),
 			},
-			Body: []*shared.History{
-				&shared.History{
-					Events: []*shared.HistoryEvent{
-						&shared.HistoryEvent{
-							EventId:   common.Int64Ptr(common.FirstEventID + 1),
+			Body: []*types.History{
+				{
+					Events: []*types.HistoryEvent{
+						{
+							EventID:   common.Int64Ptr(common.FirstEventID + 1),
 							Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 							Version:   common.Int64Ptr(testCloseFailoverVersion),
 						},
-						&shared.HistoryEvent{
-							EventId:   common.Int64Ptr(common.FirstEventID + 1),
+						{
+							EventID:   common.Int64Ptr(common.FirstEventID + 1),
 							Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 							Version:   common.Int64Ptr(testCloseFailoverVersion),
 						},
@@ -677,11 +678,11 @@ func (s *historyArchiverSuite) setupHistoryDirectory() {
 			Header: &archiver.HistoryBlobHeader{
 				IsLast: common.BoolPtr(true),
 			},
-			Body: []*shared.History{
-				&shared.History{
-					Events: []*shared.HistoryEvent{
-						&shared.HistoryEvent{
-							EventId:   common.Int64Ptr(testNextEventID - 1),
+			Body: []*types.History{
+				{
+					Events: []*types.HistoryEvent{
+						{
+							EventID:   common.Int64Ptr(testNextEventID - 1),
 							Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 							Version:   common.Int64Ptr(testCloseFailoverVersion),
 						},

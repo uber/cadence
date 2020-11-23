@@ -20,6 +20,12 @@
 
 package types
 
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
 // AccessDeniedError is an internal type (TBD...)
 type AccessDeniedError struct {
 	Message string `json:"message,required"`
@@ -491,6 +497,42 @@ func (e ArchivalStatus) Ptr() *ArchivalStatus {
 	return &e
 }
 
+// String returns a readable string representation of ArchivalStatus.
+func (e ArchivalStatus) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "Disabled"
+	case 1:
+		return "Enabled"
+	}
+	return fmt.Sprintf("ArchivalStatus(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *ArchivalStatus) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "disabled":
+		*e = ArchivalStatusDisabled
+		return nil
+	case "enabled":
+		*e = ArchivalStatusEnabled
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "ArchivalStatus", err)
+		}
+		*e = ArchivalStatus(val)
+		return nil
+	}
+}
+
+// MarshalText encodes ArchivalStatus to text.
+func (e ArchivalStatus) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
 const (
 	// ArchivalStatusDisabled is an option for ArchivalStatus
 	ArchivalStatusDisabled ArchivalStatus = iota
@@ -561,6 +603,37 @@ type CancelExternalWorkflowExecutionFailedCause int32
 // Ptr is a helper function for getting pointer value
 func (e CancelExternalWorkflowExecutionFailedCause) Ptr() *CancelExternalWorkflowExecutionFailedCause {
 	return &e
+}
+
+// String returns a readable string representation of CancelExternalWorkflowExecutionFailedCause.
+func (e CancelExternalWorkflowExecutionFailedCause) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "UnknownExternalWorkflowExecution"
+	}
+	return fmt.Sprintf("CancelExternalWorkflowExecutionFailedCause(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *CancelExternalWorkflowExecutionFailedCause) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "unknownexternalworkflowexecution":
+		*e = CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "CancelExternalWorkflowExecutionFailedCause", err)
+		}
+		*e = CancelExternalWorkflowExecutionFailedCause(val)
+		return nil
+	}
+}
+
+// MarshalText encodes CancelExternalWorkflowExecutionFailedCause to text.
+func (e CancelExternalWorkflowExecutionFailedCause) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (
@@ -769,6 +842,37 @@ type ChildWorkflowExecutionFailedCause int32
 // Ptr is a helper function for getting pointer value
 func (e ChildWorkflowExecutionFailedCause) Ptr() *ChildWorkflowExecutionFailedCause {
 	return &e
+}
+
+// String returns a readable string representation of ChildWorkflowExecutionFailedCause.
+func (e ChildWorkflowExecutionFailedCause) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "WorkflowAlreadyRunning"
+	}
+	return fmt.Sprintf("ChildWorkflowExecutionFailedCause(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *ChildWorkflowExecutionFailedCause) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "workflowalreadyrunning":
+		*e = ChildWorkflowExecutionFailedCauseWorkflowAlreadyRunning
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "ChildWorkflowExecutionFailedCause", err)
+		}
+		*e = ChildWorkflowExecutionFailedCause(val)
+		return nil
+	}
+}
+
+// MarshalText encodes ChildWorkflowExecutionFailedCause to text.
+func (e ChildWorkflowExecutionFailedCause) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (
@@ -1088,6 +1192,47 @@ type ContinueAsNewInitiator int32
 // Ptr is a helper function for getting pointer value
 func (e ContinueAsNewInitiator) Ptr() *ContinueAsNewInitiator {
 	return &e
+}
+
+// String returns a readable string representation of ContinueAsNewInitiator.
+func (e ContinueAsNewInitiator) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "Decider"
+	case 1:
+		return "RetryPolicy"
+	case 2:
+		return "CronSchedule"
+	}
+	return fmt.Sprintf("ContinueAsNewInitiator(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *ContinueAsNewInitiator) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "decider":
+		*e = ContinueAsNewInitiatorDecider
+		return nil
+	case "retrypolicy":
+		*e = ContinueAsNewInitiatorRetryPolicy
+		return nil
+	case "cronschedule":
+		*e = ContinueAsNewInitiatorCronSchedule
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "ContinueAsNewInitiator", err)
+		}
+		*e = ContinueAsNewInitiator(val)
+		return nil
+	}
+}
+
+// MarshalText encodes ContinueAsNewInitiator to text.
+func (e ContinueAsNewInitiator) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (
@@ -1504,6 +1649,147 @@ func (e DecisionTaskFailedCause) Ptr() *DecisionTaskFailedCause {
 	return &e
 }
 
+// String returns a readable string representation of DecisionTaskFailedCause.
+func (e DecisionTaskFailedCause) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "UnhandledDecision"
+	case 1:
+		return "BadScheduleActivityAttributes"
+	case 2:
+		return "BadRequestCancelActivityAttributes"
+	case 3:
+		return "BadStartTimerAttributes"
+	case 4:
+		return "BadCancelTimerAttributes"
+	case 5:
+		return "BadRecordMarkerAttributes"
+	case 6:
+		return "BadCompleteWorkflowExecutionAttributes"
+	case 7:
+		return "BadFailWorkflowExecutionAttributes"
+	case 8:
+		return "BadCancelWorkflowExecutionAttributes"
+	case 9:
+		return "BadRequestCancelExternalWorkflowExecutionAttributes"
+	case 10:
+		return "BadContinueAsNewAttributes"
+	case 11:
+		return "StartTimerDuplicateID"
+	case 12:
+		return "ResetStickyTasklist"
+	case 13:
+		return "WorkflowWorkerUnhandledFailure"
+	case 14:
+		return "BadSignalWorkflowExecutionAttributes"
+	case 15:
+		return "BadStartChildExecutionAttributes"
+	case 16:
+		return "ForceCloseDecision"
+	case 17:
+		return "FailoverCloseDecision"
+	case 18:
+		return "BadSignalInputSize"
+	case 19:
+		return "ResetWorkflow"
+	case 20:
+		return "BadBinary"
+	case 21:
+		return "ScheduleActivityDuplicateID"
+	case 22:
+		return "BadSearchAttributes"
+	}
+	return fmt.Sprintf("DecisionTaskFailedCause(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *DecisionTaskFailedCause) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "unhandleddecision":
+		*e = DecisionTaskFailedCauseUnhandledDecision
+		return nil
+	case "badscheduleactivityattributes":
+		*e = DecisionTaskFailedCauseBadScheduleActivityAttributes
+		return nil
+	case "badrequestcancelactivityattributes":
+		*e = DecisionTaskFailedCauseBadRequestCancelActivityAttributes
+		return nil
+	case "badstarttimerattributes":
+		*e = DecisionTaskFailedCauseBadStartTimerAttributes
+		return nil
+	case "badcanceltimerattributes":
+		*e = DecisionTaskFailedCauseBadCancelTimerAttributes
+		return nil
+	case "badrecordmarkerattributes":
+		*e = DecisionTaskFailedCauseBadRecordMarkerAttributes
+		return nil
+	case "badcompleteworkflowexecutionattributes":
+		*e = DecisionTaskFailedCauseBadCompleteWorkflowExecutionAttributes
+		return nil
+	case "badfailworkflowexecutionattributes":
+		*e = DecisionTaskFailedCauseBadFailWorkflowExecutionAttributes
+		return nil
+	case "badcancelworkflowexecutionattributes":
+		*e = DecisionTaskFailedCauseBadCancelWorkflowExecutionAttributes
+		return nil
+	case "badrequestcancelexternalworkflowexecutionattributes":
+		*e = DecisionTaskFailedCauseBadRequestCancelExternalWorkflowExecutionAttributes
+		return nil
+	case "badcontinueasnewattributes":
+		*e = DecisionTaskFailedCauseBadContinueAsNewAttributes
+		return nil
+	case "starttimerduplicateid":
+		*e = DecisionTaskFailedCauseStartTimerDuplicateID
+		return nil
+	case "resetstickytasklist":
+		*e = DecisionTaskFailedCauseResetStickyTasklist
+		return nil
+	case "workflowworkerunhandledfailure":
+		*e = DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure
+		return nil
+	case "badsignalworkflowexecutionattributes":
+		*e = DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes
+		return nil
+	case "badstartchildexecutionattributes":
+		*e = DecisionTaskFailedCauseBadStartChildExecutionAttributes
+		return nil
+	case "forceclosedecision":
+		*e = DecisionTaskFailedCauseForceCloseDecision
+		return nil
+	case "failoverclosedecision":
+		*e = DecisionTaskFailedCauseFailoverCloseDecision
+		return nil
+	case "badsignalinputsize":
+		*e = DecisionTaskFailedCauseBadSignalInputSize
+		return nil
+	case "resetworkflow":
+		*e = DecisionTaskFailedCauseResetWorkflow
+		return nil
+	case "badbinary":
+		*e = DecisionTaskFailedCauseBadBinary
+		return nil
+	case "scheduleactivityduplicateid":
+		*e = DecisionTaskFailedCauseScheduleActivityDuplicateID
+		return nil
+	case "badsearchattributes":
+		*e = DecisionTaskFailedCauseBadSearchAttributes
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "DecisionTaskFailedCause", err)
+		}
+		*e = DecisionTaskFailedCause(val)
+		return nil
+	}
+}
+
+// MarshalText encodes DecisionTaskFailedCause to text.
+func (e DecisionTaskFailedCause) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
 const (
 	// DecisionTaskFailedCauseUnhandledDecision is an option for DecisionTaskFailedCause
 	DecisionTaskFailedCauseUnhandledDecision DecisionTaskFailedCause = iota
@@ -1746,6 +2032,97 @@ type DecisionType int32
 // Ptr is a helper function for getting pointer value
 func (e DecisionType) Ptr() *DecisionType {
 	return &e
+}
+
+// String returns a readable string representation of DecisionType.
+func (e DecisionType) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "ScheduleActivityTask"
+	case 1:
+		return "RequestCancelActivityTask"
+	case 2:
+		return "StartTimer"
+	case 3:
+		return "CompleteWorkflowExecution"
+	case 4:
+		return "FailWorkflowExecution"
+	case 5:
+		return "CancelTimer"
+	case 6:
+		return "CancelWorkflowExecution"
+	case 7:
+		return "RequestCancelExternalWorkflowExecution"
+	case 8:
+		return "RecordMarker"
+	case 9:
+		return "ContinueAsNewWorkflowExecution"
+	case 10:
+		return "StartChildWorkflowExecution"
+	case 11:
+		return "SignalExternalWorkflowExecution"
+	case 12:
+		return "UpsertWorkflowSearchAttributes"
+	}
+	return fmt.Sprintf("DecisionType(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *DecisionType) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "scheduleactivitytask":
+		*e = DecisionTypeScheduleActivityTask
+		return nil
+	case "requestcancelactivitytask":
+		*e = DecisionTypeRequestCancelActivityTask
+		return nil
+	case "starttimer":
+		*e = DecisionTypeStartTimer
+		return nil
+	case "completeworkflowexecution":
+		*e = DecisionTypeCompleteWorkflowExecution
+		return nil
+	case "failworkflowexecution":
+		*e = DecisionTypeFailWorkflowExecution
+		return nil
+	case "canceltimer":
+		*e = DecisionTypeCancelTimer
+		return nil
+	case "cancelworkflowexecution":
+		*e = DecisionTypeCancelWorkflowExecution
+		return nil
+	case "requestcancelexternalworkflowexecution":
+		*e = DecisionTypeRequestCancelExternalWorkflowExecution
+		return nil
+	case "recordmarker":
+		*e = DecisionTypeRecordMarker
+		return nil
+	case "continueasnewworkflowexecution":
+		*e = DecisionTypeContinueAsNewWorkflowExecution
+		return nil
+	case "startchildworkflowexecution":
+		*e = DecisionTypeStartChildWorkflowExecution
+		return nil
+	case "signalexternalworkflowexecution":
+		*e = DecisionTypeSignalExternalWorkflowExecution
+		return nil
+	case "upsertworkflowsearchattributes":
+		*e = DecisionTypeUpsertWorkflowSearchAttributes
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "DecisionType", err)
+		}
+		*e = DecisionType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes DecisionType to text.
+func (e DecisionType) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (
@@ -2357,6 +2734,47 @@ func (e DomainStatus) Ptr() *DomainStatus {
 	return &e
 }
 
+// String returns a readable string representation of DomainStatus.
+func (e DomainStatus) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "Registered"
+	case 1:
+		return "Deprecated"
+	case 2:
+		return "Deleted"
+	}
+	return fmt.Sprintf("DomainStatus(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *DomainStatus) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "registered":
+		*e = DomainStatusRegistered
+		return nil
+	case "deprecated":
+		*e = DomainStatusDeprecated
+		return nil
+	case "deleted":
+		*e = DomainStatusDeleted
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "DomainStatus", err)
+		}
+		*e = DomainStatus(val)
+		return nil
+	}
+}
+
+// MarshalText encodes DomainStatus to text.
+func (e DomainStatus) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
 const (
 	// DomainStatusRegistered is an option for DomainStatus
 	DomainStatusRegistered DomainStatus = iota
@@ -2372,6 +2790,42 @@ type EncodingType int32
 // Ptr is a helper function for getting pointer value
 func (e EncodingType) Ptr() *EncodingType {
 	return &e
+}
+
+// String returns a readable string representation of EncodingType.
+func (e EncodingType) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "ThriftRW"
+	case 1:
+		return "JSON"
+	}
+	return fmt.Sprintf("EncodingType(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *EncodingType) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "thriftrw":
+		*e = EncodingTypeThriftRW
+		return nil
+	case "json":
+		*e = EncodingTypeJSON
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "EncodingType", err)
+		}
+		*e = EncodingType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes EncodingType to text.
+func (e EncodingType) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (
@@ -2418,6 +2872,242 @@ type EventType int32
 // Ptr is a helper function for getting pointer value
 func (e EventType) Ptr() *EventType {
 	return &e
+}
+
+// String returns a readable string representation of EventType.
+func (e EventType) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "WorkflowExecutionStarted"
+	case 1:
+		return "WorkflowExecutionCompleted"
+	case 2:
+		return "WorkflowExecutionFailed"
+	case 3:
+		return "WorkflowExecutionTimedOut"
+	case 4:
+		return "DecisionTaskScheduled"
+	case 5:
+		return "DecisionTaskStarted"
+	case 6:
+		return "DecisionTaskCompleted"
+	case 7:
+		return "DecisionTaskTimedOut"
+	case 8:
+		return "DecisionTaskFailed"
+	case 9:
+		return "ActivityTaskScheduled"
+	case 10:
+		return "ActivityTaskStarted"
+	case 11:
+		return "ActivityTaskCompleted"
+	case 12:
+		return "ActivityTaskFailed"
+	case 13:
+		return "ActivityTaskTimedOut"
+	case 14:
+		return "ActivityTaskCancelRequested"
+	case 15:
+		return "RequestCancelActivityTaskFailed"
+	case 16:
+		return "ActivityTaskCanceled"
+	case 17:
+		return "TimerStarted"
+	case 18:
+		return "TimerFired"
+	case 19:
+		return "CancelTimerFailed"
+	case 20:
+		return "TimerCanceled"
+	case 21:
+		return "WorkflowExecutionCancelRequested"
+	case 22:
+		return "WorkflowExecutionCanceled"
+	case 23:
+		return "RequestCancelExternalWorkflowExecutionInitiated"
+	case 24:
+		return "RequestCancelExternalWorkflowExecutionFailed"
+	case 25:
+		return "ExternalWorkflowExecutionCancelRequested"
+	case 26:
+		return "MarkerRecorded"
+	case 27:
+		return "WorkflowExecutionSignaled"
+	case 28:
+		return "WorkflowExecutionTerminated"
+	case 29:
+		return "WorkflowExecutionContinuedAsNew"
+	case 30:
+		return "StartChildWorkflowExecutionInitiated"
+	case 31:
+		return "StartChildWorkflowExecutionFailed"
+	case 32:
+		return "ChildWorkflowExecutionStarted"
+	case 33:
+		return "ChildWorkflowExecutionCompleted"
+	case 34:
+		return "ChildWorkflowExecutionFailed"
+	case 35:
+		return "ChildWorkflowExecutionCanceled"
+	case 36:
+		return "ChildWorkflowExecutionTimedOut"
+	case 37:
+		return "ChildWorkflowExecutionTerminated"
+	case 38:
+		return "SignalExternalWorkflowExecutionInitiated"
+	case 39:
+		return "SignalExternalWorkflowExecutionFailed"
+	case 40:
+		return "ExternalWorkflowExecutionSignaled"
+	case 41:
+		return "UpsertWorkflowSearchAttributes"
+	}
+	return fmt.Sprintf("EventType(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *EventType) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "workflowexecutionstarted":
+		*e = EventTypeWorkflowExecutionStarted
+		return nil
+	case "workflowexecutioncompleted":
+		*e = EventTypeWorkflowExecutionCompleted
+		return nil
+	case "workflowexecutionfailed":
+		*e = EventTypeWorkflowExecutionFailed
+		return nil
+	case "workflowexecutiontimedout":
+		*e = EventTypeWorkflowExecutionTimedOut
+		return nil
+	case "decisiontaskscheduled":
+		*e = EventTypeDecisionTaskScheduled
+		return nil
+	case "decisiontaskstarted":
+		*e = EventTypeDecisionTaskStarted
+		return nil
+	case "decisiontaskcompleted":
+		*e = EventTypeDecisionTaskCompleted
+		return nil
+	case "decisiontasktimedout":
+		*e = EventTypeDecisionTaskTimedOut
+		return nil
+	case "decisiontaskfailed":
+		*e = EventTypeDecisionTaskFailed
+		return nil
+	case "activitytaskscheduled":
+		*e = EventTypeActivityTaskScheduled
+		return nil
+	case "activitytaskstarted":
+		*e = EventTypeActivityTaskStarted
+		return nil
+	case "activitytaskcompleted":
+		*e = EventTypeActivityTaskCompleted
+		return nil
+	case "activitytaskfailed":
+		*e = EventTypeActivityTaskFailed
+		return nil
+	case "activitytasktimedout":
+		*e = EventTypeActivityTaskTimedOut
+		return nil
+	case "activitytaskcancelrequested":
+		*e = EventTypeActivityTaskCancelRequested
+		return nil
+	case "requestcancelactivitytaskfailed":
+		*e = EventTypeRequestCancelActivityTaskFailed
+		return nil
+	case "activitytaskcanceled":
+		*e = EventTypeActivityTaskCanceled
+		return nil
+	case "timerstarted":
+		*e = EventTypeTimerStarted
+		return nil
+	case "timerfired":
+		*e = EventTypeTimerFired
+		return nil
+	case "canceltimerfailed":
+		*e = EventTypeCancelTimerFailed
+		return nil
+	case "timercanceled":
+		*e = EventTypeTimerCanceled
+		return nil
+	case "workflowexecutioncancelrequested":
+		*e = EventTypeWorkflowExecutionCancelRequested
+		return nil
+	case "workflowexecutioncanceled":
+		*e = EventTypeWorkflowExecutionCanceled
+		return nil
+	case "requestcancelexternalworkflowexecutioninitiated":
+		*e = EventTypeRequestCancelExternalWorkflowExecutionInitiated
+		return nil
+	case "requestcancelexternalworkflowexecutionfailed":
+		*e = EventTypeRequestCancelExternalWorkflowExecutionFailed
+		return nil
+	case "externalworkflowexecutioncancelrequested":
+		*e = EventTypeExternalWorkflowExecutionCancelRequested
+		return nil
+	case "markerrecorded":
+		*e = EventTypeMarkerRecorded
+		return nil
+	case "workflowexecutionsignaled":
+		*e = EventTypeWorkflowExecutionSignaled
+		return nil
+	case "workflowexecutionterminated":
+		*e = EventTypeWorkflowExecutionTerminated
+		return nil
+	case "workflowexecutioncontinuedasnew":
+		*e = EventTypeWorkflowExecutionContinuedAsNew
+		return nil
+	case "startchildworkflowexecutioninitiated":
+		*e = EventTypeStartChildWorkflowExecutionInitiated
+		return nil
+	case "startchildworkflowexecutionfailed":
+		*e = EventTypeStartChildWorkflowExecutionFailed
+		return nil
+	case "childworkflowexecutionstarted":
+		*e = EventTypeChildWorkflowExecutionStarted
+		return nil
+	case "childworkflowexecutioncompleted":
+		*e = EventTypeChildWorkflowExecutionCompleted
+		return nil
+	case "childworkflowexecutionfailed":
+		*e = EventTypeChildWorkflowExecutionFailed
+		return nil
+	case "childworkflowexecutioncanceled":
+		*e = EventTypeChildWorkflowExecutionCanceled
+		return nil
+	case "childworkflowexecutiontimedout":
+		*e = EventTypeChildWorkflowExecutionTimedOut
+		return nil
+	case "childworkflowexecutionterminated":
+		*e = EventTypeChildWorkflowExecutionTerminated
+		return nil
+	case "signalexternalworkflowexecutioninitiated":
+		*e = EventTypeSignalExternalWorkflowExecutionInitiated
+		return nil
+	case "signalexternalworkflowexecutionfailed":
+		*e = EventTypeSignalExternalWorkflowExecutionFailed
+		return nil
+	case "externalworkflowexecutionsignaled":
+		*e = EventTypeExternalWorkflowExecutionSignaled
+		return nil
+	case "upsertworkflowsearchattributes":
+		*e = EventTypeUpsertWorkflowSearchAttributes
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "EventType", err)
+		}
+		*e = EventType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes EventType to text.
+func (e EventType) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (
@@ -3243,6 +3933,42 @@ func (e HistoryEventFilterType) Ptr() *HistoryEventFilterType {
 	return &e
 }
 
+// String returns a readable string representation of HistoryEventFilterType.
+func (e HistoryEventFilterType) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "AllEvent"
+	case 1:
+		return "CloseEvent"
+	}
+	return fmt.Sprintf("HistoryEventFilterType(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *HistoryEventFilterType) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "allevent":
+		*e = HistoryEventFilterTypeAllEvent
+		return nil
+	case "closeevent":
+		*e = HistoryEventFilterTypeCloseEvent
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "HistoryEventFilterType", err)
+		}
+		*e = HistoryEventFilterType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes HistoryEventFilterType to text.
+func (e HistoryEventFilterType) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
 const (
 	// HistoryEventFilterTypeAllEvent is an option for HistoryEventFilterType
 	HistoryEventFilterTypeAllEvent HistoryEventFilterType = iota
@@ -3256,6 +3982,62 @@ type IndexedValueType int32
 // Ptr is a helper function for getting pointer value
 func (e IndexedValueType) Ptr() *IndexedValueType {
 	return &e
+}
+
+// String returns a readable string representation of IndexedValueType.
+func (e IndexedValueType) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "String"
+	case 1:
+		return "Keyword"
+	case 2:
+		return "Int"
+	case 3:
+		return "Double"
+	case 4:
+		return "Bool"
+	case 5:
+		return "Datetime"
+	}
+	return fmt.Sprintf("IndexedValueType(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *IndexedValueType) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "string":
+		*e = IndexedValueTypeString
+		return nil
+	case "keyword":
+		*e = IndexedValueTypeKeyword
+		return nil
+	case "int":
+		*e = IndexedValueTypeInt
+		return nil
+	case "double":
+		*e = IndexedValueTypeDouble
+		return nil
+	case "bool":
+		*e = IndexedValueTypeBool
+		return nil
+	case "datetime":
+		*e = IndexedValueTypeDatetime
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "IndexedValueType", err)
+		}
+		*e = IndexedValueType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes IndexedValueType to text.
+func (e IndexedValueType) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (
@@ -3754,6 +4536,47 @@ func (e ParentClosePolicy) Ptr() *ParentClosePolicy {
 	return &e
 }
 
+// String returns a readable string representation of ParentClosePolicy.
+func (e ParentClosePolicy) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "Abandon"
+	case 1:
+		return "RequestCancel"
+	case 2:
+		return "Terminate"
+	}
+	return fmt.Sprintf("ParentClosePolicy(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *ParentClosePolicy) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "abandon":
+		*e = ParentClosePolicyAbandon
+		return nil
+	case "requestcancel":
+		*e = ParentClosePolicyRequestCancel
+		return nil
+	case "terminate":
+		*e = ParentClosePolicyTerminate
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "ParentClosePolicy", err)
+		}
+		*e = ParentClosePolicy(val)
+		return nil
+	}
+}
+
+// MarshalText encodes ParentClosePolicy to text.
+func (e ParentClosePolicy) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
 const (
 	// ParentClosePolicyAbandon is an option for ParentClosePolicy
 	ParentClosePolicyAbandon ParentClosePolicy = iota
@@ -3892,6 +4715,47 @@ func (e PendingActivityState) Ptr() *PendingActivityState {
 	return &e
 }
 
+// String returns a readable string representation of PendingActivityState.
+func (e PendingActivityState) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "Scheduled"
+	case 1:
+		return "Started"
+	case 2:
+		return "CancelRequested"
+	}
+	return fmt.Sprintf("PendingActivityState(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *PendingActivityState) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "scheduled":
+		*e = PendingActivityStateScheduled
+		return nil
+	case "started":
+		*e = PendingActivityStateStarted
+		return nil
+	case "cancelrequested":
+		*e = PendingActivityStateCancelRequested
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "PendingActivityState", err)
+		}
+		*e = PendingActivityState(val)
+		return nil
+	}
+}
+
+// MarshalText encodes PendingActivityState to text.
+func (e PendingActivityState) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
 const (
 	// PendingActivityStateScheduled is an option for PendingActivityState
 	PendingActivityStateScheduled PendingActivityState = iota
@@ -4005,6 +4869,42 @@ type PendingDecisionState int32
 // Ptr is a helper function for getting pointer value
 func (e PendingDecisionState) Ptr() *PendingDecisionState {
 	return &e
+}
+
+// String returns a readable string representation of PendingDecisionState.
+func (e PendingDecisionState) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "Scheduled"
+	case 1:
+		return "Started"
+	}
+	return fmt.Sprintf("PendingDecisionState(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *PendingDecisionState) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "scheduled":
+		*e = PendingDecisionStateScheduled
+		return nil
+	case "started":
+		*e = PendingDecisionStateStarted
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "PendingDecisionState", err)
+		}
+		*e = PendingDecisionState(val)
+		return nil
+	}
+}
+
+// MarshalText encodes PendingDecisionState to text.
+func (e PendingDecisionState) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (
@@ -4411,6 +5311,42 @@ func (e QueryConsistencyLevel) Ptr() *QueryConsistencyLevel {
 	return &e
 }
 
+// String returns a readable string representation of QueryConsistencyLevel.
+func (e QueryConsistencyLevel) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "Eventual"
+	case 1:
+		return "Strong"
+	}
+	return fmt.Sprintf("QueryConsistencyLevel(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *QueryConsistencyLevel) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "eventual":
+		*e = QueryConsistencyLevelEventual
+		return nil
+	case "strong":
+		*e = QueryConsistencyLevelStrong
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "QueryConsistencyLevel", err)
+		}
+		*e = QueryConsistencyLevel(val)
+		return nil
+	}
+}
+
+// MarshalText encodes QueryConsistencyLevel to text.
+func (e QueryConsistencyLevel) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
 const (
 	// QueryConsistencyLevelEventual is an option for QueryConsistencyLevel
 	QueryConsistencyLevelEventual QueryConsistencyLevel = iota
@@ -4437,6 +5373,42 @@ type QueryRejectCondition int32
 // Ptr is a helper function for getting pointer value
 func (e QueryRejectCondition) Ptr() *QueryRejectCondition {
 	return &e
+}
+
+// String returns a readable string representation of QueryRejectCondition.
+func (e QueryRejectCondition) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "NotOpen"
+	case 1:
+		return "NotCompletedCleanly"
+	}
+	return fmt.Sprintf("QueryRejectCondition(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *QueryRejectCondition) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "notopen":
+		*e = QueryRejectConditionNotOpen
+		return nil
+	case "notcompletedcleanly":
+		*e = QueryRejectConditionNotCompletedCleanly
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "QueryRejectCondition", err)
+		}
+		*e = QueryRejectCondition(val)
+		return nil
+	}
+}
+
+// MarshalText encodes QueryRejectCondition to text.
+func (e QueryRejectCondition) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (
@@ -4467,6 +5439,42 @@ func (e QueryResultType) Ptr() *QueryResultType {
 	return &e
 }
 
+// String returns a readable string representation of QueryResultType.
+func (e QueryResultType) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "Answered"
+	case 1:
+		return "Failed"
+	}
+	return fmt.Sprintf("QueryResultType(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *QueryResultType) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "answered":
+		*e = QueryResultTypeAnswered
+		return nil
+	case "failed":
+		*e = QueryResultTypeFailed
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "QueryResultType", err)
+		}
+		*e = QueryResultType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes QueryResultType to text.
+func (e QueryResultType) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
 const (
 	// QueryResultTypeAnswered is an option for QueryResultType
 	QueryResultTypeAnswered QueryResultType = iota
@@ -4480,6 +5488,42 @@ type QueryTaskCompletedType int32
 // Ptr is a helper function for getting pointer value
 func (e QueryTaskCompletedType) Ptr() *QueryTaskCompletedType {
 	return &e
+}
+
+// String returns a readable string representation of QueryTaskCompletedType.
+func (e QueryTaskCompletedType) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "Completed"
+	case 1:
+		return "Failed"
+	}
+	return fmt.Sprintf("QueryTaskCompletedType(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *QueryTaskCompletedType) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "completed":
+		*e = QueryTaskCompletedTypeCompleted
+		return nil
+	case "failed":
+		*e = QueryTaskCompletedTypeFailed
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "QueryTaskCompletedType", err)
+		}
+		*e = QueryTaskCompletedType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes QueryTaskCompletedType to text.
+func (e QueryTaskCompletedType) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (
@@ -6196,6 +7240,37 @@ func (e SignalExternalWorkflowExecutionFailedCause) Ptr() *SignalExternalWorkflo
 	return &e
 }
 
+// String returns a readable string representation of SignalExternalWorkflowExecutionFailedCause.
+func (e SignalExternalWorkflowExecutionFailedCause) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "UnknownExternalWorkflowExecution"
+	}
+	return fmt.Sprintf("SignalExternalWorkflowExecutionFailedCause(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *SignalExternalWorkflowExecutionFailedCause) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "unknownexternalworkflowexecution":
+		*e = SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "SignalExternalWorkflowExecutionFailedCause", err)
+		}
+		*e = SignalExternalWorkflowExecutionFailedCause(val)
+		return nil
+	}
+}
+
+// MarshalText encodes SignalExternalWorkflowExecutionFailedCause to text.
+func (e SignalExternalWorkflowExecutionFailedCause) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
 const (
 	// SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution is an option for SignalExternalWorkflowExecutionFailedCause
 	SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution SignalExternalWorkflowExecutionFailedCause = iota
@@ -7205,6 +8280,42 @@ func (e TaskListKind) Ptr() *TaskListKind {
 	return &e
 }
 
+// String returns a readable string representation of TaskListKind.
+func (e TaskListKind) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "Normal"
+	case 1:
+		return "Sticky"
+	}
+	return fmt.Sprintf("TaskListKind(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *TaskListKind) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "normal":
+		*e = TaskListKindNormal
+		return nil
+	case "sticky":
+		*e = TaskListKindSticky
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "TaskListKind", err)
+		}
+		*e = TaskListKind(val)
+		return nil
+	}
+}
+
+// MarshalText encodes TaskListKind to text.
+func (e TaskListKind) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
 const (
 	// TaskListKindNormal is an option for TaskListKind
 	TaskListKindNormal TaskListKind = iota
@@ -7304,6 +8415,42 @@ func (e TaskListType) Ptr() *TaskListType {
 	return &e
 }
 
+// String returns a readable string representation of TaskListType.
+func (e TaskListType) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "Decision"
+	case 1:
+		return "Activity"
+	}
+	return fmt.Sprintf("TaskListType(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *TaskListType) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "decision":
+		*e = TaskListTypeDecision
+		return nil
+	case "activity":
+		*e = TaskListTypeActivity
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "TaskListType", err)
+		}
+		*e = TaskListType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes TaskListType to text.
+func (e TaskListType) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
 const (
 	// TaskListTypeDecision is an option for TaskListType
 	TaskListTypeDecision TaskListType = iota
@@ -7366,6 +8513,52 @@ type TimeoutType int32
 // Ptr is a helper function for getting pointer value
 func (e TimeoutType) Ptr() *TimeoutType {
 	return &e
+}
+
+// String returns a readable string representation of TimeoutType.
+func (e TimeoutType) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "StartToClose"
+	case 1:
+		return "ScheduleToStart"
+	case 2:
+		return "ScheduleToClose"
+	case 3:
+		return "Heartbeat"
+	}
+	return fmt.Sprintf("TimeoutType(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *TimeoutType) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "starttoclose":
+		*e = TimeoutTypeStartToClose
+		return nil
+	case "scheduletostart":
+		*e = TimeoutTypeScheduleToStart
+		return nil
+	case "scheduletoclose":
+		*e = TimeoutTypeScheduleToClose
+		return nil
+	case "heartbeat":
+		*e = TimeoutTypeHeartbeat
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "TimeoutType", err)
+		}
+		*e = TimeoutType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes TimeoutType to text.
+func (e TimeoutType) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (
@@ -7885,6 +9078,62 @@ type WorkflowExecutionCloseStatus int32
 // Ptr is a helper function for getting pointer value
 func (e WorkflowExecutionCloseStatus) Ptr() *WorkflowExecutionCloseStatus {
 	return &e
+}
+
+// String returns a readable string representation of WorkflowExecutionCloseStatus.
+func (e WorkflowExecutionCloseStatus) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "Completed"
+	case 1:
+		return "Failed"
+	case 2:
+		return "Canceled"
+	case 3:
+		return "Terminated"
+	case 4:
+		return "ContinuedAsNew"
+	case 5:
+		return "TimedOut"
+	}
+	return fmt.Sprintf("WorkflowExecutionCloseStatus(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *WorkflowExecutionCloseStatus) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "completed":
+		*e = WorkflowExecutionCloseStatusCompleted
+		return nil
+	case "failed":
+		*e = WorkflowExecutionCloseStatusFailed
+		return nil
+	case "canceled":
+		*e = WorkflowExecutionCloseStatusCanceled
+		return nil
+	case "terminated":
+		*e = WorkflowExecutionCloseStatusTerminated
+		return nil
+	case "continuedasnew":
+		*e = WorkflowExecutionCloseStatusContinuedAsNew
+		return nil
+	case "timedout":
+		*e = WorkflowExecutionCloseStatusTimedOut
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "WorkflowExecutionCloseStatus", err)
+		}
+		*e = WorkflowExecutionCloseStatus(val)
+		return nil
+	}
+}
+
+// MarshalText encodes WorkflowExecutionCloseStatus to text.
+func (e WorkflowExecutionCloseStatus) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (
@@ -8578,6 +9827,52 @@ type WorkflowIDReusePolicy int32
 // Ptr is a helper function for getting pointer value
 func (e WorkflowIDReusePolicy) Ptr() *WorkflowIDReusePolicy {
 	return &e
+}
+
+// String returns a readable string representation of WorkflowIDReusePolicy.
+func (e WorkflowIDReusePolicy) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "AllowDuplicateFailedOnly"
+	case 1:
+		return "AllowDuplicate"
+	case 2:
+		return "RejectDuplicate"
+	case 3:
+		return "TerminateIfRunning"
+	}
+	return fmt.Sprintf("WorkflowIDReusePolicy(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *WorkflowIDReusePolicy) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "allowduplicatefailedonly":
+		*e = WorkflowIDReusePolicyAllowDuplicateFailedOnly
+		return nil
+	case "allowduplicate":
+		*e = WorkflowIDReusePolicyAllowDuplicate
+		return nil
+	case "rejectduplicate":
+		*e = WorkflowIDReusePolicyRejectDuplicate
+		return nil
+	case "terminateifrunning":
+		*e = WorkflowIDReusePolicyTerminateIfRunning
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "WorkflowIDReusePolicy", err)
+		}
+		*e = WorkflowIDReusePolicy(val)
+		return nil
+	}
+}
+
+// MarshalText encodes WorkflowIDReusePolicy to text.
+func (e WorkflowIDReusePolicy) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (

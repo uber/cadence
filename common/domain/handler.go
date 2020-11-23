@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 var (
@@ -172,7 +173,7 @@ func (d *handlerImpl) RegisterDomain(
 		archivalEvent, err := d.toArchivalRegisterEvent(
 			registerRequest.HistoryArchivalStatus,
 			registerRequest.GetHistoryArchivalURI(),
-			clusterHistoryArchivalConfig.GetDomainDefaultStatus(),
+			*thrift.FromArchivalStatus(clusterHistoryArchivalConfig.GetDomainDefaultStatus().Ptr()),
 			clusterHistoryArchivalConfig.GetDomainDefaultURI(),
 		)
 		if err != nil {
@@ -192,7 +193,7 @@ func (d *handlerImpl) RegisterDomain(
 		archivalEvent, err := d.toArchivalRegisterEvent(
 			registerRequest.VisibilityArchivalStatus,
 			registerRequest.GetVisibilityArchivalURI(),
-			clusterVisibilityArchivalConfig.GetDomainDefaultStatus(),
+			*thrift.FromArchivalStatus(clusterVisibilityArchivalConfig.GetDomainDefaultStatus().Ptr()),
 			clusterVisibilityArchivalConfig.GetDomainDefaultURI(),
 		)
 		if err != nil {

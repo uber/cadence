@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/util"
 )
 
@@ -66,8 +67,8 @@ type historyArchiverSuite struct {
 	container          *archiver.HistoryBootstrapContainer
 	testArchivalURI    archiver.URI
 	testGetDirectory   string
-	historyBatchesV1   []*shared.History
-	historyBatchesV100 []*shared.History
+	historyBatchesV1   []*types.History
+	historyBatchesV100 []*types.History
 }
 
 func TestHistoryArchiverSuite(t *testing.T) {
@@ -204,11 +205,11 @@ func (s *historyArchiverSuite) TestArchive_Fail_HistoryMutated() {
 	mockCtrl := gomock.NewController(s.T())
 	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
-	historyBatches := []*shared.History{
-		&shared.History{
-			Events: []*shared.HistoryEvent{
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(common.FirstEventID + 1),
+	historyBatches := []*types.History{
+		{
+			Events: []*types.HistoryEvent{
+				{
+					EventID:   common.Int64Ptr(common.FirstEventID + 1),
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   common.Int64Ptr(testCloseFailoverVersion + 1),
 				},
@@ -268,25 +269,25 @@ func (s *historyArchiverSuite) TestArchive_Success() {
 	mockCtrl := gomock.NewController(s.T())
 	defer mockCtrl.Finish()
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
-	historyBatches := []*shared.History{
-		&shared.History{
-			Events: []*shared.HistoryEvent{
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(common.FirstEventID + 1),
+	historyBatches := []*types.History{
+		{
+			Events: []*types.HistoryEvent{
+				{
+					EventID:   common.Int64Ptr(common.FirstEventID + 1),
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   common.Int64Ptr(testCloseFailoverVersion),
 				},
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(common.FirstEventID + 2),
+				{
+					EventID:   common.Int64Ptr(common.FirstEventID + 2),
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   common.Int64Ptr(testCloseFailoverVersion),
 				},
 			},
 		},
-		&shared.History{
-			Events: []*shared.HistoryEvent{
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(testNextEventID - 1),
+		{
+			Events: []*types.HistoryEvent{
+				{
+					EventID:   common.Int64Ptr(testNextEventID - 1),
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   common.Int64Ptr(testCloseFailoverVersion),
 				},
@@ -447,7 +448,7 @@ func (s *historyArchiverSuite) TestGet_Success_SmallPageSize() {
 		PageSize:             1,
 		CloseFailoverVersion: common.Int64Ptr(100),
 	}
-	combinedHistory := []*shared.History{}
+	combinedHistory := []*types.History{}
 
 	URI, err := archiver.NewURI("file://" + s.testGetDirectory)
 	s.NoError(err)
@@ -533,11 +534,11 @@ func (s *historyArchiverSuite) newTestHistoryArchiver(historyIterator archiver.H
 }
 
 func (s *historyArchiverSuite) setupHistoryDirectory() {
-	s.historyBatchesV1 = []*shared.History{
-		&shared.History{
-			Events: []*shared.HistoryEvent{
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(testNextEventID - 1),
+	s.historyBatchesV1 = []*types.History{
+		{
+			Events: []*types.HistoryEvent{
+				{
+					EventID:   common.Int64Ptr(testNextEventID - 1),
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   common.Int64Ptr(1),
 				},
@@ -545,25 +546,25 @@ func (s *historyArchiverSuite) setupHistoryDirectory() {
 		},
 	}
 
-	s.historyBatchesV100 = []*shared.History{
-		&shared.History{
-			Events: []*shared.HistoryEvent{
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(common.FirstEventID + 1),
+	s.historyBatchesV100 = []*types.History{
+		{
+			Events: []*types.HistoryEvent{
+				{
+					EventID:   common.Int64Ptr(common.FirstEventID + 1),
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   common.Int64Ptr(testCloseFailoverVersion),
 				},
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(common.FirstEventID + 1),
+				{
+					EventID:   common.Int64Ptr(common.FirstEventID + 1),
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   common.Int64Ptr(testCloseFailoverVersion),
 				},
 			},
 		},
-		&shared.History{
-			Events: []*shared.HistoryEvent{
-				&shared.HistoryEvent{
-					EventId:   common.Int64Ptr(testNextEventID - 1),
+		{
+			Events: []*types.HistoryEvent{
+				{
+					EventID:   common.Int64Ptr(testNextEventID - 1),
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   common.Int64Ptr(testCloseFailoverVersion),
 				},
@@ -575,7 +576,7 @@ func (s *historyArchiverSuite) setupHistoryDirectory() {
 	s.writeHistoryBatchesForGetTest(s.historyBatchesV100, testCloseFailoverVersion)
 }
 
-func (s *historyArchiverSuite) writeHistoryBatchesForGetTest(historyBatches []*shared.History, version int64) {
+func (s *historyArchiverSuite) writeHistoryBatchesForGetTest(historyBatches []*types.History, version int64) {
 	data, err := encode(historyBatches)
 	s.Require().NoError(err)
 	filename := constructHistoryFilename(testDomainID, testWorkflowID, testRunID, version)
