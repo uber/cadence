@@ -30,7 +30,9 @@ We also provide several other compose files for different features/modes:
 * docker-compose-es-v7.yml enables advanced visibility with ElasticSearch 7.x
 * docker-compose-mysql.yml uses MySQL as persistence storage
 * docker-compose-postgres.yml uses PosstgreSQL as persistence storage
-* docker-compose-prometheus.yaml runs with Prometheus with Grafana access.
+* docker-compose-prometheus.yaml runs with Prometheus
+
+Also feel free to make your own to combine the above features.
 
 Using a released image
 -----------------------
