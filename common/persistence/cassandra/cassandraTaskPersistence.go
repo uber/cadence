@@ -396,7 +396,7 @@ func (d *cassandraTaskPersistence) CreateTasks(
 
 	for _, task := range request.Tasks {
 		scheduleID := task.Data.ScheduleID
-		ttl := int64(task.Data.ScheduleToStartTimeout)
+		ttl := int64(task.Data.ScheduleToStartTimeout.Seconds())
 		if ttl <= 0 {
 			batch.Query(templateCreateTaskQuery,
 				domainID,
