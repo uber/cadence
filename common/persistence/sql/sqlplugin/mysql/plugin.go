@@ -171,8 +171,9 @@ func registerTLSConfig(cfg *config.SQL) error {
 	if cfg.ConnectAttributes["tls"] == "" {
 		if cfg.TLS.SSLMode != "" {
 			cfg.ConnectAttributes["tls"] = cfg.TLS.SSLMode
+		} else {
+			cfg.ConnectAttributes["tls"] = customTLSName
 		}
-		cfg.ConnectAttributes["tls"] = customTLSName
 	}
 
 	return nil
