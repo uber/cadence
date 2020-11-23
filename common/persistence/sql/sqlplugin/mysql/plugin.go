@@ -169,6 +169,9 @@ func registerTLSConfig(cfg *config.SQL) error {
 	// If no `tls` connect attribute is provided then we override it to our newly registered tls config automatically.
 	// This allows users to simply provide a tls config without needing to remember to also set the connect attribute
 	if cfg.ConnectAttributes["tls"] == "" {
+		if cfg.TLS.SSLMode != "" {
+			cfg.ConnectAttributes["tls"] = cfg.TLS.SSLMode
+		}
 		cfg.ConnectAttributes["tls"] = customTLSName
 	}
 
