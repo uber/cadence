@@ -406,7 +406,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		ExecutionMgrNumConns:            dc.GetIntProperty(dynamicconfig.ExecutionMgrNumConns, 50),
 		HistoryMgrNumConns:              dc.GetIntProperty(dynamicconfig.HistoryMgrNumConns, 50),
 		MaximumBufferedEventsBatch:      dc.GetIntProperty(dynamicconfig.MaximumBufferedEventsBatch, 100),
-		// 10K signals should big enough given workflow has 200K history lengh limit. It needs to be non-zero to protect continueAsNew from infinit loop
+		// 10K signals should big enough given a workflow execution has 200K history lengh limit. It needs to be non-zero to protect continueAsNew from infinit loop
 		MaximumSignalsPerExecution:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaximumSignalsPerExecution, 10000),
 		ShardUpdateMinInterval:          dc.GetDurationProperty(dynamicconfig.ShardUpdateMinInterval, 5*time.Minute),
 		ShardSyncMinInterval:            dc.GetDurationProperty(dynamicconfig.ShardSyncMinInterval, 5*time.Minute),
