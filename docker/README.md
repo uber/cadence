@@ -19,12 +19,30 @@ Use Cadence-CLI with `docker run --network=host --rm ubercadence/cli:master`
 For example to register new domain 'test-domain' with 1 retention day
 `docker run --network=host --rm ubercadence/cli:master --do test-domain domain register -rd 1`
 
-
-Using a pre-built image
+Using different docker-compose files
 -----------------------
+By default `docker-compose up` will run with `docker-compose.yaml` in this folder.
+This compose file is running with Cassandra, with basic visibility, 
+using Statsd for emitting metric to Graphite, with Grafana access. 
+
+We also provide several other compose files for different features/modes:
+* docker-compose-es.yml enables advanced visibility with ElasticSearch 6.x
+* docker-compose-es-v7.yml enables advanced visibility with ElasticSearch 7.x
+* docker-compose-mysql.yml uses MySQL as persistence storage
+* docker-compose-postgres.yml uses PosstgreSQL as persistence storage
+* docker-compose-prometheus.yaml runs with Prometheus
+
+Also feel free to make your own to combine the above features.
+
+Using a released image
+-----------------------
+The above compose files all using master image. It's taking the latest bits on the master branch of this repo.
+You may want to use more stable version from our release process.
+
 With every tagged release of the cadence server, there is also a corresponding
 docker image that's uploaded to docker hub. In addition, the release will also
 contain a **docker.tar.gz** file (docker-compose startup scripts). 
+
 Go [here](https://github.com/uber/cadence/releases/latest) to download a latest **docker.tar.gz** 
 
 Execute the following
@@ -36,7 +54,7 @@ cd docker
 docker-compose up
 ```
 
-Building an image for any branch and restarting
+DIY: Building an image for any branch and restarting
 -----------------------------------------
 Replace **YOUR_TAG** and **YOUR_CHECKOUT_BRANCH** in the below command to build:
 ```
@@ -54,28 +72,7 @@ docker-compose up
 Note that with `TARGET=auto-setup`, the images will setup all the DB/ElasticSearch schema during startup.
 By default, the image will not setup schema if you leave TARGET empty.
 
-Running cadence service with MySQL
------------------------------------------
-
-Run cadence with MySQL instead of Cassandra, use following commads:
-
-```
-docker-compose -f docker-compose-mysql.yml up
-docker-compose -f docker-compose-mysql.yml down
-```
-
-Please note that SQL support is still in active developement and it is not production ready yet.
-
-Running cadence service with ElasticSearch
------------------------------------------
-
-Run cadence with ElasticSearch for visibility instead of Cassandra/MySQL
-
-```
-docker-compose -f docker-compose-es.yml up
-``` 
-
-Quickstart for production
+Using docker image for production
 =========================
 In a typical production setting, dependencies (cassandra / statsd server) are
 managed / started independently of the cadence-server. To use the container in
