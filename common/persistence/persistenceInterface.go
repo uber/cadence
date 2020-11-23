@@ -243,7 +243,7 @@ type (
 		ScheduledID       int64
 		BranchToken       []byte
 		NewRunBranchToken []byte
-		CreationTime      int64
+		CreationTime      time.Time
 	}
 
 	// InternalWorkflowExecutionInfo describes a workflow execution for Persistence Interface
@@ -259,8 +259,8 @@ type (
 		CompletionEvent                    *DataBlob
 		TaskList                           string
 		WorkflowTypeName                   string
-		WorkflowTimeout                    int32
-		DecisionStartToCloseTimeout        int32
+		WorkflowTimeout                    time.Duration
+		DecisionStartToCloseTimeout        time.Duration
 		ExecutionContext                   []byte
 		State                              int
 		CloseStatus                        int
@@ -276,15 +276,15 @@ type (
 		DecisionScheduleID                 int64
 		DecisionStartedID                  int64
 		DecisionRequestID                  string
-		DecisionTimeout                    int32
+		DecisionTimeout                    time.Duration
 		DecisionAttempt                    int64
-		DecisionStartedTimestamp           int64
-		DecisionScheduledTimestamp         int64
-		DecisionOriginalScheduledTimestamp int64
+		DecisionStartedTimestamp           time.Time
+		DecisionScheduledTimestamp         time.Time
+		DecisionOriginalScheduledTimestamp time.Time
 		CancelRequested                    bool
 		CancelRequestID                    string
 		StickyTaskList                     string
-		StickyScheduleToStartTimeout       int32
+		StickyScheduleToStartTimeout       time.Duration
 		ClientLibraryVersion               string
 		ClientFeatureVersion               string
 		ClientImpl                         string
@@ -292,15 +292,15 @@ type (
 		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
-		InitialInterval    int32
+		InitialInterval    time.Duration
 		BackoffCoefficient float64
-		MaximumInterval    int32
+		MaximumInterval    time.Duration
 		ExpirationTime     time.Time
 		MaximumAttempts    int32
 		NonRetriableErrors []string
 		BranchToken        []byte
 		CronSchedule       string
-		ExpirationSeconds  int32
+		ExpirationSeconds  time.Duration
 		Memo               map[string][]byte
 		SearchAttributes   map[string][]byte
 
@@ -338,10 +338,10 @@ type (
 		ActivityID               string
 		RequestID                string
 		Details                  []byte
-		ScheduleToStartTimeout   int32
-		ScheduleToCloseTimeout   int32
-		StartToCloseTimeout      int32
-		HeartbeatTimeout         int32
+		ScheduleToStartTimeout   time.Duration
+		ScheduleToCloseTimeout   time.Duration
+		StartToCloseTimeout      time.Duration
+		HeartbeatTimeout         time.Duration
 		CancelRequested          bool
 		CancelRequestID          int64
 		LastHeartBeatUpdatedTime time.Time
@@ -352,9 +352,9 @@ type (
 		StartedIdentity    string
 		TaskList           string
 		HasRetryPolicy     bool
-		InitialInterval    int32
+		InitialInterval    time.Duration
 		BackoffCoefficient float64
-		MaximumInterval    int32
+		MaximumInterval    time.Duration
 		ExpirationTime     time.Time
 		MaximumAttempts    int32
 		NonRetriableErrors []string
@@ -378,7 +378,7 @@ type (
 		CreateRequestID       string
 		DomainName            string
 		WorkflowTypeName      string
-		ParentClosePolicy     workflow.ParentClosePolicy
+		ParentClosePolicy     types.ParentClosePolicy
 	}
 
 	// InternalUpdateWorkflowExecutionRequest is used to update a workflow execution for Persistence Interface
@@ -514,7 +514,7 @@ type (
 	// InternalGetWorkflowExecutionRequest is used to retrieve the info of a workflow execution
 	InternalGetWorkflowExecutionRequest struct {
 		DomainID  string
-		Execution workflow.WorkflowExecution
+		Execution types.WorkflowExecution
 	}
 
 	// InternalGetWorkflowExecutionResponse is the response to GetWorkflowExecution for Persistence Interface
@@ -847,7 +847,7 @@ type (
 		RunID                  string
 		TaskID                 int64
 		ScheduleID             int64
-		ScheduleToStartTimeout int32
+		ScheduleToStartTimeout time.Duration
 		Expiry                 time.Time
 		CreatedTime            time.Time
 	}
