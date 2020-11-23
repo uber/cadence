@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+	"github.com/uber/cadence/common/types"
 )
 
 func updateActivityInfos(
@@ -65,10 +66,10 @@ func updateActivityInfos(
 				StartedTimeNanos:              common.Int64Ptr(activityInfo.StartedTime.UnixNano()),
 				ActivityID:                    &activityInfo.ActivityID,
 				RequestID:                     &activityInfo.RequestID,
-				ScheduleToStartTimeoutSeconds: &activityInfo.ScheduleToStartTimeout,
-				ScheduleToCloseTimeoutSeconds: &activityInfo.ScheduleToCloseTimeout,
-				StartToCloseTimeoutSeconds:    &activityInfo.StartToCloseTimeout,
-				HeartbeatTimeoutSeconds:       &activityInfo.HeartbeatTimeout,
+				ScheduleToStartTimeoutSeconds: common.Int32Ptr(int32(activityInfo.ScheduleToStartTimeout.Seconds())),
+				ScheduleToCloseTimeoutSeconds: common.Int32Ptr(int32(activityInfo.ScheduleToCloseTimeout.Seconds())),
+				StartToCloseTimeoutSeconds:    common.Int32Ptr(int32(activityInfo.StartToCloseTimeout.Seconds())),
+				HeartbeatTimeoutSeconds:       common.Int32Ptr(int32(activityInfo.HeartbeatTimeout.Seconds())),
 				CancelRequested:               &activityInfo.CancelRequested,
 				CancelRequestID:               &activityInfo.CancelRequestID,
 				TimerTaskStatus:               &activityInfo.TimerTaskStatus,
@@ -76,9 +77,9 @@ func updateActivityInfos(
 				TaskList:                      &activityInfo.TaskList,
 				StartedIdentity:               &activityInfo.StartedIdentity,
 				HasRetryPolicy:                &activityInfo.HasRetryPolicy,
-				RetryInitialIntervalSeconds:   &activityInfo.InitialInterval,
+				RetryInitialIntervalSeconds:   common.Int32Ptr(int32(activityInfo.InitialInterval.Seconds())),
 				RetryBackoffCoefficient:       &activityInfo.BackoffCoefficient,
-				RetryMaximumIntervalSeconds:   &activityInfo.MaximumInterval,
+				RetryMaximumIntervalSeconds:   common.Int32Ptr(int32(activityInfo.MaximumInterval.Seconds())),
 				RetryExpirationTimeNanos:      common.Int64Ptr(activityInfo.ExpirationTime.UnixNano()),
 				RetryMaximumAttempts:          &activityInfo.MaximumAttempts,
 				RetryNonRetryableErrors:       activityInfo.NonRetriableErrors,
@@ -168,10 +169,10 @@ func getActivityInfoMap(
 			StartedTime:              time.Unix(0, decoded.GetStartedTimeNanos()),
 			ActivityID:               decoded.GetActivityID(),
 			RequestID:                decoded.GetRequestID(),
-			ScheduleToStartTimeout:   decoded.GetScheduleToStartTimeoutSeconds(),
-			ScheduleToCloseTimeout:   decoded.GetScheduleToCloseTimeoutSeconds(),
-			StartToCloseTimeout:      decoded.GetStartToCloseTimeoutSeconds(),
-			HeartbeatTimeout:         decoded.GetHeartbeatTimeoutSeconds(),
+			ScheduleToStartTimeout:   common.SecondsToDuration(int64(decoded.GetScheduleToStartTimeoutSeconds())),
+			ScheduleToCloseTimeout:   common.SecondsToDuration(int64(decoded.GetScheduleToCloseTimeoutSeconds())),
+			StartToCloseTimeout:      common.SecondsToDuration(int64(decoded.GetStartToCloseTimeoutSeconds())),
+			HeartbeatTimeout:         common.SecondsToDuration(int64(decoded.GetHeartbeatTimeoutSeconds())),
 			CancelRequested:          decoded.GetCancelRequested(),
 			CancelRequestID:          decoded.GetCancelRequestID(),
 			TimerTaskStatus:          decoded.GetTimerTaskStatus(),
@@ -179,9 +180,9 @@ func getActivityInfoMap(
 			StartedIdentity:          decoded.GetStartedIdentity(),
 			TaskList:                 decoded.GetTaskList(),
 			HasRetryPolicy:           decoded.GetHasRetryPolicy(),
-			InitialInterval:          decoded.GetRetryInitialIntervalSeconds(),
+			InitialInterval:          common.SecondsToDuration(int64(decoded.GetRetryInitialIntervalSeconds())),
 			BackoffCoefficient:       decoded.GetRetryBackoffCoefficient(),
-			MaximumInterval:          decoded.GetRetryMaximumIntervalSeconds(),
+			MaximumInterval:          common.SecondsToDuration(int64(decoded.GetRetryMaximumIntervalSeconds())),
 			ExpirationTime:           time.Unix(0, decoded.GetRetryExpirationTimeNanos()),
 			MaximumAttempts:          decoded.GetRetryMaximumAttempts(),
 			NonRetriableErrors:       decoded.GetRetryNonRetryableErrors(),
@@ -454,7 +455,7 @@ func getChildExecutionInfoMap(
 			CreateRequestID:       rowInfo.GetCreateRequestID(),
 			DomainName:            rowInfo.GetDomainName(),
 			WorkflowTypeName:      rowInfo.GetWorkflowTypeName(),
-			ParentClosePolicy:     workflow.ParentClosePolicy(rowInfo.GetParentClosePolicy()),
+			ParentClosePolicy:     types.ParentClosePolicy(rowInfo.GetParentClosePolicy()),
 		}
 		if rowInfo.InitiatedEvent != nil {
 			info.InitiatedEvent = persistence.NewDataBlob(rowInfo.InitiatedEvent, common.EncodingType(rowInfo.GetInitiatedEventEncoding()))
