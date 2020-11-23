@@ -26,12 +26,12 @@ import (
 	"fmt"
 	"go/importer"
 	"go/types"
-	"html/template"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"text/template"
 	"unicode"
 )
 
@@ -96,7 +96,7 @@ import (
 var structTemplate = template.Must(template.New("struct type").Funcs(funcMap).Parse(`
 // {{.Prefix}}{{internal .Name}} is an internal type (TBD...)
 type {{.Prefix}}{{internal .Name}} struct {
-{{range .Fields}}	{{internal .Name}} {{if .Type.IsMap}}map[{{.Type.MapKeyType}}]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer}}*{{end}}{{.Type.Prefix}}{{internal .Type.Name}}
+{{range .Fields}}	{{internal .Name}} {{if .Type.IsMap}}map[{{.Type.MapKeyType}}]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer}}*{{end}}{{.Type.Prefix}}{{internal .Type.Name}} ` + "`{{.Tag}}`" + `
 {{end}}}
 {{range .Fields}}
 // Get{{internal .Name}} is an internal getter (TBD...)
@@ -270,6 +270,7 @@ type (
 	Field struct {
 		Name string
 		Type Type
+		Tag  string
 	}
 )
 
@@ -353,6 +354,7 @@ func newStructType(s *types.Struct) Type {
 		fields[i] = Field{
 			Name: f.Name(),
 			Type: newType(f.Type()),
+			Tag:  s.Tag(i),
 		}
 	}
 	return Type{

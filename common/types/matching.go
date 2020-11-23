@@ -22,14 +22,14 @@ package types
 
 // AddActivityTaskRequest is an internal type (TBD...)
 type AddActivityTaskRequest struct {
-	DomainUUID                    *string
-	Execution                     *WorkflowExecution
-	SourceDomainUUID              *string
-	TaskList                      *TaskList
-	ScheduleID                    *int64
-	ScheduleToStartTimeoutSeconds *int32
-	Source                        *TaskSource
-	ForwardedFrom                 *string
+	DomainUUID                    *string            `json:"domainUUID,omitempty"`
+	Execution                     *WorkflowExecution `json:"execution,omitempty"`
+	SourceDomainUUID              *string            `json:"sourceDomainUUID,omitempty"`
+	TaskList                      *TaskList          `json:"taskList,omitempty"`
+	ScheduleID                    *int64             `json:"scheduleId,omitempty"`
+	ScheduleToStartTimeoutSeconds *int32             `json:"scheduleToStartTimeoutSeconds,omitempty"`
+	Source                        *TaskSource        `json:"source,omitempty"`
+	ForwardedFrom                 *string            `json:"forwardedFrom,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -98,13 +98,13 @@ func (v *AddActivityTaskRequest) GetForwardedFrom() (o string) {
 
 // AddDecisionTaskRequest is an internal type (TBD...)
 type AddDecisionTaskRequest struct {
-	DomainUUID                    *string
-	Execution                     *WorkflowExecution
-	TaskList                      *TaskList
-	ScheduleID                    *int64
-	ScheduleToStartTimeoutSeconds *int32
-	Source                        *TaskSource
-	ForwardedFrom                 *string
+	DomainUUID                    *string            `json:"domainUUID,omitempty"`
+	Execution                     *WorkflowExecution `json:"execution,omitempty"`
+	TaskList                      *TaskList          `json:"taskList,omitempty"`
+	ScheduleID                    *int64             `json:"scheduleId,omitempty"`
+	ScheduleToStartTimeoutSeconds *int32             `json:"scheduleToStartTimeoutSeconds,omitempty"`
+	Source                        *TaskSource        `json:"source,omitempty"`
+	ForwardedFrom                 *string            `json:"forwardedFrom,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -165,10 +165,10 @@ func (v *AddDecisionTaskRequest) GetForwardedFrom() (o string) {
 
 // CancelOutstandingPollRequest is an internal type (TBD...)
 type CancelOutstandingPollRequest struct {
-	DomainUUID   *string
-	TaskListType *int32
-	TaskList     *TaskList
-	PollerID     *string
+	DomainUUID   *string   `json:"domainUUID,omitempty"`
+	TaskListType *int32    `json:"taskListType,omitempty"`
+	TaskList     *TaskList `json:"taskList,omitempty"`
+	PollerID     *string   `json:"pollerID,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -205,8 +205,8 @@ func (v *CancelOutstandingPollRequest) GetPollerID() (o string) {
 
 // MatchingDescribeTaskListRequest is an internal type (TBD...)
 type MatchingDescribeTaskListRequest struct {
-	DomainUUID  *string
-	DescRequest *DescribeTaskListRequest
+	DomainUUID  *string                  `json:"domainUUID,omitempty"`
+	DescRequest *DescribeTaskListRequest `json:"descRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -227,8 +227,8 @@ func (v *MatchingDescribeTaskListRequest) GetDescRequest() (o *DescribeTaskListR
 
 // MatchingListTaskListPartitionsRequest is an internal type (TBD...)
 type MatchingListTaskListPartitionsRequest struct {
-	Domain   *string
-	TaskList *TaskList
+	Domain   *string   `json:"domain,omitempty"`
+	TaskList *TaskList `json:"taskList,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -249,7 +249,7 @@ func (v *MatchingListTaskListPartitionsRequest) GetTaskList() (o *TaskList) {
 
 // MatchingServiceAddActivityTaskArgs is an internal type (TBD...)
 type MatchingServiceAddActivityTaskArgs struct {
-	AddRequest *AddActivityTaskRequest
+	AddRequest *AddActivityTaskRequest `json:"addRequest,omitempty"`
 }
 
 // GetAddRequest is an internal getter (TBD...)
@@ -262,12 +262,12 @@ func (v *MatchingServiceAddActivityTaskArgs) GetAddRequest() (o *AddActivityTask
 
 // MatchingServiceAddActivityTaskResult is an internal type (TBD...)
 type MatchingServiceAddActivityTaskResult struct {
-	BadRequestError        *BadRequestError
-	InternalServiceError   *InternalServiceError
-	ServiceBusyError       *ServiceBusyError
-	LimitExceededError     *LimitExceededError
-	DomainNotActiveError   *DomainNotActiveError
-	RemoteSyncMatchedError *RemoteSyncMatchedError
+	BadRequestError        *BadRequestError        `json:"badRequestError,omitempty"`
+	InternalServiceError   *InternalServiceError   `json:"internalServiceError,omitempty"`
+	ServiceBusyError       *ServiceBusyError       `json:"serviceBusyError,omitempty"`
+	LimitExceededError     *LimitExceededError     `json:"limitExceededError,omitempty"`
+	DomainNotActiveError   *DomainNotActiveError   `json:"domainNotActiveError,omitempty"`
+	RemoteSyncMatchedError *RemoteSyncMatchedError `json:"remoteSyncMatchedError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
@@ -320,7 +320,7 @@ func (v *MatchingServiceAddActivityTaskResult) GetRemoteSyncMatchedError() (o *R
 
 // MatchingServiceAddDecisionTaskArgs is an internal type (TBD...)
 type MatchingServiceAddDecisionTaskArgs struct {
-	AddRequest *AddDecisionTaskRequest
+	AddRequest *AddDecisionTaskRequest `json:"addRequest,omitempty"`
 }
 
 // GetAddRequest is an internal getter (TBD...)
@@ -333,12 +333,12 @@ func (v *MatchingServiceAddDecisionTaskArgs) GetAddRequest() (o *AddDecisionTask
 
 // MatchingServiceAddDecisionTaskResult is an internal type (TBD...)
 type MatchingServiceAddDecisionTaskResult struct {
-	BadRequestError        *BadRequestError
-	InternalServiceError   *InternalServiceError
-	ServiceBusyError       *ServiceBusyError
-	LimitExceededError     *LimitExceededError
-	DomainNotActiveError   *DomainNotActiveError
-	RemoteSyncMatchedError *RemoteSyncMatchedError
+	BadRequestError        *BadRequestError        `json:"badRequestError,omitempty"`
+	InternalServiceError   *InternalServiceError   `json:"internalServiceError,omitempty"`
+	ServiceBusyError       *ServiceBusyError       `json:"serviceBusyError,omitempty"`
+	LimitExceededError     *LimitExceededError     `json:"limitExceededError,omitempty"`
+	DomainNotActiveError   *DomainNotActiveError   `json:"domainNotActiveError,omitempty"`
+	RemoteSyncMatchedError *RemoteSyncMatchedError `json:"remoteSyncMatchedError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
@@ -391,7 +391,7 @@ func (v *MatchingServiceAddDecisionTaskResult) GetRemoteSyncMatchedError() (o *R
 
 // MatchingServiceCancelOutstandingPollArgs is an internal type (TBD...)
 type MatchingServiceCancelOutstandingPollArgs struct {
-	Request *CancelOutstandingPollRequest
+	Request *CancelOutstandingPollRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -404,9 +404,9 @@ func (v *MatchingServiceCancelOutstandingPollArgs) GetRequest() (o *CancelOutsta
 
 // MatchingServiceCancelOutstandingPollResult is an internal type (TBD...)
 type MatchingServiceCancelOutstandingPollResult struct {
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	ServiceBusyError     *ServiceBusyError
+	BadRequestError      *BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError `json:"internalServiceError,omitempty"`
+	ServiceBusyError     *ServiceBusyError     `json:"serviceBusyError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
@@ -435,7 +435,7 @@ func (v *MatchingServiceCancelOutstandingPollResult) GetServiceBusyError() (o *S
 
 // MatchingServiceDescribeTaskListArgs is an internal type (TBD...)
 type MatchingServiceDescribeTaskListArgs struct {
-	Request *MatchingDescribeTaskListRequest
+	Request *MatchingDescribeTaskListRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -448,11 +448,11 @@ func (v *MatchingServiceDescribeTaskListArgs) GetRequest() (o *MatchingDescribeT
 
 // MatchingServiceDescribeTaskListResult is an internal type (TBD...)
 type MatchingServiceDescribeTaskListResult struct {
-	Success              *DescribeTaskListResponse
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	EntityNotExistError  *EntityNotExistsError
-	ServiceBusyError     *ServiceBusyError
+	Success              *DescribeTaskListResponse `json:"success,omitempty"`
+	BadRequestError      *BadRequestError          `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError     `json:"internalServiceError,omitempty"`
+	EntityNotExistError  *EntityNotExistsError     `json:"entityNotExistError,omitempty"`
+	ServiceBusyError     *ServiceBusyError         `json:"serviceBusyError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
@@ -497,7 +497,7 @@ func (v *MatchingServiceDescribeTaskListResult) GetServiceBusyError() (o *Servic
 
 // MatchingServiceListTaskListPartitionsArgs is an internal type (TBD...)
 type MatchingServiceListTaskListPartitionsArgs struct {
-	Request *MatchingListTaskListPartitionsRequest
+	Request *MatchingListTaskListPartitionsRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -510,10 +510,10 @@ func (v *MatchingServiceListTaskListPartitionsArgs) GetRequest() (o *MatchingLis
 
 // MatchingServiceListTaskListPartitionsResult is an internal type (TBD...)
 type MatchingServiceListTaskListPartitionsResult struct {
-	Success              *ListTaskListPartitionsResponse
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	ServiceBusyError     *ServiceBusyError
+	Success              *ListTaskListPartitionsResponse `json:"success,omitempty"`
+	BadRequestError      *BadRequestError                `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError           `json:"internalServiceError,omitempty"`
+	ServiceBusyError     *ServiceBusyError               `json:"serviceBusyError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
@@ -550,7 +550,7 @@ func (v *MatchingServiceListTaskListPartitionsResult) GetServiceBusyError() (o *
 
 // MatchingServicePollForActivityTaskArgs is an internal type (TBD...)
 type MatchingServicePollForActivityTaskArgs struct {
-	PollRequest *MatchingPollForActivityTaskRequest
+	PollRequest *MatchingPollForActivityTaskRequest `json:"pollRequest,omitempty"`
 }
 
 // GetPollRequest is an internal getter (TBD...)
@@ -563,11 +563,11 @@ func (v *MatchingServicePollForActivityTaskArgs) GetPollRequest() (o *MatchingPo
 
 // MatchingServicePollForActivityTaskResult is an internal type (TBD...)
 type MatchingServicePollForActivityTaskResult struct {
-	Success              *PollForActivityTaskResponse
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	LimitExceededError   *LimitExceededError
-	ServiceBusyError     *ServiceBusyError
+	Success              *PollForActivityTaskResponse `json:"success,omitempty"`
+	BadRequestError      *BadRequestError             `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError        `json:"internalServiceError,omitempty"`
+	LimitExceededError   *LimitExceededError          `json:"limitExceededError,omitempty"`
+	ServiceBusyError     *ServiceBusyError            `json:"serviceBusyError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
@@ -612,7 +612,7 @@ func (v *MatchingServicePollForActivityTaskResult) GetServiceBusyError() (o *Ser
 
 // MatchingServicePollForDecisionTaskArgs is an internal type (TBD...)
 type MatchingServicePollForDecisionTaskArgs struct {
-	PollRequest *MatchingPollForDecisionTaskRequest
+	PollRequest *MatchingPollForDecisionTaskRequest `json:"pollRequest,omitempty"`
 }
 
 // GetPollRequest is an internal getter (TBD...)
@@ -625,11 +625,11 @@ func (v *MatchingServicePollForDecisionTaskArgs) GetPollRequest() (o *MatchingPo
 
 // MatchingServicePollForDecisionTaskResult is an internal type (TBD...)
 type MatchingServicePollForDecisionTaskResult struct {
-	Success              *MatchingPollForDecisionTaskResponse
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	LimitExceededError   *LimitExceededError
-	ServiceBusyError     *ServiceBusyError
+	Success              *MatchingPollForDecisionTaskResponse `json:"success,omitempty"`
+	BadRequestError      *BadRequestError                     `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError                `json:"internalServiceError,omitempty"`
+	LimitExceededError   *LimitExceededError                  `json:"limitExceededError,omitempty"`
+	ServiceBusyError     *ServiceBusyError                    `json:"serviceBusyError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
@@ -674,7 +674,7 @@ func (v *MatchingServicePollForDecisionTaskResult) GetServiceBusyError() (o *Ser
 
 // MatchingServiceQueryWorkflowArgs is an internal type (TBD...)
 type MatchingServiceQueryWorkflowArgs struct {
-	QueryRequest *MatchingQueryWorkflowRequest
+	QueryRequest *MatchingQueryWorkflowRequest `json:"queryRequest,omitempty"`
 }
 
 // GetQueryRequest is an internal getter (TBD...)
@@ -687,13 +687,13 @@ func (v *MatchingServiceQueryWorkflowArgs) GetQueryRequest() (o *MatchingQueryWo
 
 // MatchingServiceQueryWorkflowResult is an internal type (TBD...)
 type MatchingServiceQueryWorkflowResult struct {
-	Success              *QueryWorkflowResponse
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	EntityNotExistError  *EntityNotExistsError
-	QueryFailedError     *QueryFailedError
-	LimitExceededError   *LimitExceededError
-	ServiceBusyError     *ServiceBusyError
+	Success              *QueryWorkflowResponse `json:"success,omitempty"`
+	BadRequestError      *BadRequestError       `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError  `json:"internalServiceError,omitempty"`
+	EntityNotExistError  *EntityNotExistsError  `json:"entityNotExistError,omitempty"`
+	QueryFailedError     *QueryFailedError      `json:"queryFailedError,omitempty"`
+	LimitExceededError   *LimitExceededError    `json:"limitExceededError,omitempty"`
+	ServiceBusyError     *ServiceBusyError      `json:"serviceBusyError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
@@ -754,7 +754,7 @@ func (v *MatchingServiceQueryWorkflowResult) GetServiceBusyError() (o *ServiceBu
 
 // MatchingServiceRespondQueryTaskCompletedArgs is an internal type (TBD...)
 type MatchingServiceRespondQueryTaskCompletedArgs struct {
-	Request *MatchingRespondQueryTaskCompletedRequest
+	Request *MatchingRespondQueryTaskCompletedRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -767,11 +767,11 @@ func (v *MatchingServiceRespondQueryTaskCompletedArgs) GetRequest() (o *Matching
 
 // MatchingServiceRespondQueryTaskCompletedResult is an internal type (TBD...)
 type MatchingServiceRespondQueryTaskCompletedResult struct {
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	EntityNotExistError  *EntityNotExistsError
-	LimitExceededError   *LimitExceededError
-	ServiceBusyError     *ServiceBusyError
+	BadRequestError      *BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError `json:"internalServiceError,omitempty"`
+	EntityNotExistError  *EntityNotExistsError `json:"entityNotExistError,omitempty"`
+	LimitExceededError   *LimitExceededError   `json:"limitExceededError,omitempty"`
+	ServiceBusyError     *ServiceBusyError     `json:"serviceBusyError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
@@ -816,10 +816,10 @@ func (v *MatchingServiceRespondQueryTaskCompletedResult) GetServiceBusyError() (
 
 // MatchingPollForActivityTaskRequest is an internal type (TBD...)
 type MatchingPollForActivityTaskRequest struct {
-	DomainUUID    *string
-	PollerID      *string
-	PollRequest   *PollForActivityTaskRequest
-	ForwardedFrom *string
+	DomainUUID    *string                     `json:"domainUUID,omitempty"`
+	PollerID      *string                     `json:"pollerID,omitempty"`
+	PollRequest   *PollForActivityTaskRequest `json:"pollRequest,omitempty"`
+	ForwardedFrom *string                     `json:"forwardedFrom,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -856,10 +856,10 @@ func (v *MatchingPollForActivityTaskRequest) GetForwardedFrom() (o string) {
 
 // MatchingPollForDecisionTaskRequest is an internal type (TBD...)
 type MatchingPollForDecisionTaskRequest struct {
-	DomainUUID    *string
-	PollerID      *string
-	PollRequest   *PollForDecisionTaskRequest
-	ForwardedFrom *string
+	DomainUUID    *string                     `json:"domainUUID,omitempty"`
+	PollerID      *string                     `json:"pollerID,omitempty"`
+	PollRequest   *PollForDecisionTaskRequest `json:"pollRequest,omitempty"`
+	ForwardedFrom *string                     `json:"forwardedFrom,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -896,23 +896,23 @@ func (v *MatchingPollForDecisionTaskRequest) GetForwardedFrom() (o string) {
 
 // MatchingPollForDecisionTaskResponse is an internal type (TBD...)
 type MatchingPollForDecisionTaskResponse struct {
-	TaskToken                 []byte
-	WorkflowExecution         *WorkflowExecution
-	WorkflowType              *WorkflowType
-	PreviousStartedEventID    *int64
-	StartedEventID            *int64
-	Attempt                   *int64
-	NextEventID               *int64
-	BacklogCountHint          *int64
-	StickyExecutionEnabled    *bool
-	Query                     *WorkflowQuery
-	DecisionInfo              *TransientDecisionInfo
-	WorkflowExecutionTaskList *TaskList
-	EventStoreVersion         *int32
-	BranchToken               []byte
-	ScheduledTimestamp        *int64
-	StartedTimestamp          *int64
-	Queries                   map[string]*WorkflowQuery
+	TaskToken                 []byte                    `json:"taskToken,omitempty"`
+	WorkflowExecution         *WorkflowExecution        `json:"workflowExecution,omitempty"`
+	WorkflowType              *WorkflowType             `json:"workflowType,omitempty"`
+	PreviousStartedEventID    *int64                    `json:"previousStartedEventId,omitempty"`
+	StartedEventID            *int64                    `json:"startedEventId,omitempty"`
+	Attempt                   *int64                    `json:"attempt,omitempty"`
+	NextEventID               *int64                    `json:"nextEventId,omitempty"`
+	BacklogCountHint          *int64                    `json:"backlogCountHint,omitempty"`
+	StickyExecutionEnabled    *bool                     `json:"stickyExecutionEnabled,omitempty"`
+	Query                     *WorkflowQuery            `json:"query,omitempty"`
+	DecisionInfo              *TransientDecisionInfo    `json:"decisionInfo,omitempty"`
+	WorkflowExecutionTaskList *TaskList                 `json:"WorkflowExecutionTaskList,omitempty"`
+	EventStoreVersion         *int32                    `json:"eventStoreVersion,omitempty"`
+	BranchToken               []byte                    `json:"branchToken,omitempty"`
+	ScheduledTimestamp        *int64                    `json:"scheduledTimestamp,omitempty"`
+	StartedTimestamp          *int64                    `json:"startedTimestamp,omitempty"`
+	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
 }
 
 // GetTaskToken is an internal getter (TBD...)
@@ -1053,10 +1053,10 @@ func (v *MatchingPollForDecisionTaskResponse) GetQueries() (o map[string]*Workfl
 
 // MatchingQueryWorkflowRequest is an internal type (TBD...)
 type MatchingQueryWorkflowRequest struct {
-	DomainUUID    *string
-	TaskList      *TaskList
-	QueryRequest  *QueryWorkflowRequest
-	ForwardedFrom *string
+	DomainUUID    *string               `json:"domainUUID,omitempty"`
+	TaskList      *TaskList             `json:"taskList,omitempty"`
+	QueryRequest  *QueryWorkflowRequest `json:"queryRequest,omitempty"`
+	ForwardedFrom *string               `json:"forwardedFrom,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -1093,10 +1093,10 @@ func (v *MatchingQueryWorkflowRequest) GetForwardedFrom() (o string) {
 
 // MatchingRespondQueryTaskCompletedRequest is an internal type (TBD...)
 type MatchingRespondQueryTaskCompletedRequest struct {
-	DomainUUID       *string
-	TaskList         *TaskList
-	TaskID           *string
-	CompletedRequest *RespondQueryTaskCompletedRequest
+	DomainUUID       *string                           `json:"domainUUID,omitempty"`
+	TaskList         *TaskList                         `json:"taskList,omitempty"`
+	TaskID           *string                           `json:"taskID,omitempty"`
+	CompletedRequest *RespondQueryTaskCompletedRequest `json:"completedRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
