@@ -83,17 +83,19 @@ func (c *elasticV6) IsNotFoundError(err error) bool {
 	return false
 }
 
-// newV6Client returns a new implementation of GenericClient
-func newV6Client(
+// NewV6Client returns a new implementation of GenericClient
+func NewV6Client(
 	connectConfig *config.ElasticSearchConfig,
 	visibilityConfig *config.VisibilityConfig,
 	logger log.Logger,
+	clientOptions ...elastic.ClientOptionFunc,
 ) (GenericClient, error) {
-	client, err := elastic.NewClient(
+	clientOptions = append(clientOptions,
 		elastic.SetURL(connectConfig.URL.String()),
 		elastic.SetRetrier(elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))),
-		elastic.SetDecoder(&elastic.NumberDecoder{}), // critical to ensure decode of int64 won't lose precise
+		elastic.SetDecoder(&elastic.NumberDecoder{}), // critical to ensure decode of int64 won't lose precise)
 	)
+	client, err := elastic.NewClient(clientOptions...)
 	if err != nil {
 		return nil, err
 	}
