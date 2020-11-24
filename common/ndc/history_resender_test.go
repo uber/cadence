@@ -297,10 +297,10 @@ func (s *historyResenderSuite) TestSendReplicationRawRequest_Err() {
 		},
 		VersionHistoryItems: []*shared.VersionHistoryItem{item},
 	}
-	retryErr := &shared.RetryTaskV2Error{
-		DomainId:   common.StringPtr(s.domainID),
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
+	retryErr := &types.RetryTaskV2Error{
+		DomainID:   common.StringPtr(s.domainID),
+		WorkflowID: common.StringPtr(workflowID),
+		RunID:      common.StringPtr(runID),
 	}
 
 	s.mockHistoryClient.EXPECT().ReplicateEventsV2(gomock.Any(), request).Return(retryErr).Times(1)

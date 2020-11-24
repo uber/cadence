@@ -31,13 +31,13 @@ import (
 
 	"github.com/olivere/elastic"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -83,17 +83,22 @@ func (c *elasticV6) IsNotFoundError(err error) bool {
 	return false
 }
 
-// newV6Client returns a new implementation of GenericClient
-func newV6Client(
+// NewV6Client returns a new implementation of GenericClient
+func NewV6Client(
 	connectConfig *config.ElasticSearchConfig,
 	visibilityConfig *config.VisibilityConfig,
 	logger log.Logger,
+	clientOptFuncs ...elastic.ClientOptionFunc,
 ) (GenericClient, error) {
-	client, err := elastic.NewClient(
+	clientOptFuncs = append(clientOptFuncs,
 		elastic.SetURL(connectConfig.URL.String()),
 		elastic.SetRetrier(elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))),
-		elastic.SetDecoder(&elastic.NumberDecoder{}), // critical to ensure decode of int64 won't lose precise
+		elastic.SetDecoder(&elastic.NumberDecoder{}), // critical to ensure decode of int64 won't lose precise)
 	)
+	if connectConfig.DisableSniff {
+		clientOptFuncs = append(clientOptFuncs, elastic.SetSniff(false))
+	}
+	client, err := elastic.NewClient(clientOptFuncs...)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +195,7 @@ func (c *elasticV6) ScanByQuery(ctx context.Context, request *ScanByQueryRequest
 			}
 		}
 	} else if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ScanByQuery failed. Error: %v", err),
 		}
 	}
@@ -311,7 +316,7 @@ func (c *elasticV6) SearchForOneClosedExecution(
 	}
 	searchResult, err := c.search(ctx, params)
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("SearchForOneClosedExecution failed. Error: %v", err),
 		}
 	}

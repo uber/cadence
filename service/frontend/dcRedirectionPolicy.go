@@ -26,11 +26,11 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -154,7 +154,7 @@ func (policy *SelectedAPIsForwardingRedirectionPolicy) withRedirect(ctx context.
 }
 
 func (policy *SelectedAPIsForwardingRedirectionPolicy) isDomainNotActiveError(err error) (string, bool) {
-	domainNotActiveErr, ok := err.(*shared.DomainNotActiveError)
+	domainNotActiveErr, ok := err.(*types.DomainNotActiveError)
 	if !ok {
 		return "", false
 	}

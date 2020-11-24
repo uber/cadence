@@ -29,8 +29,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	gen "github.com/uber/cadence/.gen/go/shared"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -96,7 +96,7 @@ func (s *ShardPersistenceSuite) TestGetShard() {
 
 	_, err2 := s.GetShard(ctx, 4766)
 	s.NotNil(err2)
-	s.IsType(&gen.EntityNotExistsError{}, err2)
+	s.IsType(&types.EntityNotExistsError{}, err2)
 	log.Infof("GetShard failed with error: %v", err2)
 }
 

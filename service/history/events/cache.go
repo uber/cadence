@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 )
 
@@ -76,7 +77,7 @@ type (
 )
 
 var (
-	errEventNotFoundInBatch = &shared.InternalServiceError{Message: "History event not found within expected batch"}
+	errEventNotFoundInBatch = &types.InternalServiceError{Message: "History event not found within expected batch"}
 )
 
 var _ Cache = (*cacheImpl)(nil)

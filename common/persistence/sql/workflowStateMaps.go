@@ -27,12 +27,12 @@ import (
 	"fmt"
 	"time"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+	"github.com/uber/cadence/common/types"
 )
 
 func updateActivityInfos(
@@ -65,10 +65,10 @@ func updateActivityInfos(
 				StartedTimeNanos:              common.Int64Ptr(activityInfo.StartedTime.UnixNano()),
 				ActivityID:                    &activityInfo.ActivityID,
 				RequestID:                     &activityInfo.RequestID,
-				ScheduleToStartTimeoutSeconds: &activityInfo.ScheduleToStartTimeout,
-				ScheduleToCloseTimeoutSeconds: &activityInfo.ScheduleToCloseTimeout,
-				StartToCloseTimeoutSeconds:    &activityInfo.StartToCloseTimeout,
-				HeartbeatTimeoutSeconds:       &activityInfo.HeartbeatTimeout,
+				ScheduleToStartTimeoutSeconds: common.Int32Ptr(int32(activityInfo.ScheduleToStartTimeout.Seconds())),
+				ScheduleToCloseTimeoutSeconds: common.Int32Ptr(int32(activityInfo.ScheduleToCloseTimeout.Seconds())),
+				StartToCloseTimeoutSeconds:    common.Int32Ptr(int32(activityInfo.StartToCloseTimeout.Seconds())),
+				HeartbeatTimeoutSeconds:       common.Int32Ptr(int32(activityInfo.HeartbeatTimeout.Seconds())),
 				CancelRequested:               &activityInfo.CancelRequested,
 				CancelRequestID:               &activityInfo.CancelRequestID,
 				TimerTaskStatus:               &activityInfo.TimerTaskStatus,
@@ -76,9 +76,9 @@ func updateActivityInfos(
 				TaskList:                      &activityInfo.TaskList,
 				StartedIdentity:               &activityInfo.StartedIdentity,
 				HasRetryPolicy:                &activityInfo.HasRetryPolicy,
-				RetryInitialIntervalSeconds:   &activityInfo.InitialInterval,
+				RetryInitialIntervalSeconds:   common.Int32Ptr(int32(activityInfo.InitialInterval.Seconds())),
 				RetryBackoffCoefficient:       &activityInfo.BackoffCoefficient,
-				RetryMaximumIntervalSeconds:   &activityInfo.MaximumInterval,
+				RetryMaximumIntervalSeconds:   common.Int32Ptr(int32(activityInfo.MaximumInterval.Seconds())),
 				RetryExpirationTimeNanos:      common.Int64Ptr(activityInfo.ExpirationTime.UnixNano()),
 				RetryMaximumAttempts:          &activityInfo.MaximumAttempts,
 				RetryNonRetryableErrors:       activityInfo.NonRetriableErrors,
@@ -104,7 +104,7 @@ func updateActivityInfos(
 		}
 
 		if _, err := tx.ReplaceIntoActivityInfoMaps(ctx, rows); err != nil {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update activity info. Failed to execute update query. Error: %v", err),
 			}
 		}
@@ -118,7 +118,7 @@ func updateActivityInfos(
 			RunID:      runID,
 			ScheduleID: &deleteInfo,
 		}); err != nil {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update activity info. Failed to execute delete query. Error: %v", err),
 			}
 		}
@@ -144,7 +144,7 @@ func getActivityInfoMap(
 		RunID:      runID,
 	})
 	if err != nil && err != sql.ErrNoRows {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get activity info. Error: %v", err),
 		}
 	}
@@ -168,10 +168,10 @@ func getActivityInfoMap(
 			StartedTime:              time.Unix(0, decoded.GetStartedTimeNanos()),
 			ActivityID:               decoded.GetActivityID(),
 			RequestID:                decoded.GetRequestID(),
-			ScheduleToStartTimeout:   decoded.GetScheduleToStartTimeoutSeconds(),
-			ScheduleToCloseTimeout:   decoded.GetScheduleToCloseTimeoutSeconds(),
-			StartToCloseTimeout:      decoded.GetStartToCloseTimeoutSeconds(),
-			HeartbeatTimeout:         decoded.GetHeartbeatTimeoutSeconds(),
+			ScheduleToStartTimeout:   common.SecondsToDuration(int64(decoded.GetScheduleToStartTimeoutSeconds())),
+			ScheduleToCloseTimeout:   common.SecondsToDuration(int64(decoded.GetScheduleToCloseTimeoutSeconds())),
+			StartToCloseTimeout:      common.SecondsToDuration(int64(decoded.GetStartToCloseTimeoutSeconds())),
+			HeartbeatTimeout:         common.SecondsToDuration(int64(decoded.GetHeartbeatTimeoutSeconds())),
 			CancelRequested:          decoded.GetCancelRequested(),
 			CancelRequestID:          decoded.GetCancelRequestID(),
 			TimerTaskStatus:          decoded.GetTimerTaskStatus(),
@@ -179,9 +179,9 @@ func getActivityInfoMap(
 			StartedIdentity:          decoded.GetStartedIdentity(),
 			TaskList:                 decoded.GetTaskList(),
 			HasRetryPolicy:           decoded.GetHasRetryPolicy(),
-			InitialInterval:          decoded.GetRetryInitialIntervalSeconds(),
+			InitialInterval:          common.SecondsToDuration(int64(decoded.GetRetryInitialIntervalSeconds())),
 			BackoffCoefficient:       decoded.GetRetryBackoffCoefficient(),
-			MaximumInterval:          decoded.GetRetryMaximumIntervalSeconds(),
+			MaximumInterval:          common.SecondsToDuration(int64(decoded.GetRetryMaximumIntervalSeconds())),
 			ExpirationTime:           time.Unix(0, decoded.GetRetryExpirationTimeNanos()),
 			MaximumAttempts:          decoded.GetRetryMaximumAttempts(),
 			NonRetriableErrors:       decoded.GetRetryNonRetryableErrors(),
@@ -213,7 +213,7 @@ func deleteActivityInfoMap(
 		WorkflowID: workflowID,
 		RunID:      runID,
 	}); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to delete activity info map. Error: %v", err),
 		}
 	}
@@ -258,7 +258,7 @@ func updateTimerInfos(
 			}
 		}
 		if _, err := tx.ReplaceIntoTimerInfoMaps(ctx, rows); err != nil {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update timer info. Failed to execute update query. Error: %v", err),
 			}
 		}
@@ -272,7 +272,7 @@ func updateTimerInfos(
 			RunID:      runID,
 			TimerID:    &deleteInfo,
 		}); err != nil {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update timer info. Failed to execute delete query. Error: %v", err),
 			}
 		}
@@ -298,7 +298,7 @@ func getTimerInfoMap(
 		RunID:      runID,
 	})
 	if err != nil && err != sql.ErrNoRows {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get timer info. Error: %v", err),
 		}
 	}
@@ -338,7 +338,7 @@ func deleteTimerInfoMap(
 		WorkflowID: workflowID,
 		RunID:      runID,
 	}); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to delete timer info map. Error: %v", err),
 		}
 	}
@@ -393,7 +393,7 @@ func updateChildExecutionInfos(
 			}
 		}
 		if _, err := tx.ReplaceIntoChildExecutionInfoMaps(ctx, rows); err != nil {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update child execution info. Failed to execute update query. Error: %v", err),
 			}
 		}
@@ -407,7 +407,7 @@ func updateChildExecutionInfos(
 			RunID:       runID,
 			InitiatedID: common.Int64Ptr(deleteInfo),
 		}); err != nil {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update child execution info. Failed to execute delete query. Error: %v", err),
 			}
 		}
@@ -433,7 +433,7 @@ func getChildExecutionInfoMap(
 		RunID:      runID,
 	})
 	if err != nil && err != sql.ErrNoRows {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get timer info. Error: %v", err),
 		}
 	}
@@ -454,7 +454,7 @@ func getChildExecutionInfoMap(
 			CreateRequestID:       rowInfo.GetCreateRequestID(),
 			DomainName:            rowInfo.GetDomainName(),
 			WorkflowTypeName:      rowInfo.GetWorkflowTypeName(),
-			ParentClosePolicy:     workflow.ParentClosePolicy(rowInfo.GetParentClosePolicy()),
+			ParentClosePolicy:     types.ParentClosePolicy(rowInfo.GetParentClosePolicy()),
 		}
 		if rowInfo.InitiatedEvent != nil {
 			info.InitiatedEvent = persistence.NewDataBlob(rowInfo.InitiatedEvent, common.EncodingType(rowInfo.GetInitiatedEventEncoding()))
@@ -483,7 +483,7 @@ func deleteChildExecutionInfoMap(
 		WorkflowID: workflowID,
 		RunID:      runID,
 	}); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to delete timer info map. Error: %v", err),
 		}
 	}
@@ -525,7 +525,7 @@ func updateRequestCancelInfos(
 		}
 
 		if _, err := tx.ReplaceIntoRequestCancelInfoMaps(ctx, rows); err != nil {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update request cancel info. Failed to execute update query. Error: %v", err),
 			}
 		}
@@ -539,7 +539,7 @@ func updateRequestCancelInfos(
 			RunID:       runID,
 			InitiatedID: common.Int64Ptr(deleteInfo),
 		}); err != nil {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update request cancel info. Failed to execute delete query. Error: %v", err),
 			}
 		}
@@ -565,7 +565,7 @@ func getRequestCancelInfoMap(
 		RunID:      runID,
 	})
 	if err != nil && err != sql.ErrNoRows {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get request cancel info. Error: %v", err),
 		}
 	}
@@ -602,7 +602,7 @@ func deleteRequestCancelInfoMap(
 		WorkflowID: workflowID,
 		RunID:      runID,
 	}); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to delete request cancel info map. Error: %v", err),
 		}
 	}
@@ -647,7 +647,7 @@ func updateSignalInfos(
 		}
 
 		if _, err := tx.ReplaceIntoSignalInfoMaps(ctx, rows); err != nil {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update signal info. Failed to execute update query. Error: %v", err),
 			}
 		}
@@ -661,7 +661,7 @@ func updateSignalInfos(
 			RunID:       runID,
 			InitiatedID: common.Int64Ptr(deleteInfo),
 		}); err != nil {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Failed to update signal info. Failed to execute delete query. Error: %v", err),
 			}
 		}
@@ -687,7 +687,7 @@ func getSignalInfoMap(
 		RunID:      runID,
 	})
 	if err != nil && err != sql.ErrNoRows {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to get signal info. Error: %v", err),
 		}
 	}
@@ -727,7 +727,7 @@ func deleteSignalInfoMap(
 		WorkflowID: workflowID,
 		RunID:      runID,
 	}); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to delete signal info map. Error: %v", err),
 		}
 	}

@@ -111,7 +111,7 @@ func (t ThriftHandler) MergeDLQMessages(ctx context.Context, request *replicator
 
 // NotifyFailoverMarkers forwards request to the underlying handler
 func (t ThriftHandler) NotifyFailoverMarkers(ctx context.Context, request *h.NotifyFailoverMarkersRequest) (err error) {
-	err = t.h.NotifyFailoverMarkers(ctx, request)
+	err = t.h.NotifyFailoverMarkers(ctx, thrift.ToNotifyFailoverMarkersRequest(request))
 	return thrift.FromError(err)
 }
 

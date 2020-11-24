@@ -34,11 +34,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	gen "github.com/uber/cadence/.gen/go/shared"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -354,7 +354,7 @@ func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
 	req.MinEventID = 19
 	req.NextPageToken = nil
 	_, err = s.HistoryV2Mgr.ReadHistoryBranch(ctx, req)
-	s.IsType(&gen.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 
 	err = s.deleteHistoryBranch(ctx, bi2)
 	s.Nil(err)
@@ -451,7 +451,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 
 			// read to verify override success, at this point history is corrupted, missing 7/8, so we should only see 6 events
 			_, err = s.readWithError(ctx, branch, 1, 25)
-			_, ok := err.(*workflow.InternalServiceError)
+			_, ok := err.(*types.InternalServiceError)
 			s.Equal(true, ok)
 
 			events = s.read(ctx, branch, 1, 7)

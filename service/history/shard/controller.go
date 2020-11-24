@@ -28,13 +28,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/resource"
@@ -517,9 +517,9 @@ func IsShardOwnershiptLostError(err error) bool {
 func CreateShardOwnershipLostError(
 	currentHost string,
 	ownerHost string,
-) *h.ShardOwnershipLostError {
+) *types.ShardOwnershipLostError {
 
-	shardLostErr := &h.ShardOwnershipLostError{}
+	shardLostErr := &types.ShardOwnershipLostError{}
 	shardLostErr.Message = common.StringPtr(fmt.Sprintf("Shard is not owned by host: %v", currentHost))
 	shardLostErr.Owner = common.StringPtr(ownerHost)
 

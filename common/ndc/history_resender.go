@@ -166,7 +166,7 @@ func (n *HistoryResenderImpl) SendSingleWorkflowHistory(
 		case nil:
 			// continue to process the events
 			break
-		case *shared.EntityNotExistsError:
+		case *types.EntityNotExistsError:
 			// Case 1: the workflow pass the retention period
 			// Case 2: the workflow is corrupted
 			if skipTask := n.fixCurrentExecution(
@@ -300,7 +300,6 @@ func (n *HistoryResenderImpl) getHistory(
 		NextPageToken:     token,
 	})
 	response := thrift.FromGetWorkflowExecutionRawHistoryV2Response(clientResp)
-	err = thrift.FromError(err)
 	if err != nil {
 		logger.Error("error getting history", tag.Error(err))
 		return nil, err

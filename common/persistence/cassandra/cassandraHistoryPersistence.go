@@ -27,7 +27,6 @@ import (
 
 	"github.com/gocql/gocql"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
@@ -177,11 +176,11 @@ func (h *nosqlHistoryManager) ReadHistoryBranch(
 
 		switch {
 		case nodeID < lastNodeID:
-			return nil, &shared.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("corrupted data, nodeID cannot decrease"),
 			}
 		case nodeID == lastNodeID:
-			return nil, &shared.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("corrupted data, same nodeID must have smaller txnID"),
 			}
 		default: // row.NodeID > lastNodeID:

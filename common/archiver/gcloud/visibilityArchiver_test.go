@@ -34,12 +34,12 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/zap"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/gcloud/connector/mocks"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -63,7 +63,7 @@ func (s *visibilityArchiverSuite) SetupTest() {
 			WorkflowTypeName: testWorkflowTypeName,
 			StartTimestamp:   1580896574804475000,
 			CloseTimestamp:   1580896575946478000,
-			CloseStatus:      shared.WorkflowExecutionCloseStatusCompleted,
+			CloseStatus:      types.WorkflowExecutionCloseStatusCompleted,
 			HistoryLength:    36,
 		},
 	}
@@ -186,7 +186,7 @@ func (s *visibilityArchiverSuite) TestVisibilityArchive() {
 		StartTimestamp:     time.Now().UnixNano(),
 		ExecutionTimestamp: 0, // workflow without backoff
 		CloseTimestamp:     time.Now().UnixNano(),
-		CloseStatus:        shared.WorkflowExecutionCloseStatusFailed,
+		CloseStatus:        types.WorkflowExecutionCloseStatusFailed,
 		HistoryLength:      int64(101),
 	}
 

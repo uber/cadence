@@ -94,7 +94,7 @@ func (t *transferTaskExecutorBase) pushActivity(
 		t.logger.Fatal("Cannot process non activity task", tag.TaskType(task.GetTaskType()))
 	}
 
-	err := t.matchingClient.AddActivityTask(ctx, &types.AddActivityTaskRequest{
+	return t.matchingClient.AddActivityTask(ctx, &types.AddActivityTaskRequest{
 		DomainUUID:       common.StringPtr(task.TargetDomainID),
 		SourceDomainUUID: common.StringPtr(task.DomainID),
 		Execution: &types.WorkflowExecution{
@@ -105,8 +105,6 @@ func (t *transferTaskExecutorBase) pushActivity(
 		ScheduleID:                    &task.ScheduleID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(activityScheduleToStartTimeout),
 	})
-
-	return thrift.FromError(err)
 }
 
 func (t *transferTaskExecutorBase) pushDecision(
@@ -123,7 +121,7 @@ func (t *transferTaskExecutorBase) pushDecision(
 		t.logger.Fatal("Cannot process non decision task", tag.TaskType(task.GetTaskType()))
 	}
 
-	err := t.matchingClient.AddDecisionTask(ctx, &types.AddDecisionTaskRequest{
+	return t.matchingClient.AddDecisionTask(ctx, &types.AddDecisionTaskRequest{
 		DomainUUID: common.StringPtr(task.DomainID),
 		Execution: &types.WorkflowExecution{
 			WorkflowID: common.StringPtr(task.WorkflowID),
@@ -133,7 +131,6 @@ func (t *transferTaskExecutorBase) pushDecision(
 		ScheduleID:                    common.Int64Ptr(task.ScheduleID),
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(decisionScheduleToStartTimeout),
 	})
-	return thrift.FromError(err)
 }
 
 func (t *transferTaskExecutorBase) recordWorkflowStarted(
@@ -154,7 +151,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 	domain := defaultDomainName
 
 	if domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID); err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); !ok {
+		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			return err
 		}
 	} else {
@@ -169,16 +166,16 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 	request := &persistence.RecordWorkflowExecutionStartedRequest{
 		DomainUUID: domainID,
 		Domain:     domain,
-		Execution: workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		Execution: types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 		WorkflowTypeName:   workflowTypeName,
 		StartTimestamp:     startTimeUnixNano,
 		ExecutionTimestamp: executionTimeUnixNano,
 		WorkflowTimeout:    int64(workflowTimeout),
 		TaskID:             taskID,
-		Memo:               visibilityMemo,
+		Memo:               thrift.ToMemo(visibilityMemo),
 		TaskList:           taskList,
 		SearchAttributes:   searchAttributes,
 	}
@@ -204,7 +201,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 	domain := defaultDomainName
 	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
 	if err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); !ok {
+		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			return err
 		}
 	} else {
@@ -214,16 +211,16 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 	request := &persistence.UpsertWorkflowExecutionRequest{
 		DomainUUID: domainID,
 		Domain:     domain,
-		Execution: workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		Execution: types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 		WorkflowTypeName:   workflowTypeName,
 		StartTimestamp:     startTimeUnixNano,
 		ExecutionTimestamp: executionTimeUnixNano,
 		WorkflowTimeout:    int64(workflowTimeout),
 		TaskID:             taskID,
-		Memo:               visibilityMemo,
+		Memo:               thrift.ToMemo(visibilityMemo),
 		TaskList:           taskList,
 		SearchAttributes:   searchAttributes,
 	}
@@ -278,19 +275,19 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 		if err := t.visibilityMgr.RecordWorkflowExecutionClosed(ctx, &persistence.RecordWorkflowExecutionClosedRequest{
 			DomainUUID: domainID,
 			Domain:     domain,
-			Execution: workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(workflowID),
-				RunId:      common.StringPtr(runID),
+			Execution: types.WorkflowExecution{
+				WorkflowID: common.StringPtr(workflowID),
+				RunID:      common.StringPtr(runID),
 			},
 			WorkflowTypeName:   workflowTypeName,
 			StartTimestamp:     startTimeUnixNano,
 			ExecutionTimestamp: executionTimeUnixNano,
 			CloseTimestamp:     endTimeUnixNano,
-			Status:             closeStatus,
+			Status:             *thrift.ToWorkflowExecutionCloseStatus(&closeStatus),
 			HistoryLength:      historyLength,
 			RetentionSeconds:   retentionSeconds,
 			TaskID:             taskID,
-			Memo:               visibilityMemo,
+			Memo:               thrift.ToMemo(visibilityMemo),
 			TaskList:           taskList,
 			SearchAttributes:   searchAttributes,
 		}); err != nil {
@@ -375,6 +372,6 @@ func copySearchAttributes(
 }
 
 func isWorkflowNotExistError(err error) bool {
-	_, ok := err.(*workflow.EntityNotExistsError)
+	_, ok := err.(*types.EntityNotExistsError)
 	return ok
 }

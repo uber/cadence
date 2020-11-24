@@ -31,8 +31,8 @@ import (
 
 	"github.com/xwb1989/sqlparser"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -264,19 +264,19 @@ func convertToTimestamp(timeStr string) (int64, error) {
 	return parsedTime.UnixNano(), nil
 }
 
-func convertStatusStr(statusStr string) (shared.WorkflowExecutionCloseStatus, error) {
+func convertStatusStr(statusStr string) (types.WorkflowExecutionCloseStatus, error) {
 	statusStr = strings.ToLower(statusStr)
 	switch statusStr {
 	case "completed":
-		return shared.WorkflowExecutionCloseStatusCompleted, nil
+		return types.WorkflowExecutionCloseStatusCompleted, nil
 	case "failed":
-		return shared.WorkflowExecutionCloseStatusFailed, nil
+		return types.WorkflowExecutionCloseStatusFailed, nil
 	case "canceled":
-		return shared.WorkflowExecutionCloseStatusCanceled, nil
+		return types.WorkflowExecutionCloseStatusCanceled, nil
 	case "continuedasnew":
-		return shared.WorkflowExecutionCloseStatusContinuedAsNew, nil
+		return types.WorkflowExecutionCloseStatusContinuedAsNew, nil
 	case "timedout":
-		return shared.WorkflowExecutionCloseStatusTimedOut, nil
+		return types.WorkflowExecutionCloseStatusTimedOut, nil
 	default:
 		return 0, fmt.Errorf("unknown workflow close status: %s", statusStr)
 	}

@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -164,7 +165,7 @@ func (r *stateRebuilderImpl) Rebuild(
 			baseLastEventID,
 			baseLastEventVersion,
 		)) {
-			return nil, 0, &shared.BadRequestError{Message: fmt.Sprintf(
+			return nil, 0, &types.BadRequestError{Message: fmt.Sprintf(
 				"nDCStateRebuilder unable to rebuild mutable state to event ID: %v, version: %v, "+
 					"baseLastEventID + baseLastEventVersion is not the same as the last event of the last "+
 					"batch, event ID: %v, version :%v ,typicaly because of attemptting to rebuild to a middle of a batch",

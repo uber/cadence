@@ -46,6 +46,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/events"
@@ -312,7 +313,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfNoExecution() {
 	identity := "testIdentity"
 	tl := "testTaskList"
 
-	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &workflow.EntityNotExistsError{}).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{}).Once()
 
 	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
@@ -329,7 +330,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfNoExecution() {
 	})
 	s.Nil(response)
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engine2Suite) TestRecordDecisionTaskStartedIfGetExecutionFailed() {
@@ -392,7 +393,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyStarted() {
 	})
 	s.Nil(response)
 	s.NotNil(err)
-	s.IsType(&h.EventAlreadyStartedError{}, err)
+	s.IsType(&types.EventAlreadyStartedError{}, err)
 	s.logger.Error("RecordDecisionTaskStarted failed with", tag.Error(err))
 }
 
@@ -429,7 +430,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyCompleted() {
 	})
 	s.Nil(response)
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 	s.logger.Error("RecordDecisionTaskStarted failed with", tag.Error(err))
 }
 
@@ -566,7 +567,7 @@ func (s *engine2Suite) TestRecordDecisionTaskRetryDifferentRequest() {
 
 	s.Nil(response)
 	s.NotNil(err)
-	s.IsType(&h.EventAlreadyStartedError{}, err)
+	s.IsType(&types.EventAlreadyStartedError{}, err)
 	s.logger.Info("Failed with error", tag.Error(err))
 }
 
@@ -681,7 +682,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedIfNoExecution() {
 	identity := "testIdentity"
 	tl := "testTaskList"
 
-	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &workflow.EntityNotExistsError{}).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{}).Once()
 
 	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &h.RecordActivityTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
@@ -701,7 +702,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedIfNoExecution() {
 	}
 	s.Nil(response)
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
@@ -818,7 +819,7 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionFail() {
 		},
 	})
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engine2Suite) createExecutionStartedState(we workflow.WorkflowExecution, tl, identity string,
@@ -1001,8 +1002,8 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_NonDeDup() {
 			RequestId:                           common.StringPtr("newRequestID"),
 		},
 	})
-	if _, ok := err.(*workflow.WorkflowExecutionAlreadyStartedError); !ok {
-		s.Fail("return err is not *shared.WorkflowExecutionAlreadyStartedError")
+	if _, ok := err.(*types.WorkflowExecutionAlreadyStartedError); !ok {
+		s.Fail("return err is not *types.WorkflowExecutionAlreadyStartedError")
 	}
 	s.Nil(resp)
 }
@@ -1069,8 +1070,8 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 		})
 
 		if expecedErrs[index] {
-			if _, ok := err.(*workflow.WorkflowExecutionAlreadyStartedError); !ok {
-				s.Fail("return err is not *shared.WorkflowExecutionAlreadyStartedError")
+			if _, ok := err.(*types.WorkflowExecutionAlreadyStartedError); !ok {
+				s.Fail("return err is not *types.WorkflowExecutionAlreadyStartedError")
 			}
 			s.Nil(resp)
 		} else {
@@ -1152,8 +1153,8 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 			})
 
 			if expecedErrs[j] {
-				if _, ok := err.(*workflow.WorkflowExecutionAlreadyStartedError); !ok {
-					s.Fail("return err is not *shared.WorkflowExecutionAlreadyStartedError")
+				if _, ok := err.(*types.WorkflowExecutionAlreadyStartedError); !ok {
+					s.Fail("return err is not *types.WorkflowExecutionAlreadyStartedError")
 				}
 				s.Nil(resp)
 			} else {
@@ -1238,7 +1239,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 		},
 	}
 
-	notExistErr := &workflow.EntityNotExistsError{Message: "Workflow not exist"}
+	notExistErr := &types.EntityNotExistsError{Message: "Workflow not exist"}
 
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, notExistErr).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
@@ -1279,7 +1280,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_CreateTimeout() {
 		},
 	}
 
-	notExistErr := &workflow.EntityNotExistsError{Message: "Workflow not exist"}
+	notExistErr := &types.EntityNotExistsError{Message: "Workflow not exist"}
 
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, notExistErr).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()

@@ -27,9 +27,9 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -104,7 +104,7 @@ func (r *conflictResolverImpl) prepareMutableState(
 	}
 
 	if incomingVersion == currentLastItem.GetVersion() {
-		return nil, false, &shared.BadRequestError{
+		return nil, false, &types.BadRequestError{
 			Message: "nDCConflictResolver encounter replication task version == current branch last write version",
 		}
 	}
@@ -171,7 +171,7 @@ func (r *conflictResolverImpl) rebuild(
 	}
 
 	if !rebuildVersionHistory.Equals(replayVersionHistory) {
-		return nil, &shared.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "nDCConflictResolver encounter mismatch version history after rebuild",
 		}
 	}

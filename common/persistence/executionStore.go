@@ -23,10 +23,12 @@ package persistence
 
 import (
 	"context"
+	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -71,7 +73,7 @@ func (m *executionManagerImpl) GetWorkflowExecution(
 
 	internalRequest := &InternalGetWorkflowExecutionRequest{
 		DomainID:  request.DomainID,
-		Execution: request.Execution,
+		Execution: *thrift.ToWorkflowExecution(&request.Execution),
 	}
 	response, err := m.persistence.GetWorkflowExecution(ctx, internalRequest)
 	if err != nil {
@@ -141,8 +143,8 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(
 		CompletionEventBatchID:             info.CompletionEventBatchID,
 		TaskList:                           info.TaskList,
 		WorkflowTypeName:                   info.WorkflowTypeName,
-		WorkflowTimeout:                    info.WorkflowTimeout,
-		DecisionStartToCloseTimeout:        info.DecisionStartToCloseTimeout,
+		WorkflowTimeout:                    int32(info.WorkflowTimeout.Seconds()),
+		DecisionStartToCloseTimeout:        int32(info.DecisionStartToCloseTimeout.Seconds()),
 		ExecutionContext:                   info.ExecutionContext,
 		State:                              info.State,
 		CloseStatus:                        info.CloseStatus,
@@ -158,29 +160,29 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(
 		DecisionScheduleID:                 info.DecisionScheduleID,
 		DecisionStartedID:                  info.DecisionStartedID,
 		DecisionRequestID:                  info.DecisionRequestID,
-		DecisionTimeout:                    info.DecisionTimeout,
+		DecisionTimeout:                    int32(info.DecisionTimeout.Seconds()),
 		DecisionAttempt:                    info.DecisionAttempt,
-		DecisionStartedTimestamp:           info.DecisionStartedTimestamp,
-		DecisionScheduledTimestamp:         info.DecisionScheduledTimestamp,
-		DecisionOriginalScheduledTimestamp: info.DecisionOriginalScheduledTimestamp,
+		DecisionStartedTimestamp:           info.DecisionStartedTimestamp.UnixNano(),
+		DecisionScheduledTimestamp:         info.DecisionScheduledTimestamp.UnixNano(),
+		DecisionOriginalScheduledTimestamp: info.DecisionOriginalScheduledTimestamp.UnixNano(),
 		CancelRequested:                    info.CancelRequested,
 		CancelRequestID:                    info.CancelRequestID,
 		StickyTaskList:                     info.StickyTaskList,
-		StickyScheduleToStartTimeout:       info.StickyScheduleToStartTimeout,
+		StickyScheduleToStartTimeout:       int32(info.StickyScheduleToStartTimeout.Seconds()),
 		ClientLibraryVersion:               info.ClientLibraryVersion,
 		ClientFeatureVersion:               info.ClientFeatureVersion,
 		ClientImpl:                         info.ClientImpl,
 		Attempt:                            info.Attempt,
 		HasRetryPolicy:                     info.HasRetryPolicy,
-		InitialInterval:                    info.InitialInterval,
+		InitialInterval:                    int32(info.InitialInterval.Seconds()),
 		BackoffCoefficient:                 info.BackoffCoefficient,
-		MaximumInterval:                    info.MaximumInterval,
+		MaximumInterval:                    int32(info.MaximumInterval.Seconds()),
 		ExpirationTime:                     info.ExpirationTime,
 		MaximumAttempts:                    info.MaximumAttempts,
 		NonRetriableErrors:                 info.NonRetriableErrors,
 		BranchToken:                        info.BranchToken,
 		CronSchedule:                       info.CronSchedule,
-		ExpirationSeconds:                  info.ExpirationSeconds,
+		ExpirationSeconds:                  int32(info.ExpirationSeconds.Seconds()),
 		AutoResetPoints:                    autoResetPoints,
 		SearchAttributes:                   info.SearchAttributes,
 		Memo:                               info.Memo,
@@ -233,7 +235,7 @@ func (m *executionManagerImpl) DeserializeChildExecutionInfos(
 			CreateRequestID:       v.CreateRequestID,
 			DomainName:            v.DomainName,
 			WorkflowTypeName:      v.WorkflowTypeName,
-			ParentClosePolicy:     v.ParentClosePolicy,
+			ParentClosePolicy:     *thrift.FromParentClosePolicy(&v.ParentClosePolicy),
 		}
 
 		// Needed for backward compatibility reason.
@@ -279,10 +281,10 @@ func (m *executionManagerImpl) DeserializeActivityInfos(
 			ActivityID:                              v.ActivityID,
 			RequestID:                               v.RequestID,
 			Details:                                 v.Details,
-			ScheduleToStartTimeout:                  v.ScheduleToStartTimeout,
-			ScheduleToCloseTimeout:                  v.ScheduleToCloseTimeout,
-			StartToCloseTimeout:                     v.StartToCloseTimeout,
-			HeartbeatTimeout:                        v.HeartbeatTimeout,
+			ScheduleToStartTimeout:                  int32(v.ScheduleToStartTimeout.Seconds()),
+			ScheduleToCloseTimeout:                  int32(v.ScheduleToCloseTimeout.Seconds()),
+			StartToCloseTimeout:                     int32(v.StartToCloseTimeout.Seconds()),
+			HeartbeatTimeout:                        int32(v.HeartbeatTimeout.Seconds()),
 			CancelRequested:                         v.CancelRequested,
 			CancelRequestID:                         v.CancelRequestID,
 			LastHeartBeatUpdatedTime:                v.LastHeartBeatUpdatedTime,
@@ -292,9 +294,9 @@ func (m *executionManagerImpl) DeserializeActivityInfos(
 			StartedIdentity:                         v.StartedIdentity,
 			TaskList:                                v.TaskList,
 			HasRetryPolicy:                          v.HasRetryPolicy,
-			InitialInterval:                         v.InitialInterval,
+			InitialInterval:                         int32(v.InitialInterval.Seconds()),
 			BackoffCoefficient:                      v.BackoffCoefficient,
-			MaximumInterval:                         v.MaximumInterval,
+			MaximumInterval:                         int32(v.MaximumInterval.Seconds()),
 			ExpirationTime:                          v.ExpirationTime,
 			MaximumAttempts:                         v.MaximumAttempts,
 			NonRetriableErrors:                      v.NonRetriableErrors,
@@ -366,7 +368,7 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(
 			StartedRunID:          v.StartedRunID,
 			DomainName:            v.DomainName,
 			WorkflowTypeName:      v.WorkflowTypeName,
-			ParentClosePolicy:     v.ParentClosePolicy,
+			ParentClosePolicy:     *thrift.ToParentClosePolicy(&v.ParentClosePolicy),
 		}
 		newInfos = append(newInfos, i)
 	}
@@ -400,10 +402,10 @@ func (m *executionManagerImpl) SerializeUpsertActivityInfos(
 			ActivityID:                              v.ActivityID,
 			RequestID:                               v.RequestID,
 			Details:                                 v.Details,
-			ScheduleToStartTimeout:                  v.ScheduleToStartTimeout,
-			ScheduleToCloseTimeout:                  v.ScheduleToCloseTimeout,
-			StartToCloseTimeout:                     v.StartToCloseTimeout,
-			HeartbeatTimeout:                        v.HeartbeatTimeout,
+			ScheduleToStartTimeout:                  common.SecondsToDuration(int64(v.ScheduleToStartTimeout)),
+			ScheduleToCloseTimeout:                  common.SecondsToDuration(int64(v.ScheduleToCloseTimeout)),
+			StartToCloseTimeout:                     common.SecondsToDuration(int64(v.StartToCloseTimeout)),
+			HeartbeatTimeout:                        common.SecondsToDuration(int64(v.HeartbeatTimeout)),
 			CancelRequested:                         v.CancelRequested,
 			CancelRequestID:                         v.CancelRequestID,
 			LastHeartBeatUpdatedTime:                v.LastHeartBeatUpdatedTime,
@@ -413,9 +415,9 @@ func (m *executionManagerImpl) SerializeUpsertActivityInfos(
 			StartedIdentity:                         v.StartedIdentity,
 			TaskList:                                v.TaskList,
 			HasRetryPolicy:                          v.HasRetryPolicy,
-			InitialInterval:                         v.InitialInterval,
+			InitialInterval:                         common.SecondsToDuration(int64(v.InitialInterval)),
 			BackoffCoefficient:                      v.BackoffCoefficient,
-			MaximumInterval:                         v.MaximumInterval,
+			MaximumInterval:                         common.SecondsToDuration(int64(v.MaximumInterval)),
 			ExpirationTime:                          v.ExpirationTime,
 			MaximumAttempts:                         v.MaximumAttempts,
 			NonRetriableErrors:                      v.NonRetriableErrors,
@@ -460,8 +462,8 @@ func (m *executionManagerImpl) SerializeExecutionInfo(
 		CompletionEvent:                    completionEvent,
 		TaskList:                           info.TaskList,
 		WorkflowTypeName:                   info.WorkflowTypeName,
-		WorkflowTimeout:                    info.WorkflowTimeout,
-		DecisionStartToCloseTimeout:        info.DecisionStartToCloseTimeout,
+		WorkflowTimeout:                    common.SecondsToDuration(int64(info.WorkflowTimeout)),
+		DecisionStartToCloseTimeout:        common.SecondsToDuration(int64(info.DecisionStartToCloseTimeout)),
 		ExecutionContext:                   info.ExecutionContext,
 		State:                              info.State,
 		CloseStatus:                        info.CloseStatus,
@@ -477,30 +479,30 @@ func (m *executionManagerImpl) SerializeExecutionInfo(
 		DecisionScheduleID:                 info.DecisionScheduleID,
 		DecisionStartedID:                  info.DecisionStartedID,
 		DecisionRequestID:                  info.DecisionRequestID,
-		DecisionTimeout:                    info.DecisionTimeout,
+		DecisionTimeout:                    common.SecondsToDuration(int64(info.DecisionTimeout)),
 		DecisionAttempt:                    info.DecisionAttempt,
-		DecisionStartedTimestamp:           info.DecisionStartedTimestamp,
-		DecisionScheduledTimestamp:         info.DecisionScheduledTimestamp,
-		DecisionOriginalScheduledTimestamp: info.DecisionOriginalScheduledTimestamp,
+		DecisionStartedTimestamp:           time.Unix(0, info.DecisionStartedTimestamp),
+		DecisionScheduledTimestamp:         time.Unix(0, info.DecisionScheduledTimestamp),
+		DecisionOriginalScheduledTimestamp: time.Unix(0, info.DecisionOriginalScheduledTimestamp),
 		CancelRequested:                    info.CancelRequested,
 		CancelRequestID:                    info.CancelRequestID,
 		StickyTaskList:                     info.StickyTaskList,
-		StickyScheduleToStartTimeout:       info.StickyScheduleToStartTimeout,
+		StickyScheduleToStartTimeout:       common.SecondsToDuration(int64(info.StickyScheduleToStartTimeout)),
 		ClientLibraryVersion:               info.ClientLibraryVersion,
 		ClientFeatureVersion:               info.ClientFeatureVersion,
 		ClientImpl:                         info.ClientImpl,
 		AutoResetPoints:                    resetPoints,
 		Attempt:                            info.Attempt,
 		HasRetryPolicy:                     info.HasRetryPolicy,
-		InitialInterval:                    info.InitialInterval,
+		InitialInterval:                    common.SecondsToDuration(int64(info.InitialInterval)),
 		BackoffCoefficient:                 info.BackoffCoefficient,
-		MaximumInterval:                    info.MaximumInterval,
+		MaximumInterval:                    common.SecondsToDuration(int64(info.MaximumInterval)),
 		ExpirationTime:                     info.ExpirationTime,
 		MaximumAttempts:                    info.MaximumAttempts,
 		NonRetriableErrors:                 info.NonRetriableErrors,
 		BranchToken:                        info.BranchToken,
 		CronSchedule:                       info.CronSchedule,
-		ExpirationSeconds:                  info.ExpirationSeconds,
+		ExpirationSeconds:                  common.SecondsToDuration(int64(info.ExpirationSeconds)),
 		Memo:                               info.Memo,
 		SearchAttributes:                   info.SearchAttributes,
 
@@ -982,7 +984,7 @@ func (m *executionManagerImpl) fromInternalReplicationTaskInfo(internalInfo *Int
 		ScheduledID:       internalInfo.ScheduledID,
 		BranchToken:       internalInfo.BranchToken,
 		NewRunBranchToken: internalInfo.NewRunBranchToken,
-		CreationTime:      internalInfo.CreationTime,
+		CreationTime:      internalInfo.CreationTime.UnixNano(),
 	}
 }
 
@@ -1013,7 +1015,7 @@ func (m *executionManagerImpl) toInternalReplicationTaskInfo(info *ReplicationTa
 		ScheduledID:       info.ScheduledID,
 		BranchToken:       info.BranchToken,
 		NewRunBranchToken: info.NewRunBranchToken,
-		CreationTime:      info.CreationTime,
+		CreationTime:      time.Unix(0, info.CreationTime),
 	}
 }
 

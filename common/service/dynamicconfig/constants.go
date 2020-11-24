@@ -336,6 +336,8 @@ var keys = map[Key]string{
 	CurrentExecutionsScannerPersistencePageSize:              "worker.currentExecutionsPersistencePageSize",
 	CurrentExecutionsScannerInvariantCollectionHistory:       "worker.currentExecutionsScannerInvariantCollectionHistory",
 	CurrentExecutionsScannerInvariantCollectionMutableState:  "worker.currentExecutionsInvariantCollectionMutableState",
+	ConcreteExecutionFixerDomainAllow:                        "worker.concreteExecutionFixerDomainAllow",
+	CurrentExecutionFixerDomainAllow:                         "worker.currentExecutionFixerDomainAllow",
 }
 
 const (
@@ -868,6 +870,10 @@ const (
 	CurrentExecutionsScannerInvariantCollectionHistory
 	// CurrentExecutionsScannerInvariantCollectionMutableState indicates if mutable state invariant checks should be run
 	CurrentExecutionsScannerInvariantCollectionMutableState
+	// ConcreteExecutionFixerDomainAllow indicates  which domains are allowed to be fixed by concrete fixer workflow
+	ConcreteExecutionFixerDomainAllow
+	// CurrentExecutionFixerDomainAllow indicates which domains are allowed to be fixed by current fixer workflow
+	CurrentExecutionFixerDomainAllow
 	// EnableBatcher decides whether start batcher in our worker
 	EnableBatcher
 	// EnableParentClosePolicyWorker decides whether or not enable system workers for processing parent close policy task

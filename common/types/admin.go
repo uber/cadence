@@ -22,8 +22,8 @@ package types
 
 // AddSearchAttributeRequest is an internal type (TBD...)
 type AddSearchAttributeRequest struct {
-	SearchAttribute map[string]IndexedValueType
-	SecurityToken   *string
+	SearchAttribute map[string]IndexedValueType `json:"searchAttribute,omitempty"`
+	SecurityToken   *string                     `json:"securityToken,omitempty"`
 }
 
 // GetSearchAttribute is an internal getter (TBD...)
@@ -44,7 +44,7 @@ func (v *AddSearchAttributeRequest) GetSecurityToken() (o string) {
 
 // AdminServiceAddSearchAttributeArgs is an internal type (TBD...)
 type AdminServiceAddSearchAttributeArgs struct {
-	Request *AddSearchAttributeRequest
+	Request *AddSearchAttributeRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -57,9 +57,9 @@ func (v *AdminServiceAddSearchAttributeArgs) GetRequest() (o *AddSearchAttribute
 
 // AdminServiceAddSearchAttributeResult is an internal type (TBD...)
 type AdminServiceAddSearchAttributeResult struct {
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	ServiceBusyError     *ServiceBusyError
+	BadRequestError      *BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError `json:"internalServiceError,omitempty"`
+	ServiceBusyError     *ServiceBusyError     `json:"serviceBusyError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
@@ -88,7 +88,7 @@ func (v *AdminServiceAddSearchAttributeResult) GetServiceBusyError() (o *Service
 
 // AdminServiceCloseShardArgs is an internal type (TBD...)
 type AdminServiceCloseShardArgs struct {
-	Request *CloseShardRequest
+	Request *CloseShardRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -101,9 +101,9 @@ func (v *AdminServiceCloseShardArgs) GetRequest() (o *CloseShardRequest) {
 
 // AdminServiceCloseShardResult is an internal type (TBD...)
 type AdminServiceCloseShardResult struct {
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	AccessDeniedError    *AccessDeniedError
+	BadRequestError      *BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError `json:"internalServiceError,omitempty"`
+	AccessDeniedError    *AccessDeniedError    `json:"accessDeniedError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
@@ -136,9 +136,9 @@ type AdminServiceDescribeClusterArgs struct {
 
 // AdminServiceDescribeClusterResult is an internal type (TBD...)
 type AdminServiceDescribeClusterResult struct {
-	Success              *DescribeClusterResponse
-	InternalServiceError *InternalServiceError
-	ServiceBusyError     *ServiceBusyError
+	Success              *DescribeClusterResponse `json:"success,omitempty"`
+	InternalServiceError *InternalServiceError    `json:"internalServiceError,omitempty"`
+	ServiceBusyError     *ServiceBusyError        `json:"serviceBusyError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
@@ -167,7 +167,7 @@ func (v *AdminServiceDescribeClusterResult) GetServiceBusyError() (o *ServiceBus
 
 // AdminServiceDescribeHistoryHostArgs is an internal type (TBD...)
 type AdminServiceDescribeHistoryHostArgs struct {
-	Request *DescribeHistoryHostRequest
+	Request *DescribeHistoryHostRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -180,10 +180,10 @@ func (v *AdminServiceDescribeHistoryHostArgs) GetRequest() (o *DescribeHistoryHo
 
 // AdminServiceDescribeHistoryHostResult is an internal type (TBD...)
 type AdminServiceDescribeHistoryHostResult struct {
-	Success              *DescribeHistoryHostResponse
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	AccessDeniedError    *AccessDeniedError
+	Success              *DescribeHistoryHostResponse `json:"success,omitempty"`
+	BadRequestError      *BadRequestError             `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError        `json:"internalServiceError,omitempty"`
+	AccessDeniedError    *AccessDeniedError           `json:"accessDeniedError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
@@ -220,7 +220,7 @@ func (v *AdminServiceDescribeHistoryHostResult) GetAccessDeniedError() (o *Acces
 
 // AdminServiceDescribeQueueArgs is an internal type (TBD...)
 type AdminServiceDescribeQueueArgs struct {
-	Request *DescribeQueueRequest
+	Request *DescribeQueueRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -233,10 +233,10 @@ func (v *AdminServiceDescribeQueueArgs) GetRequest() (o *DescribeQueueRequest) {
 
 // AdminServiceDescribeQueueResult is an internal type (TBD...)
 type AdminServiceDescribeQueueResult struct {
-	Success              *DescribeQueueResponse
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	AccessDeniedError    *AccessDeniedError
+	Success              *DescribeQueueResponse `json:"success,omitempty"`
+	BadRequestError      *BadRequestError       `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError  `json:"internalServiceError,omitempty"`
+	AccessDeniedError    *AccessDeniedError     `json:"accessDeniedError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
@@ -273,7 +273,7 @@ func (v *AdminServiceDescribeQueueResult) GetAccessDeniedError() (o *AccessDenie
 
 // AdminServiceDescribeWorkflowExecutionArgs is an internal type (TBD...)
 type AdminServiceDescribeWorkflowExecutionArgs struct {
-	Request *AdminDescribeWorkflowExecutionRequest
+	Request *AdminDescribeWorkflowExecutionRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -286,11 +286,11 @@ func (v *AdminServiceDescribeWorkflowExecutionArgs) GetRequest() (o *AdminDescri
 
 // AdminServiceDescribeWorkflowExecutionResult is an internal type (TBD...)
 type AdminServiceDescribeWorkflowExecutionResult struct {
-	Success              *AdminDescribeWorkflowExecutionResponse
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	EntityNotExistError  *EntityNotExistsError
-	AccessDeniedError    *AccessDeniedError
+	Success              *AdminDescribeWorkflowExecutionResponse `json:"success,omitempty"`
+	BadRequestError      *BadRequestError                        `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError                   `json:"internalServiceError,omitempty"`
+	EntityNotExistError  *EntityNotExistsError                   `json:"entityNotExistError,omitempty"`
+	AccessDeniedError    *AccessDeniedError                      `json:"accessDeniedError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
@@ -335,7 +335,7 @@ func (v *AdminServiceDescribeWorkflowExecutionResult) GetAccessDeniedError() (o 
 
 // AdminServiceGetDLQReplicationMessagesArgs is an internal type (TBD...)
 type AdminServiceGetDLQReplicationMessagesArgs struct {
-	Request *GetDLQReplicationMessagesRequest
+	Request *GetDLQReplicationMessagesRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -348,9 +348,9 @@ func (v *AdminServiceGetDLQReplicationMessagesArgs) GetRequest() (o *GetDLQRepli
 
 // AdminServiceGetDLQReplicationMessagesResult is an internal type (TBD...)
 type AdminServiceGetDLQReplicationMessagesResult struct {
-	Success          *GetDLQReplicationMessagesResponse
-	BadRequestError  *BadRequestError
-	ServiceBusyError *ServiceBusyError
+	Success          *GetDLQReplicationMessagesResponse `json:"success,omitempty"`
+	BadRequestError  *BadRequestError                   `json:"badRequestError,omitempty"`
+	ServiceBusyError *ServiceBusyError                  `json:"serviceBusyError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
@@ -379,7 +379,7 @@ func (v *AdminServiceGetDLQReplicationMessagesResult) GetServiceBusyError() (o *
 
 // AdminServiceGetDomainReplicationMessagesArgs is an internal type (TBD...)
 type AdminServiceGetDomainReplicationMessagesArgs struct {
-	Request *GetDomainReplicationMessagesRequest
+	Request *GetDomainReplicationMessagesRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -392,11 +392,11 @@ func (v *AdminServiceGetDomainReplicationMessagesArgs) GetRequest() (o *GetDomai
 
 // AdminServiceGetDomainReplicationMessagesResult is an internal type (TBD...)
 type AdminServiceGetDomainReplicationMessagesResult struct {
-	Success                        *GetDomainReplicationMessagesResponse
-	BadRequestError                *BadRequestError
-	LimitExceededError             *LimitExceededError
-	ServiceBusyError               *ServiceBusyError
-	ClientVersionNotSupportedError *ClientVersionNotSupportedError
+	Success                        *GetDomainReplicationMessagesResponse `json:"success,omitempty"`
+	BadRequestError                *BadRequestError                      `json:"badRequestError,omitempty"`
+	LimitExceededError             *LimitExceededError                   `json:"limitExceededError,omitempty"`
+	ServiceBusyError               *ServiceBusyError                     `json:"serviceBusyError,omitempty"`
+	ClientVersionNotSupportedError *ClientVersionNotSupportedError       `json:"clientVersionNotSupportedError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
@@ -441,7 +441,7 @@ func (v *AdminServiceGetDomainReplicationMessagesResult) GetClientVersionNotSupp
 
 // AdminServiceGetReplicationMessagesArgs is an internal type (TBD...)
 type AdminServiceGetReplicationMessagesArgs struct {
-	Request *GetReplicationMessagesRequest
+	Request *GetReplicationMessagesRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -454,11 +454,11 @@ func (v *AdminServiceGetReplicationMessagesArgs) GetRequest() (o *GetReplication
 
 // AdminServiceGetReplicationMessagesResult is an internal type (TBD...)
 type AdminServiceGetReplicationMessagesResult struct {
-	Success                        *GetReplicationMessagesResponse
-	BadRequestError                *BadRequestError
-	LimitExceededError             *LimitExceededError
-	ServiceBusyError               *ServiceBusyError
-	ClientVersionNotSupportedError *ClientVersionNotSupportedError
+	Success                        *GetReplicationMessagesResponse `json:"success,omitempty"`
+	BadRequestError                *BadRequestError                `json:"badRequestError,omitempty"`
+	LimitExceededError             *LimitExceededError             `json:"limitExceededError,omitempty"`
+	ServiceBusyError               *ServiceBusyError               `json:"serviceBusyError,omitempty"`
+	ClientVersionNotSupportedError *ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
@@ -503,7 +503,7 @@ func (v *AdminServiceGetReplicationMessagesResult) GetClientVersionNotSupportedE
 
 // AdminServiceGetWorkflowExecutionRawHistoryV2Args is an internal type (TBD...)
 type AdminServiceGetWorkflowExecutionRawHistoryV2Args struct {
-	GetRequest *GetWorkflowExecutionRawHistoryV2Request
+	GetRequest *GetWorkflowExecutionRawHistoryV2Request `json:"getRequest,omitempty"`
 }
 
 // GetGetRequest is an internal getter (TBD...)
@@ -516,11 +516,11 @@ func (v *AdminServiceGetWorkflowExecutionRawHistoryV2Args) GetGetRequest() (o *G
 
 // AdminServiceGetWorkflowExecutionRawHistoryV2Result is an internal type (TBD...)
 type AdminServiceGetWorkflowExecutionRawHistoryV2Result struct {
-	Success              *GetWorkflowExecutionRawHistoryV2Response
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	EntityNotExistError  *EntityNotExistsError
-	ServiceBusyError     *ServiceBusyError
+	Success              *GetWorkflowExecutionRawHistoryV2Response `json:"success,omitempty"`
+	BadRequestError      *BadRequestError                          `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError                     `json:"internalServiceError,omitempty"`
+	EntityNotExistError  *EntityNotExistsError                     `json:"entityNotExistError,omitempty"`
+	ServiceBusyError     *ServiceBusyError                         `json:"serviceBusyError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
@@ -565,7 +565,7 @@ func (v *AdminServiceGetWorkflowExecutionRawHistoryV2Result) GetServiceBusyError
 
 // AdminServiceMergeDLQMessagesArgs is an internal type (TBD...)
 type AdminServiceMergeDLQMessagesArgs struct {
-	Request *MergeDLQMessagesRequest
+	Request *MergeDLQMessagesRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -578,11 +578,11 @@ func (v *AdminServiceMergeDLQMessagesArgs) GetRequest() (o *MergeDLQMessagesRequ
 
 // AdminServiceMergeDLQMessagesResult is an internal type (TBD...)
 type AdminServiceMergeDLQMessagesResult struct {
-	Success              *MergeDLQMessagesResponse
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	ServiceBusyError     *ServiceBusyError
-	EntityNotExistError  *EntityNotExistsError
+	Success              *MergeDLQMessagesResponse `json:"success,omitempty"`
+	BadRequestError      *BadRequestError          `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError     `json:"internalServiceError,omitempty"`
+	ServiceBusyError     *ServiceBusyError         `json:"serviceBusyError,omitempty"`
+	EntityNotExistError  *EntityNotExistsError     `json:"entityNotExistError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
@@ -627,7 +627,7 @@ func (v *AdminServiceMergeDLQMessagesResult) GetEntityNotExistError() (o *Entity
 
 // AdminServicePurgeDLQMessagesArgs is an internal type (TBD...)
 type AdminServicePurgeDLQMessagesArgs struct {
-	Request *PurgeDLQMessagesRequest
+	Request *PurgeDLQMessagesRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -640,10 +640,10 @@ func (v *AdminServicePurgeDLQMessagesArgs) GetRequest() (o *PurgeDLQMessagesRequ
 
 // AdminServicePurgeDLQMessagesResult is an internal type (TBD...)
 type AdminServicePurgeDLQMessagesResult struct {
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	ServiceBusyError     *ServiceBusyError
-	EntityNotExistError  *EntityNotExistsError
+	BadRequestError      *BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError `json:"internalServiceError,omitempty"`
+	ServiceBusyError     *ServiceBusyError     `json:"serviceBusyError,omitempty"`
+	EntityNotExistError  *EntityNotExistsError `json:"entityNotExistError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
@@ -680,7 +680,7 @@ func (v *AdminServicePurgeDLQMessagesResult) GetEntityNotExistError() (o *Entity
 
 // AdminServiceReadDLQMessagesArgs is an internal type (TBD...)
 type AdminServiceReadDLQMessagesArgs struct {
-	Request *ReadDLQMessagesRequest
+	Request *ReadDLQMessagesRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -693,11 +693,11 @@ func (v *AdminServiceReadDLQMessagesArgs) GetRequest() (o *ReadDLQMessagesReques
 
 // AdminServiceReadDLQMessagesResult is an internal type (TBD...)
 type AdminServiceReadDLQMessagesResult struct {
-	Success              *ReadDLQMessagesResponse
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	ServiceBusyError     *ServiceBusyError
-	EntityNotExistError  *EntityNotExistsError
+	Success              *ReadDLQMessagesResponse `json:"success,omitempty"`
+	BadRequestError      *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError    `json:"internalServiceError,omitempty"`
+	ServiceBusyError     *ServiceBusyError        `json:"serviceBusyError,omitempty"`
+	EntityNotExistError  *EntityNotExistsError    `json:"entityNotExistError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
@@ -742,7 +742,7 @@ func (v *AdminServiceReadDLQMessagesResult) GetEntityNotExistError() (o *EntityN
 
 // AdminServiceReapplyEventsArgs is an internal type (TBD...)
 type AdminServiceReapplyEventsArgs struct {
-	ReapplyEventsRequest *ReapplyEventsRequest
+	ReapplyEventsRequest *ReapplyEventsRequest `json:"reapplyEventsRequest,omitempty"`
 }
 
 // GetReapplyEventsRequest is an internal getter (TBD...)
@@ -755,11 +755,11 @@ func (v *AdminServiceReapplyEventsArgs) GetReapplyEventsRequest() (o *ReapplyEve
 
 // AdminServiceReapplyEventsResult is an internal type (TBD...)
 type AdminServiceReapplyEventsResult struct {
-	BadRequestError      *BadRequestError
-	DomainNotActiveError *DomainNotActiveError
-	LimitExceededError   *LimitExceededError
-	ServiceBusyError     *ServiceBusyError
-	EntityNotExistError  *EntityNotExistsError
+	BadRequestError      *BadRequestError      `json:"badRequestError,omitempty"`
+	DomainNotActiveError *DomainNotActiveError `json:"domainNotActiveError,omitempty"`
+	LimitExceededError   *LimitExceededError   `json:"limitExceededError,omitempty"`
+	ServiceBusyError     *ServiceBusyError     `json:"serviceBusyError,omitempty"`
+	EntityNotExistError  *EntityNotExistsError `json:"entityNotExistError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
@@ -804,7 +804,7 @@ func (v *AdminServiceReapplyEventsResult) GetEntityNotExistError() (o *EntityNot
 
 // AdminServiceRefreshWorkflowTasksArgs is an internal type (TBD...)
 type AdminServiceRefreshWorkflowTasksArgs struct {
-	Request *RefreshWorkflowTasksRequest
+	Request *RefreshWorkflowTasksRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -817,10 +817,10 @@ func (v *AdminServiceRefreshWorkflowTasksArgs) GetRequest() (o *RefreshWorkflowT
 
 // AdminServiceRefreshWorkflowTasksResult is an internal type (TBD...)
 type AdminServiceRefreshWorkflowTasksResult struct {
-	BadRequestError      *BadRequestError
-	DomainNotActiveError *DomainNotActiveError
-	ServiceBusyError     *ServiceBusyError
-	EntityNotExistError  *EntityNotExistsError
+	BadRequestError      *BadRequestError      `json:"badRequestError,omitempty"`
+	DomainNotActiveError *DomainNotActiveError `json:"domainNotActiveError,omitempty"`
+	ServiceBusyError     *ServiceBusyError     `json:"serviceBusyError,omitempty"`
+	EntityNotExistError  *EntityNotExistsError `json:"entityNotExistError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
@@ -857,7 +857,7 @@ func (v *AdminServiceRefreshWorkflowTasksResult) GetEntityNotExistError() (o *En
 
 // AdminServiceRemoveTaskArgs is an internal type (TBD...)
 type AdminServiceRemoveTaskArgs struct {
-	Request *RemoveTaskRequest
+	Request *RemoveTaskRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -870,9 +870,9 @@ func (v *AdminServiceRemoveTaskArgs) GetRequest() (o *RemoveTaskRequest) {
 
 // AdminServiceRemoveTaskResult is an internal type (TBD...)
 type AdminServiceRemoveTaskResult struct {
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	AccessDeniedError    *AccessDeniedError
+	BadRequestError      *BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError `json:"internalServiceError,omitempty"`
+	AccessDeniedError    *AccessDeniedError    `json:"accessDeniedError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
@@ -901,7 +901,7 @@ func (v *AdminServiceRemoveTaskResult) GetAccessDeniedError() (o *AccessDeniedEr
 
 // AdminServiceResendReplicationTasksArgs is an internal type (TBD...)
 type AdminServiceResendReplicationTasksArgs struct {
-	Request *ResendReplicationTasksRequest
+	Request *ResendReplicationTasksRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -914,9 +914,9 @@ func (v *AdminServiceResendReplicationTasksArgs) GetRequest() (o *ResendReplicat
 
 // AdminServiceResendReplicationTasksResult is an internal type (TBD...)
 type AdminServiceResendReplicationTasksResult struct {
-	BadRequestError     *BadRequestError
-	ServiceBusyError    *ServiceBusyError
-	EntityNotExistError *EntityNotExistsError
+	BadRequestError     *BadRequestError      `json:"badRequestError,omitempty"`
+	ServiceBusyError    *ServiceBusyError     `json:"serviceBusyError,omitempty"`
+	EntityNotExistError *EntityNotExistsError `json:"entityNotExistError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
@@ -945,7 +945,7 @@ func (v *AdminServiceResendReplicationTasksResult) GetEntityNotExistError() (o *
 
 // AdminServiceResetQueueArgs is an internal type (TBD...)
 type AdminServiceResetQueueArgs struct {
-	Request *ResetQueueRequest
+	Request *ResetQueueRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -958,9 +958,9 @@ func (v *AdminServiceResetQueueArgs) GetRequest() (o *ResetQueueRequest) {
 
 // AdminServiceResetQueueResult is an internal type (TBD...)
 type AdminServiceResetQueueResult struct {
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	AccessDeniedError    *AccessDeniedError
+	BadRequestError      *BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError `json:"internalServiceError,omitempty"`
+	AccessDeniedError    *AccessDeniedError    `json:"accessDeniedError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
@@ -989,8 +989,8 @@ func (v *AdminServiceResetQueueResult) GetAccessDeniedError() (o *AccessDeniedEr
 
 // DescribeClusterResponse is an internal type (TBD...)
 type DescribeClusterResponse struct {
-	SupportedClientVersions *SupportedClientVersions
-	MembershipInfo          *MembershipInfo
+	SupportedClientVersions *SupportedClientVersions `json:"supportedClientVersions,omitempty"`
+	MembershipInfo          *MembershipInfo          `json:"membershipInfo,omitempty"`
 }
 
 // GetSupportedClientVersions is an internal getter (TBD...)
@@ -1011,8 +1011,8 @@ func (v *DescribeClusterResponse) GetMembershipInfo() (o *MembershipInfo) {
 
 // AdminDescribeWorkflowExecutionRequest is an internal type (TBD...)
 type AdminDescribeWorkflowExecutionRequest struct {
-	Domain    *string
-	Execution *WorkflowExecution
+	Domain    *string            `json:"domain,omitempty"`
+	Execution *WorkflowExecution `json:"execution,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -1033,10 +1033,10 @@ func (v *AdminDescribeWorkflowExecutionRequest) GetExecution() (o *WorkflowExecu
 
 // AdminDescribeWorkflowExecutionResponse is an internal type (TBD...)
 type AdminDescribeWorkflowExecutionResponse struct {
-	ShardID                *string
-	HistoryAddr            *string
-	MutableStateInCache    *string
-	MutableStateInDatabase *string
+	ShardID                *string `json:"shardId,omitempty"`
+	HistoryAddr            *string `json:"historyAddr,omitempty"`
+	MutableStateInCache    *string `json:"mutableStateInCache,omitempty"`
+	MutableStateInDatabase *string `json:"mutableStateInDatabase,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -1073,14 +1073,14 @@ func (v *AdminDescribeWorkflowExecutionResponse) GetMutableStateInDatabase() (o 
 
 // GetWorkflowExecutionRawHistoryV2Request is an internal type (TBD...)
 type GetWorkflowExecutionRawHistoryV2Request struct {
-	Domain            *string
-	Execution         *WorkflowExecution
-	StartEventID      *int64
-	StartEventVersion *int64
-	EndEventID        *int64
-	EndEventVersion   *int64
-	MaximumPageSize   *int32
-	NextPageToken     []byte
+	Domain            *string            `json:"domain,omitempty"`
+	Execution         *WorkflowExecution `json:"execution,omitempty"`
+	StartEventID      *int64             `json:"startEventId,omitempty"`
+	StartEventVersion *int64             `json:"startEventVersion,omitempty"`
+	EndEventID        *int64             `json:"endEventId,omitempty"`
+	EndEventVersion   *int64             `json:"endEventVersion,omitempty"`
+	MaximumPageSize   *int32             `json:"maximumPageSize,omitempty"`
+	NextPageToken     []byte             `json:"nextPageToken,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -1149,9 +1149,9 @@ func (v *GetWorkflowExecutionRawHistoryV2Request) GetNextPageToken() (o []byte) 
 
 // GetWorkflowExecutionRawHistoryV2Response is an internal type (TBD...)
 type GetWorkflowExecutionRawHistoryV2Response struct {
-	NextPageToken  []byte
-	HistoryBatches []*DataBlob
-	VersionHistory *VersionHistory
+	NextPageToken  []byte          `json:"nextPageToken,omitempty"`
+	HistoryBatches []*DataBlob     `json:"historyBatches,omitempty"`
+	VersionHistory *VersionHistory `json:"versionHistory,omitempty"`
 }
 
 // GetNextPageToken is an internal getter (TBD...)
@@ -1180,7 +1180,7 @@ func (v *GetWorkflowExecutionRawHistoryV2Response) GetVersionHistory() (o *Versi
 
 // HostInfo is an internal type (TBD...)
 type HostInfo struct {
-	Identity *string
+	Identity *string `json:"Identity,omitempty"`
 }
 
 // GetIdentity is an internal getter (TBD...)
@@ -1193,9 +1193,9 @@ func (v *HostInfo) GetIdentity() (o string) {
 
 // MembershipInfo is an internal type (TBD...)
 type MembershipInfo struct {
-	CurrentHost      *HostInfo
-	ReachableMembers []string
-	Rings            []*RingInfo
+	CurrentHost      *HostInfo   `json:"currentHost,omitempty"`
+	ReachableMembers []string    `json:"reachableMembers,omitempty"`
+	Rings            []*RingInfo `json:"rings,omitempty"`
 }
 
 // GetCurrentHost is an internal getter (TBD...)
@@ -1224,14 +1224,14 @@ func (v *MembershipInfo) GetRings() (o []*RingInfo) {
 
 // ResendReplicationTasksRequest is an internal type (TBD...)
 type ResendReplicationTasksRequest struct {
-	DomainID      *string
-	WorkflowID    *string
-	RunID         *string
-	RemoteCluster *string
-	StartEventID  *int64
-	StartVersion  *int64
-	EndEventID    *int64
-	EndVersion    *int64
+	DomainID      *string `json:"domainID,omitempty"`
+	WorkflowID    *string `json:"workflowID,omitempty"`
+	RunID         *string `json:"runID,omitempty"`
+	RemoteCluster *string `json:"remoteCluster,omitempty"`
+	StartEventID  *int64  `json:"startEventID,omitempty"`
+	StartVersion  *int64  `json:"startVersion,omitempty"`
+	EndEventID    *int64  `json:"endEventID,omitempty"`
+	EndVersion    *int64  `json:"endVersion,omitempty"`
 }
 
 // GetDomainID is an internal getter (TBD...)
@@ -1300,9 +1300,9 @@ func (v *ResendReplicationTasksRequest) GetEndVersion() (o int64) {
 
 // RingInfo is an internal type (TBD...)
 type RingInfo struct {
-	Role        *string
-	MemberCount *int32
-	Members     []*HostInfo
+	Role        *string     `json:"role,omitempty"`
+	MemberCount *int32      `json:"memberCount,omitempty"`
+	Members     []*HostInfo `json:"members,omitempty"`
 }
 
 // GetRole is an internal getter (TBD...)

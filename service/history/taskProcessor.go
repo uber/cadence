@@ -24,7 +24,6 @@ import (
 	"sync"
 	"time"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
@@ -33,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -287,7 +287,7 @@ func (t *taskProcessor) handleTaskError(
 		return nil
 	}
 
-	if _, ok := err.(*workflow.EntityNotExistsError); ok {
+	if _, ok := err.(*types.EntityNotExistsError); ok {
 		return nil
 	}
 
@@ -328,7 +328,7 @@ func (t *taskProcessor) handleTaskError(
 	// this is a transient error
 	// TODO remove this error check special case
 	//  since the new task life cycle will not give up until task processed / verified
-	if _, ok := err.(*workflow.DomainNotActiveError); ok {
+	if _, ok := err.(*types.DomainNotActiveError); ok {
 		if t.timeSource.Now().Sub(taskInfo.startTime) > 2*cache.DomainCacheRefreshInterval {
 			scope.IncCounter(metrics.TaskNotActiveCounterPerDomain)
 			return nil
