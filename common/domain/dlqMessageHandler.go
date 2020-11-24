@@ -26,9 +26,9 @@ import (
 	"context"
 
 	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -138,7 +138,7 @@ func (d *dlqMessageHandlerImpl) Merge(
 	for _, message := range messages {
 		domainTask := message.GetDomainTaskAttributes()
 		if domainTask == nil {
-			return nil, &shared.InternalServiceError{Message: "Encounter non domain replication task in domain replication queue."}
+			return nil, &types.InternalServiceError{Message: "Encounter non domain replication task in domain replication queue."}
 		}
 
 		// TODO:

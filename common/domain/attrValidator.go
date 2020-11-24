@@ -26,6 +26,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -78,11 +79,11 @@ func (d *AttrValidatorImpl) validateDomainReplicationConfigForLocalDomain(
 	}
 
 	if activeCluster != d.clusterMetadata.GetCurrentClusterName() {
-		return &shared.BadRequestError{Message: "Invalid local domain active cluster"}
+		return &types.BadRequestError{Message: "Invalid local domain active cluster"}
 	}
 
 	if len(clusters) != 1 || clusters[0].ClusterName != activeCluster {
-		return &shared.BadRequestError{Message: "Invalid local domain clusters"}
+		return &types.BadRequestError{Message: "Invalid local domain clusters"}
 	}
 
 	return nil
@@ -149,7 +150,7 @@ func (d *AttrValidatorImpl) validateClusterName(
 ) error {
 
 	if info, ok := d.clusterMetadata.GetAllClusterInfo()[clusterName]; !ok || !info.Enabled {
-		return &shared.BadRequestError{Message: fmt.Sprintf(
+		return &types.BadRequestError{Message: fmt.Sprintf(
 			"Invalid cluster name: %v",
 			clusterName,
 		)}

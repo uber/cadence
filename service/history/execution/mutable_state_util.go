@@ -1,4 +1,5 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +25,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -69,7 +71,7 @@ func convertUpdateActivityInfos(
 	return outputs
 }
 
-func convertDeleteActivityInfos(
+func convertInt64SetToSlice(
 	inputs map[int64]struct{},
 ) []int64 {
 
@@ -120,7 +122,7 @@ func convertUpdateTimerInfos(
 	return outputs
 }
 
-func convertDeleteTimerInfos(
+func convertStringSetToSlice(
 	inputs map[string]struct{},
 ) []string {
 
@@ -197,17 +199,6 @@ func convertUpdateSignalInfos(
 	return outputs
 }
 
-func convertSignalRequestedIDs(
-	inputs map[string]struct{},
-) []string {
-
-	outputs := make([]string, 0, len(inputs))
-	for item := range inputs {
-		outputs = append(outputs, item)
-	}
-	return outputs
-}
-
 // FailDecision fails the current decision task
 func FailDecision(
 	mutableState MutableState,
@@ -244,7 +235,7 @@ func ScheduleDecision(
 
 	_, err := mutableState.AddDecisionTaskScheduledEvent(false)
 	if err != nil {
-		return &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
+		return &types.InternalServiceError{Message: "Failed to add decision scheduled event."}
 	}
 	return nil
 }

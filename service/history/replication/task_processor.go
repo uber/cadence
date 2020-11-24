@@ -34,7 +34,6 @@ import (
 
 	h "github.com/uber/cadence/.gen/go/history"
 	r "github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
@@ -42,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/execution"
@@ -58,7 +58,7 @@ const (
 
 var (
 	// ErrUnknownReplicationTask is the error to indicate unknown replication task type
-	ErrUnknownReplicationTask = &shared.BadRequestError{Message: "unknown replication task"}
+	ErrUnknownReplicationTask = &types.BadRequestError{Message: "unknown replication task"}
 )
 
 type (
@@ -566,9 +566,9 @@ func (p *taskProcessorImpl) emitDLQSizeMetricsLoop() {
 
 func isTransientRetryableError(err error) bool {
 	switch err.(type) {
-	case *shared.BadRequestError:
+	case *types.BadRequestError:
 		return false
-	case *shared.ServiceBusyError:
+	case *types.ServiceBusyError:
 		return false
 	default:
 		return true
@@ -595,17 +595,17 @@ func (p *taskProcessorImpl) updateFailureMetric(scope int, err error) {
 
 	// Also update counter to distinguish between type of failures
 	switch err := err.(type) {
-	case *h.ShardOwnershipLostError:
+	case *types.ShardOwnershipLostError:
 		p.metricsClient.IncCounter(scope, metrics.CadenceErrShardOwnershipLostCounter)
-	case *shared.BadRequestError:
+	case *types.BadRequestError:
 		p.metricsClient.IncCounter(scope, metrics.CadenceErrBadRequestCounter)
-	case *shared.DomainNotActiveError:
+	case *types.DomainNotActiveError:
 		p.metricsClient.IncCounter(scope, metrics.CadenceErrDomainNotActiveCounter)
-	case *shared.WorkflowExecutionAlreadyStartedError:
+	case *types.WorkflowExecutionAlreadyStartedError:
 		p.metricsClient.IncCounter(scope, metrics.CadenceErrExecutionAlreadyStartedCounter)
-	case *shared.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		p.metricsClient.IncCounter(scope, metrics.CadenceErrEntityNotExistsCounter)
-	case *shared.LimitExceededError:
+	case *types.LimitExceededError:
 		p.metricsClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
 	case *yarpcerrors.Status:
 		if err.Code() == yarpcerrors.CodeDeadlineExceeded {

@@ -275,7 +275,7 @@ func (fc *fileBasedClient) getValueWithFilters(key Key, filters map[Filter]inter
 		}
 	}
 	if !found {
-		return defaultValue, errors.New("unable to find key")
+		return defaultValue, notFoundError
 	}
 	return defaultValue, nil
 }

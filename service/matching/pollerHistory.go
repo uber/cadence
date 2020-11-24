@@ -23,9 +23,9 @@ package matching
 import (
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -69,8 +69,8 @@ func (pollers *pollerHistory) updatePollerInfo(id pollerIdentity, ratePerSecond 
 	pollers.history.Put(id, &pollerInfo{ratePerSecond: rps})
 }
 
-func (pollers *pollerHistory) getAllPollerInfo() []*shared.PollerInfo {
-	var result []*shared.PollerInfo
+func (pollers *pollerHistory) getAllPollerInfo() []*types.PollerInfo {
+	var result []*types.PollerInfo
 
 	ite := pollers.history.Iterator()
 	defer ite.Close()
@@ -80,7 +80,7 @@ func (pollers *pollerHistory) getAllPollerInfo() []*shared.PollerInfo {
 		value := entry.Value().(*pollerInfo)
 		// TODO add IP, T1396795
 		lastAccessTime := entry.CreateTime()
-		result = append(result, &shared.PollerInfo{
+		result = append(result, &types.PollerInfo{
 			Identity:       common.StringPtr(string(key)),
 			LastAccessTime: common.Int64Ptr(lastAccessTime.UnixNano()),
 			RatePerSecond:  common.Float64Ptr(value.ratePerSecond),

@@ -125,9 +125,20 @@ func (curre *CurrentExecution) GetShardID() int {
 	return curre.Execution.ShardID
 }
 
+// GetDomainID returns the domain id
+func (ce *ConcreteExecution) GetDomainID() string {
+	return ce.DomainID
+}
+
+// GetDomainID returns the domain id
+func (curre *CurrentExecution) GetDomainID() string {
+	return curre.DomainID
+}
+
 // Entity allows to deserialize and validate different type of executions
 type Entity interface {
 	Validate() error
 	Clone() Entity
 	GetShardID() int
+	GetDomainID() string
 }

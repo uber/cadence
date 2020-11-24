@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -136,7 +137,7 @@ func (t *timerSequenceImpl) CreateNextUserTimer() (bool, error) {
 
 	timerInfo, ok := t.mutableState.GetUserTimerInfoByEventID(firstTimerTask.EventID)
 	if !ok {
-		return false, &shared.InternalServiceError{
+		return false, &types.InternalServiceError{
 			Message: fmt.Sprintf("unable to load activity info %v", firstTimerTask.EventID),
 		}
 	}
@@ -171,7 +172,7 @@ func (t *timerSequenceImpl) CreateNextActivityTimer() (bool, error) {
 
 	activityInfo, ok := t.mutableState.GetActivityInfo(firstTimerTask.EventID)
 	if !ok {
-		return false, &shared.InternalServiceError{
+		return false, &types.InternalServiceError{
 			Message: fmt.Sprintf("unable to load activity info %v", firstTimerTask.EventID),
 		}
 	}

@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -69,7 +70,7 @@ type (
 )
 
 func (e *testSizeEstimator) EstimateSize(v interface{}) (int, error) {
-	historyBatch, ok := v.(*shared.History)
+	historyBatch, ok := v.(*types.History)
 	if !ok {
 		return -1, errors.New("test size estimator only estimate the size of history batches")
 	}
@@ -580,8 +581,8 @@ func (s *HistoryIteratorSuite) TestNext_Success_SameHistoryDifferentPage() {
 
 		s.Equal(history1.Header, history2.Header)
 		s.Equal(len(history1.Body), len(history2.Body))
-		s.Equal(expectedFirstEventID[i], history1.Body[0].Events[0].GetEventId())
-		s.Equal(expectedFirstEventID[i], history2.Body[0].Events[0].GetEventId())
+		s.Equal(expectedFirstEventID[i], history1.Body[0].Events[0].GetEventID())
+		s.Equal(expectedFirstEventID[i], history2.Body[0].Events[0].GetEventID())
 	}
 	expectedIteratorState := historyIteratorState{
 		NextEventID:       0,
@@ -643,7 +644,7 @@ func (s *HistoryIteratorSuite) constructMockHistoryV2Manager(batchInfo []int, re
 			PageSize:    testDefaultPersistencePageSize,
 			ShardID:     common.IntPtr(testShardID),
 		}
-		mockHistoryV2Manager.On("ReadHistoryBranchByBatch", mock.Anything, req).Return(nil, &shared.EntityNotExistsError{Message: "Reach the end"})
+		mockHistoryV2Manager.On("ReadHistoryBranchByBatch", mock.Anything, req).Return(nil, &types.EntityNotExistsError{Message: "Reach the end"})
 	}
 
 	return mockHistoryV2Manager

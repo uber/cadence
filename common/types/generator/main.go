@@ -26,12 +26,12 @@ import (
 	"fmt"
 	"go/importer"
 	"go/types"
-	"html/template"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"text/template"
 	"unicode"
 )
 
@@ -76,7 +76,9 @@ func capitalizeID(name string) string {
 }
 
 var funcMap = template.FuncMap{
-	"internal": internalName,
+	"internal":   internalName,
+	"enumString": strings.TrimPrefix,
+	"lower":      strings.ToLower,
 }
 
 var typesHeader = template.Must(template.New("struct type").Funcs(funcMap).Parse(licence + `package types
@@ -96,7 +98,7 @@ import (
 var structTemplate = template.Must(template.New("struct type").Funcs(funcMap).Parse(`
 // {{.Prefix}}{{internal .Name}} is an internal type (TBD...)
 type {{.Prefix}}{{internal .Name}} struct {
-{{range .Fields}}	{{internal .Name}} {{if .Type.IsMap}}map[{{.Type.MapKeyType}}]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer}}*{{end}}{{.Type.Prefix}}{{internal .Type.Name}}
+{{range .Fields}}	{{internal .Name}} {{if .Type.IsMap}}map[{{.Type.MapKeyType}}]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer}}*{{end}}{{.Type.Prefix}}{{internal .Type.Name}} ` + "`{{.Tag}}`" + `
 {{end}}}
 {{range .Fields}}
 // Get{{internal .Name}} is an internal getter (TBD...)
@@ -112,6 +114,41 @@ func (v *{{$.Prefix}}{{internal $.Name}}) Get{{internal .Name}}() (o {{if .Type.
 var enumTemplate = template.Must(template.New("enum type").Funcs(funcMap).Parse(`
 // {{internal .Name}} is an internal type (TBD...)
 type {{internal .Name}} int32
+
+// Ptr is a helper function for getting pointer value
+func (e {{internal .Name}}) Ptr() *{{internal .Name}} {
+	return &e
+}
+
+// String returns a readable string representation of {{internal .Name}}.
+func (e {{internal .Name}}) String() string {
+	w := int32(e)
+	switch w { {{range $i, $v := .EnumValues}}
+	case {{$i}}: return "{{enumString . $.Name}}"{{end}}
+	}
+	return fmt.Sprintf("{{internal .Name}}(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *{{internal .Name}}) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s { {{range $i, $v := .EnumValues}}
+	case "{{lower (enumString . $.Name)}}":
+		*e = {{internal .}}
+		return nil{{end}}
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "{{internal .Name}}", err)
+		}
+		*e = {{internal .Name}}(val)
+		return nil
+	}
+}
+
+// MarshalText encodes {{internal .Name}} to text.
+func (e {{internal .Name}}) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
 
 const ({{range $i, $v := .EnumValues}}
 	// {{internal .}} is an option for {{internal $.Name}}
@@ -265,6 +302,7 @@ type (
 	Field struct {
 		Name string
 		Type Type
+		Tag  string
 	}
 )
 
@@ -348,6 +386,7 @@ func newStructType(s *types.Struct) Type {
 		fields[i] = Field{
 			Name: f.Name(),
 			Type: newType(f.Type()),
+			Tag:  s.Tag(i),
 		}
 	}
 	return Type{

@@ -48,6 +48,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/host"
 )
@@ -682,7 +683,7 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	s.Equal(clusterName[0], updateResp.ReplicationConfiguration.GetActiveClusterName())
 	s.Equal(int64(10), updateResp.GetFailoverVersion())
 
-	_, err = poller1.PollAndProcessDecisionTask(true, false)
+	_, err = poller1.PollAndProcessDecisionTask(false, false)
 	s.logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 	s.True(workflowCompleted)
@@ -801,14 +802,14 @@ func (s *integrationClustersTestSuite) TestStartWorkflowExecution_Failover_Workf
 	startReq.RequestId = common.StringPtr(uuid.New())
 	startReq.WorkflowIdReusePolicy = workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly.Ptr()
 	we, err = client2.StartWorkflowExecution(createContext(), startReq)
-	s.IsType(&workflow.WorkflowExecutionAlreadyStartedError{}, err)
+	s.IsType(&types.WorkflowExecutionAlreadyStartedError{}, err)
 	s.Nil(we)
 
 	// start the same workflow in cluster 2 is not allowed if policy is RejectDuplicate
 	startReq.RequestId = common.StringPtr(uuid.New())
 	startReq.WorkflowIdReusePolicy = workflow.WorkflowIdReusePolicyRejectDuplicate.Ptr()
 	we, err = client2.StartWorkflowExecution(createContext(), startReq)
-	s.IsType(&workflow.WorkflowExecutionAlreadyStartedError{}, err)
+	s.IsType(&types.WorkflowExecutionAlreadyStartedError{}, err)
 	s.Nil(we)
 
 	// start the workflow in cluster 2
@@ -1494,7 +1495,7 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 
 	for i := 1; i < 20; i++ {
 		if !workflowCompleted {
-			_, err = poller2.PollAndProcessDecisionTask(true, false)
+			_, err = poller2.PollAndProcessDecisionTask(false, false)
 			s.Nil(err)
 			time.Sleep(time.Second)
 		}
@@ -1649,7 +1650,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	_, err = poller1.PollAndProcessDecisionTask(false, false)
 	s.Nil(err)
 	err = poller1.PollAndProcessActivityTask(false)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 
 	// Update domain to fail over
 	updateReq := &workflow.UpdateDomainRequest{

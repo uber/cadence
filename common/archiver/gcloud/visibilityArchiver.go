@@ -27,12 +27,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/gcloud/connector"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -151,16 +151,16 @@ func (v *visibilityArchiver) Archive(ctx context.Context, URI archiver.URI, requ
 // Currently the maximum context timeout passed into the method is 3 minutes, so it's ok if this method takes a long time to run.
 func (v *visibilityArchiver) Query(ctx context.Context, URI archiver.URI, request *archiver.QueryVisibilityRequest) (*archiver.QueryVisibilityResponse, error) {
 	if err := v.ValidateURI(URI); err != nil {
-		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidURI.Error()}
+		return nil, &types.BadRequestError{Message: archiver.ErrInvalidURI.Error()}
 	}
 
 	if err := archiver.ValidateQueryRequest(request); err != nil {
-		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidQueryVisibilityRequest.Error()}
+		return nil, &types.BadRequestError{Message: archiver.ErrInvalidQueryVisibilityRequest.Error()}
 	}
 
 	parsedQuery, err := v.queryParser.Parse(request.Query)
 	if err != nil {
-		return nil, &shared.BadRequestError{Message: err.Error()}
+		return nil, &types.BadRequestError{Message: err.Error()}
 	}
 
 	if parsedQuery.emptyResult {
@@ -181,7 +181,7 @@ func (v *visibilityArchiver) query(ctx context.Context, URI archiver.URI, reques
 		var err error
 		token, err = deserializeQueryVisibilityToken(request.nextPageToken)
 		if err != nil {
-			return nil, &shared.BadRequestError{Message: archiver.ErrNextPageTokenCorrupted.Error()}
+			return nil, &types.BadRequestError{Message: archiver.ErrNextPageTokenCorrupted.Error()}
 		}
 	}
 
@@ -208,19 +208,19 @@ func (v *visibilityArchiver) query(ctx context.Context, URI archiver.URI, reques
 
 	filenames, completed, currentCursorPos, err := v.gcloudStorage.QueryWithFilters(ctx, URI, prefix, request.pageSize, token.Offset, filters)
 	if err != nil {
-		return nil, &shared.InternalServiceError{Message: err.Error()}
+		return nil, &types.InternalServiceError{Message: err.Error()}
 	}
 
 	response := &archiver.QueryVisibilityResponse{}
 	for _, file := range filenames {
 		encodedRecord, err := v.gcloudStorage.Get(ctx, URI, fmt.Sprintf("%s/%s", request.domainID, filepath.Base(file)))
 		if err != nil {
-			return nil, &shared.InternalServiceError{Message: err.Error()}
+			return nil, &types.InternalServiceError{Message: err.Error()}
 		}
 
 		record, err := decodeVisibilityRecord(encodedRecord)
 		if err != nil {
-			return nil, &shared.InternalServiceError{Message: err.Error()}
+			return nil, &types.InternalServiceError{Message: err.Error()}
 		}
 
 		response.Executions = append(response.Executions, convertToExecutionInfo(record))
@@ -232,7 +232,7 @@ func (v *visibilityArchiver) query(ctx context.Context, URI archiver.URI, reques
 		}
 		encodedToken, err := serializeToken(newToken)
 		if err != nil {
-			return nil, &shared.InternalServiceError{Message: err.Error()}
+			return nil, &types.InternalServiceError{Message: err.Error()}
 		}
 		response.NextPageToken = encodedToken
 	}

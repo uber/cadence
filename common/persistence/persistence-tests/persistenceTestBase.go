@@ -1,4 +1,5 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +32,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -46,6 +46,7 @@ import (
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -214,13 +215,13 @@ func (s *TestBase) Setup() {
 	s.ReadLevel = 0
 	s.ReplicationReadLevel = 0
 
-	domainFilter := &history.DomainFilter{
+	domainFilter := &types.DomainFilter{
 		DomainIDs:    []string{},
 		ReverseMatch: common.BoolPtr(true),
 	}
-	transferPQSMap := map[string][]*history.ProcessingQueueState{
+	transferPQSMap := map[string][]*types.ProcessingQueueState{
 		s.ClusterMetadata.GetCurrentClusterName(): {
-			&history.ProcessingQueueState{
+			&types.ProcessingQueueState{
 				Level:        common.Int32Ptr(0),
 				AckLevel:     common.Int64Ptr(0),
 				MaxLevel:     common.Int64Ptr(0),
@@ -228,10 +229,10 @@ func (s *TestBase) Setup() {
 			},
 		},
 	}
-	transferPQS := history.ProcessingQueueStates{transferPQSMap}
-	timerPQSMap := map[string][]*history.ProcessingQueueState{
+	transferPQS := types.ProcessingQueueStates{transferPQSMap}
+	timerPQSMap := map[string][]*types.ProcessingQueueState{
 		s.ClusterMetadata.GetCurrentClusterName(): {
-			&history.ProcessingQueueState{
+			&types.ProcessingQueueState{
 				Level:        common.Int32Ptr(0),
 				AckLevel:     common.Int64Ptr(time.Now().UnixNano()),
 				MaxLevel:     common.Int64Ptr(time.Now().UnixNano()),
@@ -239,7 +240,7 @@ func (s *TestBase) Setup() {
 			},
 		},
 	}
-	timerPQS := history.ProcessingQueueStates{StatesByCluster: timerPQSMap}
+	timerPQS := types.ProcessingQueueStates{StatesByCluster: timerPQSMap}
 
 	s.ShardInfo = &p.ShardInfo{
 		ShardID:                       shardID,
@@ -673,14 +674,43 @@ func (s *TestBase) ContinueAsNewExecution(
 }
 
 // UpdateWorkflowExecution is a utility method to update workflow execution
-func (s *TestBase) UpdateWorkflowExecution(ctx context.Context, updatedInfo *p.WorkflowExecutionInfo, updatedStats *p.ExecutionStats, updatedVersionHistories *p.VersionHistories,
-	decisionScheduleIDs []int64, activityScheduleIDs []int64, condition int64, timerTasks []p.Task,
-	upsertActivityInfos []*p.ActivityInfo, deleteActivityInfos []int64,
-	upsertTimerInfos []*p.TimerInfo, deleteTimerInfos []string) error {
-	return s.UpdateWorkflowExecutionWithRangeID(ctx, updatedInfo, updatedStats, updatedVersionHistories, decisionScheduleIDs, activityScheduleIDs,
-		s.ShardInfo.RangeID, condition, timerTasks, upsertActivityInfos, deleteActivityInfos,
-		upsertTimerInfos, deleteTimerInfos, nil, nil, nil, nil,
-		nil, nil, nil, "")
+func (s *TestBase) UpdateWorkflowExecution(
+	ctx context.Context,
+	updatedInfo *p.WorkflowExecutionInfo,
+	updatedStats *p.ExecutionStats,
+	updatedVersionHistories *p.VersionHistories,
+	decisionScheduleIDs []int64,
+	activityScheduleIDs []int64,
+	condition int64,
+	timerTasks []p.Task,
+	upsertActivityInfos []*p.ActivityInfo,
+	deleteActivityInfos []int64,
+	upsertTimerInfos []*p.TimerInfo,
+	deleteTimerInfos []string,
+) error {
+	return s.UpdateWorkflowExecutionWithRangeID(
+		ctx,
+		updatedInfo,
+		updatedStats,
+		updatedVersionHistories,
+		decisionScheduleIDs,
+		activityScheduleIDs,
+		s.ShardInfo.RangeID,
+		condition,
+		timerTasks,
+		upsertActivityInfos,
+		deleteActivityInfos,
+		upsertTimerInfos,
+		deleteTimerInfos,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
 }
 
 // UpdateWorkflowExecutionAndFinish is a utility method to update workflow execution
@@ -743,7 +773,7 @@ func (s *TestBase) UpsertChildExecutionsState(
 		nil,
 		nil,
 		nil,
-		"",
+		nil,
 	)
 }
 
@@ -778,7 +808,7 @@ func (s *TestBase) UpsertRequestCancelState(
 		nil,
 		nil,
 		nil,
-		"",
+		nil,
 	)
 }
 
@@ -813,53 +843,178 @@ func (s *TestBase) UpsertSignalInfoState(
 		upsertSignalInfos,
 		nil,
 		nil,
-		"",
+		nil,
 	)
 }
 
 // UpsertSignalsRequestedState is a utility method to update mutable state of workflow execution
-func (s *TestBase) UpsertSignalsRequestedState(ctx context.Context, updatedInfo *p.WorkflowExecutionInfo, updatedStats *p.ExecutionStats, updatedVersionHistories *p.VersionHistories,
-	condition int64, upsertSignalsRequested []string) error {
-	return s.UpdateWorkflowExecutionWithRangeID(ctx, updatedInfo, updatedStats, updatedVersionHistories, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil,
-		nil, nil, upsertSignalsRequested, "")
+func (s *TestBase) UpsertSignalsRequestedState(
+	ctx context.Context,
+	updatedInfo *p.WorkflowExecutionInfo,
+	updatedStats *p.ExecutionStats,
+	updatedVersionHistories *p.VersionHistories,
+	condition int64,
+	upsertSignalsRequested []string,
+) error {
+	return s.UpdateWorkflowExecutionWithRangeID(
+		ctx,
+		updatedInfo,
+		updatedStats,
+		updatedVersionHistories,
+		nil,
+		nil,
+		s.ShardInfo.RangeID,
+		condition,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		upsertSignalsRequested,
+		nil,
+	)
 }
 
 // DeleteChildExecutionsState is a utility method to delete child execution from mutable state
-func (s *TestBase) DeleteChildExecutionsState(ctx context.Context, updatedInfo *p.WorkflowExecutionInfo, updatedStats *p.ExecutionStats, updatedVersionHistories *p.VersionHistories,
-	condition int64, deleteChildInfo int64) error {
-	return s.UpdateWorkflowExecutionWithRangeID(ctx, updatedInfo, updatedStats, updatedVersionHistories, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil,
-		nil, nil, nil, &deleteChildInfo, nil, nil,
-		nil, nil, nil, "")
+func (s *TestBase) DeleteChildExecutionsState(
+	ctx context.Context,
+	updatedInfo *p.WorkflowExecutionInfo,
+	updatedStats *p.ExecutionStats,
+	updatedVersionHistories *p.VersionHistories,
+	condition int64,
+	deleteChildInfo int64,
+) error {
+	return s.UpdateWorkflowExecutionWithRangeID(
+		ctx,
+		updatedInfo,
+		updatedStats,
+		updatedVersionHistories,
+		nil,
+		nil,
+		s.ShardInfo.RangeID,
+		condition,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		[]int64{deleteChildInfo},
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
 }
 
 // DeleteCancelState is a utility method to delete request cancel state from mutable state
-func (s *TestBase) DeleteCancelState(ctx context.Context, updatedInfo *p.WorkflowExecutionInfo, updatedStats *p.ExecutionStats, updatedVersionHistories *p.VersionHistories,
-	condition int64, deleteCancelInfo int64) error {
-	return s.UpdateWorkflowExecutionWithRangeID(ctx, updatedInfo, updatedStats, updatedVersionHistories, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil,
-		nil, nil, nil, nil, nil, &deleteCancelInfo,
-		nil, nil, nil, "")
+func (s *TestBase) DeleteCancelState(
+	ctx context.Context,
+	updatedInfo *p.WorkflowExecutionInfo,
+	updatedStats *p.ExecutionStats,
+	updatedVersionHistories *p.VersionHistories,
+	condition int64,
+	deleteCancelInfo int64,
+) error {
+	return s.UpdateWorkflowExecutionWithRangeID(
+		ctx,
+		updatedInfo,
+		updatedStats,
+		updatedVersionHistories,
+		nil,
+		nil,
+		s.ShardInfo.RangeID,
+		condition,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		[]int64{deleteCancelInfo},
+		nil,
+		nil,
+		nil,
+		nil,
+	)
 }
 
 // DeleteSignalState is a utility method to delete request cancel state from mutable state
-func (s *TestBase) DeleteSignalState(ctx context.Context, updatedInfo *p.WorkflowExecutionInfo, updatedStats *p.ExecutionStats, updatedVersionHistories *p.VersionHistories,
-	condition int64, deleteSignalInfo int64) error {
-	return s.UpdateWorkflowExecutionWithRangeID(ctx, updatedInfo, updatedStats, updatedVersionHistories, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil,
-		nil, &deleteSignalInfo, nil, "")
+func (s *TestBase) DeleteSignalState(
+	ctx context.Context,
+	updatedInfo *p.WorkflowExecutionInfo,
+	updatedStats *p.ExecutionStats,
+	updatedVersionHistories *p.VersionHistories,
+	condition int64,
+	deleteSignalInfo int64,
+) error {
+	return s.UpdateWorkflowExecutionWithRangeID(
+		ctx,
+		updatedInfo,
+		updatedStats,
+		updatedVersionHistories,
+		nil,
+		nil,
+		s.ShardInfo.RangeID,
+		condition,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		[]int64{deleteSignalInfo},
+		nil,
+		nil,
+	)
 }
 
 // DeleteSignalsRequestedState is a utility method to delete mutable state of workflow execution
-func (s *TestBase) DeleteSignalsRequestedState(ctx context.Context, updatedInfo *p.WorkflowExecutionInfo, updatedStats *p.ExecutionStats, updatedVersionHistories *p.VersionHistories,
-	condition int64, deleteSignalsRequestedID string) error {
-	return s.UpdateWorkflowExecutionWithRangeID(ctx, updatedInfo, updatedStats, updatedVersionHistories, nil, nil,
-		s.ShardInfo.RangeID, condition, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil,
-		nil, nil, nil, deleteSignalsRequestedID)
+func (s *TestBase) DeleteSignalsRequestedState(
+	ctx context.Context,
+	updatedInfo *p.WorkflowExecutionInfo,
+	updatedStats *p.ExecutionStats,
+	updatedVersionHistories *p.VersionHistories,
+	condition int64,
+	deleteSignalsRequestedIDs []string,
+) error {
+	return s.UpdateWorkflowExecutionWithRangeID(
+		ctx,
+		updatedInfo,
+		updatedStats,
+		updatedVersionHistories,
+		nil,
+		nil,
+		s.ShardInfo.RangeID,
+		condition,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		deleteSignalsRequestedIDs,
+	)
 }
 
 // UpdateWorklowStateAndReplication is a utility method to update workflow execution
@@ -894,18 +1049,34 @@ func (s *TestBase) UpdateWorklowStateAndReplication(
 		nil,
 		nil,
 		nil,
-		"",
+		nil,
 	)
 }
 
 // UpdateWorkflowExecutionWithRangeID is a utility method to update workflow execution
-func (s *TestBase) UpdateWorkflowExecutionWithRangeID(ctx context.Context, updatedInfo *p.WorkflowExecutionInfo, updatedStats *p.ExecutionStats, updatedVersionHistories *p.VersionHistories,
-	decisionScheduleIDs []int64, activityScheduleIDs []int64, rangeID, condition int64, timerTasks []p.Task,
-	upsertActivityInfos []*p.ActivityInfo, deleteActivityInfos []int64, upsertTimerInfos []*p.TimerInfo,
-	deleteTimerInfos []string, upsertChildInfos []*p.ChildExecutionInfo, deleteChildInfo *int64,
-	upsertCancelInfos []*p.RequestCancelInfo, deleteCancelInfo *int64,
-	upsertSignalInfos []*p.SignalInfo, deleteSignalInfo *int64,
-	upsertSignalRequestedIDs []string, deleteSignalRequestedID string) error {
+func (s *TestBase) UpdateWorkflowExecutionWithRangeID(
+	ctx context.Context,
+	updatedInfo *p.WorkflowExecutionInfo,
+	updatedStats *p.ExecutionStats,
+	updatedVersionHistories *p.VersionHistories,
+	decisionScheduleIDs []int64,
+	activityScheduleIDs []int64,
+	rangeID int64,
+	condition int64,
+	timerTasks []p.Task,
+	upsertActivityInfos []*p.ActivityInfo,
+	deleteActivityInfos []int64,
+	upsertTimerInfos []*p.TimerInfo,
+	deleteTimerInfos []string,
+	upsertChildInfos []*p.ChildExecutionInfo,
+	deleteChildInfos []int64,
+	upsertCancelInfos []*p.RequestCancelInfo,
+	deleteCancelInfos []int64,
+	upsertSignalInfos []*p.SignalInfo,
+	deleteSignalInfos []int64,
+	upsertSignalRequestedIDs []string,
+	deleteSignalRequestedIDs []string,
+) error {
 	return s.UpdateWorkflowExecutionWithReplication(
 		ctx,
 		updatedInfo,
@@ -922,13 +1093,13 @@ func (s *TestBase) UpdateWorkflowExecutionWithRangeID(ctx context.Context, updat
 		upsertTimerInfos,
 		deleteTimerInfos,
 		upsertChildInfos,
-		deleteChildInfo,
+		deleteChildInfos,
 		upsertCancelInfos,
-		deleteCancelInfo,
+		deleteCancelInfos,
 		upsertSignalInfos,
-		deleteSignalInfo,
+		deleteSignalInfos,
 		upsertSignalRequestedIDs,
-		deleteSignalRequestedID,
+		deleteSignalRequestedIDs,
 	)
 }
 
@@ -949,13 +1120,13 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(
 	upsertTimerInfos []*p.TimerInfo,
 	deleteTimerInfos []string,
 	upsertChildInfos []*p.ChildExecutionInfo,
-	deleteChildInfo *int64,
+	deleteChildInfos []int64,
 	upsertCancelInfos []*p.RequestCancelInfo,
-	deleteCancelInfo *int64,
+	deleteCancelInfos []int64,
 	upsertSignalInfos []*p.SignalInfo,
-	deleteSignalInfo *int64,
+	deleteSignalInfos []int64,
 	upsertSignalRequestedIDs []string,
-	deleteSignalRequestedID string,
+	deleteSignalRequestedIDs []string,
 ) error {
 
 	var transferTasks []p.Task
@@ -997,13 +1168,13 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(
 			UpsertTimerInfos:          upsertTimerInfos,
 			DeleteTimerInfos:          deleteTimerInfos,
 			UpsertChildExecutionInfos: upsertChildInfos,
-			DeleteChildExecutionInfo:  deleteChildInfo,
+			DeleteChildExecutionInfos: deleteChildInfos,
 			UpsertRequestCancelInfos:  upsertCancelInfos,
-			DeleteRequestCancelInfo:   deleteCancelInfo,
+			DeleteRequestCancelInfos:  deleteCancelInfos,
 			UpsertSignalInfos:         upsertSignalInfos,
-			DeleteSignalInfo:          deleteSignalInfo,
+			DeleteSignalInfos:         deleteSignalInfos,
 			UpsertSignalRequestedIDs:  upsertSignalRequestedIDs,
-			DeleteSignalRequestedID:   deleteSignalRequestedID,
+			DeleteSignalRequestedIDs:  deleteSignalRequestedIDs,
 
 			TransferTasks:    transferTasks,
 			ReplicationTasks: replicationTasks,
@@ -1524,7 +1695,7 @@ func (s *TestBase) RangeCompleteTimerTask(ctx context.Context, inclusiveBeginTim
 }
 
 // CreateDecisionTask is a utility method to create a task
-func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, workflowExecution workflow.WorkflowExecution, taskList string,
+func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution, taskList string,
 	decisionScheduleID int64) (int64, error) {
 	leaseResponse, err := s.TaskMgr.LeaseTaskList(ctx, &p.LeaseTaskListRequest{
 		DomainID: domainID,
@@ -1542,8 +1713,8 @@ func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, work
 			Execution: workflowExecution,
 			Data: &p.TaskInfo{
 				DomainID:   domainID,
-				WorkflowID: *workflowExecution.WorkflowId,
-				RunID:      *workflowExecution.RunId,
+				WorkflowID: *workflowExecution.WorkflowID,
+				RunID:      *workflowExecution.RunID,
 				TaskID:     taskID,
 				ScheduleID: decisionScheduleID,
 			},
@@ -1563,7 +1734,7 @@ func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, work
 }
 
 // CreateActivityTasks is a utility method to create tasks
-func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, workflowExecution workflow.WorkflowExecution,
+func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution,
 	activities map[int64]string) ([]int64, error) {
 
 	taskLists := make(map[string]*p.TaskListInfo)
@@ -1589,8 +1760,8 @@ func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, wor
 				Execution: workflowExecution,
 				Data: &p.TaskInfo{
 					DomainID:               domainID,
-					WorkflowID:             *workflowExecution.WorkflowId,
-					RunID:                  *workflowExecution.RunId,
+					WorkflowID:             *workflowExecution.WorkflowID,
+					RunID:                  *workflowExecution.RunID,
 					TaskID:                 taskID,
 					ScheduleID:             activityScheduleID,
 					ScheduleToStartTimeout: defaultScheduleToStartTimeout,

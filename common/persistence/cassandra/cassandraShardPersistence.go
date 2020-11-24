@@ -28,12 +28,12 @@ import (
 
 	"github.com/gocql/gocql"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -138,7 +138,7 @@ func NewShardPersistenceFromSession(session *gocql.Session, clusterName string, 
 }
 
 func (d *cassandraShardPersistence) CreateShard(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalCreateShardRequest,
 ) error {
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
@@ -173,7 +173,8 @@ func (d *cassandraShardPersistence) CreateShard(
 		shardInfo.ReplicationDLQAckLevel,
 		markerData,
 		markerEncoding,
-		shardInfo.RangeID)
+		shardInfo.RangeID,
+	).WithContext(ctx)
 
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
@@ -193,7 +194,7 @@ func (d *cassandraShardPersistence) CreateShard(
 }
 
 func (d *cassandraShardPersistence) GetShard(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalGetShardRequest,
 ) (*p.InternalGetShardResponse, error) {
 	shardID := request.ShardID
@@ -204,12 +205,13 @@ func (d *cassandraShardPersistence) GetShard(
 		rowTypeShardWorkflowID,
 		rowTypeShardRunID,
 		defaultVisibilityTimestamp,
-		rowTypeShardTaskID)
+		rowTypeShardTaskID,
+	).WithContext(ctx)
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
 		if cassandra.IsNotFoundError(err) {
-			return nil, &workflow.EntityNotExistsError{
+			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Shard not found.  ShardId: %v", shardID),
 			}
 		}
@@ -230,7 +232,7 @@ func (d *cassandraShardPersistence) GetShard(
 		// result in lost tasks, corrupted workflow history, etc.
 
 		d.logger.Warn("Corrupted shard rangeID", tag.ShardID(shardID), tag.ShardRangeID(shardInfoRangeID), tag.PreviousShardRangeID(rangeID))
-		if err := d.updateRangeID(context.TODO(), shardID, shardInfoRangeID, rangeID); err != nil {
+		if err := d.updateRangeID(ctx, shardID, shardInfoRangeID, rangeID); err != nil {
 			return nil, err
 		}
 
@@ -252,7 +254,7 @@ func (d *cassandraShardPersistence) GetShard(
 }
 
 func (d *cassandraShardPersistence) updateRangeID(
-	_ context.Context,
+	ctx context.Context,
 	shardID int,
 	rangeID int64,
 	previousRangeID int64,
@@ -267,7 +269,7 @@ func (d *cassandraShardPersistence) updateRangeID(
 		defaultVisibilityTimestamp,
 		rowTypeShardTaskID,
 		previousRangeID,
-	)
+	).WithContext(ctx)
 
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
@@ -292,7 +294,7 @@ func (d *cassandraShardPersistence) updateRangeID(
 }
 
 func (d *cassandraShardPersistence) UpdateShard(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalUpdateShardRequest,
 ) error {
 	cqlNowTimestamp := p.UnixNanoToDBTimestamp(time.Now().UnixNano())
@@ -329,7 +331,8 @@ func (d *cassandraShardPersistence) UpdateShard(
 		rowTypeShardRunID,
 		defaultVisibilityTimestamp,
 		rowTypeShardTaskID,
-		request.PreviousRangeID)
+		request.PreviousRangeID,
+	).WithContext(ctx)
 
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)

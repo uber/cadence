@@ -124,7 +124,6 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 					Identity: common.StringPtr(processorWFTypeName),
 				},
 			})
-			err = thrift.FromError(err)
 		case shared.ParentClosePolicyRequestCancel:
 			err = client.RequestCancelWorkflowExecution(nil, &types.HistoryRequestCancelWorkflowExecutionRequest{
 				DomainUUID: common.StringPtr(request.DomainUUID),
@@ -137,11 +136,10 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 					Identity: common.StringPtr(processorWFTypeName),
 				},
 			})
-			err = thrift.FromError(err)
 		}
 
 		if err != nil {
-			if _, ok := err.(*shared.EntityNotExistsError); ok {
+			if _, ok := err.(*types.EntityNotExistsError); ok {
 				err = nil
 			}
 		}

@@ -45,6 +45,7 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -74,8 +75,8 @@ var (
 		DomainUUID:   testDomainID,
 		Domain:       testDomain,
 		PageSize:     testPageSize,
-		EarliestTime: testEarliestTime,
-		LatestTime:   testLatestTime,
+		EarliestTime: time.Unix(0, testEarliestTime),
+		LatestTime:   time.Unix(0, testLatestTime),
 	}
 	testSearchResult = &p.InternalListWorkflowExecutionsResponse{}
 	errTestESSearch  = errors.New("ES error")
@@ -88,6 +89,8 @@ var (
 	filterByWID    = fmt.Sprintf("map[match:map[WorkflowID:map[query:%s]]]", testWorkflowID)
 	filterByRunID  = fmt.Sprintf("map[match:map[RunID:map[query:%s]]]", testRunID)
 	filterByStatus = fmt.Sprintf("map[match:map[CloseStatus:map[query:%v]]]", testCloseStatus)
+
+	esIndexMaxResultWindow = 3
 )
 
 func TestESVisibilitySuite(t *testing.T) {
@@ -100,7 +103,7 @@ func (s *ESVisibilitySuite) SetupTest() {
 
 	s.mockESClient = &esMocks.GenericClient{}
 	config := &config.VisibilityConfig{
-		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(esIndexMaxResultWindow),
 		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 	}
 
@@ -121,8 +124,8 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 	request.WorkflowID = "wid"
 	request.RunID = "rid"
 	request.WorkflowTypeName = "wfType"
-	request.StartTimestamp = int64(123)
-	request.ExecutionTimestamp = int64(321)
+	request.StartTimestamp = time.Unix(0, int64(123))
+	request.ExecutionTimestamp = time.Unix(0, int64(321))
 	request.TaskID = int64(111)
 	memoBytes := []byte(`test bytes`)
 	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
@@ -134,8 +137,8 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 		s.Equal(request.RunID, input.GetRunID())
 		s.Equal(request.TaskID, input.GetVersion())
 		s.Equal(request.WorkflowTypeName, fields[es.WorkflowType].GetStringData())
-		s.Equal(request.StartTimestamp, fields[es.StartTime].GetIntData())
-		s.Equal(request.ExecutionTimestamp, fields[es.ExecutionTime].GetIntData())
+		s.Equal(request.StartTimestamp.UnixNano(), fields[es.StartTime].GetIntData())
+		s.Equal(request.ExecutionTimestamp.UnixNano(), fields[es.ExecutionTime].GetIntData())
 		s.Equal(memoBytes, fields[es.Memo].GetBinaryData())
 		s.Equal(string(common.EncodingTypeThriftRW), fields[es.Encoding].GetStringData())
 		return true
@@ -176,12 +179,12 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 	request.WorkflowID = "wid"
 	request.RunID = "rid"
 	request.WorkflowTypeName = "wfType"
-	request.StartTimestamp = int64(123)
-	request.ExecutionTimestamp = int64(321)
+	request.StartTimestamp = time.Unix(0, int64(123))
+	request.ExecutionTimestamp = time.Unix(0, int64(321))
 	request.TaskID = int64(111)
 	memoBytes := []byte(`test bytes`)
 	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
-	request.CloseTimestamp = int64(999)
+	request.CloseTimestamp = time.Unix(0, int64(999))
 	closeStatus := workflow.WorkflowExecutionCloseStatusTerminated
 	request.Status = *thrift.ToWorkflowExecutionCloseStatus(&closeStatus)
 	request.HistoryLength = int64(20)
@@ -192,11 +195,11 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 		s.Equal(request.RunID, input.GetRunID())
 		s.Equal(request.TaskID, input.GetVersion())
 		s.Equal(request.WorkflowTypeName, fields[es.WorkflowType].GetStringData())
-		s.Equal(request.StartTimestamp, fields[es.StartTime].GetIntData())
-		s.Equal(request.ExecutionTimestamp, fields[es.ExecutionTime].GetIntData())
+		s.Equal(request.StartTimestamp.UnixNano(), fields[es.StartTime].GetIntData())
+		s.Equal(request.ExecutionTimestamp.UnixNano(), fields[es.ExecutionTime].GetIntData())
 		s.Equal(memoBytes, fields[es.Memo].GetBinaryData())
 		s.Equal(string(common.EncodingTypeThriftRW), fields[es.Encoding].GetStringData())
-		s.Equal(request.CloseTimestamp, fields[es.CloseTime].GetIntData())
+		s.Equal(request.CloseTimestamp.UnixNano(), fields[es.CloseTime].GetIntData())
 		s.Equal(int64(closeStatus), fields[es.CloseStatus].GetIntData())
 		s.Equal(request.HistoryLength, fields[es.HistoryLength].GetIntData())
 		return true
@@ -233,6 +236,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed_EmptyRequest() {
 func (s *ESVisibilitySuite) TestListOpenWorkflowExecutions() {
 	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchRequest) bool {
 		s.True(input.IsOpen)
+		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
 
@@ -245,7 +249,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutions() {
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ListOpenWorkflowExecutions(ctx, testRequest)
 	s.Error(err)
-	_, ok := err.(*workflow.InternalServiceError)
+	_, ok := err.(*types.InternalServiceError)
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "ListOpenWorkflowExecutions failed"))
 }
@@ -253,6 +257,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutions() {
 func (s *ESVisibilitySuite) TestListClosedWorkflowExecutions() {
 	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchRequest) bool {
 		s.False(input.IsOpen)
+		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
 
@@ -265,7 +270,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutions() {
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ListClosedWorkflowExecutions(ctx, testRequest)
 	s.Error(err)
-	_, ok := err.(*workflow.InternalServiceError)
+	_, ok := err.(*types.InternalServiceError)
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "ListClosedWorkflowExecutions failed"))
 }
@@ -275,6 +280,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
 		s.True(input.IsOpen)
 		s.Equal(es.WorkflowType, input.MatchQuery.Name)
 		s.Equal(testWorkflowType, input.MatchQuery.Text)
+		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
 
@@ -292,7 +298,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ListOpenWorkflowExecutionsByType(ctx, request)
 	s.Error(err)
-	_, ok := err.(*workflow.InternalServiceError)
+	_, ok := err.(*types.InternalServiceError)
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "ListOpenWorkflowExecutionsByType failed"))
 }
@@ -302,6 +308,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
 		s.False(input.IsOpen)
 		s.Equal(es.WorkflowType, input.MatchQuery.Name)
 		s.Equal(testWorkflowType, input.MatchQuery.Text)
+		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
 
@@ -319,7 +326,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ListClosedWorkflowExecutionsByType(ctx, request)
 	s.Error(err)
-	_, ok := err.(*workflow.InternalServiceError)
+	_, ok := err.(*types.InternalServiceError)
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "ListClosedWorkflowExecutionsByType failed"))
 }
@@ -329,6 +336,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByWorkflowID() {
 		s.True(input.IsOpen)
 		s.Equal(es.WorkflowID, input.MatchQuery.Name)
 		s.Equal(testWorkflowID, input.MatchQuery.Text)
+		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
 
@@ -346,7 +354,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByWorkflowID() {
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 	s.Error(err)
-	_, ok := err.(*workflow.InternalServiceError)
+	_, ok := err.(*types.InternalServiceError)
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "ListOpenWorkflowExecutionsByWorkflowID failed"))
 }
@@ -356,6 +364,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByWorkflowID() {
 		s.False(input.IsOpen)
 		s.Equal(es.WorkflowID, input.MatchQuery.Name)
 		s.Equal(testWorkflowID, input.MatchQuery.Text)
+		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
 
@@ -373,7 +382,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByWorkflowID() {
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 	s.Error(err)
-	_, ok := err.(*workflow.InternalServiceError)
+	_, ok := err.(*types.InternalServiceError)
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "ListClosedWorkflowExecutionsByWorkflowID failed"))
 }
@@ -383,6 +392,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
 		s.False(input.IsOpen)
 		s.Equal(es.CloseStatus, input.MatchQuery.Name)
 		s.Equal(testCloseStatus, input.MatchQuery.Text)
+		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
 
@@ -401,7 +411,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
 	s.mockESClient.On("Search", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ListClosedWorkflowExecutionsByStatus(ctx, request)
 	s.Error(err)
-	_, ok := err.(*workflow.InternalServiceError)
+	_, ok := err.(*types.InternalServiceError)
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "ListClosedWorkflowExecutionsByStatus failed"))
 }
@@ -435,7 +445,7 @@ func (s *ESVisibilitySuite) TestDeserializePageToken() {
 	result, err = es.DeserializePageToken(badInput)
 	s.Error(err)
 	s.Nil(result)
-	err, ok := err.(*workflow.BadRequestError)
+	err, ok := err.(*types.BadRequestError)
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "unable to deserialize page token"))
 
@@ -704,6 +714,7 @@ func (s *ESVisibilitySuite) TestAddDomainToQuery() {
 func (s *ESVisibilitySuite) TestListWorkflowExecutions() {
 	s.mockESClient.On("SearchByQuery", mock.Anything, mock.MatchedBy(func(input *es.SearchByQueryRequest) bool {
 		s.True(strings.Contains(input.Query, `{"match_phrase":{"CloseStatus":{"query":"5"}}}`))
+		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
 
@@ -723,14 +734,14 @@ func (s *ESVisibilitySuite) TestListWorkflowExecutions() {
 	s.mockESClient.On("SearchByQuery", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ListWorkflowExecutions(ctx, request)
 	s.Error(err)
-	_, ok := err.(*workflow.InternalServiceError)
+	_, ok := err.(*types.InternalServiceError)
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "ListWorkflowExecutions failed"))
 
 	request.Query = `invalid query`
 	_, err = s.visibilityStore.ListWorkflowExecutions(context.Background(), request)
 	s.Error(err)
-	_, ok = err.(*workflow.BadRequestError)
+	_, ok = err.(*types.BadRequestError)
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "Error when parse query"))
 }
@@ -759,7 +770,7 @@ func (s *ESVisibilitySuite) TestScanWorkflowExecutions() {
 	request.Query = `invalid query`
 	_, err = s.visibilityStore.ScanWorkflowExecutions(ctx, request)
 	s.Error(err)
-	_, ok := err.(*workflow.BadRequestError)
+	_, ok := err.(*types.BadRequestError)
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "Error when parse query"))
 
@@ -768,7 +779,7 @@ func (s *ESVisibilitySuite) TestScanWorkflowExecutions() {
 	s.mockESClient.On("ScanByQuery", mock.Anything, mock.Anything).Return(nil, errTestESSearch).Once()
 	_, err = s.visibilityStore.ScanWorkflowExecutions(ctx, request)
 	s.Error(err)
-	_, ok = err.(*workflow.InternalServiceError)
+	_, ok = err.(*types.InternalServiceError)
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "ScanWorkflowExecutions failed"))
 }
@@ -797,7 +808,7 @@ func (s *ESVisibilitySuite) TestCountWorkflowExecutions() {
 
 	_, err = s.visibilityStore.CountWorkflowExecutions(ctx, request)
 	s.Error(err)
-	_, ok := err.(*workflow.InternalServiceError)
+	_, ok := err.(*types.InternalServiceError)
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "CountWorkflowExecutions failed"))
 
@@ -805,7 +816,7 @@ func (s *ESVisibilitySuite) TestCountWorkflowExecutions() {
 	request.Query = `invalid query`
 	_, err = s.visibilityStore.CountWorkflowExecutions(ctx, request)
 	s.Error(err)
-	_, ok = err.(*workflow.BadRequestError)
+	_, ok = err.(*types.BadRequestError)
 	s.True(ok)
 	s.True(strings.Contains(err.Error(), "Error when parse query"))
 }

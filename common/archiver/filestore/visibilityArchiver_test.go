@@ -35,11 +35,11 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/util"
 )
 
@@ -129,7 +129,7 @@ func (s *visibilityArchiverSuite) TestArchive_Fail_InvalidURI() {
 		StartTimestamp:     time.Now().UnixNano(),
 		ExecutionTimestamp: 0, // workflow without backoff
 		CloseTimestamp:     time.Now().UnixNano(),
-		CloseStatus:        shared.WorkflowExecutionCloseStatusFailed,
+		CloseStatus:        types.WorkflowExecutionCloseStatusFailed,
 		HistoryLength:      int64(101),
 	}
 	err = visibilityArchiver.Archive(context.Background(), URI, request)
@@ -170,9 +170,9 @@ func (s *visibilityArchiverSuite) TestArchive_Success() {
 		StartTimestamp:     closeTimestamp.Add(-time.Hour).UnixNano(),
 		ExecutionTimestamp: 0, // workflow without backoff
 		CloseTimestamp:     closeTimestamp.UnixNano(),
-		CloseStatus:        shared.WorkflowExecutionCloseStatusFailed,
+		CloseStatus:        types.WorkflowExecutionCloseStatusFailed,
 		HistoryLength:      int64(101),
-		Memo: &shared.Memo{
+		Memo: &types.Memo{
 			Fields: map[string][]byte{
 				"testFields": []byte{1, 2, 3},
 			},
@@ -267,11 +267,11 @@ func (s *visibilityArchiverSuite) TestMatchQuery() {
 				earliestCloseTime: int64(1000),
 				latestCloseTime:   int64(12345),
 				workflowTypeName:  common.StringPtr("some random type name"),
-				closeStatus:       shared.WorkflowExecutionCloseStatusContinuedAsNew.Ptr(),
+				closeStatus:       types.WorkflowExecutionCloseStatusContinuedAsNew.Ptr(),
 			},
 			record: &visibilityRecord{
 				CloseTimestamp:   int64(12345),
-				CloseStatus:      shared.WorkflowExecutionCloseStatusContinuedAsNew,
+				CloseStatus:      types.WorkflowExecutionCloseStatusContinuedAsNew,
 				WorkflowTypeName: "some random type name",
 			},
 			shouldMatch: true,
@@ -426,7 +426,7 @@ func (s *visibilityArchiverSuite) TestQuery_Success_SmallPageSize() {
 	mockParser.EXPECT().Parse(gomock.Any()).Return(&parsedQuery{
 		earliestCloseTime: int64(1),
 		latestCloseTime:   int64(10001),
-		closeStatus:       shared.WorkflowExecutionCloseStatusFailed.Ptr(),
+		closeStatus:       types.WorkflowExecutionCloseStatusFailed.Ptr(),
 	}, nil).AnyTimes()
 	visibilityArchiver.queryParser = mockParser
 	request := &archiver.QueryVisibilityRequest{
@@ -463,7 +463,7 @@ func (s *visibilityArchiverSuite) TestArchiveAndQuery() {
 	mockParser.EXPECT().Parse(gomock.Any()).Return(&parsedQuery{
 		earliestCloseTime: int64(10),
 		latestCloseTime:   int64(10001),
-		closeStatus:       shared.WorkflowExecutionCloseStatusFailed.Ptr(),
+		closeStatus:       types.WorkflowExecutionCloseStatusFailed.Ptr(),
 	}, nil).AnyTimes()
 	visibilityArchiver.queryParser = mockParser
 	URI, err := archiver.NewURI("file://" + dir)
@@ -478,7 +478,7 @@ func (s *visibilityArchiverSuite) TestArchiveAndQuery() {
 		PageSize: 1,
 		Query:    "parsed by mockParser",
 	}
-	executions := []*shared.WorkflowExecutionInfo{}
+	executions := []*types.WorkflowExecutionInfo{}
 	for len(executions) == 0 || request.NextPageToken != nil {
 		response, err := visibilityArchiver.Query(context.Background(), URI, request)
 		s.NoError(err)
@@ -511,7 +511,7 @@ func (s *visibilityArchiverSuite) setupVisibilityDirectory() {
 			WorkflowTypeName: testWorkflowTypeName,
 			StartTimestamp:   1,
 			CloseTimestamp:   10000,
-			CloseStatus:      shared.WorkflowExecutionCloseStatusFailed,
+			CloseStatus:      types.WorkflowExecutionCloseStatusFailed,
 			HistoryLength:    101,
 		},
 		{
@@ -523,7 +523,7 @@ func (s *visibilityArchiverSuite) setupVisibilityDirectory() {
 			StartTimestamp:     2,
 			ExecutionTimestamp: 0,
 			CloseTimestamp:     1000,
-			CloseStatus:        shared.WorkflowExecutionCloseStatusFailed,
+			CloseStatus:        types.WorkflowExecutionCloseStatusFailed,
 			HistoryLength:      123,
 		},
 		{
@@ -535,7 +535,7 @@ func (s *visibilityArchiverSuite) setupVisibilityDirectory() {
 			StartTimestamp:     3,
 			ExecutionTimestamp: 0,
 			CloseTimestamp:     10,
-			CloseStatus:        shared.WorkflowExecutionCloseStatusContinuedAsNew,
+			CloseStatus:        types.WorkflowExecutionCloseStatusContinuedAsNew,
 			HistoryLength:      456,
 		},
 		{
@@ -547,7 +547,7 @@ func (s *visibilityArchiverSuite) setupVisibilityDirectory() {
 			StartTimestamp:     3,
 			ExecutionTimestamp: 0,
 			CloseTimestamp:     5,
-			CloseStatus:        shared.WorkflowExecutionCloseStatusFailed,
+			CloseStatus:        types.WorkflowExecutionCloseStatusFailed,
 			HistoryLength:      456,
 		},
 		{
@@ -559,7 +559,7 @@ func (s *visibilityArchiverSuite) setupVisibilityDirectory() {
 			StartTimestamp:     3,
 			ExecutionTimestamp: 0,
 			CloseTimestamp:     10000,
-			CloseStatus:        shared.WorkflowExecutionCloseStatusContinuedAsNew,
+			CloseStatus:        types.WorkflowExecutionCloseStatusContinuedAsNew,
 			HistoryLength:      456,
 		},
 	}

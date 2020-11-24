@@ -21,7 +21,6 @@
 package dynamicconfig
 
 import (
-	"errors"
 	"sync"
 	"time"
 )
@@ -53,7 +52,7 @@ func (mc *inMemoryClient) GetValue(key Key, defaultValue interface{}) (interface
 	if val, ok := mc.globalValues[key]; ok {
 		return val, nil
 	}
-	return defaultValue, errors.New("unable to find key")
+	return defaultValue, notFoundError
 }
 
 func (mc *inMemoryClient) GetValueWithFilters(
@@ -72,7 +71,7 @@ func (mc *inMemoryClient) GetIntValue(name Key, filters map[Filter]interface{}, 
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(int), nil
 	}
-	return defaultValue, errors.New("unable to find key")
+	return defaultValue, notFoundError
 }
 
 func (mc *inMemoryClient) GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
@@ -82,7 +81,7 @@ func (mc *inMemoryClient) GetFloatValue(name Key, filters map[Filter]interface{}
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(float64), nil
 	}
-	return defaultValue, errors.New("unable to find key")
+	return defaultValue, notFoundError
 }
 
 func (mc *inMemoryClient) GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
@@ -92,7 +91,7 @@ func (mc *inMemoryClient) GetBoolValue(name Key, filters map[Filter]interface{},
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(bool), nil
 	}
-	return defaultValue, errors.New("unable to find key")
+	return defaultValue, notFoundError
 }
 
 func (mc *inMemoryClient) GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error) {
@@ -102,7 +101,7 @@ func (mc *inMemoryClient) GetStringValue(name Key, filters map[Filter]interface{
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(string), nil
 	}
-	return defaultValue, errors.New("unable to find key")
+	return defaultValue, notFoundError
 }
 
 func (mc *inMemoryClient) GetMapValue(
@@ -114,7 +113,7 @@ func (mc *inMemoryClient) GetMapValue(
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(map[string]interface{}), nil
 	}
-	return defaultValue, errors.New("unable to find key")
+	return defaultValue, notFoundError
 }
 
 func (mc *inMemoryClient) GetDurationValue(
@@ -126,7 +125,7 @@ func (mc *inMemoryClient) GetDurationValue(
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(time.Duration), nil
 	}
-	return defaultValue, errors.New("unable to find key")
+	return defaultValue, notFoundError
 }
 
 func (mc *inMemoryClient) UpdateValue(key Key, value interface{}) error {

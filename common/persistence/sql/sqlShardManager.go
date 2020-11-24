@@ -28,12 +28,12 @@ import (
 
 	"github.com/uber/cadence/common/persistence/serialization"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+	"github.com/uber/cadence/common/types"
 )
 
 type sqlShardManager struct {
@@ -72,13 +72,13 @@ func (m *sqlShardManager) CreateShard(
 
 	row, err := shardInfoToShardsRow(*request.ShardInfo, m.parser)
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("CreateShard operation failed. Error: %v", err),
 		}
 	}
 
 	if _, err := m.db.InsertIntoShards(ctx, row); err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("CreateShard operation failed. Failed to insert into shards table. Error: %v", err),
 		}
 	}
@@ -93,11 +93,11 @@ func (m *sqlShardManager) GetShard(
 	row, err := m.db.SelectFromShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(request.ShardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, &workflow.EntityNotExistsError{
+			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("GetShard operation failed. Shard with ID %v not found. Error: %v", request.ShardID, err),
 			}
 		}
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("GetShard operation failed. Failed to get record. ShardId: %v. Error: %v", request.ShardID, err),
 		}
 	}
@@ -174,7 +174,7 @@ func (m *sqlShardManager) UpdateShard(
 ) error {
 	row, err := shardInfoToShardsRow(*request.ShardInfo, m.parser)
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("UpdateShard operation failed. Error: %v", err),
 		}
 	}
@@ -202,11 +202,11 @@ func lockShard(ctx context.Context, tx sqlplugin.Tx, shardID int, oldRangeID int
 	rangeID, err := tx.WriteLockShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(shardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Failed to lock shard with ID %v that does not exist.", shardID),
 			}
 		}
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to lock shard with ID: %v. Error: %v", shardID, err),
 		}
 	}
@@ -226,11 +226,11 @@ func readLockShard(ctx context.Context, tx sqlplugin.Tx, shardID int, oldRangeID
 	rangeID, err := tx.ReadLockShards(ctx, &sqlplugin.ShardsFilter{ShardID: int64(shardID)})
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Failed to lock shard with ID %v that does not exist.", shardID),
 			}
 		}
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to lock shard with ID: %v. Error: %v", shardID, err),
 		}
 	}

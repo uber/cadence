@@ -27,6 +27,7 @@ import (
 )
 
 // IsTimeoutError checks if an error is timeout error
+// TODO: deprecate this function in favor of the implemention in gocql/client.go
 func IsTimeoutError(err error) bool {
 	if err == context.DeadlineExceeded {
 		return true
@@ -42,11 +43,13 @@ func IsTimeoutError(err error) bool {
 }
 
 // IsNotFoundError checks if an error due to entity not found
+// TODO: deprecate this function in favor of the implemention in gocql/client.go
 func IsNotFoundError(err error) bool {
 	return err == gocql.ErrNotFound
 }
 
 // IsThrottlingError checks if an error is due to throttling error
+// TODO: deprecate this function in favor of the implemention in gocql/client.go
 func IsThrottlingError(err error) bool {
 	if req, ok := err.(gocql.RequestError); ok {
 		// gocql does not expose the constant errOverloaded = 0x1001

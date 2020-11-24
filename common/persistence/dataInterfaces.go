@@ -1,4 +1,5 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,15 +27,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/replicator"
-
 	"github.com/pborman/uuid"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/codec"
+	"github.com/uber/cadence/common/types"
 )
 
 // Domain status
@@ -246,24 +245,24 @@ type (
 
 	// ShardInfo describes a shard
 	ShardInfo struct {
-		ShardID                       int                                    `json:"shard_id"`
-		Owner                         string                                 `json:"owner"`
-		RangeID                       int64                                  `json:"range_id"`
-		StolenSinceRenew              int                                    `json:"stolen_since_renew"`
-		UpdatedAt                     time.Time                              `json:"updated_at"`
-		ReplicationAckLevel           int64                                  `json:"replication_ack_level"`
-		ReplicationDLQAckLevel        map[string]int64                       `json:"replication_dlq_ack_level"`
-		TransferAckLevel              int64                                  `json:"transfer_ack_level"`
-		TimerAckLevel                 time.Time                              `json:"timer_ack_level"`
-		ClusterTransferAckLevel       map[string]int64                       `json:"cluster_transfer_ack_level"`
-		ClusterTimerAckLevel          map[string]time.Time                   `json:"cluster_timer_ack_level"`
-		TransferProcessingQueueStates *history.ProcessingQueueStates         `json:"transfer_processing_queue_states"`
-		TimerProcessingQueueStates    *history.ProcessingQueueStates         `json:"timer_processing_queue_states"`
-		TransferFailoverLevels        map[string]TransferFailoverLevel       // uuid -> TransferFailoverLevel
-		TimerFailoverLevels           map[string]TimerFailoverLevel          // uuid -> TimerFailoverLevel
-		ClusterReplicationLevel       map[string]int64                       `json:"cluster_replication_level"`
-		DomainNotificationVersion     int64                                  `json:"domain_notification_version"`
-		PendingFailoverMarkers        []*replicator.FailoverMarkerAttributes `json:"pending_failover_markers"`
+		ShardID                       int                               `json:"shard_id"`
+		Owner                         string                            `json:"owner"`
+		RangeID                       int64                             `json:"range_id"`
+		StolenSinceRenew              int                               `json:"stolen_since_renew"`
+		UpdatedAt                     time.Time                         `json:"updated_at"`
+		ReplicationAckLevel           int64                             `json:"replication_ack_level"`
+		ReplicationDLQAckLevel        map[string]int64                  `json:"replication_dlq_ack_level"`
+		TransferAckLevel              int64                             `json:"transfer_ack_level"`
+		TimerAckLevel                 time.Time                         `json:"timer_ack_level"`
+		ClusterTransferAckLevel       map[string]int64                  `json:"cluster_transfer_ack_level"`
+		ClusterTimerAckLevel          map[string]time.Time              `json:"cluster_timer_ack_level"`
+		TransferProcessingQueueStates *types.ProcessingQueueStates      `json:"transfer_processing_queue_states"`
+		TimerProcessingQueueStates    *types.ProcessingQueueStates      `json:"timer_processing_queue_states"`
+		TransferFailoverLevels        map[string]TransferFailoverLevel  // uuid -> TransferFailoverLevel
+		TimerFailoverLevels           map[string]TimerFailoverLevel     // uuid -> TimerFailoverLevel
+		ClusterReplicationLevel       map[string]int64                  `json:"cluster_replication_level"`
+		DomainNotificationVersion     int64                             `json:"domain_notification_version"`
+		PendingFailoverMarkers        []*types.FailoverMarkerAttributes `json:"pending_failover_markers"`
 	}
 
 	// TransferFailoverLevel contains corresponding start / end level
@@ -926,13 +925,13 @@ type (
 		UpsertTimerInfos          []*TimerInfo
 		DeleteTimerInfos          []string
 		UpsertChildExecutionInfos []*ChildExecutionInfo
-		DeleteChildExecutionInfo  *int64
+		DeleteChildExecutionInfos []int64
 		UpsertRequestCancelInfos  []*RequestCancelInfo
-		DeleteRequestCancelInfo   *int64
+		DeleteRequestCancelInfos  []int64
 		UpsertSignalInfos         []*SignalInfo
-		DeleteSignalInfo          *int64
+		DeleteSignalInfos         []int64
 		UpsertSignalRequestedIDs  []string
-		DeleteSignalRequestedID   string
+		DeleteSignalRequestedIDs  []string
 		NewBufferedEvents         []*workflow.HistoryEvent
 		ClearBufferedEvents       bool
 
@@ -1129,7 +1128,7 @@ type (
 
 	// CreateTaskInfo describes a task to be created in CreateTasksRequest
 	CreateTaskInfo struct {
-		Execution workflow.WorkflowExecution
+		Execution types.WorkflowExecution
 		Data      *TaskInfo
 		TaskID    int64
 	}

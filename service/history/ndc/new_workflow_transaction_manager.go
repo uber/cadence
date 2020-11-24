@@ -27,8 +27,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 )
 
@@ -214,7 +214,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsZombie(
 		return err
 	}
 	if targetWorkflowPolicy != execution.TransactionPolicyPassive {
-		return &shared.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: "nDCTransactionManagerForNewWorkflow createAsZombie encounter target workflow policy not being passive",
 		}
 	}
@@ -335,7 +335,7 @@ func (r *transactionManagerForNewWorkflowImpl) executeTransaction(
 		)
 
 	default:
-		return &shared.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("nDCTransactionManager: encounter unknown transaction type: %v", transactionPolicy),
 		}
 	}

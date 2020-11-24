@@ -35,12 +35,6 @@ const (
 	// (default range ID: initialRangeID == 1)
 	createTaskListQry = `INSERT ` + taskListCreatePart
 
-	replaceTaskListQry = `INSERT ` + taskListCreatePart +
-		`ON CONFLICT (shard_id, domain_id, name, task_type) DO UPDATE
-SET range_id = excluded.range_id,
-data = excluded.data,
-data_encoding = excluded.data_encoding`
-
 	updateTaskListQry = `UPDATE task_lists SET
 range_id = :range_id,
 data = :data,
@@ -127,11 +121,6 @@ func (pdb *db) InsertIntoTaskLists(ctx context.Context, row *sqlplugin.TaskLists
 	return pdb.conn.NamedExecContext(ctx, createTaskListQry, row)
 }
 
-// ReplaceIntoTaskLists replaces one or more rows in task_lists table
-func (pdb *db) ReplaceIntoTaskLists(ctx context.Context, row *sqlplugin.TaskListsRow) (sql.Result, error) {
-	return pdb.conn.NamedExecContext(ctx, replaceTaskListQry, row)
-}
-
 // UpdateTaskLists updates a row in task_lists table
 func (pdb *db) UpdateTaskLists(ctx context.Context, row *sqlplugin.TaskListsRow) (sql.Result, error) {
 	return pdb.conn.NamedExecContext(ctx, updateTaskListQry, row)
@@ -192,11 +181,6 @@ func (pdb *db) InsertIntoTasksWithTTL(_ context.Context, _ []sqlplugin.TasksRowW
 
 // InsertIntoTaskListsWithTTL is not supported in Postgres
 func (pdb *db) InsertIntoTaskListsWithTTL(_ context.Context, _ *sqlplugin.TaskListsRowWithTTL) (sql.Result, error) {
-	return nil, sqlplugin.ErrTTLNotSupported
-}
-
-// ReplaceIntoTaskListsWithTTL is not supported in Postgres
-func (pdb *db) ReplaceIntoTaskListsWithTTL(_ context.Context, _ *sqlplugin.TaskListsRowWithTTL) (sql.Result, error) {
 	return nil, sqlplugin.ErrTTLNotSupported
 }
 
