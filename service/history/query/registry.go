@@ -26,10 +26,11 @@ import (
 	"sync"
 
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 var (
-	errQueryNotExists = &shared.InternalServiceError{Message: "query does not exist"}
+	errQueryNotExists = &types.InternalServiceError{Message: "query does not exist"}
 )
 
 type (

@@ -29,11 +29,11 @@ import (
 
 	"github.com/gocql/gocql"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -184,7 +184,7 @@ func (d *cassandraTaskPersistence) LeaseTaskList(
 	request *p.LeaseTaskListRequest,
 ) (*p.LeaseTaskListResponse, error) {
 	if len(request.TaskList) == 0 {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("LeaseTaskList requires non empty task list"),
 		}
 	}
@@ -351,7 +351,7 @@ func (d *cassandraTaskPersistence) ListTaskList(
 	ctx context.Context,
 	request *p.ListTaskListRequest,
 ) (*p.ListTaskListResponse, error) {
-	return nil, &workflow.InternalServiceError{
+	return nil, &types.InternalServiceError{
 		Message: fmt.Sprintf("unsupported operation"),
 	}
 }
@@ -467,7 +467,7 @@ func (d *cassandraTaskPersistence) GetTasks(
 	request *p.GetTasksRequest,
 ) (*p.InternalGetTasksResponse, error) {
 	if request.MaxReadLevel == nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "getTasks: both readLevel and maxReadLevel MUST be specified for cassandra persistence",
 		}
 	}
@@ -487,7 +487,7 @@ func (d *cassandraTaskPersistence) GetTasks(
 
 	iter := query.Iter()
 	if iter == nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "GetTasks operation failed.  Not able to create query iterator.",
 		}
 	}

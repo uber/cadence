@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -245,17 +246,17 @@ func (s *workflowResetterSuite) TestResetWorkflow_Error() {
 		incomingFirstEventVersion,
 	)
 	s.Error(err)
-	s.IsType(&shared.RetryTaskV2Error{}, err)
+	s.IsType(&types.RetryTaskV2Error{}, err)
 	s.Nil(rebuiltMutableState)
 
-	retryErr, isRetryError := err.(*shared.RetryTaskV2Error)
+	retryErr, isRetryError := err.(*types.RetryTaskV2Error)
 	s.True(isRetryError)
-	expectedErr := &shared.RetryTaskV2Error{
+	expectedErr := &types.RetryTaskV2Error{
 		Message:         resendOnResetWorkflowMessage,
-		DomainId:        common.StringPtr(s.domainID),
-		WorkflowId:      common.StringPtr(s.workflowID),
-		RunId:           common.StringPtr(s.newRunID),
-		EndEventId:      common.Int64Ptr(incomingFirstEventID),
+		DomainID:        common.StringPtr(s.domainID),
+		WorkflowID:      common.StringPtr(s.workflowID),
+		RunID:           common.StringPtr(s.newRunID),
+		EndEventID:      common.Int64Ptr(incomingFirstEventID),
 		EndEventVersion: common.Int64Ptr(incomingFirstEventVersion),
 	}
 	s.Equal(retryErr, expectedErr)

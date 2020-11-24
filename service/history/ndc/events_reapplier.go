@@ -25,12 +25,11 @@ package ndc
 import (
 	ctx "context"
 
-	"go.uber.org/cadence/.gen/go/shared"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 )
 
@@ -91,7 +90,7 @@ func (r *eventsReapplierImpl) ReapplyEvents(
 
 	// sanity check workflow still running
 	if !msBuilder.IsWorkflowExecutionRunning() {
-		return nil, &shared.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "unable to reapply events to closed workflow.",
 		}
 	}

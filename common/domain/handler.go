@@ -40,10 +40,11 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 var (
-	errFailoverTooFrequent = &shared.ServiceBusyError{Message: "The domain failovers too frequent."}
+	errFailoverTooFrequent = &types.ServiceBusyError{Message: "The domain failovers too frequent."}
 )
 
 type (
@@ -126,14 +127,14 @@ func (d *handlerImpl) RegisterDomain(
 
 	if !d.clusterMetadata.IsGlobalDomainEnabled() {
 		if registerRequest.GetIsGlobalDomain() {
-			return &shared.BadRequestError{Message: "Cannot register global domain when not enabled"}
+			return &types.BadRequestError{Message: "Cannot register global domain when not enabled"}
 		}
 
 		registerRequest.IsGlobalDomain = common.BoolPtr(false)
 	} else {
 		// cluster global domain enabled
 		if registerRequest.IsGlobalDomain == nil {
-			return &shared.BadRequestError{Message: "Must specify whether domain is a global domain"}
+			return &types.BadRequestError{Message: "Must specify whether domain is a global domain"}
 		}
 		if !d.clusterMetadata.IsMasterCluster() && registerRequest.GetIsGlobalDomain() {
 			return errNotMasterCluster
@@ -145,8 +146,8 @@ func (d *handlerImpl) RegisterDomain(
 	switch err.(type) {
 	case nil:
 		// domain already exists, cannot proceed
-		return &shared.DomainAlreadyExistsError{Message: "Domain already exists."}
-	case *shared.EntityNotExistsError:
+		return &types.DomainAlreadyExistsError{Message: "Domain already exists."}
+	case *types.EntityNotExistsError:
 		// domain does not exists, proceeds
 	default:
 		// other err
@@ -848,7 +849,7 @@ func (d *handlerImpl) updateDomainConfiguration(
 			// only do merging
 			config.BadBinaries = d.mergeBadBinaries(config.BadBinaries.Binaries, domainConfig.BadBinaries.Binaries, time.Now().UnixNano())
 			if len(config.BadBinaries.Binaries) > maxLength {
-				return config, isConfigChanged, &shared.BadRequestError{
+				return config, isConfigChanged, &types.BadRequestError{
 					Message: fmt.Sprintf("Total resetBinaries cannot exceed the max limit: %v", maxLength),
 				}
 			}
@@ -865,7 +866,7 @@ func (d *handlerImpl) updateDeleteBadBinary(
 	if deleteBadBinary != nil {
 		_, ok := config.BadBinaries.Binaries[*deleteBadBinary]
 		if !ok {
-			return config, false, &shared.BadRequestError{
+			return config, false, &types.BadRequestError{
 				Message: fmt.Sprintf("Bad binary checksum %v doesn't exists.", *deleteBadBinary),
 			}
 		}

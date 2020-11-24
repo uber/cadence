@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -149,7 +150,7 @@ func (notifier *notifierImpl) WatchHistoryEvent(
 
 		if _, ok := subscribers[subscriberID]; ok {
 			// UUID collision
-			return &gen.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: "Unable to watch on workflow execution.",
 			}
 		}
@@ -183,7 +184,7 @@ func (notifier *notifierImpl) UnwatchHistoryEvent(
 
 	if !success {
 		// cannot find the subscribe ID, which means there is a bug
-		return &gen.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: "Unable to unwatch on workflow execution.",
 		}
 	}

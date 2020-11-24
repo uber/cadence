@@ -27,8 +27,8 @@ import (
 	"github.com/hashicorp/go-version"
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -69,7 +69,7 @@ const (
 
 var (
 	// ErrUnknownFeature indicates that requested feature is not known by version checker
-	ErrUnknownFeature = &shared.BadRequestError{Message: "Unknown feature"}
+	ErrUnknownFeature = &types.BadRequestError{Message: "Unknown feature"}
 )
 
 type (
@@ -137,10 +137,10 @@ func (vc *versionChecker) ClientSupported(ctx context.Context, enableClientVersi
 	}
 	version, err := version.NewVersion(clientFeatureVersion)
 	if err != nil {
-		return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
+		return &types.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
 	}
 	if !supportedVersions.Check(version) {
-		return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
+		return &types.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
 	}
 	return nil
 }
@@ -171,14 +171,14 @@ func (vc *versionChecker) featureSupported(clientImpl string, clientFeatureVersi
 		switch feature {
 		case consistentQuery:
 		case rawHistoryQuery:
-			return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion}
+			return &types.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion}
 		case stickyQuery:
 			version, err := version.NewVersion(clientFeatureVersion)
 			if err != nil {
-				return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion}
+				return &types.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion}
 			}
 			if !vc.stickyQueryUnknownImplConstraints.Check(version) {
-				return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, SupportedVersions: vc.stickyQueryUnknownImplConstraints.String()}
+				return &types.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, SupportedVersions: vc.stickyQueryUnknownImplConstraints.String()}
 			}
 			return nil
 		default:
@@ -186,22 +186,22 @@ func (vc *versionChecker) featureSupported(clientImpl string, clientFeatureVersi
 		}
 	}
 	if clientFeatureVersion == "" {
-		return &shared.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion}
+		return &types.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion}
 	}
 	implMap, ok := vc.supportedFeatures[clientImpl]
 	if !ok {
-		return &shared.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion}
+		return &types.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion}
 	}
 	supportedVersions, ok := implMap[feature]
 	if !ok {
-		return &shared.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion}
+		return &types.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion}
 	}
 	version, err := version.NewVersion(clientFeatureVersion)
 	if err != nil {
-		return &shared.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
+		return &types.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
 	}
 	if !supportedVersions.Check(version) {
-		return &shared.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion, SupportedVersions: supportedVersions.String()}
+		return &types.ClientVersionNotSupportedError{ClientImpl: clientImpl, FeatureVersion: clientFeatureVersion, SupportedVersions: supportedVersions.String()}
 	}
 	return nil
 }

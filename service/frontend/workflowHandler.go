@@ -108,44 +108,44 @@ type (
 )
 
 var (
-	errDomainNotSet                               = &gen.BadRequestError{Message: "Domain not set on request."}
-	errTaskTokenNotSet                            = &gen.BadRequestError{Message: "Task token not set on request."}
-	errInvalidTaskToken                           = &gen.BadRequestError{Message: "Invalid TaskToken."}
-	errTaskListNotSet                             = &gen.BadRequestError{Message: "TaskList is not set on request."}
-	errTaskListTypeNotSet                         = &gen.BadRequestError{Message: "TaskListType is not set on request."}
-	errExecutionNotSet                            = &gen.BadRequestError{Message: "Execution is not set on request."}
-	errWorkflowIDNotSet                           = &gen.BadRequestError{Message: "WorkflowId is not set on request."}
-	errActivityIDNotSet                           = &gen.BadRequestError{Message: "ActivityID is not set on request."}
-	errInvalidRunID                               = &gen.BadRequestError{Message: "Invalid RunId."}
-	errInvalidNextPageToken                       = &gen.BadRequestError{Message: "Invalid NextPageToken."}
-	errNextPageTokenRunIDMismatch                 = &gen.BadRequestError{Message: "RunID in the request does not match the NextPageToken."}
-	errQueryNotSet                                = &gen.BadRequestError{Message: "WorkflowQuery is not set on request."}
-	errQueryTypeNotSet                            = &gen.BadRequestError{Message: "QueryType is not set on request."}
-	errRequestNotSet                              = &gen.BadRequestError{Message: "Request is nil."}
-	errNoPermission                               = &gen.BadRequestError{Message: "No permission to do this operation."}
-	errRequestIDNotSet                            = &gen.BadRequestError{Message: "RequestId is not set on request."}
-	errWorkflowTypeNotSet                         = &gen.BadRequestError{Message: "WorkflowType is not set on request."}
-	errInvalidRetention                           = &gen.BadRequestError{Message: "RetentionDays is invalid."}
-	errInvalidExecutionStartToCloseTimeoutSeconds = &gen.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
-	errInvalidTaskStartToCloseTimeoutSeconds      = &gen.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
-	errQueryDisallowedForDomain                   = &gen.BadRequestError{Message: "Domain is not allowed to query, please contact cadence team to re-enable queries."}
-	errClusterNameNotSet                          = &gen.BadRequestError{Message: "Cluster name is not set."}
-	errEmptyReplicationInfo                       = &gen.BadRequestError{Message: "Replication task info is not set."}
-	errEmptyQueueType                             = &gen.BadRequestError{Message: "Queue type is not set."}
-	errShuttingDown                               = &gen.InternalServiceError{Message: "Shutting down"}
+	errDomainNotSet                               = &types.BadRequestError{Message: "Domain not set on request."}
+	errTaskTokenNotSet                            = &types.BadRequestError{Message: "Task token not set on request."}
+	errInvalidTaskToken                           = &types.BadRequestError{Message: "Invalid TaskToken."}
+	errTaskListNotSet                             = &types.BadRequestError{Message: "TaskList is not set on request."}
+	errTaskListTypeNotSet                         = &types.BadRequestError{Message: "TaskListType is not set on request."}
+	errExecutionNotSet                            = &types.BadRequestError{Message: "Execution is not set on request."}
+	errWorkflowIDNotSet                           = &types.BadRequestError{Message: "WorkflowId is not set on request."}
+	errActivityIDNotSet                           = &types.BadRequestError{Message: "ActivityID is not set on request."}
+	errInvalidRunID                               = &types.BadRequestError{Message: "Invalid RunId."}
+	errInvalidNextPageToken                       = &types.BadRequestError{Message: "Invalid NextPageToken."}
+	errNextPageTokenRunIDMismatch                 = &types.BadRequestError{Message: "RunID in the request does not match the NextPageToken."}
+	errQueryNotSet                                = &types.BadRequestError{Message: "WorkflowQuery is not set on request."}
+	errQueryTypeNotSet                            = &types.BadRequestError{Message: "QueryType is not set on request."}
+	errRequestNotSet                              = &types.BadRequestError{Message: "Request is nil."}
+	errNoPermission                               = &types.BadRequestError{Message: "No permission to do this operation."}
+	errRequestIDNotSet                            = &types.BadRequestError{Message: "RequestId is not set on request."}
+	errWorkflowTypeNotSet                         = &types.BadRequestError{Message: "WorkflowType is not set on request."}
+	errInvalidRetention                           = &types.BadRequestError{Message: "RetentionDays is invalid."}
+	errInvalidExecutionStartToCloseTimeoutSeconds = &types.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
+	errInvalidTaskStartToCloseTimeoutSeconds      = &types.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
+	errQueryDisallowedForDomain                   = &types.BadRequestError{Message: "Domain is not allowed to query, please contact cadence team to re-enable queries."}
+	errClusterNameNotSet                          = &types.BadRequestError{Message: "Cluster name is not set."}
+	errEmptyReplicationInfo                       = &types.BadRequestError{Message: "Replication task info is not set."}
+	errEmptyQueueType                             = &types.BadRequestError{Message: "Queue type is not set."}
+	errShuttingDown                               = &types.InternalServiceError{Message: "Shutting down"}
 
 	// err for archival
-	errHistoryNotFound = &gen.BadRequestError{Message: "Requested workflow history not found, may have passed retention period."}
+	errHistoryNotFound = &types.BadRequestError{Message: "Requested workflow history not found, may have passed retention period."}
 
 	// err for string too long
-	errDomainTooLong       = &gen.BadRequestError{Message: "Domain length exceeds limit."}
-	errWorkflowTypeTooLong = &gen.BadRequestError{Message: "WorkflowType length exceeds limit."}
-	errWorkflowIDTooLong   = &gen.BadRequestError{Message: "WorkflowID length exceeds limit."}
-	errSignalNameTooLong   = &gen.BadRequestError{Message: "SignalName length exceeds limit."}
-	errTaskListTooLong     = &gen.BadRequestError{Message: "TaskList length exceeds limit."}
-	errRawTaskListTooLong  = &gen.BadRequestError{Message: "Raw TaskList length exceeds limit."}
-	errRequestIDTooLong    = &gen.BadRequestError{Message: "RequestID length exceeds limit."}
-	errIdentityTooLong     = &gen.BadRequestError{Message: "Identity length exceeds limit."}
+	errDomainTooLong       = &types.BadRequestError{Message: "Domain length exceeds limit."}
+	errWorkflowTypeTooLong = &types.BadRequestError{Message: "WorkflowType length exceeds limit."}
+	errWorkflowIDTooLong   = &types.BadRequestError{Message: "WorkflowID length exceeds limit."}
+	errSignalNameTooLong   = &types.BadRequestError{Message: "SignalName length exceeds limit."}
+	errTaskListTooLong     = &types.BadRequestError{Message: "TaskList length exceeds limit."}
+	errRawTaskListTooLong  = &types.BadRequestError{Message: "Raw TaskList length exceeds limit."}
+	errRequestIDTooLong    = &types.BadRequestError{Message: "RequestID length exceeds limit."}
+	errIdentityTooLong     = &types.BadRequestError{Message: "Identity length exceeds limit."}
 
 	frontendServiceRetryPolicy = common.CreateFrontendServiceRetryPolicy()
 )
@@ -496,7 +496,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 			PollRequest: thrift.ToPollForActivityTaskRequest(pollRequest),
 		})
 		resp = thrift.FromPollForActivityTaskResponse(clientResp)
-		return thrift.FromError(err)
+		return err
 	}
 
 	err = backoff.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
@@ -589,7 +589,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 			PollRequest: thrift.ToPollForDecisionTaskRequest(pollRequest),
 		})
 		matchingResp = thrift.FromMatchingPollForDecisionTaskResponse(clientResp)
-		return thrift.FromError(err)
+		return err
 	}
 
 	err = backoff.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
@@ -629,7 +629,7 @@ func (wh *WorkflowHandler) checkBadBinary(domainEntry *cache.DomainCacheEntry, b
 		_, ok := badBinaries[binaryChecksum]
 		if ok {
 			wh.GetMetricsClient().IncCounter(metrics.FrontendPollForDecisionTaskScope, metrics.CadenceErrBadBinaryCounter)
-			return &gen.BadRequestError{
+			return &types.BadRequestError{
 				Message: fmt.Sprintf("binary %v already marked as bad deployment", binaryChecksum),
 			}
 		}
@@ -649,7 +649,6 @@ func (wh *WorkflowHandler) cancelOutstandingPoll(ctx context.Context, err error,
 			TaskList:     thrift.ToTaskList(taskList),
 			PollerID:     common.StringPtr(pollerID),
 		})
-		err = thrift.FromError(err)
 		// We can not do much if this call fails.  Just log the error and move on
 		if err != nil {
 			wh.GetLogger().Warn("Failed to cancel outstanding poller.",
@@ -737,7 +736,6 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
 			FailedRequest: failRequest,
 		})
-		err = thrift.FromError(err)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -748,7 +746,6 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 			HeartbeatRequest: thrift.ToRecordActivityTaskHeartbeatRequest(heartbeatRequest),
 		})
 		resp = thrift.FromRecordActivityTaskHeartbeatResponse(clientResp)
-		err = thrift.FromError(err)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -846,7 +843,6 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
 			FailedRequest: failRequest,
 		})
-		err = thrift.FromError(err)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -863,7 +859,6 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 			HeartbeatRequest: thrift.ToRecordActivityTaskHeartbeatRequest(req),
 		})
 		resp = thrift.FromRecordActivityTaskHeartbeatResponse(clientResp)
-		err = thrift.FromError(err)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -947,7 +942,6 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
 			FailedRequest: failRequest,
 		})
-		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -956,7 +950,6 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 			DomainUUID:      common.StringPtr(taskToken.DomainID),
 			CompleteRequest: thrift.ToRespondActivityTaskCompletedRequest(completeRequest),
 		})
-		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -1057,7 +1050,6 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
 			FailedRequest: failRequest,
 		})
-		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -1072,7 +1064,6 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 			DomainUUID:      common.StringPtr(taskToken.DomainID),
 			CompleteRequest: req,
 		})
-		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -1155,7 +1146,6 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 		DomainUUID:    common.StringPtr(taskToken.DomainID),
 		FailedRequest: thrift.ToRespondActivityTaskFailedRequest(failedRequest),
 	})
-	err = thrift.FromError(err)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -1258,7 +1248,6 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 		DomainUUID:    common.StringPtr(taskToken.DomainID),
 		FailedRequest: req,
 	})
-	err = thrift.FromError(err)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -1341,7 +1330,6 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
 			FailedRequest: failRequest,
 		})
-		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -1350,7 +1338,6 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
 			CancelRequest: thrift.ToRespondActivityTaskCanceledRequest(cancelRequest),
 		})
-		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -1450,7 +1437,6 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
 			FailedRequest: failRequest,
 		})
-		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -1465,7 +1451,6 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
 			CancelRequest: thrift.ToRespondActivityTaskCanceledRequest(req),
 		})
-		err = thrift.FromError(err)
 		if err != nil {
 			return wh.error(err, scope)
 		}
@@ -1526,7 +1511,6 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		CompleteRequest: thrift.ToRespondDecisionTaskCompletedRequest(completeRequest)},
 	)
 	histResp := thrift.FromHistoryRespondDecisionTaskCompletedResponse(clientResp)
-	err = thrift.FromError(err)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -1635,7 +1619,6 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 		DomainUUID:    common.StringPtr(taskToken.DomainID),
 		FailedRequest: thrift.ToRespondDecisionTaskFailedRequest(failedRequest),
 	})
-	err = thrift.FromError(err)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -1725,7 +1708,6 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	}
 
 	err = wh.GetMatchingClient().RespondQueryTaskCompleted(ctx, thrift.ToMatchingRespondQueryTaskCompletedRequest(matchingRequest))
-	err = thrift.FromError(err)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -1816,7 +1798,6 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	}
 
 	if err := wh.searchAttributesValidator.ValidateSearchAttributes(thrift.ToSearchAttributes(startRequest.SearchAttributes), domainName); err != nil {
-		err = thrift.FromError(err)
 		return nil, wh.error(err, scope)
 	}
 
@@ -1852,7 +1833,6 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
 	clientResp, err := wh.GetHistoryClient().StartWorkflowExecution(ctx, thrift.ToHistoryStartWorkflowExecutionRequest(common.CreateHistoryStartWorkflowRequest(domainID, startRequest)))
 	resp = thrift.FromStartWorkflowExecutionResponse(clientResp)
-	err = thrift.FromError(err)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -1940,7 +1920,6 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			CurrentBranchToken:  currentBranchToken,
 		})
 		response := thrift.FromPollMutableStateResponse(clientResp)
-		err = thrift.FromError(err)
 
 		if err != nil {
 			return nil, "", 0, 0, false, err
@@ -2146,7 +2125,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 	}
 
 	if signalRequest.GetSignalName() == "" {
-		return wh.error(&gen.BadRequestError{Message: "SignalName is not set on request."},
+		return wh.error(&types.BadRequestError{Message: "SignalName is not set on request."},
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2183,7 +2162,6 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		DomainUUID:    common.StringPtr(domainID),
 		SignalRequest: thrift.ToSignalWorkflowExecutionRequest(signalRequest),
 	})
-	err = thrift.FromError(err)
 	if err != nil {
 		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
@@ -2235,7 +2213,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 	}
 
 	if signalWithStartRequest.GetWorkflowId() == "" {
-		return nil, wh.error(&gen.BadRequestError{Message: "WorkflowId is not set on request."},
+		return nil, wh.error(&types.BadRequestError{Message: "WorkflowId is not set on request."},
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2244,7 +2222,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 	}
 
 	if signalWithStartRequest.GetSignalName() == "" {
-		return nil, wh.error(&gen.BadRequestError{Message: "SignalName is not set on request."},
+		return nil, wh.error(&types.BadRequestError{Message: "SignalName is not set on request."},
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2253,7 +2231,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 	}
 
 	if signalWithStartRequest.WorkflowType == nil || signalWithStartRequest.WorkflowType.GetName() == "" {
-		return nil, wh.error(&gen.BadRequestError{Message: "WorkflowType is not set on request."},
+		return nil, wh.error(&types.BadRequestError{Message: "WorkflowType is not set on request."},
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2270,13 +2248,13 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 	}
 
 	if signalWithStartRequest.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
-		return nil, wh.error(&gen.BadRequestError{
+		return nil, wh.error(&types.BadRequestError{
 			Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."},
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
 	if signalWithStartRequest.GetTaskStartToCloseTimeoutSeconds() <= 0 {
-		return nil, wh.error(&gen.BadRequestError{
+		return nil, wh.error(&types.BadRequestError{
 			Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."},
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
@@ -2290,7 +2268,6 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 	}
 
 	if err := wh.searchAttributesValidator.ValidateSearchAttributes(thrift.ToSearchAttributes(signalWithStartRequest.SearchAttributes), domainName); err != nil {
-		err = thrift.FromError(err)
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2334,7 +2311,6 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		SignalWithStartRequest: thrift.ToSignalWithStartWorkflowExecutionRequest(signalWithStartRequest),
 	})
 	resp = thrift.FromStartWorkflowExecutionResponse(clientResp)
-	err = thrift.FromError(err)
 	if err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
@@ -2388,7 +2364,6 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 		DomainUUID:       common.StringPtr(domainID),
 		TerminateRequest: thrift.ToTerminateWorkflowExecutionRequest(terminateRequest),
 	})
-	err = thrift.FromError(err)
 	if err != nil {
 		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
@@ -2443,7 +2418,6 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(
 		ResetRequest: thrift.ToResetWorkflowExecutionRequest(resetRequest),
 	})
 	resp = thrift.FromResetWorkflowExecutionResponse(clientResp)
-	err = thrift.FromError(err)
 	if err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
@@ -2496,7 +2470,6 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 		DomainUUID:    common.StringPtr(domainID),
 		CancelRequest: thrift.ToRequestCancelWorkflowExecutionRequest(cancelRequest),
 	})
-	err = thrift.FromError(err)
 	if err != nil {
 		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
@@ -2535,23 +2508,23 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 	}
 
 	if listRequest.StartTimeFilter == nil {
-		return nil, wh.error(&gen.BadRequestError{Message: "StartTimeFilter is required"}, scope)
+		return nil, wh.error(&types.BadRequestError{Message: "StartTimeFilter is required"}, scope)
 	}
 
 	if listRequest.StartTimeFilter.EarliestTime == nil {
-		return nil, wh.error(&gen.BadRequestError{Message: "EarliestTime in StartTimeFilter is required"}, scope)
+		return nil, wh.error(&types.BadRequestError{Message: "EarliestTime in StartTimeFilter is required"}, scope)
 	}
 
 	if listRequest.StartTimeFilter.LatestTime == nil {
-		return nil, wh.error(&gen.BadRequestError{Message: "LatestTime in StartTimeFilter is required"}, scope)
+		return nil, wh.error(&types.BadRequestError{Message: "LatestTime in StartTimeFilter is required"}, scope)
 	}
 
 	if listRequest.StartTimeFilter.GetEarliestTime() > listRequest.StartTimeFilter.GetLatestTime() {
-		return nil, wh.error(&gen.BadRequestError{Message: "EarliestTime in StartTimeFilter should not be larger than LatestTime"}, scope)
+		return nil, wh.error(&types.BadRequestError{Message: "EarliestTime in StartTimeFilter should not be larger than LatestTime"}, scope)
 	}
 
 	if listRequest.ExecutionFilter != nil && listRequest.TypeFilter != nil {
-		return nil, wh.error(&gen.BadRequestError{
+		return nil, wh.error(&types.BadRequestError{
 			Message: "Only one of ExecutionFilter or TypeFilter is allowed"}, scope)
 	}
 
@@ -2560,7 +2533,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 	}
 
 	if wh.isListRequestPageSizeTooLarge(listRequest.GetMaximumPageSize(), listRequest.GetDomain()) {
-		return nil, wh.error(&gen.BadRequestError{
+		return nil, wh.error(&types.BadRequestError{
 			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}, scope)
 	}
 
@@ -2657,16 +2630,16 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 
 	maxPageSize := wh.config.VisibilityArchivalQueryMaxPageSize()
 	if int(listRequest.GetPageSize()) > maxPageSize {
-		return nil, wh.error(&gen.BadRequestError{
+		return nil, wh.error(&types.BadRequestError{
 			Message: fmt.Sprintf("Pagesize is larger than allowed %d", maxPageSize)}, scope)
 	}
 
 	if !wh.GetArchivalMetadata().GetVisibilityConfig().ClusterConfiguredForArchival() {
-		return nil, wh.error(&gen.BadRequestError{Message: "Cluster is not configured for visibility archival"}, scope)
+		return nil, wh.error(&types.BadRequestError{Message: "Cluster is not configured for visibility archival"}, scope)
 	}
 
 	if !wh.GetArchivalMetadata().GetVisibilityConfig().ReadEnabled() {
-		return nil, wh.error(&gen.BadRequestError{Message: "Cluster is not configured for reading archived visibility records"}, scope)
+		return nil, wh.error(&types.BadRequestError{Message: "Cluster is not configured for reading archived visibility records"}, scope)
 	}
 
 	entry, err := wh.GetDomainCache().GetDomain(listRequest.GetDomain())
@@ -2675,7 +2648,7 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 	}
 
 	if entry.GetConfig().VisibilityArchivalStatus != gen.ArchivalStatusEnabled {
-		return nil, wh.error(&gen.BadRequestError{Message: "Domain is not configured for visibility archival"}, scope)
+		return nil, wh.error(&types.BadRequestError{Message: "Domain is not configured for visibility archival"}, scope)
 	}
 
 	URI, err := archiver.NewURI(entry.GetConfig().VisibilityArchivalURI)
@@ -2744,19 +2717,19 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 	}
 
 	if listRequest.StartTimeFilter == nil {
-		return nil, wh.error(&gen.BadRequestError{Message: "StartTimeFilter is required"}, scope)
+		return nil, wh.error(&types.BadRequestError{Message: "StartTimeFilter is required"}, scope)
 	}
 
 	if listRequest.StartTimeFilter.EarliestTime == nil {
-		return nil, wh.error(&gen.BadRequestError{Message: "EarliestTime in StartTimeFilter is required"}, scope)
+		return nil, wh.error(&types.BadRequestError{Message: "EarliestTime in StartTimeFilter is required"}, scope)
 	}
 
 	if listRequest.StartTimeFilter.LatestTime == nil {
-		return nil, wh.error(&gen.BadRequestError{Message: "LatestTime in StartTimeFilter is required"}, scope)
+		return nil, wh.error(&types.BadRequestError{Message: "LatestTime in StartTimeFilter is required"}, scope)
 	}
 
 	if listRequest.StartTimeFilter.GetEarliestTime() > listRequest.StartTimeFilter.GetLatestTime() {
-		return nil, wh.error(&gen.BadRequestError{Message: "EarliestTime in StartTimeFilter should not be larger than LatestTime"}, scope)
+		return nil, wh.error(&types.BadRequestError{Message: "EarliestTime in StartTimeFilter should not be larger than LatestTime"}, scope)
 	}
 
 	filterCount := 0
@@ -2768,7 +2741,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 	}
 
 	if filterCount > 1 {
-		return nil, wh.error(&gen.BadRequestError{
+		return nil, wh.error(&types.BadRequestError{
 			Message: "Only one of ExecutionFilter, TypeFilter or StatusFilter is allowed"}, scope)
 	} // If ExecutionFilter is provided with one of TypeFilter or StatusFilter, use ExecutionFilter and ignore other filter
 
@@ -2777,7 +2750,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 	}
 
 	if wh.isListRequestPageSizeTooLarge(listRequest.GetMaximumPageSize(), listRequest.GetDomain()) {
-		return nil, wh.error(&gen.BadRequestError{
+		return nil, wh.error(&types.BadRequestError{
 			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}, scope)
 	}
 
@@ -2888,13 +2861,12 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 	}
 
 	if wh.isListRequestPageSizeTooLarge(listRequest.GetPageSize(), listRequest.GetDomain()) {
-		return nil, wh.error(&gen.BadRequestError{
+		return nil, wh.error(&types.BadRequestError{
 			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}, scope)
 	}
 
 	validatedQuery, err := wh.visibilityQueryValidator.ValidateQuery(listRequest.GetQuery())
 	if err != nil {
-		err = thrift.FromError(err)
 		return nil, wh.error(err, scope)
 	}
 
@@ -2957,13 +2929,12 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 	}
 
 	if wh.isListRequestPageSizeTooLarge(listRequest.GetPageSize(), listRequest.GetDomain()) {
-		return nil, wh.error(&gen.BadRequestError{
+		return nil, wh.error(&types.BadRequestError{
 			Message: fmt.Sprintf("Pagesize is larger than allow %d", wh.config.ESIndexMaxResultWindow())}, scope)
 	}
 
 	validatedQuery, err := wh.visibilityQueryValidator.ValidateQuery(listRequest.GetQuery())
 	if err != nil {
-		err = thrift.FromError(err)
 		return nil, wh.error(err, scope)
 	}
 
@@ -3023,7 +2994,6 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 
 	validatedQuery, err := wh.visibilityQueryValidator.ValidateQuery(countRequest.GetQuery())
 	if err != nil {
-		err = thrift.FromError(err)
 		return nil, wh.error(err, scope)
 	}
 
@@ -3110,7 +3080,6 @@ func (wh *WorkflowHandler) ResetStickyTaskList(
 		DomainUUID: common.StringPtr(domainID),
 		Execution:  thrift.ToWorkflowExecution(resetRequest.Execution),
 	})
-	err = thrift.FromError(err)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -3191,7 +3160,6 @@ func (wh *WorkflowHandler) QueryWorkflow(
 	}
 	clientResp, err := wh.GetHistoryClient().QueryWorkflow(ctx, req)
 	hResponse := thrift.FromHistoryQueryWorkflowResponse(clientResp)
-	err = thrift.FromError(err)
 	if err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
@@ -3243,7 +3211,6 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(
 		Request:    thrift.ToDescribeWorkflowExecutionRequest(request),
 	})
 	response := thrift.FromDescribeWorkflowExecutionResponse(clientResp)
-	err = thrift.FromError(err)
 
 	if err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
@@ -3301,7 +3268,6 @@ func (wh *WorkflowHandler) DescribeTaskList(
 		DescRequest: thrift.ToDescribeTaskListRequest(request),
 	})
 	response := thrift.FromDescribeTaskListResponse(clientResp)
-	err = thrift.FromError(err)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -3344,7 +3310,6 @@ func (wh *WorkflowHandler) ListTaskListPartitions(
 		TaskList: thrift.ToTaskList(request.TaskList),
 	})
 	resp = thrift.FromListTaskListPartitionsResponse(clientResp)
-	err = thrift.FromError(err)
 	return resp, err
 }
 
@@ -3530,38 +3495,38 @@ func frontendInternalServiceError(fmtStr string, args ...interface{}) error {
 
 func (wh *WorkflowHandler) error(err error, scope metrics.Scope, tagsForErrorLog ...tag.Tag) error {
 	switch err := err.(type) {
-	case *gen.InternalServiceError:
+	case *types.InternalServiceError:
 		wh.GetLogger().WithTags(tagsForErrorLog...).Error("Internal service error", tag.Error(err))
 		scope.IncCounter(metrics.CadenceFailures)
 		return frontendInternalServiceError("cadence internal error, msg: %v", err.Message)
-	case *gen.BadRequestError:
+	case *types.BadRequestError:
 		scope.IncCounter(metrics.CadenceErrBadRequestCounter)
 		return err
-	case *gen.DomainNotActiveError:
+	case *types.DomainNotActiveError:
 		scope.IncCounter(metrics.CadenceErrBadRequestCounter)
 		return err
-	case *gen.ServiceBusyError:
+	case *types.ServiceBusyError:
 		scope.IncCounter(metrics.CadenceErrServiceBusyCounter)
 		return err
-	case *gen.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		scope.IncCounter(metrics.CadenceErrEntityNotExistsCounter)
 		return err
-	case *gen.WorkflowExecutionAlreadyStartedError:
+	case *types.WorkflowExecutionAlreadyStartedError:
 		scope.IncCounter(metrics.CadenceErrExecutionAlreadyStartedCounter)
 		return err
-	case *gen.DomainAlreadyExistsError:
+	case *types.DomainAlreadyExistsError:
 		scope.IncCounter(metrics.CadenceErrDomainAlreadyExistsCounter)
 		return err
-	case *gen.CancellationAlreadyRequestedError:
+	case *types.CancellationAlreadyRequestedError:
 		scope.IncCounter(metrics.CadenceErrCancellationAlreadyRequestedCounter)
 		return err
-	case *gen.QueryFailedError:
+	case *types.QueryFailedError:
 		scope.IncCounter(metrics.CadenceErrQueryFailedCounter)
 		return err
-	case *gen.LimitExceededError:
+	case *types.LimitExceededError:
 		scope.IncCounter(metrics.CadenceErrLimitExceededCounter)
 		return err
-	case *gen.ClientVersionNotSupportedError:
+	case *types.ClientVersionNotSupportedError:
 		scope.IncCounter(metrics.CadenceErrClientVersionNotSupportedCounter)
 		return err
 	case *yarpcerrors.Status:
@@ -3745,7 +3710,7 @@ func verifyHistoryIsComplete(
 	if !isFirstPage { // atleast one page of history has been read previously
 		if firstEventID <= expectedFirstEventID {
 			// not first page and no events have been read in the previous pages - not possible
-			return &gen.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: fmt.Sprintf(
 					"invalid history: expected first eventID to be > %v but got %v", expectedFirstEventID, firstEventID),
 			}
@@ -3767,7 +3732,7 @@ func verifyHistoryIsComplete(
 		return nil
 	}
 
-	return &gen.InternalServiceError{
+	return &types.InternalServiceError{
 		Message: fmt.Sprintf(
 			"incomplete history: "+
 				"expected events [%v-%v] but got events [%v-%v] of length %v:"+
@@ -3798,8 +3763,8 @@ func serializeHistoryToken(token *getHistoryContinuationToken) ([]byte, error) {
 	return bytes, err
 }
 
-func createServiceBusyError() *gen.ServiceBusyError {
-	err := &gen.ServiceBusyError{}
+func createServiceBusyError() *types.ServiceBusyError {
+	err := &types.ServiceBusyError{}
 	err.Message = "Too many outstanding requests to the cadence service"
 	return err
 }
@@ -3854,7 +3819,7 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 	var failoverVersion *int64
 	for resp := range respChan {
 		if resp == nil {
-			return &gen.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: "Failed to verify failover version from all clusters",
 			}
 		}
@@ -3862,7 +3827,7 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 			failoverVersion = resp.FailoverVersion
 		}
 		if *failoverVersion != resp.GetFailoverVersion() {
-			return &gen.BadRequestError{
+			return &types.BadRequestError{
 				Message: "Concurrent failover is not allow.",
 			}
 		}
@@ -3879,12 +3844,11 @@ func (wh *WorkflowHandler) historyArchived(ctx context.Context, request *gen.Get
 		Execution:  request.Execution,
 	}
 	_, err := wh.GetHistoryClient().GetMutableState(ctx, thrift.ToGetMutableStateRequest(getMutableStateRequest))
-	err = thrift.FromError(err)
 	if err == nil {
 		return false
 	}
 	switch err.(type) {
-	case *gen.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		// the only case in which history is assumed to be archived is if getting mutable state returns entity not found error
 		return true
 	}

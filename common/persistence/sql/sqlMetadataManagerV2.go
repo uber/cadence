@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"time"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -61,18 +60,18 @@ func newMetadataPersistenceV2(
 func updateMetadata(ctx context.Context, tx sqlplugin.Tx, oldNotificationVersion int64) error {
 	result, err := tx.UpdateDomainMetadata(ctx, &sqlplugin.DomainMetadataRow{NotificationVersion: oldNotificationVersion})
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to update domain metadata. Error: %v", err),
 		}
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Could not verify whether domain metadata update occurred. Error: %v", err),
 		}
 	} else if rowsAffected != 1 {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to update domain metadata. <>1 rows affected. Error: %v", err),
 		}
 	}
@@ -83,7 +82,7 @@ func updateMetadata(ctx context.Context, tx sqlplugin.Tx, oldNotificationVersion
 func lockMetadata(ctx context.Context, tx sqlplugin.Tx) error {
 	err := tx.LockDomainMetadata(ctx)
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to lock domain metadata. Error: %v", err),
 		}
 	}
@@ -151,7 +150,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(
 			IsGlobal:     request.IsGlobalDomain,
 		}); err1 != nil {
 			if m.db.IsDupEntryError(err1) {
-				return &workflow.DomainAlreadyExistsError{
+				return &types.DomainAlreadyExistsError{
 					Message: fmt.Sprintf("name: %v", request.Info.Name),
 				}
 			}
@@ -176,7 +175,7 @@ func (m *sqlMetadataManagerV2) GetDomain(
 	filter := &sqlplugin.DomainFilter{}
 	switch {
 	case request.Name != "" && request.ID != "":
-		return nil, &workflow.BadRequestError{
+		return nil, &types.BadRequestError{
 			Message: "GetDomain operation failed.  Both ID and Name specified in request.",
 		}
 	case request.Name != "":
@@ -184,7 +183,7 @@ func (m *sqlMetadataManagerV2) GetDomain(
 	case request.ID != "":
 		filter.ID = sqlplugin.UUIDPtr(sqlplugin.MustParseUUID(request.ID))
 	default:
-		return nil, &workflow.BadRequestError{
+		return nil, &types.BadRequestError{
 			Message: "GetDomain operation failed.  Both ID and Name are empty.",
 		}
 	}
@@ -199,11 +198,11 @@ func (m *sqlMetadataManagerV2) GetDomain(
 				identity = request.ID
 			}
 
-			return nil, &workflow.EntityNotExistsError{
+			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Domain %s does not exist.", identity),
 			}
 		default:
-			return nil, &workflow.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("GetDomain operation failed. Error %v", err),
 			}
 		}
@@ -375,7 +374,7 @@ func (m *sqlMetadataManagerV2) GetMetadata(
 ) (*persistence.GetMetadataResponse, error) {
 	row, err := m.db.SelectFromDomainMetadata(ctx)
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("GetMetadata operation failed. Error: %v", err),
 		}
 	}
@@ -399,7 +398,7 @@ func (m *sqlMetadataManagerV2) ListDomains(
 		if err == sql.ErrNoRows {
 			return &persistence.InternalListDomainsResponse{}, nil
 		}
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListDomains operation failed. Failed to get domain rows. Error: %v", err),
 		}
 	}

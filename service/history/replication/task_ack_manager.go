@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	exec "github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
@@ -284,7 +285,7 @@ func (t *taskAckManagerImpl) processReplication(
 		release(nil)
 
 		return action(targetActivityInfo, targetVersionHistory)
-	case *shared.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		return nil, nil
 	default:
 		return nil, err
@@ -325,7 +326,7 @@ func (t *taskAckManagerImpl) getEventsBlob(
 	}
 
 	if len(eventBatchBlobs) != 1 {
-		return nil, &shared.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "replicatorQueueProcessor encounter more than 1 NDC raw event batch",
 		}
 	}
@@ -614,7 +615,7 @@ func getVersionHistoryItems(
 ) ([]*shared.VersionHistoryItem, []byte, error) {
 
 	if versionHistories == nil {
-		return nil, nil, &shared.InternalServiceError{
+		return nil, nil, &types.InternalServiceError{
 			Message: "replicatorQueueProcessor encounter workflow without version histories",
 		}
 	}

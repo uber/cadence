@@ -445,12 +445,12 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 		{
 			Name:     "nil request",
 			Request:  nil,
-			Expected: &shared.BadRequestError{Message: "Request is nil."},
+			Expected: &types.BadRequestError{Message: "Request is nil."},
 		},
 		{
 			Name:     "empty request",
 			Request:  &admin.AddSearchAttributeRequest{},
-			Expected: &shared.BadRequestError{Message: "SearchAttributes are not provided"},
+			Expected: &types.BadRequestError{Message: "SearchAttributes are not provided"},
 		},
 		{
 			Name: "no advanced config",
@@ -459,7 +459,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 					"CustomKeywordField": 1,
 				},
 			},
-			Expected: &shared.BadRequestError{Message: "AdvancedVisibilityStore is not configured for this Cadence Cluster"},
+			Expected: &types.BadRequestError{Message: "AdvancedVisibilityStore is not configured for this Cadence Cluster"},
 		},
 	}
 	for _, testCase := range testCases1 {
@@ -489,7 +489,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 					"WorkflowID": 1,
 				},
 			},
-			Expected: &shared.BadRequestError{Message: "Key [WorkflowID] is reserved by system"},
+			Expected: &types.BadRequestError{Message: "Key [WorkflowID] is reserved by system"},
 		},
 		{
 			Name: "key already whitelisted",
@@ -498,7 +498,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 					"testkey": 1,
 				},
 			},
-			Expected: &shared.BadRequestError{Message: "Key [testkey] is already whitelist"},
+			Expected: &types.BadRequestError{Message: "Key [testkey] is already whitelist"},
 		},
 	}
 	for _, testCase := range testCases2 {
@@ -512,7 +512,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 				"testkey2": 1,
 			},
 		},
-		Expected: &shared.InternalServiceError{Message: "Failed to update dynamic config, err: error"},
+		Expected: &types.InternalServiceError{Message: "Failed to update dynamic config, err: error"},
 	}
 	dynamicConfig.EXPECT().UpdateValue(dynamicconfig.ValidSearchAttributes, map[string]interface{}{
 		"testkey":  shared.IndexedValueTypeKeyword,
@@ -530,7 +530,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 				"testkey3": -1,
 			},
 		},
-		Expected: &shared.BadRequestError{Message: "Unknown value type, IndexedValueType(-1)"},
+		Expected: &types.BadRequestError{Message: "Unknown value type, IndexedValueType(-1)"},
 	}
 	s.Equal(convertFailedTest.Expected, handler.AddSearchAttribute(ctx, convertFailedTest.Request))
 
@@ -544,7 +544,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 				"testkey4": 1,
 			},
 		},
-		Expected: &shared.InternalServiceError{Message: "Failed to update ES mapping, err: error"},
+		Expected: &types.InternalServiceError{Message: "Failed to update ES mapping, err: error"},
 	}
 	s.Equal(esErrorTest.Expected, handler.AddSearchAttribute(ctx, esErrorTest.Request))
 }
@@ -575,7 +575,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Permission() {
 			Request: &admin.AddSearchAttributeRequest{
 				SecurityToken: common.StringPtr(common.DefaultAdminOperationToken),
 			},
-			Expected: &shared.BadRequestError{Message: "SearchAttributes are not provided"},
+			Expected: &types.BadRequestError{Message: "SearchAttributes are not provided"},
 		},
 	}
 	for _, testCase := range testCases {
