@@ -27,8 +27,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/uber/cadence/common/types/mapper/thrift"
-
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	cclient "go.uber.org/cadence/client"
 
@@ -41,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (

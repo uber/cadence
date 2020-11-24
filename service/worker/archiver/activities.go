@@ -24,8 +24,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/uber/cadence/common/types/mapper/thrift"
-
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 
@@ -34,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
