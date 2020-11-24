@@ -48,7 +48,6 @@ type (
 	// elasticV7 implements Client
 	elasticV7 struct {
 		client     *elastic.Client
-		config     *config.VisibilityConfig
 		logger     log.Logger
 		serializer p.PayloadSerializer
 	}
@@ -79,7 +78,6 @@ type (
 // NewV7Client returns a new implementation of GenericClient
 func NewV7Client(
 	connectConfig *config.ElasticSearchConfig,
-	visibilityConfig *config.VisibilityConfig,
 	logger log.Logger,
 	clientOptFuncs ...elastic.ClientOptionFunc,
 ) (GenericClient, error) {
@@ -98,7 +96,6 @@ func NewV7Client(
 
 	return &elasticV7{
 		client:     client,
-		config:     visibilityConfig,
 		logger:     logger,
 		serializer: p.NewPayloadSerializer(),
 	}, nil
@@ -152,7 +149,7 @@ func (c *elasticV7) Search(ctx context.Context, request *SearchRequest) (*p.Inte
 		return nil, err
 	}
 
-	return c.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.ListRequest.PageSize, request.Filter)
+	return c.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.ListRequest.PageSize, request.MaxResultWindow, request.Filter)
 }
 
 func (c *elasticV7) SearchByQuery(ctx context.Context, request *SearchByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -166,7 +163,7 @@ func (c *elasticV7) SearchByQuery(ctx context.Context, request *SearchByQueryReq
 		return nil, err
 	}
 
-	return c.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.PageSize, request.Filter)
+	return c.getListWorkflowExecutionsResponse(searchResult.Hits, token, request.PageSize, request.MaxResultWindow, request.Filter)
 }
 
 func (c *elasticV7) ScanByQuery(ctx context.Context, request *ScanByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -499,8 +496,13 @@ func buildPutMappingBodyV7(root, key, valueType string) map[string]interface{} {
 	return body
 }
 
-func (c *elasticV7) getListWorkflowExecutionsResponse(searchHits *elastic.SearchHits,
-	token *ElasticVisibilityPageToken, pageSize int, isRecordValid func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool) (*p.InternalListWorkflowExecutionsResponse, error) {
+func (c *elasticV7) getListWorkflowExecutionsResponse(
+	searchHits *elastic.SearchHits,
+	token *ElasticVisibilityPageToken,
+	pageSize int,
+	maxResultWindow int,
+	isRecordValid func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool,
+) (*p.InternalListWorkflowExecutionsResponse, error) {
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	actualHits := searchHits.Hits
@@ -522,7 +524,7 @@ func (c *elasticV7) getListWorkflowExecutionsResponse(searchHits *elastic.Search
 
 		// ES Search API support pagination using From and PageSize, but has limit that From+PageSize cannot exceed a threshold
 		// to retrieve deeper pages, use ES SearchAfter
-		if searchHits.TotalHits.Value <= int64(c.config.ESIndexMaxResultWindow()-pageSize) { // use ES Search From+Size
+		if searchHits.TotalHits.Value <= int64(maxResultWindow-pageSize) { // use ES Search From+Size
 			nextPageToken, err = SerializePageToken(&ElasticVisibilityPageToken{From: token.From + numOfActualHits})
 		} else { // use ES Search After
 			var sortVal interface{}

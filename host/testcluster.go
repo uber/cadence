@@ -158,7 +158,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 			ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(defaultTestValueOfESIndexMaxResultWindow),
 			ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 		}
-		esClient, err = elasticsearch.NewGenericClient(options.ESConfig, visConfig, logger)
+		esClient, err = elasticsearch.NewGenericClient(options.ESConfig, logger)
 		if err != nil {
 			return nil, err
 		}

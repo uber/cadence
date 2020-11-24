@@ -161,11 +161,12 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutions(
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
-		Index:       v.index,
-		ListRequest: request,
-		IsOpen:      true,
-		Filter:      isRecordValid,
-		MatchQuery:  nil,
+		Index:           v.index,
+		ListRequest:     request,
+		IsOpen:          true,
+		Filter:          isRecordValid,
+		MatchQuery:      nil,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
@@ -184,11 +185,12 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutions(
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
-		Index:       v.index,
-		ListRequest: request,
-		IsOpen:      false,
-		Filter:      isRecordValid,
-		MatchQuery:  nil,
+		Index:           v.index,
+		ListRequest:     request,
+		IsOpen:          false,
+		Filter:          isRecordValid,
+		MatchQuery:      nil,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
@@ -215,6 +217,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByType(
 			Name: es.WorkflowType,
 			Text: request.WorkflowTypeName,
 		},
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
@@ -241,6 +244,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByType(
 			Name: es.WorkflowType,
 			Text: request.WorkflowTypeName,
 		},
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
@@ -267,6 +271,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 			Name: es.WorkflowID,
 			Text: request.WorkflowID,
 		},
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
@@ -293,6 +298,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 			Name: es.WorkflowID,
 			Text: request.WorkflowID,
 		},
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
@@ -319,6 +325,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 			Name: es.CloseStatus,
 			Text: int32(*thrift.FromWorkflowExecutionCloseStatus(&request.Status)),
 		},
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
@@ -373,11 +380,12 @@ func (v *esVisibilityStore) ListWorkflowExecutions(
 	}
 
 	resp, err := v.esClient.SearchByQuery(ctx, &es.SearchByQueryRequest{
-		Index:         v.index,
-		Query:         queryDSL,
-		NextPageToken: request.NextPageToken,
-		PageSize:      request.PageSize,
-		Filter:        nil,
+		Index:           v.index,
+		Query:           queryDSL,
+		NextPageToken:   request.NextPageToken,
+		PageSize:        request.PageSize,
+		Filter:          nil,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
 		return nil, &workflow.InternalServiceError{
