@@ -210,11 +210,11 @@ func (s *nDCIntegrationTestSuite) TestSingleBranch() {
 
 		for s.generator.HasNextVertex() {
 			events := s.generator.GetNextVertices()
-			historyEvents := &shared.History{}
+			historyEvents := &types.History{}
 			for _, event := range events {
-				historyEvents.Events = append(historyEvents.Events, event.GetData().(*shared.HistoryEvent))
+				historyEvents.Events = append(historyEvents.Events, event.GetData().(*types.HistoryEvent))
 			}
-			historyBatch = append(historyBatch, historyEvents)
+			historyBatch = append(historyBatch, thrift.FromHistory(historyEvents))
 		}
 
 		versionHistory := s.eventBatchesToVersionHistory(nil, historyBatch)
@@ -301,11 +301,11 @@ func (s *nDCIntegrationTestSuite) TestMultipleBranches() {
 
 		for i := 0; i < 10 && baseGenerator.HasNextVertex(); i++ {
 			events := baseGenerator.GetNextVertices()
-			historyEvents := &shared.History{}
+			historyEvents := &types.History{}
 			for _, event := range events {
-				historyEvents.Events = append(historyEvents.Events, event.GetData().(*shared.HistoryEvent))
+				historyEvents.Events = append(historyEvents.Events, event.GetData().(*types.HistoryEvent))
 			}
-			baseBranch = append(baseBranch, historyEvents)
+			baseBranch = append(baseBranch, thrift.FromHistory(historyEvents))
 		}
 		baseVersionHistory := s.eventBatchesToVersionHistory(nil, baseBranch)
 
@@ -314,11 +314,11 @@ func (s *nDCIntegrationTestSuite) TestMultipleBranches() {
 		branchGenerator1 := baseGenerator.DeepCopy()
 		for i := 0; i < 10 && branchGenerator1.HasNextVertex(); i++ {
 			events := branchGenerator1.GetNextVertices()
-			historyEvents := &shared.History{}
+			historyEvents := &types.History{}
 			for _, event := range events {
-				historyEvents.Events = append(historyEvents.Events, event.GetData().(*shared.HistoryEvent))
+				historyEvents.Events = append(historyEvents.Events, event.GetData().(*types.HistoryEvent))
 			}
-			branch1 = append(branch1, historyEvents)
+			branch1 = append(branch1, thrift.FromHistory(historyEvents))
 		}
 		branchVersionHistory1 = s.eventBatchesToVersionHistory(branchVersionHistory1, branch1)
 
@@ -328,11 +328,11 @@ func (s *nDCIntegrationTestSuite) TestMultipleBranches() {
 		branchGenerator2.SetVersion(branchGenerator2.GetVersion() + 1)
 		for i := 0; i < 10 && branchGenerator2.HasNextVertex(); i++ {
 			events := branchGenerator2.GetNextVertices()
-			historyEvents := &shared.History{}
+			historyEvents := &types.History{}
 			for _, event := range events {
-				historyEvents.Events = append(historyEvents.Events, event.GetData().(*shared.HistoryEvent))
+				historyEvents.Events = append(historyEvents.Events, event.GetData().(*types.HistoryEvent))
 			}
-			branch2 = append(branch2, historyEvents)
+			branch2 = append(branch2, thrift.FromHistory(historyEvents))
 		}
 		branchVersionHistory2 = s.eventBatchesToVersionHistory(branchVersionHistory2, branch2)
 
@@ -957,11 +957,11 @@ func (s *nDCIntegrationTestSuite) TestEventsReapply_ZombieWorkflow() {
 
 	for s.generator.HasNextVertex() {
 		events := s.generator.GetNextVertices()
-		historyEvents := &shared.History{}
+		historyEvents := &types.History{}
 		for _, event := range events {
-			historyEvents.Events = append(historyEvents.Events, event.GetData().(*shared.HistoryEvent))
+			historyEvents.Events = append(historyEvents.Events, event.GetData().(*types.HistoryEvent))
 		}
-		historyBatch = append(historyBatch, historyEvents)
+		historyBatch = append(historyBatch, thrift.FromHistory(historyEvents))
 	}
 
 	versionHistory := s.eventBatchesToVersionHistory(nil, historyBatch)
@@ -984,11 +984,11 @@ func (s *nDCIntegrationTestSuite) TestEventsReapply_ZombieWorkflow() {
 	s.mockAdminClient["standby"].(*adminClient.MockClient).EXPECT().ReapplyEvents(gomock.Any(), gomock.Any()).Return(nil).Times(2)
 	for i := 0; i < 2 && s.generator.HasNextVertex(); i++ {
 		events := s.generator.GetNextVertices()
-		historyEvents := &shared.History{}
+		historyEvents := &types.History{}
 		for _, event := range events {
-			historyEvents.Events = append(historyEvents.Events, event.GetData().(*shared.HistoryEvent))
+			historyEvents.Events = append(historyEvents.Events, event.GetData().(*types.HistoryEvent))
 		}
-		historyBatch = append(historyBatch, historyEvents)
+		historyBatch = append(historyBatch, thrift.FromHistory(historyEvents))
 	}
 
 	versionHistory = s.eventBatchesToVersionHistory(nil, historyBatch)
@@ -1019,22 +1019,22 @@ func (s *nDCIntegrationTestSuite) TestEventsReapply_UpdateNonCurrentBranch() {
 	var taskID int64
 	for i := 0; i < 4 && s.generator.HasNextVertex(); i++ {
 		events := s.generator.GetNextVertices()
-		historyEvents := &shared.History{}
+		historyEvents := &types.History{}
 		for _, event := range events {
-			historyEvent := event.GetData().(*shared.HistoryEvent)
-			taskID = historyEvent.GetTaskId()
+			historyEvent := event.GetData().(*types.HistoryEvent)
+			taskID = historyEvent.GetTaskID()
 			historyEvents.Events = append(historyEvents.Events, historyEvent)
 			switch historyEvent.GetEventType() {
-			case workflow.EventTypeWorkflowExecutionCompleted,
-				workflow.EventTypeWorkflowExecutionFailed,
-				workflow.EventTypeWorkflowExecutionTimedOut,
-				workflow.EventTypeWorkflowExecutionTerminated,
-				workflow.EventTypeWorkflowExecutionContinuedAsNew,
-				workflow.EventTypeWorkflowExecutionCanceled:
+			case types.EventTypeWorkflowExecutionCompleted,
+				types.EventTypeWorkflowExecutionFailed,
+				types.EventTypeWorkflowExecutionTimedOut,
+				types.EventTypeWorkflowExecutionTerminated,
+				types.EventTypeWorkflowExecutionContinuedAsNew,
+				types.EventTypeWorkflowExecutionCanceled:
 				isWorkflowFinished = true
 			}
 		}
-		baseBranch = append(baseBranch, historyEvents)
+		baseBranch = append(baseBranch, thrift.FromHistory(historyEvents))
 	}
 	if isWorkflowFinished {
 		// cannot proceed since the test below requires workflow not finished
@@ -1060,13 +1060,13 @@ func (s *nDCIntegrationTestSuite) TestEventsReapply_UpdateNonCurrentBranch() {
 	newGenerator.SetVersion(newGenerator.GetVersion() + 1) // simulate events from other cluster
 	for i := 0; i < 4 && newGenerator.HasNextVertex(); i++ {
 		events := newGenerator.GetNextVertices()
-		historyEvents := &shared.History{}
+		historyEvents := &types.History{}
 		for _, event := range events {
-			history := event.GetData().(*shared.HistoryEvent)
-			taskID = history.GetTaskId()
+			history := event.GetData().(*types.HistoryEvent)
+			taskID = history.GetTaskID()
 			historyEvents.Events = append(historyEvents.Events, history)
 		}
-		newBranch = append(newBranch, historyEvents)
+		newBranch = append(newBranch, thrift.FromHistory(historyEvents))
 	}
 	newVersionHistory = s.eventBatchesToVersionHistory(newVersionHistory, newBranch)
 	s.applyEvents(
