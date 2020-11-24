@@ -888,7 +888,10 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 					// CreateWorkflowExecution failed because it already exists
 					executionInfo := createWorkflowExecutionInfo(execution)
 					replicationState := createReplicationState(previous["replication_state"].(map[string]interface{}))
-					lastWriteVersion := replicationState.LastWriteVersion
+					lastWriteVersion = common.EmptyVersion
+					if replicationState != nil {
+						lastWriteVersion = replicationState.LastWriteVersion
+					}
 
 					msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v, columns: (%v)",
 						executionInfo.WorkflowID, executionInfo.RunID, request.RangeID, strings.Join(columns, ","))
@@ -1688,12 +1691,16 @@ func (d *cassandraPersistence) GetCurrentExecution(
 	currentRunID := result["current_run_id"].(gocql.UUID).String()
 	executionInfo := createWorkflowExecutionInfo(result["execution"].(map[string]interface{}))
 	replicationState := createReplicationState(result["replication_state"].(map[string]interface{}))
+	lastWriteVersion := common.EmptyVersion
+	if replicationState != nil {
+		lastWriteVersion = replicationState.LastWriteVersion
+	}
 	return &p.GetCurrentExecutionResponse{
 		RunID:            currentRunID,
 		StartRequestID:   executionInfo.CreateRequestID,
 		State:            executionInfo.State,
 		CloseStatus:      executionInfo.CloseStatus,
-		LastWriteVersion: replicationState.LastWriteVersion,
+		LastWriteVersion: lastWriteVersion,
 	}, nil
 }
 
