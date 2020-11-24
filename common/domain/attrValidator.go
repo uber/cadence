@@ -23,7 +23,6 @@ package domain
 import (
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -53,10 +52,10 @@ func (d *AttrValidatorImpl) validateDomainConfig(config *persistence.DomainConfi
 	if config.Retention < int32(d.minRetentionDays) {
 		return errInvalidRetentionPeriod
 	}
-	if config.HistoryArchivalStatus == shared.ArchivalStatusEnabled && len(config.HistoryArchivalURI) == 0 {
+	if config.HistoryArchivalStatus == types.ArchivalStatusEnabled && len(config.HistoryArchivalURI) == 0 {
 		return errInvalidArchivalConfig
 	}
-	if config.VisibilityArchivalStatus == shared.ArchivalStatusEnabled && len(config.VisibilityArchivalURI) == 0 {
+	if config.VisibilityArchivalStatus == types.ArchivalStatusEnabled && len(config.VisibilityArchivalURI) == 0 {
 		return errInvalidArchivalConfig
 	}
 	return nil

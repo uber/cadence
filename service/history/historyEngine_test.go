@@ -1626,8 +1626,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadBinary() {
 		&persistence.DomainInfo{ID: domainID, Name: constants.TestDomainName},
 		&p.DomainConfig{
 			Retention: 2,
-			BadBinaries: workflow.BadBinaries{
-				Binaries: map[string]*workflow.BadBinaryInfo{
+			BadBinaries: types.BadBinaries{
+				Binaries: map[string]*types.BadBinaryInfo{
 					"test-bad-binary": {},
 				},
 			},

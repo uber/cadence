@@ -1197,11 +1197,11 @@ type (
 		// NOTE: this retention is in days, not in seconds
 		Retention                int32
 		EmitMetric               bool
-		HistoryArchivalStatus    workflow.ArchivalStatus
+		HistoryArchivalStatus    types.ArchivalStatus
 		HistoryArchivalURI       string
-		VisibilityArchivalStatus workflow.ArchivalStatus
+		VisibilityArchivalStatus types.ArchivalStatus
 		VisibilityArchivalURI    string
-		BadBinaries              workflow.BadBinaries
+		BadBinaries              types.BadBinaries
 	}
 
 	// DomainReplicationConfig describes the cross DC domain replication configuration

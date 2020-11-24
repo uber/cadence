@@ -47,6 +47,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 )
 
@@ -1953,8 +1954,8 @@ func getBadDecisionCompletedID(ctx context.Context, domain, wid, rid, binChecksu
 		return 0, printErrorAndReturn("DescribeWorkflowExecution failed", err)
 	}
 
-	_, p := execution.FindAutoResetPoint(clock.NewRealTimeSource(), &shared.BadBinaries{
-		Binaries: map[string]*shared.BadBinaryInfo{
+	_, p := execution.FindAutoResetPoint(clock.NewRealTimeSource(), &types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
 			binChecksum: {},
 		},
 	}, resp.WorkflowExecutionInfo.AutoResetPoints)

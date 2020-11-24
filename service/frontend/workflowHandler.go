@@ -251,7 +251,7 @@ func (wh *WorkflowHandler) Health(ctx context.Context) (*health.HealthStatus, er
 // entity within Cadence, used as a container for all resources like workflow executions, tasklists, etc.  Domain
 // acts as a sandbox and provides isolation for all resources within the domain.  All resources belongs to exactly one
 // domain.
-func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *gen.RegisterDomainRequest) (retError error) {
+func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *types.RegisterDomainRequest) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfile(metrics.FrontendRegisterDomainScope)
@@ -291,8 +291,8 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 // ListDomains returns the information and configuration for a registered domain.
 func (wh *WorkflowHandler) ListDomains(
 	ctx context.Context,
-	listRequest *gen.ListDomainsRequest,
-) (response *gen.ListDomainsResponse, retError error) {
+	listRequest *types.ListDomainsRequest,
+) (response *types.ListDomainsResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfile(metrics.FrontendListDomainsScope)
@@ -320,8 +320,8 @@ func (wh *WorkflowHandler) ListDomains(
 // DescribeDomain returns the information and configuration for a registered domain.
 func (wh *WorkflowHandler) DescribeDomain(
 	ctx context.Context,
-	describeRequest *gen.DescribeDomainRequest,
-) (response *gen.DescribeDomainResponse, retError error) {
+	describeRequest *types.DescribeDomainRequest,
+) (response *types.DescribeDomainResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfile(metrics.FrontendDescribeDomainScope)
@@ -353,8 +353,8 @@ func (wh *WorkflowHandler) DescribeDomain(
 // UpdateDomain is used to update the information and configuration for a registered domain.
 func (wh *WorkflowHandler) UpdateDomain(
 	ctx context.Context,
-	updateRequest *gen.UpdateDomainRequest,
-) (resp *gen.UpdateDomainResponse, retError error) {
+	updateRequest *types.UpdateDomainRequest,
+) (resp *types.UpdateDomainResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfile(metrics.FrontendUpdateDomainScope)
@@ -402,7 +402,7 @@ func (wh *WorkflowHandler) UpdateDomain(
 // DeprecateDomain us used to update status of a registered domain to DEPRECATED. Once the domain is deprecated
 // it cannot be used to start new workflow executions.  Existing workflow executions will continue to run on
 // deprecated domains.
-func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest *gen.DeprecateDomainRequest) (retError error) {
+func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest *types.DeprecateDomainRequest) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfile(metrics.FrontendDeprecateDomainScope)
@@ -2647,7 +2647,7 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 		return nil, wh.error(err, scope)
 	}
 
-	if entry.GetConfig().VisibilityArchivalStatus != gen.ArchivalStatusEnabled {
+	if entry.GetConfig().VisibilityArchivalStatus != types.ArchivalStatusEnabled {
 		return nil, wh.error(&types.BadRequestError{Message: "Domain is not configured for visibility archival"}, scope)
 	}
 
@@ -3769,12 +3769,12 @@ func createServiceBusyError() *types.ServiceBusyError {
 	return err
 }
 
-func isFailoverRequest(updateRequest *gen.UpdateDomainRequest) bool {
+func isFailoverRequest(updateRequest *types.UpdateDomainRequest) bool {
 	return updateRequest.ReplicationConfiguration != nil && updateRequest.ReplicationConfiguration.ActiveClusterName != nil
 }
 
-func isGraceFailoverRequest(updateRequest *gen.UpdateDomainRequest) bool {
-	return updateRequest.IsSetFailoverTimeoutInSeconds()
+func isGraceFailoverRequest(updateRequest *types.UpdateDomainRequest) bool {
+	return updateRequest.FailoverTimeoutInSeconds != nil
 }
 
 func (wh *WorkflowHandler) checkOngoingFailover(

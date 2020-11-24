@@ -26,8 +26,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
@@ -66,7 +64,7 @@ const (
 type (
 	// ReplicationTaskExecutor is the interface which is to execute domain replication task
 	ReplicationTaskExecutor interface {
-		Execute(task *replicator.DomainTaskAttributes) error
+		Execute(task *types.DomainTaskAttributes) error
 	}
 
 	domainReplicationTaskExecutorImpl struct {
@@ -91,7 +89,7 @@ func NewReplicationTaskExecutor(
 }
 
 // Execute handles receiving of the domain replication task
-func (h *domainReplicationTaskExecutorImpl) Execute(task *replicator.DomainTaskAttributes) error {
+func (h *domainReplicationTaskExecutorImpl) Execute(task *types.DomainTaskAttributes) error {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultDomainRepliationTaskContextTimeout)
 	defer cancel()
 
@@ -100,9 +98,9 @@ func (h *domainReplicationTaskExecutorImpl) Execute(task *replicator.DomainTaskA
 	}
 
 	switch task.GetDomainOperation() {
-	case replicator.DomainOperationCreate:
+	case types.DomainOperationCreate:
 		return h.handleDomainCreationReplicationTask(ctx, task)
-	case replicator.DomainOperationUpdate:
+	case types.DomainOperationUpdate:
 		return h.handleDomainUpdateReplicationTask(ctx, task)
 	default:
 		return ErrInvalidDomainOperation
@@ -110,7 +108,7 @@ func (h *domainReplicationTaskExecutorImpl) Execute(task *replicator.DomainTaskA
 }
 
 // handleDomainCreationReplicationTask handles the domain creation replication task
-func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(ctx context.Context, task *replicator.DomainTaskAttributes) error {
+func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(ctx context.Context, task *types.DomainTaskAttributes) error {
 	// task already validated
 	status, err := h.convertDomainStatusFromThrift(task.Info.Status)
 	if err != nil {
@@ -194,7 +192,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(
 }
 
 // handleDomainUpdateReplicationTask handles the domain update replication task
-func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ctx context.Context, task *replicator.DomainTaskAttributes) error {
+func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ctx context.Context, task *types.DomainTaskAttributes) error {
 	// task already validated
 	status, err := h.convertDomainStatusFromThrift(task.Info.Status)
 	if err != nil {
@@ -274,7 +272,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 	return h.metadataManager.UpdateDomain(ctx, request)
 }
 
-func (h *domainReplicationTaskExecutorImpl) validateDomainReplicationTask(task *replicator.DomainTaskAttributes) error {
+func (h *domainReplicationTaskExecutorImpl) validateDomainReplicationTask(task *types.DomainTaskAttributes) error {
 	if task == nil {
 		return ErrEmptyDomainReplicationTask
 	}
@@ -298,7 +296,7 @@ func (h *domainReplicationTaskExecutorImpl) validateDomainReplicationTask(task *
 }
 
 func (h *domainReplicationTaskExecutorImpl) convertClusterReplicationConfigFromThrift(
-	input []*shared.ClusterReplicationConfiguration) []*persistence.ClusterReplicationConfig {
+	input []*types.ClusterReplicationConfiguration) []*persistence.ClusterReplicationConfig {
 	output := []*persistence.ClusterReplicationConfig{}
 	for _, cluster := range input {
 		clusterName := cluster.GetClusterName()
@@ -307,15 +305,15 @@ func (h *domainReplicationTaskExecutorImpl) convertClusterReplicationConfigFromT
 	return output
 }
 
-func (h *domainReplicationTaskExecutorImpl) convertDomainStatusFromThrift(input *shared.DomainStatus) (int, error) {
+func (h *domainReplicationTaskExecutorImpl) convertDomainStatusFromThrift(input *types.DomainStatus) (int, error) {
 	if input == nil {
 		return 0, ErrInvalidDomainStatus
 	}
 
 	switch *input {
-	case shared.DomainStatusRegistered:
+	case types.DomainStatusRegistered:
 		return persistence.DomainStatusRegistered, nil
-	case shared.DomainStatusDeprecated:
+	case types.DomainStatusDeprecated:
 		return persistence.DomainStatusDeprecated, nil
 	default:
 		return 0, ErrInvalidDomainStatus

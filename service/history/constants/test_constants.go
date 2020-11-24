@@ -21,10 +21,10 @@
 package constants
 
 import (
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 var (
@@ -64,7 +64,7 @@ var (
 		&persistence.DomainInfo{ID: TestDomainID, Name: TestDomainName},
 		&persistence.DomainConfig{
 			Retention:                1,
-			VisibilityArchivalStatus: workflow.ArchivalStatusEnabled,
+			VisibilityArchivalStatus: types.ArchivalStatusEnabled,
 			VisibilityArchivalURI:    "test:///visibility/archival",
 		},
 		&persistence.DomainReplicationConfig{
