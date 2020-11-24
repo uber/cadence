@@ -35,7 +35,6 @@ import (
 // NewGenericClient create a ES client
 func NewGenericClient(
 	connectConfig *config.ElasticSearchConfig,
-	visibilityConfig *config.VisibilityConfig,
 	logger log.Logger,
 ) (GenericClient, error) {
 	if connectConfig.Version == "" {
@@ -43,9 +42,9 @@ func NewGenericClient(
 	}
 	switch connectConfig.Version {
 	case "v6":
-		return NewV6Client(connectConfig, visibilityConfig, logger)
+		return NewV6Client(connectConfig, logger)
 	case "v7":
-		return NewV7Client(connectConfig, visibilityConfig, logger)
+		return NewV7Client(connectConfig, logger)
 	default:
 		return nil, fmt.Errorf("not supported ElasticSearch version: %v", connectConfig.Version)
 	}
@@ -80,11 +79,12 @@ type (
 
 	// SearchRequest is request for Search
 	SearchRequest struct {
-		Index       string
-		ListRequest *p.InternalListWorkflowExecutionsRequest
-		IsOpen      bool
-		Filter      IsRecordValidFilter
-		MatchQuery  *GenericMatch
+		Index           string
+		ListRequest     *p.InternalListWorkflowExecutionsRequest
+		IsOpen          bool
+		Filter          IsRecordValidFilter
+		MatchQuery      *GenericMatch
+		MaxResultWindow int
 	}
 
 	// GenericMatch is a match struct
@@ -95,11 +95,12 @@ type (
 
 	// SearchByQueryRequest is request for SearchByQuery
 	SearchByQueryRequest struct {
-		Index         string
-		Query         string
-		NextPageToken []byte
-		PageSize      int
-		Filter        IsRecordValidFilter
+		Index           string
+		Query           string
+		NextPageToken   []byte
+		PageSize        int
+		Filter          IsRecordValidFilter
+		MaxResultWindow int
 	}
 
 	// ScanByQueryRequest is request for SearchByQuery

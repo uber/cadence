@@ -89,6 +89,8 @@ var (
 	filterByWID    = fmt.Sprintf("map[match:map[WorkflowID:map[query:%s]]]", testWorkflowID)
 	filterByRunID  = fmt.Sprintf("map[match:map[RunID:map[query:%s]]]", testRunID)
 	filterByStatus = fmt.Sprintf("map[match:map[CloseStatus:map[query:%v]]]", testCloseStatus)
+
+	esIndexMaxResultWindow = 3
 )
 
 func TestESVisibilitySuite(t *testing.T) {
@@ -101,7 +103,7 @@ func (s *ESVisibilitySuite) SetupTest() {
 
 	s.mockESClient = &esMocks.GenericClient{}
 	config := &config.VisibilityConfig{
-		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(3),
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(esIndexMaxResultWindow),
 		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 	}
 
@@ -234,6 +236,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed_EmptyRequest() {
 func (s *ESVisibilitySuite) TestListOpenWorkflowExecutions() {
 	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchRequest) bool {
 		s.True(input.IsOpen)
+		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
 
@@ -254,6 +257,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutions() {
 func (s *ESVisibilitySuite) TestListClosedWorkflowExecutions() {
 	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchRequest) bool {
 		s.False(input.IsOpen)
+		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
 
@@ -276,6 +280,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
 		s.True(input.IsOpen)
 		s.Equal(es.WorkflowType, input.MatchQuery.Name)
 		s.Equal(testWorkflowType, input.MatchQuery.Text)
+		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
 
@@ -303,6 +308,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
 		s.False(input.IsOpen)
 		s.Equal(es.WorkflowType, input.MatchQuery.Name)
 		s.Equal(testWorkflowType, input.MatchQuery.Text)
+		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
 
@@ -330,6 +336,7 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByWorkflowID() {
 		s.True(input.IsOpen)
 		s.Equal(es.WorkflowID, input.MatchQuery.Name)
 		s.Equal(testWorkflowID, input.MatchQuery.Text)
+		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
 
@@ -357,6 +364,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByWorkflowID() {
 		s.False(input.IsOpen)
 		s.Equal(es.WorkflowID, input.MatchQuery.Name)
 		s.Equal(testWorkflowID, input.MatchQuery.Text)
+		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
 
@@ -384,6 +392,7 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
 		s.False(input.IsOpen)
 		s.Equal(es.CloseStatus, input.MatchQuery.Name)
 		s.Equal(testCloseStatus, input.MatchQuery.Text)
+		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
 
@@ -705,6 +714,7 @@ func (s *ESVisibilitySuite) TestAddDomainToQuery() {
 func (s *ESVisibilitySuite) TestListWorkflowExecutions() {
 	s.mockESClient.On("SearchByQuery", mock.Anything, mock.MatchedBy(func(input *es.SearchByQueryRequest) bool {
 		s.True(strings.Contains(input.Query, `{"match_phrase":{"CloseStatus":{"query":"5"}}}`))
+		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
 
