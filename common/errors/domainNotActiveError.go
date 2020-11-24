@@ -23,12 +23,12 @@ package errors
 import (
 	"fmt"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 // NewDomainNotActiveError return a domain not exist error
-func NewDomainNotActiveError(domainName string, currentCluster string, activeCluster string) *workflow.DomainNotActiveError {
-	return &workflow.DomainNotActiveError{
+func NewDomainNotActiveError(domainName string, currentCluster string, activeCluster string) *types.DomainNotActiveError {
+	return &types.DomainNotActiveError{
 		Message: fmt.Sprintf(
 			"Domain: %s is active in cluster: %s, while current cluster %s is a standby cluster.",
 			domainName,
@@ -42,8 +42,8 @@ func NewDomainNotActiveError(domainName string, currentCluster string, activeClu
 }
 
 // NewDomainPendingActiveError return a domain not active error
-func NewDomainPendingActiveError(domainName string, currentCluster string) *workflow.DomainNotActiveError {
-	return &workflow.DomainNotActiveError{
+func NewDomainPendingActiveError(domainName string, currentCluster string) *types.DomainNotActiveError {
+	return &types.DomainNotActiveError{
 		Message: fmt.Sprintf(
 			"Domain: %s is pending active in cluster: %s.",
 			domainName,

@@ -23,10 +23,10 @@ package persistence
 import (
 	"context"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -233,9 +233,9 @@ func (p *shardPersistenceClient) updateErrorMetric(scope int, err error) {
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrShardExistsCounter)
 	case *ShardOwnershipLostError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrShardOwnershipLostCounter)
-	case *workflow.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrEntityNotExistsCounter)
-	case *workflow.ServiceBusyError:
+	case *types.ServiceBusyError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	default:
@@ -702,7 +702,7 @@ func (p *workflowExecutionPersistenceClient) updateErrorMetric(scope int, err er
 	switch err.(type) {
 	case *WorkflowExecutionAlreadyStartedError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrExecutionAlreadyStartedCounter)
-	case *workflow.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrEntityNotExistsCounter)
 	case *ShardOwnershipLostError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrShardOwnershipLostCounter)
@@ -713,7 +713,7 @@ func (p *workflowExecutionPersistenceClient) updateErrorMetric(scope int, err er
 	case *TimeoutError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
-	case *workflow.ServiceBusyError:
+	case *types.ServiceBusyError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	default:
@@ -865,7 +865,7 @@ func (p *taskPersistenceClient) updateErrorMetric(scope int, err error) {
 	case *TimeoutError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
-	case *workflow.ServiceBusyError:
+	case *types.ServiceBusyError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	default:
@@ -1007,13 +1007,13 @@ func (p *metadataPersistenceClient) Close() {
 
 func (p *metadataPersistenceClient) updateErrorMetric(scope int, err error) {
 	switch err.(type) {
-	case *workflow.DomainAlreadyExistsError:
+	case *types.DomainAlreadyExistsError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrDomainAlreadyExistsCounter)
-	case *workflow.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrEntityNotExistsCounter)
-	case *workflow.BadRequestError:
+	case *types.BadRequestError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrBadRequestCounter)
-	case *workflow.ServiceBusyError:
+	case *types.ServiceBusyError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	default:
@@ -1289,9 +1289,9 @@ func (p *visibilityPersistenceClient) updateErrorMetric(scope int, err error) {
 	case *TimeoutError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
-	case *workflow.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrEntityNotExistsCounter)
-	case *workflow.ServiceBusyError:
+	case *types.ServiceBusyError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	default:
@@ -1434,14 +1434,14 @@ func (p *historyPersistenceClient) GetHistoryTree(
 
 func (p *historyPersistenceClient) updateErrorMetric(scope int, err error) {
 	switch err.(type) {
-	case *workflow.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrEntityNotExistsCounter)
 	case *ConditionFailedError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrConditionFailedCounter)
 	case *TimeoutError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
-	case *workflow.ServiceBusyError:
+	case *types.ServiceBusyError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	default:

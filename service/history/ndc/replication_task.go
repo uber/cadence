@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -73,21 +74,21 @@ type (
 
 var (
 	// ErrInvalidDomainID is returned if domain ID is invalid
-	ErrInvalidDomainID = &shared.BadRequestError{Message: "invalid domain ID"}
+	ErrInvalidDomainID = &types.BadRequestError{Message: "invalid domain ID"}
 	// ErrInvalidExecution is returned if execution is invalid
-	ErrInvalidExecution = &shared.BadRequestError{Message: "invalid execution"}
+	ErrInvalidExecution = &types.BadRequestError{Message: "invalid execution"}
 	// ErrInvalidRunID is returned if run ID is invalid
-	ErrInvalidRunID = &shared.BadRequestError{Message: "invalid run ID"}
+	ErrInvalidRunID = &types.BadRequestError{Message: "invalid run ID"}
 	// ErrEventIDMismatch is returned if event ID mis-matched
-	ErrEventIDMismatch = &shared.BadRequestError{Message: "event ID mismatch"}
+	ErrEventIDMismatch = &types.BadRequestError{Message: "event ID mismatch"}
 	// ErrEventVersionMismatch is returned if event version mis-matched
-	ErrEventVersionMismatch = &shared.BadRequestError{Message: "event version mismatch"}
+	ErrEventVersionMismatch = &types.BadRequestError{Message: "event version mismatch"}
 	// ErrNoNewRunHistory is returned if there is no new run history
-	ErrNoNewRunHistory = &shared.BadRequestError{Message: "no new run history events"}
+	ErrNoNewRunHistory = &types.BadRequestError{Message: "no new run history events"}
 	// ErrLastEventIsNotContinueAsNew is returned if the last event is not continue as new
-	ErrLastEventIsNotContinueAsNew = &shared.BadRequestError{Message: "last event is not continue as new"}
+	ErrLastEventIsNotContinueAsNew = &types.BadRequestError{Message: "last event is not continue as new"}
 	// ErrEmptyHistoryRawEventBatch indicate that one single batch of history raw events is of size 0
-	ErrEmptyHistoryRawEventBatch = &shared.BadRequestError{Message: "encounter empty history batch"}
+	ErrEmptyHistoryRawEventBatch = &types.BadRequestError{Message: "encounter empty history batch"}
 )
 
 func newReplicationTask(

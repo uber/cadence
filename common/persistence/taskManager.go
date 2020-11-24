@@ -24,6 +24,8 @@ package persistence
 
 import (
 	"context"
+
+	"github.com/uber/cadence/common"
 )
 
 type (
@@ -124,7 +126,7 @@ func (t *taskManager) toInternalTaskInfo(taskInfo *TaskInfo) *InternalTaskInfo {
 		RunID:                  taskInfo.RunID,
 		TaskID:                 taskInfo.TaskID,
 		ScheduleID:             taskInfo.ScheduleID,
-		ScheduleToStartTimeout: taskInfo.ScheduleToStartTimeout,
+		ScheduleToStartTimeout: common.SecondsToDuration(int64(taskInfo.ScheduleToStartTimeout)),
 		Expiry:                 taskInfo.Expiry,
 		CreatedTime:            taskInfo.CreatedTime,
 	}
@@ -139,7 +141,7 @@ func (t *taskManager) fromInternalTaskInfo(internalTaskInfo *InternalTaskInfo) *
 		RunID:                  internalTaskInfo.RunID,
 		TaskID:                 internalTaskInfo.TaskID,
 		ScheduleID:             internalTaskInfo.ScheduleID,
-		ScheduleToStartTimeout: internalTaskInfo.ScheduleToStartTimeout,
+		ScheduleToStartTimeout: int32(internalTaskInfo.ScheduleToStartTimeout.Seconds()),
 		Expiry:                 internalTaskInfo.Expiry,
 		CreatedTime:            internalTaskInfo.CreatedTime,
 	}

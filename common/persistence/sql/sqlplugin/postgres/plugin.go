@@ -131,7 +131,12 @@ func generateCredentialString(user string, password string) string {
 func registerTLSConfig(cfg *config.SQL) (sslParams url.Values, err error) {
 	sslParams = url.Values{}
 	if cfg.TLS != nil && cfg.TLS.Enabled {
-		sslParams.Set("sslmode", "require")
+		sslMode := cfg.TLS.SSLMode
+		if sslMode == "" {
+			// NOTE: Default to require for backward compatibility for Cadence users.
+			sslMode = "require"
+		}
+		sslParams.Set("sslmode", sslMode)
 		sslParams.Set("sslrootcert", cfg.TLS.CaFile)
 		sslParams.Set("sslkey", cfg.TLS.KeyFile)
 		sslParams.Set("sslcert", cfg.TLS.CertFile)

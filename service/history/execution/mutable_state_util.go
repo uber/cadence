@@ -25,6 +25,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -234,7 +235,7 @@ func ScheduleDecision(
 
 	_, err := mutableState.AddDecisionTaskScheduledEvent(false)
 	if err != nil {
-		return &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
+		return &types.InternalServiceError{Message: "Failed to add decision scheduled event."}
 	}
 	return nil
 }

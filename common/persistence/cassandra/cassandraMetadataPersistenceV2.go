@@ -24,13 +24,13 @@ import (
 	"context"
 	"fmt"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -87,7 +87,7 @@ func (m *nosqlDomainManager) CreateDomain(
 
 	if err != nil {
 		if m.db.IsConditionFailedError(err) {
-			return nil, &workflow.DomainAlreadyExistsError{
+			return nil, &types.DomainAlreadyExistsError{
 				Message: fmt.Sprintf("CreateDomain operation failed because of conditional failure, %v", err),
 			}
 		}
@@ -131,11 +131,11 @@ func (m *nosqlDomainManager) GetDomain(
 	request *p.GetDomainRequest,
 ) (*p.InternalGetDomainResponse, error) {
 	if len(request.ID) > 0 && len(request.Name) > 0 {
-		return nil, &workflow.BadRequestError{
+		return nil, &types.BadRequestError{
 			Message: "GetDomain operation failed.  Both ID and Name specified in request.",
 		}
 	} else if len(request.ID) == 0 && len(request.Name) == 0 {
-		return nil, &workflow.BadRequestError{
+		return nil, &types.BadRequestError{
 			Message: "GetDomain operation failed.  Both ID and Name are empty.",
 		}
 	}
@@ -153,7 +153,7 @@ func (m *nosqlDomainManager) GetDomain(
 			identity = ID
 		}
 		if m.db.IsNotFoundError(err) {
-			return &workflow.EntityNotExistsError{
+			return &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Domain %s does not exist.", identity),
 			}
 		}
@@ -174,7 +174,7 @@ func (m *nosqlDomainManager) GetDomain(
 
 	domainConfig, err := m.fromNoSQLInternalDomainConfig(row.Config)
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("cannot convert fromNoSQLInternalDomainConfig, %v ", err),
 		}
 	}
@@ -212,7 +212,7 @@ func (m *nosqlDomainManager) ListDomains(
 
 		domainConfig, err := m.fromNoSQLInternalDomainConfig(row.Config)
 		if err != nil {
-			return nil, &workflow.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("cannot convert fromNoSQLInternalDomainConfig, %v ", err),
 			}
 		}

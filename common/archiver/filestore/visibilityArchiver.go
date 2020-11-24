@@ -29,11 +29,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/util"
 )
 
@@ -139,16 +139,16 @@ func (v *visibilityArchiver) Query(
 	request *archiver.QueryVisibilityRequest,
 ) (*archiver.QueryVisibilityResponse, error) {
 	if err := v.ValidateURI(URI); err != nil {
-		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidURI.Error()}
+		return nil, &types.BadRequestError{Message: archiver.ErrInvalidURI.Error()}
 	}
 
 	if err := archiver.ValidateQueryRequest(request); err != nil {
-		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidQueryVisibilityRequest.Error()}
+		return nil, &types.BadRequestError{Message: archiver.ErrInvalidQueryVisibilityRequest.Error()}
 	}
 
 	parsedQuery, err := v.queryParser.Parse(request.Query)
 	if err != nil {
-		return nil, &shared.BadRequestError{Message: err.Error()}
+		return nil, &types.BadRequestError{Message: err.Error()}
 	}
 
 	if parsedQuery.emptyResult {
@@ -173,14 +173,14 @@ func (v *visibilityArchiver) query(
 		var err error
 		token, err = deserializeQueryVisibilityToken(request.nextPageToken)
 		if err != nil {
-			return nil, &shared.BadRequestError{Message: archiver.ErrNextPageTokenCorrupted.Error()}
+			return nil, &types.BadRequestError{Message: archiver.ErrNextPageTokenCorrupted.Error()}
 		}
 	}
 
 	dirPath := path.Join(URI.Path(), request.domainID)
 	exists, err := util.DirectoryExists(dirPath)
 	if err != nil {
-		return nil, &shared.InternalServiceError{Message: err.Error()}
+		return nil, &types.InternalServiceError{Message: err.Error()}
 	}
 	if !exists {
 		return &archiver.QueryVisibilityResponse{}, nil
@@ -188,12 +188,12 @@ func (v *visibilityArchiver) query(
 
 	files, err := util.ListFiles(dirPath)
 	if err != nil {
-		return nil, &shared.InternalServiceError{Message: err.Error()}
+		return nil, &types.InternalServiceError{Message: err.Error()}
 	}
 
 	files, err = sortAndFilterFiles(files, token)
 	if err != nil {
-		return nil, &shared.InternalServiceError{Message: err.Error()}
+		return nil, &types.InternalServiceError{Message: err.Error()}
 	}
 	if len(files) == 0 {
 		return &archiver.QueryVisibilityResponse{}, nil
@@ -203,12 +203,12 @@ func (v *visibilityArchiver) query(
 	for idx, file := range files {
 		encodedRecord, err := util.ReadFile(path.Join(dirPath, file))
 		if err != nil {
-			return nil, &shared.InternalServiceError{Message: err.Error()}
+			return nil, &types.InternalServiceError{Message: err.Error()}
 		}
 
 		record, err := decodeVisibilityRecord(encodedRecord)
 		if err != nil {
-			return nil, &shared.InternalServiceError{Message: err.Error()}
+			return nil, &types.InternalServiceError{Message: err.Error()}
 		}
 
 		if record.CloseTimestamp < request.parsedQuery.earliestCloseTime {
@@ -225,7 +225,7 @@ func (v *visibilityArchiver) query(
 					}
 					encodedToken, err := serializeToken(newToken)
 					if err != nil {
-						return nil, &shared.InternalServiceError{Message: err.Error()}
+						return nil, &types.InternalServiceError{Message: err.Error()}
 					}
 					response.NextPageToken = encodedToken
 				}
@@ -322,13 +322,13 @@ func matchQuery(record *visibilityRecord, query *parsedQuery) bool {
 	return true
 }
 
-func convertToExecutionInfo(record *visibilityRecord) *shared.WorkflowExecutionInfo {
-	return &shared.WorkflowExecutionInfo{
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(record.WorkflowID),
-			RunId:      common.StringPtr(record.RunID),
+func convertToExecutionInfo(record *visibilityRecord) *types.WorkflowExecutionInfo {
+	return &types.WorkflowExecutionInfo{
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(record.WorkflowID),
+			RunID:      common.StringPtr(record.RunID),
 		},
-		Type: &shared.WorkflowType{
+		Type: &types.WorkflowType{
 			Name: common.StringPtr(record.WorkflowTypeName),
 		},
 		StartTime:     common.Int64Ptr(record.StartTimestamp),
@@ -337,7 +337,7 @@ func convertToExecutionInfo(record *visibilityRecord) *shared.WorkflowExecutionI
 		CloseStatus:   record.CloseStatus.Ptr(),
 		HistoryLength: common.Int64Ptr(record.HistoryLength),
 		Memo:          record.Memo,
-		SearchAttributes: &shared.SearchAttributes{
+		SearchAttributes: &types.SearchAttributes{
 			IndexedFields: archiver.ConvertSearchAttrToBytes(record.SearchAttributes),
 		},
 	}

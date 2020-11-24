@@ -30,11 +30,11 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/shard"
@@ -191,7 +191,7 @@ func (s *taskProcessorSuite) TestProcessTaskAndAck_DomainTrue_ProcessErrNoErr() 
 }
 
 func (s *taskProcessorSuite) TestHandleTaskError_EntityNotExists() {
-	err := &workflow.EntityNotExistsError{}
+	err := &types.EntityNotExistsError{}
 
 	taskInfo := newTaskInfo(s.mockProcessor, nil, s.logger, s.mockShard.GetTimeSource().Now())
 	s.Nil(s.taskProcessor.handleTaskError(s.scope, taskInfo, s.notificationChan, err))
@@ -221,7 +221,7 @@ func (s *taskProcessorSuite) TestHandleTaskError_ErrTaskDiscarded() {
 }
 
 func (s *taskProcessorSuite) TestHandleTaskError_DomainNotActiveError() {
-	err := &workflow.DomainNotActiveError{}
+	err := &types.DomainNotActiveError{}
 
 	taskInfo := newTaskInfo(s.mockProcessor, nil, s.logger, s.mockShard.GetTimeSource().Now())
 	taskInfo.startTime = time.Now().Add(-cache.DomainCacheRefreshInterval * time.Duration(2))

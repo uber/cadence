@@ -30,7 +30,6 @@ import (
 
 	"github.com/uber/cadence/common/persistence/serialization"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -140,7 +139,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 		if m.db.IsDupEntryError(err) {
 			return &p.ConditionFailedError{Msg: fmt.Sprintf("AppendHistoryNodes: row already exist: %v", err)}
 		}
-		return &shared.InternalServiceError{Message: fmt.Sprintf("AppendHistoryEvents: %v", err)}
+		return &types.InternalServiceError{Message: fmt.Sprintf("AppendHistoryEvents: %v", err)}
 	}
 	return nil
 }
@@ -163,7 +162,7 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 		// TODO the inner pagination token can be replaced by a dummy token
 		//  since lastNodeID & lastTxnID are both provided
 		if lastNodeID, err = deserializePageToken(request.NextPageToken); err != nil {
-			return nil, &shared.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("invalid next page token %v", request.NextPageToken)}
 		}
 		minNodeID = lastNodeID + 1
@@ -202,7 +201,7 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 			//  -> batch with lower transaction ID is invalid (happens before)
 			//  -> batch with higher transaction ID is valid
 			if row.NodeID < lastNodeID {
-				return nil, &shared.InternalServiceError{
+				return nil, &types.InternalServiceError{
 					Message: fmt.Sprintf("corrupted data, nodeID cannot decrease"),
 				}
 			} else if row.NodeID > lastNodeID {
@@ -216,11 +215,11 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 
 		switch {
 		case row.NodeID < lastNodeID:
-			return nil, &shared.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("corrupted data, nodeID cannot decrease"),
 			}
 		case row.NodeID == lastNodeID:
-			return nil, &shared.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("corrupted data, same nodeID must have smaller txnID"),
 			}
 		default: // row.NodeID > lastNodeID:

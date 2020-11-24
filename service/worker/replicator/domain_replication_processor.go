@@ -28,10 +28,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.uber.org/cadence/.gen/go/shared"
-
 	"github.com/uber/cadence/.gen/go/replicator"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -40,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -148,7 +146,6 @@ func (p *domainReplicationProcessor) fetchDomainReplicationTasks() {
 	}
 	clientResp, err := p.remotePeer.GetDomainReplicationMessages(ctx, thrift.ToGetDomainReplicationMessagesRequest(request))
 	response := thrift.FromGetDomainReplicationMessagesResponse(clientResp)
-	err = thrift.FromError(err)
 	defer cancel()
 
 	if err != nil {
@@ -188,7 +185,7 @@ func (p *domainReplicationProcessor) putDomainReplicationTaskToDLQ(
 
 	domainAttribute := task.GetDomainTaskAttributes()
 	if domainAttribute == nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: "Domain replication task does not set domain task attribute",
 		}
 	}
@@ -223,7 +220,7 @@ func getWaitDuration() time.Duration {
 
 func isTransientRetryableError(err error) bool {
 	switch err.(type) {
-	case *shared.BadRequestError:
+	case *types.BadRequestError:
 		return false
 	default:
 		return true

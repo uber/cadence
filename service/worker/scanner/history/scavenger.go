@@ -27,7 +27,6 @@ import (
 	"go.uber.org/cadence/activity"
 	"golang.org/x/time/rate"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -35,7 +34,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -239,10 +237,9 @@ func (s *Scavenger) startTaskProcessor(
 					RunID:      common.StringPtr(task.runID),
 				},
 			})
-			err = thrift.FromError(err)
 
 			if err != nil {
-				if _, ok := err.(*shared.EntityNotExistsError); ok {
+				if _, ok := err.(*types.EntityNotExistsError); ok {
 					//deleting history branch
 					var branchToken []byte
 					branchToken, err = p.NewHistoryBranchTokenByBranchID(task.treeID, task.branchID)

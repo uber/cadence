@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -195,7 +196,7 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 		0,
 	)
 	m.Error(err2)
-	m.IsType(&gen.DomainAlreadyExistsError{}, err2)
+	m.IsType(&types.DomainAlreadyExistsError{}, err2)
 	m.Nil(resp2)
 }
 
@@ -234,7 +235,7 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	resp0, err0 := m.GetDomain(ctx, "", "does-not-exist")
 	m.Nil(resp0)
 	m.Error(err0)
-	m.IsType(&gen.EntityNotExistsError{}, err0)
+	m.IsType(&types.EntityNotExistsError{}, err0)
 	testBinaries := gen.BadBinaries{
 		Binaries: map[string]*gen.BadBinaryInfo{
 			"abc": &gen.BadBinaryInfo{
@@ -335,12 +336,12 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 
 	resp4, err4 := m.GetDomain(ctx, id, name)
 	m.Error(err4)
-	m.IsType(&gen.BadRequestError{}, err4)
+	m.IsType(&types.BadRequestError{}, err4)
 	m.Nil(resp4)
 
 	resp5, err5 := m.GetDomain(ctx, "", "")
 	m.Nil(resp5)
-	m.IsType(&gen.BadRequestError{}, err5)
+	m.IsType(&types.BadRequestError{}, err5)
 }
 
 // TestConcurrentCreateDomain test
@@ -948,12 +949,12 @@ func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 
 	resp4, err4 := m.GetDomain(ctx, "", name)
 	m.Error(err4)
-	m.IsType(&gen.EntityNotExistsError{}, err4)
+	m.IsType(&types.EntityNotExistsError{}, err4)
 	m.Nil(resp4)
 
 	resp5, err5 := m.GetDomain(ctx, id, "")
 	m.Error(err5)
-	m.IsType(&gen.EntityNotExistsError{}, err5)
+	m.IsType(&types.EntityNotExistsError{}, err5)
 	m.Nil(resp5)
 
 	id = uuid.New()
@@ -992,12 +993,12 @@ func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 
 	resp8, err8 := m.GetDomain(ctx, "", name)
 	m.Error(err8)
-	m.IsType(&gen.EntityNotExistsError{}, err8)
+	m.IsType(&types.EntityNotExistsError{}, err8)
 	m.Nil(resp8)
 
 	resp9, err9 := m.GetDomain(ctx, id, "")
 	m.Error(err9)
-	m.IsType(&gen.EntityNotExistsError{}, err9)
+	m.IsType(&types.EntityNotExistsError{}, err9)
 	m.Nil(resp9)
 }
 

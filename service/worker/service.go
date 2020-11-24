@@ -28,7 +28,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
@@ -39,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/batcher"
 	"github.com/uber/cadence/service/worker/failovermanager"
@@ -359,7 +359,7 @@ func (s *Service) ensureDomainExists(domain string) {
 	switch err.(type) {
 	case nil:
 		// noop
-	case *shared.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		s.GetLogger().Info(fmt.Sprintf("domain %s does not exist, attempting to register domain", domain))
 		s.registerSystemDomain(domain)
 	default:
@@ -388,7 +388,7 @@ func (s *Service) registerSystemDomain(domain string) {
 		FailoverVersion: common.EmptyVersion,
 	})
 	if err != nil {
-		if _, ok := err.(*shared.DomainAlreadyExistsError); ok {
+		if _, ok := err.(*types.DomainAlreadyExistsError); ok {
 			return
 		}
 		s.GetLogger().Fatal("failed to register system domain", tag.Error(err))

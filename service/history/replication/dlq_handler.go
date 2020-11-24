@@ -26,7 +26,6 @@ import (
 	"context"
 
 	"github.com/uber/cadence/.gen/go/replicator"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
@@ -40,7 +39,7 @@ const (
 )
 
 var (
-	errInvalidCluster = &workflow.BadRequestError{Message: "Invalid target cluster name."}
+	errInvalidCluster = &types.BadRequestError{Message: "Invalid target cluster name."}
 )
 
 type (
@@ -162,7 +161,6 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 			},
 		)
 		response = thrift.FromGetDLQReplicationMessagesResponse(clientResp)
-		err = thrift.FromError(err)
 		if err != nil {
 			return nil, nil, err
 		}

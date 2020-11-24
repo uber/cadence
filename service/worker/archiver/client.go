@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -251,9 +252,9 @@ func (c *client) archiveVisibilityInline(ctx context.Context, request *ClientReq
 		StartTimestamp:     request.ArchiveRequest.StartTimestamp,
 		ExecutionTimestamp: request.ArchiveRequest.ExecutionTimestamp,
 		CloseTimestamp:     request.ArchiveRequest.CloseTimestamp,
-		CloseStatus:        request.ArchiveRequest.CloseStatus,
+		CloseStatus:        *thrift.ToWorkflowExecutionCloseStatus(&request.ArchiveRequest.CloseStatus),
 		HistoryLength:      request.ArchiveRequest.HistoryLength,
-		Memo:               request.ArchiveRequest.Memo,
+		Memo:               thrift.ToMemo(request.ArchiveRequest.Memo),
 		SearchAttributes:   convertSearchAttributesToString(request.ArchiveRequest.SearchAttributes),
 		HistoryArchivalURI: request.ArchiveRequest.URI,
 	})

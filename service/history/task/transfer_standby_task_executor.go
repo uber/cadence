@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -609,7 +610,7 @@ func (t *transferStandbyTaskExecutor) fetchHistoryFromRemote(
 			nil,
 		)
 	} else {
-		err = &workflow.InternalServiceError{
+		err = &types.InternalServiceError{
 			Message: "transferQueueStandbyProcessor encounter empty historyResendInfo",
 		}
 	}

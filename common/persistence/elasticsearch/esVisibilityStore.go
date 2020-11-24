@@ -44,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -168,7 +169,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutions(
 		MatchQuery:  nil,
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListOpenWorkflowExecutions failed, %v", err),
 		}
 	}
@@ -191,7 +192,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutions(
 		MatchQuery:  nil,
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
 		}
 	}
@@ -217,7 +218,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByType(
 		},
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListOpenWorkflowExecutionsByType failed, %v", err),
 		}
 	}
@@ -243,7 +244,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByType(
 		},
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByType failed, %v", err),
 		}
 	}
@@ -269,7 +270,7 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 		},
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListOpenWorkflowExecutionsByWorkflowID failed, %v", err),
 		}
 	}
@@ -295,7 +296,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 		},
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID failed, %v", err),
 		}
 	}
@@ -321,7 +322,7 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 		},
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByStatus failed, %v", err),
 		}
 	}
@@ -334,7 +335,7 @@ func (v *esVisibilityStore) GetClosedWorkflowExecution(
 ) (*p.InternalGetClosedWorkflowExecutionResponse, error) {
 	resp, err := v.esClient.SearchForOneClosedExecution(ctx, v.index, request)
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("SearchForOneClosedExecution failed, %v", err),
 		}
 	}
@@ -369,7 +370,7 @@ func (v *esVisibilityStore) ListWorkflowExecutions(
 
 	queryDSL, err := v.getESQueryDSL(request, token)
 	if err != nil {
-		return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
+		return nil, &types.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
 	}
 
 	resp, err := v.esClient.SearchByQuery(ctx, &es.SearchByQueryRequest{
@@ -380,7 +381,7 @@ func (v *esVisibilityStore) ListWorkflowExecutions(
 		Filter:        nil,
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListWorkflowExecutions failed, %v", err),
 		}
 	}
@@ -403,7 +404,7 @@ func (v *esVisibilityStore) ScanWorkflowExecutions(
 	if len(token.ScrollID) == 0 { // first call
 		queryDSL, err = getESQueryDSLForScan(request)
 		if err != nil {
-			return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
+			return nil, &types.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
 		}
 	}
 
@@ -414,7 +415,7 @@ func (v *esVisibilityStore) ScanWorkflowExecutions(
 		PageSize:      request.PageSize,
 	})
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ScanWorkflowExecutions failed, %v", err),
 		}
 	}
@@ -429,12 +430,12 @@ func (v *esVisibilityStore) CountWorkflowExecutions(
 
 	queryDSL, err := getESQueryDSLForCount(request)
 	if err != nil {
-		return nil, &workflow.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
+		return nil, &types.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
 	}
 
 	count, err := v.esClient.CountByQuery(ctx, v.index, queryDSL)
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("CountWorkflowExecutions failed. Error: %v", err),
 		}
 	}

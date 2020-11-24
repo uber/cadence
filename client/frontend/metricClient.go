@@ -37,7 +37,10 @@ type metricClient struct {
 }
 
 // NewMetricClient creates a new instance of Client that emits metrics
-func NewMetricClient(client Client, metricsClient metrics.Client) Client {
+func NewMetricClient(
+	client Client,
+	metricsClient metrics.Client,
+) Client {
 	return &metricClient{
 		client:        client,
 		metricsClient: metricsClient,

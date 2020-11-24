@@ -24,9 +24,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -83,7 +83,7 @@ func (v *visibilityManagerWrapper) RecordWorkflowExecutionStarted(
 		}
 		return v.visibilityManager.RecordWorkflowExecutionStarted(ctx, request)
 	default:
-		return &shared.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Unknown advanced visibility writing mode: %s", v.advancedVisWritingMode()),
 		}
 	}
@@ -104,7 +104,7 @@ func (v *visibilityManagerWrapper) RecordWorkflowExecutionClosed(
 		}
 		return v.visibilityManager.RecordWorkflowExecutionClosed(ctx, request)
 	default:
-		return &shared.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Unknown advanced visibility writing mode: %s", v.advancedVisWritingMode()),
 		}
 	}

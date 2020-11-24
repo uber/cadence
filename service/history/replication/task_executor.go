@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/ndc"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/shard"
@@ -144,12 +145,12 @@ func (e *taskExecutorImpl) handleActivityTask(
 		defer stopwatch.Stop()
 
 		resendErr := e.historyResender.SendSingleWorkflowHistory(
-			retryErr.GetDomainId(),
-			retryErr.GetWorkflowId(),
-			retryErr.GetRunId(),
-			retryErr.StartEventId,
+			retryErr.GetDomainID(),
+			retryErr.GetWorkflowID(),
+			retryErr.GetRunID(),
+			retryErr.StartEventID,
 			retryErr.StartEventVersion,
-			retryErr.EndEventId,
+			retryErr.EndEventID,
 			retryErr.EndEventVersion,
 		)
 		switch {
@@ -158,17 +159,17 @@ func (e *taskExecutorImpl) handleActivityTask(
 		case resendErr == ndc.ErrSkipTask:
 			e.logger.Error(
 				"skip replication sync activity task",
-				tag.WorkflowDomainID(retryErr.GetDomainId()),
-				tag.WorkflowID(retryErr.GetWorkflowId()),
-				tag.WorkflowRunID(retryErr.GetRunId()),
+				tag.WorkflowDomainID(retryErr.GetDomainID()),
+				tag.WorkflowID(retryErr.GetWorkflowID()),
+				tag.WorkflowRunID(retryErr.GetRunID()),
 			)
 			return nil
 		default:
 			e.logger.Error(
 				"error resend history for sync activity",
-				tag.WorkflowDomainID(retryErr.GetDomainId()),
-				tag.WorkflowID(retryErr.GetWorkflowId()),
-				tag.WorkflowRunID(retryErr.GetRunId()),
+				tag.WorkflowDomainID(retryErr.GetDomainID()),
+				tag.WorkflowID(retryErr.GetWorkflowID()),
+				tag.WorkflowRunID(retryErr.GetRunID()),
 				tag.Error(resendErr),
 			)
 			// should return the replication error, not the resending error
@@ -216,12 +217,12 @@ func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
 	defer resendStopWatch.Stop()
 
 	resendErr := e.historyResender.SendSingleWorkflowHistory(
-		retryErr.GetDomainId(),
-		retryErr.GetWorkflowId(),
-		retryErr.GetRunId(),
-		retryErr.StartEventId,
+		retryErr.GetDomainID(),
+		retryErr.GetWorkflowID(),
+		retryErr.GetRunID(),
+		retryErr.StartEventID,
 		retryErr.StartEventVersion,
-		retryErr.EndEventId,
+		retryErr.EndEventID,
 		retryErr.EndEventVersion,
 	)
 	switch {
@@ -230,17 +231,17 @@ func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
 	case resendErr == ndc.ErrSkipTask:
 		e.logger.Error(
 			"skip replication history task",
-			tag.WorkflowDomainID(retryErr.GetDomainId()),
-			tag.WorkflowID(retryErr.GetWorkflowId()),
-			tag.WorkflowRunID(retryErr.GetRunId()),
+			tag.WorkflowDomainID(retryErr.GetDomainID()),
+			tag.WorkflowID(retryErr.GetWorkflowID()),
+			tag.WorkflowRunID(retryErr.GetRunID()),
 		)
 		return nil
 	default:
 		e.logger.Error(
 			"error resend history for history event v2",
-			tag.WorkflowDomainID(retryErr.GetDomainId()),
-			tag.WorkflowID(retryErr.GetWorkflowId()),
-			tag.WorkflowRunID(retryErr.GetRunId()),
+			tag.WorkflowDomainID(retryErr.GetDomainID()),
+			tag.WorkflowID(retryErr.GetWorkflowID()),
+			tag.WorkflowRunID(retryErr.GetRunID()),
 			tag.Error(resendErr),
 		)
 		// should return the replication error, not the resending error
@@ -285,8 +286,8 @@ FilterLoop:
 
 func (e *taskExecutorImpl) convertRetryTaskV2Error(
 	err error,
-) (*shared.RetryTaskV2Error, bool) {
+) (*types.RetryTaskV2Error, bool) {
 
-	retError, ok := err.(*shared.RetryTaskV2Error)
+	retError, ok := err.(*types.RetryTaskV2Error)
 	return retError, ok
 }

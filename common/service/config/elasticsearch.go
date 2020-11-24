@@ -37,6 +37,9 @@ type (
 		Username string `yaml:username` //nolint:govet
 		// optional password to communicate with ElasticSearch
 		Password string `yaml:password` //nolint:govet
+		// optional to disable sniff, according to issues on Github,
+		// Sniff could cause issue like "no Elasticsearch node available"
+		DisableSniff bool `yaml:disableSniff`
 	}
 )
 

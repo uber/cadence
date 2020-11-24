@@ -39,7 +39,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 )
 
@@ -310,7 +309,6 @@ func (c *coordinatorImpl) notifyRemoteCoordinator(
 				FailoverMarkerTokens: tokens,
 			},
 		)
-		err = thrift.FromError(err)
 		if err != nil {
 			c.metrics.IncCounter(metrics.FailoverMarkerScope, metrics.FailoverMarkerNotificationFailure)
 			c.logger.Error("Failed to notify failover markers", tag.Error(err))

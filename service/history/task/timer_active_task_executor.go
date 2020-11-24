@@ -32,7 +32,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -135,7 +134,7 @@ Loop:
 		if !ok {
 			errString := fmt.Sprintf("failed to find in user timer event ID: %v", timerSequenceID.EventID)
 			t.logger.Error(errString)
-			return &workflow.InternalServiceError{Message: errString}
+			return &types.InternalServiceError{Message: errString}
 		}
 
 		if expired := timerSequence.IsExpired(referenceTime, timerSequenceID); !expired {
@@ -427,7 +426,7 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 		if scheduledEvent.ActivityTaskScheduledEventAttributes.Domain != nil {
 			domainEntry, err := t.shard.GetDomainCache().GetDomain(scheduledEvent.ActivityTaskScheduledEventAttributes.GetDomain())
 			if err != nil {
-				return &workflow.InternalServiceError{Message: "unable to re-schedule activity across domain."}
+				return &types.InternalServiceError{Message: "unable to re-schedule activity across domain."}
 			}
 			targetDomainID = domainEntry.GetInfo().ID
 		}
@@ -443,7 +442,7 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 
 	release(nil) // release earlier as we don't need the lock anymore
 
-	err = t.shard.GetService().GetMatchingClient().AddActivityTask(ctx, &types.AddActivityTaskRequest{
+	return t.shard.GetService().GetMatchingClient().AddActivityTask(ctx, &types.AddActivityTaskRequest{
 		DomainUUID:                    common.StringPtr(targetDomainID),
 		SourceDomainUUID:              common.StringPtr(domainID),
 		Execution:                     &execution,
@@ -451,7 +450,6 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 		ScheduleID:                    common.Int64Ptr(scheduledID),
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
 	})
-	return thrift.FromError(err)
 }
 
 func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
