@@ -50,6 +50,7 @@ import (
 	"github.com/uber/cadence/common/resource"
 	dc "github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -936,25 +937,25 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetFirstPage() {
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(domainEntry, nil).AnyTimes()
 
 	nextPageToken := []byte{'1', '2', '3'}
-	historyBatch1 := &shared.History{
-		Events: []*shared.HistoryEvent{
-			&shared.HistoryEvent{EventId: common.Int64Ptr(1)},
-			&shared.HistoryEvent{EventId: common.Int64Ptr(2)},
+	historyBatch1 := &types.History{
+		Events: []*types.HistoryEvent{
+			{EventID: common.Int64Ptr(1)},
+			{EventID: common.Int64Ptr(2)},
 		},
 	}
-	historyBatch2 := &shared.History{
-		Events: []*shared.HistoryEvent{
-			&shared.HistoryEvent{EventId: common.Int64Ptr(3)},
-			&shared.HistoryEvent{EventId: common.Int64Ptr(4)},
-			&shared.HistoryEvent{EventId: common.Int64Ptr(5)},
+	historyBatch2 := &types.History{
+		Events: []*types.HistoryEvent{
+			{EventID: common.Int64Ptr(3)},
+			{EventID: common.Int64Ptr(4)},
+			{EventID: common.Int64Ptr(5)},
 		},
 	}
-	history := &shared.History{}
+	history := &types.History{}
 	history.Events = append(history.Events, historyBatch1.Events...)
 	history.Events = append(history.Events, historyBatch2.Events...)
 	s.mockHistoryArchiver.On("Get", mock.Anything, mock.Anything, mock.Anything).Return(&archiver.GetHistoryResponse{
 		NextPageToken:  nextPageToken,
-		HistoryBatches: []*shared.History{historyBatch1, historyBatch2},
+		HistoryBatches: []*types.History{historyBatch1, historyBatch2},
 	}, nil)
 	s.mockArchiverProvider.On("GetHistoryArchiver", mock.Anything, mock.Anything).Return(s.mockHistoryArchiver, nil)
 
@@ -964,7 +965,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetFirstPage() {
 	s.NoError(err)
 	s.NotNil(resp)
 	s.NotNil(resp.History)
-	s.Equal(history, resp.History)
+	s.Equal(history, thrift.ToHistory(resp.History))
 	s.Equal(nextPageToken, resp.NextPageToken)
 	s.True(resp.GetArchived())
 }

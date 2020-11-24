@@ -20,6 +20,12 @@
 
 package types
 
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
 // AddActivityTaskRequest is an internal type (TBD...)
 type AddActivityTaskRequest struct {
 	DomainUUID                    *string            `json:"domainUUID,omitempty"`
@@ -1137,6 +1143,42 @@ type TaskSource int32
 // Ptr is a helper function for getting pointer value
 func (e TaskSource) Ptr() *TaskSource {
 	return &e
+}
+
+// String returns a readable string representation of TaskSource.
+func (e TaskSource) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "History"
+	case 1:
+		return "DbBacklog"
+	}
+	return fmt.Sprintf("TaskSource(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *TaskSource) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "history":
+		*e = TaskSourceHistory
+		return nil
+	case "dbbacklog":
+		*e = TaskSourceDbBacklog
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "TaskSource", err)
+		}
+		*e = TaskSource(val)
+		return nil
+	}
+}
+
+// MarshalText encodes TaskSource to text.
+func (e TaskSource) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (

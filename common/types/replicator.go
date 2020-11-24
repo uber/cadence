@@ -20,12 +20,54 @@
 
 package types
 
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
 // DLQType is an internal type (TBD...)
 type DLQType int32
 
 // Ptr is a helper function for getting pointer value
 func (e DLQType) Ptr() *DLQType {
 	return &e
+}
+
+// String returns a readable string representation of DLQType.
+func (e DLQType) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "Replication"
+	case 1:
+		return "Domain"
+	}
+	return fmt.Sprintf("DLQType(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *DLQType) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "replication":
+		*e = DLQTypeReplication
+		return nil
+	case "domain":
+		*e = DLQTypeDomain
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "DLQType", err)
+		}
+		*e = DLQType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes DLQType to text.
+func (e DLQType) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (
@@ -41,6 +83,42 @@ type DomainOperation int32
 // Ptr is a helper function for getting pointer value
 func (e DomainOperation) Ptr() *DomainOperation {
 	return &e
+}
+
+// String returns a readable string representation of DomainOperation.
+func (e DomainOperation) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "Create"
+	case 1:
+		return "Update"
+	}
+	return fmt.Sprintf("DomainOperation(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *DomainOperation) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "create":
+		*e = DomainOperationCreate
+		return nil
+	case "update":
+		*e = DomainOperationUpdate
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "DomainOperation", err)
+		}
+		*e = DomainOperation(val)
+		return nil
+	}
+}
+
+// MarshalText encodes DomainOperation to text.
+func (e DomainOperation) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (
@@ -749,6 +827,67 @@ type ReplicationTaskType int32
 // Ptr is a helper function for getting pointer value
 func (e ReplicationTaskType) Ptr() *ReplicationTaskType {
 	return &e
+}
+
+// String returns a readable string representation of ReplicationTaskType.
+func (e ReplicationTaskType) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "Domain"
+	case 1:
+		return "History"
+	case 2:
+		return "SyncShardStatus"
+	case 3:
+		return "SyncActivity"
+	case 4:
+		return "HistoryMetadata"
+	case 5:
+		return "HistoryV2"
+	case 6:
+		return "FailoverMarker"
+	}
+	return fmt.Sprintf("ReplicationTaskType(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *ReplicationTaskType) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "domain":
+		*e = ReplicationTaskTypeDomain
+		return nil
+	case "history":
+		*e = ReplicationTaskTypeHistory
+		return nil
+	case "syncshardstatus":
+		*e = ReplicationTaskTypeSyncShardStatus
+		return nil
+	case "syncactivity":
+		*e = ReplicationTaskTypeSyncActivity
+		return nil
+	case "historymetadata":
+		*e = ReplicationTaskTypeHistoryMetadata
+		return nil
+	case "historyv2":
+		*e = ReplicationTaskTypeHistoryV2
+		return nil
+	case "failovermarker":
+		*e = ReplicationTaskTypeFailoverMarker
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "ReplicationTaskType", err)
+		}
+		*e = ReplicationTaskType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes ReplicationTaskType to text.
+func (e ReplicationTaskType) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const (

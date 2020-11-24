@@ -41,7 +41,6 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/backoff"
@@ -142,7 +141,7 @@ func (h *historyArchiver) Archive(
 		historyIterator = archiver.NewHistoryIterator(ctx, request, h.container.HistoryV2Manager, targetHistoryBlobSize)
 	}
 
-	historyBatches := []*shared.History{}
+	historyBatches := []*types.History{}
 	for historyIterator.HasNext() {
 		historyBlob, err := getNextHistoryBlob(ctx, historyIterator)
 		if err != nil {

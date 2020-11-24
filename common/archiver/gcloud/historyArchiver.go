@@ -26,7 +26,6 @@ import (
 	"errors"
 	"path/filepath"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/gcloud/connector"
@@ -218,7 +217,7 @@ func (h *historyArchiver) Get(ctx context.Context, URI archiver.URI, request *ar
 	}
 
 	response := &archiver.GetHistoryResponse{}
-	response.HistoryBatches = []*shared.History{}
+	response.HistoryBatches = []*types.History{}
 	numOfEvents := 0
 
 outer:
@@ -314,7 +313,7 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 	return historyBlob, nil
 }
 
-func historyMutated(request *archiver.ArchiveHistoryRequest, historyBatches []*shared.History, isLast bool) bool {
+func historyMutated(request *archiver.ArchiveHistoryRequest, historyBatches []*types.History, isLast bool) bool {
 	lastBatch := historyBatches[len(historyBatches)-1].Events
 	lastEvent := lastBatch[len(lastBatch)-1]
 	lastFailoverVersion := lastEvent.GetVersion()
@@ -325,7 +324,7 @@ func historyMutated(request *archiver.ArchiveHistoryRequest, historyBatches []*s
 	if !isLast {
 		return false
 	}
-	lastEventID := lastEvent.GetEventId()
+	lastEventID := lastEvent.GetEventID()
 	return lastFailoverVersion != request.CloseFailoverVersion || lastEventID+1 != request.NextEventID
 }
 

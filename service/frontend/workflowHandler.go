@@ -2681,7 +2681,7 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 	}
 
 	return &gen.ListArchivedWorkflowExecutionsResponse{
-		Executions:    archiverResponse.Executions,
+		Executions:    thrift.FromWorkflowExecutionInfoArray(archiverResponse.Executions),
 		NextPageToken: archiverResponse.NextPageToken,
 	}, nil
 }
@@ -3896,12 +3896,12 @@ func (wh *WorkflowHandler) getArchivedHistory(
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	history := &gen.History{}
+	history := &types.History{}
 	for _, batch := range resp.HistoryBatches {
 		history.Events = append(history.Events, batch.Events...)
 	}
 	return &gen.GetWorkflowExecutionHistoryResponse{
-		History:       history,
+		History:       thrift.FromHistory(history),
 		NextPageToken: resp.NextPageToken,
 		Archived:      common.BoolPtr(true),
 	}, nil

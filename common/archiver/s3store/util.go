@@ -37,7 +37,6 @@ import (
 
 	"github.com/uber/cadence/common"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/types"
 )
@@ -237,7 +236,7 @@ func download(ctx context.Context, s3cli s3iface.S3API, URI archiver.URI, key st
 	return body, nil
 }
 
-func historyMutated(request *archiver.ArchiveHistoryRequest, historyBatches []*shared.History, isLast bool) bool {
+func historyMutated(request *archiver.ArchiveHistoryRequest, historyBatches []*types.History, isLast bool) bool {
 	lastBatch := historyBatches[len(historyBatches)-1].Events
 	lastEvent := lastBatch[len(lastBatch)-1]
 	lastFailoverVersion := lastEvent.GetVersion()
@@ -248,7 +247,7 @@ func historyMutated(request *archiver.ArchiveHistoryRequest, historyBatches []*s
 	if !isLast {
 		return false
 	}
-	lastEventID := lastEvent.GetEventId()
+	lastEventID := lastEvent.GetEventID()
 	return lastFailoverVersion != request.CloseFailoverVersion || lastEventID+1 != request.NextEventID
 }
 
@@ -261,13 +260,13 @@ func contextExpired(ctx context.Context) bool {
 	}
 }
 
-func convertToExecutionInfo(record *visibilityRecord) *shared.WorkflowExecutionInfo {
-	return &shared.WorkflowExecutionInfo{
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(record.WorkflowID),
-			RunId:      common.StringPtr(record.RunID),
+func convertToExecutionInfo(record *visibilityRecord) *types.WorkflowExecutionInfo {
+	return &types.WorkflowExecutionInfo{
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(record.WorkflowID),
+			RunID:      common.StringPtr(record.RunID),
 		},
-		Type: &shared.WorkflowType{
+		Type: &types.WorkflowType{
 			Name: common.StringPtr(record.WorkflowTypeName),
 		},
 		StartTime:     common.Int64Ptr(record.StartTimestamp),
@@ -276,7 +275,7 @@ func convertToExecutionInfo(record *visibilityRecord) *shared.WorkflowExecutionI
 		CloseStatus:   record.CloseStatus.Ptr(),
 		HistoryLength: common.Int64Ptr(record.HistoryLength),
 		Memo:          record.Memo,
-		SearchAttributes: &shared.SearchAttributes{
+		SearchAttributes: &types.SearchAttributes{
 			IndexedFields: archiver.ConvertSearchAttrToBytes(record.SearchAttributes),
 		},
 	}

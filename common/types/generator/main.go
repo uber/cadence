@@ -76,7 +76,9 @@ func capitalizeID(name string) string {
 }
 
 var funcMap = template.FuncMap{
-	"internal": internalName,
+	"internal":   internalName,
+	"enumString": strings.TrimPrefix,
+	"lower":      strings.ToLower,
 }
 
 var typesHeader = template.Must(template.New("struct type").Funcs(funcMap).Parse(licence + `package types
@@ -116,6 +118,36 @@ type {{internal .Name}} int32
 // Ptr is a helper function for getting pointer value
 func (e {{internal .Name}}) Ptr() *{{internal .Name}} {
 	return &e
+}
+
+// String returns a readable string representation of {{internal .Name}}.
+func (e {{internal .Name}}) String() string {
+	w := int32(e)
+	switch w { {{range $i, $v := .EnumValues}}
+	case {{$i}}: return "{{enumString . $.Name}}"{{end}}
+	}
+	return fmt.Sprintf("{{internal .Name}}(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *{{internal .Name}}) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s { {{range $i, $v := .EnumValues}}
+	case "{{lower (enumString . $.Name)}}":
+		*e = {{internal .}}
+		return nil{{end}}
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "{{internal .Name}}", err)
+		}
+		*e = {{internal .Name}}(val)
+		return nil
+	}
+}
+
+// MarshalText encodes {{internal .Name}} to text.
+func (e {{internal .Name}}) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
 }
 
 const ({{range $i, $v := .EnumValues}}
