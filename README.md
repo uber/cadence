@@ -19,10 +19,15 @@ We highly recommend that you use [Cadence service docker](docker/README.md) to r
 
 Try out the sample recipes for [Go](https://github.com/uber-common/cadence-samples) or [Java](https://github.com/uber/cadence-java-samples) to get started.
 
-### Use CLI
+### Use CLI Tools
+Use [Cadence command-line tool](tools/cli/README.md) to perform various tasks on Cadence server cluster
 
-Try out [Cadence command-line tool](tools/cli/README.md) to perform various tasks on Cadence
+For [manual setup or upgrading](docs/persistence.md) server schema --
 
+* If server runs with Cassandra, Use [Cadence Cassandra tool](tools/cassandra/README.md) to perform various tasks on database schema of Cassandra persistence
+* If server runs with SQL database, Use [Cadence SQL tool](tools/sql/README.md) to perform various tasks on database schema of SQL based persistence
+
+TIPS: Run `make tools` to build all tools mentioned above. 
 ### Use Cadence Web
 
 Try out [Cadence Web UI](https://github.com/uber/cadence-web) to view your workflows on Cadence.

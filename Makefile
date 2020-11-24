@@ -180,6 +180,8 @@ bins_nothrift: fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadenc
 
 bins: thriftc bins_nothrift
 
+tools: cadence-cassandra-tool cadence-sql-tool cadence
+
 test: bins
 	@rm -f test
 	@rm -f test.log
@@ -260,7 +262,7 @@ clean:
 	rm -f cadence-cassandra-tool
 	rm -Rf $(BUILD)
 
-install-schema: bins
+install-schema: cadence-cassandra-tool
 	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence --rf 1
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence setup-schema -v 0.0
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence update-schema -d ./schema/cassandra/cadence/versioned
@@ -268,7 +270,7 @@ install-schema: bins
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility setup-schema -v 0.0
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility update-schema -d ./schema/cassandra/visibility/versioned
 
-install-schema-mysql: bins
+install-schema-mysql: cadence-sql-tool
 	./cadence-sql-tool --ep 127.0.0.1 create --db cadence
 	./cadence-sql-tool --ep 127.0.0.1 --db cadence setup-schema -v 0.0
 	./cadence-sql-tool --ep 127.0.0.1 --db cadence update-schema -d ./schema/mysql/v57/cadence/versioned
@@ -276,7 +278,7 @@ install-schema-mysql: bins
 	./cadence-sql-tool --ep 127.0.0.1 --db cadence_visibility setup-schema -v 0.0
 	./cadence-sql-tool --ep 127.0.0.1 --db cadence_visibility update-schema -d ./schema/mysql/v57/visibility/versioned
 
-install-schema-postgres: bins
+install-schema-postgres: cadence-sql-tool
 	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres create --db cadence
 	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres --db cadence setup -v 0.0
 	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres --db cadence update-schema -d ./schema/postgres/cadence/versioned
@@ -287,7 +289,7 @@ install-schema-postgres: bins
 start: bins
 	./cadence-server start
 
-install-schema-cdc: bins
+install-schema-cdc: cadence-cassandra-tool
 	@echo Setting up cadence_active key space
 	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_active --rf 1
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_active setup-schema -v 0.0

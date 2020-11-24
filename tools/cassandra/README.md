@@ -9,7 +9,7 @@ make install-schema
 ## For production
 
 ### Create the binaries
-- Run `make bins`
+- Run `make cadence-cassandra-tool`
 - You should see an executable `cadence-cassandra-tool`
 
 ### Do one time database creation and schema setup for a new cluster
