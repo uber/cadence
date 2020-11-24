@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,17 +18,52 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package gocql
 
 import (
 	"context"
 
 	"github.com/gocql/gocql"
+
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 )
 
-// IsTimeoutError checks if an error is timeout error
-// TODO: deprecate this function in favor of the implemention in gocql/client.go
-func IsTimeoutError(err error) bool {
+var _ Client = client{}
+
+type (
+	client struct{}
+)
+
+var (
+	defaultClient = client{}
+)
+
+// NewClient creates a default gocql client based on the open source gocql library.
+func NewClient() Client {
+	return defaultClient
+}
+
+func (c client) CreateSession(
+	config ClusterConfig,
+) (Session, error) {
+	// TODO:
+	//   1. move NewCassandraCluster function into this package
+	//   2. remove the dependency on common/service/config package
+	cluster := cassandra.NewCassandraCluster(config.Cassandra)
+	cluster.ProtoVersion = config.ProtoVersion
+	cluster.Consistency = mustConvertConsistency(config.Consistency)
+	cluster.SerialConsistency = mustConvertSerialConsistency(config.SerialConsistency)
+	cluster.Timeout = config.Timeout
+	gocqlSession, err := cluster.CreateSession()
+	if err != nil {
+		return nil, err
+	}
+	return &session{
+		Session: gocqlSession,
+	}, nil
+}
+
+func (c client) IsTimeoutError(err error) bool {
 	if err == context.DeadlineExceeded {
 		return true
 	}
@@ -42,26 +77,14 @@ func IsTimeoutError(err error) bool {
 	return ok
 }
 
-// IsNotFoundError checks if an error due to entity not found
-// TODO: deprecate this function in favor of the implemention in gocql/client.go
-func IsNotFoundError(err error) bool {
+func (c client) IsNotFoundError(err error) bool {
 	return err == gocql.ErrNotFound
 }
 
-// IsThrottlingError checks if an error is due to throttling error
-// TODO: deprecate this function in favor of the implemention in gocql/client.go
-func IsThrottlingError(err error) bool {
+func (c client) IsThrottlingError(err error) bool {
 	if req, ok := err.(gocql.RequestError); ok {
 		// gocql does not expose the constant errOverloaded = 0x1001
 		return req.Code() == 0x1001
-	}
-	return false
-}
-
-// IsConditionFailedError checks if an error is conditional update failure error
-func IsConditionFailedError(err error) bool {
-	if err == errConditionFailed {
-		return true
 	}
 	return false
 }
