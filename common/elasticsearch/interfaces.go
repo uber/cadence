@@ -43,9 +43,9 @@ func NewGenericClient(
 	}
 	switch connectConfig.Version {
 	case "v6":
-		return newV6Client(connectConfig, visibilityConfig, logger)
+		return NewV6Client(connectConfig, visibilityConfig, logger)
 	case "v7":
-		return newV7Client(connectConfig, visibilityConfig, logger)
+		return NewV7Client(connectConfig, visibilityConfig, logger)
 	default:
 		return nil, fmt.Errorf("not supported ElasticSearch version: %v", connectConfig.Version)
 	}
