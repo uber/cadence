@@ -98,11 +98,11 @@ const (
 
 var (
 	// ErrBlobSizeExceedsLimit is error for event blob size exceeds limit
-	ErrBlobSizeExceedsLimit = &workflow.BadRequestError{Message: "Blob data size exceeds limit."}
+	ErrBlobSizeExceedsLimit = &types.BadRequestError{Message: "Blob data size exceeds limit."}
 	// ErrContextTimeoutTooShort is error for setting a very short context timeout when calling a long poll API
-	ErrContextTimeoutTooShort = &workflow.BadRequestError{Message: "Context timeout is too short."}
+	ErrContextTimeoutTooShort = &types.BadRequestError{Message: "Context timeout is too short."}
 	// ErrContextTimeoutNotSet is error for not setting a context timeout when calling a long poll API
-	ErrContextTimeoutNotSet = &workflow.BadRequestError{Message: "Context timeout is not set."}
+	ErrContextTimeoutNotSet = &types.BadRequestError{Message: "Context timeout is not set."}
 )
 
 // AwaitWaitGroup calls Wait on the given wait
@@ -206,7 +206,7 @@ func CreateReplicationServiceBusyRetryPolicy() backoff.RetryPolicy {
 // IsPersistenceTransientError checks if the error is a transient persistence error
 func IsPersistenceTransientError(err error) bool {
 	switch err.(type) {
-	case *workflow.InternalServiceError, *workflow.ServiceBusyError:
+	case *types.InternalServiceError, *types.ServiceBusyError:
 		return true
 	}
 
@@ -216,11 +216,11 @@ func IsPersistenceTransientError(err error) bool {
 // IsServiceTransientError checks if the error is a transient error.
 func IsServiceTransientError(err error) bool {
 	switch err.(type) {
-	case *workflow.InternalServiceError:
+	case *types.InternalServiceError:
 		return true
-	case *workflow.ServiceBusyError:
+	case *types.ServiceBusyError:
 		return true
-	case *h.ShardOwnershipLostError:
+	case *types.ShardOwnershipLostError:
 		return true
 	case *yarpcerrors.Status:
 		// We only selectively retry the following yarpc errors client can safe retry with a backoff
@@ -238,7 +238,7 @@ func IsServiceTransientError(err error) bool {
 // IsServiceBusyError checks if the error is a service busy error.
 func IsServiceBusyError(err error) bool {
 	switch err.(type) {
-	case *workflow.ServiceBusyError:
+	case *types.ServiceBusyError:
 		return true
 	}
 	return false
@@ -247,7 +247,7 @@ func IsServiceBusyError(err error) bool {
 // IsContextTimeoutError checks if the error is context timeout error
 func IsContextTimeoutError(err error) bool {
 	switch err := err.(type) {
-	case *workflow.InternalServiceError:
+	case *types.InternalServiceError:
 		return err.Message == context.DeadlineExceeded.Error()
 	}
 	return err == context.DeadlineExceeded || yarpcerrors.IsDeadlineExceeded(err)
@@ -403,25 +403,25 @@ func ValidateRetryPolicy(policy *workflow.RetryPolicy) error {
 		return nil
 	}
 	if policy.GetInitialIntervalInSeconds() <= 0 {
-		return &workflow.BadRequestError{Message: "InitialIntervalInSeconds must be greater than 0 on retry policy."}
+		return &types.BadRequestError{Message: "InitialIntervalInSeconds must be greater than 0 on retry policy."}
 	}
 	if policy.GetBackoffCoefficient() < 1 {
-		return &workflow.BadRequestError{Message: "BackoffCoefficient cannot be less than 1 on retry policy."}
+		return &types.BadRequestError{Message: "BackoffCoefficient cannot be less than 1 on retry policy."}
 	}
 	if policy.GetMaximumIntervalInSeconds() < 0 {
-		return &workflow.BadRequestError{Message: "MaximumIntervalInSeconds cannot be less than 0 on retry policy."}
+		return &types.BadRequestError{Message: "MaximumIntervalInSeconds cannot be less than 0 on retry policy."}
 	}
 	if policy.GetMaximumIntervalInSeconds() > 0 && policy.GetMaximumIntervalInSeconds() < policy.GetInitialIntervalInSeconds() {
-		return &workflow.BadRequestError{Message: "MaximumIntervalInSeconds cannot be less than InitialIntervalInSeconds on retry policy."}
+		return &types.BadRequestError{Message: "MaximumIntervalInSeconds cannot be less than InitialIntervalInSeconds on retry policy."}
 	}
 	if policy.GetMaximumAttempts() < 0 {
-		return &workflow.BadRequestError{Message: "MaximumAttempts cannot be less than 0 on retry policy."}
+		return &types.BadRequestError{Message: "MaximumAttempts cannot be less than 0 on retry policy."}
 	}
 	if policy.GetExpirationIntervalInSeconds() < 0 {
-		return &workflow.BadRequestError{Message: "ExpirationIntervalInSeconds cannot be less than 0 on retry policy."}
+		return &types.BadRequestError{Message: "ExpirationIntervalInSeconds cannot be less than 0 on retry policy."}
 	}
 	if policy.GetMaximumAttempts() == 0 && policy.GetExpirationIntervalInSeconds() == 0 {
-		return &workflow.BadRequestError{Message: "MaximumAttempts and ExpirationIntervalInSeconds are both 0. At least one of them must be specified."}
+		return &types.BadRequestError{Message: "MaximumAttempts and ExpirationIntervalInSeconds are both 0. At least one of them must be specified."}
 	}
 	return nil
 }
@@ -787,7 +787,7 @@ func ConvertDynamicConfigMapPropertyToIntMap(
 
 // IsStickyTaskConditionError is error from matching engine
 func IsStickyTaskConditionError(err error) bool {
-	if e, ok := err.(*workflow.InternalServiceError); ok {
+	if e, ok := err.(*types.InternalServiceError); ok {
 		return e.GetMessage() == StickyTaskConditionFailedErrorMsg
 	}
 	return false

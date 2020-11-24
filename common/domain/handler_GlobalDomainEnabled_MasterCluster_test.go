@@ -43,6 +43,7 @@ import (
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/service/config"
 	dc "github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -147,7 +148,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDoma
 		Data:                                   data,
 		IsGlobalDomain:                         common.BoolPtr(isGlobalDomain),
 	})
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 }
 
 func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDomain_LocalDomain_AllDefault() {

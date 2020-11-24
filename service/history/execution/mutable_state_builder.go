@@ -44,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/query"
@@ -61,25 +62,25 @@ const (
 
 var (
 	// ErrWorkflowFinished indicates trying to mutate mutable state after workflow finished
-	ErrWorkflowFinished = &workflow.InternalServiceError{Message: "invalid mutable state action: mutation after finish"}
+	ErrWorkflowFinished = &types.InternalServiceError{Message: "invalid mutable state action: mutation after finish"}
 	// ErrMissingTimerInfo indicates missing timer info
-	ErrMissingTimerInfo = &workflow.InternalServiceError{Message: "unable to get timer info"}
+	ErrMissingTimerInfo = &types.InternalServiceError{Message: "unable to get timer info"}
 	// ErrMissingActivityInfo indicates missing activity info
-	ErrMissingActivityInfo = &workflow.InternalServiceError{Message: "unable to get activity info"}
+	ErrMissingActivityInfo = &types.InternalServiceError{Message: "unable to get activity info"}
 	// ErrMissingChildWorkflowInfo indicates missing child workflow info
-	ErrMissingChildWorkflowInfo = &workflow.InternalServiceError{Message: "unable to get child workflow info"}
+	ErrMissingChildWorkflowInfo = &types.InternalServiceError{Message: "unable to get child workflow info"}
 	// ErrMissingWorkflowStartEvent indicates missing workflow start event
-	ErrMissingWorkflowStartEvent = &workflow.InternalServiceError{Message: "unable to get workflow start event"}
+	ErrMissingWorkflowStartEvent = &types.InternalServiceError{Message: "unable to get workflow start event"}
 	// ErrMissingWorkflowCompletionEvent indicates missing workflow completion event
-	ErrMissingWorkflowCompletionEvent = &workflow.InternalServiceError{Message: "unable to get workflow completion event"}
+	ErrMissingWorkflowCompletionEvent = &types.InternalServiceError{Message: "unable to get workflow completion event"}
 	// ErrMissingActivityScheduledEvent indicates missing workflow activity scheduled event
-	ErrMissingActivityScheduledEvent = &workflow.InternalServiceError{Message: "unable to get activity scheduled event"}
+	ErrMissingActivityScheduledEvent = &types.InternalServiceError{Message: "unable to get activity scheduled event"}
 	// ErrMissingChildWorkflowInitiatedEvent indicates missing child workflow initiated event
-	ErrMissingChildWorkflowInitiatedEvent = &workflow.InternalServiceError{Message: "unable to get child workflow initiated event"}
+	ErrMissingChildWorkflowInitiatedEvent = &types.InternalServiceError{Message: "unable to get child workflow initiated event"}
 	// ErrEventsAfterWorkflowFinish is the error indicating server error trying to write events after workflow finish event
-	ErrEventsAfterWorkflowFinish = &workflow.InternalServiceError{Message: "error validating last event being workflow finish event"}
+	ErrEventsAfterWorkflowFinish = &types.InternalServiceError{Message: "error validating last event being workflow finish event"}
 	// ErrMissingVersionHistories is the error indicating cadence failed to process 2dc workflow type.
-	ErrMissingVersionHistories = &workflow.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
+	ErrMissingVersionHistories = &types.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
 )
 
 type (
@@ -1982,17 +1983,17 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 // TODO: we will release the restriction when reset API allow those pending
 func (e *mutableStateBuilder) CheckResettable() error {
 	if len(e.GetPendingChildExecutionInfos()) > 0 {
-		return &workflow.BadRequestError{
+		return &types.BadRequestError{
 			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending child workflow."),
 		}
 	}
 	if len(e.GetPendingRequestCancelExternalInfos()) > 0 {
-		return &workflow.BadRequestError{
+		return &types.BadRequestError{
 			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending request cancel."),
 		}
 	}
 	if len(e.GetPendingSignalExternalInfos()) > 0 {
-		return &workflow.BadRequestError{
+		return &types.BadRequestError{
 			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending signals to send."),
 		}
 	}
@@ -3309,7 +3310,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 		attributes,
 		firstRunID,
 	); err != nil {
-		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
+		return nil, nil, &types.InternalServiceError{Message: "Failed to add workflow execution started event."}
 	}
 
 	if err = e.ReplicateWorkflowExecutionContinuedAsNewEvent(
@@ -3981,13 +3982,13 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 	}
 
 	if len(workflowEventsSeq) > 1 {
-		return nil, nil, &workflow.InternalServiceError{
+		return nil, nil, &types.InternalServiceError{
 			Message: "cannot generate workflow snapshot with transient events",
 		}
 	}
 	if len(e.bufferedEvents) > 0 {
 		// TODO do we need the functionality to generate snapshot with buffered events?
-		return nil, nil, &workflow.InternalServiceError{
+		return nil, nil, &types.InternalServiceError{
 			Message: "cannot generate workflow snapshot with buffered events",
 		}
 	}
@@ -4193,7 +4194,7 @@ func (e *mutableStateBuilder) prepareEventsAndReplicationTasks(
 	)
 
 	if transactionPolicy == TransactionPolicyPassive && len(e.insertReplicationTasks) > 0 {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "should not generate replication task when close transaction as passive",
 		}
 	}
@@ -4220,7 +4221,7 @@ func (e *mutableStateBuilder) eventsToReplicationTask(
 	currentCluster := e.clusterMetadata.GetCurrentClusterName()
 
 	if currentCluster != sourceCluster {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "mutableStateBuilder encounter contradicting version & transaction policy",
 		}
 	}
@@ -4364,7 +4365,7 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
 		return false, err
 	}
 	if lastWriteVersion != decision.Version {
-		return false, &workflow.InternalServiceError{Message: fmt.Sprintf(
+		return false, &types.InternalServiceError{Message: fmt.Sprintf(
 			"mutableStateBuilder encounter mismatch version, decision: %v, last write version %v",
 			decision.Version,
 			lastWriteVersion,
@@ -4388,7 +4389,7 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
 	if lastWriteSourceCluster != currentCluster && currentVersionCluster != currentCluster {
 		// do a sanity check on buffered events
 		if e.HasBufferedEvents() {
-			return false, &workflow.InternalServiceError{
+			return false, &types.InternalServiceError{
 				Message: "mutableStateBuilder encounter previous passive workflow with buffered events",
 			}
 		}
@@ -4402,7 +4403,7 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
 	if lastWriteSourceCluster != currentCluster && currentVersionCluster == currentCluster {
 		// do a sanity check on buffered events
 		if e.HasBufferedEvents() {
-			return false, &workflow.InternalServiceError{
+			return false, &types.InternalServiceError{
 				Message: "mutableStateBuilder encounter previous passive workflow with buffered events",
 			}
 		}
@@ -4609,14 +4610,14 @@ func (e *mutableStateBuilder) createInternalServerError(
 	actionTag tag.Tag,
 ) error {
 
-	return &workflow.InternalServiceError{Message: actionTag.Field().String + " operation failed"}
+	return &types.InternalServiceError{Message: actionTag.Field().String + " operation failed"}
 }
 
 func (e *mutableStateBuilder) createCallerError(
 	actionTag tag.Tag,
 ) error {
 
-	return &workflow.BadRequestError{
+	return &types.BadRequestError{
 		Message: fmt.Sprintf(mutableStateInvalidHistoryActionMsgTemplate, actionTag.Field().String),
 	}
 }

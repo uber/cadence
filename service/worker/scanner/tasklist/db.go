@@ -23,9 +23,9 @@ package tasklist
 import (
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 var retryForeverPolicy = newRetryForeverPolicy()
@@ -85,7 +85,7 @@ func (s *Scavenger) deleteTaskList(key *taskListKey, rangeID int64) error {
 			RangeID:      rangeID,
 		})
 	}, retryForeverPolicy, func(err error) bool {
-		_, ok := err.(*shared.ServiceBusyError)
+		_, ok := err.(*types.ServiceBusyError)
 		return ok
 	})
 }

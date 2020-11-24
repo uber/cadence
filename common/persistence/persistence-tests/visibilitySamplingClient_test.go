@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
@@ -148,7 +147,7 @@ func (s *VisibilitySamplingSuite) TestListOpenWorkflowExecutions() {
 	// no remaining tokens
 	_, err = s.client.ListOpenWorkflowExecutions(ctx, request)
 	s.Error(err)
-	errDetail, ok := err.(*gen.ServiceBusyError)
+	errDetail, ok := err.(*types.ServiceBusyError)
 	s.True(ok)
 	s.Equal(listErrMsg, errDetail.Message)
 }
@@ -168,7 +167,7 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutions() {
 	// no remaining tokens
 	_, err = s.client.ListClosedWorkflowExecutions(ctx, request)
 	s.Error(err)
-	errDetail, ok := err.(*gen.ServiceBusyError)
+	errDetail, ok := err.(*types.ServiceBusyError)
 	s.True(ok)
 	s.Equal(listErrMsg, errDetail.Message)
 }
@@ -192,7 +191,7 @@ func (s *VisibilitySamplingSuite) TestListOpenWorkflowExecutionsByType() {
 	// no remaining tokens
 	_, err = s.client.ListOpenWorkflowExecutionsByType(ctx, request)
 	s.Error(err)
-	errDetail, ok := err.(*gen.ServiceBusyError)
+	errDetail, ok := err.(*types.ServiceBusyError)
 	s.True(ok)
 	s.Equal(listErrMsg, errDetail.Message)
 }
@@ -216,7 +215,7 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByType() {
 	// no remaining tokens
 	_, err = s.client.ListClosedWorkflowExecutionsByType(ctx, request)
 	s.Error(err)
-	errDetail, ok := err.(*gen.ServiceBusyError)
+	errDetail, ok := err.(*types.ServiceBusyError)
 	s.True(ok)
 	s.Equal(listErrMsg, errDetail.Message)
 }
@@ -240,7 +239,7 @@ func (s *VisibilitySamplingSuite) TestListOpenWorkflowExecutionsByWorkflowID() {
 	// no remaining tokens
 	_, err = s.client.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 	s.Error(err)
-	errDetail, ok := err.(*gen.ServiceBusyError)
+	errDetail, ok := err.(*types.ServiceBusyError)
 	s.True(ok)
 	s.Equal(listErrMsg, errDetail.Message)
 }
@@ -264,7 +263,7 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByWorkflowID()
 	// no remaining tokens
 	_, err = s.client.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 	s.Error(err)
-	errDetail, ok := err.(*gen.ServiceBusyError)
+	errDetail, ok := err.(*types.ServiceBusyError)
 	s.True(ok)
 	s.Equal(listErrMsg, errDetail.Message)
 }
@@ -288,7 +287,7 @@ func (s *VisibilitySamplingSuite) TestListClosedWorkflowExecutionsByStatus() {
 	// no remaining tokens
 	_, err = s.client.ListClosedWorkflowExecutionsByStatus(ctx, request)
 	s.Error(err)
-	errDetail, ok := err.(*gen.ServiceBusyError)
+	errDetail, ok := err.(*types.ServiceBusyError)
 	s.True(ok)
 	s.Equal(listErrMsg, errDetail.Message)
 }

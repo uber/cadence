@@ -28,12 +28,12 @@ import (
 
 	"github.com/gocql/gocql"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -211,7 +211,7 @@ func (d *cassandraShardPersistence) GetShard(
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
 		if cassandra.IsNotFoundError(err) {
-			return nil, &workflow.EntityNotExistsError{
+			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Shard not found.  ShardId: %v", shardID),
 			}
 		}

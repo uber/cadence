@@ -27,11 +27,11 @@ import (
 
 	"github.com/gocql/gocql"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -405,7 +405,7 @@ func (db *cdb) SelectAllDomains(ctx context.Context, pageSize int, pageToken []b
 	query = db.session.Query(templateListDomainQueryV2, constDomainPartition).WithContext(ctx)
 	iter := query.PageSize(pageSize).PageState(pageToken).Iter()
 	if iter == nil {
-		return nil, nil, &workflow.InternalServiceError{
+		return nil, nil, &types.InternalServiceError{
 			Message: "SelectAllDomains operation failed.  Not able to create query iterator.",
 		}
 	}

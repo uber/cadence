@@ -28,6 +28,7 @@ import (
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -40,9 +41,9 @@ const (
 )
 
 var (
-	errTerminationStateInvalid = &shared.InternalServiceError{Message: "query termination state invalid"}
-	errAlreadyInTerminalState  = &shared.InternalServiceError{Message: "query already in terminal state"}
-	errQueryNotInTerminalState = &shared.InternalServiceError{Message: "query not in terminal state"}
+	errTerminationStateInvalid = &types.InternalServiceError{Message: "query termination state invalid"}
+	errAlreadyInTerminalState  = &types.InternalServiceError{Message: "query already in terminal state"}
+	errQueryNotInTerminalState = &types.InternalServiceError{Message: "query not in terminal state"}
 )
 
 type (

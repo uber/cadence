@@ -60,7 +60,7 @@ const (
 )
 
 var (
-	errMaxMessageIDNotSet = &gen.BadRequestError{Message: "Max messageID is not set."}
+	errMaxMessageIDNotSet = &types.BadRequestError{Message: "Max messageID is not set."}
 )
 
 //go:generate mockgen -copyright_file=../../LICENSE -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package frontend github.com/uber/cadence/service/frontend AdminHandler
@@ -186,10 +186,10 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 		return adh.error(errNoPermission, scope)
 	}
 	if len(request.GetSearchAttribute()) == 0 {
-		return adh.error(&gen.BadRequestError{Message: "SearchAttributes are not provided"}, scope)
+		return adh.error(&types.BadRequestError{Message: "SearchAttributes are not provided"}, scope)
 	}
 	if err := adh.validateConfigForAdvanceVisibility(); err != nil {
-		return adh.error(&gen.BadRequestError{Message: fmt.Sprintf("AdvancedVisibilityStore is not configured for this Cadence Cluster")}, scope)
+		return adh.error(&types.BadRequestError{Message: fmt.Sprintf("AdvancedVisibilityStore is not configured for this Cadence Cluster")}, scope)
 	}
 
 	searchAttr := request.GetSearchAttribute()
@@ -197,10 +197,10 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 		dynamicconfig.ValidSearchAttributes, nil, definition.GetDefaultIndexedKeys())
 	for k, v := range searchAttr {
 		if definition.IsSystemIndexedKey(k) {
-			return adh.error(&gen.BadRequestError{Message: fmt.Sprintf("Key [%s] is reserved by system", k)}, scope)
+			return adh.error(&types.BadRequestError{Message: fmt.Sprintf("Key [%s] is reserved by system", k)}, scope)
 		}
 		if _, exist := currentValidAttr[k]; exist {
-			return adh.error(&gen.BadRequestError{Message: fmt.Sprintf("Key [%s] is already whitelist", k)}, scope)
+			return adh.error(&types.BadRequestError{Message: fmt.Sprintf("Key [%s] is already whitelist", k)}, scope)
 		}
 
 		currentValidAttr[k] = int(v)
@@ -209,7 +209,7 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 	// update dynamic config
 	err := adh.params.DynamicConfig.UpdateValue(dynamicconfig.ValidSearchAttributes, currentValidAttr)
 	if err != nil {
-		return adh.error(&gen.InternalServiceError{Message: fmt.Sprintf("Failed to update dynamic config, err: %v", err)}, scope)
+		return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to update dynamic config, err: %v", err)}, scope)
 	}
 
 	// update elasticsearch mapping, new added field will not be able to remove or update
@@ -217,18 +217,18 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 	for k, v := range searchAttr {
 		valueType := convertIndexedValueTypeToESDataType(v)
 		if len(valueType) == 0 {
-			return adh.error(&gen.BadRequestError{Message: fmt.Sprintf("Unknown value type, %v", v)}, scope)
+			return adh.error(&types.BadRequestError{Message: fmt.Sprintf("Unknown value type, %v", v)}, scope)
 		}
 		err := adh.params.ESClient.PutMapping(ctx, index, definition.Attr, k, valueType)
 		if adh.esClient.IsNotFoundError(err) {
 			err = adh.params.ESClient.CreateIndex(ctx, index)
 			if err != nil {
-				return adh.error(&gen.InternalServiceError{Message: fmt.Sprintf("Failed to create ES index, err: %v", err)}, scope)
+				return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to create ES index, err: %v", err)}, scope)
 			}
 			err = adh.params.ESClient.PutMapping(ctx, index, definition.Attr, k, valueType)
 		}
 		if err != nil {
-			return adh.error(&gen.InternalServiceError{Message: fmt.Sprintf("Failed to update ES mapping, err: %v", err)}, scope)
+			return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to update ES mapping, err: %v", err)}, scope)
 		}
 	}
 
@@ -270,7 +270,6 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 		Execution:  thrift.ToWorkflowExecution(request.Execution),
 	})
 	resp2 := thrift.FromDescribeMutableStateResponse(clientResp)
-	err = thrift.FromError(err)
 	if err != nil {
 		return &admin.DescribeWorkflowExecutionResponse{}, err
 	}
@@ -296,7 +295,6 @@ func (adh *adminHandlerImpl) RemoveTask(
 		return adh.error(errRequestNotSet, scope)
 	}
 	err := adh.GetHistoryClient().RemoveTask(ctx, thrift.ToRemoveTaskRequest(request))
-	err = thrift.FromError(err)
 	return err
 }
 
@@ -314,7 +312,6 @@ func (adh *adminHandlerImpl) CloseShard(
 		return adh.error(errRequestNotSet, scope)
 	}
 	err := adh.GetHistoryClient().CloseShard(ctx, thrift.ToCloseShardRequest(request))
-	err = thrift.FromError(err)
 	return err
 }
 
@@ -336,7 +333,6 @@ func (adh *adminHandlerImpl) ResetQueue(
 	}
 
 	err := adh.GetHistoryClient().ResetQueue(ctx, thrift.ToResetQueueRequest(request))
-	err = thrift.FromError(err)
 	return err
 }
 
@@ -358,7 +354,7 @@ func (adh *adminHandlerImpl) DescribeQueue(
 	}
 
 	clientResp, err := adh.GetHistoryClient().DescribeQueue(ctx, thrift.ToDescribeQueueRequest(request))
-	return thrift.FromDescribeQueueResponse(clientResp), thrift.FromError(err)
+	return thrift.FromDescribeQueueResponse(clientResp), err
 }
 
 // DescribeHistoryHost returns information about the internal states of a history host
@@ -382,7 +378,7 @@ func (adh *adminHandlerImpl) DescribeHistoryHost(
 	}
 
 	clientResp, err := adh.GetHistoryClient().DescribeHistoryHost(ctx, thrift.ToDescribeHistoryHostRequest(request))
-	return thrift.FromDescribeHistoryHostResponse(clientResp), thrift.FromError(err)
+	return thrift.FromDescribeHistoryHostResponse(clientResp), err
 }
 
 // GetWorkflowExecutionRawHistoryV2 - retrieves the history of workflow execution
@@ -415,7 +411,6 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 			Execution:  thrift.ToWorkflowExecution(execution),
 		})
 		response := thrift.FromGetMutableStateResponse(clientResp)
-		err = thrift.FromError(err)
 		if err != nil {
 			return nil, adh.error(err, scope)
 		}
@@ -439,7 +434,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		}
 		versionHistories := pageToken.VersionHistories
 		if versionHistories == nil {
-			return nil, adh.error(&gen.BadRequestError{Message: "Invalid version histories."}, scope)
+			return nil, adh.error(&types.BadRequestError{Message: "Invalid version histories."}, scope)
 		}
 		targetVersionHistory, err = adh.setRequestDefaultValueAndGetTargetVersionHistory(
 			request,
@@ -481,7 +476,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		ShardID:       common.IntPtr(shardID),
 	})
 	if err != nil {
-		if _, ok := err.(*gen.EntityNotExistsError); ok {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
 			// when no events can be returned from DB, DB layer will return
 			// EntityNotExistsError, this API shall return empty response
 			return &admin.GetWorkflowExecutionRawHistoryV2Response{
@@ -600,7 +595,6 @@ func (adh *adminHandlerImpl) GetReplicationMessages(
 
 	clientResp, err := adh.GetHistoryRawClient().GetReplicationMessages(ctx, thrift.ToGetReplicationMessagesRequest(request))
 	resp = thrift.FromGetReplicationMessagesResponse(clientResp)
-	err = thrift.FromError(err)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -689,7 +683,6 @@ func (adh *adminHandlerImpl) GetDLQReplicationMessages(
 
 	clientResp, err := adh.GetHistoryClient().GetDLQReplicationMessages(ctx, thrift.ToGetDLQReplicationMessagesRequest(request))
 	resp = thrift.FromGetDLQReplicationMessagesResponse(clientResp)
-	err = thrift.FromError(err)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -730,7 +723,6 @@ func (adh *adminHandlerImpl) ReapplyEvents(
 		DomainUUID: common.StringPtr(domainEntry.GetInfo().ID),
 		Request:    thrift.ToReapplyEventsRequest(request),
 	})
-	err = thrift.FromError(err)
 	if err != nil {
 		return adh.error(err, scope)
 	}
@@ -769,7 +761,7 @@ func (adh *adminHandlerImpl) ReadDLQMessages(
 	switch request.GetType() {
 	case replicator.DLQTypeReplication:
 		clientResp, err := adh.GetHistoryClient().ReadDLQMessages(ctx, thrift.ToReadDLQMessagesRequest(request))
-		return thrift.FromReadDLQMessagesResponse(clientResp), thrift.FromError(err)
+		return thrift.FromReadDLQMessagesResponse(clientResp), err
 	case replicator.DLQTypeDomain:
 		op = func() error {
 			select {
@@ -786,7 +778,7 @@ func (adh *adminHandlerImpl) ReadDLQMessages(
 			}
 		}
 	default:
-		return nil, &gen.BadRequestError{Message: "The DLQ type is not supported."}
+		return nil, &types.BadRequestError{Message: "The DLQ type is not supported."}
 	}
 	err = backoff.Retry(op, adminServiceRetryPolicy, common.IsServiceTransientError)
 	if err != nil {
@@ -824,8 +816,7 @@ func (adh *adminHandlerImpl) PurgeDLQMessages(
 	var op func() error
 	switch request.GetType() {
 	case replicator.DLQTypeReplication:
-		err = adh.GetHistoryClient().PurgeDLQMessages(ctx, thrift.ToPurgeDLQMessagesRequest(request))
-		return thrift.FromError(err)
+		return adh.GetHistoryClient().PurgeDLQMessages(ctx, thrift.ToPurgeDLQMessagesRequest(request))
 	case replicator.DLQTypeDomain:
 		op = func() error {
 			select {
@@ -839,7 +830,7 @@ func (adh *adminHandlerImpl) PurgeDLQMessages(
 			}
 		}
 	default:
-		return &gen.BadRequestError{Message: "The DLQ type is not supported."}
+		return &types.BadRequestError{Message: "The DLQ type is not supported."}
 	}
 	err = backoff.Retry(op, adminServiceRetryPolicy, common.IsServiceTransientError)
 	if err != nil {
@@ -876,7 +867,7 @@ func (adh *adminHandlerImpl) MergeDLQMessages(
 	switch request.GetType() {
 	case replicator.DLQTypeReplication:
 		clientResp, err := adh.GetHistoryClient().MergeDLQMessages(ctx, thrift.ToMergeDLQMessagesRequest(request))
-		return thrift.FromMergeDLQMessagesResponse(clientResp), thrift.FromError(err)
+		return thrift.FromMergeDLQMessagesResponse(clientResp), err
 	case replicator.DLQTypeDomain:
 
 		op = func() error {
@@ -895,7 +886,7 @@ func (adh *adminHandlerImpl) MergeDLQMessages(
 			}
 		}
 	default:
-		return nil, &gen.BadRequestError{Message: "The DLQ type is not supported."}
+		return nil, &types.BadRequestError{Message: "The DLQ type is not supported."}
 	}
 	err = backoff.Retry(op, adminServiceRetryPolicy, common.IsServiceTransientError)
 	if err != nil {
@@ -931,7 +922,6 @@ func (adh *adminHandlerImpl) RefreshWorkflowTasks(
 		DomainUIID: common.StringPtr(domainEntry.GetInfo().ID),
 		Request:    thrift.ToRefreshWorkflowTasksRequest(request),
 	})
-	err = thrift.FromError(err)
 	if err != nil {
 		return adh.error(err, scope)
 	}
@@ -954,8 +944,7 @@ func (adh *adminHandlerImpl) ResendReplicationTasks(
 		adh.GetDomainCache(),
 		adh.GetRemoteAdminClient(request.GetRemoteCluster()),
 		func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
-			err := adh.GetHistoryClient().ReplicateEventsV2(ctx, thrift.ToReplicateEventsV2Request(request))
-			return thrift.FromError(err)
+			return adh.GetHistoryClient().ReplicateEventsV2(ctx, thrift.ToReplicateEventsV2Request(request))
 		},
 		adh.eventSerializder,
 		nil,
@@ -979,35 +968,35 @@ func (adh *adminHandlerImpl) validateGetWorkflowExecutionRawHistoryV2Request(
 
 	execution := request.Execution
 	if len(execution.GetWorkflowId()) == 0 {
-		return &gen.BadRequestError{Message: "Invalid WorkflowID."}
+		return &types.BadRequestError{Message: "Invalid WorkflowID."}
 	}
 	// TODO currently, this API is only going to be used by re-send history events
 	// to remote cluster if kafka is lossy again, in the future, this API can be used
 	// by CLI and client, then empty runID (meaning the current workflow) should be allowed
 	if len(execution.GetRunId()) == 0 || uuid.Parse(execution.GetRunId()) == nil {
-		return &gen.BadRequestError{Message: "Invalid RunID."}
+		return &types.BadRequestError{Message: "Invalid RunID."}
 	}
 
 	pageSize := int(request.GetMaximumPageSize())
 	if pageSize <= 0 {
-		return &gen.BadRequestError{Message: "Invalid PageSize."}
+		return &types.BadRequestError{Message: "Invalid PageSize."}
 	}
 
 	if request.StartEventId == nil &&
 		request.StartEventVersion == nil &&
 		request.EndEventId == nil &&
 		request.EndEventVersion == nil {
-		return &gen.BadRequestError{Message: "Invalid event query range."}
+		return &types.BadRequestError{Message: "Invalid event query range."}
 	}
 
 	if (request.StartEventId != nil && request.StartEventVersion == nil) ||
 		(request.StartEventId == nil && request.StartEventVersion != nil) {
-		return &gen.BadRequestError{Message: "Invalid start event id and start event version combination."}
+		return &types.BadRequestError{Message: "Invalid start event id and start event version combination."}
 	}
 
 	if (request.EndEventId != nil && request.EndEventVersion == nil) ||
 		(request.EndEventId == nil && request.EndEventVersion != nil) {
-		return &gen.BadRequestError{Message: "Invalid end event id and end event version combination."}
+		return &types.BadRequestError{Message: "Invalid end event id and end event version combination."}
 	}
 	return nil
 }
@@ -1051,7 +1040,7 @@ func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 	}
 
 	if request.GetStartEventId() < 0 {
-		return nil, &gen.BadRequestError{Message: "Invalid FirstEventID && NextEventID combination."}
+		return nil, &types.BadRequestError{Message: "Invalid FirstEventID && NextEventID combination."}
 	}
 
 	// get branch based on the end event if end event is defined in the request
@@ -1131,7 +1120,7 @@ func (adh *adminHandlerImpl) validatePaginationToken(
 		request.GetStartEventVersion() != token.StartEventVersion ||
 		request.GetEndEventId() != token.EndEventID ||
 		request.GetEndEventVersion() != token.EndEventVersion {
-		return &gen.BadRequestError{Message: "Invalid pagination token."}
+		return &types.BadRequestError{Message: "Invalid pagination token."}
 	}
 	return nil
 }
@@ -1146,22 +1135,22 @@ func (adh *adminHandlerImpl) startRequestProfile(scope int) (metrics.Scope, metr
 
 func (adh *adminHandlerImpl) error(err error, scope metrics.Scope) error {
 	switch err.(type) {
-	case *gen.InternalServiceError:
+	case *types.InternalServiceError:
 		adh.GetLogger().Error("Internal service error", tag.Error(err))
 		scope.IncCounter(metrics.CadenceFailures)
 		return err
-	case *gen.BadRequestError:
+	case *types.BadRequestError:
 		scope.IncCounter(metrics.CadenceErrBadRequestCounter)
 		return err
-	case *gen.ServiceBusyError:
+	case *types.ServiceBusyError:
 		scope.IncCounter(metrics.CadenceErrServiceBusyCounter)
 		return err
-	case *gen.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		return err
 	default:
 		adh.GetLogger().Error("Uncategorized error", tag.Error(err))
 		scope.IncCounter(metrics.CadenceFailures)
-		return &gen.InternalServiceError{Message: err.Error()}
+		return &types.InternalServiceError{Message: err.Error()}
 	}
 }
 

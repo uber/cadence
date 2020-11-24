@@ -195,7 +195,7 @@ func upload(ctx context.Context, s3cli s3iface.S3API, URI archiver.URI, key stri
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			if aerr.Code() == s3.ErrCodeNoSuchBucket {
-				return &shared.BadRequestError{Message: errBucketNotExists.Error()}
+				return &types.BadRequestError{Message: errBucketNotExists.Error()}
 			}
 		}
 		return err
@@ -214,11 +214,11 @@ func download(ctx context.Context, s3cli s3iface.S3API, URI archiver.URI, key st
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			if aerr.Code() == s3.ErrCodeNoSuchBucket {
-				return nil, &shared.BadRequestError{Message: errBucketNotExists.Error()}
+				return nil, &types.BadRequestError{Message: errBucketNotExists.Error()}
 			}
 
 			if aerr.Code() == s3.ErrCodeNoSuchKey {
-				return nil, &shared.EntityNotExistsError{Message: archiver.ErrHistoryNotExist.Error()}
+				return nil, &types.EntityNotExistsError{Message: archiver.ErrHistoryNotExist.Error()}
 			}
 		}
 		return nil, err

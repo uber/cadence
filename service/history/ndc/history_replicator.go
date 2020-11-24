@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -271,7 +272,7 @@ func (r *historyReplicatorImpl) applyEvents(
 			}
 			return r.applyNonStartEventsToNoneCurrentBranch(ctx, context, mutableState, branchIndex, releaseFn, task)
 
-		case *shared.EntityNotExistsError:
+		case *types.EntityNotExistsError:
 			// mutable state not created, check if is workflow reset
 			mutableState, err := r.applyNonStartEventsMissingMutableState(ctx, context, task)
 			if err != nil {
@@ -359,7 +360,7 @@ func (r *historyReplicatorImpl) applyNonStartEventsPrepareBranch(
 	switch err.(type) {
 	case nil:
 		return doContinue, versionHistoryIndex, nil
-	case *shared.RetryTaskV2Error:
+	case *types.RetryTaskV2Error:
 		// replication message can arrive out of order
 		// do not log
 		return false, 0, err
@@ -728,14 +729,14 @@ func newNDCRetryTaskErrorWithHint(
 	endEventVersion *int64,
 ) error {
 
-	return &shared.RetryTaskV2Error{
+	return &types.RetryTaskV2Error{
 		Message:           message,
-		DomainId:          common.StringPtr(domainID),
-		WorkflowId:        common.StringPtr(workflowID),
-		RunId:             common.StringPtr(runID),
-		StartEventId:      startEventID,
+		DomainID:          common.StringPtr(domainID),
+		WorkflowID:        common.StringPtr(workflowID),
+		RunID:             common.StringPtr(runID),
+		StartEventID:      startEventID,
 		StartEventVersion: startEventVersion,
-		EndEventId:        endEventID,
+		EndEventID:        endEventID,
 		EndEventVersion:   endEventVersion,
 	}
 }

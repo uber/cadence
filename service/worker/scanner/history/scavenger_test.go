@@ -32,7 +32,6 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/zap"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -306,28 +305,28 @@ func (s *ScavengerTestSuite) TestDeletingBranchesTwoPages() {
 			WorkflowID: common.StringPtr("workflowID1"),
 			RunID:      common.StringPtr("runID1"),
 		},
-	}).Return(nil, &shared.EntityNotExistsError{})
+	}).Return(nil, &types.EntityNotExistsError{})
 	client.EXPECT().DescribeMutableState(gomock.Any(), &types.DescribeMutableStateRequest{
 		DomainUUID: common.StringPtr("domainID2"),
 		Execution: &types.WorkflowExecution{
 			WorkflowID: common.StringPtr("workflowID2"),
 			RunID:      common.StringPtr("runID2"),
 		},
-	}).Return(nil, &shared.EntityNotExistsError{})
+	}).Return(nil, &types.EntityNotExistsError{})
 	client.EXPECT().DescribeMutableState(gomock.Any(), &types.DescribeMutableStateRequest{
 		DomainUUID: common.StringPtr("domainID3"),
 		Execution: &types.WorkflowExecution{
 			WorkflowID: common.StringPtr("workflowID3"),
 			RunID:      common.StringPtr("runID3"),
 		},
-	}).Return(nil, &shared.EntityNotExistsError{})
+	}).Return(nil, &types.EntityNotExistsError{})
 	client.EXPECT().DescribeMutableState(gomock.Any(), &types.DescribeMutableStateRequest{
 		DomainUUID: common.StringPtr("domainID4"),
 		Execution: &types.WorkflowExecution{
 			WorkflowID: common.StringPtr("workflowID4"),
 			RunID:      common.StringPtr("runID4"),
 		},
-	}).Return(nil, &shared.EntityNotExistsError{})
+	}).Return(nil, &types.EntityNotExistsError{})
 
 	branchToken1, err := p.NewHistoryBranchTokenByBranchID("treeID1", "branchID1")
 	s.Nil(err)
@@ -422,7 +421,7 @@ func (s *ScavengerTestSuite) TestMixesTwoPages() {
 			WorkflowID: common.StringPtr("workflowID3"),
 			RunID:      common.StringPtr("runID3"),
 		},
-	}).Return(nil, &shared.EntityNotExistsError{})
+	}).Return(nil, &types.EntityNotExistsError{})
 
 	client.EXPECT().DescribeMutableState(gomock.Any(), &types.DescribeMutableStateRequest{
 		DomainUUID: common.StringPtr("domainID4"),
@@ -430,7 +429,7 @@ func (s *ScavengerTestSuite) TestMixesTwoPages() {
 			WorkflowID: common.StringPtr("workflowID4"),
 			RunID:      common.StringPtr("runID4"),
 		},
-	}).Return(nil, &shared.EntityNotExistsError{})
+	}).Return(nil, &types.EntityNotExistsError{})
 	client.EXPECT().DescribeMutableState(gomock.Any(), &types.DescribeMutableStateRequest{
 		DomainUUID: common.StringPtr("domainID5"),
 		Execution: &types.WorkflowExecution{

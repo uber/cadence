@@ -34,7 +34,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -123,7 +122,6 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 					Identity: common.StringPtr(processorWFTypeName),
 				},
 			})
-			err = thrift.FromError(err)
 		case shared.ParentClosePolicyRequestCancel:
 			err = client.RequestCancelWorkflowExecution(nil, &types.HistoryRequestCancelWorkflowExecutionRequest{
 				DomainUUID: common.StringPtr(request.DomainUUID),
@@ -136,11 +134,10 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 					Identity: common.StringPtr(processorWFTypeName),
 				},
 			})
-			err = thrift.FromError(err)
 		}
 
 		if err != nil {
-			if _, ok := err.(*shared.EntityNotExistsError); ok {
+			if _, ok := err.(*types.EntityNotExistsError); ok {
 				err = nil
 			}
 		}

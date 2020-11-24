@@ -220,7 +220,7 @@ func (h *historyArchiverSuite) TestArchive_Fail_TimeoutWhenReadingHistory() {
 	historyIterator := archiver.NewMockHistoryIterator(mockCtrl)
 	gomock.InOrder(
 		historyIterator.EXPECT().HasNext().Return(true),
-		historyIterator.EXPECT().Next().Return(nil, &shared.ServiceBusyError{}),
+		historyIterator.EXPECT().Next().Return(nil, &types.ServiceBusyError{}),
 	)
 
 	historyArchiver := newHistoryArchiver(h.container, historyIterator, storageWrapper)
@@ -420,7 +420,7 @@ func (h *historyArchiverSuite) TestGet_Fail_InvalidToken() {
 	response, err := historyArchiver.Get(ctx, URI, request)
 	h.Nil(response)
 	h.Error(err)
-	h.IsType(&shared.BadRequestError{}, err)
+	h.IsType(&types.BadRequestError{}, err)
 }
 
 func (h *historyArchiverSuite) TestGet_Success_PickHighestVersion() {

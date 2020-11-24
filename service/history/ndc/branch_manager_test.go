@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -274,7 +275,7 @@ func (s *branchManagerSuite) TestPrepareVersionHistory_BranchAppendable_MissingE
 		incomingVersionHistory,
 		150+2,
 		300)
-	s.IsType(&shared.RetryTaskV2Error{}, err)
+	s.IsType(&types.RetryTaskV2Error{}, err)
 }
 
 func (s *branchManagerSuite) TestPrepareVersionHistory_BranchNotAppendable_NoMissingEventInBetween() {
@@ -368,5 +369,5 @@ func (s *branchManagerSuite) TestPrepareVersionHistory_BranchNotAppendable_Missi
 		baseBranchLCAEventID+2,
 		baseBranchLCAEventVersion,
 	)
-	s.IsType(&shared.RetryTaskV2Error{}, err)
+	s.IsType(&types.RetryTaskV2Error{}, err)
 }
