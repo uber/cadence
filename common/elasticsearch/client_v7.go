@@ -76,17 +76,18 @@ type (
 	}
 )
 
-// newV7Client returns a new implementation of GenericClient
-func newV7Client(
+// NewV7Client returns a new implementation of GenericClient
+func NewV7Client(
 	connectConfig *config.ElasticSearchConfig,
 	visibilityConfig *config.VisibilityConfig,
 	logger log.Logger,
+	clientOptFuncs ...elastic.ClientOptionFunc,
 ) (GenericClient, error) {
-	clientOptFuncs := []elastic.ClientOptionFunc{
+	clientOptFuncs = append(clientOptFuncs,
 		elastic.SetURL(connectConfig.URL.String()),
 		elastic.SetRetrier(elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))),
 		elastic.SetDecoder(&elastic.NumberDecoder{}), // critical to ensure decode of int64 won't lose precise
-	}
+	)
 	if connectConfig.DisableSniff {
 		clientOptFuncs = append(clientOptFuncs, elastic.SetSniff(false))
 	}
