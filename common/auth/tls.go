@@ -25,6 +25,11 @@ type (
 	TLS struct {
 		Enabled bool `yaml:"enabled"`
 
+		// For Postgres(https://www.postgresql.org/docs/9.1/libpq-ssl.html) and MySQL
+		// default to require if Enable is true.
+		// For MySQL: https://github.com/go-sql-driver/mysql , it also can be set in ConnectAttributes, default is tls-custom
+		SSLMode string `yaml:"sslmode" `
+
 		// CertPath and KeyPath are optional depending on server
 		// config, but both fields must be omitted to avoid using a
 		// client certificate
