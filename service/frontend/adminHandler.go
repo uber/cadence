@@ -415,8 +415,8 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 			return nil, adh.error(err, scope)
 		}
 
-		versionHistories := persistence.NewVersionHistoriesFromThrift(
-			response.GetVersionHistories(),
+		versionHistories := persistence.NewVersionHistoriesFromInternalType(
+			thrift.ToVersionHistories(response.GetVersionHistories()),
 		)
 		targetVersionHistory, err = adh.setRequestDefaultValueAndGetTargetVersionHistory(
 			request,
@@ -438,7 +438,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		}
 		targetVersionHistory, err = adh.setRequestDefaultValueAndGetTargetVersionHistory(
 			request,
-			persistence.NewVersionHistoriesFromThrift(versionHistories),
+			persistence.NewVersionHistoriesFromInternalType(thrift.ToVersionHistories(versionHistories)),
 		)
 		if err != nil {
 			return nil, adh.error(err, scope)
@@ -457,7 +457,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		return &admin.GetWorkflowExecutionRawHistoryV2Response{
 			HistoryBatches: []*gen.DataBlob{},
 			NextPageToken:  nil, // no further pagination
-			VersionHistory: targetVersionHistory.ToThrift(),
+			VersionHistory: thrift.FromVersionHistory(targetVersionHistory.ToInternalType()),
 		}, nil
 	}
 	pageSize := int(request.GetMaximumPageSize())
@@ -482,7 +482,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 			return &admin.GetWorkflowExecutionRawHistoryV2Response{
 				HistoryBatches: []*gen.DataBlob{},
 				NextPageToken:  nil, // no further pagination
-				VersionHistory: targetVersionHistory.ToThrift(),
+				VersionHistory: thrift.FromVersionHistory(targetVersionHistory.ToInternalType()),
 			}, nil
 		}
 		return nil, err
@@ -503,7 +503,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 
 	result := &admin.GetWorkflowExecutionRawHistoryV2Response{
 		HistoryBatches: blobs,
-		VersionHistory: targetVersionHistory.ToThrift(),
+		VersionHistory: thrift.FromVersionHistory(targetVersionHistory.ToInternalType()),
 	}
 	if len(pageToken.PersistenceToken) == 0 {
 		result.NextPageToken = nil
@@ -1102,7 +1102,7 @@ func (adh *adminHandlerImpl) generatePaginationToken(
 		StartEventVersion: request.GetStartEventVersion(),
 		EndEventID:        request.GetEndEventId(),
 		EndEventVersion:   request.GetEndEventVersion(),
-		VersionHistories:  versionHistories.ToThrift(),
+		VersionHistories:  thrift.FromVersionHistories(versionHistories.ToInternalType()),
 		PersistenceToken:  nil, // this is the initialized value
 	}
 }

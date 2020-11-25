@@ -1134,7 +1134,7 @@ func (s *workflowHandlerSuite) getWorkflowExecutionHistory(nextEventID int64, tr
 	ctx := context.Background()
 	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
 	s.mockVersionChecker.EXPECT().SupportsRawHistoryQuery(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-	blob, _ := wh.GetPayloadSerializer().SerializeBatchEvents(historyEvents, common.EncodingTypeThriftRW)
+	blob, _ := wh.GetPayloadSerializer().SerializeBatchEvents(thrift.ToHistoryEventArray(historyEvents), common.EncodingTypeThriftRW)
 	s.mockHistoryV2Mgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadRawHistoryBranchResponse{
 		HistoryEventBlobs: []*persistence.DataBlob{blob},
 		NextPageToken:     []byte{},
@@ -1169,7 +1169,7 @@ func (s *workflowHandlerSuite) getWorkflowExecutionHistory(nextEventID int64, tr
 }
 
 func deserializeBlobDataToHistoryEvents(wh *WorkflowHandler, dataBlobs []*shared.DataBlob) []*shared.HistoryEvent {
-	var historyEvents []*shared.HistoryEvent
+	var historyEvents []*types.HistoryEvent
 	for _, batch := range dataBlobs {
 		events, err := wh.GetPayloadSerializer().DeserializeBatchEvents(&persistence.DataBlob{Data: batch.Data, Encoding: common.EncodingTypeThriftRW})
 		if err != nil {
@@ -1177,7 +1177,7 @@ func deserializeBlobDataToHistoryEvents(wh *WorkflowHandler, dataBlobs []*shared
 		}
 		historyEvents = append(historyEvents, events...)
 	}
-	return historyEvents
+	return thrift.FromHistoryEventArray(historyEvents)
 }
 
 func (s *workflowHandlerSuite) TestListWorkflowExecutions() {

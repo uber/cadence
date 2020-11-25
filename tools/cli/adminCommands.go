@@ -85,10 +85,11 @@ func AdminShowWorkflow(c *cli.Context) {
 	for idx, b := range history {
 		totalSize += len(b.Data)
 		fmt.Printf("======== batch %v, blob len: %v ======\n", idx+1, len(b.Data))
-		historyBatch, err := serializer.DeserializeBatchEvents(b)
+		internalHistoryBatch, err := serializer.DeserializeBatchEvents(b)
 		if err != nil {
 			ErrorAndExit("DeserializeBatchEvents err", err)
 		}
+		historyBatch := thrift.FromHistoryEventArray(internalHistoryBatch)
 		allEvents.Events = append(allEvents.Events, historyBatch...)
 		for _, e := range historyBatch {
 			jsonstr, err := json.Marshal(e)
@@ -205,7 +206,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	if ms.VersionHistories != nil {
 		// if VersionHistories is set, then all branch infos are stored in VersionHistories
 		branchTokens = [][]byte{}
-		for _, versionHistory := range ms.VersionHistories.ToThrift().Histories {
+		for _, versionHistory := range ms.VersionHistories.ToInternalType().Histories {
 			branchTokens = append(branchTokens, versionHistory.BranchToken)
 		}
 	}
