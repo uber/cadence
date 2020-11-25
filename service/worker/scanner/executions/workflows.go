@@ -105,7 +105,7 @@ type (
 
 	// FixerWorkflowParams are the parameters to the fix workflow
 	FixerWorkflowParams struct {
-		ScanExecution workflow.Execution
+		ScanExecution                 workflow.Execution
 		FixerWorkflowConfigOverwrites FixerWorkflowConfigOverwrites
 		ScanType                      ScanType
 	}

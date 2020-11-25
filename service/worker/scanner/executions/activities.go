@@ -26,6 +26,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+
 	"go.uber.org/cadence"
 
 	"go.uber.org/cadence/.gen/go/shared"
@@ -302,9 +303,9 @@ func FixerCorruptedKeysActivity(
 		scanExec.RunId = c.StringPtr(params.ScannerWorkflowRunID)
 	} else {
 		listResp, err := client.ListClosedWorkflowExecutions(activityCtx, &shared.ListClosedWorkflowExecutionsRequest{
-			Domain: c.StringPtr(c.SystemLocalDomainName),
+			Domain:          c.StringPtr(c.SystemLocalDomainName),
 			MaximumPageSize: c.Int32Ptr(1),
-			NextPageToken: nil,
+			NextPageToken:   nil,
 			ExecutionFilter: &shared.WorkflowExecutionFilter{
 				WorkflowId: c.StringPtr(params.ScannerWorkflowWorkflowID),
 			},
@@ -320,7 +321,7 @@ func FixerCorruptedKeysActivity(
 	}
 
 	descResp, err := client.DescribeWorkflowExecution(activityCtx, &shared.DescribeWorkflowExecutionRequest{
-		Domain: c.StringPtr(c.SystemLocalDomainName),
+		Domain:    c.StringPtr(c.SystemLocalDomainName),
 		Execution: scanExec,
 	})
 	if err != nil {

@@ -183,7 +183,86 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
 			Resource: s.mockResource,
 		}),
 	})
-	fixerResultValue, err := env.ExecuteActivity(FixerCorruptedKeysActivity, FixerCorruptedKeysActivityParams{})
+	fixerResultValue, err := env.ExecuteActivity(FixerCorruptedKeysActivity, FixerCorruptedKeysActivityParams{
+		ScannerWorkflowWorkflowID: "test_id",
+		ScannerWorkflowRunID:      "test_run_id",
+	})
+	s.NoError(err)
+	fixerResult := &FixerCorruptedKeysActivityResult{}
+	s.NoError(fixerResultValue.Get(&fixerResult))
+	s.Equal(1, *fixerResult.MinShard)
+	s.Equal(3, *fixerResult.MaxShard)
+	s.Equal(ShardQueryPaginationToken{
+		NextShardID: common.IntPtr(4),
+		IsDone:      false,
+	}, fixerResult.ShardQueryPaginationToken)
+	s.Contains(fixerResult.CorruptedKeys, CorruptedKeysEntry{
+		ShardID: 1,
+		CorruptedKeys: store.Keys{
+			UUID: "first",
+		},
+	})
+	s.Contains(fixerResult.CorruptedKeys, CorruptedKeysEntry{
+		ShardID: 2,
+		CorruptedKeys: store.Keys{
+			UUID: "second",
+		},
+	})
+	s.Contains(fixerResult.CorruptedKeys, CorruptedKeysEntry{
+		ShardID: 3,
+		CorruptedKeys: store.Keys{
+			UUID: "third",
+		},
+	})
+}
+
+func (s *activitiesSuite) TestFixerCorruptedKeysActivity_MostRecent() {
+	s.mockResource.SDKClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&shared.ListClosedWorkflowExecutionsResponse{
+		Executions: []*shared.WorkflowExecutionInfo{
+			{
+				Execution: &shared.WorkflowExecution{
+					WorkflowId: common.StringPtr("test_workflow_id"),
+					RunId:      common.StringPtr("test_run_id"),
+				},
+			},
+		},
+	}, nil)
+	s.mockResource.SDKClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(&shared.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &shared.WorkflowExecutionInfo{
+			CloseStatus: shared.WorkflowExecutionCloseStatusCompleted.Ptr(),
+		},
+	}, nil)
+	queryResult := &ShardCorruptKeysQueryResult{
+		Result: map[int]store.Keys{
+			1: {
+				UUID: "first",
+			},
+			2: {
+				UUID: "second",
+			},
+			3: {
+				UUID: "third",
+			},
+		},
+		ShardQueryPaginationToken: ShardQueryPaginationToken{
+			NextShardID: common.IntPtr(4),
+			IsDone:      false,
+		},
+	}
+	queryResultData, err := json.Marshal(queryResult)
+	s.NoError(err)
+	s.mockResource.SDKClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(&shared.QueryWorkflowResponse{
+		QueryResult: queryResultData,
+	}, nil)
+	env := s.NewTestActivityEnvironment()
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.WithValue(context.Background(), ScanTypeFixerContextKeyMap[ConcreteExecutionType], FixerContext{
+			Resource: s.mockResource,
+		}),
+	})
+	fixerResultValue, err := env.ExecuteActivity(FixerCorruptedKeysActivity, FixerCorruptedKeysActivityParams{
+		ScannerWorkflowWorkflowID: "test_id",
+	})
 	s.NoError(err)
 	fixerResult := &FixerCorruptedKeysActivityResult{}
 	s.NoError(fixerResultValue.Get(&fixerResult))

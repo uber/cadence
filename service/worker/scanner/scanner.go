@@ -27,8 +27,8 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/shared"
 	cclient "go.uber.org/cadence/client"
-	"go.uber.org/cadence/workflow"
 	"go.uber.org/cadence/worker"
+	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common"
