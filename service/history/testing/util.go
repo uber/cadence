@@ -345,6 +345,7 @@ func AddStartChildWorkflowExecutionInitiatedEvent(
 	input []byte,
 	executionStartToCloseTimeout int32,
 	taskStartToCloseTimeout int32,
+	retryPolicy *workflow.RetryPolicy,
 ) (*workflow.HistoryEvent,
 	*persistence.ChildExecutionInfo) {
 
@@ -358,6 +359,7 @@ func AddStartChildWorkflowExecutionInitiatedEvent(
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
 			Control:                             nil,
+			RetryPolicy:                         retryPolicy,
 		})
 	return event, cei
 }

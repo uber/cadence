@@ -1267,42 +1267,35 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 	attributes *workflow.StartChildWorkflowExecutionInitiatedEventAttributes,
 ) (string, error) {
 
+	frontendStartReq := &workflow.StartWorkflowExecutionRequest{
+		Domain:                              common.StringPtr(targetDomain),
+		WorkflowId:                          attributes.WorkflowId,
+		WorkflowType:                        attributes.WorkflowType,
+		TaskList:                            attributes.TaskList,
+		Input:                               attributes.Input,
+		Header:                              attributes.Header,
+		ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      attributes.TaskStartToCloseTimeoutSeconds,
+		// Use the same request ID to dedupe StartWorkflowExecution calls
+		RequestId:             common.StringPtr(childInfo.CreateRequestID),
+		WorkflowIdReusePolicy: attributes.WorkflowIdReusePolicy,
+		RetryPolicy:           attributes.RetryPolicy,
+		CronSchedule:          attributes.CronSchedule,
+		Memo:                  attributes.Memo,
+		SearchAttributes:      attributes.SearchAttributes,
+	}
+
 	now := t.shard.GetTimeSource().Now()
-	request := &h.StartWorkflowExecutionRequest{
-		DomainUUID: common.StringPtr(task.TargetDomainID),
-		StartRequest: &workflow.StartWorkflowExecutionRequest{
-			Domain:                              common.StringPtr(targetDomain),
-			WorkflowId:                          attributes.WorkflowId,
-			WorkflowType:                        attributes.WorkflowType,
-			TaskList:                            attributes.TaskList,
-			Input:                               attributes.Input,
-			Header:                              attributes.Header,
-			ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
-			TaskStartToCloseTimeoutSeconds:      attributes.TaskStartToCloseTimeoutSeconds,
-			// Use the same request ID to dedupe StartWorkflowExecution calls
-			RequestId:             common.StringPtr(childInfo.CreateRequestID),
-			WorkflowIdReusePolicy: attributes.WorkflowIdReusePolicy,
-			RetryPolicy:           attributes.RetryPolicy,
-			CronSchedule:          attributes.CronSchedule,
-			Memo:                  attributes.Memo,
-			SearchAttributes:      attributes.SearchAttributes,
+	historyStartReq := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, now)
+
+	historyStartReq.ParentExecutionInfo = &h.ParentExecutionInfo{
+		DomainUUID: common.StringPtr(task.DomainID),
+		Domain:     common.StringPtr(domain),
+		Execution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(task.WorkflowID),
+			RunId:      common.StringPtr(task.RunID),
 		},
-		ParentExecutionInfo: &h.ParentExecutionInfo{
-			DomainUUID: common.StringPtr(task.DomainID),
-			Domain:     common.StringPtr(domain),
-			Execution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(task.WorkflowID),
-				RunId:      common.StringPtr(task.RunID),
-			},
-			InitiatedId: common.Int64Ptr(task.ScheduleID),
-		},
-		FirstDecisionTaskBackoffSeconds: common.Int32Ptr(
-			backoff.GetBackoffForNextScheduleInSeconds(
-				attributes.GetCronSchedule(),
-				now,
-				now,
-			),
-		),
+		InitiatedId: common.Int64Ptr(task.ScheduleID),
 	}
 
 	startWorkflowCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
@@ -1310,7 +1303,7 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 	var response *workflow.StartWorkflowExecutionResponse
 	var err error
 	op := func() error {
-		clientResp, err := t.historyClient.StartWorkflowExecution(startWorkflowCtx, thrift.ToHistoryStartWorkflowExecutionRequest(request))
+		clientResp, err := t.historyClient.StartWorkflowExecution(startWorkflowCtx, thrift.ToHistoryStartWorkflowExecutionRequest(historyStartReq))
 		response = thrift.FromStartWorkflowExecutionResponse(clientResp)
 		return err
 	}
