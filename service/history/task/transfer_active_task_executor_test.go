@@ -38,7 +38,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
@@ -1558,7 +1557,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 	taskID := int64(59)
 
 	event, ci := test.AddStartChildWorkflowExecutionInitiatedEvent(mutableState, event.GetEventId(), uuid.New(),
-		s.childDomainName, childWorkflowID, childWorkflowType, childTaskListName, nil, 1, 1)
+		s.childDomainName, childWorkflowID, childWorkflowType, childTaskListName, nil, 1, 1, nil)
 
 	transferTask := &persistence.TransferTaskInfo{
 		Version:          s.version,
@@ -1582,7 +1581,103 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 		transferTask,
 		mutableState,
 		ci,
+		time.Now(),
 	)).Return(&types.StartWorkflowExecutionResponse{RunID: common.StringPtr(childRunID)}, nil).Times(1)
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
+	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.version).Return(cluster.TestCurrentClusterName).AnyTimes()
+	s.mockHistoryClient.EXPECT().ScheduleDecisionTask(gomock.Any(), &types.ScheduleDecisionTaskRequest{
+		DomainUUID: common.StringPtr(constants.TestChildDomainID),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(childWorkflowID),
+			RunID:      common.StringPtr(childRunID),
+		},
+		IsFirstDecision: common.BoolPtr(true),
+	}).Return(nil).Times(1)
+
+	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
+	s.Nil(err)
+}
+
+func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_WithRetry_Success() {
+
+	workflowExecution := workflow.WorkflowExecution{
+		WorkflowId: common.StringPtr("some random workflow ID"),
+		RunId:      common.StringPtr(uuid.New()),
+	}
+	workflowType := "some random workflow type"
+	taskListName := "some random task list"
+
+	childWorkflowID := "some random child workflow ID"
+	childRunID := uuid.New()
+	childWorkflowType := "some random child workflow type"
+	childTaskListName := "some random child task list"
+
+	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
+		s.mockShard,
+		s.logger,
+		s.version,
+		workflowExecution.GetRunId(),
+		constants.TestGlobalDomainEntry,
+	)
+	_, err := mutableState.AddWorkflowExecutionStartedEvent(
+		workflowExecution,
+		&history.StartWorkflowExecutionRequest{
+			DomainUUID: common.StringPtr(s.domainID),
+			StartRequest: &workflow.StartWorkflowExecutionRequest{
+				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskListName)},
+				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
+				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+			},
+		},
+	)
+	s.Nil(err)
+
+	di := test.AddDecisionTaskScheduledEvent(mutableState)
+	event := test.AddDecisionTaskStartedEvent(mutableState, di.ScheduleID, taskListName, uuid.New())
+	di.StartedID = event.GetEventId()
+	event = test.AddDecisionTaskCompletedEvent(mutableState, di.ScheduleID, di.StartedID, nil, "some random identity")
+
+	taskID := int64(59)
+
+	retryPolicy := &workflow.RetryPolicy{
+		ExpirationIntervalInSeconds: common.Int32Ptr(100),
+		MaximumAttempts:             common.Int32Ptr(3),
+		InitialIntervalInSeconds:    common.Int32Ptr(1),
+		MaximumIntervalInSeconds:    common.Int32Ptr(2),
+		BackoffCoefficient:          common.Float64Ptr(1),
+	}
+
+	event, ci := test.AddStartChildWorkflowExecutionInitiatedEvent(mutableState, event.GetEventId(), uuid.New(),
+		s.childDomainName, childWorkflowID, childWorkflowType, childTaskListName, nil, 1, 1, retryPolicy)
+
+	transferTask := &persistence.TransferTaskInfo{
+		Version:          s.version,
+		DomainID:         s.domainID,
+		WorkflowID:       workflowExecution.GetWorkflowId(),
+		RunID:            workflowExecution.GetRunId(),
+		TargetDomainID:   constants.TestChildDomainID,
+		TargetWorkflowID: childWorkflowID,
+		TargetRunID:      "",
+		TaskID:           taskID,
+		TaskList:         taskListName,
+		TaskType:         persistence.TransferTaskTypeStartChildExecution,
+		ScheduleID:       event.GetEventId(),
+	}
+
+	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+	s.mockHistoryClient.EXPECT().StartWorkflowExecution(
+		gomock.Any(),
+		gomock.Eq(s.createChildWorkflowExecutionRequest(
+			s.domainName,
+			s.childDomainName,
+			transferTask,
+			mutableState,
+			ci,
+			s.mockShard.GetTimeSource().Now(),
+		))).Return(&types.StartWorkflowExecutionResponse{RunID: common.StringPtr(childRunID)}, nil).Times(1)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.version).Return(cluster.TestCurrentClusterName).AnyTimes()
@@ -1651,6 +1746,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Failure
 		nil,
 		1,
 		1,
+		nil,
 	)
 
 	transferTask := &persistence.TransferTaskInfo{
@@ -1675,6 +1771,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Failure
 		transferTask,
 		mutableState,
 		ci,
+		time.Now(),
 	)).Return(nil, &types.WorkflowExecutionAlreadyStartedError{}).Times(1)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
@@ -1737,6 +1834,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 		nil,
 		1,
 		1,
+		nil,
 	)
 
 	transferTask := &persistence.TransferTaskInfo{
@@ -1827,6 +1925,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Duplica
 		nil,
 		1,
 		1,
+		nil,
 	)
 
 	transferTask := &persistence.TransferTaskInfo{
@@ -2125,6 +2224,7 @@ func (s *transferActiveTaskExecutorSuite) createChildWorkflowExecutionRequest(
 	task *persistence.TransferTaskInfo,
 	mutableState execution.MutableState,
 	ci *persistence.ChildExecutionInfo,
+	now time.Time,
 ) *types.HistoryStartWorkflowExecutionRequest {
 
 	event, err := mutableState.GetChildExecutionInitiatedEvent(context.Background(), task.ScheduleID)
@@ -2134,31 +2234,31 @@ func (s *transferActiveTaskExecutorSuite) createChildWorkflowExecutionRequest(
 		WorkflowID: common.StringPtr(task.WorkflowID),
 		RunID:      common.StringPtr(task.RunID),
 	}
-	now := time.Now()
-	return &types.HistoryStartWorkflowExecutionRequest{
-		DomainUUID: common.StringPtr(task.TargetDomainID),
-		StartRequest: &types.StartWorkflowExecutionRequest{
-			Domain:                              common.StringPtr(childDomainName),
-			WorkflowID:                          attributes.WorkflowID,
-			WorkflowType:                        attributes.WorkflowType,
-			TaskList:                            attributes.TaskList,
-			Input:                               attributes.Input,
-			ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
-			TaskStartToCloseTimeoutSeconds:      attributes.TaskStartToCloseTimeoutSeconds,
-			// Use the same request ID to dedupe StartWorkflowExecution calls
-			RequestID:             common.StringPtr(ci.CreateRequestID),
-			WorkflowIDReusePolicy: attributes.WorkflowIDReusePolicy,
-		},
-		ParentExecutionInfo: &types.ParentExecutionInfo{
-			DomainUUID:  common.StringPtr(task.DomainID),
-			Domain:      common.StringPtr(constants.TestDomainName),
-			Execution:   &workflowExecution,
-			InitiatedID: common.Int64Ptr(task.ScheduleID),
-		},
-		FirstDecisionTaskBackoffSeconds: common.Int32Ptr(
-			backoff.GetBackoffForNextScheduleInSeconds(attributes.GetCronSchedule(), now, now),
-		),
+	frontendStartReq := &types.StartWorkflowExecutionRequest{
+		Domain:                              common.StringPtr(childDomainName),
+		WorkflowID:                          attributes.WorkflowID,
+		WorkflowType:                        attributes.WorkflowType,
+		TaskList:                            attributes.TaskList,
+		Input:                               attributes.Input,
+		ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      attributes.TaskStartToCloseTimeoutSeconds,
+		// Use the same request ID to dedupe StartWorkflowExecution calls
+		RequestID:             common.StringPtr(ci.CreateRequestID),
+		WorkflowIDReusePolicy: attributes.WorkflowIDReusePolicy,
+		RetryPolicy:           attributes.RetryPolicy,
 	}
+
+	parentInfo := &types.ParentExecutionInfo{
+		DomainUUID:  common.StringPtr(task.DomainID),
+		Domain:      common.StringPtr(domainName),
+		Execution:   &workflowExecution,
+		InitiatedID: common.Int64Ptr(task.ScheduleID),
+	}
+
+	historyStartReq := common.CreateHistoryStartWorkflowRequest(
+		task.TargetDomainID, thrift.FromStartWorkflowExecutionRequest(frontendStartReq), now)
+	historyStartReq.ParentExecutionInfo = thrift.FromParentExecutionInfo(parentInfo)
+	return thrift.ToHistoryStartWorkflowExecutionRequest(historyStartReq)
 }
 
 func (s *transferActiveTaskExecutorSuite) createUpsertWorkflowSearchAttributesRequest(

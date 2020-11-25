@@ -2971,7 +2971,7 @@ func getStartRequest(
 		Header:                              request.Header,
 	}
 
-	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req)
+	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
 	return startRequest
 }
 

@@ -1285,7 +1285,9 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 		SearchAttributes:      attributes.SearchAttributes,
 	}
 
-	historyStartReq := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq)
+	now := t.shard.GetTimeSource().Now()
+	historyStartReq := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, now)
+
 	historyStartReq.ParentExecutionInfo = &h.ParentExecutionInfo{
 		DomainUUID: common.StringPtr(task.DomainID),
 		Domain:     common.StringPtr(domain),
@@ -1295,14 +1297,6 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 		},
 		InitiatedId: common.Int64Ptr(task.ScheduleID),
 	}
-	now := t.shard.GetTimeSource().Now()
-	historyStartReq.FirstDecisionTaskBackoffSeconds = common.Int32Ptr(
-		backoff.GetBackoffForNextScheduleInSeconds(
-			attributes.GetCronSchedule(),
-			now,
-			now,
-		),
-	)
 
 	startWorkflowCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 	defer cancel()
