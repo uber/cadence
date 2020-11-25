@@ -358,7 +358,6 @@ func ScannerWorkflow(
 	}).Get(ctx, nil); err != nil {
 		return err
 	}
-
 	return nil
 }
 
