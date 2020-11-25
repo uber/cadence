@@ -87,6 +87,7 @@ const (
 	FrontendClientRoleTagValue = "frontend_client"
 	AdminClientRoleTagValue    = "admin_client"
 	DCRedirectionRoleTagValue  = "dc_redirection"
+	BlobstoreRoleTagValue      = "blobstore"
 
 	SizeStatsTypeTagValue  = "size"
 	CountStatsTypeTagValue = "count"
@@ -1348,6 +1349,13 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 
 		HistoryArchiverScope:    {operation: "HistoryArchiver"},
 		VisibilityArchiverScope: {operation: "VisibilityArchiver"},
+
+		BlobstoreClientUploadScope:          {operation: "BlobstoreClientUpload", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientDownloadScope:        {operation: "BlobstoreClientDownload", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientGetMetadataScope:     {operation: "BlobstoreClientGetMetadata", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientExistsScope:          {operation: "BlobstoreClientExists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientDeleteScope:          {operation: "BlobstoreClientDelete", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
+		BlobstoreClientDirectoryExistsScope: {operation: "BlobstoreClientDirectoryExists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 
 		DomainFailoverScope:         {operation: "DomainFailover"},
 		DomainReplicationQueueScope: {operation: "DomainReplicationQueue"},
