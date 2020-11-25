@@ -30,6 +30,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/.gen/proto"
+
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -256,6 +258,10 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 
 	scope, sw := wh.startRequestProfile(metrics.FrontendRegisterDomainScope)
 	defer sw.Stop()
+
+	var x proto.TimeoutType
+	x = 5
+	_ = x.String()
 
 	if wh.isShuttingDown() {
 		return errShuttingDown
