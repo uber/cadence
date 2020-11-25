@@ -23,8 +23,6 @@ package config
 import (
 	"time"
 
-	"github.com/uber/cadence/common/metrics"
-
 	"github.com/cactus/go-statsd-client/statsd"
 	prom "github.com/m3db/prometheus_client_golang/prometheus"
 	"github.com/uber-go/tally"
@@ -33,6 +31,7 @@ import (
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	statsdreporter "github.com/uber/cadence/common/metrics/tally/statsd"
 )
 
