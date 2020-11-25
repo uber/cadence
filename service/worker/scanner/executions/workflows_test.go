@@ -434,6 +434,7 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 	}
 
 	env.ExecuteWorkflow(FixerWorkflow, FixerWorkflowParams{
+		
 		ScannerWorkflowWorkflowID:     "test_wid",
 		ScannerWorkflowRunID:          "test_rid",
 		FixerWorkflowConfigOverwrites: fixerWorkflowConfigOverwrites,

@@ -339,6 +339,8 @@ var keys = map[Key]string{
 	CurrentExecutionsScannerInvariantCollectionMutableState:  "worker.currentExecutionsInvariantCollectionMutableState",
 	ConcreteExecutionFixerDomainAllow:                        "worker.concreteExecutionFixerDomainAllow",
 	CurrentExecutionFixerDomainAllow:                         "worker.currentExecutionFixerDomainAllow",
+	ConcreteExecutionFixerEnabled:                            "worker.concreteExecutionFixerEnabled",
+	CurrentExecutionFixerEnabled:                             "worker.currentExecutionFixerEnabled",
 }
 
 const (
@@ -878,6 +880,10 @@ const (
 	ConcreteExecutionFixerDomainAllow
 	// CurrentExecutionFixerDomainAllow indicates which domains are allowed to be fixed by current fixer workflow
 	CurrentExecutionFixerDomainAllow
+	// ConcreteExecutionFixerEnabled indicates if concrete execution fixer workflow is enabled
+	ConcreteExecutionFixerEnabled
+	// CurrentExecutionFixerEnabled indicates if current execution fixer workflow is enabled
+	CurrentExecutionFixerEnabled
 	// EnableBatcher decides whether start batcher in our worker
 	EnableBatcher
 	// EnableParentClosePolicyWorker decides whether or not enable system workers for processing parent close policy task

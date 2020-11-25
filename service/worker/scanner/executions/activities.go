@@ -25,7 +25,7 @@ package executions
 import (
 	"context"
 	"encoding/json"
-
+	"errors"
 	"go.uber.org/cadence"
 
 	"go.uber.org/cadence/.gen/go/shared"
@@ -295,12 +295,33 @@ func FixerCorruptedKeysActivity(
 ) (*FixerCorruptedKeysActivityResult, error) {
 	resource := activityCtx.Value(ScanTypeFixerContextKeyMap[params.ScanType]).(FixerContext).Resource
 	client := resource.GetSDKClient()
+	scanExec := &shared.WorkflowExecution{
+		WorkflowId: c.StringPtr(params.ScannerWorkflowWorkflowID),
+	}
+	if params.ScannerWorkflowRunID != "" {
+		scanExec.RunId = c.StringPtr(params.ScannerWorkflowRunID)
+	} else {
+		listResp, err := client.ListClosedWorkflowExecutions(activityCtx, &shared.ListClosedWorkflowExecutionsRequest{
+			Domain: c.StringPtr(c.SystemLocalDomainName),
+			MaximumPageSize: c.Int32Ptr(1),
+			NextPageToken: nil,
+			ExecutionFilter: &shared.WorkflowExecutionFilter{
+				WorkflowId: c.StringPtr(params.ScannerWorkflowWorkflowID),
+			},
+			StatusFilter: shared.WorkflowExecutionCloseStatusCompleted.Ptr(),
+		})
+		if err != nil {
+			return nil, err
+		}
+		if len(listResp.Executions) != 1 {
+			return nil, errors.New("got unexpected number of executions back from list")
+		}
+		scanExec.RunId = listResp.Executions[0].Execution.RunId
+	}
+
 	descResp, err := client.DescribeWorkflowExecution(activityCtx, &shared.DescribeWorkflowExecutionRequest{
 		Domain: c.StringPtr(c.SystemLocalDomainName),
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: c.StringPtr(params.ScannerWorkflowWorkflowID),
-			RunId:      c.StringPtr(params.ScannerWorkflowRunID),
-		},
+		Execution: scanExec,
 	})
 	if err != nil {
 		return nil, err
