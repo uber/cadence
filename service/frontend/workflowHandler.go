@@ -1831,7 +1831,11 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	}
 
 	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
-	clientResp, err := wh.GetHistoryClient().StartWorkflowExecution(ctx, thrift.ToHistoryStartWorkflowExecutionRequest(common.CreateHistoryStartWorkflowRequest(domainID, startRequest)))
+	clientResp, err := wh.GetHistoryClient().
+		StartWorkflowExecution(
+			ctx, thrift.ToHistoryStartWorkflowExecutionRequest(
+				common.CreateHistoryStartWorkflowRequest(
+					domainID, startRequest, time.Now())))
 	resp = thrift.FromStartWorkflowExecutionResponse(clientResp)
 	if err != nil {
 		return nil, wh.error(err, scope)
