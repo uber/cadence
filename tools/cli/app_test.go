@@ -34,13 +34,10 @@ import (
 	clientFrontendTest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
 	"go.uber.org/cadence/.gen/go/shared"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
-	serverAdminTest "github.com/uber/cadence/.gen/go/admin/adminservicetest"
-	serverFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
-	serverFrontendTest "github.com/uber/cadence/.gen/go/cadence/workflowservicetest"
-	serverShared "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/admin"
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 type cliAppSuite struct {
@@ -48,25 +45,25 @@ type cliAppSuite struct {
 	app                  *cli.App
 	mockCtrl             *gomock.Controller
 	clientFrontendClient *clientFrontendTest.MockClient
-	serverFrontendClient *serverFrontendTest.MockClient
-	serverAdminClient    *serverAdminTest.MockClient
+	serverFrontendClient *frontend.MockClient
+	serverAdminClient    *admin.MockClient
 }
 
 type clientFactoryMock struct {
 	clientFrontendClient clientFrontend.Interface
-	serverFrontendClient serverFrontend.Interface
-	serverAdminClient    serverAdmin.Interface
+	serverFrontendClient frontend.Client
+	serverAdminClient    admin.Client
 }
 
 func (m *clientFactoryMock) ClientFrontendClient(c *cli.Context) clientFrontend.Interface {
 	return m.clientFrontendClient
 }
 
-func (m *clientFactoryMock) ServerFrontendClient(c *cli.Context) serverFrontend.Interface {
+func (m *clientFactoryMock) ServerFrontendClient(c *cli.Context) frontend.Client {
 	return m.serverFrontendClient
 }
 
-func (m *clientFactoryMock) ServerAdminClient(c *cli.Context) serverAdmin.Interface {
+func (m *clientFactoryMock) ServerAdminClient(c *cli.Context) admin.Client {
 	return m.serverAdminClient
 }
 
@@ -94,8 +91,8 @@ func (s *cliAppSuite) SetupTest() {
 	s.mockCtrl = gomock.NewController(s.T())
 
 	s.clientFrontendClient = clientFrontendTest.NewMockClient(s.mockCtrl)
-	s.serverFrontendClient = serverFrontendTest.NewMockClient(s.mockCtrl)
-	s.serverAdminClient = serverAdminTest.NewMockClient(s.mockCtrl)
+	s.serverFrontendClient = frontend.NewMockClient(s.mockCtrl)
+	s.serverAdminClient = admin.NewMockClient(s.mockCtrl)
 	SetFactory(&clientFactoryMock{
 		clientFrontendClient: s.clientFrontendClient,
 		serverFrontendClient: s.serverFrontendClient,
@@ -149,19 +146,19 @@ func (s *cliAppSuite) TestDomainRegister_Failed() {
 	s.Equal(1, errorCode)
 }
 
-var describeDomainResponseServer = &serverShared.DescribeDomainResponse{
-	DomainInfo: &serverShared.DomainInfo{
+var describeDomainResponseServer = &types.DescribeDomainResponse{
+	DomainInfo: &types.DomainInfo{
 		Name:        common.StringPtr("test-domain"),
 		Description: common.StringPtr("a test domain"),
 		OwnerEmail:  common.StringPtr("test@uber.com"),
 	},
-	Configuration: &serverShared.DomainConfiguration{
+	Configuration: &types.DomainConfiguration{
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(3),
 		EmitMetric:                             common.BoolPtr(true),
 	},
-	ReplicationConfiguration: &serverShared.DomainReplicationConfiguration{
+	ReplicationConfiguration: &types.DomainReplicationConfiguration{
 		ActiveClusterName: common.StringPtr("active"),
-		Clusters: []*serverShared.ClusterReplicationConfiguration{
+		Clusters: []*types.ClusterReplicationConfiguration{
 			{
 				ClusterName: common.StringPtr("active"),
 			},
@@ -503,8 +500,8 @@ var describeTaskListResponse = &shared.DescribeTaskListResponse{
 }
 
 func (s *cliAppSuite) TestAdminDescribeWorkflow() {
-	resp := &admin.DescribeWorkflowExecutionResponse{
-		ShardId:                common.StringPtr("test-shard-id"),
+	resp := &types.AdminDescribeWorkflowExecutionResponse{
+		ShardID:                common.StringPtr("test-shard-id"),
 		HistoryAddr:            common.StringPtr("ip:port"),
 		MutableStateInDatabase: common.StringPtr("{\"ExecutionInfo\":{\"BranchToken\":\"WQsACgAAACQ2MzI5YzEzMi1mMGI0LTQwZmUtYWYxMS1hODVmMDA3MzAzODQLABQAAAAkOWM5OWI1MjItMGEyZi00NTdmLWEyNDgtMWU0OTA0ZDg4YzVhDwAeDAAAAAAA\"}}"),
 	}
@@ -515,7 +512,7 @@ func (s *cliAppSuite) TestAdminDescribeWorkflow() {
 }
 
 func (s *cliAppSuite) TestAdminDescribeWorkflow_Failed() {
-	s.serverAdminClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, &serverShared.BadRequestError{"faked error"})
+	s.serverAdminClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, &types.BadRequestError{"faked error"})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "admin", "wf", "describe", "-w", "test-wf-id"})
 	s.Equal(1, errorCode)
 }
