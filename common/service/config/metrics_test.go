@@ -30,6 +30,7 @@ import (
 	"github.com/uber-go/tally/prometheus"
 
 	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/metrics"
 )
 
 type MetricsSuite struct {
@@ -84,5 +85,5 @@ func (s *MetricsSuite) TestPrometheus() {
 func (s *MetricsSuite) TestNoop() {
 	config := &Metrics{}
 	scope := config.NewScope(loggerimpl.NewNopLogger(), "test")
-	s.Equal(tally.NoopScope, scope)
+	s.Equal(tally.NoopScope.Tagged(map[string]string{metrics.CadenceServiceTagName: "test"}), scope)
 }
