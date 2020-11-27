@@ -33,7 +33,6 @@ import (
 
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyservicetest"
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
@@ -45,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/shard"
@@ -56,9 +56,9 @@ type (
 		*require.Assertions
 		controller *gomock.Controller
 
-		mockShard        *shard.TestContext
-		mockEngine       *engine.MockEngine
-		config           *config.Config
+		mockShard  *shard.TestContext
+		mockEngine *engine.MockEngine
+		config     *config.Config
 		historyClient    *historyservicetest.MockClient
 		taskFetcher      *MockTaskFetcher
 		mockDomainCache  *cache.MockDomainCache
@@ -139,8 +139,8 @@ func (s *taskProcessorSuite) TearDownTest() {
 }
 
 func (s *taskProcessorSuite) TestProcessResponse_NoTask() {
-	response := &replicator.ReplicationMessages{
-		LastRetrievedMessageId: common.Int64Ptr(100),
+	response := &types.ReplicationMessages{
+		LastRetrievedMessageID: common.Int64Ptr(100),
 	}
 
 	s.taskProcessor.processResponse(response)
@@ -153,8 +153,8 @@ func (s *taskProcessorSuite) TestSendFetchMessageRequest() {
 	requestMessage := <-s.requestChan
 
 	s.Equal(int32(0), requestMessage.token.GetShardID())
-	s.Equal(int64(-1), requestMessage.token.GetLastProcessedMessageId())
-	s.Equal(int64(-1), requestMessage.token.GetLastRetrievedMessageId())
+	s.Equal(int64(-1), requestMessage.token.GetLastProcessedMessageID())
+	s.Equal(int64(-1), requestMessage.token.GetLastRetrievedMessageID())
 }
 
 func (s *taskProcessorSuite) TestHandleSyncShardStatus() {
@@ -165,7 +165,7 @@ func (s *taskProcessorSuite) TestHandleSyncShardStatus() {
 		Timestamp:     common.Int64Ptr(now.UnixNano()),
 	}).Return(nil).Times(1)
 
-	err := s.taskProcessor.handleSyncShardStatus(&replicator.SyncShardStatus{
+	err := s.taskProcessor.handleSyncShardStatus(&types.SyncShardStatus{
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 	})
 	s.NoError(err)
@@ -175,12 +175,12 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_SyncActivityReplication
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
-	task := &replicator.ReplicationTask{
-		TaskType: replicator.ReplicationTaskTypeSyncActivity.Ptr(),
-		SyncActivityTaskAttributes: &replicator.SyncActivityTaskAttributes{
-			DomainId:   common.StringPtr(domainID),
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+	task := &types.ReplicationTask{
+		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
+		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
+			DomainID:   common.StringPtr(domainID),
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	}
 	request := &persistence.PutReplicationTaskToDLQRequest{
@@ -210,14 +210,14 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTas
 	serializer := s.mockShard.GetPayloadSerializer()
 	data, err := serializer.SerializeBatchEvents(events, common.EncodingTypeThriftRW)
 	s.NoError(err)
-	task := &replicator.ReplicationTask{
-		TaskType: replicator.ReplicationTaskTypeHistoryV2.Ptr(),
-		HistoryTaskV2Attributes: &replicator.HistoryTaskV2Attributes{
-			DomainId:   common.StringPtr(domainID),
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-			Events: &shared.DataBlob{
-				EncodingType: shared.EncodingTypeThriftRW.Ptr(),
+	task := &types.ReplicationTask{
+		TaskType: types.ReplicationTaskTypeHistoryV2.Ptr(),
+		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
+			DomainID:   common.StringPtr(domainID),
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
+			Events: &types.DataBlob{
+				EncodingType: types.EncodingTypeThriftRW.Ptr(),
 				Data:         data.Data,
 			},
 		},
@@ -252,14 +252,14 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeHistoryV2
 	serializer := s.mockShard.GetPayloadSerializer()
 	data, err := serializer.SerializeBatchEvents(events, common.EncodingTypeThriftRW)
 	s.NoError(err)
-	task := &replicator.ReplicationTask{
-		TaskType: replicator.ReplicationTaskTypeHistoryV2.Ptr(),
-		HistoryTaskV2Attributes: &replicator.HistoryTaskV2Attributes{
-			DomainId:   common.StringPtr(domainID),
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
-			Events: &shared.DataBlob{
-				EncodingType: shared.EncodingTypeThriftRW.Ptr(),
+	task := &types.ReplicationTask{
+		TaskType: types.ReplicationTaskTypeHistoryV2.Ptr(),
+		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
+			DomainID:   common.StringPtr(domainID),
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
+			Events: &types.DataBlob{
+				EncodingType: types.EncodingTypeThriftRW.Ptr(),
 				Data:         data.Data,
 			},
 		},
@@ -280,13 +280,13 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeSyncActiv
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
-	task := &replicator.ReplicationTask{
-		TaskType: replicator.ReplicationTaskTypeSyncActivity.Ptr(),
-		SyncActivityTaskAttributes: &replicator.SyncActivityTaskAttributes{
-			DomainId:    common.StringPtr(domainID),
-			WorkflowId:  common.StringPtr(workflowID),
-			RunId:       common.StringPtr(runID),
-			ScheduledId: common.Int64Ptr(1),
+	task := &types.ReplicationTask{
+		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
+		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
+			DomainID:    common.StringPtr(domainID),
+			WorkflowID:  common.StringPtr(workflowID),
+			RunID:       common.StringPtr(runID),
+			ScheduledID: common.Int64Ptr(1),
 		},
 	}
 	request, err := s.taskProcessor.generateDLQRequest(task)

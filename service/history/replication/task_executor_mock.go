@@ -31,7 +31,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	replicator "github.com/uber/cadence/.gen/go/replicator"
+	types "github.com/uber/cadence/common/types"
 )
 
 // MockTaskExecutor is a mock of TaskExecutor interface
@@ -58,7 +58,7 @@ func (m *MockTaskExecutor) EXPECT() *MockTaskExecutorMockRecorder {
 }
 
 // execute mocks base method
-func (m *MockTaskExecutor) execute(replicationTask *replicator.ReplicationTask, forceApply bool) (int, error) {
+func (m *MockTaskExecutor) execute(replicationTask *types.ReplicationTask, forceApply bool) (int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "execute", replicationTask, forceApply)
 	ret0, _ := ret[0].(int)

@@ -31,7 +31,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -43,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	exec "github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
@@ -59,14 +59,14 @@ type (
 	TaskAckManager interface {
 		GetTask(
 			ctx ctx.Context,
-			taskInfo *replicator.ReplicationTaskInfo,
-		) (*replicator.ReplicationTask, error)
+			taskInfo *types.ReplicationTaskInfo,
+		) (*types.ReplicationTask, error)
 
 		GetTasks(
 			ctx ctx.Context,
 			pollingCluster string,
 			lastReadTaskID int64,
-		) (*replicator.ReplicationMessages, error)
+		) (*types.ReplicationMessages, error)
 	}
 
 	taskAckManagerImpl struct {
@@ -116,8 +116,8 @@ func NewTaskAckManager(
 
 func (t *taskAckManagerImpl) GetTask(
 	ctx ctx.Context,
-	taskInfo *replicator.ReplicationTaskInfo,
-) (*replicator.ReplicationTask, error) {
+	taskInfo *types.ReplicationTaskInfo,
+) (*types.ReplicationTask, error) {
 	task := &persistence.ReplicationTaskInfo{
 		DomainID:     taskInfo.GetDomainID(),
 		WorkflowID:   taskInfo.GetWorkflowID(),
@@ -136,7 +136,7 @@ func (t *taskAckManagerImpl) GetTasks(
 	ctx ctx.Context,
 	pollingCluster string,
 	lastReadTaskID int64,
-) (*replicator.ReplicationMessages, error) {
+) (*types.ReplicationMessages, error) {
 
 	if lastReadTaskID == common.EmptyMessageID {
 		lastReadTaskID = t.shard.GetClusterReplicationLevel(pollingCluster)
@@ -153,11 +153,11 @@ func (t *taskAckManagerImpl) GetTasks(
 		return nil, err
 	}
 
-	var replicationTasks []*replicator.ReplicationTask
+	var replicationTasks []*types.ReplicationTask
 	readLevel := lastReadTaskID
 	for _, taskInfo := range taskInfoList {
 		_ = t.rateLimiter.Wait(ctx)
-		var replicationTask *replicator.ReplicationTask
+		var replicationTask *types.ReplicationTask
 		op := func() error {
 			var err error
 			replicationTask, err = t.toReplicationTask(ctx, taskInfo)
@@ -200,17 +200,17 @@ func (t *taskAckManagerImpl) GetTasks(
 		t.logger.Error("error updating replication level for shard", tag.Error(err), tag.OperationFailed)
 	}
 
-	return &replicator.ReplicationMessages{
+	return &types.ReplicationMessages{
 		ReplicationTasks:       replicationTasks,
 		HasMore:                common.BoolPtr(hasMore),
-		LastRetrievedMessageId: common.Int64Ptr(readLevel),
+		LastRetrievedMessageID: common.Int64Ptr(readLevel),
 	}, nil
 }
 
 func (t *taskAckManagerImpl) toReplicationTask(
 	ctx ctx.Context,
 	taskInfo task.Info,
-) (*replicator.ReplicationTask, error) {
+) (*types.ReplicationTask, error) {
 
 	task, ok := taskInfo.(*persistence.ReplicationTaskInfo)
 	if !ok {
@@ -221,19 +221,19 @@ func (t *taskAckManagerImpl) toReplicationTask(
 	case persistence.ReplicationTaskTypeSyncActivity:
 		task, err := t.generateSyncActivityTask(ctx, task)
 		if task != nil {
-			task.SourceTaskId = common.Int64Ptr(taskInfo.GetTaskID())
+			task.SourceTaskID = common.Int64Ptr(taskInfo.GetTaskID())
 		}
 		return task, err
 	case persistence.ReplicationTaskTypeHistory:
 		task, err := t.generateHistoryReplicationTask(ctx, task)
 		if task != nil {
-			task.SourceTaskId = common.Int64Ptr(taskInfo.GetTaskID())
+			task.SourceTaskID = common.Int64Ptr(taskInfo.GetTaskID())
 		}
 		return task, err
 	case persistence.ReplicationTaskTypeFailoverMarker:
 		task := t.generateFailoverMarkerTask(task)
 		if task != nil {
-			task.SourceTaskId = common.Int64Ptr(taskInfo.GetTaskID())
+			task.SourceTaskID = common.Int64Ptr(taskInfo.GetTaskID())
 		}
 		return task, nil
 	default:
@@ -248,8 +248,8 @@ func (t *taskAckManagerImpl) processReplication(
 	action func(
 		activityInfo *persistence.ActivityInfo,
 		versionHistories *persistence.VersionHistories,
-	) (*replicator.ReplicationTask, error),
-) (retReplicationTask *replicator.ReplicationTask, retError error) {
+	) (*types.ReplicationTask, error),
+) (retReplicationTask *types.ReplicationTask, retError error) {
 
 	execution := shared.WorkflowExecution{
 		WorkflowId: common.StringPtr(taskInfo.GetWorkflowID()),
@@ -458,12 +458,12 @@ func (t *taskAckManagerImpl) getPaginationFunc(
 
 func (t *taskAckManagerImpl) generateFailoverMarkerTask(
 	taskInfo *persistence.ReplicationTaskInfo,
-) *replicator.ReplicationTask {
+) *types.ReplicationTask {
 
-	return &replicator.ReplicationTask{
-		TaskType:     replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeFailoverMarker),
-		SourceTaskId: common.Int64Ptr(taskInfo.GetTaskID()),
-		FailoverMarkerAttributes: &replicator.FailoverMarkerAttributes{
+	return &types.ReplicationTask{
+		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeFailoverMarker),
+		SourceTaskID: common.Int64Ptr(taskInfo.GetTaskID()),
+		FailoverMarkerAttributes: &types.FailoverMarkerAttributes{
 			DomainID:        common.StringPtr(taskInfo.GetDomainID()),
 			FailoverVersion: common.Int64Ptr(taskInfo.GetVersion()),
 		},
@@ -474,7 +474,7 @@ func (t *taskAckManagerImpl) generateFailoverMarkerTask(
 func (t *taskAckManagerImpl) generateSyncActivityTask(
 	ctx ctx.Context,
 	taskInfo *persistence.ReplicationTaskInfo,
-) (*replicator.ReplicationTask, error) {
+) (*types.ReplicationTask, error) {
 
 	return t.processReplication(
 		ctx,
@@ -483,7 +483,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 		func(
 			activityInfo *persistence.ActivityInfo,
 			versionHistories *persistence.VersionHistories,
-		) (*replicator.ReplicationTask, error) {
+		) (*types.ReplicationTask, error) {
 			if activityInfo == nil {
 				return nil, nil
 			}
@@ -507,16 +507,16 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 				versionHistory = rawVersionHistory.ToThrift()
 			}
 
-			return &replicator.ReplicationTask{
-				TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeSyncActivity),
-				SyncActivityTaskAttributes: &replicator.SyncActivityTaskAttributes{
-					DomainId:           common.StringPtr(taskInfo.GetDomainID()),
-					WorkflowId:         common.StringPtr(taskInfo.GetWorkflowID()),
-					RunId:              common.StringPtr(taskInfo.GetRunID()),
+			return &types.ReplicationTask{
+				TaskType: types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeSyncActivity),
+				SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
+					DomainID:           common.StringPtr(taskInfo.GetDomainID()),
+					WorkflowID:         common.StringPtr(taskInfo.GetWorkflowID()),
+					RunID:              common.StringPtr(taskInfo.GetRunID()),
 					Version:            common.Int64Ptr(activityInfo.Version),
-					ScheduledId:        common.Int64Ptr(activityInfo.ScheduleID),
+					ScheduledID:        common.Int64Ptr(activityInfo.ScheduleID),
 					ScheduledTime:      scheduledTime,
-					StartedId:          common.Int64Ptr(activityInfo.StartedID),
+					StartedID:          common.Int64Ptr(activityInfo.StartedID),
 					StartedTime:        startedTime,
 					LastHeartbeatTime:  heartbeatTime,
 					Details:            activityInfo.Details,
@@ -524,7 +524,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 					LastFailureReason:  common.StringPtr(activityInfo.LastFailureReason),
 					LastWorkerIdentity: common.StringPtr(activityInfo.LastWorkerIdentity),
 					LastFailureDetails: activityInfo.LastFailureDetails,
-					VersionHistory:     versionHistory,
+					VersionHistory:     thrift.ToVersionHistory(versionHistory),
 				},
 				CreationTime: common.Int64Ptr(taskInfo.CreationTime),
 			}, nil
@@ -535,7 +535,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 	ctx ctx.Context,
 	task *persistence.ReplicationTaskInfo,
-) (*replicator.ReplicationTask, error) {
+) (*types.ReplicationTask, error) {
 
 	return t.processReplication(
 		ctx,
@@ -544,7 +544,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 		func(
 			activityInfo *persistence.ActivityInfo,
 			versionHistories *persistence.VersionHistories,
-		) (*replicator.ReplicationTask, error) {
+		) (*types.ReplicationTask, error) {
 			if versionHistories == nil {
 				t.logger.Error("encounter workflow without version histories",
 					tag.WorkflowDomainID(task.GetDomainID()),
@@ -590,16 +590,16 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 				}
 			}
 
-			replicationTask := &replicator.ReplicationTask{
-				TaskType: replicator.ReplicationTaskType.Ptr(replicator.ReplicationTaskTypeHistoryV2),
-				HistoryTaskV2Attributes: &replicator.HistoryTaskV2Attributes{
-					TaskId:              common.Int64Ptr(task.FirstEventID),
-					DomainId:            common.StringPtr(task.DomainID),
-					WorkflowId:          common.StringPtr(task.WorkflowID),
-					RunId:               common.StringPtr(task.RunID),
-					VersionHistoryItems: versionHistoryItems,
-					Events:              eventsBlob,
-					NewRunEvents:        newRunEventsBlob,
+			replicationTask := &types.ReplicationTask{
+				TaskType: types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeHistoryV2),
+				HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
+					TaskID:              common.Int64Ptr(task.FirstEventID),
+					DomainID:            common.StringPtr(task.DomainID),
+					WorkflowID:          common.StringPtr(task.WorkflowID),
+					RunID:               common.StringPtr(task.RunID),
+					VersionHistoryItems: thrift.ToVersionHistoryItemArray(versionHistoryItems),
+					Events:              thrift.ToDataBlob(eventsBlob),
+					NewRunEvents:        thrift.ToDataBlob(newRunEventsBlob),
 				},
 				CreationTime: common.Int64Ptr(task.CreationTime),
 			}
