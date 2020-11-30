@@ -11,6 +11,9 @@ steps:
     command: "make cover_profile"
     artifact_paths:
       - "build/coverage/*.out"
+    retry:
+      automatic:
+        limit: 1
     plugins:
       - docker-compose#v3.0.0:
           run: unit-test

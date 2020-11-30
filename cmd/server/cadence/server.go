@@ -124,7 +124,7 @@ func (s *server) startService() common.Daemon {
 	)
 
 	svcCfg := s.cfg.Services[s.name]
-	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger)
+	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger, params.Name)
 	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger)
 	params.MembershipFactory, err = s.cfg.Ringpop.NewFactory(
 		params.RPCFactory.GetDispatcher(),

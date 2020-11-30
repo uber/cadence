@@ -38,17 +38,17 @@ import (
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -463,7 +463,7 @@ func doRereplicate(
 	endEventVersion int64,
 	sourceCluster string,
 	session *gocql.Session,
-	adminClient serverAdmin.Interface,
+	adminClient admin.Client,
 ) {
 
 	exeM, _ := cassandra.NewWorkflowExecutionPersistence(shardID, session, loggerimpl.NewNopLogger())
@@ -487,7 +487,7 @@ func doRereplicate(
 	}
 	if err := adminClient.ResendReplicationTasks(
 		ctx,
-		&admin.ResendReplicationTasksRequest{
+		&types.ResendReplicationTasksRequest{
 			DomainID:      common.StringPtr(domainID),
 			WorkflowID:    common.StringPtr(wid),
 			RunID:         common.StringPtr(rid),

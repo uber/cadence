@@ -30,9 +30,9 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/urfave/cli"
 
-	serverFrontendTest "github.com/uber/cadence/.gen/go/cadence/workflowservicetest"
-	serverShared "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 func TestAdminAddSearchAttribute_isValueTypeValid(t *testing.T) {
@@ -71,15 +71,15 @@ func TestAdminAddSearchAttribute_isValueTypeValid(t *testing.T) {
 func TestAdminFailover(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	serverFrontendClient := serverFrontendTest.NewMockClient(mockCtrl)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
 	domainCLI := &domainCLIImpl{
 		frontendClient: serverFrontendClient,
 	}
 
-	var listDomainsResponse = &serverShared.ListDomainsResponse{
-		Domains: []*serverShared.DescribeDomainResponse{
+	var listDomainsResponse = &types.ListDomainsResponse{
+		Domains: []*types.DescribeDomainResponse{
 			{
-				DomainInfo: &serverShared.DomainInfo{
+				DomainInfo: &types.DomainInfo{
 					Name:        common.StringPtr("test-domain"),
 					Description: common.StringPtr("a test domain"),
 					OwnerEmail:  common.StringPtr("test@uber.com"),
@@ -87,9 +87,9 @@ func TestAdminFailover(t *testing.T) {
 						common.DomainDataKeyForManagedFailover: "true",
 					},
 				},
-				ReplicationConfiguration: &serverShared.DomainReplicationConfiguration{
+				ReplicationConfiguration: &types.DomainReplicationConfiguration{
 					ActiveClusterName: common.StringPtr("active"),
-					Clusters: []*serverShared.ClusterReplicationConfiguration{
+					Clusters: []*types.ClusterReplicationConfiguration{
 						{
 							ClusterName: common.StringPtr("active"),
 						},
