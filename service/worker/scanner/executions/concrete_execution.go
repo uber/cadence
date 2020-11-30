@@ -167,6 +167,7 @@ func ConcreteExecutionScannerConfig(dc *dynamicconfig.Collection) *shardscanner.
 			PageSize:                dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerPersistencePageSize, 1000),
 			BlobstoreFlushThreshold: dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerBlobstoreFlushThreshold, 100),
 			ActivityBatchSize:       dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerActivityBatchSize, 25),
+			AllowDomain:             dc.GetBoolPropertyFilteredByDomain(dynamicconfig.ConcreteExecutionFixerDomainAllow, false),
 		},
 		DynamicCollection: dc,
 		ScannerHooks:      ConcreteExecutionHooks,

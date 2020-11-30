@@ -133,6 +133,7 @@ func CurrentExecutionScannerConfig(dc *dynamicconfig.Collection) *shardscanner.S
 			PageSize:                dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerPersistencePageSize, 1000),
 			BlobstoreFlushThreshold: dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerBlobstoreFlushThreshold, 100),
 			ActivityBatchSize:       dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerActivityBatchSize, 25),
+			AllowDomain:             dc.GetBoolPropertyFilteredByDomain(dynamicconfig.CurrentExecutionFixerDomainAllow, false),
 		},
 		ScannerHooks: CurrentExecutionsHooks,
 		FixerHooks:   CurrentExecutionFixerHooks,
