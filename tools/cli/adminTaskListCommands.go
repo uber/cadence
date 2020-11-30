@@ -29,8 +29,8 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 
-	s "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 // AdminDescribeTaskList displays poller and status information of task list.
@@ -38,16 +38,16 @@ func AdminDescribeTaskList(c *cli.Context) {
 	frontendClient := cFactory.ServerFrontendClient(c)
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	taskList := getRequiredOption(c, FlagTaskList)
-	taskListType := s.TaskListTypeDecision
+	taskListType := types.TaskListTypeDecision
 	if strings.ToLower(c.String(FlagTaskListType)) == "activity" {
-		taskListType = s.TaskListTypeActivity
+		taskListType = types.TaskListTypeActivity
 	}
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	request := &s.DescribeTaskListRequest{
+	request := &types.DescribeTaskListRequest{
 		Domain:                common.StringPtr(domain),
-		TaskList:              &s.TaskList{Name: common.StringPtr(taskList)},
+		TaskList:              &types.TaskList{Name: common.StringPtr(taskList)},
 		TaskListType:          &taskListType,
 		IncludeTaskListStatus: common.BoolPtr(true),
 	}
@@ -71,7 +71,7 @@ func AdminDescribeTaskList(c *cli.Context) {
 	printPollerInfo(pollers, taskListType)
 }
 
-func printTaskListStatus(taskListStatus *s.TaskListStatus) {
+func printTaskListStatus(taskListStatus *types.TaskListStatus) {
 	taskIDBlock := taskListStatus.GetTaskIDBlock()
 
 	table := tablewriter.NewWriter(os.Stdout)
@@ -88,11 +88,11 @@ func printTaskListStatus(taskListStatus *s.TaskListStatus) {
 	table.Render()
 }
 
-func printPollerInfo(pollers []*s.PollerInfo, taskListType s.TaskListType) {
+func printPollerInfo(pollers []*types.PollerInfo, taskListType types.TaskListType) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetBorder(false)
 	table.SetColumnSeparator("|")
-	if taskListType == s.TaskListTypeActivity {
+	if taskListType == types.TaskListTypeActivity {
 		table.SetHeader([]string{"Activity Poller Identity", "Last Access Time"})
 	} else {
 		table.SetHeader([]string{"Decision Poller Identity", "Last Access Time"})

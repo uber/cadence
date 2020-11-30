@@ -31,7 +31,6 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/auth"
@@ -40,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	cassp "github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/tools/cassandra"
 )
@@ -152,7 +152,7 @@ func AdminDescribeWorkflow(c *cli.Context) {
 	}
 }
 
-func describeMutableState(c *cli.Context) *admin.DescribeWorkflowExecutionResponse {
+func describeMutableState(c *cli.Context) *types.AdminDescribeWorkflowExecutionResponse {
 	adminClient := cFactory.ServerAdminClient(c)
 
 	domain := getRequiredGlobalOption(c, FlagDomain)
@@ -162,11 +162,11 @@ func describeMutableState(c *cli.Context) *admin.DescribeWorkflowExecutionRespon
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	resp, err := adminClient.DescribeWorkflowExecution(ctx, &admin.DescribeWorkflowExecutionRequest{
+	resp, err := adminClient.DescribeWorkflowExecution(ctx, &types.AdminDescribeWorkflowExecutionRequest{
 		Domain: common.StringPtr(domain),
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(wid),
-			RunId:      common.StringPtr(rid),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(wid),
+			RunID:      common.StringPtr(rid),
 		},
 	})
 	if err != nil {
@@ -193,7 +193,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 	session := connectToCassandra(c)
-	shardID := resp.GetShardId()
+	shardID := resp.GetShardID()
 	shardIDInt, err := strconv.Atoi(shardID)
 	if err != nil {
 		ErrorAndExit("strconv.Atoi(shardID) err", err)
@@ -383,7 +383,7 @@ func AdminRemoveTask(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	req := &shared.RemoveTaskRequest{
+	req := &types.RemoveTaskRequest{
 		ShardID:             common.Int32Ptr(int32(shardID)),
 		Type:                common.Int32Ptr(int32(typeID)),
 		TaskID:              common.Int64Ptr(taskID),
@@ -456,7 +456,7 @@ func AdminCloseShard(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	req := &shared.CloseShardRequest{}
+	req := &types.CloseShardRequest{}
 	req.ShardID = common.Int32Ptr(int32(sid))
 
 	err := adminClient.CloseShard(ctx, req)
@@ -482,12 +482,12 @@ func AdminDescribeHistoryHost(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	req := &shared.DescribeHistoryHostRequest{}
+	req := &types.DescribeHistoryHostRequest{}
 	if len(wid) > 0 {
-		req.ExecutionForHost = &shared.WorkflowExecution{WorkflowId: common.StringPtr(wid)}
+		req.ExecutionForHost = &types.WorkflowExecution{WorkflowID: common.StringPtr(wid)}
 	}
 	if c.IsSet(FlagShardID) {
-		req.ShardIdForHost = common.Int32Ptr(int32(sid))
+		req.ShardIDForHost = common.Int32Ptr(int32(sid))
 	}
 	if len(addr) > 0 {
 		req.HostAddress = common.StringPtr(addr)
@@ -515,11 +515,11 @@ func AdminRefreshWorkflowTasks(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	err := adminClient.RefreshWorkflowTasks(ctx, &shared.RefreshWorkflowTasksRequest{
+	err := adminClient.RefreshWorkflowTasks(ctx, &types.RefreshWorkflowTasksRequest{
 		Domain: common.StringPtr(domain),
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(wid),
-			RunId:      common.StringPtr(rid),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(wid),
+			RunID:      common.StringPtr(rid),
 		},
 	})
 	if err != nil {
@@ -540,7 +540,7 @@ func AdminResetQueue(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	req := &shared.ResetQueueRequest{
+	req := &types.ResetQueueRequest{
 		ShardID:     common.Int32Ptr(int32(shardID)),
 		ClusterName: common.StringPtr(clusterName),
 		Type:        common.Int32Ptr(int32(typeID)),
@@ -564,7 +564,7 @@ func AdminDescribeQueue(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	req := &shared.DescribeQueueRequest{
+	req := &types.DescribeQueueRequest{
 		ShardID:     common.Int32Ptr(int32(shardID)),
 		ClusterName: common.StringPtr(clusterName),
 		Type:        common.Int32Ptr(int32(typeID)),
