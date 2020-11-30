@@ -28,7 +28,6 @@ import (
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -52,7 +51,7 @@ type (
 	RequestDetail struct {
 		WorkflowID string
 		RunID      string
-		Policy     shared.ParentClosePolicy
+		Policy     types.ParentClosePolicy
 	}
 
 	// Request defines the request for parent close policy
@@ -106,10 +105,10 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 	for _, execution := range request.Executions {
 		var err error
 		switch execution.Policy {
-		case shared.ParentClosePolicyAbandon:
+		case types.ParentClosePolicyAbandon:
 			//no-op
 			continue
-		case shared.ParentClosePolicyTerminate:
+		case types.ParentClosePolicyTerminate:
 			err = client.TerminateWorkflowExecution(nil, &types.HistoryTerminateWorkflowExecutionRequest{
 				DomainUUID: common.StringPtr(request.DomainUUID),
 				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
@@ -122,7 +121,7 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 					Identity: common.StringPtr(processorWFTypeName),
 				},
 			})
-		case shared.ParentClosePolicyRequestCancel:
+		case types.ParentClosePolicyRequestCancel:
 			err = client.RequestCancelWorkflowExecution(nil, &types.HistoryRequestCancelWorkflowExecutionRequest{
 				DomainUUID: common.StringPtr(request.DomainUUID),
 				CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
