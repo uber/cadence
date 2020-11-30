@@ -1418,7 +1418,7 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 			executions = append(executions, parentclosepolicy.RequestDetail{
 				WorkflowID: childInfo.StartedWorkflowID,
 				RunID:      childInfo.StartedRunID,
-				Policy:     childInfo.ParentClosePolicy,
+				Policy:     *thrift.ToParentClosePolicy(&childInfo.ParentClosePolicy),
 			})
 		}
 
