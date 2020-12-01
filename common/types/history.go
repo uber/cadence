@@ -4304,13 +4304,22 @@ func (v *HistoryRespondDecisionTaskCompletedRequest) GetCompleteRequest() (o *Re
 
 // HistoryRespondDecisionTaskCompletedResponse is an internal type (TBD...)
 type HistoryRespondDecisionTaskCompletedResponse struct {
-	StartedResponse *RecordDecisionTaskStartedResponse `json:"startedResponse,omitempty"`
+	StartedResponse             *RecordDecisionTaskStartedResponse    `json:"startedResponse,omitempty"`
+	ActivitiesToDispatchLocally map[string]*ActivityLocalDispatchInfo `json:"activitiesToDispatchLocally,omitempty"`
 }
 
 // GetStartedResponse is an internal getter (TBD...)
 func (v *HistoryRespondDecisionTaskCompletedResponse) GetStartedResponse() (o *RecordDecisionTaskStartedResponse) {
 	if v != nil && v.StartedResponse != nil {
 		return v.StartedResponse
+	}
+	return
+}
+
+// GetActivitiesToDispatchLocally is an internal getter (TBD...)
+func (v *HistoryRespondDecisionTaskCompletedResponse) GetActivitiesToDispatchLocally() (o map[string]*ActivityLocalDispatchInfo) {
+	if v != nil && v.ActivitiesToDispatchLocally != nil {
+		return v.ActivitiesToDispatchLocally
 	}
 	return
 }
