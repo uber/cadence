@@ -575,6 +575,7 @@ func (s *workflowResetterSuite) TestClosePendingDecisionTask() {
 		baseRunID,
 		newRunID,
 		baseForkEventVerison,
+		reason,
 	).Return(nil, nil).Times(1)
 	_, err = s.workflowResetter.closePendingDecisionTask(
 		sourceMutableState,
