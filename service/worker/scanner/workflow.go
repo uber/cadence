@@ -57,6 +57,7 @@ const (
 	concreteExecutionsScannerWFTypeName   = "cadence-sys-executions-scanner-workflow"
 	concreteExecutionsScannerTaskListName = "cadence-sys-executions-scanner-tasklist-0"
 
+	concreteExecutionsFixerWFID         = "cadence-sys-executions-fixer"
 	concreteExecutionsFixerWFTypeName   = "cadence-sys-executions-fixer-workflow"
 	concreteExecutionsFixerTaskListName = "cadence-sys-executions-fixer-tasklist-0"
 
@@ -64,6 +65,7 @@ const (
 	currentExecutionsScannerWFTypeName   = "cadence-sys-current-executions-scanner-workflow"
 	currentExecutionsScannerTaskListName = "cadence-sys-current-executions-scanner-tasklist-0"
 
+	currentExecutionsFixerWFID         = "cadence-sys-current-executions-fixer"
 	currentExecutionsFixerWFTypeName   = "cadence-sys-current-executions-fixer-workflow"
 	currentExecutionsFixerTaskListName = "cadence-sys-current-executions-fixer-tasklist-0"
 )
@@ -108,6 +110,20 @@ var (
 	currentExecutionsScannerWFStartOptions = cclient.StartWorkflowOptions{
 		ID:                           currentExecutionsScannerWFID,
 		TaskList:                     currentExecutionsScannerTaskListName,
+		ExecutionStartToCloseTimeout: infiniteDuration,
+		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
+		CronSchedule:                 "* * * * *",
+	}
+	concreteExecutionsFixerWFStartOptions = cclient.StartWorkflowOptions{
+		ID:                           concreteExecutionsFixerWFID,
+		TaskList:                     concreteExecutionsFixerTaskListName,
+		ExecutionStartToCloseTimeout: infiniteDuration,
+		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
+		CronSchedule:                 "* * * * *",
+	}
+	currentExecutionsFixerWFStartOptions = cclient.StartWorkflowOptions{
+		ID:                           currentExecutionsFixerWFID,
+		TaskList:                     currentExecutionsFixerTaskListName,
 		ExecutionStartToCloseTimeout: infiniteDuration,
 		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
 		CronSchedule:                 "* * * * *",

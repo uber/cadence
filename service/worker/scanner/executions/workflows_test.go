@@ -434,8 +434,10 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 	}
 
 	env.ExecuteWorkflow(FixerWorkflow, FixerWorkflowParams{
-		ScannerWorkflowWorkflowID:     "test_wid",
-		ScannerWorkflowRunID:          "test_rid",
+		ScanExecution: workflow.Execution{
+			ID:    "test_wid",
+			RunID: "test_rid",
+		},
 		FixerWorkflowConfigOverwrites: fixerWorkflowConfigOverwrites,
 		ScanType:                      ConcreteExecutionType,
 	})
@@ -587,9 +589,11 @@ func (s *workflowsSuite) TestGetCorruptedKeys_Success() {
 	}, nil)
 
 	env.ExecuteWorkflow(getCorruptedKeys, FixerWorkflowParams{
-		ScannerWorkflowWorkflowID: "test_wid",
-		ScannerWorkflowRunID:      "test_rid",
-		ScanType:                  ConcreteExecutionType,
+		ScanExecution: workflow.Execution{
+			ID:    "test_wid",
+			RunID: "test_rid",
+		},
+		ScanType: ConcreteExecutionType,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.NoError(env.GetWorkflowError())
@@ -635,9 +639,11 @@ func (s *workflowsSuite) TestGetCorruptedKeys_Error() {
 		StartingShardID:           common.IntPtr(11),
 	}).Return(nil, errors.New("got error"))
 	env.ExecuteWorkflow(getCorruptedKeys, FixerWorkflowParams{
-		ScannerWorkflowWorkflowID: "test_wid",
-		ScannerWorkflowRunID:      "test_rid",
-		ScanType:                  ConcreteExecutionType,
+		ScanExecution: workflow.Execution{
+			ID:    "test_wid",
+			RunID: "test_rid",
+		},
+		ScanType: ConcreteExecutionType,
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.Error(env.GetWorkflowError())
