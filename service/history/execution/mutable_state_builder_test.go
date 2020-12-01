@@ -40,6 +40,8 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/shard"
@@ -322,7 +324,7 @@ func (s *mutableStateSuite) TestReorderEvents() {
 	dbState := &persistence.WorkflowMutableState{
 		ExecutionInfo:  info,
 		ActivityInfos:  activityInfos,
-		BufferedEvents: bufferedEvents,
+		BufferedEvents: thrift.ToHistoryEventArray(bufferedEvents),
 	}
 
 	s.msBuilder.Load(dbState)
@@ -759,7 +761,7 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 			Version:               failoverVersion,
 			InitiatedID:           80,
 			InitiatedEventBatchID: 20,
-			InitiatedEvent:        &shared.HistoryEvent{},
+			InitiatedEvent:        &types.HistoryEvent{},
 			StartedID:             common.EmptyEventID,
 			CreateRequestID:       uuid.New(),
 			DomainName:            testDomainID,
@@ -812,7 +814,7 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 		ChildExecutionInfos: childInfos,
 		SignalInfos:         signalInfos,
 		SignalRequestedIDs:  signalRequestIDs,
-		BufferedEvents:      bufferedEvents,
+		BufferedEvents:      thrift.ToHistoryEventArray(bufferedEvents),
 		VersionHistories:    versionHistories,
 	}
 }

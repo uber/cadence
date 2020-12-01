@@ -1504,7 +1504,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			Type:             &workflow.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
 			StartTime:        common.Int64Ptr(executionInfo.StartTimestamp.UnixNano()),
 			HistoryLength:    common.Int64Ptr(mutableState.GetNextEventID() - common.FirstEventID),
-			AutoResetPoints:  executionInfo.AutoResetPoints,
+			AutoResetPoints:  thrift.FromResetPoints(executionInfo.AutoResetPoints),
 			Memo:             &workflow.Memo{Fields: executionInfo.Memo},
 			SearchAttributes: &workflow.SearchAttributes{IndexedFields: executionInfo.SearchAttributes},
 		},
@@ -1591,7 +1591,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 				RunID:             common.StringPtr(ch.StartedRunID),
 				WorkflowTypName:   common.StringPtr(ch.WorkflowTypeName),
 				InitiatedID:       common.Int64Ptr(ch.InitiatedID),
-				ParentClosePolicy: common.ParentClosePolicyPtr(ch.ParentClosePolicy),
+				ParentClosePolicy: thrift.FromParentClosePolicy(&ch.ParentClosePolicy),
 			}
 			result.PendingChildren = append(result.PendingChildren, p)
 		}

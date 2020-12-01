@@ -244,7 +244,7 @@ func (c *contextImpl) LoadWorkflowExecutionForReplication(
 	if c.mutableState == nil {
 		response, err := c.getWorkflowExecutionWithRetry(ctx, &persistence.GetWorkflowExecutionRequest{
 			DomainID:  c.domainID,
-			Execution: c.workflowExecution,
+			Execution: *thrift.ToWorkflowExecution(&c.workflowExecution),
 		})
 		if err != nil {
 			return nil, err
@@ -331,7 +331,7 @@ func (c *contextImpl) LoadWorkflowExecution(
 	if c.mutableState == nil {
 		response, err := c.getWorkflowExecutionWithRetry(ctx, &persistence.GetWorkflowExecutionRequest{
 			DomainID:  c.domainID,
-			Execution: c.workflowExecution,
+			Execution: *thrift.ToWorkflowExecution(&c.workflowExecution),
 		})
 		if err != nil {
 			return nil, err

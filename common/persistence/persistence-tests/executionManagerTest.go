@@ -43,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -1110,12 +1111,12 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	testResetPoints := gen.ResetPoints{
-		Points: []*gen.ResetPointInfo{
+	testResetPoints := types.ResetPoints{
+		Points: []*types.ResetPointInfo{
 			{
 				BinaryChecksum:           common.StringPtr("test-binary-checksum"),
-				RunId:                    common.StringPtr("test-runID"),
-				FirstDecisionCompletedId: common.Int64Ptr(123),
+				RunID:                    common.StringPtr("test-runID"),
+				FirstDecisionCompletedID: common.Int64Ptr(123),
 				CreatedTimeNano:          common.Int64Ptr(456),
 				Resettable:               common.BoolPtr(true),
 				ExpiringTimeNano:         common.Int64Ptr(789),
@@ -1234,7 +1235,7 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 	s.EqualTimes(createReq.NewWorkflowSnapshot.ExecutionInfo.ExpirationTime, info.ExpirationTime)
 	s.Equal(createReq.NewWorkflowSnapshot.ExecutionInfo.CronSchedule, info.CronSchedule)
 	s.Equal(createReq.NewWorkflowSnapshot.ExecutionInfo.NonRetriableErrors, info.NonRetriableErrors)
-	s.Equal(testResetPoints.String(), info.AutoResetPoints.String())
+	s.Equal(testResetPoints, *info.AutoResetPoints)
 	s.Equal(createReq.NewWorkflowSnapshot.ExecutionStats.HistorySize, state.ExecutionStats.HistorySize)
 	val, ok := info.SearchAttributes[testSearchAttrKey]
 	s.True(ok)
@@ -1292,7 +1293,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Empty(info0.ClientFeatureVersion)
 	s.Empty(info0.ClientImpl)
 	s.Equal(int32(0), info0.SignalCount)
-	s.True(info0.AutoResetPoints.Equals(&gen.ResetPoints{}))
+	s.Equal(info0.AutoResetPoints, &types.ResetPoints{})
 	s.True(len(info0.SearchAttributes) == 0)
 	s.True(len(info0.Memo) == 0)
 	s.assertChecksumsEqual(testWorkflowChecksum, state0.Checksum)
@@ -2583,13 +2584,13 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateActivities() {
 		Version:                  7789,
 		ScheduleID:               1,
 		ScheduledEventBatchID:    1,
-		ScheduledEvent:           &gen.HistoryEvent{EventId: int64Ptr(1)},
+		ScheduledEvent:           &types.HistoryEvent{EventID: int64Ptr(1)},
 		ScheduledTime:            currentTime,
 		ActivityID:               uuid.New(),
 		RequestID:                uuid.New(),
 		Details:                  []byte(uuid.New()),
 		StartedID:                2,
-		StartedEvent:             &gen.HistoryEvent{EventId: int64Ptr(2)},
+		StartedEvent:             &types.HistoryEvent{EventID: int64Ptr(2)},
 		StartedTime:              currentTime,
 		ScheduleToCloseTimeout:   1,
 		ScheduleToStartTimeout:   2,
@@ -2632,13 +2633,13 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateActivities() {
 	s.Equal(int64(7789), ai.Version)
 	s.Equal(int64(1), ai.ScheduleID)
 	s.Equal(int64(1), ai.ScheduledEventBatchID)
-	s.Equal(int64(1), *ai.ScheduledEvent.EventId)
+	s.Equal(int64(1), *ai.ScheduledEvent.EventID)
 	s.EqualTimes(currentTime, ai.ScheduledTime)
 	s.Equal(activityInfos[0].ActivityID, ai.ActivityID)
 	s.Equal(activityInfos[0].RequestID, ai.RequestID)
 	s.Equal(activityInfos[0].Details, ai.Details)
 	s.Equal(int64(2), ai.StartedID)
-	s.Equal(int64(2), *ai.StartedEvent.EventId)
+	s.Equal(int64(2), *ai.StartedEvent.EventID)
 	s.EqualTimes(currentTime, ai.StartedTime)
 	s.Equal(int32(1), ai.ScheduleToCloseTimeout)
 	s.Equal(int32(2), ai.ScheduleToStartTimeout)
@@ -2769,11 +2770,11 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateChildExecutions() {
 	childExecutionInfos := []*p.ChildExecutionInfo{{
 		Version:           1234,
 		InitiatedID:       1,
-		InitiatedEvent:    &gen.HistoryEvent{EventId: int64Ptr(1)},
+		InitiatedEvent:    &types.HistoryEvent{EventID: int64Ptr(1)},
 		StartedID:         2,
-		StartedEvent:      &gen.HistoryEvent{EventId: int64Ptr(2)},
+		StartedEvent:      &types.HistoryEvent{EventID: int64Ptr(2)},
 		CreateRequestID:   createRequestID,
-		ParentClosePolicy: gen.ParentClosePolicyTerminate,
+		ParentClosePolicy: types.ParentClosePolicyTerminate,
 	}}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{updatedInfo.LastProcessedEvent, common.EmptyVersion},
@@ -2791,10 +2792,10 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateChildExecutions() {
 	s.NotNil(ci)
 	s.Equal(int64(1234), ci.Version)
 	s.Equal(int64(1), ci.InitiatedID)
-	s.Equal(gen.ParentClosePolicyTerminate, ci.ParentClosePolicy)
-	s.Equal(int64(1), *ci.InitiatedEvent.EventId)
+	s.Equal(types.ParentClosePolicyTerminate, ci.ParentClosePolicy)
+	s.Equal(int64(1), *ci.InitiatedEvent.EventID)
 	s.Equal(int64(2), ci.StartedID)
-	s.Equal(int64(2), *ci.StartedEvent.EventId)
+	s.Equal(int64(2), *ci.StartedEvent.EventID)
 	s.Equal(createRequestID, ci.CreateRequestID)
 
 	err2 = s.DeleteChildExecutionsState(ctx, updatedInfo, updatedStats, versionHistories, int64(5), int64(1))
@@ -3062,7 +3063,7 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 	s.Equal(p.WorkflowCloseStatusContinuedAsNew, prevExecutionInfo.CloseStatus)
 	s.Equal(int64(5), prevExecutionInfo.NextEventID)
 	s.Equal(int64(2), prevExecutionInfo.LastProcessedEvent)
-	s.True(prevExecutionInfo.AutoResetPoints.Equals(&gen.ResetPoints{}))
+	s.Equal(&types.ResetPoints{}, prevExecutionInfo.AutoResetPoints)
 
 	newExecutionState, err4 := s.GetWorkflowExecutionInfo(ctx, domainID, newWorkflowExecution)
 	s.NoError(err4)
@@ -3072,7 +3073,7 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 	s.Equal(int64(3), newExecutionInfo.NextEventID)
 	s.Equal(common.EmptyEventID, newExecutionInfo.LastProcessedEvent)
 	s.Equal(int64(2), newExecutionInfo.DecisionScheduleID)
-	s.Equal(testResetPoints.String(), newExecutionInfo.AutoResetPoints.String())
+	s.Equal(thrift.ToResetPoints(&testResetPoints), newExecutionInfo.AutoResetPoints)
 
 	newRunID, err5 := s.GetCurrentWorkflowRunID(ctx, domainID, workflowExecution.GetWorkflowId())
 	s.NoError(err5)
@@ -3319,7 +3320,7 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 	s.True(stats0.BufferedEventsSize > 0)
 	testHistory := &gen.History{Events: make([]*gen.HistoryEvent, 0)}
 	testHistory.Events = append(testHistory.Events, eventsBatch1...)
-	history0 := &gen.History{Events: state0.BufferedEvents}
+	history0 := &gen.History{Events: thrift.FromHistoryEventArray(state0.BufferedEvents)}
 	s.True(testHistory.Equals(history0))
 	testHistory.Events = append(testHistory.Events, eventsBatch2...)
 
@@ -3333,7 +3334,7 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 	s.NotNil(info1, "Valid Workflow info expected.")
 	s.Equal(2, stats1.BufferedEventsCount)
 	s.True(stats1.BufferedEventsSize > 0)
-	history1 := &gen.History{Events: state1.BufferedEvents}
+	history1 := &gen.History{Events: thrift.FromHistoryEventArray(state1.BufferedEvents)}
 	s.True(testHistory.Equals(history1))
 
 	err3 := s.UpdateWorkflowExecutionForBufferEvents(ctx, bufferUpdateInfo, bufferedUpdatedStats, bufferUpdateInfo.NextEventID, nil, true, versionHistories)
@@ -3436,10 +3437,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 				Version:                  7789,
 				ScheduleID:               4,
 				ScheduledEventBatchID:    3,
-				ScheduledEvent:           &gen.HistoryEvent{EventId: int64Ptr(40)},
+				ScheduledEvent:           &types.HistoryEvent{EventID: int64Ptr(40)},
 				ScheduledTime:            currentTime,
 				StartedID:                6,
-				StartedEvent:             &gen.HistoryEvent{EventId: int64Ptr(60)},
+				StartedEvent:             &types.HistoryEvent{EventID: int64Ptr(60)},
 				StartedTime:              currentTime,
 				ScheduleToCloseTimeout:   1,
 				ScheduleToStartTimeout:   2,
@@ -3452,10 +3453,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 				Version:                  7789,
 				ScheduleID:               5,
 				ScheduledEventBatchID:    3,
-				ScheduledEvent:           &gen.HistoryEvent{EventId: int64Ptr(50)},
+				ScheduledEvent:           &types.HistoryEvent{EventID: int64Ptr(50)},
 				ScheduledTime:            currentTime,
 				StartedID:                7,
-				StartedEvent:             &gen.HistoryEvent{EventId: int64Ptr(70)},
+				StartedEvent:             &types.HistoryEvent{EventID: int64Ptr(70)},
 				StartedTime:              currentTime,
 				ScheduleToCloseTimeout:   1,
 				ScheduleToStartTimeout:   2,
@@ -3493,7 +3494,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 			9: {
 				Version:         2334,
 				InitiatedID:     9,
-				InitiatedEvent:  &gen.HistoryEvent{EventId: int64Ptr(123)},
+				InitiatedEvent:  &types.HistoryEvent{EventID: int64Ptr(123)},
 				StartedID:       11,
 				StartedEvent:    nil,
 				CreateRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -3553,11 +3554,11 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 	s.Equal(1, stats0.BufferedEventsCount)
 	s.True(stats0.BufferedEventsSize > 0)
 	s.assertChecksumsEqual(testWorkflowChecksum, state0.Checksum)
-	testHistory := &gen.History{Events: make([]*gen.HistoryEvent, 0)}
-	testHistory.Events = append(testHistory.Events, eventsBatch1...)
-	history0 := &gen.History{Events: state0.BufferedEvents}
-	s.True(testHistory.Equals(history0))
-	testHistory.Events = append(testHistory.Events, eventsBatch2...)
+	testHistory := &types.History{Events: make([]*types.HistoryEvent, 0)}
+	testHistory.Events = append(testHistory.Events, thrift.ToHistoryEventArray(eventsBatch1)...)
+	history0 := &types.History{Events: state0.BufferedEvents}
+	s.Equal(history0, testHistory)
+	testHistory.Events = append(testHistory.Events, thrift.ToHistoryEventArray(eventsBatch2)...)
 
 	err2 = s.UpdateWorkflowExecutionForBufferEvents(ctx, bufferUpdateInfo, bufferedUpdatedStats, bufferUpdateInfo.NextEventID, eventsBatch2, false, versionHistories)
 	s.NoError(err2)
@@ -3570,8 +3571,8 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 	s.Equal(2, stats1.BufferedEventsCount)
 	s.True(stats1.BufferedEventsSize > 0)
 	s.assertChecksumsEqual(testWorkflowChecksum, state1.Checksum)
-	history1 := &gen.History{Events: state1.BufferedEvents}
-	s.True(testHistory.Equals(history1))
+	history1 := &types.History{Events: state1.BufferedEvents}
+	s.Equal(history1, testHistory)
 
 	s.Equal(2, len(state1.ActivityInfos))
 	ai, ok := state1.ActivityInfos[4]
@@ -3580,10 +3581,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 	s.Equal(int64(7789), ai.Version)
 	s.Equal(int64(4), ai.ScheduleID)
 	s.Equal(int64(3), ai.ScheduledEventBatchID)
-	s.Equal(int64(40), *ai.ScheduledEvent.EventId)
+	s.Equal(int64(40), *ai.ScheduledEvent.EventID)
 	s.EqualTimes(currentTime, ai.ScheduledTime)
 	s.Equal(int64(6), ai.StartedID)
-	s.Equal(int64(60), *ai.StartedEvent.EventId)
+	s.Equal(int64(60), *ai.StartedEvent.EventID)
 	s.EqualTimes(currentTime, ai.StartedTime)
 	s.Equal(int32(1), ai.ScheduleToCloseTimeout)
 	s.Equal(int32(2), ai.ScheduleToStartTimeout)
@@ -3598,10 +3599,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 	s.Equal(int64(7789), ai.Version)
 	s.Equal(int64(5), ai.ScheduleID)
 	s.Equal(int64(3), ai.ScheduledEventBatchID)
-	s.Equal(int64(50), *ai.ScheduledEvent.EventId)
+	s.Equal(int64(50), *ai.ScheduledEvent.EventID)
 	s.EqualTimes(currentTime, ai.ScheduledTime)
 	s.Equal(int64(7), ai.StartedID)
-	s.Equal(int64(70), *ai.StartedEvent.EventId)
+	s.Equal(int64(70), *ai.StartedEvent.EventID)
 	s.EqualTimes(currentTime, ai.StartedTime)
 	s.Equal(int32(1), ai.ScheduleToCloseTimeout)
 	s.Equal(int32(2), ai.ScheduleToStartTimeout)
@@ -3674,10 +3675,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 			Version:                  8789,
 			ScheduleID:               40,
 			ScheduledEventBatchID:    30,
-			ScheduledEvent:           &gen.HistoryEvent{EventId: int64Ptr(400)},
+			ScheduledEvent:           &types.HistoryEvent{EventID: int64Ptr(400)},
 			ScheduledTime:            currentTime,
 			StartedID:                60,
-			StartedEvent:             &gen.HistoryEvent{EventId: int64Ptr(600)},
+			StartedEvent:             &types.HistoryEvent{EventID: int64Ptr(600)},
 			StartedTime:              currentTime,
 			ScheduleToCloseTimeout:   10,
 			ScheduleToStartTimeout:   20,
@@ -3707,7 +3708,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 		{
 			Version:         3334,
 			InitiatedID:     10,
-			InitiatedEvent:  &gen.HistoryEvent{EventId: common.Int64Ptr(10)},
+			InitiatedEvent:  &types.HistoryEvent{EventID: common.Int64Ptr(10)},
 			StartedID:       15,
 			StartedEvent:    nil,
 			CreateRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -3770,10 +3771,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 	s.Equal(int64(8789), ai.Version)
 	s.Equal(int64(40), ai.ScheduleID)
 	s.Equal(int64(30), ai.ScheduledEventBatchID)
-	s.Equal(int64(400), *ai.ScheduledEvent.EventId)
+	s.Equal(int64(400), *ai.ScheduledEvent.EventID)
 	s.Equal(currentTime.Unix(), ai.ScheduledTime.Unix())
 	s.Equal(int64(60), ai.StartedID)
-	s.Equal(int64(600), *ai.StartedEvent.EventId)
+	s.Equal(int64(600), *ai.StartedEvent.EventID)
 	s.Equal(currentTime.Unix(), ai.StartedTime.Unix())
 	s.Equal(int32(10), ai.ScheduleToCloseTimeout)
 	s.Equal(int32(20), ai.ScheduleToStartTimeout)
@@ -4083,7 +4084,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		DecisionStartedID:           222,
 		DecisionRequestID:           uuid.New(),
 		DecisionTimeout:             0,
-		AutoResetPoints:             &gen.ResetPoints{},
+		AutoResetPoints:             &types.ResetPoints{},
 	}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{resetExecutionInfo.DecisionScheduleID, common.EmptyVersion},
@@ -4246,7 +4247,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		DecisionStartedID:           222,
 		DecisionRequestID:           uuid.New(),
 		DecisionTimeout:             0,
-		AutoResetPoints:             &gen.ResetPoints{},
+		AutoResetPoints:             &types.ResetPoints{},
 	}
 	newWorkflowExecutionInfo := copyWorkflowExecutionInfo(resetExecutionInfo)
 	newWorkflowExecutionStats := &p.ExecutionStats{}
@@ -4396,7 +4397,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		DecisionStartedID:           222,
 		DecisionRequestID:           uuid.New(),
 		DecisionTimeout:             0,
-		AutoResetPoints:             &gen.ResetPoints{},
+		AutoResetPoints:             &types.ResetPoints{},
 	}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{resetExecutionInfo.DecisionScheduleID, common.EmptyVersion},
@@ -4507,7 +4508,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		DecisionStartedID:           222,
 		DecisionRequestID:           uuid.New(),
 		DecisionTimeout:             0,
-		AutoResetPoints:             &gen.ResetPoints{},
+		AutoResetPoints:             &types.ResetPoints{},
 	}
 	newWorkflowExecutionInfo := copyWorkflowExecutionInfo(resetExecutionInfo)
 	newWorkflowExecutionStats := &p.ExecutionStats{}
@@ -4663,7 +4664,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		DecisionStartedID:           222,
 		DecisionRequestID:           uuid.New(),
 		DecisionTimeout:             0,
-		AutoResetPoints:             &gen.ResetPoints{},
+		AutoResetPoints:             &types.ResetPoints{},
 	}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{resetExecutionInfo.DecisionScheduleID, common.EmptyVersion},
@@ -4797,7 +4798,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		DecisionStartedID:           222,
 		DecisionRequestID:           uuid.New(),
 		DecisionTimeout:             0,
-		AutoResetPoints:             &gen.ResetPoints{},
+		AutoResetPoints:             &types.ResetPoints{},
 	}
 	newWorkflowExecutionInfo := copyWorkflowExecutionInfo(resetExecutionInfo)
 	newWorkflowExecutionStats := &p.ExecutionStats{}

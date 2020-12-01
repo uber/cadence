@@ -45,6 +45,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/query"
@@ -298,7 +299,7 @@ func (e *mutableStateBuilder) CopyToPersistence() *persistence.WorkflowMutableSt
 	state.SignalInfos = e.pendingSignalInfoIDs
 	state.SignalRequestedIDs = e.pendingSignalRequestedIDs
 	state.ExecutionInfo = e.executionInfo
-	state.BufferedEvents = e.bufferedEvents
+	state.BufferedEvents = thrift.ToHistoryEventArray(e.bufferedEvents)
 	state.VersionHistories = e.versionHistories
 	state.Checksum = e.checksum
 
@@ -322,7 +323,7 @@ func (e *mutableStateBuilder) Load(
 	e.pendingSignalInfoIDs = state.SignalInfos
 	e.pendingSignalRequestedIDs = state.SignalRequestedIDs
 	e.executionInfo = state.ExecutionInfo
-	e.bufferedEvents = state.BufferedEvents
+	e.bufferedEvents = thrift.FromHistoryEventArray(state.BufferedEvents)
 
 	e.currentVersion = common.EmptyVersion
 	e.hasBufferedEventsInDB = len(e.bufferedEvents) > 0
@@ -924,7 +925,7 @@ func (e *mutableStateBuilder) GetActivityScheduledEvent(
 
 	// Needed for backward compatibility reason
 	if ai.ScheduledEvent != nil {
-		return ai.ScheduledEvent, nil
+		return thrift.FromHistoryEvent(ai.ScheduledEvent), nil
 	}
 
 	currentBranchToken, err := e.GetCurrentBranchToken()
@@ -994,7 +995,7 @@ func (e *mutableStateBuilder) GetChildExecutionInitiatedEvent(
 
 	// Needed for backward compatibility reason
 	if ci.InitiatedEvent != nil {
-		return ci.InitiatedEvent, nil
+		return thrift.FromHistoryEvent(ci.InitiatedEvent), nil
 	}
 
 	currentBranchToken, err := e.GetCurrentBranchToken()
@@ -1091,7 +1092,7 @@ func (e *mutableStateBuilder) GetCompletionEvent(
 
 	// Needed for backward compatibility reason
 	if e.executionInfo.CompletionEvent != nil {
-		return e.executionInfo.CompletionEvent, nil
+		return thrift.FromHistoryEvent(e.executionInfo.CompletionEvent), nil
 	}
 
 	// Needed for backward compatibility reason
@@ -1817,12 +1818,12 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 		e.executionInfo.NonRetriableErrors = event.RetryPolicy.NonRetriableErrorReasons
 	}
 
-	e.executionInfo.AutoResetPoints = rolloverAutoResetPointsWithExpiringTime(
+	e.executionInfo.AutoResetPoints = thrift.ToResetPoints(rolloverAutoResetPointsWithExpiringTime(
 		event.GetPrevAutoResetPoints(),
 		event.GetContinuedExecutionRunId(),
 		startEvent.GetTimestamp(),
 		e.domainEntry.GetRetentionDays(e.executionInfo.WorkflowID),
-	)
+	))
 
 	if event.Memo != nil {
 		e.executionInfo.Memo = event.Memo.GetFields()
@@ -1926,7 +1927,7 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 	exeInfo := e.executionInfo
 	var currResetPoints []*workflow.ResetPointInfo
 	if exeInfo.AutoResetPoints != nil && exeInfo.AutoResetPoints.Points != nil {
-		currResetPoints = e.executionInfo.AutoResetPoints.Points
+		currResetPoints = thrift.FromResetPointInfoArray(e.executionInfo.AutoResetPoints.Points)
 	} else {
 		currResetPoints = make([]*workflow.ResetPointInfo, 0, 1)
 	}
@@ -1963,8 +1964,8 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 		Resettable:               common.BoolPtr(resettable),
 	}
 	currResetPoints = append(currResetPoints, info)
-	exeInfo.AutoResetPoints = &workflow.ResetPoints{
-		Points: currResetPoints,
+	exeInfo.AutoResetPoints = &types.ResetPoints{
+		Points: thrift.ToResetPointInfoArray(currResetPoints),
 	}
 	bytes, err := json.Marshal(recentBinaryChecksums)
 	if err != nil {
@@ -3418,7 +3419,7 @@ func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionInitiatedEvent
 		CreateRequestID:       createRequestID,
 		DomainName:            attributes.GetDomain(),
 		WorkflowTypeName:      attributes.GetWorkflowType().GetName(),
-		ParentClosePolicy:     attributes.GetParentClosePolicy(),
+		ParentClosePolicy:     *thrift.ToParentClosePolicy(attributes.GetParentClosePolicy().Ptr()),
 	}
 
 	e.pendingChildExecutionInfoIDs[initiatedEventID] = ci
@@ -3946,7 +3947,7 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		DeleteSignalInfos:         convertInt64SetToSlice(e.deleteSignalInfos),
 		UpsertSignalRequestedIDs:  convertStringSetToSlice(e.updateSignalRequestedIDs),
 		DeleteSignalRequestedIDs:  convertStringSetToSlice(e.deleteSignalRequestedIDs),
-		NewBufferedEvents:         e.updateBufferedEvents,
+		NewBufferedEvents:         thrift.ToHistoryEventArray(e.updateBufferedEvents),
 		ClearBufferedEvents:       e.clearBufferedEvents,
 
 		TransferTasks:    e.insertTransferTasks,
@@ -4514,7 +4515,7 @@ func (e *mutableStateBuilder) closeTransactionHandleWorkflowReset(
 	if _, pt := FindAutoResetPoint(
 		e.timeSource,
 		&domainEntry.GetConfig().BadBinaries,
-		e.GetExecutionInfo().AutoResetPoints,
+		thrift.FromResetPoints(e.GetExecutionInfo().AutoResetPoints),
 	); pt != nil {
 		if err := e.taskGenerator.GenerateWorkflowResetTasks(
 			e.unixNanoToTime(now.UnixNano()),

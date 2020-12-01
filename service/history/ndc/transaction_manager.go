@@ -391,9 +391,9 @@ func (r *transactionManagerImpl) checkWorkflowExists(
 		ctx,
 		&persistence.GetWorkflowExecutionRequest{
 			DomainID: domainID,
-			Execution: shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(workflowID),
-				RunId:      common.StringPtr(runID),
+			Execution: types.WorkflowExecution{
+				WorkflowID: common.StringPtr(workflowID),
+				RunID:      common.StringPtr(runID),
 			},
 		},
 	)

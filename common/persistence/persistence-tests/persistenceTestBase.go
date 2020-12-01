@@ -47,6 +47,7 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -567,7 +568,7 @@ func (s *TestBase) GetWorkflowExecutionInfoWithStats(ctx context.Context, domain
 	*p.MutableStateStats, *p.WorkflowMutableState, error) {
 	response, err := s.ExecutionManager.GetWorkflowExecution(ctx, &p.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
-		Execution: workflowExecution,
+		Execution: *thrift.ToWorkflowExecution(&workflowExecution),
 	})
 	if err != nil {
 		return nil, nil, err
@@ -581,7 +582,7 @@ func (s *TestBase) GetWorkflowExecutionInfo(ctx context.Context, domainID string
 	*p.WorkflowMutableState, error) {
 	response, err := s.ExecutionManager.GetWorkflowExecution(ctx, &p.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
-		Execution: workflowExecution,
+		Execution: *thrift.ToWorkflowExecution(&workflowExecution),
 	})
 	if err != nil {
 		return nil, err
@@ -657,7 +658,7 @@ func (s *TestBase) ContinueAsNewExecution(
 				DecisionScheduleID:          decisionScheduleID,
 				DecisionStartedID:           common.EmptyEventID,
 				DecisionTimeout:             1,
-				AutoResetPoints:             prevResetPoints,
+				AutoResetPoints:             thrift.ToResetPoints(prevResetPoints),
 			},
 			ExecutionStats:   updatedStats,
 			TransferTasks:    nil,
@@ -1285,7 +1286,7 @@ func (s *TestBase) UpdateWorkflowExecutionForBufferEvents(
 		UpdateWorkflowMutation: p.WorkflowMutation{
 			ExecutionInfo:       updatedInfo,
 			ExecutionStats:      updatedStats,
-			NewBufferedEvents:   bufferEvents,
+			NewBufferedEvents:   thrift.ToHistoryEventArray(bufferEvents),
 			Condition:           condition,
 			ClearBufferedEvents: clearBufferedEvents,
 			VersionHistories:    versionHistories,

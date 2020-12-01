@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
+	"github.com/uber/cadence/common/types"
 )
 
 // ConcreteExecutionIterator is used to retrieve Concrete executions.
@@ -51,9 +52,9 @@ func ConcreteExecution(
 
 	req := persistence.GetWorkflowExecutionRequest{
 		DomainID: request.DomainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(request.WorkflowID),
-			RunId:      common.StringPtr(request.RunID),
+		Execution: types.WorkflowExecution{
+			WorkflowID: common.StringPtr(request.WorkflowID),
+			RunID:      common.StringPtr(request.RunID),
 		},
 	}
 	e, err := retryer.GetWorkflowExecution(ctx, &req)

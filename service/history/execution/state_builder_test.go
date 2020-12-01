@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/events"
@@ -1047,7 +1048,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskScheduled() {
 		Version:                  event.GetVersion(),
 		ScheduleID:               event.GetEventId(),
 		ScheduledEventBatchID:    event.GetEventId(),
-		ScheduledEvent:           event,
+		ScheduledEvent:           thrift.ToHistoryEvent(event),
 		ScheduledTime:            time.Unix(0, event.GetTimestamp()),
 		StartedID:                common.EmptyEventID,
 		StartedTime:              time.Time{},

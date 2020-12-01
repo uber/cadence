@@ -293,7 +293,7 @@ type (
 		ParentRunID                        string
 		InitiatedID                        int64
 		CompletionEventBatchID             int64
-		CompletionEvent                    *workflow.HistoryEvent
+		CompletionEvent                    *types.HistoryEvent
 		TaskList                           string
 		WorkflowTypeName                   string
 		WorkflowTimeout                    int32
@@ -325,7 +325,7 @@ type (
 		ClientLibraryVersion               string
 		ClientFeatureVersion               string
 		ClientImpl                         string
-		AutoResetPoints                    *workflow.ResetPoints
+		AutoResetPoints                    *types.ResetPoints
 		Memo                               map[string][]byte
 		SearchAttributes                   map[string][]byte
 		// for retry
@@ -657,7 +657,7 @@ type (
 		SignalRequestedIDs  map[string]struct{}
 		ExecutionInfo       *WorkflowExecutionInfo
 		ExecutionStats      *ExecutionStats
-		BufferedEvents      []*workflow.HistoryEvent
+		BufferedEvents      []*types.HistoryEvent
 		VersionHistories    *VersionHistories
 		ReplicationState    *ReplicationState // TODO: remove this after all 2DC workflows complete
 		Checksum            checksum.Checksum
@@ -668,10 +668,10 @@ type (
 		Version                  int64
 		ScheduleID               int64
 		ScheduledEventBatchID    int64
-		ScheduledEvent           *workflow.HistoryEvent
+		ScheduledEvent           *types.HistoryEvent
 		ScheduledTime            time.Time
 		StartedID                int64
-		StartedEvent             *workflow.HistoryEvent
+		StartedEvent             *types.HistoryEvent
 		StartedTime              time.Time
 		DomainID                 string
 		ActivityID               string
@@ -717,15 +717,15 @@ type (
 		Version               int64
 		InitiatedID           int64
 		InitiatedEventBatchID int64
-		InitiatedEvent        *workflow.HistoryEvent
+		InitiatedEvent        *types.HistoryEvent
 		StartedID             int64
 		StartedWorkflowID     string
 		StartedRunID          string
-		StartedEvent          *workflow.HistoryEvent
+		StartedEvent          *types.HistoryEvent
 		CreateRequestID       string
 		DomainName            string
 		WorkflowTypeName      string
-		ParentClosePolicy     workflow.ParentClosePolicy
+		ParentClosePolicy     types.ParentClosePolicy
 	}
 
 	// RequestCancelInfo has details for pending external workflow cancellations
@@ -787,7 +787,7 @@ type (
 	// GetWorkflowExecutionRequest is used to retrieve the info of a workflow execution
 	GetWorkflowExecutionRequest struct {
 		DomainID  string
-		Execution workflow.WorkflowExecution
+		Execution types.WorkflowExecution
 	}
 
 	// GetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest
@@ -932,7 +932,7 @@ type (
 		DeleteSignalInfos         []int64
 		UpsertSignalRequestedIDs  []string
 		DeleteSignalRequestedIDs  []string
-		NewBufferedEvents         []*workflow.HistoryEvent
+		NewBufferedEvents         []*types.HistoryEvent
 		ClearBufferedEvents       bool
 
 		TransferTasks    []Task

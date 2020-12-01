@@ -25,11 +25,9 @@ import (
 	"context"
 	"time"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -74,7 +72,7 @@ func (m *executionManagerImpl) GetWorkflowExecution(
 
 	internalRequest := &InternalGetWorkflowExecutionRequest{
 		DomainID:  request.DomainID,
-		Execution: *thrift.ToWorkflowExecution(&request.Execution),
+		Execution: request.Execution,
 	}
 	response, err := m.persistence.GetWorkflowExecution(ctx, internalRequest)
 	if err != nil {
@@ -132,7 +130,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(
 	}
 
 	newInfo := &WorkflowExecutionInfo{
-		CompletionEvent: thrift.FromHistoryEvent(completionEvent),
+		CompletionEvent: completionEvent,
 
 		DomainID:                           info.DomainID,
 		WorkflowID:                         info.WorkflowID,
@@ -184,7 +182,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(
 		BranchToken:                        info.BranchToken,
 		CronSchedule:                       info.CronSchedule,
 		ExpirationSeconds:                  int32(info.ExpirationSeconds.Seconds()),
-		AutoResetPoints:                    thrift.FromResetPoints(autoResetPoints),
+		AutoResetPoints:                    autoResetPoints,
 		SearchAttributes:                   info.SearchAttributes,
 		Memo:                               info.Memo,
 	}
@@ -196,7 +194,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(
 
 func (m *executionManagerImpl) DeserializeBufferedEvents(
 	blobs []*DataBlob,
-) ([]*workflow.HistoryEvent, error) {
+) ([]*types.HistoryEvent, error) {
 
 	events := make([]*types.HistoryEvent, 0)
 	for _, b := range blobs {
@@ -206,7 +204,7 @@ func (m *executionManagerImpl) DeserializeBufferedEvents(
 		}
 		events = append(events, history...)
 	}
-	return thrift.FromHistoryEventArray(events), nil
+	return events, nil
 }
 
 func (m *executionManagerImpl) DeserializeChildExecutionInfos(
@@ -224,8 +222,8 @@ func (m *executionManagerImpl) DeserializeChildExecutionInfos(
 			return nil, err
 		}
 		c := &ChildExecutionInfo{
-			InitiatedEvent: thrift.FromHistoryEvent(initiatedEvent),
-			StartedEvent:   thrift.FromHistoryEvent(startedEvent),
+			InitiatedEvent: initiatedEvent,
+			StartedEvent:   startedEvent,
 
 			Version:               v.Version,
 			InitiatedID:           v.InitiatedID,
@@ -236,7 +234,7 @@ func (m *executionManagerImpl) DeserializeChildExecutionInfos(
 			CreateRequestID:       v.CreateRequestID,
 			DomainName:            v.DomainName,
 			WorkflowTypeName:      v.WorkflowTypeName,
-			ParentClosePolicy:     *thrift.FromParentClosePolicy(&v.ParentClosePolicy),
+			ParentClosePolicy:     v.ParentClosePolicy,
 		}
 
 		// Needed for backward compatibility reason.
@@ -270,8 +268,8 @@ func (m *executionManagerImpl) DeserializeActivityInfos(
 			return nil, err
 		}
 		a := &ActivityInfo{
-			ScheduledEvent: thrift.FromHistoryEvent(scheduledEvent),
-			StartedEvent:   thrift.FromHistoryEvent(startedEvent),
+			ScheduledEvent: scheduledEvent,
+			StartedEvent:   startedEvent,
 
 			Version:                                 v.Version,
 			ScheduleID:                              v.ScheduleID,
@@ -348,11 +346,11 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(
 
 	newInfos := make([]*InternalChildExecutionInfo, 0)
 	for _, v := range infos {
-		initiatedEvent, err := m.serializer.SerializeEvent(thrift.ToHistoryEvent(v.InitiatedEvent), encoding)
+		initiatedEvent, err := m.serializer.SerializeEvent(v.InitiatedEvent, encoding)
 		if err != nil {
 			return nil, err
 		}
-		startedEvent, err := m.serializer.SerializeEvent(thrift.ToHistoryEvent(v.StartedEvent), encoding)
+		startedEvent, err := m.serializer.SerializeEvent(v.StartedEvent, encoding)
 		if err != nil {
 			return nil, err
 		}
@@ -369,7 +367,7 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(
 			StartedRunID:          v.StartedRunID,
 			DomainName:            v.DomainName,
 			WorkflowTypeName:      v.WorkflowTypeName,
-			ParentClosePolicy:     *thrift.ToParentClosePolicy(&v.ParentClosePolicy),
+			ParentClosePolicy:     v.ParentClosePolicy,
 		}
 		newInfos = append(newInfos, i)
 	}
@@ -383,11 +381,11 @@ func (m *executionManagerImpl) SerializeUpsertActivityInfos(
 
 	newInfos := make([]*InternalActivityInfo, 0)
 	for _, v := range infos {
-		scheduledEvent, err := m.serializer.SerializeEvent(thrift.ToHistoryEvent(v.ScheduledEvent), encoding)
+		scheduledEvent, err := m.serializer.SerializeEvent(v.ScheduledEvent, encoding)
 		if err != nil {
 			return nil, err
 		}
-		startedEvent, err := m.serializer.SerializeEvent(thrift.ToHistoryEvent(v.StartedEvent), encoding)
+		startedEvent, err := m.serializer.SerializeEvent(v.StartedEvent, encoding)
 		if err != nil {
 			return nil, err
 		}
@@ -441,12 +439,12 @@ func (m *executionManagerImpl) SerializeExecutionInfo(
 	if info == nil {
 		return &InternalWorkflowExecutionInfo{}, nil
 	}
-	completionEvent, err := m.serializer.SerializeEvent(thrift.ToHistoryEvent(info.CompletionEvent), encoding)
+	completionEvent, err := m.serializer.SerializeEvent(info.CompletionEvent, encoding)
 	if err != nil {
 		return nil, err
 	}
 
-	resetPoints, err := m.serializer.SerializeResetPoints(thrift.ToResetPoints(info.AutoResetPoints), encoding)
+	resetPoints, err := m.serializer.SerializeResetPoints(info.AutoResetPoints, encoding)
 	if err != nil {
 		return nil, err
 	}
@@ -636,7 +634,7 @@ func (m *executionManagerImpl) SerializeWorkflowMutation(
 	}
 	var serializedNewBufferedEvents *DataBlob
 	if input.NewBufferedEvents != nil {
-		serializedNewBufferedEvents, err = m.serializer.SerializeBatchEvents(thrift.ToHistoryEventArray(input.NewBufferedEvents), encoding)
+		serializedNewBufferedEvents, err = m.serializer.SerializeBatchEvents(input.NewBufferedEvents, encoding)
 		if err != nil {
 			return nil, err
 		}

@@ -26,6 +26,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -530,7 +531,7 @@ func (b *HistoryBuilder) newWorkflowExecutionStartedEvent(
 	var resetPoints *workflow.ResetPoints
 	if previousExecution != nil {
 		prevRunID = common.StringPtr(previousExecution.RunID)
-		resetPoints = previousExecution.AutoResetPoints
+		resetPoints = thrift.FromResetPoints(previousExecution.AutoResetPoints)
 	}
 	request := startRequest.StartRequest
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(workflow.EventTypeWorkflowExecutionStarted)

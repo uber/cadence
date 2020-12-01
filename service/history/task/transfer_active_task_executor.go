@@ -842,7 +842,7 @@ func (t *transferActiveTaskExecutor) processResetWorkflow(
 	}
 	logger = logger.WithTags(tag.WorkflowDomainName(domainEntry.GetInfo().Name))
 
-	reason, resetPoint := execution.FindAutoResetPoint(t.shard.GetTimeSource(), &domainEntry.GetConfig().BadBinaries, executionInfo.AutoResetPoints)
+	reason, resetPoint := execution.FindAutoResetPoint(t.shard.GetTimeSource(), &domainEntry.GetConfig().BadBinaries, thrift.FromResetPoints(executionInfo.AutoResetPoints))
 	if resetPoint == nil {
 		logger.Warn("Auto-Reset is skipped, because reset point is not found.")
 		return nil
@@ -1411,14 +1411,14 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 
 		executions := make([]parentclosepolicy.RequestDetail, 0, len(childInfos))
 		for _, childInfo := range childInfos {
-			if childInfo.ParentClosePolicy == workflow.ParentClosePolicyAbandon {
+			if childInfo.ParentClosePolicy == types.ParentClosePolicyAbandon {
 				continue
 			}
 
 			executions = append(executions, parentclosepolicy.RequestDetail{
 				WorkflowID: childInfo.StartedWorkflowID,
 				RunID:      childInfo.StartedRunID,
-				Policy:     *thrift.ToParentClosePolicy(&childInfo.ParentClosePolicy),
+				Policy:     childInfo.ParentClosePolicy,
 			})
 		}
 
@@ -1462,11 +1462,11 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 	defer cancel()
 
 	switch childInfo.ParentClosePolicy {
-	case workflow.ParentClosePolicyAbandon:
+	case types.ParentClosePolicyAbandon:
 		// noop
 		return nil
 
-	case workflow.ParentClosePolicyTerminate:
+	case types.ParentClosePolicyTerminate:
 		return t.historyClient.TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
 			TerminateRequest: &types.TerminateWorkflowExecutionRequest{
@@ -1480,7 +1480,7 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 			},
 		})
 
-	case workflow.ParentClosePolicyRequestCancel:
+	case types.ParentClosePolicyRequestCancel:
 		return t.historyClient.RequestCancelWorkflowExecution(ctx, &types.HistoryRequestCancelWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
 			CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
