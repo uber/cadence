@@ -77,4 +77,4 @@ require (
 	gopkg.in/yaml.v2 v2.2.2
 )
 
-replace github.com/golang/protobuf v1.4.1 => github.com/golang/protobuf v1.3.5
+replace github.com/golang/protobuf => github.com/golang/protobuf v1.3.5
