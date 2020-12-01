@@ -25,10 +25,10 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type searchAttributesValidatorSuite struct {
@@ -52,7 +52,7 @@ func (s *searchAttributesValidatorSuite) TestValidateSearchAttributes() {
 		dynamicconfig.GetIntPropertyFilteredByDomain(sizeOfTotalLimit))
 
 	domain := "domain"
-	var attr *gen.SearchAttributes
+	var attr *types.SearchAttributes
 
 	err := validator.ValidateSearchAttributes(attr, domain)
 	s.Nil(err)
@@ -60,7 +60,7 @@ func (s *searchAttributesValidatorSuite) TestValidateSearchAttributes() {
 	fields := map[string][]byte{
 		"CustomIntField": []byte(`1`),
 	}
-	attr = &gen.SearchAttributes{
+	attr = &types.SearchAttributes{
 		IndexedFields: fields,
 	}
 	err = validator.ValidateSearchAttributes(attr, domain)

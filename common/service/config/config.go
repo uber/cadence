@@ -30,7 +30,6 @@ import (
 	"github.com/uber-go/tally/prometheus"
 	"github.com/uber/ringpop-go/discovery"
 
-	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
@@ -143,6 +142,8 @@ type (
 		VisibilityConfig *VisibilityConfig `yaml:"-" json:"-"`
 		// TransactionSizeLimit is the largest allowed transaction size
 		TransactionSizeLimit dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
+		// ErrorInjectionRate is the the rate for injecting random error
+		ErrorInjectionRate dynamicconfig.FloatPropertyFn `yaml:"-" json:"-"`
 	}
 
 	// DataStore is the configuration for a single datastore
@@ -152,7 +153,7 @@ type (
 		// SQL contains the config for a SQL based datastore
 		SQL *SQL `yaml:"sql"`
 		// ElasticSearch contains the config for a ElasticSearch datastore
-		ElasticSearch *elasticsearch.Config `yaml:"elasticsearch"`
+		ElasticSearch *ElasticSearchConfig `yaml:"elasticsearch"`
 	}
 
 	// VisibilityConfig is config for visibility
@@ -195,6 +196,7 @@ type (
 		MaxConns int `yaml:"maxConns"`
 		// TLS configuration
 		TLS *auth.TLS `yaml:"tls"`
+		// TODO: add a field for custom gocql client
 	}
 
 	// SQL is the configuration for connecting to a SQL backed datastore

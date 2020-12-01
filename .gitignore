@@ -17,6 +17,7 @@ test
 test.log
 test_xdc
 test_xdc.log
+test_e2e
 test_eventsV2
 test_eventsV2.log
 test_eventsV2_xdc

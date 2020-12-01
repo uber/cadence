@@ -24,13 +24,13 @@ import (
 	"context"
 	"sync"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/tokenbucket"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -39,6 +39,9 @@ const (
 	numOfPriorityForClosed = 2
 	numOfPriorityForList   = 1
 )
+
+// ErrPersistenceLimitExceededForList is the error indicating QPS limit reached for list visibility.
+var ErrPersistenceLimitExceededForList = &types.ServiceBusyError{Message: "Persistence Max QPS Reached for List Operations."}
 
 type visibilitySamplingClient struct {
 	rateLimitersForOpen   *domainToBucketMap
@@ -112,8 +115,8 @@ func (p *visibilitySamplingClient) RecordWorkflowExecutionStarted(
 		tag.WorkflowDomainID(domainID),
 		tag.WorkflowDomainName(domain),
 		tag.WorkflowType(request.WorkflowTypeName),
-		tag.WorkflowID(request.Execution.GetWorkflowId()),
-		tag.WorkflowRunID(request.Execution.GetRunId()),
+		tag.WorkflowID(request.Execution.GetWorkflowID()),
+		tag.WorkflowRunID(request.Execution.GetRunID()),
 	)
 	p.metricClient.IncCounter(metrics.PersistenceRecordWorkflowExecutionStartedScope, metrics.PersistenceSampledCounter)
 	return nil
@@ -136,8 +139,8 @@ func (p *visibilitySamplingClient) RecordWorkflowExecutionClosed(
 		tag.WorkflowDomainID(domainID),
 		tag.WorkflowDomainName(domain),
 		tag.WorkflowType(request.WorkflowTypeName),
-		tag.WorkflowID(request.Execution.GetWorkflowId()),
-		tag.WorkflowRunID(request.Execution.GetRunId()),
+		tag.WorkflowID(request.Execution.GetWorkflowID()),
+		tag.WorkflowRunID(request.Execution.GetRunID()),
 	)
 	p.metricClient.IncCounter(metrics.PersistenceRecordWorkflowExecutionClosedScope, metrics.PersistenceSampledCounter)
 	return nil
@@ -159,8 +162,8 @@ func (p *visibilitySamplingClient) UpsertWorkflowExecution(
 		tag.WorkflowDomainID(domainID),
 		tag.WorkflowDomainName(domain),
 		tag.WorkflowType(request.WorkflowTypeName),
-		tag.WorkflowID(request.Execution.GetWorkflowId()),
-		tag.WorkflowRunID(request.Execution.GetRunId()),
+		tag.WorkflowID(request.Execution.GetWorkflowID()),
+		tag.WorkflowRunID(request.Execution.GetRunID()),
 	)
 	p.metricClient.IncCounter(metrics.PersistenceUpsertWorkflowExecutionScope, metrics.PersistenceSampledCounter)
 	return nil
@@ -309,7 +312,7 @@ func (p *visibilitySamplingClient) GetName() string {
 
 func getRequestPriority(request *RecordWorkflowExecutionClosedRequest) int {
 	priority := 0
-	if request.Status == workflow.WorkflowExecutionCloseStatusCompleted {
+	if request.Status == types.WorkflowExecutionCloseStatusCompleted {
 		priority = 1 // low priority for completed workflows
 	}
 	return priority

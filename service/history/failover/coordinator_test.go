@@ -34,15 +34,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/history/historyservicetest"
-	"github.com/uber/cadence/.gen/go/replicator"
+	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 )
 
@@ -54,7 +53,7 @@ type (
 		controller          *gomock.Controller
 		mockResource        *resource.Test
 		mockMetadataManager *mmocks.MetadataManager
-		historyClient       *historyservicetest.MockClient
+		historyClient       *history.MockClient
 		config              *config.Config
 		coordinator         *coordinatorImpl
 	}
@@ -95,46 +94,46 @@ func (s *coordinatorSuite) TearDownTest() {
 
 func (s *coordinatorSuite) TestNotifyFailoverMarkers() {
 	doneCh := make(chan struct{})
-	attributes := &replicator.FailoverMarkerAttributes{
+	attributes := &types.FailoverMarkerAttributes{
 		DomainID:        common.StringPtr(uuid.New()),
 		FailoverVersion: common.Int64Ptr(1),
 		CreationTime:    common.Int64Ptr(1),
 	}
 	s.historyClient.EXPECT().NotifyFailoverMarkers(
-		context.Background(), &history.NotifyFailoverMarkersRequest{
-			FailoverMarkerTokens: []*history.FailoverMarkerToken{
+		context.Background(), &types.NotifyFailoverMarkersRequest{
+			FailoverMarkerTokens: []*types.FailoverMarkerToken{
 				{
 					ShardIDs:       []int32{1, 2},
 					FailoverMarker: attributes,
 				},
 			},
 		},
-	).DoAndReturn(func(ctx context.Context, request *history.NotifyFailoverMarkersRequest) error {
+	).DoAndReturn(func(ctx context.Context, request *types.NotifyFailoverMarkersRequest) error {
 		close(doneCh)
 		return nil
 	}).Times(1)
 	s.coordinator.NotifyFailoverMarkers(
 		1,
-		[]*replicator.FailoverMarkerAttributes{attributes},
+		[]*types.FailoverMarkerAttributes{attributes},
 	)
 	s.coordinator.NotifyFailoverMarkers(
 		2,
-		[]*replicator.FailoverMarkerAttributes{attributes},
+		[]*types.FailoverMarkerAttributes{attributes},
 	)
 	s.coordinator.Start()
 	<-doneCh
 }
 
 func (s *coordinatorSuite) TestNotifyRemoteCoordinator_Empty() {
-	requestByMarker := make(map[*replicator.FailoverMarkerAttributes]*receiveRequest)
+	requestByMarker := make(map[*types.FailoverMarkerAttributes]*receiveRequest)
 	s.historyClient.EXPECT().NotifyFailoverMarkers(context.Background(), gomock.Any()).Times(0)
 	s.coordinator.notifyRemoteCoordinator(requestByMarker)
 }
 
 func (s *coordinatorSuite) TestNotifyRemoteCoordinator() {
 
-	requestByMarker := make(map[*replicator.FailoverMarkerAttributes]*receiveRequest)
-	attributes := &replicator.FailoverMarkerAttributes{
+	requestByMarker := make(map[*types.FailoverMarkerAttributes]*receiveRequest)
+	attributes := &types.FailoverMarkerAttributes{
 		DomainID:        common.StringPtr(uuid.New()),
 		FailoverVersion: common.Int64Ptr(1),
 		CreationTime:    common.Int64Ptr(1),
@@ -145,8 +144,8 @@ func (s *coordinatorSuite) TestNotifyRemoteCoordinator() {
 	}
 
 	s.historyClient.EXPECT().NotifyFailoverMarkers(
-		context.Background(), &history.NotifyFailoverMarkersRequest{
-			FailoverMarkerTokens: []*history.FailoverMarkerToken{
+		context.Background(), &types.NotifyFailoverMarkersRequest{
+			FailoverMarkerTokens: []*types.FailoverMarkerToken{
 				{
 					ShardIDs:       []int32{1, 2, 3},
 					FailoverMarker: attributes,
@@ -159,30 +158,30 @@ func (s *coordinatorSuite) TestNotifyRemoteCoordinator() {
 }
 
 func (s *coordinatorSuite) TestAggregateNotificationRequests() {
-	requestByMarker := make(map[*replicator.FailoverMarkerAttributes]*receiveRequest)
-	attributes1 := &replicator.FailoverMarkerAttributes{
+	requestByMarker := make(map[*types.FailoverMarkerAttributes]*receiveRequest)
+	attributes1 := &types.FailoverMarkerAttributes{
 		DomainID:        common.StringPtr(uuid.New()),
 		FailoverVersion: common.Int64Ptr(1),
 		CreationTime:    common.Int64Ptr(1),
 	}
-	attributes2 := &replicator.FailoverMarkerAttributes{
+	attributes2 := &types.FailoverMarkerAttributes{
 		DomainID:        common.StringPtr(uuid.New()),
 		FailoverVersion: common.Int64Ptr(2),
 		CreationTime:    common.Int64Ptr(2),
 	}
 	request1 := &notificationRequest{
 		shardID: 1,
-		markers: []*replicator.FailoverMarkerAttributes{attributes1},
+		markers: []*types.FailoverMarkerAttributes{attributes1},
 	}
 	aggregateNotificationRequests(request1, requestByMarker)
 	request2 := &notificationRequest{
 		shardID: 2,
-		markers: []*replicator.FailoverMarkerAttributes{attributes1},
+		markers: []*types.FailoverMarkerAttributes{attributes1},
 	}
 	aggregateNotificationRequests(request2, requestByMarker)
 	request3 := &notificationRequest{
 		shardID: 3,
-		markers: []*replicator.FailoverMarkerAttributes{attributes1, attributes2},
+		markers: []*types.FailoverMarkerAttributes{attributes1, attributes2},
 	}
 	aggregateNotificationRequests(request3, requestByMarker)
 	s.Equal([]int32{1, 2, 3}, requestByMarker[attributes1].shardIDs)
@@ -191,12 +190,12 @@ func (s *coordinatorSuite) TestAggregateNotificationRequests() {
 
 func (s *coordinatorSuite) TestHandleFailoverMarkers_DeleteExpiredFailoverMarker() {
 	domainID := uuid.New()
-	attributes1 := &replicator.FailoverMarkerAttributes{
+	attributes1 := &types.FailoverMarkerAttributes{
 		DomainID:        common.StringPtr(domainID),
 		FailoverVersion: common.Int64Ptr(1),
 		CreationTime:    common.Int64Ptr(1),
 	}
-	attributes2 := &replicator.FailoverMarkerAttributes{
+	attributes2 := &types.FailoverMarkerAttributes{
 		DomainID:        common.StringPtr(domainID),
 		FailoverVersion: common.Int64Ptr(2),
 		CreationTime:    common.Int64Ptr(1),
@@ -217,12 +216,12 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_DeleteExpiredFailoverMarker
 
 func (s *coordinatorSuite) TestHandleFailoverMarkers_IgnoreExpiredFailoverMarker() {
 	domainID := uuid.New()
-	attributes1 := &replicator.FailoverMarkerAttributes{
+	attributes1 := &types.FailoverMarkerAttributes{
 		DomainID:        common.StringPtr(domainID),
 		FailoverVersion: common.Int64Ptr(1),
 		CreationTime:    common.Int64Ptr(1),
 	}
-	attributes2 := &replicator.FailoverMarkerAttributes{
+	attributes2 := &types.FailoverMarkerAttributes{
 		DomainID:        common.StringPtr(domainID),
 		FailoverVersion: common.Int64Ptr(2),
 		CreationTime:    common.Int64Ptr(1),
@@ -243,12 +242,12 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_IgnoreExpiredFailoverMarker
 
 func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Success() {
 	domainID := uuid.New()
-	attributes1 := &replicator.FailoverMarkerAttributes{
+	attributes1 := &types.FailoverMarkerAttributes{
 		DomainID:        common.StringPtr(domainID),
 		FailoverVersion: common.Int64Ptr(2),
 		CreationTime:    common.Int64Ptr(1),
 	}
-	attributes2 := &replicator.FailoverMarkerAttributes{
+	attributes2 := &types.FailoverMarkerAttributes{
 		DomainID:        common.StringPtr(domainID),
 		FailoverVersion: common.Int64Ptr(2),
 		CreationTime:    common.Int64Ptr(1),
@@ -316,12 +315,12 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Suc
 
 func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Error() {
 	domainID := uuid.New()
-	attributes1 := &replicator.FailoverMarkerAttributes{
+	attributes1 := &types.FailoverMarkerAttributes{
 		DomainID:        common.StringPtr(domainID),
 		FailoverVersion: common.Int64Ptr(2),
 		CreationTime:    common.Int64Ptr(1),
 	}
-	attributes2 := &replicator.FailoverMarkerAttributes{
+	attributes2 := &types.FailoverMarkerAttributes{
 		DomainID:        common.StringPtr(domainID),
 		FailoverVersion: common.Int64Ptr(2),
 		CreationTime:    common.Int64Ptr(1),

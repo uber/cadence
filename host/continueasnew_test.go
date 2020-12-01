@@ -130,7 +130,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 	}
 
 	s.False(workflowComplete)
-	_, err := poller.PollAndProcessDecisionTask(true, false)
+	_, err := poller.PollAndProcessDecisionTask(false, false)
 	s.Nil(err)
 	s.True(workflowComplete)
 	s.Equal(previousRunID, lastRunStartedEvent.WorkflowExecutionStartedEventAttributes.GetContinuedExecutionRunId())
@@ -210,7 +210,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
 	}
 
 	// process the decision and continue as new
-	_, err := poller.PollAndProcessDecisionTask(true, false)
+	_, err := poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -471,7 +471,7 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 	s.NotNil(startedEvent)
 
 	// Process Child Execution final decision to complete it
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 	s.True(childComplete)

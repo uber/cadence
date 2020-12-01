@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,8 +31,8 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/matching/matchingservicetest"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -43,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/events"
@@ -62,7 +63,7 @@ type (
 		mockDomainCache        *cache.MockDomainCache
 		mockClusterMetadata    *cluster.MockMetadata
 		mockNDCHistoryResender *ndc.MockHistoryResender
-		mockMatchingClient     *matchingservicetest.MockClient
+		mockMatchingClient     *matching.MockClient
 
 		mockVisibilityMgr    *mocks.VisibilityManager
 		mockExecutionMgr     *mocks.ExecutionManager
@@ -999,7 +1000,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessStartChildExecution_Pendin
 
 	taskID := int64(59)
 	event, _ = test.AddStartChildWorkflowExecutionInitiatedEvent(mutableState, event.GetEventId(), uuid.New(),
-		constants.TestChildDomainName, childWorkflowID, childWorkflowType, childTaskListName, nil, 1, 1)
+		constants.TestChildDomainName, childWorkflowID, childWorkflowType, childTaskListName, nil, 1, 1, nil)
 	nextEventID := event.GetEventId()
 
 	now := time.Now()
@@ -1084,7 +1085,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessStartChildExecution_Succes
 
 	taskID := int64(59)
 	event, childInfo := test.AddStartChildWorkflowExecutionInitiatedEvent(mutableState, event.GetEventId(), uuid.New(),
-		constants.TestChildDomainName, childWorkflowID, childWorkflowType, childTaskListName, nil, 1, 1)
+		constants.TestChildDomainName, childWorkflowID, childWorkflowType, childTaskListName, nil, 1, 1, nil)
 
 	now := time.Now()
 	transferTask := &persistence.TransferTaskInfo{
@@ -1167,9 +1168,9 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessRecordWorkflowStartedTask(
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionStarted", mock.Anything, &persistence.RecordWorkflowExecutionStartedRequest{
 		DomainUUID: constants.TestDomainID,
 		Domain:     constants.TestDomainName,
-		Execution: workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(executionInfo.WorkflowID),
-			RunId:      common.StringPtr(executionInfo.RunID),
+		Execution: types.WorkflowExecution{
+			WorkflowID: common.StringPtr(executionInfo.WorkflowID),
+			RunID:      common.StringPtr(executionInfo.RunID),
 		},
 		WorkflowTypeName: executionInfo.WorkflowTypeName,
 		StartTimestamp:   event.GetTimestamp(),
@@ -1236,9 +1237,9 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttrib
 	s.mockVisibilityMgr.On("UpsertWorkflowExecution", mock.Anything, &persistence.UpsertWorkflowExecutionRequest{
 		DomainUUID: constants.TestDomainID,
 		Domain:     constants.TestDomainName,
-		Execution: workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(executionInfo.WorkflowID),
-			RunId:      common.StringPtr(executionInfo.RunID),
+		Execution: types.WorkflowExecution{
+			WorkflowID: common.StringPtr(executionInfo.WorkflowID),
+			RunID:      common.StringPtr(executionInfo.RunID),
 		},
 		WorkflowTypeName: executionInfo.WorkflowTypeName,
 		StartTimestamp:   event.GetTimestamp(),

@@ -21,10 +21,24 @@
 package matching
 
 import (
-	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
+	"context"
+
+	"go.uber.org/yarpc"
+
+	"github.com/uber/cadence/common/types"
 )
 
-// Client is the interface exposed by matching service client
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -package matching github.com/uber/cadence/client/matching Client
+
+// Client is the interface exposed by types service client
 type Client interface {
-	matchingserviceclient.Interface
+	AddActivityTask(context.Context, *types.AddActivityTaskRequest, ...yarpc.CallOption) error
+	AddDecisionTask(context.Context, *types.AddDecisionTaskRequest, ...yarpc.CallOption) error
+	CancelOutstandingPoll(context.Context, *types.CancelOutstandingPollRequest, ...yarpc.CallOption) error
+	DescribeTaskList(context.Context, *types.MatchingDescribeTaskListRequest, ...yarpc.CallOption) (*types.DescribeTaskListResponse, error)
+	ListTaskListPartitions(context.Context, *types.MatchingListTaskListPartitionsRequest, ...yarpc.CallOption) (*types.ListTaskListPartitionsResponse, error)
+	PollForActivityTask(context.Context, *types.MatchingPollForActivityTaskRequest, ...yarpc.CallOption) (*types.PollForActivityTaskResponse, error)
+	PollForDecisionTask(context.Context, *types.MatchingPollForDecisionTaskRequest, ...yarpc.CallOption) (*types.MatchingPollForDecisionTaskResponse, error)
+	QueryWorkflow(context.Context, *types.MatchingQueryWorkflowRequest, ...yarpc.CallOption) (*types.QueryWorkflowResponse, error)
+	RespondQueryTaskCompleted(context.Context, *types.MatchingRespondQueryTaskCompletedRequest, ...yarpc.CallOption) error
 }

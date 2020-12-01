@@ -41,6 +41,8 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/engine"
@@ -144,7 +146,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
 			WorkflowId: common.StringPtr(workflowID),
 			RunId:      common.StringPtr(runID),
 		},
-	}).Return(nil, &shared.EntityNotExistsError{})
+	}).Return(nil, &types.EntityNotExistsError{})
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(
 		cache.NewGlobalDomainCacheEntryForTest(
 			&persistence.DomainInfo{ID: domainID, Name: domainName},
@@ -246,7 +248,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 		RunId:          common.StringPtr(runID),
 		Version:        common.Int64Ptr(version),
 		ScheduledId:    common.Int64Ptr(scheduleID),
-		VersionHistory: versionHistory2.ToThrift(),
+		VersionHistory: thrift.FromVersionHistory(versionHistory2.ToInternalType()),
 	}
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	s.mockMutableState.EXPECT().GetNextEventID().Return(nextEventID).AnyTimes()
@@ -359,7 +361,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingVers
 		RunId:          common.StringPtr(runID),
 		Version:        common.Int64Ptr(version),
 		ScheduledId:    common.Int64Ptr(scheduleID),
-		VersionHistory: incomingVersionHistory.ToThrift(),
+		VersionHistory: thrift.FromVersionHistory(incomingVersionHistory.ToInternalType()),
 	}
 	localVersionHistories := &persistence.VersionHistories{
 		CurrentVersionHistoryIndex: 0,
@@ -438,7 +440,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_DifferentVersionHistories_Inc
 		RunId:          common.StringPtr(runID),
 		Version:        common.Int64Ptr(version),
 		ScheduledId:    common.Int64Ptr(scheduleID),
-		VersionHistory: incomingVersionHistory.ToThrift(),
+		VersionHistory: thrift.FromVersionHistory(incomingVersionHistory.ToInternalType()),
 	}
 	localVersionHistories := &persistence.VersionHistories{
 		CurrentVersionHistoryIndex: 0,
@@ -528,7 +530,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingSche
 		RunId:          common.StringPtr(runID),
 		Version:        common.Int64Ptr(version),
 		ScheduledId:    common.Int64Ptr(scheduleID),
-		VersionHistory: incomingVersionHistory.ToThrift(),
+		VersionHistory: thrift.FromVersionHistory(incomingVersionHistory.ToInternalType()),
 	}
 	localVersionHistories := &persistence.VersionHistories{
 		CurrentVersionHistoryIndex: 0,
@@ -614,7 +616,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_SameSchedule
 		RunId:          common.StringPtr(runID),
 		Version:        common.Int64Ptr(version),
 		ScheduledId:    common.Int64Ptr(scheduleID),
-		VersionHistory: incomingVersionHistory.ToThrift(),
+		VersionHistory: thrift.FromVersionHistory(incomingVersionHistory.ToInternalType()),
 	}
 	localVersionHistories := &persistence.VersionHistories{
 		CurrentVersionHistoryIndex: 0,
@@ -687,7 +689,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_LocalVersion
 		RunId:          common.StringPtr(runID),
 		Version:        common.Int64Ptr(version),
 		ScheduledId:    common.Int64Ptr(scheduleID),
-		VersionHistory: incomingVersionHistory.ToThrift(),
+		VersionHistory: thrift.FromVersionHistory(incomingVersionHistory.ToInternalType()),
 	}
 	localVersionHistories := &persistence.VersionHistories{
 		CurrentVersionHistoryIndex: 0,
@@ -761,7 +763,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 		RunId:          common.StringPtr(runID),
 		Version:        common.Int64Ptr(version),
 		ScheduledId:    common.Int64Ptr(scheduleID),
-		VersionHistory: versionHistory.ToThrift(),
+		VersionHistory: thrift.FromVersionHistory(versionHistory.ToInternalType()),
 	}
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	s.mockMutableState.EXPECT().GetNextEventID().Return(nextEventID).AnyTimes()
@@ -818,7 +820,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivity
 		RunId:          common.StringPtr(runID),
 		Version:        common.Int64Ptr(version),
 		ScheduledId:    common.Int64Ptr(scheduleID),
-		VersionHistory: versionHistory.ToThrift(),
+		VersionHistory: thrift.FromVersionHistory(versionHistory.ToInternalType()),
 	}
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	s.mockMutableState.EXPECT().GetNextEventID().Return(nextEventID).AnyTimes()
@@ -888,7 +890,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 		Attempt:           common.Int32Ptr(attempt),
 		LastHeartbeatTime: common.Int64Ptr(heartBeatUpdatedTime.UnixNano()),
 		Details:           details,
-		VersionHistory:    versionHistory.ToThrift(),
+		VersionHistory:    thrift.FromVersionHistory(versionHistory.ToInternalType()),
 	}
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	s.mockMutableState.EXPECT().GetNextEventID().Return(nextEventID).AnyTimes()
@@ -965,7 +967,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 		Attempt:           common.Int32Ptr(attempt),
 		LastHeartbeatTime: common.Int64Ptr(heartBeatUpdatedTime.UnixNano()),
 		Details:           details,
-		VersionHistory:    versionHistory.ToThrift(),
+		VersionHistory:    thrift.FromVersionHistory(versionHistory.ToInternalType()),
 	}
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	s.mockMutableState.EXPECT().GetNextEventID().Return(nextEventID).AnyTimes()
@@ -1042,7 +1044,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_Larger
 		Attempt:           common.Int32Ptr(attempt),
 		LastHeartbeatTime: common.Int64Ptr(heartBeatUpdatedTime.UnixNano()),
 		Details:           details,
-		VersionHistory:    versionHistory.ToThrift(),
+		VersionHistory:    thrift.FromVersionHistory(versionHistory.ToInternalType()),
 	}
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	s.mockMutableState.EXPECT().GetNextEventID().Return(nextEventID).AnyTimes()
@@ -1118,7 +1120,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning() {
 		Attempt:           common.Int32Ptr(attempt),
 		LastHeartbeatTime: common.Int64Ptr(heartBeatUpdatedTime.UnixNano()),
 		Details:           details,
-		VersionHistory:    versionHistory.ToThrift(),
+		VersionHistory:    thrift.FromVersionHistory(versionHistory.ToInternalType()),
 	}
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	s.mockMutableState.EXPECT().GetNextEventID().Return(nextEventID).AnyTimes()
@@ -1207,7 +1209,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_ZombieWorkflo
 		Attempt:           common.Int32Ptr(attempt),
 		LastHeartbeatTime: common.Int64Ptr(heartBeatUpdatedTime.UnixNano()),
 		Details:           details,
-		VersionHistory:    versionHistory.ToThrift(),
+		VersionHistory:    thrift.FromVersionHistory(versionHistory.ToInternalType()),
 	}
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	s.mockMutableState.EXPECT().GetNextEventID().Return(nextEventID).AnyTimes()

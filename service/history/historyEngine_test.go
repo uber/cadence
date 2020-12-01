@@ -37,9 +37,9 @@ import (
 	"go.uber.org/yarpc/api/transport"
 
 	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/history/historyservicetest"
-	"github.com/uber/cadence/.gen/go/matching/matchingservicetest"
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	hclient "github.com/uber/cadence/client/history"
+	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	cc "github.com/uber/cadence/common/client"
@@ -50,6 +50,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/events"
@@ -72,8 +73,8 @@ type (
 		mockTxProcessor      *queue.MockProcessor
 		mockTimerProcessor   *queue.MockProcessor
 		mockDomainCache      *cache.MockDomainCache
-		mockMatchingClient   *matchingservicetest.MockClient
-		mockHistoryClient    *historyservicetest.MockClient
+		mockHistoryClient    *hclient.MockClient
+		mockMatchingClient   *matching.MockClient
 		mockClusterMetadata  *cluster.MockMetadata
 		mockEventsReapplier  *ndc.MockEventsReapplier
 		mockWorkflowResetter *reset.MockWorkflowResetter
@@ -237,13 +238,13 @@ func (s *engineSuite) TestGetMutableState_EmptyRunID() {
 		WorkflowId: common.StringPtr("test-get-workflow-execution-event-id"),
 	}
 
-	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, &workflow.EntityNotExistsError{}).Once()
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{}).Once()
 
 	_, err := s.mockHistoryEngine.GetMutableState(ctx, &history.GetMutableStateRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
 		Execution:  &execution,
 	})
-	s.Equal(&workflow.EntityNotExistsError{}, err)
+	s.Equal(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engineSuite) TestGetMutableStateLongPoll() {
@@ -587,7 +588,7 @@ func (s *engineSuite) TestQueryWorkflow_DirectlyThroughMatching() {
 	ms := execution.CreatePersistenceMutableState(msBuilder)
 	gweResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gweResponse, nil).Once()
-	s.mockMatchingClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(&workflow.QueryWorkflowResponse{QueryResult: []byte{1, 2, 3}}, nil)
+	s.mockMatchingClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(&types.QueryWorkflowResponse{QueryResult: []byte{1, 2, 3}}, nil)
 	s.mockHistoryEngine.matchingClient = s.mockMatchingClient
 	request := &history.QueryWorkflowRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
@@ -808,7 +809,7 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Unblocked() {
 	ms := execution.CreatePersistenceMutableState(msBuilder)
 	gweResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gweResponse, nil).Once()
-	s.mockMatchingClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(&workflow.QueryWorkflowResponse{QueryResult: []byte{1, 2, 3}}, nil)
+	s.mockMatchingClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(&types.QueryWorkflowResponse{QueryResult: []byte{1, 2, 3}}, nil)
 	s.mockHistoryEngine.matchingClient = s.mockMatchingClient
 	waitGroup := &sync.WaitGroup{}
 	waitGroup.Add(1)
@@ -866,7 +867,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedInvalidToken() {
 	})
 
 	s.NotNil(err)
-	s.IsType(&workflow.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 }
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedIfNoExecution() {
@@ -878,7 +879,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfNoExecution() {
 	})
 	identity := "testIdentity"
 
-	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &workflow.EntityNotExistsError{}).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{}).Once()
 
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &history.RespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
@@ -888,7 +889,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfNoExecution() {
 		},
 	})
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedIfGetExecutionFailed() {
@@ -994,7 +995,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskCompleted() {
 		},
 	})
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskNotStarted() {
@@ -1032,7 +1033,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskNotStarted() {
 		},
 	})
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
@@ -2338,7 +2339,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedInvalidToken() {
 	})
 
 	s.NotNil(err)
-	s.IsType(&workflow.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCompletedIfNoExecution() {
@@ -2350,7 +2351,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNoExecution() {
 	})
 	identity := "testIdentity"
 
-	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &workflow.EntityNotExistsError{}).Once()
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{}).Once()
 
 	err := s.mockHistoryEngine.RespondActivityTaskCompleted(context.Background(), &history.RespondActivityTaskCompletedRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
@@ -2360,7 +2361,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNoExecution() {
 		},
 	})
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCompletedIfNoRunID() {
@@ -2371,7 +2372,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNoRunID() {
 	})
 	identity := "testIdentity"
 
-	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, &workflow.EntityNotExistsError{}).Once()
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{}).Once()
 
 	err := s.mockHistoryEngine.RespondActivityTaskCompleted(context.Background(), &history.RespondActivityTaskCompletedRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
@@ -2381,7 +2382,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNoRunID() {
 		},
 	})
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCompletedIfGetExecutionFailed() {
@@ -2584,7 +2585,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskCompleted() {
 		},
 	})
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskNotStarted() {
@@ -2633,7 +2634,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskNotStarted() {
 		},
 	})
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCompletedConflictOnUpdate() {
@@ -2905,7 +2906,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedInvalidToken() {
 	})
 
 	s.NotNil(err)
-	s.IsType(&workflow.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 }
 
 func (s *engineSuite) TestRespondActivityTaskFailedIfNoExecution() {
@@ -2918,7 +2919,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfNoExecution() {
 	identity := "testIdentity"
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(nil,
-		&workflow.EntityNotExistsError{}).Once()
+		&types.EntityNotExistsError{}).Once()
 
 	err := s.mockHistoryEngine.RespondActivityTaskFailed(context.Background(), &history.RespondActivityTaskFailedRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
@@ -2928,7 +2929,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfNoExecution() {
 		},
 	})
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engineSuite) TestRespondActivityTaskFailedIfNoRunID() {
@@ -2940,7 +2941,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfNoRunID() {
 	identity := "testIdentity"
 
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil,
-		&workflow.EntityNotExistsError{}).Once()
+		&types.EntityNotExistsError{}).Once()
 
 	err := s.mockHistoryEngine.RespondActivityTaskFailed(context.Background(), &history.RespondActivityTaskFailedRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
@@ -2950,7 +2951,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfNoRunID() {
 		},
 	})
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engineSuite) TestRespondActivityTaskFailedIfGetExecutionFailed() {
@@ -3154,7 +3155,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskCompleted() {
 		},
 	})
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engineSuite) TestRespondActivityTaskFailedIfTaskNotStarted() {
@@ -3201,7 +3202,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskNotStarted() {
 		},
 	})
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engineSuite) TestRespondActivityTaskFailedConflictOnUpdate() {
@@ -3673,7 +3674,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Scheduled() {
 		},
 	})
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCanceled_Started() {
@@ -3812,7 +3813,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNoRunID() {
 	})
 	identity := "testIdentity"
 
-	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, &workflow.EntityNotExistsError{}).Once()
+	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{}).Once()
 
 	err := s.mockHistoryEngine.RespondActivityTaskCanceled(context.Background(), &history.RespondActivityTaskCanceledRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
@@ -3822,7 +3823,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNoRunID() {
 		},
 	})
 	s.NotNil(err)
-	s.IsType(&workflow.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCanceledIfNoAIdProvided() {
@@ -5173,6 +5174,7 @@ func (s *engineSuite) TestReapplyEvents_ResetWorkflow() {
 	s.mockEventsReapplier.EXPECT().ReapplyEvents(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 	s.mockWorkflowResetter.EXPECT().ResetWorkflow(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
 		gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
+		gomock.Any(),
 	).Return(nil).Times(1)
 	err = s.mockHistoryEngine.ReapplyEvents(
 		context.Background(),

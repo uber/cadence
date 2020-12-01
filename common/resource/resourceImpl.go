@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -87,6 +88,7 @@ type (
 		blobstoreClient         blobstore.Client
 		archivalMetadata        archiver.ArchivalMetadata
 		archiverProvider        provider.ArchiverProvider
+		domainReplicationQueue  domain.ReplicationQueue
 
 		// membership infos
 
@@ -233,6 +235,12 @@ func New(
 	)
 
 	domainMetricsScopeCache := cache.NewDomainMetricsScopeCache()
+	domainReplicationQueue := domain.NewReplicationQueue(
+		persistenceBean.GetDomainReplicationQueueManager(),
+		params.ClusterMetadata.GetCurrentClusterName(),
+		params.MetricsClient,
+		logger,
+	)
 
 	frontendRawClient := clientBean.GetFrontendClient()
 	frontendClient := frontend.NewRetryableClient(
@@ -301,6 +309,7 @@ func New(
 		blobstoreClient:         params.BlobstoreClient,
 		archivalMetadata:        params.ArchivalMetadata,
 		archiverProvider:        params.ArchiverProvider,
+		domainReplicationQueue:  domainReplicationQueue,
 
 		// membership infos
 
@@ -473,6 +482,11 @@ func (h *Impl) GetArchiverProvider() provider.ArchiverProvider {
 	return h.archiverProvider
 }
 
+// GetDomainReplicationQueue return domain replication queue
+func (h *Impl) GetDomainReplicationQueue() domain.ReplicationQueue {
+	return h.domainReplicationQueue
+}
+
 // membership infos
 
 // GetMembershipMonitor return the membership monitor
@@ -573,11 +587,6 @@ func (h *Impl) GetTaskManager() persistence.TaskManager {
 // GetVisibilityManager return visibility manager
 func (h *Impl) GetVisibilityManager() persistence.VisibilityManager {
 	return h.visibilityMgr
-}
-
-// GetDomainReplicationQueue return domain replication queue
-func (h *Impl) GetDomainReplicationQueue() persistence.DomainReplicationQueue {
-	return h.persistenceBean.GetDomainReplicationQueue()
 }
 
 // GetShardManager return shard manager

@@ -146,7 +146,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 	s.Logger.Info("Waiting for workflow to complete", tag.WorkflowRunID(*we.RunId))
 
 	s.False(workflowComplete)
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Nil(err)
 	s.True(workflowComplete)
 	s.True(activityExecutedCount == 1)
@@ -330,7 +330,7 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 		}
 	}
 
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.True(err == nil, err)
 
 	s.True(workflowComplete)
@@ -650,7 +650,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
 	s.Logger.Info("Waiting for workflow to complete", tag.WorkflowRunID(*we.RunId))
 
 	s.False(workflowComplete)
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Nil(err)
 	s.True(workflowComplete)
 }
@@ -1329,7 +1329,7 @@ func (s *integrationSuite) TestActivityCancellationNotStarted() {
 	// Process signal in decider and send request cancellation
 	scheduleActivity = false
 	requestCancellation = true
-	_, err = poller.PollAndProcessDecisionTask(true, false)
+	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Nil(err)
 
 	scheduleActivity = false

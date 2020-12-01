@@ -27,9 +27,9 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -79,6 +79,9 @@ func (r *conflictResolverImpl) prepareMutableState(
 ) (execution.MutableState, bool, error) {
 
 	versionHistories := r.mutableState.GetVersionHistories()
+	if versionHistories == nil {
+		return nil, false, execution.ErrMissingVersionHistories
+	}
 	currentVersionHistoryIndex := versionHistories.GetCurrentVersionHistoryIndex()
 
 	// replication task to be applied to current branch
@@ -101,7 +104,7 @@ func (r *conflictResolverImpl) prepareMutableState(
 	}
 
 	if incomingVersion == currentLastItem.GetVersion() {
-		return nil, false, &shared.BadRequestError{
+		return nil, false, &types.BadRequestError{
 			Message: "nDCConflictResolver encounter replication task version == current branch last write version",
 		}
 	}
@@ -123,6 +126,9 @@ func (r *conflictResolverImpl) rebuild(
 ) (execution.MutableState, error) {
 
 	versionHistories := r.mutableState.GetVersionHistories()
+	if versionHistories == nil {
+		return nil, execution.ErrMissingVersionHistories
+	}
 	replayVersionHistory, err := versionHistories.GetVersionHistory(branchIndex)
 	if err != nil {
 		return nil, err
@@ -156,13 +162,16 @@ func (r *conflictResolverImpl) rebuild(
 
 	// after rebuilt verification
 	rebuildVersionHistories := rebuildMutableState.GetVersionHistories()
+	if rebuildVersionHistories == nil {
+		return nil, execution.ErrMissingVersionHistories
+	}
 	rebuildVersionHistory, err := rebuildVersionHistories.GetCurrentVersionHistory()
 	if err != nil {
 		return nil, err
 	}
 
 	if !rebuildVersionHistory.Equals(replayVersionHistory) {
-		return nil, &shared.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "nDCConflictResolver encounter mismatch version history after rebuild",
 		}
 	}

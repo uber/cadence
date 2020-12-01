@@ -30,7 +30,6 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
@@ -186,7 +185,6 @@ type (
 		sortByCloseTime bool
 		cassandraStore
 		lowConslevel gocql.Consistency
-		serializer   p.PayloadSerializer
 	}
 )
 
@@ -211,7 +209,6 @@ func newVisibilityPersistence(
 		sortByCloseTime: listClosedOrderingByCloseTime,
 		cassandraStore:  cassandraStore{session: session, logger: logger},
 		lowConslevel:    gocql.One,
-		serializer:      p.NewPayloadSerializer(),
 	}, nil
 }
 
@@ -223,68 +220,59 @@ func (v *cassandraVisibilityPersistence) Close() {
 }
 
 func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
-	ttl := request.WorkflowTimeout + openExecutionTTLBuffer
+	ttl := int64(request.WorkflowTimeout.Seconds()) + openExecutionTTLBuffer
 	var query *gocql.Query
-
-	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
 	if ttl > maxCassandraTTL {
 		query = v.session.Query(templateCreateWorkflowExecutionStarted,
 			request.DomainUUID,
 			domainPartition,
 			request.WorkflowID,
 			request.RunID,
-			p.UnixNanoToDBTimestamp(request.StartTimestamp),
-			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
+			p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp.UnixNano()),
 			request.WorkflowTypeName,
-			memo.Data,
-			string(memo.GetEncoding()),
+			request.Memo.Data,
+			string(request.Memo.GetEncoding()),
 			request.TaskList,
-		)
+		).WithContext(ctx)
 	} else {
 		query = v.session.Query(templateCreateWorkflowExecutionStartedWithTTL,
 			request.DomainUUID,
 			domainPartition,
 			request.WorkflowID,
 			request.RunID,
-			p.UnixNanoToDBTimestamp(request.StartTimestamp),
-			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
+			p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp.UnixNano()),
 			request.WorkflowTypeName,
-			memo.Data,
-			string(memo.GetEncoding()),
+			request.Memo.Data,
+			string(request.Memo.GetEncoding()),
 			request.TaskList,
 			ttl,
-		)
+		).WithContext(ctx)
 	}
-	query = query.WithTimestamp(p.UnixNanoToDBTimestamp(request.StartTimestamp))
+	query = query.WithTimestamp(p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()))
 	err := query.Exec()
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("RecordWorkflowExecutionStarted operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("RecordWorkflowExecutionStarted operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "RecordWorkflowExecutionStarted", err)
 	}
 
 	return nil
 }
 
 func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalRecordWorkflowExecutionClosedRequest,
 ) error {
-	batch := v.session.NewBatch(gocql.LoggedBatch)
+	batch := v.session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 
 	// First, remove execution from the open table
 	batch.Query(templateDeleteWorkflowExecutionStarted,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.StartTimestamp),
+		p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()),
 		request.RunID,
 	)
 
@@ -293,24 +281,22 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 	// Find how long to keep the row
 	retention := request.RetentionSeconds
 	if retention == 0 {
-		retention = defaultCloseTTLSeconds
+		retention = defaultCloseTTLSeconds * time.Second
 	}
-
-	memo := v.serializeMemo(request.Memo, request.DomainUUID, request.WorkflowID, request.RunID)
-	if retention > maxCassandraTTL {
+	if int64(retention.Seconds()) > maxCassandraTTL {
 		batch.Query(templateCreateWorkflowExecutionClosed,
 			request.DomainUUID,
 			domainPartition,
 			request.WorkflowID,
 			request.RunID,
-			p.UnixNanoToDBTimestamp(request.StartTimestamp),
-			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
-			p.UnixNanoToDBTimestamp(request.CloseTimestamp),
+			p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.CloseTimestamp.UnixNano()),
 			request.WorkflowTypeName,
 			*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 			request.HistoryLength,
-			memo.Data,
-			string(memo.GetEncoding()),
+			request.Memo.Data,
+			string(request.Memo.GetEncoding()),
 			request.TaskList,
 		)
 		// duplicate write to v2 to order by close time
@@ -319,14 +305,14 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			domainPartition,
 			request.WorkflowID,
 			request.RunID,
-			p.UnixNanoToDBTimestamp(request.StartTimestamp),
-			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
-			p.UnixNanoToDBTimestamp(request.CloseTimestamp),
+			p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.CloseTimestamp.UnixNano()),
 			request.WorkflowTypeName,
 			*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 			request.HistoryLength,
-			memo.Data,
-			string(memo.GetEncoding()),
+			request.Memo.Data,
+			string(request.Memo.GetEncoding()),
 			request.TaskList,
 		)
 	} else {
@@ -335,16 +321,16 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			domainPartition,
 			request.WorkflowID,
 			request.RunID,
-			p.UnixNanoToDBTimestamp(request.StartTimestamp),
-			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
-			p.UnixNanoToDBTimestamp(request.CloseTimestamp),
+			p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.CloseTimestamp.UnixNano()),
 			request.WorkflowTypeName,
 			*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 			request.HistoryLength,
-			memo.Data,
-			string(memo.GetEncoding()),
+			request.Memo.Data,
+			string(request.Memo.GetEncoding()),
 			request.TaskList,
-			retention,
+			int64(retention.Seconds()),
 		)
 		// duplicate write to v2 to order by close time
 		batch.Query(templateCreateWorkflowExecutionClosedWithTTLV2,
@@ -352,16 +338,16 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 			domainPartition,
 			request.WorkflowID,
 			request.RunID,
-			p.UnixNanoToDBTimestamp(request.StartTimestamp),
-			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp),
-			p.UnixNanoToDBTimestamp(request.CloseTimestamp),
+			p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.ExecutionTimestamp.UnixNano()),
+			p.UnixNanoToDBTimestamp(request.CloseTimestamp.UnixNano()),
 			request.WorkflowTypeName,
 			*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 			request.HistoryLength,
-			memo.Data,
-			string(memo.GetEncoding()),
+			request.Memo.Data,
+			string(request.Memo.GetEncoding()),
 			request.TaskList,
-			retention,
+			int64(retention.Seconds()),
 		)
 	}
 
@@ -372,26 +358,19 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 	// CloseTimestamp can be before StartTimestamp, meaning using CloseTimestamp
 	// can cause the deletion of open visibility record to be ignored.
 	queryTimeStamp := request.CloseTimestamp
-	if queryTimeStamp < request.StartTimestamp {
-		queryTimeStamp = request.StartTimestamp + time.Second.Nanoseconds()
+	if queryTimeStamp.Before(request.StartTimestamp) {
+		queryTimeStamp = request.StartTimestamp.Add(time.Second)
 	}
-	batch = batch.WithTimestamp(p.UnixNanoToDBTimestamp(queryTimeStamp))
+	batch = batch.WithTimestamp(p.UnixNanoToDBTimestamp(queryTimeStamp.UnixNano()))
 	err := v.session.ExecuteBatch(batch)
 	if err != nil {
-		if isThrottlingError(err) {
-			return &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("RecordWorkflowExecutionClosed operation failed. Error: %v", err),
-			}
-		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("RecordWorkflowExecutionClosed operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(nil, "RecordWorkflowExecutionClosed", err)
 	}
 	return nil
 }
 
 func (v *cassandraVisibilityPersistence) UpsertWorkflowExecution(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalUpsertWorkflowExecutionRequest,
 ) error {
 	if p.IsNopUpsertWorkflowRequest(request) {
@@ -401,42 +380,36 @@ func (v *cassandraVisibilityPersistence) UpsertWorkflowExecution(
 }
 
 func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	query := v.session.Query(templateGetOpenWorkflowExecutions,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime)).Consistency(v.lowConslevel)
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
+	).Consistency(v.lowConslevel).WithContext(ctx)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "ListOpenWorkflowExecutions operation failed.  Not able to create query iterator.",
 		}
 	}
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readOpenWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readOpenWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readOpenWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readOpenWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListOpenWorkflowExecutions operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListOpenWorkflowExecutions operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListOpenWorkflowExecutions", err)
 	}
 
 	return response, nil
@@ -452,79 +425,67 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutions(
 	query := v.session.Query(templateGetClosedWorkflowExecutions,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime)).Consistency(v.lowConslevel)
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
+	).Consistency(v.lowConslevel).WithContext(ctx)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "ListClosedWorkflowExecutions operation failed.  Not able to create query iterator.",
 		}
 	}
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListClosedWorkflowExecutions operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutions", err)
 	}
 
 	return response, nil
 }
 
 func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByType(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsByTypeRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	query := v.session.Query(templateGetOpenWorkflowExecutionsByType,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime),
-		request.WorkflowTypeName).Consistency(v.lowConslevel)
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
+		request.WorkflowTypeName,
+	).Consistency(v.lowConslevel).WithContext(ctx)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "ListOpenWorkflowExecutionsByType operation failed.  Not able to create query iterator.",
 		}
 	}
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readOpenWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readOpenWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readOpenWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readOpenWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListOpenWorkflowExecutionsByType operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListOpenWorkflowExecutionsByType operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListOpenWorkflowExecutionsByType", err)
 	}
 
 	return response, nil
@@ -540,80 +501,68 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByType(
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByType,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime),
-		request.WorkflowTypeName).Consistency(v.lowConslevel)
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
+		request.WorkflowTypeName,
+	).Consistency(v.lowConslevel).WithContext(ctx)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "ListClosedWorkflowExecutionsByType operation failed.  Not able to create query iterator.",
 		}
 	}
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListClosedWorkflowExecutionsByType operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByType operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByType", err)
 	}
 
 	return response, nil
 }
 
 func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByWorkflowID(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsByWorkflowIDRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	query := v.session.Query(templateGetOpenWorkflowExecutionsByID,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime),
-		request.WorkflowID).Consistency(v.lowConslevel)
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
+		request.WorkflowID,
+	).Consistency(v.lowConslevel).WithContext(ctx)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "ListOpenWorkflowExecutionsByWorkflowID operation failed.  Not able to create query iterator.",
 		}
 	}
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readOpenWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readOpenWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readOpenWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readOpenWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListOpenWorkflowExecutionsByWorkflowID operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListOpenWorkflowExecutionsByWorkflowID operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListOpenWorkflowExecutionsByWorkflowID", err)
 	}
 
 	return response, nil
@@ -629,37 +578,31 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByWorkflowI
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByID,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime),
-		request.WorkflowID).Consistency(v.lowConslevel)
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
+		request.WorkflowID,
+	).Consistency(v.lowConslevel).WithContext(ctx)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "ListClosedWorkflowExecutionsByWorkflowID operation failed.  Not able to create query iterator.",
 		}
 	}
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByWorkflowID", err)
 	}
 
 	return response, nil
@@ -675,44 +618,38 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByStatus(
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByStatus,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime),
-		*thrift.FromWorkflowExecutionCloseStatus(&request.Status)).Consistency(v.lowConslevel)
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
+		*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
+	).Consistency(v.lowConslevel).WithContext(ctx)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "ListClosedWorkflowExecutionsByStatus operation failed.  Not able to create query iterator.",
 		}
 	}
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListClosedWorkflowExecutionsByStatus operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByStatus operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByStatus", err)
 	}
 
 	return response, nil
 }
 
 func (v *cassandraVisibilityPersistence) GetClosedWorkflowExecution(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalGetClosedWorkflowExecutionRequest,
 ) (*p.InternalGetClosedWorkflowExecutionResponse, error) {
 	execution := request.Execution
@@ -720,32 +657,26 @@ func (v *cassandraVisibilityPersistence) GetClosedWorkflowExecution(
 		request.DomainUUID,
 		domainPartition,
 		execution.GetWorkflowID(),
-		execution.GetRunID())
+		execution.GetRunID(),
+	).WithContext(ctx)
 
 	iter := query.Iter()
 	if iter == nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "GetClosedWorkflowExecution operation failed.  Not able to create query iterator.",
 		}
 	}
 
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	if !has {
-		return nil, &workflow.EntityNotExistsError{
+		return nil, &types.EntityNotExistsError{
 			Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
 				execution.GetWorkflowID(), execution.GetRunID()),
 		}
 	}
 
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("GetClosedWorkflowExecution operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetClosedWorkflowExecution operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "GetClosedWorkflowExecution", err)
 	}
 
 	return &p.InternalGetClosedWorkflowExecutionResponse{
@@ -782,193 +713,153 @@ func (v *cassandraVisibilityPersistence) CountWorkflowExecutions(
 }
 
 func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsOrderByClosedTime(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	query := v.session.Query(templateGetClosedWorkflowExecutionsV2,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime)).Consistency(v.lowConslevel)
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
+	).Consistency(v.lowConslevel).WithContext(ctx)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "ListClosedWorkflowExecutions operation failed.  Not able to create query iterator.",
 		}
 	}
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListClosedWorkflowExecutions operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutions", err)
 	}
 
 	return response, nil
 }
 
 func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByTypeOrderByClosedTime(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsByTypeRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByTypeV2,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime),
-		request.WorkflowTypeName).Consistency(v.lowConslevel)
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
+		request.WorkflowTypeName,
+	).Consistency(v.lowConslevel).WithContext(ctx)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "ListClosedWorkflowExecutionsByType operation failed.  Not able to create query iterator.",
 		}
 	}
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListClosedWorkflowExecutionsByType operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByType operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByType", err)
 	}
 
 	return response, nil
 }
 
 func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByWorkflowIDOrderByClosedTime(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalListWorkflowExecutionsByWorkflowIDRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByIDV2,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime),
-		request.WorkflowID).Consistency(v.lowConslevel)
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
+		request.WorkflowID,
+	).Consistency(v.lowConslevel).WithContext(ctx)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "ListClosedWorkflowExecutionsByWorkflowID operation failed.  Not able to create query iterator.",
 		}
 	}
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByWorkflowID operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByWorkflowID", err)
 	}
 
 	return response, nil
 }
 
 func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByStatusOrderByClosedTime(
-	_ context.Context,
+	ctx context.Context,
 	request *p.InternalListClosedWorkflowExecutionsByStatusRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	query := v.session.Query(templateGetClosedWorkflowExecutionsByStatusV2,
 		request.DomainUUID,
 		domainPartition,
-		p.UnixNanoToDBTimestamp(request.EarliestTime),
-		p.UnixNanoToDBTimestamp(request.LatestTime),
-		request.Status).Consistency(v.lowConslevel)
+		p.UnixNanoToDBTimestamp(request.EarliestTime.UnixNano()),
+		p.UnixNanoToDBTimestamp(request.LatestTime.UnixNano()),
+		request.Status,
+	).Consistency(v.lowConslevel).WithContext(ctx)
 	iter := query.PageSize(request.PageSize).PageState(request.NextPageToken).Iter()
 	if iter == nil {
 		// TODO: should return a bad request error if the token is invalid
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "ListClosedWorkflowExecutionsByStatus operation failed.  Not able to create query iterator.",
 		}
 	}
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	wfexecution, has := readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+	wfexecution, has := readClosedWorkflowExecutionRecord(iter)
 	for has {
 		response.Executions = append(response.Executions, wfexecution)
-		wfexecution, has = readClosedWorkflowExecutionRecord(iter, v.serializer, v.logger)
+		wfexecution, has = readClosedWorkflowExecutionRecord(iter)
 	}
 
 	nextPageToken := iter.PageState()
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		if isThrottlingError(err) {
-			return nil, &workflow.ServiceBusyError{
-				Message: fmt.Sprintf("ListClosedWorkflowExecutionsByStatus operation failed. Error: %v", err),
-			}
-		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutionsByStatus operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByStatus", err)
 	}
 
 	return response, nil
 }
 
-func (v *cassandraVisibilityPersistence) serializeMemo(visibilityMemo *types.Memo, domainID, wID, rID string) *p.DataBlob {
-	memo, err := v.serializer.SerializeVisibilityMemo(thrift.FromMemo(visibilityMemo), common.EncodingTypeThriftRW)
-	if err != nil {
-		v.logger.WithTags(
-			tag.WorkflowDomainID(domainID),
-			tag.WorkflowID(wID),
-			tag.WorkflowRunID(rID),
-			tag.Error(err)).
-			Error("Unable to encode visibility memo")
-	}
-	if memo == nil {
-		return &p.DataBlob{}
-	}
-	return memo
-}
-
-func readOpenWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSerializer, logger log.Logger) (*p.InternalVisibilityWorkflowExecutionInfo, bool) {
+func readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*p.InternalVisibilityWorkflowExecutionInfo, bool) {
 	var workflowID string
 	var runID gocql.UUID
 	var typeName string
@@ -978,20 +869,13 @@ func readOpenWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSeria
 	var encoding string
 	var taskList string
 	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &typeName, &memo, &encoding, &taskList) {
-		memo, err := serializer.DeserializeVisibilityMemo(p.NewDataBlob(memo, common.EncodingType(encoding)))
-		if err != nil {
-			logger.Error("failed to deserialize memo",
-				tag.WorkflowID(workflowID),
-				tag.WorkflowRunID(runID.String()),
-				tag.Error(err))
-		}
 		record := &p.InternalVisibilityWorkflowExecutionInfo{
 			WorkflowID:    workflowID,
 			RunID:         runID.String(),
 			TypeName:      typeName,
 			StartTime:     startTime,
 			ExecutionTime: executionTime,
-			Memo:          thrift.ToMemo(memo),
+			Memo:          p.NewDataBlob(memo, common.EncodingType(encoding)),
 			TaskList:      taskList,
 		}
 		return record, true
@@ -999,7 +883,7 @@ func readOpenWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSeria
 	return nil, false
 }
 
-func readClosedWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSerializer, logger log.Logger) (*p.InternalVisibilityWorkflowExecutionInfo, bool) {
+func readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*p.InternalVisibilityWorkflowExecutionInfo, bool) {
 	var workflowID string
 	var runID gocql.UUID
 	var typeName string
@@ -1012,13 +896,6 @@ func readClosedWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSer
 	var encoding string
 	var taskList string
 	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &closeTime, &typeName, &status, &historyLength, &memo, &encoding, &taskList) {
-		memo, err := serializer.DeserializeVisibilityMemo(p.NewDataBlob(memo, common.EncodingType(encoding)))
-		if err != nil {
-			logger.Error("failed to deserialize memo",
-				tag.WorkflowID(workflowID),
-				tag.WorkflowRunID(runID.String()),
-				tag.Error(err))
-		}
 		record := &p.InternalVisibilityWorkflowExecutionInfo{
 			WorkflowID:    workflowID,
 			RunID:         runID.String(),
@@ -1028,7 +905,7 @@ func readClosedWorkflowExecutionRecord(iter *gocql.Iter, serializer p.PayloadSer
 			CloseTime:     closeTime,
 			Status:        thrift.ToWorkflowExecutionCloseStatus(&status),
 			HistoryLength: historyLength,
-			Memo:          thrift.ToMemo(memo),
+			Memo:          p.NewDataBlob(memo, common.EncodingType(encoding)),
 			TaskList:      taskList,
 		}
 		return record, true

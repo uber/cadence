@@ -26,10 +26,12 @@ import (
 	"fmt"
 	"go/importer"
 	"go/types"
-	"html/template"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
+	"text/template"
 	"unicode"
 )
 
@@ -56,6 +58,14 @@ const licence = `// Copyright (c) 2017-2020 Uber Technologies Inc.
 `
 
 func internalName(name string) string {
+	return noUnderscores(capitalizeID(name))
+}
+
+func noUnderscores(name string) string {
+	return strings.ReplaceAll(name, "_", "")
+}
+
+func capitalizeID(name string) string {
 	if index := strings.Index(name, "Id"); index > 0 {
 		nextWordIndex := index + len("Id")
 		if nextWordIndex >= len(name) || unicode.IsUpper([]rune(name)[nextWordIndex]) {
@@ -66,7 +76,9 @@ func internalName(name string) string {
 }
 
 var funcMap = template.FuncMap{
-	"internal": internalName,
+	"internal":   internalName,
+	"enumString": strings.TrimPrefix,
+	"lower":      strings.ToLower,
 }
 
 var typesHeader = template.Must(template.New("struct type").Funcs(funcMap).Parse(licence + `package types
@@ -86,7 +98,7 @@ import (
 var structTemplate = template.Must(template.New("struct type").Funcs(funcMap).Parse(`
 // {{.Prefix}}{{internal .Name}} is an internal type (TBD...)
 type {{.Prefix}}{{internal .Name}} struct {
-{{range .Fields}}	{{internal .Name}} {{if .Type.IsMap}}map[{{.Type.MapKeyType}}]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer}}*{{end}}{{.Type.Prefix}}{{internal .Type.Name}}
+{{range .Fields}}	{{internal .Name}} {{if .Type.IsMap}}map[{{.Type.MapKeyType}}]{{end}}{{if .Type.IsArray}}[]{{end}}{{if .Type.IsPointer}}*{{end}}{{.Type.Prefix}}{{internal .Type.Name}} ` + "`{{.Tag}}`" + `
 {{end}}}
 {{range .Fields}}
 // Get{{internal .Name}} is an internal getter (TBD...)
@@ -102,6 +114,41 @@ func (v *{{$.Prefix}}{{internal $.Name}}) Get{{internal .Name}}() (o {{if .Type.
 var enumTemplate = template.Must(template.New("enum type").Funcs(funcMap).Parse(`
 // {{internal .Name}} is an internal type (TBD...)
 type {{internal .Name}} int32
+
+// Ptr is a helper function for getting pointer value
+func (e {{internal .Name}}) Ptr() *{{internal .Name}} {
+	return &e
+}
+
+// String returns a readable string representation of {{internal .Name}}.
+func (e {{internal .Name}}) String() string {
+	w := int32(e)
+	switch w { {{range $i, $v := .EnumValues}}
+	case {{$i}}: return "{{enumString . $.Name}}"{{end}}
+	}
+	return fmt.Sprintf("{{internal .Name}}(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *{{internal .Name}}) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s { {{range $i, $v := .EnumValues}}
+	case "{{lower (enumString . $.Name)}}":
+		*e = {{internal .}}
+		return nil{{end}}
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "{{internal .Name}}", err)
+		}
+		*e = {{internal .Name}}(val)
+		return nil
+	}
+}
+
+// MarshalText encodes {{internal .Name}} to text.
+func (e {{internal .Name}}) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
 
 const ({{range $i, $v := .EnumValues}}
 	// {{internal .}} is an option for {{internal $.Name}}
@@ -208,6 +255,7 @@ func To{{internal .Name}}(t {{if .IsPointer}}*{{end}}{{.ThriftPackage}}.{{.Name}
 `))
 
 var historyMapperAdditions = template.Must(template.New("history mapper additions").Parse(`
+// FromProcessingQueueStateArrayMap converts internal ProcessingQueueState array map to thrift
 func FromProcessingQueueStateArrayMap(t map[string][]*types.ProcessingQueueState) map[string][]*history.ProcessingQueueState {
 	if t == nil {
 		return nil
@@ -219,6 +267,7 @@ func FromProcessingQueueStateArrayMap(t map[string][]*types.ProcessingQueueState
 	return v
 }
 
+// ToProcessingQueueStateArrayMap converts thrift ProcessingQueueState array map to internal
 func ToProcessingQueueStateArrayMap(t map[string][]*history.ProcessingQueueState) map[string][]*types.ProcessingQueueState {
 	if t == nil {
 		return nil
@@ -253,6 +302,7 @@ type (
 	Field struct {
 		Name string
 		Type Type
+		Tag  string
 	}
 )
 
@@ -291,21 +341,38 @@ func newNamedType(n *types.Named) Type {
 	t.ThriftPackage = pkg.Name()
 	t.FullThriftPackage = pkg.Path()
 	if t.IsPrimitive {
+		type enumConst struct {
+			label string
+			value int
+		}
+		enumConsts := []enumConst{}
 		for _, name := range pkg.Scope().Names() {
 			enumValue := pkg.Scope().Lookup(name)
 			if isEnumValue(enumValue, n) {
-				t.EnumValues = append(t.EnumValues, enumValue.Name())
+				c := enumValue.(*types.Const)
+				val, _ := strconv.Atoi(c.Val().String())
+				enumConsts = append(enumConsts, enumConst{enumValue.Name(), val})
 			}
 		}
-		if len(t.EnumValues) > 0 {
+		if len(enumConsts) > 0 {
 			t.IsPrimitive = false
 			t.IsEnum = true
 			if _, ok := enumPointerExceptions[t.Name]; !ok {
 				t.IsPointer = true
 			}
+			sort.Slice(enumConsts, func(i, j int) bool {
+				return enumConsts[i].value < enumConsts[j].value
+			})
+			for _, c := range enumConsts {
+				t.EnumValues = append(t.EnumValues, c.label)
+			}
 		}
 	}
 	//TODO: fix this hack
+	if t.Name == "IndexedValueType" {
+		t.IsEnum = true
+		t.IsPrimitive = false
+	}
 	if t.Name == "ContinueAsNewInitiator" {
 		t.IsPrimitive = false
 	}
@@ -319,6 +386,7 @@ func newStructType(s *types.Struct) Type {
 		fields[i] = Field{
 			Name: f.Name(),
 			Type: newType(f.Type()),
+			Tag:  s.Tag(i),
 		}
 	}
 	return Type{
@@ -414,6 +482,18 @@ func main() {
 			DuplicatePrefix: "History",
 			MapperAdditions: historyMapperAdditions,
 		},
+		{
+			ThriftPackage:   "github.com/uber/cadence/.gen/go/admin",
+			TypesFile:       "common/types/admin.go",
+			MapperFile:      "common/types/mapper/thrift/admin.go",
+			DuplicatePrefix: "Admin",
+		},
+		{
+			ThriftPackage:   "github.com/uber/cadence/.gen/go/matching",
+			TypesFile:       "common/types/matching.go",
+			MapperFile:      "common/types/mapper/thrift/matching.go",
+			DuplicatePrefix: "Matching",
+		},
 	}
 
 	for _, p := range packages {
@@ -434,6 +514,9 @@ func main() {
 		for _, name := range pkg.Scope().Names() {
 			obj := pkg.Scope().Lookup(name)
 			t := newType(obj.Type())
+			if _, isConst := obj.(*types.Const); isConst {
+				continue
+			}
 			if count, ok := allNames[t.Name]; ok {
 				allNames[t.Name] = count + 1
 			} else {

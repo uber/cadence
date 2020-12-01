@@ -42,7 +42,7 @@ type Service struct {
 	resource.Resource
 
 	status  int32
-	handler *Handler
+	handler *handlerImpl
 	stopC   chan struct{}
 	params  *service.BootstrapParams
 	config  *config.Config
@@ -123,7 +123,9 @@ func (s *Service) Start() {
 	logger.Info("history starting")
 
 	s.handler = NewHandler(s.Resource, s.config)
-	s.handler.RegisterHandler()
+
+	thriftHandler := NewThriftHandler(s.handler)
+	thriftHandler.register(s.GetDispatcher())
 
 	// must start resource first
 	s.Resource.Start()

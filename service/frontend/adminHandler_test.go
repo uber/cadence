@@ -33,13 +33,11 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/history/historyservicetest"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/definition"
-	"github.com/uber/cadence/common/elasticsearch"
 	esmock "github.com/uber/cadence/common/elasticsearch/mocks"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -48,6 +46,7 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -57,7 +56,7 @@ type (
 
 		controller        *gomock.Controller
 		mockResource      *resource.Test
-		mockHistoryClient *historyservicetest.MockClient
+		mockHistoryClient *history.MockClient
 		mockDomainCache   *cache.MockDomainCache
 
 		mockHistoryV2Mgr *mocks.HistoryV2Manager
@@ -65,7 +64,7 @@ type (
 		domainName string
 		domainID   string
 
-		handler *AdminHandler
+		handler *adminHandlerImpl
 	}
 )
 
@@ -231,9 +230,9 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 		persistence.NewVersionHistoryItem(int64(10), int64(100)),
 	})
 	rawVersionHistories := persistence.NewVersionHistories(versionHistory)
-	versionHistories := rawVersionHistories.ToThrift()
-	mState := &history.GetMutableStateResponse{
-		NextEventId:        common.Int64Ptr(11),
+	versionHistories := rawVersionHistories.ToInternalType()
+	mState := &types.GetMutableStateResponse{
+		NextEventID:        common.Int64Ptr(11),
 		CurrentBranchToken: branchToken,
 		VersionHistories:   versionHistories,
 	}
@@ -269,9 +268,9 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_SameStartIDAnd
 		persistence.NewVersionHistoryItem(int64(10), int64(100)),
 	})
 	rawVersionHistories := persistence.NewVersionHistories(versionHistory)
-	versionHistories := rawVersionHistories.ToThrift()
-	mState := &history.GetMutableStateResponse{
-		NextEventId:        common.Int64Ptr(11),
+	versionHistories := rawVersionHistories.ToInternalType()
+	mState := &types.GetMutableStateResponse{
+		NextEventID:        common.Int64Ptr(11),
 		CurrentBranchToken: branchToken,
 		VersionHistories:   versionHistories,
 	}
@@ -445,12 +444,12 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 		{
 			Name:     "nil request",
 			Request:  nil,
-			Expected: &shared.BadRequestError{Message: "Request is nil."},
+			Expected: &types.BadRequestError{Message: "Request is nil."},
 		},
 		{
 			Name:     "empty request",
 			Request:  &admin.AddSearchAttributeRequest{},
-			Expected: &shared.BadRequestError{Message: "SearchAttributes are not provided"},
+			Expected: &types.BadRequestError{Message: "SearchAttributes are not provided"},
 		},
 		{
 			Name: "no advanced config",
@@ -459,7 +458,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 					"CustomKeywordField": 1,
 				},
 			},
-			Expected: &shared.BadRequestError{Message: "AdvancedVisibilityStore is not configured for this Cadence Cluster"},
+			Expected: &types.BadRequestError{Message: "AdvancedVisibilityStore is not configured for this Cadence Cluster"},
 		},
 	}
 	for _, testCase := range testCases1 {
@@ -469,10 +468,11 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 	dynamicConfig := dynamicconfig.NewMockClient(s.controller)
 	handler.params.DynamicConfig = dynamicConfig
 	// add advanced visibility store related config
-	handler.params.ESConfig = &elasticsearch.Config{}
-	esClient := &esmock.Client{}
+	handler.params.ESConfig = &config.ElasticSearchConfig{}
+	esClient := &esmock.GenericClient{}
 	defer func() { esClient.AssertExpectations(s.T()) }()
 	handler.params.ESClient = esClient
+	handler.esClient = esClient
 
 	mockValidAttr := map[string]interface{}{
 		"testkey": shared.IndexedValueTypeKeyword,
@@ -488,7 +488,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 					"WorkflowID": 1,
 				},
 			},
-			Expected: &shared.BadRequestError{Message: "Key [WorkflowID] is reserved by system"},
+			Expected: &types.BadRequestError{Message: "Key [WorkflowID] is reserved by system"},
 		},
 		{
 			Name: "key already whitelisted",
@@ -497,7 +497,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 					"testkey": 1,
 				},
 			},
-			Expected: &shared.BadRequestError{Message: "Key [testkey] is already whitelist"},
+			Expected: &types.BadRequestError{Message: "Key [testkey] is already whitelist"},
 		},
 	}
 	for _, testCase := range testCases2 {
@@ -511,7 +511,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 				"testkey2": 1,
 			},
 		},
-		Expected: &shared.InternalServiceError{Message: "Failed to update dynamic config, err: error"},
+		Expected: &types.InternalServiceError{Message: "Failed to update dynamic config, err: error"},
 	}
 	dynamicConfig.EXPECT().UpdateValue(dynamicconfig.ValidSearchAttributes, map[string]interface{}{
 		"testkey":  shared.IndexedValueTypeKeyword,
@@ -529,12 +529,13 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 				"testkey3": -1,
 			},
 		},
-		Expected: &shared.BadRequestError{Message: "Unknown value type, IndexedValueType(-1)"},
+		Expected: &types.BadRequestError{Message: "Unknown value type, IndexedValueType(-1)"},
 	}
 	s.Equal(convertFailedTest.Expected, handler.AddSearchAttribute(ctx, convertFailedTest.Request))
 
 	esClient.On("PutMapping", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(errors.New("error"))
+	esClient.On("IsNotFoundError", mock.Anything).Return(false)
 	esErrorTest := test{
 		Name: "es error",
 		Request: &admin.AddSearchAttributeRequest{
@@ -542,7 +543,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 				"testkey4": 1,
 			},
 		},
-		Expected: &shared.InternalServiceError{Message: "Failed to update ES mapping, err: error"},
+		Expected: &types.InternalServiceError{Message: "Failed to update ES mapping, err: error"},
 	}
 	s.Equal(esErrorTest.Expected, handler.AddSearchAttribute(ctx, esErrorTest.Request))
 }
@@ -573,7 +574,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Permission() {
 			Request: &admin.AddSearchAttributeRequest{
 				SecurityToken: common.StringPtr(common.DefaultAdminOperationToken),
 			},
-			Expected: &shared.BadRequestError{Message: "SearchAttributes are not provided"},
+			Expected: &types.BadRequestError{Message: "SearchAttributes are not provided"},
 		},
 	}
 	for _, testCase := range testCases {

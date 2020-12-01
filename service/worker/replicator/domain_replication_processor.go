@@ -28,10 +28,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.uber.org/cadence/.gen/go/shared"
-
 	"github.com/uber/cadence/.gen/go/replicator"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -40,7 +37,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -49,7 +47,6 @@ const (
 	pollIntervalSecs                          = 1
 	taskProcessorErrorRetryWait               = time.Second
 	taskProcessorErrorRetryBackoffCoefficient = 1
-	taskProcessorErrorRetryMaxAttampts        = 5
 )
 
 func newDomainReplicationProcessor(
@@ -60,11 +57,12 @@ func newDomainReplicationProcessor(
 	taskExecutor domain.ReplicationTaskExecutor,
 	hostInfo *membership.HostInfo,
 	serviceResolver membership.ServiceResolver,
-	domainReplicationQueue persistence.DomainReplicationQueue,
+	domainReplicationQueue domain.ReplicationQueue,
+	replicationMaxRetry time.Duration,
 ) *domainReplicationProcessor {
 	retryPolicy := backoff.NewExponentialRetryPolicy(taskProcessorErrorRetryWait)
 	retryPolicy.SetBackoffCoefficient(taskProcessorErrorRetryBackoffCoefficient)
-	retryPolicy.SetMaximumAttempts(taskProcessorErrorRetryMaxAttampts)
+	retryPolicy.SetExpirationInterval(replicationMaxRetry)
 
 	return &domainReplicationProcessor{
 		hostInfo:               hostInfo,
@@ -97,7 +95,7 @@ type (
 		lastProcessedMessageID int64
 		lastRetrievedMessageID int64
 		done                   chan struct{}
-		domainReplicationQueue persistence.DomainReplicationQueue
+		domainReplicationQueue domain.ReplicationQueue
 	}
 )
 
@@ -146,7 +144,8 @@ func (p *domainReplicationProcessor) fetchDomainReplicationTasks() {
 		LastRetrievedMessageId: common.Int64Ptr(p.lastRetrievedMessageID),
 		LastProcessedMessageId: common.Int64Ptr(p.lastProcessedMessageID),
 	}
-	response, err := p.remotePeer.GetDomainReplicationMessages(ctx, request)
+	clientResp, err := p.remotePeer.GetDomainReplicationMessages(ctx, thrift.ToGetDomainReplicationMessagesRequest(request))
+	response := thrift.FromGetDomainReplicationMessagesResponse(clientResp)
 	defer cancel()
 
 	if err != nil {
@@ -186,7 +185,7 @@ func (p *domainReplicationProcessor) putDomainReplicationTaskToDLQ(
 
 	domainAttribute := task.GetDomainTaskAttributes()
 	if domainAttribute == nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: "Domain replication task does not set domain task attribute",
 		}
 	}
@@ -204,11 +203,11 @@ func (p *domainReplicationProcessor) handleDomainReplicationTask(
 	sw := p.metricsClient.StartTimer(metrics.DomainReplicationTaskScope, metrics.ReplicatorLatency)
 	defer sw.Stop()
 
-	if err := p.taskExecutor.Execute(task.DomainTaskAttributes); err != nil {
+	err := p.taskExecutor.Execute(task.DomainTaskAttributes)
+	if err != nil {
 		p.metricsClient.IncCounter(metrics.DomainReplicationTaskScope, metrics.ReplicatorFailures)
-		return err
 	}
-	return nil
+	return err
 }
 
 func (p *domainReplicationProcessor) Stop() {
@@ -221,7 +220,7 @@ func getWaitDuration() time.Duration {
 
 func isTransientRetryableError(err error) bool {
 	switch err.(type) {
-	case *shared.BadRequestError:
+	case *types.BadRequestError:
 		return false
 	default:
 		return true

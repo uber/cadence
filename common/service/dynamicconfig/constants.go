@@ -64,6 +64,7 @@ var keys = map[Key]string{
 	EnableDomainNotActiveAutoForwarding: "system.enableDomainNotActiveAutoForwarding",
 	EnableGracefulFailover:              "system.enableGracefulFailover",
 	TransactionSizeLimit:                "system.transactionSizeLimit",
+	PersistenceErrorInjectionRate:       "system.persistenceErrorInjectionRate",
 	MinRetentionDays:                    "system.minRetentionDays",
 	MaxDecisionStartToCloseSeconds:      "system.maxDecisionStartToCloseSeconds",
 	DisallowQuery:                       "system.disallowQuery",
@@ -75,14 +76,18 @@ var keys = map[Key]string{
 	EnableAuthorization:                 "system.enableAuthorization",
 
 	// size limit
-	BlobSizeLimitError:     "limit.blobSize.error",
-	BlobSizeLimitWarn:      "limit.blobSize.warn",
-	HistorySizeLimitError:  "limit.historySize.error",
-	HistorySizeLimitWarn:   "limit.historySize.warn",
-	HistoryCountLimitError: "limit.historyCount.error",
-	HistoryCountLimitWarn:  "limit.historyCount.warn",
-	MaxIDLengthLimit:       "limit.maxIDLength",
-	MaxIDLengthWarnLimit:   "limit.maxIDWarnLength",
+	BlobSizeLimitError:      "limit.blobSize.error",
+	BlobSizeLimitWarn:       "limit.blobSize.warn",
+	HistorySizeLimitError:   "limit.historySize.error",
+	HistorySizeLimitWarn:    "limit.historySize.warn",
+	HistoryCountLimitError:  "limit.historyCount.error",
+	HistoryCountLimitWarn:   "limit.historyCount.warn",
+	MaxIDLengthLimit:        "limit.maxIDLength",
+	MaxIDLengthWarnLimit:    "limit.maxIDWarnLength",
+	MaxRawTaskListNameLimit: "limit.maxRawTaskListNameLength",
+
+	// admin settings
+	AdminErrorInjectionRate: "admin.errorInjectionRate",
 
 	// frontend settings
 	FrontendPersistenceMaxQPS:                   "frontend.persistenceMaxQPS",
@@ -112,6 +117,7 @@ var keys = map[Key]string{
 	VisibilityArchivalQueryMaxQPS:               "frontend.visibilityArchivalQueryMaxQPS",
 	DomainFailoverRefreshInterval:               "frontend.domainFailoverRefreshInterval",
 	DomainFailoverRefreshTimerJitterCoefficient: "frontend.domainFailoverRefreshTimerJitterCoefficient",
+	FrontendErrorInjectionRate:                  "frontend.errorInjectionRate",
 
 	// matching settings
 	MatchingRPS:                             "matching.rps",
@@ -135,6 +141,7 @@ var keys = map[Key]string{
 	MatchingForwarderMaxRatePerSecond:       "matching.forwarderMaxRatePerSecond",
 	MatchingForwarderMaxChildrenPerNode:     "matching.forwarderMaxChildrenPerNode",
 	MatchingShutdownDrainDuration:           "matching.shutdownDrainDuration",
+	MatchingErrorInjectionRate:              "matching.errorInjectionRate",
 
 	// history settings
 	HistoryRPS:                                            "history.rps",
@@ -285,6 +292,7 @@ var keys = map[Key]string{
 	NotifyFailoverMarkerTimerJitterCoefficient:            "history.NotifyFailoverMarkerTimerJitterCoefficient",
 	EnableDropStuckTaskByDomainID:                         "history.DropStuckTaskByDomain",
 	EnableActivityLocalDispatchByDomain:                   "history.enableActivityLocalDispatchByDomain",
+	HistoryErrorInjectionRate:                             "history.errorInjectionRate",
 
 	WorkerPersistenceMaxQPS:                                  "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                            "worker.persistenceGlobalMaxQPS",
@@ -329,6 +337,10 @@ var keys = map[Key]string{
 	CurrentExecutionsScannerPersistencePageSize:              "worker.currentExecutionsPersistencePageSize",
 	CurrentExecutionsScannerInvariantCollectionHistory:       "worker.currentExecutionsScannerInvariantCollectionHistory",
 	CurrentExecutionsScannerInvariantCollectionMutableState:  "worker.currentExecutionsInvariantCollectionMutableState",
+	ConcreteExecutionFixerDomainAllow:                        "worker.concreteExecutionFixerDomainAllow",
+	CurrentExecutionFixerDomainAllow:                         "worker.currentExecutionFixerDomainAllow",
+	ConcreteExecutionFixerEnabled:                            "worker.concreteExecutionFixerEnabled",
+	CurrentExecutionFixerEnabled:                             "worker.currentExecutionFixerEnabled",
 }
 
 const (
@@ -380,6 +392,8 @@ const (
 	EnableGracefulFailover
 	// TransactionSizeLimit is the largest allowed transaction size to persistence
 	TransactionSizeLimit
+	// PersistenceErrorInjectionRate is the rate for injecting random error in persistence
+	PersistenceErrorInjectionRate
 	// MinRetentionDays is the minimal allowed retention days for domain
 	MinRetentionDays
 	// MaxDecisionStartToCloseSeconds is the minimal allowed decision start to close timeout in seconds
@@ -410,6 +424,13 @@ const (
 	// MaxIDLengthWarnLimit is the warn length limit for various IDs, including: Domain, TaskList, WorkflowID, ActivityID, TimerID,
 	// WorkflowType, ActivityType, SignalName, MarkerName, ErrorReason/FailureReason/CancelCause, Identity, RequestID
 	MaxIDLengthWarnLimit
+	// MaxRawTaskListNameLimit is the max length of user provided task list name (non-sticky and non-scalable)
+	MaxRawTaskListNameLimit
+
+	// key for admin
+
+	// AdminErrorInjectionRate is the rate for injecting random error in admin client
+	AdminErrorInjectionRate
 
 	// key for frontend
 
@@ -468,6 +489,9 @@ const (
 	// DomainFailoverRefreshTimerJitterCoefficient is the jitter for domain failover refresh timer jitter
 	DomainFailoverRefreshTimerJitterCoefficient
 
+	// FrontendErrorInjectionRate is the rate for injecting random error in frontend client
+	FrontendErrorInjectionRate
+
 	// key for matching
 
 	// MatchingRPS is request rate per second for each matching host
@@ -512,6 +536,8 @@ const (
 	MatchingForwarderMaxChildrenPerNode
 	// MatchingShutdownDrainDuration is the duration of traffic drain during shutdown
 	MatchingShutdownDrainDuration
+	// MatchingErrorInjectionRate is the rate for injecting random error in matching client
+	MatchingErrorInjectionRate
 
 	// key for history
 
@@ -759,6 +785,9 @@ const (
 	// EnableDropStuckTaskByDomainID is whether stuck timer/transfer task should be dropped for a domain
 	EnableDropStuckTaskByDomainID
 
+	// HistoryErrorInjectionRate is the rate for injecting random error in history client
+	HistoryErrorInjectionRate
+
 	// key for worker
 
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
@@ -847,6 +876,14 @@ const (
 	CurrentExecutionsScannerInvariantCollectionHistory
 	// CurrentExecutionsScannerInvariantCollectionMutableState indicates if mutable state invariant checks should be run
 	CurrentExecutionsScannerInvariantCollectionMutableState
+	// ConcreteExecutionFixerDomainAllow indicates  which domains are allowed to be fixed by concrete fixer workflow
+	ConcreteExecutionFixerDomainAllow
+	// CurrentExecutionFixerDomainAllow indicates which domains are allowed to be fixed by current fixer workflow
+	CurrentExecutionFixerDomainAllow
+	// ConcreteExecutionFixerEnabled indicates if concrete execution fixer workflow is enabled
+	ConcreteExecutionFixerEnabled
+	// CurrentExecutionFixerEnabled indicates if current execution fixer workflow is enabled
+	CurrentExecutionFixerEnabled
 	// EnableBatcher decides whether start batcher in our worker
 	EnableBatcher
 	// EnableParentClosePolicyWorker decides whether or not enable system workers for processing parent close policy task
@@ -915,11 +952,11 @@ const (
 	// NotifyFailoverMarkerTimerJitterCoefficient is the jitter for failover marker notifier timer
 	NotifyFailoverMarkerTimerJitterCoefficient
 
-	// lastKeyForTest must be the last one in this const group for testing purpose
-	lastKeyForTest
-
 	// EnableActivityLocalDispatchByDomain allows worker to dispatch activity tasks through local tunnel after decisions are made. This is an performance optimization to skip activity scheduling efforts.
 	EnableActivityLocalDispatchByDomain
+
+	// lastKeyForTest must be the last one in this const group for testing purpose
+	lastKeyForTest
 )
 
 // Filter represents a filter on the dynamic config key

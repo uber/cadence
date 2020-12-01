@@ -60,6 +60,7 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
@@ -100,7 +101,7 @@ type (
 		taskMgr                       persistence.TaskManager
 		visibilityMgr                 persistence.VisibilityManager
 		executionMgrFactory           persistence.ExecutionManagerFactory
-		domainReplicationQueue        persistence.DomainReplicationQueue
+		domainReplicationQueue        domain.ReplicationQueue
 		shutdownCh                    chan struct{}
 		shutdownWG                    sync.WaitGroup
 		clusterNo                     int // cluster number
@@ -110,8 +111,8 @@ type (
 		archiverMetadata              carchiver.ArchivalMetadata
 		archiverProvider              provider.ArchiverProvider
 		historyConfig                 *HistoryConfig
-		esConfig                      *elasticsearch.Config
-		esClient                      elasticsearch.Client
+		esConfig                      *config.ElasticSearchConfig
+		esClient                      elasticsearch.GenericClient
 		workerConfig                  *WorkerConfig
 		mockAdminClient               map[string]adminClient.Client
 		domainReplicationTaskExecutor domain.ReplicationTaskExecutor
@@ -137,15 +138,15 @@ type (
 		ExecutionMgrFactory           persistence.ExecutionManagerFactory
 		TaskMgr                       persistence.TaskManager
 		VisibilityMgr                 persistence.VisibilityManager
-		DomainReplicationQueue        persistence.DomainReplicationQueue
+		DomainReplicationQueue        domain.ReplicationQueue
 		Logger                        log.Logger
 		ClusterNo                     int
 		ArchiverMetadata              carchiver.ArchivalMetadata
 		ArchiverProvider              provider.ArchiverProvider
 		EnableReadHistoryFromArchival bool
 		HistoryConfig                 *HistoryConfig
-		ESConfig                      *elasticsearch.Config
-		ESClient                      elasticsearch.Client
+		ESConfig                      *config.ElasticSearchConfig
+		ESClient                      elasticsearch.GenericClient
 		WorkerConfig                  *WorkerConfig
 		MockAdminClient               map[string]adminClient.Client
 		DomainReplicationTaskExecutor domain.ReplicationTaskExecutor
@@ -644,6 +645,7 @@ func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, ser
 		serviceResolver,
 		c.domainReplicationQueue,
 		c.domainReplicationTaskExecutor,
+		time.Millisecond,
 	)
 	if err := c.replicator.Start(); err != nil {
 		c.replicator.Stop()
@@ -718,7 +720,7 @@ func (c *cadenceImpl) createSystemDomain() error {
 		FailoverVersion:   common.EmptyVersion,
 	})
 	if err != nil {
-		if _, ok := err.(*shared.DomainAlreadyExistsError); ok {
+		if _, ok := err.(*types.DomainAlreadyExistsError); ok {
 			return nil
 		}
 		return fmt.Errorf("failed to create cadence-system domain: %v", err)

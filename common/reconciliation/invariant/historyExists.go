@@ -29,6 +29,7 @@ import (
 	c "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -93,7 +94,7 @@ func (h *historyExists) Check(
 	}
 	if readHistoryBranchErr != nil {
 		switch readHistoryBranchErr.(type) {
-		case *shared.EntityNotExistsError:
+		case *types.EntityNotExistsError:
 			return CheckResult{
 				CheckResultType: CheckResultTypeCorrupted,
 				InvariantName:   h.Name(),
@@ -134,7 +135,7 @@ func (h *historyExists) Fix(
 	if fixResult != nil {
 		return *fixResult
 	}
-	fixResult = DeleteExecution(ctx, &execution, h.pr)
+	fixResult = DeleteExecution(ctx, execution, h.pr)
 	fixResult.CheckResult = *checkResult
 	fixResult.InvariantName = h.Name()
 	return *fixResult
@@ -163,7 +164,7 @@ func ExecutionStillExists(
 		return true, nil
 	}
 	switch err.(type) {
-	case *shared.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		return false, nil
 	default:
 		return false, err

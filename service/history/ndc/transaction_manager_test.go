@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/execution"
@@ -231,6 +232,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Cl
 		workflow,
 		EventsReapplicationResetWorkflowReason,
 		workflowEvents.Events,
+		false,
 	).Return(nil).Times(1)
 
 	s.mockExecutionManager.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
@@ -450,7 +452,7 @@ func (s *transactionManagerSuite) TestCheckWorkflowExists_DoesNotExists() {
 			WorkflowId: common.StringPtr(workflowID),
 			RunId:      common.StringPtr(runID),
 		},
-	}).Return(nil, &shared.EntityNotExistsError{}).Once()
+	}).Return(nil, &types.EntityNotExistsError{}).Once()
 
 	exists, err := s.transactionManager.checkWorkflowExists(ctx, domainID, workflowID, runID)
 	s.NoError(err)
@@ -484,7 +486,7 @@ func (s *transactionManagerSuite) TestGetWorkflowCurrentRunID_Missing() {
 	s.mockExecutionManager.On("GetCurrentExecution", mock.Anything, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
-	}).Return(nil, &shared.EntityNotExistsError{}).Once()
+	}).Return(nil, &types.EntityNotExistsError{}).Once()
 
 	currentRunID, err := s.transactionManager.getCurrentWorkflowRunID(ctx, domainID, workflowID)
 	s.NoError(err)

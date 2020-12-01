@@ -27,13 +27,13 @@ import (
 
 	"github.com/gocql/gocql"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -78,26 +78,6 @@ func (h *nosqlHistoryManager) Close() {
 	h.db.Close()
 }
 
-func (h *nosqlHistoryManager) convertCommonErrors(
-	operation string,
-	err error,
-) error {
-	if h.db.IsNotFoundError(err) {
-		return &shared.EntityNotExistsError{
-			Message: fmt.Sprintf("%v failed. Error: %v ", operation, err),
-		}
-	} else if h.db.IsTimeoutError(err) {
-		return &p.TimeoutError{Msg: fmt.Sprintf("%v timed out. Error: %v", operation, err)}
-	} else if h.db.IsThrottlingError(err) {
-		return &shared.ServiceBusyError{
-			Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
-		}
-	}
-	return &shared.InternalServiceError{
-		Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
-	}
-}
-
 // AppendHistoryNodes upsert a batch of events as a single node to a history branch
 // Note that it's not allowed to append above the branch's ancestors' nodes, which means nodeID >= ForkNodeID
 func (h *nosqlHistoryManager) AppendHistoryNodes(
@@ -117,17 +97,17 @@ func (h *nosqlHistoryManager) AppendHistoryNodes(
 	var err error
 	var treeRow *nosqlplugin.HistoryTreeRow
 	if request.IsNewBranch {
-		var ancestors []*shared.HistoryBranchRange
+		var ancestors []*types.HistoryBranchRange
 		for _, anc := range branchInfo.Ancestors {
 			ancestors = append(ancestors, anc)
 		}
 		treeRow = &nosqlplugin.HistoryTreeRow{
-			ShardID:                     request.ShardID,
-			TreeID:                      branchInfo.GetTreeID(),
-			BranchID:                    branchInfo.GetBranchID(),
-			Ancestors:                   ancestors,
-			CreateTimestampMilliseconds: p.UnixNanoToDBTimestamp(time.Now().UnixNano()),
-			Info:                        request.Info,
+			ShardID:         request.ShardID,
+			TreeID:          branchInfo.GetTreeID(),
+			BranchID:        branchInfo.GetBranchID(),
+			Ancestors:       ancestors,
+			CreateTimestamp: time.Now(),
+			Info:            request.Info,
 		}
 	}
 	nodeRow := &nosqlplugin.HistoryNodeRow{
@@ -142,7 +122,7 @@ func (h *nosqlHistoryManager) AppendHistoryNodes(
 	err = h.db.InsertIntoHistoryTreeAndNode(ctx, treeRow, nodeRow)
 
 	if err != nil {
-		return h.convertCommonErrors("AppendHistoryNodes", err)
+		return convertCommonErrors(h.db, "AppendHistoryNodes", err)
 	}
 	return nil
 }
@@ -164,7 +144,7 @@ func (h *nosqlHistoryManager) ReadHistoryBranch(
 	}
 	rows, pagingToken, err := h.db.SelectFromHistoryNode(ctx, filter)
 	if err != nil {
-		return nil, err
+		return nil, convertCommonErrors(h.db, "SelectFromHistoryNode", err)
 	}
 
 	history := make([]*p.DataBlob, 0, int(request.PageSize))
@@ -196,11 +176,11 @@ func (h *nosqlHistoryManager) ReadHistoryBranch(
 
 		switch {
 		case nodeID < lastNodeID:
-			return nil, &shared.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("corrupted data, nodeID cannot decrease"),
 			}
 		case nodeID == lastNodeID:
-			return nil, &shared.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("corrupted data, same nodeID must have smaller txnID"),
 			}
 		default: // row.NodeID > lastNodeID:
@@ -271,14 +251,14 @@ func (h *nosqlHistoryManager) ForkHistoryBranch(
 
 	forkB := request.ForkBranchInfo
 	treeID := *forkB.TreeID
-	newAncestors := make([]*shared.HistoryBranchRange, 0, len(forkB.Ancestors)+1)
+	newAncestors := make([]*types.HistoryBranchRange, 0, len(forkB.Ancestors)+1)
 
 	beginNodeID := p.GetBeginNodeID(forkB)
 	if beginNodeID >= request.ForkNodeID {
 		// this is the case that new branch's ancestors doesn't include the forking branch
 		for _, br := range forkB.Ancestors {
 			if *br.EndNodeID >= request.ForkNodeID {
-				newAncestors = append(newAncestors, &shared.HistoryBranchRange{
+				newAncestors = append(newAncestors, &types.HistoryBranchRange{
 					BranchID:    br.BranchID,
 					BeginNodeID: br.BeginNodeID,
 					EndNodeID:   common.Int64Ptr(request.ForkNodeID),
@@ -291,7 +271,7 @@ func (h *nosqlHistoryManager) ForkHistoryBranch(
 	} else {
 		// this is the case the new branch will inherit all ancestors from forking branch
 		newAncestors = forkB.Ancestors
-		newAncestors = append(newAncestors, &shared.HistoryBranchRange{
+		newAncestors = append(newAncestors, &types.HistoryBranchRange{
 			BranchID:    forkB.BranchID,
 			BeginNodeID: common.Int64Ptr(beginNodeID),
 			EndNodeID:   common.Int64Ptr(request.ForkNodeID),
@@ -299,32 +279,32 @@ func (h *nosqlHistoryManager) ForkHistoryBranch(
 	}
 
 	resp := &p.InternalForkHistoryBranchResponse{
-		NewBranchInfo: shared.HistoryBranch{
+		NewBranchInfo: types.HistoryBranch{
 			TreeID:    &treeID,
 			BranchID:  &request.NewBranchID,
 			Ancestors: newAncestors,
 		}}
 
-	var ancestors []*shared.HistoryBranchRange
+	var ancestors []*types.HistoryBranchRange
 	for _, an := range newAncestors {
-		anc := &shared.HistoryBranchRange{
+		anc := &types.HistoryBranchRange{
 			BranchID:  an.BranchID,
 			EndNodeID: an.EndNodeID,
 		}
 		ancestors = append(ancestors, anc)
 	}
 	treeRow := &nosqlplugin.HistoryTreeRow{
-		ShardID:                     request.ShardID,
-		TreeID:                      treeID,
-		BranchID:                    request.NewBranchID,
-		Ancestors:                   ancestors,
-		CreateTimestampMilliseconds: p.UnixNanoToDBTimestamp(time.Now().UnixNano()),
-		Info:                        request.Info,
+		ShardID:         request.ShardID,
+		TreeID:          treeID,
+		BranchID:        request.NewBranchID,
+		Ancestors:       ancestors,
+		CreateTimestamp: time.Now(),
+		Info:            request.Info,
 	}
 
 	err := h.db.InsertIntoHistoryTreeAndNode(ctx, treeRow, nil)
 	if err != nil {
-		return nil, h.convertCommonErrors("ForkHistoryBranch", err)
+		return nil, convertCommonErrors(h.db, "ForkHistoryBranch", err)
 	}
 	return resp, nil
 }
@@ -339,12 +319,12 @@ func (h *nosqlHistoryManager) DeleteHistoryBranch(
 	treeID := *branch.TreeID
 	brsToDelete := branch.Ancestors
 	beginNodeID := p.GetBeginNodeID(branch)
-	brsToDelete = append(brsToDelete, &shared.HistoryBranchRange{
+	brsToDelete = append(brsToDelete, &types.HistoryBranchRange{
 		BranchID:    branch.BranchID,
 		BeginNodeID: common.Int64Ptr(beginNodeID),
 	})
 
-	rsp, err := h.GetHistoryTree(context.TODO(), &p.InternalGetHistoryTreeRequest{
+	rsp, err := h.GetHistoryTree(ctx, &p.InternalGetHistoryTreeRequest{
 		TreeID:  treeID,
 		ShardID: &request.ShardID,
 	})
@@ -398,7 +378,7 @@ func (h *nosqlHistoryManager) DeleteHistoryBranch(
 
 	err = h.db.DeleteFromHistoryTreeAndNode(ctx, treeFilter, nodeFilters)
 	if err != nil {
-		return h.convertCommonErrors("DeleteHistoryBranch", err)
+		return convertCommonErrors(h.db, "DeleteHistoryBranch", err)
 	}
 	return nil
 }
@@ -409,7 +389,7 @@ func (h *nosqlHistoryManager) GetAllHistoryTreeBranches(
 ) (*p.GetAllHistoryTreeBranchesResponse, error) {
 	dbBranches, pagingToken, err := h.db.SelectAllHistoryTrees(ctx, request.NextPageToken, request.PageSize)
 	if err != nil {
-		return nil, err
+		return nil, convertCommonErrors(h.db, "SelectAllHistoryTrees", err)
 	}
 
 	branchDetails := make([]p.HistoryBranchDetail, 0, int(request.PageSize))
@@ -419,7 +399,7 @@ func (h *nosqlHistoryManager) GetAllHistoryTreeBranches(
 		branchDetail := p.HistoryBranchDetail{
 			TreeID:   branch.TreeID,
 			BranchID: branch.BranchID,
-			ForkTime: time.Unix(0, p.DBTimestampToUnixNano(branch.CreateTimestampMilliseconds)),
+			ForkTime: branch.CreateTimestamp,
 			Info:     branch.Info,
 		}
 		branchDetails = append(branchDetails, branchDetail)
@@ -447,12 +427,12 @@ func (h *nosqlHistoryManager) GetHistoryTree(
 			TreeID:  treeID,
 		})
 	if err != nil {
-		return nil, err
+		return nil, convertCommonErrors(h.db, "SelectFromHistoryTree", err)
 	}
 
-	branches := make([]*shared.HistoryBranch, 0)
+	branches := make([]*types.HistoryBranch, 0)
 	for _, dbBr := range dbBranches {
-		br := &shared.HistoryBranch{
+		br := &types.HistoryBranch{
 			TreeID:    &treeID,
 			BranchID:  &dbBr.BranchID,
 			Ancestors: dbBr.Ancestors,

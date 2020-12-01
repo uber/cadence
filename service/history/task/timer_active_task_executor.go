@@ -24,7 +24,6 @@ import (
 	"context"
 	"fmt"
 
-	m "github.com/uber/cadence/.gen/go/matching"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -32,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -134,7 +134,7 @@ Loop:
 		if !ok {
 			errString := fmt.Sprintf("failed to find in user timer event ID: %v", timerSequenceID.EventID)
 			t.logger.Error(errString)
-			return &workflow.InternalServiceError{Message: errString}
+			return &types.InternalServiceError{Message: errString}
 		}
 
 		if expired := timerSequence.IsExpired(referenceTime, timerSequenceID); !expired {
@@ -426,28 +426,28 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 		if scheduledEvent.ActivityTaskScheduledEventAttributes.Domain != nil {
 			domainEntry, err := t.shard.GetDomainCache().GetDomain(scheduledEvent.ActivityTaskScheduledEventAttributes.GetDomain())
 			if err != nil {
-				return &workflow.InternalServiceError{Message: "unable to re-schedule activity across domain."}
+				return &types.InternalServiceError{Message: "unable to re-schedule activity across domain."}
 			}
 			targetDomainID = domainEntry.GetInfo().ID
 		}
 	}
 
-	execution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(task.WorkflowID),
-		RunId:      common.StringPtr(task.RunID)}
-	taskList := &workflow.TaskList{
+	execution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(task.WorkflowID),
+		RunID:      common.StringPtr(task.RunID)}
+	taskList := &types.TaskList{
 		Name: common.StringPtr(activityInfo.TaskList),
 	}
 	scheduleToStartTimeout := activityInfo.ScheduleToStartTimeout
 
 	release(nil) // release earlier as we don't need the lock anymore
 
-	return t.shard.GetService().GetMatchingClient().AddActivityTask(ctx, &m.AddActivityTaskRequest{
+	return t.shard.GetService().GetMatchingClient().AddActivityTask(ctx, &types.AddActivityTaskRequest{
 		DomainUUID:                    common.StringPtr(targetDomainID),
 		SourceDomainUUID:              common.StringPtr(domainID),
 		Execution:                     &execution,
 		TaskList:                      taskList,
-		ScheduleId:                    common.Int64Ptr(scheduledID),
+		ScheduleID:                    common.Int64Ptr(scheduledID),
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
 	})
 }

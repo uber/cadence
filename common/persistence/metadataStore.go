@@ -22,6 +22,9 @@ package persistence
 
 import (
 	"context"
+	"time"
+
+	"github.com/uber/cadence/common"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
@@ -68,7 +71,7 @@ func (m *metadataManagerImpl) CreateDomain(
 		IsGlobalDomain:    request.IsGlobalDomain,
 		ConfigVersion:     request.ConfigVersion,
 		FailoverVersion:   request.FailoverVersion,
-		LastUpdatedTime:   request.LastUpdatedTime,
+		LastUpdatedTime:   time.Unix(0, request.LastUpdatedTime),
 	})
 }
 
@@ -76,29 +79,32 @@ func (m *metadataManagerImpl) GetDomain(
 	ctx context.Context,
 	request *GetDomainRequest,
 ) (*GetDomainResponse, error) {
-	resp, err := m.persistence.GetDomain(ctx, request)
+	internalResp, err := m.persistence.GetDomain(ctx, request)
 	if err != nil {
 		return nil, err
 	}
 
-	dc, err := m.fromInternalDomainConfig(resp.Config)
+	dc, err := m.fromInternalDomainConfig(internalResp.Config)
 	if err != nil {
 		return nil, err
 	}
 
-	return &GetDomainResponse{
-		Info:                        resp.Info,
+	resp := &GetDomainResponse{
+		Info:                        internalResp.Info,
 		Config:                      &dc,
-		ReplicationConfig:           resp.ReplicationConfig,
-		IsGlobalDomain:              resp.IsGlobalDomain,
-		ConfigVersion:               resp.ConfigVersion,
-		FailoverVersion:             resp.FailoverVersion,
-		FailoverNotificationVersion: resp.FailoverNotificationVersion,
-		PreviousFailoverVersion:     resp.PreviousFailoverVersion,
-		FailoverEndTime:             resp.FailoverEndTime,
-		LastUpdatedTime:             resp.LastUpdatedTime,
-		NotificationVersion:         resp.NotificationVersion,
-	}, nil
+		ReplicationConfig:           internalResp.ReplicationConfig,
+		IsGlobalDomain:              internalResp.IsGlobalDomain,
+		ConfigVersion:               internalResp.ConfigVersion,
+		FailoverVersion:             internalResp.FailoverVersion,
+		FailoverNotificationVersion: internalResp.FailoverNotificationVersion,
+		PreviousFailoverVersion:     internalResp.PreviousFailoverVersion,
+		LastUpdatedTime:             internalResp.LastUpdatedTime.UnixNano(),
+		NotificationVersion:         internalResp.NotificationVersion,
+	}
+	if internalResp.FailoverEndTime != nil {
+		resp.FailoverEndTime = common.Int64Ptr(internalResp.FailoverEndTime.UnixNano())
+	}
+	return resp, nil
 }
 
 func (m *metadataManagerImpl) UpdateDomain(
@@ -109,7 +115,7 @@ func (m *metadataManagerImpl) UpdateDomain(
 	if err != nil {
 		return err
 	}
-	return m.persistence.UpdateDomain(ctx, &InternalUpdateDomainRequest{
+	internalReq := &InternalUpdateDomainRequest{
 		Info:                        request.Info,
 		Config:                      &dc,
 		ReplicationConfig:           request.ReplicationConfig,
@@ -117,10 +123,13 @@ func (m *metadataManagerImpl) UpdateDomain(
 		FailoverVersion:             request.FailoverVersion,
 		FailoverNotificationVersion: request.FailoverNotificationVersion,
 		PreviousFailoverVersion:     request.PreviousFailoverVersion,
-		FailoverEndTime:             request.FailoverEndTime,
-		LastUpdatedTime:             request.LastUpdatedTime,
+		LastUpdatedTime:             time.Unix(0, request.LastUpdatedTime),
 		NotificationVersion:         request.NotificationVersion,
-	})
+	}
+	if request.FailoverEndTime != nil {
+		internalReq.FailoverEndTime = common.TimePtr(time.Unix(0, *request.FailoverEndTime))
+	}
+	return m.persistence.UpdateDomain(ctx, internalReq)
 }
 
 func (m *metadataManagerImpl) DeleteDomain(
@@ -151,7 +160,7 @@ func (m *metadataManagerImpl) ListDomains(
 		if err != nil {
 			return nil, err
 		}
-		domains = append(domains, &GetDomainResponse{
+		currResp := &GetDomainResponse{
 			Info:                        d.Info,
 			Config:                      &dc,
 			ReplicationConfig:           d.ReplicationConfig,
@@ -159,10 +168,13 @@ func (m *metadataManagerImpl) ListDomains(
 			ConfigVersion:               d.ConfigVersion,
 			FailoverVersion:             d.FailoverVersion,
 			FailoverNotificationVersion: d.FailoverNotificationVersion,
-			FailoverEndTime:             d.FailoverEndTime,
 			PreviousFailoverVersion:     d.PreviousFailoverVersion,
 			NotificationVersion:         d.NotificationVersion,
-		})
+		}
+		if d.FailoverEndTime != nil {
+			currResp.FailoverEndTime = common.Int64Ptr(d.FailoverEndTime.UnixNano())
+		}
+		domains = append(domains, currResp)
 	}
 	return &ListDomainsResponse{
 		Domains:       domains,
@@ -177,14 +189,18 @@ func (m *metadataManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalD
 	if c.BadBinaries.Binaries == nil {
 		c.BadBinaries.Binaries = map[string]*shared.BadBinaryInfo{}
 	}
+	badBinaries, err := m.serializer.SerializeBadBinaries(thrift.ToBadBinaries(&c.BadBinaries), common.EncodingTypeThriftRW)
+	if err != nil {
+		return InternalDomainConfig{}, err
+	}
 	return InternalDomainConfig{
-		Retention:                c.Retention,
+		Retention:                common.DaysToDuration(c.Retention),
 		EmitMetric:               c.EmitMetric,
 		HistoryArchivalStatus:    *thrift.ToArchivalStatus(&c.HistoryArchivalStatus),
 		HistoryArchivalURI:       c.HistoryArchivalURI,
 		VisibilityArchivalStatus: *thrift.ToArchivalStatus(&c.VisibilityArchivalStatus),
 		VisibilityArchivalURI:    c.VisibilityArchivalURI,
-		BadBinaries:              *thrift.ToBadBinaries(&c.BadBinaries),
+		BadBinaries:              badBinaries,
 	}, nil
 }
 
@@ -192,14 +208,22 @@ func (m *metadataManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig)
 	if ic == nil {
 		return DomainConfig{}, nil
 	}
+	internalBadBinaries, err := m.serializer.DeserializeBadBinaries(ic.BadBinaries)
+	if err != nil {
+		return DomainConfig{}, err
+	}
+	badBinaries := thrift.FromBadBinaries(internalBadBinaries)
+	if badBinaries.Binaries == nil {
+		badBinaries.Binaries = map[string]*shared.BadBinaryInfo{}
+	}
 	return DomainConfig{
-		Retention:                ic.Retention,
+		Retention:                common.DurationToDays(ic.Retention),
 		EmitMetric:               ic.EmitMetric,
 		HistoryArchivalStatus:    *thrift.FromArchivalStatus(&ic.HistoryArchivalStatus),
 		HistoryArchivalURI:       ic.HistoryArchivalURI,
 		VisibilityArchivalStatus: *thrift.FromArchivalStatus(&ic.VisibilityArchivalStatus),
 		VisibilityArchivalURI:    ic.VisibilityArchivalURI,
-		BadBinaries:              *thrift.FromBadBinaries(&ic.BadBinaries),
+		BadBinaries:              *badBinaries,
 	}, nil
 }
 

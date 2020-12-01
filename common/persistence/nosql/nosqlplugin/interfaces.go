@@ -22,11 +22,10 @@ package nosqlplugin
 
 import (
 	"context"
+	"time"
 
-	"github.com/uber/cadence/common/types"
-
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -104,6 +103,8 @@ type (
 		UpdateQueueMetadataCas(ctx context.Context, row QueueMetadataRow) error
 		// Read a QueueMetadata
 		SelectQueueMetadata(ctx context.Context, queueType persistence.QueueType) (*QueueMetadataRow, error)
+		// GetQueueSize return the queue size
+		GetQueueSize(ctx context.Context, queueType persistence.QueueType) (int64, error)
 	}
 
 	// domainCRUD is for domain + domain metadata storage system
@@ -142,16 +143,15 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
-		FailoverEndTime             int64
+		FailoverEndTime             *time.Time
 		NotificationVersion         int64
-		LastUpdatedTime             int64
+		LastUpdatedTime             time.Time
 		IsGlobalDomain              bool
 	}
 
 	// NoSQLInternalDomainConfig defines the struct for the domainConfig
 	NoSQLInternalDomainConfig struct {
-		// NOTE: this retention is in days, not in seconds
-		Retention                int32
+		Retention                time.Duration
 		EmitMetric               bool                 // deprecated
 		ArchivalBucket           string               // deprecated
 		ArchivalStatus           types.ArchivalStatus // deprecated
@@ -219,12 +219,12 @@ type (
 
 	// HistoryTreeRow represents a row in history_tree table
 	HistoryTreeRow struct {
-		ShardID                     int
-		TreeID                      string
-		BranchID                    string
-		Ancestors                   []*shared.HistoryBranchRange
-		CreateTimestampMilliseconds int64
-		Info                        string
+		ShardID         int
+		TreeID          string
+		BranchID        string
+		Ancestors       []*types.HistoryBranchRange
+		CreateTimestamp time.Time
+		Info            string
 	}
 
 	// HistoryTreeFilter contains the column names within history_tree table that

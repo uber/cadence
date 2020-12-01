@@ -31,12 +31,12 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/.gen/go/admin/adminservicetest"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyservicetest"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -45,6 +45,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/shard"
@@ -63,7 +64,7 @@ type (
 		taskFetcher      *MockTaskFetcher
 		mockDomainCache  *cache.MockDomainCache
 		mockClientBean   *client.MockBean
-		adminClient      *adminservicetest.MockClient
+		adminClient      *admin.MockClient
 		clusterMetadata  *cluster.MockMetadata
 		executionManager *mocks.ExecutionManager
 		requestChan      chan *request
@@ -201,9 +202,9 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTas
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
-	events := []*shared.HistoryEvent{
+	events := []*types.HistoryEvent{
 		{
-			EventId: common.Int64Ptr(1),
+			EventID: common.Int64Ptr(1),
 			Version: common.Int64Ptr(1),
 		},
 	}
@@ -243,9 +244,9 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeHistoryV2
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
-	events := []*shared.HistoryEvent{
+	events := []*types.HistoryEvent{
 		{
-			EventId: common.Int64Ptr(1),
+			EventID: common.Int64Ptr(1),
 			Version: common.Int64Ptr(1),
 		},
 	}

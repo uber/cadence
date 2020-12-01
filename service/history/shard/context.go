@@ -30,8 +30,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -42,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
@@ -83,8 +82,8 @@ type (
 		UpdateTransferAckLevel(ackLevel int64) error
 		GetTransferClusterAckLevel(cluster string) int64
 		UpdateTransferClusterAckLevel(cluster string, ackLevel int64) error
-		GetTransferProcessingQueueStates(cluster string) []*history.ProcessingQueueState
-		UpdateTransferProcessingQueueStates(cluster string, states []*history.ProcessingQueueState) error
+		GetTransferProcessingQueueStates(cluster string) []*types.ProcessingQueueState
+		UpdateTransferProcessingQueueStates(cluster string, states []*types.ProcessingQueueState) error
 
 		GetReplicatorAckLevel() int64
 		UpdateReplicatorAckLevel(ackLevel int64) error
@@ -98,8 +97,8 @@ type (
 		UpdateTimerAckLevel(ackLevel time.Time) error
 		GetTimerClusterAckLevel(cluster string) time.Time
 		UpdateTimerClusterAckLevel(cluster string, ackLevel time.Time) error
-		GetTimerProcessingQueueStates(cluster string) []*history.ProcessingQueueState
-		UpdateTimerProcessingQueueStates(cluster string, states []*history.ProcessingQueueState) error
+		GetTimerProcessingQueueStates(cluster string) []*types.ProcessingQueueState
+		UpdateTimerProcessingQueueStates(cluster string, states []*types.ProcessingQueueState) error
 
 		UpdateTransferFailoverLevel(failoverID string, level persistence.TransferFailoverLevel) error
 		DeleteTransferFailoverLevel(failoverID string) error
@@ -118,8 +117,8 @@ type (
 		AppendHistoryV2Events(ctx context.Context, request *persistence.AppendHistoryNodesRequest, domainID string, execution shared.WorkflowExecution) (int, error)
 
 		ReplicateFailoverMarkers(ctx context.Context, makers []*persistence.FailoverMarkerTask) error
-		AddingPendingFailoverMarker(*replicator.FailoverMarkerAttributes) error
-		ValidateAndUpdateFailoverMarkers() ([]*replicator.FailoverMarkerAttributes, error)
+		AddingPendingFailoverMarker(*types.FailoverMarkerAttributes) error
+		ValidateAndUpdateFailoverMarkers() ([]*types.FailoverMarkerAttributes, error)
 	}
 
 	contextImpl struct {
@@ -143,10 +142,10 @@ type (
 		transferSequenceNumber        int64
 		maxTransferSequenceNumber     int64
 		transferMaxReadLevel          int64
-		timerMaxReadLevelMap          map[string]time.Time           // cluster -> timerMaxReadLevel
-		transferProcessingQueueStates *history.ProcessingQueueStates // deserialized shardInfo.TransferProcessingQueueStates
-		timerProcessingQueueStates    *history.ProcessingQueueStates // deserialized shardInfo.TimerProcessingQueueStates
-		pendingFailoverMarkers        []*replicator.FailoverMarkerAttributes
+		timerMaxReadLevelMap          map[string]time.Time         // cluster -> timerMaxReadLevel
+		transferProcessingQueueStates *types.ProcessingQueueStates // deserialized shardInfo.TransferProcessingQueueStates
+		timerProcessingQueueStates    *types.ProcessingQueueStates // deserialized shardInfo.TimerProcessingQueueStates
+		pendingFailoverMarkers        []*types.FailoverMarkerAttributes
 
 		// exist only in memory
 		remoteClusterCurrentTime map[string]time.Time
@@ -261,7 +260,7 @@ func (s *contextImpl) UpdateTransferClusterAckLevel(cluster string, ackLevel int
 	return s.updateShardInfoLocked()
 }
 
-func (s *contextImpl) GetTransferProcessingQueueStates(cluster string) []*history.ProcessingQueueState {
+func (s *contextImpl) GetTransferProcessingQueueStates(cluster string) []*types.ProcessingQueueState {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -281,19 +280,19 @@ func (s *contextImpl) GetTransferProcessingQueueStates(cluster string) []*histor
 
 	// otherwise, create default queue state based on existing ack level,
 	// which belongs to local cluster. this can happen if you add more cluster
-	return []*history.ProcessingQueueState{
+	return []*types.ProcessingQueueState{
 		{
 			Level:    common.Int32Ptr(0),
 			AckLevel: common.Int64Ptr(ackLevel),
 			MaxLevel: common.Int64Ptr(math.MaxInt64),
-			DomainFilter: &history.DomainFilter{
+			DomainFilter: &types.DomainFilter{
 				ReverseMatch: common.BoolPtr(true),
 			},
 		},
 	}
 }
 
-func (s *contextImpl) UpdateTransferProcessingQueueStates(cluster string, states []*history.ProcessingQueueState) error {
+func (s *contextImpl) UpdateTransferProcessingQueueStates(cluster string, states []*types.ProcessingQueueState) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -302,16 +301,10 @@ func (s *contextImpl) UpdateTransferProcessingQueueStates(cluster string, states
 	}
 
 	if s.transferProcessingQueueStates.StatesByCluster == nil {
-		s.transferProcessingQueueStates.StatesByCluster = make(map[string][]*history.ProcessingQueueState)
+		s.transferProcessingQueueStates.StatesByCluster = make(map[string][]*types.ProcessingQueueState)
 	}
 	s.transferProcessingQueueStates.StatesByCluster[cluster] = states
-	serializer := s.GetPayloadSerializer()
-	data, err := serializer.SerializeProcessingQueueStates(s.transferProcessingQueueStates, common.EncodingTypeThriftRW)
-	if err != nil {
-		s.logger.Error("Failed to serialize transfer processing queue states", tag.Error(err))
-		return err
-	}
-	s.shardInfo.TransferProcessingQueueStates = data
+	s.shardInfo.TransferProcessingQueueStates = s.transferProcessingQueueStates
 
 	// for backward compatibility
 	ackLevel := states[0].GetAckLevel()
@@ -434,7 +427,7 @@ func (s *contextImpl) UpdateTimerClusterAckLevel(cluster string, ackLevel time.T
 	return s.updateShardInfoLocked()
 }
 
-func (s *contextImpl) GetTimerProcessingQueueStates(cluster string) []*history.ProcessingQueueState {
+func (s *contextImpl) GetTimerProcessingQueueStates(cluster string) []*types.ProcessingQueueState {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -454,19 +447,19 @@ func (s *contextImpl) GetTimerProcessingQueueStates(cluster string) []*history.P
 
 	// otherwise, create default queue state based on existing ack level,
 	// which belongs to local cluster. this can happen if you add more cluster
-	return []*history.ProcessingQueueState{
+	return []*types.ProcessingQueueState{
 		{
 			Level:    common.Int32Ptr(0),
 			AckLevel: common.Int64Ptr(ackLevel.UnixNano()),
 			MaxLevel: common.Int64Ptr(math.MaxInt64),
-			DomainFilter: &history.DomainFilter{
+			DomainFilter: &types.DomainFilter{
 				ReverseMatch: common.BoolPtr(true),
 			},
 		},
 	}
 }
 
-func (s *contextImpl) UpdateTimerProcessingQueueStates(cluster string, states []*history.ProcessingQueueState) error {
+func (s *contextImpl) UpdateTimerProcessingQueueStates(cluster string, states []*types.ProcessingQueueState) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -475,16 +468,10 @@ func (s *contextImpl) UpdateTimerProcessingQueueStates(cluster string, states []
 	}
 
 	if s.timerProcessingQueueStates.StatesByCluster == nil {
-		s.timerProcessingQueueStates.StatesByCluster = make(map[string][]*history.ProcessingQueueState)
+		s.timerProcessingQueueStates.StatesByCluster = make(map[string][]*types.ProcessingQueueState)
 	}
 	s.timerProcessingQueueStates.StatesByCluster[cluster] = states
-	serializer := s.GetPayloadSerializer()
-	data, err := serializer.SerializeProcessingQueueStates(s.timerProcessingQueueStates, common.EncodingTypeThriftRW)
-	if err != nil {
-		s.logger.Error("Failed to serialize timer processing queue states", tag.Error(err))
-		return err
-	}
-	s.shardInfo.TimerProcessingQueueStates = data
+	s.shardInfo.TimerProcessingQueueStates = s.timerProcessingQueueStates
 
 	// for backward compatibility
 	ackLevel := states[0].GetAckLevel()
@@ -634,12 +621,12 @@ Create_Loop:
 		response, err := s.executionManager.CreateWorkflowExecution(ctx, request)
 		if err != nil {
 			switch err.(type) {
-			case *shared.WorkflowExecutionAlreadyStartedError,
+			case *types.WorkflowExecutionAlreadyStartedError,
 				*persistence.WorkflowExecutionAlreadyStartedError,
 				*persistence.CurrentWorkflowConditionFailedError,
-				*shared.ServiceBusyError,
+				*types.ServiceBusyError,
 				*persistence.TimeoutError,
-				*shared.LimitExceededError:
+				*types.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
 				{
@@ -747,8 +734,8 @@ Update_Loop:
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
-				*shared.ServiceBusyError,
-				*shared.LimitExceededError:
+				*types.ServiceBusyError,
+				*types.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
 				{
@@ -863,8 +850,8 @@ Conflict_Resolve_Loop:
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
-				*shared.ServiceBusyError,
-				*shared.LimitExceededError:
+				*types.ServiceBusyError,
+				*types.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
 				{
@@ -1219,24 +1206,28 @@ func (s *contextImpl) allocateTaskIDsLocked(
 
 	if err := s.allocateTransferIDsLocked(
 		transferTasks,
-		transferMaxReadLevel); err != nil {
+		transferMaxReadLevel,
+	); err != nil {
 		return err
 	}
 	if err := s.allocateTransferIDsLocked(
 		replicationTasks,
-		transferMaxReadLevel); err != nil {
+		transferMaxReadLevel,
+	); err != nil {
 		return err
 	}
 	return s.allocateTimerIDsLocked(
 		domainEntry,
 		workflowID,
-		timerTasks)
+		timerTasks,
+	)
 }
 
 func (s *contextImpl) allocateTransferIDsLocked(
 	tasks []persistence.Task,
 	transferMaxReadLevel *int64,
 ) error {
+	now := s.GetTimeSource().Now()
 
 	for _, task := range tasks {
 		id, err := s.generateTransferTaskIDLocked()
@@ -1245,8 +1236,7 @@ func (s *contextImpl) allocateTransferIDsLocked(
 		}
 		s.logger.Debug(fmt.Sprintf("Assigning task ID: %v", id))
 		task.SetTaskID(id)
-		// TODO: set the task visibility time
-		//task.SetVisibilityTimestamp(s.GetTimeSource().Now())
+		task.SetVisibilityTimestamp(now)
 		*transferMaxReadLevel = id
 	}
 	return nil
@@ -1380,7 +1370,7 @@ Retry_Loop:
 }
 
 func (s *contextImpl) AddingPendingFailoverMarker(
-	marker *replicator.FailoverMarkerAttributes,
+	marker *types.FailoverMarkerAttributes,
 ) error {
 
 	domainEntry, err := s.GetDomainCache().GetDomainByID(marker.GetDomainID())
@@ -1404,9 +1394,9 @@ func (s *contextImpl) AddingPendingFailoverMarker(
 	return s.forceUpdateShardInfoLocked()
 }
 
-func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*replicator.FailoverMarkerAttributes, error) {
+func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*types.FailoverMarkerAttributes, error) {
 
-	completedFailoverMarkers := make(map[*replicator.FailoverMarkerAttributes]struct{})
+	completedFailoverMarkers := make(map[*types.FailoverMarkerAttributes]struct{})
 	s.RLock()
 	for _, marker := range s.pendingFailoverMarkers {
 		domainEntry, err := s.GetDomainCache().GetDomainByID(marker.GetDomainID())
@@ -1448,14 +1438,7 @@ func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*replicator.Failover
 }
 
 func (s *contextImpl) updateFailoverMarkersInShardInfoLocked() error {
-
-	serializer := s.GetPayloadSerializer()
-	data, err := serializer.SerializePendingFailoverMarkers(s.pendingFailoverMarkers, common.EncodingTypeThriftRW)
-	if err != nil {
-		return err
-	}
-
-	s.shardInfo.PendingFailoverMarkers = data
+	s.shardInfo.PendingFailoverMarkers = s.pendingFailoverMarkers
 	return nil
 }
 
@@ -1486,7 +1469,7 @@ func acquireShard(
 			shardInfo = resp.ShardInfo
 			return nil
 		}
-		if _, ok := err.(*shared.EntityNotExistsError); !ok {
+		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			return err
 		}
 
@@ -1532,23 +1515,22 @@ func acquireShard(
 		timerMaxReadLevelMap[clusterName] = timerMaxReadLevelMap[clusterName].Truncate(time.Millisecond)
 	}
 
-	serializer := shardItem.GetPayloadSerializer()
-	transferProcessingQueueStates, err := serializer.DeserializeProcessingQueueStates(shardInfo.TransferProcessingQueueStates)
+	transferProcessingQueueStates := shardInfo.TransferProcessingQueueStates
 	if err != nil {
 		return nil, err
 	}
 	if transferProcessingQueueStates == nil {
-		transferProcessingQueueStates = &history.ProcessingQueueStates{
-			StatesByCluster: make(map[string][]*history.ProcessingQueueState),
+		transferProcessingQueueStates = &types.ProcessingQueueStates{
+			StatesByCluster: make(map[string][]*types.ProcessingQueueState),
 		}
 	}
-	timerProcessingQueueStates, err := serializer.DeserializeProcessingQueueStates(shardInfo.TimerProcessingQueueStates)
+	timerProcessingQueueStates := shardInfo.TimerProcessingQueueStates
 	if err != nil {
 		return nil, err
 	}
 	if timerProcessingQueueStates == nil {
-		timerProcessingQueueStates = &history.ProcessingQueueStates{
-			StatesByCluster: make(map[string][]*history.ProcessingQueueState),
+		timerProcessingQueueStates = &types.ProcessingQueueStates{
+			StatesByCluster: make(map[string][]*types.ProcessingQueueState),
 		}
 	}
 
@@ -1569,7 +1551,7 @@ func acquireShard(
 		timerMaxReadLevelMap:           timerMaxReadLevelMap, // use ack to init read level
 		transferProcessingQueueStates:  transferProcessingQueueStates,
 		timerProcessingQueueStates:     timerProcessingQueueStates,
-		pendingFailoverMarkers:         []*replicator.FailoverMarkerAttributes{},
+		pendingFailoverMarkers:         []*types.FailoverMarkerAttributes{},
 		logger:                         shardItem.logger,
 		throttledLogger:                shardItem.throttledLogger,
 		previousShardOwnerWasDifferent: ownershipChanged,

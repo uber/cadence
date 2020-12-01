@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -150,23 +151,30 @@ func (r *stateRebuilderImpl) Rebuild(
 	if err := rebuiltMutableState.SetCurrentBranchToken(targetBranchToken); err != nil {
 		return nil, 0, err
 	}
-	currentVersionHistory, err := rebuiltMutableState.GetVersionHistories().GetCurrentVersionHistory()
-	if err != nil {
-		return nil, 0, err
-	}
-	lastItem, err := currentVersionHistory.GetLastItem()
-	if err != nil {
-		return nil, 0, err
-	}
-	if !lastItem.Equals(persistence.NewVersionHistoryItem(
-		baseLastEventID,
-		baseLastEventVersion,
-	)) {
-		return nil, 0, &shared.InternalServiceError{Message: fmt.Sprintf(
-			"nDCStateRebuilder unable to rebuild mutable state to event ID: %v, version: %v",
+	rebuildVersionHistories := rebuiltMutableState.GetVersionHistories()
+	if rebuildVersionHistories != nil {
+		currentVersionHistory, err := rebuildVersionHistories.GetCurrentVersionHistory()
+		if err != nil {
+			return nil, 0, err
+		}
+		lastItem, err := currentVersionHistory.GetLastItem()
+		if err != nil {
+			return nil, 0, err
+		}
+		if !lastItem.Equals(persistence.NewVersionHistoryItem(
 			baseLastEventID,
 			baseLastEventVersion,
-		)}
+		)) {
+			return nil, 0, &types.BadRequestError{Message: fmt.Sprintf(
+				"nDCStateRebuilder unable to rebuild mutable state to event ID: %v, version: %v, "+
+					"baseLastEventID + baseLastEventVersion is not the same as the last event of the last "+
+					"batch, event ID: %v, version :%v ,typicaly because of attemptting to rebuild to a middle of a batch",
+				baseLastEventID,
+				baseLastEventVersion,
+				lastItem.EventID,
+				lastItem.Version,
+			)}
+		}
 	}
 
 	// close rebuilt mutable state transaction clearing all generated tasks, etc.

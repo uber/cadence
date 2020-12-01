@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -252,7 +253,7 @@ func (c *Cache) validateWorkflowExecutionInfo(
 ) error {
 
 	if execution.GetWorkflowId() == "" {
-		return &workflow.BadRequestError{Message: "Can't load workflow execution.  WorkflowId not set."}
+		return &types.BadRequestError{Message: "Can't load workflow execution.  WorkflowId not set."}
 	}
 
 	// RunID is not provided, lets try to retrieve the RunID for current active execution
@@ -268,7 +269,7 @@ func (c *Cache) validateWorkflowExecutionInfo(
 
 		execution.RunId = common.StringPtr(response.RunID)
 	} else if uuid.Parse(execution.GetRunId()) == nil { // immediately return if invalid runID
-		return &workflow.BadRequestError{Message: "RunID is not valid UUID."}
+		return &types.BadRequestError{Message: "RunID is not valid UUID."}
 	}
 	return nil
 }

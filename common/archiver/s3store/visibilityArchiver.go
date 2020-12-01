@@ -30,10 +30,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -164,16 +164,16 @@ func (v *visibilityArchiver) Query(
 	request *archiver.QueryVisibilityRequest,
 ) (*archiver.QueryVisibilityResponse, error) {
 	if err := softValidateURI(URI); err != nil {
-		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidURI.Error()}
+		return nil, &types.BadRequestError{Message: archiver.ErrInvalidURI.Error()}
 	}
 
 	if err := archiver.ValidateQueryRequest(request); err != nil {
-		return nil, &shared.BadRequestError{Message: archiver.ErrInvalidQueryVisibilityRequest.Error()}
+		return nil, &types.BadRequestError{Message: archiver.ErrInvalidQueryVisibilityRequest.Error()}
 	}
 
 	parsedQuery, err := v.queryParser.Parse(request.Query)
 	if err != nil {
-		return nil, &shared.BadRequestError{Message: err.Error()}
+		return nil, &types.BadRequestError{Message: err.Error()}
 	}
 
 	return v.query(ctx, URI, &queryVisibilityRequest{
@@ -217,9 +217,9 @@ func (v *visibilityArchiver) query(
 	})
 	if err != nil {
 		if isRetryableError(err) {
-			return nil, &shared.InternalServiceError{Message: err.Error()}
+			return nil, &types.InternalServiceError{Message: err.Error()}
 		}
-		return nil, &shared.BadRequestError{Message: err.Error()}
+		return nil, &types.BadRequestError{Message: err.Error()}
 	}
 	if len(results.Contents) == 0 {
 		return &archiver.QueryVisibilityResponse{}, nil
@@ -232,12 +232,12 @@ func (v *visibilityArchiver) query(
 	for _, item := range results.Contents {
 		encodedRecord, err := download(ctx, v.s3cli, URI, *item.Key)
 		if err != nil {
-			return nil, &shared.InternalServiceError{Message: err.Error()}
+			return nil, &types.InternalServiceError{Message: err.Error()}
 		}
 
 		record, err := decodeVisibilityRecord(encodedRecord)
 		if err != nil {
-			return nil, &shared.InternalServiceError{Message: err.Error()}
+			return nil, &types.InternalServiceError{Message: err.Error()}
 		}
 		response.Executions = append(response.Executions, convertToExecutionInfo(record))
 	}

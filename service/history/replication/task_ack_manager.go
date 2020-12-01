@@ -42,6 +42,8 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	exec "github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
@@ -284,7 +286,7 @@ func (t *taskAckManagerImpl) processReplication(
 		release(nil)
 
 		return action(targetActivityInfo, targetVersionHistory)
-	case *shared.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		return nil, nil
 	default:
 		return nil, err
@@ -325,7 +327,7 @@ func (t *taskAckManagerImpl) getEventsBlob(
 	}
 
 	if len(eventBatchBlobs) != 1 {
-		return nil, &shared.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "replicatorQueueProcessor encounter more than 1 NDC raw event batch",
 		}
 	}
@@ -503,7 +505,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 				if err != nil {
 					return nil, err
 				}
-				versionHistory = rawVersionHistory.ToThrift()
+				versionHistory = thrift.FromVersionHistory(rawVersionHistory.ToInternalType())
 			}
 
 			return &replicator.ReplicationTask{
@@ -544,6 +546,13 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 			activityInfo *persistence.ActivityInfo,
 			versionHistories *persistence.VersionHistories,
 		) (*replicator.ReplicationTask, error) {
+			if versionHistories == nil {
+				t.logger.Error("encounter workflow without version histories",
+					tag.WorkflowDomainID(task.GetDomainID()),
+					tag.WorkflowID(task.GetWorkflowID()),
+					tag.WorkflowRunID(task.GetRunID()))
+				return nil, nil
+			}
 			versionHistoryItems, branchToken, err := getVersionHistoryItems(
 				versionHistories,
 				task.FirstEventID,
@@ -607,7 +616,7 @@ func getVersionHistoryItems(
 ) ([]*shared.VersionHistoryItem, []byte, error) {
 
 	if versionHistories == nil {
-		return nil, nil, &shared.InternalServiceError{
+		return nil, nil, &types.InternalServiceError{
 			Message: "replicatorQueueProcessor encounter workflow without version histories",
 		}
 	}
@@ -626,5 +635,5 @@ func getVersionHistoryItems(
 	if err != nil {
 		return nil, nil, err
 	}
-	return versionHistory.ToThrift().Items, versionHistory.GetBranchToken(), nil
+	return thrift.FromVersionHistoryItemArray(versionHistory.ToInternalType().Items), versionHistory.GetBranchToken(), nil
 }

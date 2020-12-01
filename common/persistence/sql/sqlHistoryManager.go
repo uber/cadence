@@ -25,9 +25,11 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
+
 	"github.com/uber/cadence/common/persistence/serialization"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -81,13 +83,13 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 	}
 
 	if request.IsNewBranch {
-		var ancestors []*shared.HistoryBranchRange
+		var ancestors []*types.HistoryBranchRange
 		for _, anc := range branchInfo.Ancestors {
 			ancestors = append(ancestors, anc)
 		}
 
 		treeInfo := &sqlblobs.HistoryTreeInfo{
-			Ancestors:        ancestors,
+			Ancestors:        thrift.FromHistoryBranchRangeArray(ancestors),
 			Info:             &request.Info,
 			CreatedTimeNanos: common.TimeNowNanosPtr(),
 		}
@@ -137,7 +139,7 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 		if m.db.IsDupEntryError(err) {
 			return &p.ConditionFailedError{Msg: fmt.Sprintf("AppendHistoryNodes: row already exist: %v", err)}
 		}
-		return &shared.InternalServiceError{Message: fmt.Sprintf("AppendHistoryEvents: %v", err)}
+		return &types.InternalServiceError{Message: fmt.Sprintf("AppendHistoryEvents: %v", err)}
 	}
 	return nil
 }
@@ -160,7 +162,7 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 		// TODO the inner pagination token can be replaced by a dummy token
 		//  since lastNodeID & lastTxnID are both provided
 		if lastNodeID, err = deserializePageToken(request.NextPageToken); err != nil {
-			return nil, &shared.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("invalid next page token %v", request.NextPageToken)}
 		}
 		minNodeID = lastNodeID + 1
@@ -199,7 +201,7 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 			//  -> batch with lower transaction ID is invalid (happens before)
 			//  -> batch with higher transaction ID is valid
 			if row.NodeID < lastNodeID {
-				return nil, &shared.InternalServiceError{
+				return nil, &types.InternalServiceError{
 					Message: fmt.Sprintf("corrupted data, nodeID cannot decrease"),
 				}
 			} else if row.NodeID > lastNodeID {
@@ -213,11 +215,11 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 
 		switch {
 		case row.NodeID < lastNodeID:
-			return nil, &shared.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("corrupted data, nodeID cannot decrease"),
 			}
 		case row.NodeID == lastNodeID:
-			return nil, &shared.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("corrupted data, same nodeID must have smaller txnID"),
 			}
 		default: // row.NodeID > lastNodeID:
@@ -293,14 +295,14 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 
 	forkB := request.ForkBranchInfo
 	treeID := *forkB.TreeID
-	newAncestors := make([]*shared.HistoryBranchRange, 0, len(forkB.Ancestors)+1)
+	newAncestors := make([]*types.HistoryBranchRange, 0, len(forkB.Ancestors)+1)
 
 	beginNodeID := p.GetBeginNodeID(forkB)
 	if beginNodeID >= request.ForkNodeID {
 		// this is the case that new branch's ancestors doesn't include the forking branch
 		for _, br := range forkB.Ancestors {
 			if *br.EndNodeID >= request.ForkNodeID {
-				newAncestors = append(newAncestors, &shared.HistoryBranchRange{
+				newAncestors = append(newAncestors, &types.HistoryBranchRange{
 					BranchID:    br.BranchID,
 					BeginNodeID: br.BeginNodeID,
 					EndNodeID:   common.Int64Ptr(request.ForkNodeID),
@@ -313,7 +315,7 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 	} else {
 		// this is the case the new branch will inherit all ancestors from forking branch
 		newAncestors = forkB.Ancestors
-		newAncestors = append(newAncestors, &shared.HistoryBranchRange{
+		newAncestors = append(newAncestors, &types.HistoryBranchRange{
 			BranchID:    forkB.BranchID,
 			BeginNodeID: common.Int64Ptr(beginNodeID),
 			EndNodeID:   common.Int64Ptr(request.ForkNodeID),
@@ -321,14 +323,14 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 	}
 
 	resp := &p.InternalForkHistoryBranchResponse{
-		NewBranchInfo: shared.HistoryBranch{
+		NewBranchInfo: types.HistoryBranch{
 			TreeID:    &treeID,
 			BranchID:  &request.NewBranchID,
 			Ancestors: newAncestors,
 		}}
 
 	treeInfo := &sqlblobs.HistoryTreeInfo{
-		Ancestors:        newAncestors,
+		Ancestors:        thrift.FromHistoryBranchRangeArray(newAncestors),
 		Info:             &request.Info,
 		CreatedTimeNanos: common.TimeNowNanosPtr(),
 	}
@@ -369,7 +371,7 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 	treeID := *branch.TreeID
 	brsToDelete := branch.Ancestors
 	beginNodeID := p.GetBeginNodeID(branch)
-	brsToDelete = append(brsToDelete, &shared.HistoryBranchRange{
+	brsToDelete = append(brsToDelete, &types.HistoryBranchRange{
 		BranchID:    branch.BranchID,
 		BeginNodeID: common.Int64Ptr(beginNodeID),
 	})
@@ -453,7 +455,7 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(
 ) (*p.InternalGetHistoryTreeResponse, error) {
 
 	treeID := sqlplugin.MustParseUUID(request.TreeID)
-	branches := make([]*shared.HistoryBranch, 0)
+	branches := make([]*types.HistoryBranch, 0)
 
 	treeFilter := &sqlplugin.HistoryTreeFilter{
 		TreeID:  treeID,
@@ -468,10 +470,10 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(
 		if err != nil {
 			return nil, err
 		}
-		br := &shared.HistoryBranch{
+		br := &types.HistoryBranch{
 			TreeID:    &request.TreeID,
 			BranchID:  common.StringPtr(row.BranchID.String()),
-			Ancestors: treeInfo.Ancestors,
+			Ancestors: thrift.ToHistoryBranchRangeArray(treeInfo.Ancestors),
 		}
 		branches = append(branches, br)
 	}

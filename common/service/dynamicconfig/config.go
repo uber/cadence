@@ -28,6 +28,7 @@ import (
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -44,7 +45,7 @@ func NewCollection(
 	return &Collection{
 		client:        client,
 		logger:        logger,
-		keys:          &sync.Map{},
+		logKeys:       &sync.Map{},
 		errCount:      -1,
 		filterOptions: filterOptions,
 	}
@@ -56,7 +57,7 @@ func NewCollection(
 type Collection struct {
 	client        Client
 	logger        log.Logger
-	keys          *sync.Map // map of config Key to strongly typed value
+	logKeys       *sync.Map // map of config Keys for logging to capture changes
 	errCount      int64
 	filterOptions []FilterOption
 }
@@ -65,7 +66,11 @@ func (c *Collection) logError(key Key, err error) {
 	errCount := atomic.AddInt64(&c.errCount, 1)
 	if errCount%errCountLogThreshold == 0 {
 		// log only every 'x' errors to reduce mem allocs and to avoid log noise
-		c.logger.Warn("Failed to fetch key from dynamic config", tag.Key(key.String()), tag.Error(err))
+		if _, ok := err.(*types.EntityNotExistsError); ok {
+			c.logger.Info("dynamic config not set, use default value", tag.Key(key.String()))
+		} else {
+			c.logger.Warn("Failed to fetch key from dynamic config", tag.Key(key.String()), tag.Error(err))
+		}
 	}
 }
 
@@ -74,10 +79,19 @@ func (c *Collection) logValue(
 	value, defaultValue interface{},
 	cmpValueEquals func(interface{}, interface{}) bool,
 ) {
-	loadedValue, loaded := c.keys.LoadOrStore(key, value)
-	if !loaded || !cmpValueEquals(loadedValue, value) {
-		c.logger.Debug("Get dynamic config",
-			tag.Name(key.String()), tag.Value(value), tag.DefaultValue(defaultValue))
+	loadedValue, loaded := c.logKeys.LoadOrStore(key, value)
+	if !loaded {
+		c.logger.Info("First loading dynamic config",
+			tag.Key(key.String()), tag.Value(value), tag.DefaultValue(defaultValue))
+	} else {
+		// it's loaded before, check if the value has changed
+		if !cmpValueEquals(loadedValue, value) {
+			c.logger.Info("Dynamic config has changed",
+				tag.Key(key.String()), tag.Value(value), tag.DefaultValue(loadedValue))
+			// update the logKeys so that we can capture the changes again
+			// (ignore the racing condition here because it's just for logging, we need a lock if really need to solve it)
+			c.logKeys.Store(key, value)
+		}
 	}
 }
 

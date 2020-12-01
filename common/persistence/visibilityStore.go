@@ -23,12 +23,12 @@ package persistence
 import (
 	"context"
 	"encoding/json"
+	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/types/mapper/thrift"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -38,6 +38,9 @@ type (
 		logger      log.Logger
 	}
 )
+
+// VisibilityEncoding is default encoding for visibility data
+const VisibilityEncoding = common.EncodingTypeThriftRW
 
 var _ VisibilityManager = (*visibilityManagerImpl)(nil)
 
@@ -64,15 +67,15 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionStarted(
 ) error {
 	req := &InternalRecordWorkflowExecutionStartedRequest{
 		DomainUUID:         request.DomainUUID,
-		WorkflowID:         request.Execution.GetWorkflowId(),
-		RunID:              request.Execution.GetRunId(),
+		WorkflowID:         request.Execution.GetWorkflowID(),
+		RunID:              request.Execution.GetRunID(),
 		WorkflowTypeName:   request.WorkflowTypeName,
-		StartTimestamp:     request.StartTimestamp,
-		ExecutionTimestamp: request.ExecutionTimestamp,
-		WorkflowTimeout:    request.WorkflowTimeout,
+		StartTimestamp:     time.Unix(0, request.StartTimestamp),
+		ExecutionTimestamp: time.Unix(0, request.ExecutionTimestamp),
+		WorkflowTimeout:    common.SecondsToDuration(request.WorkflowTimeout),
 		TaskID:             request.TaskID,
 		TaskList:           request.TaskList,
-		Memo:               thrift.ToMemo(request.Memo),
+		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowID(), request.Execution.GetRunID()),
 		SearchAttributes:   request.SearchAttributes,
 	}
 	return v.persistence.RecordWorkflowExecutionStarted(ctx, req)
@@ -84,19 +87,19 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(
 ) error {
 	req := &InternalRecordWorkflowExecutionClosedRequest{
 		DomainUUID:         request.DomainUUID,
-		WorkflowID:         request.Execution.GetWorkflowId(),
-		RunID:              request.Execution.GetRunId(),
+		WorkflowID:         request.Execution.GetWorkflowID(),
+		RunID:              request.Execution.GetRunID(),
 		WorkflowTypeName:   request.WorkflowTypeName,
-		StartTimestamp:     request.StartTimestamp,
-		ExecutionTimestamp: request.ExecutionTimestamp,
+		StartTimestamp:     time.Unix(0, request.StartTimestamp),
+		ExecutionTimestamp: time.Unix(0, request.ExecutionTimestamp),
 		TaskID:             request.TaskID,
-		Memo:               thrift.ToMemo(request.Memo),
+		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowID(), request.Execution.GetRunID()),
 		TaskList:           request.TaskList,
 		SearchAttributes:   request.SearchAttributes,
-		CloseTimestamp:     request.CloseTimestamp,
-		Status:             *thrift.ToWorkflowExecutionCloseStatus(&request.Status),
+		CloseTimestamp:     time.Unix(0, request.CloseTimestamp),
+		Status:             request.Status,
 		HistoryLength:      request.HistoryLength,
-		RetentionSeconds:   request.RetentionSeconds,
+		RetentionSeconds:   common.SecondsToDuration(request.RetentionSeconds),
 	}
 	return v.persistence.RecordWorkflowExecutionClosed(ctx, req)
 }
@@ -107,13 +110,13 @@ func (v *visibilityManagerImpl) UpsertWorkflowExecution(
 ) error {
 	req := &InternalUpsertWorkflowExecutionRequest{
 		DomainUUID:         request.DomainUUID,
-		WorkflowID:         request.Execution.GetWorkflowId(),
-		RunID:              request.Execution.GetRunId(),
+		WorkflowID:         request.Execution.GetWorkflowID(),
+		RunID:              request.Execution.GetRunID(),
 		WorkflowTypeName:   request.WorkflowTypeName,
-		StartTimestamp:     request.StartTimestamp,
-		ExecutionTimestamp: request.ExecutionTimestamp,
+		StartTimestamp:     time.Unix(0, request.StartTimestamp),
+		ExecutionTimestamp: time.Unix(0, request.ExecutionTimestamp),
 		TaskID:             request.TaskID,
-		Memo:               thrift.ToMemo(request.Memo),
+		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowID(), request.Execution.GetRunID()),
 		TaskList:           request.TaskList,
 		SearchAttributes:   request.SearchAttributes,
 	}
@@ -220,7 +223,7 @@ func (v *visibilityManagerImpl) ListClosedWorkflowExecutionsByStatus(
 ) (*ListWorkflowExecutionsResponse, error) {
 	internalListRequest := v.toInternalListWorkflowExecutionsRequest(&request.ListWorkflowExecutionsRequest)
 	internalRequest := &InternalListClosedWorkflowExecutionsByStatusRequest{
-		Status: *thrift.ToWorkflowExecutionCloseStatus(&request.Status),
+		Status: request.Status,
 	}
 	if internalListRequest != nil {
 		internalRequest.InternalListWorkflowExecutionsRequest = *internalListRequest
@@ -239,7 +242,7 @@ func (v *visibilityManagerImpl) GetClosedWorkflowExecution(
 	internalReq := &InternalGetClosedWorkflowExecutionRequest{
 		DomainUUID: request.DomainUUID,
 		Domain:     request.Domain,
-		Execution:  *thrift.ToWorkflowExecution(&request.Execution),
+		Execution:  request.Execution,
 	}
 	internalResp, err := v.persistence.GetClosedWorkflowExecution(ctx, internalReq)
 	if err != nil {
@@ -300,7 +303,7 @@ func (v *visibilityManagerImpl) convertInternalListResponse(internalResp *Intern
 	}
 
 	resp := &ListWorkflowExecutionsResponse{}
-	resp.Executions = make([]*shared.WorkflowExecutionInfo, len(internalResp.Executions))
+	resp.Executions = make([]*types.WorkflowExecutionInfo, len(internalResp.Executions))
 	for i, execution := range internalResp.Executions {
 		resp.Executions[i] = v.convertVisibilityWorkflowExecutionInfo(execution)
 	}
@@ -309,7 +312,7 @@ func (v *visibilityManagerImpl) convertInternalListResponse(internalResp *Intern
 	return resp
 }
 
-func (v *visibilityManagerImpl) getSearchAttributes(attr map[string]interface{}) (*shared.SearchAttributes, error) {
+func (v *visibilityManagerImpl) getSearchAttributes(attr map[string]interface{}) (*types.SearchAttributes, error) {
 	indexedFields := make(map[string][]byte)
 	var err error
 	var valBytes []byte
@@ -324,18 +327,24 @@ func (v *visibilityManagerImpl) getSearchAttributes(attr map[string]interface{})
 	if err != nil {
 		return nil, err
 	}
-	return &shared.SearchAttributes{
+	return &types.SearchAttributes{
 		IndexedFields: indexedFields,
 	}, nil
 }
 
-func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution *InternalVisibilityWorkflowExecutionInfo) *shared.WorkflowExecutionInfo {
+func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution *InternalVisibilityWorkflowExecutionInfo) *types.WorkflowExecutionInfo {
 	// special handling of ExecutionTime for cron or retry
 	if execution.ExecutionTime.UnixNano() == 0 {
 		execution.ExecutionTime = execution.StartTime
 	}
 
-	memo := thrift.FromMemo(execution.Memo)
+	memo, err := v.serializer.DeserializeVisibilityMemo(execution.Memo)
+	if err != nil {
+		v.logger.Error("failed to deserialize memo",
+			tag.WorkflowID(execution.WorkflowID),
+			tag.WorkflowRunID(execution.RunID),
+			tag.Error(err))
+	}
 	searchAttributes, err := v.getSearchAttributes(execution.SearchAttributes)
 	if err != nil {
 		v.logger.Error("failed to convert search attributes",
@@ -344,12 +353,12 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 			tag.Error(err))
 	}
 
-	convertedExecution := &shared.WorkflowExecutionInfo{
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(execution.WorkflowID),
-			RunId:      common.StringPtr(execution.RunID),
+	convertedExecution := &types.WorkflowExecutionInfo{
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(execution.WorkflowID),
+			RunID:      common.StringPtr(execution.RunID),
 		},
-		Type: &shared.WorkflowType{
+		Type: &types.WorkflowType{
 			Name: common.StringPtr(execution.TypeName),
 		},
 		StartTime:        common.Int64Ptr(execution.StartTime.UnixNano()),
@@ -362,7 +371,7 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 	// for close records
 	if execution.Status != nil {
 		convertedExecution.CloseTime = common.Int64Ptr(execution.CloseTime.UnixNano())
-		convertedExecution.CloseStatus = thrift.FromWorkflowExecutionCloseStatus(execution.Status)
+		convertedExecution.CloseStatus = execution.Status
 		convertedExecution.HistoryLength = common.Int64Ptr(execution.HistoryLength)
 	}
 
@@ -376,8 +385,8 @@ func (v *visibilityManagerImpl) fromInternalListWorkflowExecutionsRequest(intern
 	return &ListWorkflowExecutionsRequest{
 		DomainUUID:    internalReq.DomainUUID,
 		Domain:        internalReq.Domain,
-		EarliestTime:  internalReq.EarliestTime,
-		LatestTime:    internalReq.LatestTime,
+		EarliestTime:  internalReq.EarliestTime.UnixNano(),
+		LatestTime:    internalReq.LatestTime.UnixNano(),
 		PageSize:      internalReq.PageSize,
 		NextPageToken: internalReq.NextPageToken,
 	}
@@ -390,9 +399,25 @@ func (v *visibilityManagerImpl) toInternalListWorkflowExecutionsRequest(req *Lis
 	return &InternalListWorkflowExecutionsRequest{
 		DomainUUID:    req.DomainUUID,
 		Domain:        req.Domain,
-		EarliestTime:  req.EarliestTime,
-		LatestTime:    req.LatestTime,
+		EarliestTime:  time.Unix(0, req.EarliestTime),
+		LatestTime:    time.Unix(0, req.LatestTime),
 		PageSize:      req.PageSize,
 		NextPageToken: req.NextPageToken,
 	}
+}
+
+func (v *visibilityManagerImpl) serializeMemo(visibilityMemo *types.Memo, domainID, wID, rID string) *DataBlob {
+	memo, err := v.serializer.SerializeVisibilityMemo(visibilityMemo, VisibilityEncoding)
+	if err != nil {
+		v.logger.WithTags(
+			tag.WorkflowDomainID(domainID),
+			tag.WorkflowID(wID),
+			tag.WorkflowRunID(rID),
+			tag.Error(err)).
+			Error("Unable to encode visibility memo")
+	}
+	if memo == nil {
+		return &DataBlob{}
+	}
+	return memo
 }

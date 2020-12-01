@@ -52,6 +52,8 @@ import (
 	cndc "github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
@@ -128,31 +130,31 @@ var (
 	// ErrStaleState is the error returned during state update indicating that cached mutable state could be stale
 	ErrStaleState = errors.New("cache mutable state could potentially be stale")
 	// ErrActivityTaskNotFound is the error to indicate activity task could be duplicate and activity already completed
-	ErrActivityTaskNotFound = &workflow.EntityNotExistsError{Message: "activity task not found"}
+	ErrActivityTaskNotFound = &types.EntityNotExistsError{Message: "activity task not found"}
 	// ErrWorkflowCompleted is the error to indicate workflow execution already completed
-	ErrWorkflowCompleted = &workflow.EntityNotExistsError{Message: "workflow execution already completed"}
+	ErrWorkflowCompleted = &types.EntityNotExistsError{Message: "workflow execution already completed"}
 	// ErrWorkflowParent is the error to parent execution is given and mismatch
-	ErrWorkflowParent = &workflow.EntityNotExistsError{Message: "workflow parent does not match"}
+	ErrWorkflowParent = &types.EntityNotExistsError{Message: "workflow parent does not match"}
 	// ErrDeserializingToken is the error to indicate task token is invalid
-	ErrDeserializingToken = &workflow.BadRequestError{Message: "error deserializing task token"}
+	ErrDeserializingToken = &types.BadRequestError{Message: "error deserializing task token"}
 	// ErrSerializingToken is the error to indicate task token can not be serialized
-	ErrSerializingToken = &workflow.BadRequestError{Message: "error serializing task token"}
+	ErrSerializingToken = &types.BadRequestError{Message: "error serializing task token"}
 	// ErrSignalOverSize is the error to indicate signal input size is > 256K
-	ErrSignalOverSize = &workflow.BadRequestError{Message: "signal input size is over 256K"}
+	ErrSignalOverSize = &types.BadRequestError{Message: "signal input size is over 256K"}
 	// ErrCancellationAlreadyRequested is the error indicating cancellation for target workflow is already requested
-	ErrCancellationAlreadyRequested = &workflow.CancellationAlreadyRequestedError{Message: "cancellation already requested for this workflow execution"}
+	ErrCancellationAlreadyRequested = &types.CancellationAlreadyRequestedError{Message: "cancellation already requested for this workflow execution"}
 	// ErrSignalsLimitExceeded is the error indicating limit reached for maximum number of signal events
-	ErrSignalsLimitExceeded = &workflow.LimitExceededError{Message: "exceeded workflow execution limit for signal events"}
+	ErrSignalsLimitExceeded = &types.LimitExceededError{Message: "exceeded workflow execution limit for signal events"}
 	// ErrQueryEnteredInvalidState is error indicating query entered invalid state
-	ErrQueryEnteredInvalidState = &workflow.BadRequestError{Message: "query entered invalid state, this should be impossible"}
+	ErrQueryEnteredInvalidState = &types.BadRequestError{Message: "query entered invalid state, this should be impossible"}
 	// ErrQueryWorkflowBeforeFirstDecision is error indicating that query was attempted before first decision task completed
-	ErrQueryWorkflowBeforeFirstDecision = &workflow.QueryFailedError{Message: "workflow must handle at least one decision task before it can be queried"}
+	ErrQueryWorkflowBeforeFirstDecision = &types.QueryFailedError{Message: "workflow must handle at least one decision task before it can be queried"}
 	// ErrConsistentQueryNotEnabled is error indicating that consistent query was requested but either cluster or domain does not enable consistent query
-	ErrConsistentQueryNotEnabled = &workflow.BadRequestError{Message: "cluster or domain does not enable strongly consistent query but strongly consistent query was requested"}
+	ErrConsistentQueryNotEnabled = &types.BadRequestError{Message: "cluster or domain does not enable strongly consistent query but strongly consistent query was requested"}
 	// ErrConsistentQueryBufferExceeded is error indicating that too many consistent queries have been buffered and until buffered queries are finished new consistent queries cannot be buffered
-	ErrConsistentQueryBufferExceeded = &workflow.InternalServiceError{Message: "consistent query buffer is full, cannot accept new consistent queries"}
+	ErrConsistentQueryBufferExceeded = &types.InternalServiceError{Message: "consistent query buffer is full, cannot accept new consistent queries"}
 	// ErrConcurrentStartRequest is error indicating there is an outstanding start workflow request. The incoming request fails to acquires the lock before the outstanding request finishes.
-	ErrConcurrentStartRequest = &workflow.ServiceBusyError{Message: "an outstanding start workflow request is in-progress. Failed to acquire the resource."}
+	ErrConcurrentStartRequest = &types.ServiceBusyError{Message: "an outstanding start workflow request is in-progress. Failed to acquire the resource."}
 
 	// FailedWorkflowCloseState is a set of failed workflow close states, used for start workflow policy
 	// for start workflow execution API
@@ -300,7 +302,7 @@ func NewEngineWithShardContext(
 		common.IsServiceBusyError,
 	)
 	resendFunc := func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
-		return historyRetryableClient.ReplicateEventsV2(ctx, request)
+		return historyRetryableClient.ReplicateEventsV2(ctx, thrift.ToReplicateEventsV2Request(request))
 	}
 	for _, replicationTaskFetcher := range replicationTaskFetchers.GetFetchers() {
 		sourceCluster := replicationTaskFetcher.GetSourceCluster()
@@ -875,7 +877,7 @@ func (e *historyEngineImpl) addStartEventsAndTasks(
 		startRequest,
 	)
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: "Failed to add workflow execution started event.",
 		}
 	}
@@ -888,7 +890,7 @@ func (e *historyEngineImpl) addStartEventsAndTasks(
 			sRequest.GetSignalInput(),
 			sRequest.GetIdentity())
 		if err != nil {
-			return &workflow.InternalServiceError{Message: "Failed to add workflow execution signaled event."}
+			return &types.InternalServiceError{Message: "Failed to add workflow execution signaled event."}
 		}
 	}
 
@@ -950,15 +952,15 @@ func (e *historyEngineImpl) PollMutableState(
 
 func (e *historyEngineImpl) updateEntityNotExistsErrorOnPassiveCluster(err error, domainID string) error {
 	switch err.(type) {
-	case *workflow.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		domainCache, domainCacheErr := e.shard.GetDomainCache().GetDomainByID(domainID)
 		if domainCacheErr != nil {
 			return err // if could not access domain cache simply return original error
 		}
 
 		if domainNotActiveErr := domainCache.GetDomainNotActiveErr(); domainNotActiveErr != nil {
-			domainNotActiveErrCasted := domainNotActiveErr.(*workflow.DomainNotActiveError)
-			return &workflow.EntityNotExistsError{
+			domainNotActiveErrCasted := domainNotActiveErr.(*types.DomainNotActiveError)
+			return &types.EntityNotExistsError{
 				Message:        "Workflow execution not found in non-active cluster",
 				ActiveCluster:  common.StringPtr(domainNotActiveErrCasted.GetActiveCluster()),
 				CurrentCluster: common.StringPtr(domainNotActiveErrCasted.GetCurrentCluster()),
@@ -989,7 +991,7 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 		request.CurrentBranchToken = response.CurrentBranchToken
 	}
 	if !bytes.Equal(request.CurrentBranchToken, response.CurrentBranchToken) {
-		return nil, &workflow.CurrentBranchChangedError{
+		return nil, &types.CurrentBranchChangedError{
 			Message:            "current branch token and request branch token doesn't match.",
 			CurrentBranchToken: response.CurrentBranchToken}
 	}
@@ -1017,7 +1019,7 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 		}
 		// check again if the current branch token changed
 		if !bytes.Equal(request.CurrentBranchToken, response.CurrentBranchToken) {
-			return nil, &workflow.CurrentBranchChangedError{
+			return nil, &types.CurrentBranchChangedError{
 				Message:            "current branch token and request branch token doesn't match.",
 				CurrentBranchToken: response.CurrentBranchToken}
 		}
@@ -1041,7 +1043,7 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 				response.WorkflowState = common.Int32Ptr(int32(event.WorkflowState))
 				response.WorkflowCloseState = common.Int32Ptr(int32(event.WorkflowCloseState))
 				if !bytes.Equal(request.CurrentBranchToken, event.CurrentBranchToken) {
-					return nil, &workflow.CurrentBranchChangedError{
+					return nil, &types.CurrentBranchChangedError{
 						Message:            "Current branch token and request branch token doesn't match.",
 						CurrentBranchToken: event.CurrentBranchToken}
 				}
@@ -1185,7 +1187,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 					},
 				}, nil
 			case workflow.QueryResultTypeFailed:
-				return nil, &workflow.QueryFailedError{Message: result.GetErrorMessage()}
+				return nil, &types.QueryFailedError{Message: result.GetErrorMessage()}
 			default:
 				scope.IncCounter(metrics.QueryRegistryInvalidStateCount)
 				return nil, ErrQueryEnteredInvalidState
@@ -1247,7 +1249,8 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		// a really short deadline, causing we clear the stickiness
 		stickyContext, cancel := context.WithTimeout(context.Background(), time.Duration(msResp.GetStickyTaskListScheduleToStartTimeout())*time.Second)
 		stickyStopWatch := scope.StartTimer(metrics.DirectQueryDispatchStickyLatency)
-		matchingResp, err := e.rawMatchingClient.QueryWorkflow(stickyContext, stickyMatchingRequest)
+		clientResp, err := e.rawMatchingClient.QueryWorkflow(stickyContext, thrift.ToMatchingQueryWorkflowRequest(stickyMatchingRequest))
+		matchingResp := thrift.FromQueryWorkflowResponse(clientResp)
 		stickyStopWatch.Stop()
 		cancel()
 		if err == nil {
@@ -1309,7 +1312,8 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 	}
 
 	nonStickyStopWatch := scope.StartTimer(metrics.DirectQueryDispatchNonStickyLatency)
-	matchingResp, err := e.matchingClient.QueryWorkflow(ctx, nonStickyMatchingRequest)
+	clientResp, err := e.matchingClient.QueryWorkflow(ctx, thrift.ToMatchingQueryWorkflowRequest(nonStickyMatchingRequest))
+	matchingResp := thrift.FromQueryWorkflowResponse(clientResp)
 	nonStickyStopWatch.Stop()
 	if err != nil {
 		e.logger.Error("query directly though matching on non-sticky failed",
@@ -1369,7 +1373,7 @@ func (e *historyEngineImpl) getMutableState(
 	}
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories != nil {
-		retResp.VersionHistories = versionHistories.ToThrift()
+		retResp.VersionHistories = thrift.FromVersionHistories(versionHistories.ToInternalType())
 	}
 	return
 }
@@ -1593,6 +1597,20 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 		}
 	}
 
+	if di, ok := mutableState.GetPendingDecision(); ok {
+		pendingDecision := &workflow.PendingDecisionInfo{
+			State:                      workflow.PendingDecisionStateScheduled.Ptr(),
+			ScheduledTimestamp:         common.Int64Ptr(di.ScheduledTimestamp),
+			Attempt:                    common.Int64Ptr(di.Attempt),
+			OriginalScheduledTimestamp: common.Int64Ptr(di.OriginalScheduledTimestamp),
+		}
+		if di.StartedID != common.EmptyEventID {
+			pendingDecision.State = workflow.PendingDecisionStateStarted.Ptr()
+			pendingDecision.StartedTimestamp = common.Int64Ptr(di.StartedTimestamp)
+		}
+		result.PendingDecision = pendingDecision
+	}
+
 	return result, nil
 }
 
@@ -1666,7 +1684,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 				// Looks like ActivityTask already started as a result of another call.
 				// It is OK to drop the task at this point.
 				e.logger.Debug("Potentially duplicate task.", tag.TaskID(request.GetTaskId()), tag.WorkflowScheduleID(scheduleID), tag.TaskType(persistence.TransferTaskTypeActivityTask))
-				return &h.EventAlreadyStartedError{Message: "Activity task already started."}
+				return &types.EventAlreadyStartedError{Message: "Activity task already started."}
 			}
 
 			if _, err := mutableState.AddActivityTaskStartedEvent(
@@ -1774,7 +1792,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 
 			if _, err := mutableState.AddActivityTaskCompletedEvent(scheduleID, ai.StartedID, request); err != nil {
 				// Unable to add ActivityTaskCompleted event to history
-				return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskCompleted event to history."}
+				return &types.InternalServiceError{Message: "Unable to add ActivityTaskCompleted event to history."}
 			}
 			activityStartedTime = ai.StartedTime
 			taskList = ai.TaskList
@@ -1855,7 +1873,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 				// no more retry, and we want to record the failure event
 				if _, err := mutableState.AddActivityTaskFailedEvent(scheduleID, ai.StartedID, request); err != nil {
 					// Unable to add ActivityTaskFailed event to history
-					return nil, &workflow.InternalServiceError{Message: "Unable to add ActivityTaskFailed event to history."}
+					return nil, &types.InternalServiceError{Message: "Unable to add ActivityTaskFailed event to history."}
 				}
 				postActions.createDecision = true
 			}
@@ -1937,7 +1955,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 				request.Details,
 				common.StringDefault(request.Identity)); err != nil {
 				// Unable to add ActivityTaskCanceled event to history
-				return &workflow.InternalServiceError{Message: "Unable to add ActivityTaskCanceled event to history."}
+				return &types.InternalServiceError{Message: "Unable to add ActivityTaskCanceled event to history."}
 			}
 
 			activityStartedTime = ai.StartedTime
@@ -2081,7 +2099,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 			}
 
 			if _, err := mutableState.AddWorkflowExecutionCancelRequestedEvent("", req); err != nil {
-				return nil, &workflow.InternalServiceError{Message: "Unable to cancel workflow execution."}
+				return nil, &types.InternalServiceError{Message: "Unable to cancel workflow execution."}
 			}
 
 			return updateWorkflowWithNewDecision, nil
@@ -2156,7 +2174,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 				request.GetSignalName(),
 				request.GetInput(),
 				request.GetIdentity()); err != nil {
-				return nil, &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
+				return nil, &types.InternalServiceError{Message: "Unable to signal workflow execution."}
 			}
 
 			return postActions, nil
@@ -2191,7 +2209,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 			// workflow not exist, will create workflow then signal
 			mutableState, err1 := wfContext.LoadWorkflowExecution(ctx)
 			if err1 != nil {
-				if _, ok := err1.(*workflow.EntityNotExistsError); ok {
+				if _, ok := err1.(*types.EntityNotExistsError); ok {
 					break
 				}
 				return nil, err1
@@ -2230,14 +2248,14 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 				sRequest.GetSignalName(),
 				sRequest.GetSignalInput(),
 				sRequest.GetIdentity()); err != nil {
-				return nil, &workflow.InternalServiceError{Message: "Unable to signal workflow execution."}
+				return nil, &types.InternalServiceError{Message: "Unable to signal workflow execution."}
 			}
 
 			// Create a transfer task to schedule a decision task
 			if !mutableState.HasPendingDecision() {
 				_, err := mutableState.AddDecisionTaskScheduledEvent(false)
 				if err != nil {
-					return nil, &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
+					return nil, &types.InternalServiceError{Message: "Failed to add decision scheduled event."}
 				}
 			}
 
@@ -2255,7 +2273,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 			return nil, ErrMaxAttemptsExceeded
 		}
 	} else {
-		if _, ok := err0.(*workflow.EntityNotExistsError); !ok {
+		if _, ok := err0.(*types.EntityNotExistsError); !ok {
 			return nil, err0
 		}
 		// workflow not exist, will create workflow then signal
@@ -2372,7 +2390,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 			// Check mutable state to make sure child execution is in pending child executions
 			ci, isRunning := mutableState.GetChildExecutionInfo(initiatedID)
 			if !isRunning || ci.StartedID == common.EmptyEventID {
-				return &workflow.EntityNotExistsError{Message: "Pending child execution not found."}
+				return &types.EntityNotExistsError{Message: "Pending child execution not found."}
 			}
 
 			switch *completionEvent.EventType {
@@ -2465,7 +2483,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	}
 	if request.GetDecisionFinishEventId() <= common.FirstEventID ||
 		request.GetDecisionFinishEventId() >= baseMutableState.GetNextEventID() {
-		return nil, &workflow.BadRequestError{
+		return nil, &types.BadRequestError{
 			Message: "Decision finish ID must be > 1 && <= workflow next event ID.",
 		}
 	}
@@ -2520,16 +2538,24 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	resetRunID := uuid.New()
 	baseRebuildLastEventID := request.GetDecisionFinishEventId() - 1
 	baseVersionHistories := baseMutableState.GetVersionHistories()
-	baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
+	baseCurrentBranchToken, err := baseMutableState.GetCurrentBranchToken()
 	if err != nil {
 		return nil, err
 	}
-	baseRebuildLastEventVersion, err := baseCurrentVersionHistory.GetEventVersion(baseRebuildLastEventID)
-	if err != nil {
-		return nil, err
-	}
-	baseCurrentBranchToken := baseCurrentVersionHistory.GetBranchToken()
+	baseRebuildLastEventVersion := baseMutableState.GetCurrentVersion()
 	baseNextEventID := baseMutableState.GetNextEventID()
+
+	if baseVersionHistories != nil {
+		baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
+		if err != nil {
+			return nil, err
+		}
+		baseRebuildLastEventVersion, err = baseCurrentVersionHistory.GetEventVersion(baseRebuildLastEventID)
+		if err != nil {
+			return nil, err
+		}
+		baseCurrentBranchToken = baseCurrentVersionHistory.GetBranchToken()
+	}
 
 	if err := e.workflowResetter.ResetWorkflow(
 		ctx,
@@ -2552,6 +2578,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		),
 		request.GetReason(),
 		nil,
+		request.GetSkipSignalReapply(),
 	); err != nil {
 		return nil, err
 	}
@@ -2631,7 +2658,7 @@ UpdateHistoryLoop:
 			if !mutableState.HasPendingDecision() {
 				_, err := mutableState.AddDecisionTaskScheduledEvent(false)
 				if err != nil {
-					return &workflow.InternalServiceError{Message: "Failed to add decision scheduled event."}
+					return &types.InternalServiceError{Message: "Failed to add decision scheduled event."}
 				}
 			}
 		}
@@ -2803,31 +2830,31 @@ func validateStartWorkflowExecutionRequest(
 ) error {
 
 	if len(request.GetRequestId()) == 0 {
-		return &workflow.BadRequestError{Message: "Missing request ID."}
+		return &types.BadRequestError{Message: "Missing request ID."}
 	}
 	if request.ExecutionStartToCloseTimeoutSeconds == nil || request.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
-		return &workflow.BadRequestError{Message: "Missing or invalid ExecutionStartToCloseTimeoutSeconds."}
+		return &types.BadRequestError{Message: "Missing or invalid ExecutionStartToCloseTimeoutSeconds."}
 	}
 	if request.TaskStartToCloseTimeoutSeconds == nil || request.GetTaskStartToCloseTimeoutSeconds() <= 0 {
-		return &workflow.BadRequestError{Message: "Missing or invalid TaskStartToCloseTimeoutSeconds."}
+		return &types.BadRequestError{Message: "Missing or invalid TaskStartToCloseTimeoutSeconds."}
 	}
 	if request.TaskList == nil || request.TaskList.Name == nil || request.TaskList.GetName() == "" {
-		return &workflow.BadRequestError{Message: "Missing Tasklist."}
+		return &types.BadRequestError{Message: "Missing Tasklist."}
 	}
 	if request.WorkflowType == nil || request.WorkflowType.Name == nil || request.WorkflowType.GetName() == "" {
-		return &workflow.BadRequestError{Message: "Missing WorkflowType."}
+		return &types.BadRequestError{Message: "Missing WorkflowType."}
 	}
 	if len(request.GetDomain()) > maxIDLengthLimit {
-		return &workflow.BadRequestError{Message: "Domain exceeds length limit."}
+		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
 	if len(request.GetWorkflowId()) > maxIDLengthLimit {
-		return &workflow.BadRequestError{Message: "WorkflowId exceeds length limit."}
+		return &types.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
 	if len(request.TaskList.GetName()) > maxIDLengthLimit {
-		return &workflow.BadRequestError{Message: "TaskList exceeds length limit."}
+		return &types.BadRequestError{Message: "TaskList exceeds length limit."}
 	}
 	if len(request.WorkflowType.GetName()) > maxIDLengthLimit {
-		return &workflow.BadRequestError{Message: "WorkflowType exceeds length limit."}
+		return &types.BadRequestError{Message: "WorkflowType exceeds length limit."}
 	}
 
 	return common.ValidateRetryPolicy(request.RetryPolicy)
@@ -2860,9 +2887,9 @@ func validateDomainUUID(
 ) (string, error) {
 
 	if domainUUID == nil {
-		return "", &workflow.BadRequestError{Message: "Missing domain UUID."}
+		return "", &types.BadRequestError{Message: "Missing domain UUID."}
 	} else if uuid.Parse(*domainUUID) == nil {
-		return "", &workflow.BadRequestError{Message: "Invalid domain UUID."}
+		return "", &types.BadRequestError{Message: "Invalid domain UUID."}
 	}
 	return *domainUUID, nil
 }
@@ -2917,11 +2944,11 @@ func getScheduleID(
 ) (int64, error) {
 
 	if activityID == "" {
-		return 0, &workflow.BadRequestError{Message: "Neither ActivityID nor ScheduleID is provided"}
+		return 0, &types.BadRequestError{Message: "Neither ActivityID nor ScheduleID is provided"}
 	}
 	activityInfo, ok := mutableState.GetActivityByActivityID(activityID)
 	if !ok {
-		return 0, &workflow.BadRequestError{Message: "Cannot locate Activity ScheduleID"}
+		return 0, &types.BadRequestError{Message: "Cannot locate Activity ScheduleID"}
 	}
 	return activityInfo.ScheduleID, nil
 }
@@ -2949,7 +2976,7 @@ func getStartRequest(
 		Header:                              request.Header,
 	}
 
-	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req)
+	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
 	return startRequest
 }
 
@@ -2994,7 +3021,7 @@ func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(
 		// previous workflow completed, proceed
 	default:
 		// persistence.WorkflowStateZombie or unknown type
-		return &workflow.InternalServiceError{Message: fmt.Sprintf("Failed to process workflow, workflow has invalid state: %v.", prevState)}
+		return &types.InternalServiceError{Message: fmt.Sprintf("Failed to process workflow, workflow has invalid state: %v.", prevState)}
 	}
 
 	switch wfIDReusePolicy {
@@ -3010,17 +3037,17 @@ func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(
 		msg := "Workflow execution already finished. WorkflowId: %v, RunId: %v. Workflow ID reuse policy: reject duplicate workflow ID."
 		return getWorkflowAlreadyStartedError(msg, prevStartRequestID, execution.GetWorkflowId(), prevRunID)
 	default:
-		return &workflow.InternalServiceError{Message: "Failed to process start workflow reuse policy."}
+		return &types.InternalServiceError{Message: "Failed to process start workflow reuse policy."}
 	}
 
 	return nil
 }
 
 func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workflowID string, runID string) error {
-	return &workflow.WorkflowExecutionAlreadyStartedError{
+	return &types.WorkflowExecutionAlreadyStartedError{
 		Message:        common.StringPtr(fmt.Sprintf(errMsg, workflowID, runID)),
-		StartRequestId: common.StringPtr(fmt.Sprintf("%v", createRequestID)),
-		RunId:          common.StringPtr(fmt.Sprintf("%v", runID)),
+		StartRequestID: common.StringPtr(fmt.Sprintf("%v", createRequestID)),
+		RunID:          common.StringPtr(fmt.Sprintf("%v", runID)),
 	}
 }
 
@@ -3147,6 +3174,9 @@ func (e *historyEngineImpl) ReapplyEvents(
 				}
 
 				baseVersionHistories := mutableState.GetVersionHistories()
+				if baseVersionHistories == nil {
+					return nil, execution.ErrMissingVersionHistories
+				}
 				baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
 				if err != nil {
 					return nil, err
@@ -3179,6 +3209,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 					),
 					ndc.EventsReapplicationResetWorkflowReason,
 					toReapplyEvents,
+					false,
 				); err != nil {
 					return nil, err
 				}
@@ -3202,7 +3233,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 			)
 			if err != nil {
 				e.logger.Error("failed to re-apply stale events", tag.Error(err))
-				return nil, &workflow.InternalServiceError{Message: "unable to re-apply stale events"}
+				return nil, &types.InternalServiceError{Message: "unable to re-apply stale events"}
 			}
 			if len(reappliedEvents) == 0 {
 				return &updateWorkflowAction{
@@ -3385,7 +3416,7 @@ func (e *historyEngineImpl) loadWorkflow(
 		workflowContext.getReleaseFn()(nil)
 	}
 
-	return nil, &workflow.InternalServiceError{Message: "unable to locate current workflow execution"}
+	return nil, &types.InternalServiceError{Message: "unable to locate current workflow execution"}
 }
 
 func (e *historyEngineImpl) newChildContext(

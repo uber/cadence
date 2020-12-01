@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -89,7 +90,7 @@ func (o *openCurrentExecution) Check(
 	}
 	if currentExecErr != nil {
 		switch currentExecErr.(type) {
-		case *shared.EntityNotExistsError:
+		case *types.EntityNotExistsError:
 			return CheckResult{
 				CheckResultType: CheckResultTypeCorrupted,
 				InvariantName:   o.Name(),
@@ -131,7 +132,7 @@ func (o *openCurrentExecution) Fix(
 	if fixResult != nil {
 		return *fixResult
 	}
-	fixResult = DeleteExecution(ctx, &execution, o.pr)
+	fixResult = DeleteExecution(ctx, execution, o.pr)
 	fixResult.CheckResult = *checkResult
 	fixResult.InvariantName = o.Name()
 	return *fixResult
@@ -158,7 +159,7 @@ func ExecutionStillOpen(
 	resp, err := pr.GetWorkflowExecution(ctx, req)
 	if err != nil {
 		switch err.(type) {
-		case *shared.EntityNotExistsError:
+		case *types.EntityNotExistsError:
 			return false, nil
 		default:
 			return false, err

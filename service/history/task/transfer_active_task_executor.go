@@ -37,6 +37,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/reset"
@@ -53,9 +55,9 @@ const (
 
 var (
 	// ErrMissingRequestCancelInfo indicates missing request cancel info
-	ErrMissingRequestCancelInfo = &workflow.InternalServiceError{Message: "unable to get request cancel info"}
+	ErrMissingRequestCancelInfo = &types.InternalServiceError{Message: "unable to get request cancel info"}
 	// ErrMissingSignalInfo indicates missing signal external
-	ErrMissingSignalInfo = &workflow.InternalServiceError{Message: "unable to get signal info"}
+	ErrMissingSignalInfo = &types.InternalServiceError{Message: "unable to get signal info"}
 )
 
 var (
@@ -330,23 +332,23 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	if replyToParentWorkflow {
 		recordChildCompletionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 		defer cancel()
-		err = t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &h.RecordChildExecutionCompletedRequest{
+		err = t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &types.RecordChildExecutionCompletedRequest{
 			DomainUUID: common.StringPtr(parentDomainID),
-			WorkflowExecution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(parentWorkflowID),
-				RunId:      common.StringPtr(parentRunID),
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: common.StringPtr(parentWorkflowID),
+				RunID:      common.StringPtr(parentRunID),
 			},
-			InitiatedId: common.Int64Ptr(initiatedID),
-			CompletedExecution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(task.WorkflowID),
-				RunId:      common.StringPtr(task.RunID),
+			InitiatedID: common.Int64Ptr(initiatedID),
+			CompletedExecution: &types.WorkflowExecution{
+				WorkflowID: common.StringPtr(task.WorkflowID),
+				RunID:      common.StringPtr(task.RunID),
 			},
-			CompletionEvent: completionEvent,
+			CompletionEvent: thrift.ToHistoryEvent(completionEvent),
 		})
 
 		// Check to see if the error is non-transient, in which case reset the error and continue with processing
 		switch err.(type) {
-		case *workflow.EntityNotExistsError:
+		case *types.EntityNotExistsError:
 			err = nil
 		}
 	}
@@ -401,7 +403,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 	if task.DomainID == task.TargetDomainID && task.WorkflowID == task.TargetWorkflowID {
 		// it does not matter if the run ID is a mismatch
 		err = t.requestCancelExternalExecutionFailed(ctx, task, wfContext, targetDomain, task.TargetWorkflowID, task.TargetRunID)
-		if _, ok := err.(*workflow.EntityNotExistsError); ok {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 			return nil
 		}
@@ -555,13 +557,13 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 	// remove signalRequestedID from target workflow, after Signal detail is removed from source workflow
 	removeSignalCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 	defer cancel()
-	return t.historyClient.RemoveSignalMutableState(removeSignalCtx, &h.RemoveSignalMutableStateRequest{
+	return t.historyClient.RemoveSignalMutableState(removeSignalCtx, &types.RemoveSignalMutableStateRequest{
 		DomainUUID: common.StringPtr(task.TargetDomainID),
-		WorkflowExecution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(task.TargetWorkflowID),
-			RunId:      common.StringPtr(task.TargetRunID),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(task.TargetWorkflowID),
+			RunID:      common.StringPtr(task.TargetRunID),
 		},
-		RequestId: common.StringPtr(signalInfo.SignalRequestID),
+		RequestID: common.StringPtr(signalInfo.SignalRequestID),
 	})
 }
 
@@ -591,7 +593,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	// Get parent domain name
 	var domain string
 	if domainEntry, err := t.shard.GetDomainCache().GetDomainByID(task.DomainID); err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); !ok {
+		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			return err
 		}
 		// it is possible that the domain got deleted. Use domainID instead as this is only needed for the history event
@@ -603,7 +605,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	// Get target domain name
 	var targetDomain string
 	if domainEntry, err := t.shard.GetDomainCache().GetDomainByID(task.TargetDomainID); err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); !ok {
+		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			return err
 		}
 		// it is possible that the domain got deleted. Use domainID instead as this is only needed for the history event
@@ -651,7 +653,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		// Check to see if the error is non-transient, in which case add StartChildWorkflowExecutionFailed
 		// event and complete transfer task by setting the err = nil
 		switch err.(type) {
-		case *workflow.WorkflowExecutionAlreadyStartedError:
+		case *types.WorkflowExecutionAlreadyStartedError:
 			err = t.recordStartChildExecutionFailed(ctx, task, wfContext, attributes)
 		}
 		return err
@@ -909,14 +911,14 @@ func (t *transferActiveTaskExecutor) recordChildExecutionStarted(
 	return t.updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
+				return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
 
 			domain := initiatedAttributes.Domain
 			initiatedEventID := task.ScheduleID
 			ci, ok := mutableState.GetChildExecutionInfo(initiatedEventID)
 			if !ok || ci.StartedID != common.EmptyEventID {
-				return &workflow.EntityNotExistsError{Message: "Pending child execution not found."}
+				return &types.EntityNotExistsError{Message: "Pending child execution not found."}
 			}
 
 			_, err := mutableState.AddChildWorkflowExecutionStartedEvent(
@@ -944,13 +946,13 @@ func (t *transferActiveTaskExecutor) recordStartChildExecutionFailed(
 	return t.updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
+				return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
 
 			initiatedEventID := task.ScheduleID
 			ci, ok := mutableState.GetChildExecutionInfo(initiatedEventID)
 			if !ok || ci.StartedID != common.EmptyEventID {
-				return &workflow.EntityNotExistsError{Message: "Pending child execution not found."}
+				return &types.EntityNotExistsError{Message: "Pending child execution not found."}
 			}
 
 			_, err := mutableState.AddStartChildWorkflowExecutionFailedEvent(initiatedEventID,
@@ -970,14 +972,14 @@ func (t *transferActiveTaskExecutor) createFirstDecisionTask(
 
 	scheduleDecisionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 	defer cancel()
-	err := t.historyClient.ScheduleDecisionTask(scheduleDecisionCtx, &h.ScheduleDecisionTaskRequest{
+	err := t.historyClient.ScheduleDecisionTask(scheduleDecisionCtx, &types.ScheduleDecisionTaskRequest{
 		DomainUUID:        common.StringPtr(domainID),
-		WorkflowExecution: execution,
+		WorkflowExecution: thrift.ToWorkflowExecution(execution),
 		IsFirstDecision:   common.BoolPtr(true),
 	})
 
 	if err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); ok {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
 			// Maybe child workflow execution already timedout or terminated
 			// Safe to discard the error and complete this transfer task
 			return nil
@@ -999,7 +1001,7 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionCompleted(
 	err := t.updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
+				return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
 
 			initiatedEventID := task.ScheduleID
@@ -1017,7 +1019,7 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionCompleted(
 			return err
 		})
 
-	if _, ok := err.(*workflow.EntityNotExistsError); ok {
+	if _, ok := err.(*types.EntityNotExistsError); ok {
 		// this could happen if this is a duplicate processing of the task,
 		// or the execution has already completed.
 		return nil
@@ -1038,7 +1040,7 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionCompleted(
 	err := t.updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
+				return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
 
 			initiatedEventID := task.ScheduleID
@@ -1057,7 +1059,7 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionCompleted(
 			return err
 		})
 
-	if _, ok := err.(*workflow.EntityNotExistsError); ok {
+	if _, ok := err.(*types.EntityNotExistsError); ok {
 		// this could happen if this is a duplicate processing of the task,
 		// or the execution has already completed.
 		return nil
@@ -1077,7 +1079,7 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionFailed(
 	err := t.updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return &workflow.EntityNotExistsError{Message: "Workflow execution already completed."}
+				return &types.EntityNotExistsError{Message: "Workflow execution already completed."}
 			}
 
 			initiatedEventID := task.ScheduleID
@@ -1097,7 +1099,7 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionFailed(
 			return err
 		})
 
-	if _, ok := err.(*workflow.EntityNotExistsError); ok {
+	if _, ok := err.(*types.EntityNotExistsError); ok {
 		// this could happen if this is a duplicate processing of the task,
 		// or the execution has already completed.
 		return nil
@@ -1118,7 +1120,7 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionFailed(
 	err := t.updateWorkflowExecution(ctx, wfContext, true,
 		func(ctx context.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return &workflow.EntityNotExistsError{Message: "Workflow is not running."}
+				return &types.EntityNotExistsError{Message: "Workflow is not running."}
 			}
 
 			initiatedEventID := task.ScheduleID
@@ -1139,7 +1141,7 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionFailed(
 			return err
 		})
 
-	if _, ok := err.(*workflow.EntityNotExistsError); ok {
+	if _, ok := err.(*types.EntityNotExistsError); ok {
 		// this could happen if this is a duplicate processing of the task,
 		// or the execution has already completed.
 		return nil
@@ -1204,12 +1206,12 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionWithRetry(
 	requestCancelCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 	defer cancel()
 	op := func() error {
-		return t.historyClient.RequestCancelWorkflowExecution(requestCancelCtx, request)
+		return t.historyClient.RequestCancelWorkflowExecution(requestCancelCtx, thrift.ToHistoryRequestCancelWorkflowExecutionRequest(request))
 	}
 
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	err := backoff.Retry(op, taskRetryPolicy, common.IsPersistenceTransientError)
 
-	if _, ok := err.(*workflow.CancellationAlreadyRequestedError); ok {
+	if _, ok := err.(*types.CancellationAlreadyRequestedError); ok {
 		// err is CancellationAlreadyRequestedError
 		// this could happen if target workflow cancellation is already requested
 		// mark as success
@@ -1250,10 +1252,10 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionWithRetry(
 	signalCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 	defer cancel()
 	op := func() error {
-		return t.historyClient.SignalWorkflowExecution(signalCtx, request)
+		return t.historyClient.SignalWorkflowExecution(signalCtx, thrift.ToHistorySignalWorkflowExecutionRequest(request))
 	}
 
-	return backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	return backoff.Retry(op, taskRetryPolicy, common.IsPersistenceTransientError)
 }
 
 func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
@@ -1265,42 +1267,35 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 	attributes *workflow.StartChildWorkflowExecutionInitiatedEventAttributes,
 ) (string, error) {
 
+	frontendStartReq := &workflow.StartWorkflowExecutionRequest{
+		Domain:                              common.StringPtr(targetDomain),
+		WorkflowId:                          attributes.WorkflowId,
+		WorkflowType:                        attributes.WorkflowType,
+		TaskList:                            attributes.TaskList,
+		Input:                               attributes.Input,
+		Header:                              attributes.Header,
+		ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      attributes.TaskStartToCloseTimeoutSeconds,
+		// Use the same request ID to dedupe StartWorkflowExecution calls
+		RequestId:             common.StringPtr(childInfo.CreateRequestID),
+		WorkflowIdReusePolicy: attributes.WorkflowIdReusePolicy,
+		RetryPolicy:           attributes.RetryPolicy,
+		CronSchedule:          attributes.CronSchedule,
+		Memo:                  attributes.Memo,
+		SearchAttributes:      attributes.SearchAttributes,
+	}
+
 	now := t.shard.GetTimeSource().Now()
-	request := &h.StartWorkflowExecutionRequest{
-		DomainUUID: common.StringPtr(task.TargetDomainID),
-		StartRequest: &workflow.StartWorkflowExecutionRequest{
-			Domain:                              common.StringPtr(targetDomain),
-			WorkflowId:                          attributes.WorkflowId,
-			WorkflowType:                        attributes.WorkflowType,
-			TaskList:                            attributes.TaskList,
-			Input:                               attributes.Input,
-			Header:                              attributes.Header,
-			ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
-			TaskStartToCloseTimeoutSeconds:      attributes.TaskStartToCloseTimeoutSeconds,
-			// Use the same request ID to dedupe StartWorkflowExecution calls
-			RequestId:             common.StringPtr(childInfo.CreateRequestID),
-			WorkflowIdReusePolicy: attributes.WorkflowIdReusePolicy,
-			RetryPolicy:           attributes.RetryPolicy,
-			CronSchedule:          attributes.CronSchedule,
-			Memo:                  attributes.Memo,
-			SearchAttributes:      attributes.SearchAttributes,
+	historyStartReq := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, now)
+
+	historyStartReq.ParentExecutionInfo = &h.ParentExecutionInfo{
+		DomainUUID: common.StringPtr(task.DomainID),
+		Domain:     common.StringPtr(domain),
+		Execution: &workflow.WorkflowExecution{
+			WorkflowId: common.StringPtr(task.WorkflowID),
+			RunId:      common.StringPtr(task.RunID),
 		},
-		ParentExecutionInfo: &h.ParentExecutionInfo{
-			DomainUUID: common.StringPtr(task.DomainID),
-			Domain:     common.StringPtr(domain),
-			Execution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(task.WorkflowID),
-				RunId:      common.StringPtr(task.RunID),
-			},
-			InitiatedId: common.Int64Ptr(task.ScheduleID),
-		},
-		FirstDecisionTaskBackoffSeconds: common.Int32Ptr(
-			backoff.GetBackoffForNextScheduleInSeconds(
-				attributes.GetCronSchedule(),
-				now,
-				now,
-			),
-		),
+		InitiatedId: common.Int64Ptr(task.ScheduleID),
 	}
 
 	startWorkflowCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
@@ -1308,11 +1303,12 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 	var response *workflow.StartWorkflowExecutionResponse
 	var err error
 	op := func() error {
-		response, err = t.historyClient.StartWorkflowExecution(startWorkflowCtx, request)
+		clientResp, err := t.historyClient.StartWorkflowExecution(startWorkflowCtx, thrift.ToHistoryStartWorkflowExecutionRequest(historyStartReq))
+		response = thrift.FromStartWorkflowExecutionResponse(clientResp)
 		return err
 	}
 
-	err = backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	err = backoff.Retry(op, taskRetryPolicy, common.IsPersistenceTransientError)
 	if err != nil {
 		return "", err
 	}
@@ -1341,6 +1337,9 @@ func (t *transferActiveTaskExecutor) resetWorkflow(
 	resetRunID := uuid.New()
 	baseRebuildLastEventID := resetPoint.GetFirstDecisionCompletedId() - 1
 	baseVersionHistories := baseMutableState.GetVersionHistories()
+	if baseVersionHistories == nil {
+		return execution.ErrMissingVersionHistories
+	}
 	baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
 	if err != nil {
 		return err
@@ -1373,13 +1372,14 @@ func (t *transferActiveTaskExecutor) resetWorkflow(
 		),
 		reason,
 		nil,
+		false,
 	)
 
 	switch err.(type) {
 	case nil:
 		return nil
 
-	case *workflow.BadRequestError:
+	case *types.BadRequestError:
 		// This means the reset point is corrupted and not retry able.
 		// There must be a bug in our system that we must fix.(for example, history is not the same in active/passive)
 		t.metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.AutoResetPointCorruptionCounter)
@@ -1418,7 +1418,7 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 			executions = append(executions, parentclosepolicy.RequestDetail{
 				WorkflowID: childInfo.StartedWorkflowID,
 				RunID:      childInfo.StartedRunID,
-				Policy:     childInfo.ParentClosePolicy,
+				Policy:     *thrift.ToParentClosePolicy(&childInfo.ParentClosePolicy),
 			})
 		}
 
@@ -1441,7 +1441,7 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 			domainName,
 			childInfo,
 		); err != nil {
-			if _, ok := err.(*workflow.EntityNotExistsError); !ok {
+			if _, ok := err.(*types.EntityNotExistsError); !ok {
 				scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
 				return err
 			}
@@ -1467,13 +1467,13 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 		return nil
 
 	case workflow.ParentClosePolicyTerminate:
-		return t.historyClient.TerminateWorkflowExecution(ctx, &h.TerminateWorkflowExecutionRequest{
+		return t.historyClient.TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
-			TerminateRequest: &workflow.TerminateWorkflowExecutionRequest{
+			TerminateRequest: &types.TerminateWorkflowExecutionRequest{
 				Domain: common.StringPtr(domainName),
-				WorkflowExecution: &workflow.WorkflowExecution{
-					WorkflowId: common.StringPtr(childInfo.StartedWorkflowID),
-					RunId:      common.StringPtr(childInfo.StartedRunID),
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: common.StringPtr(childInfo.StartedWorkflowID),
+					RunID:      common.StringPtr(childInfo.StartedRunID),
 				},
 				Reason:   common.StringPtr("by parent close policy"),
 				Identity: common.StringPtr(identityHistoryService),
@@ -1481,20 +1481,20 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 		})
 
 	case workflow.ParentClosePolicyRequestCancel:
-		return t.historyClient.RequestCancelWorkflowExecution(ctx, &h.RequestCancelWorkflowExecutionRequest{
+		return t.historyClient.RequestCancelWorkflowExecution(ctx, &types.HistoryRequestCancelWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
-			CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
+			CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
 				Domain: common.StringPtr(domainName),
-				WorkflowExecution: &workflow.WorkflowExecution{
-					WorkflowId: common.StringPtr(childInfo.StartedWorkflowID),
-					RunId:      common.StringPtr(childInfo.StartedRunID),
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: common.StringPtr(childInfo.StartedWorkflowID),
+					RunID:      common.StringPtr(childInfo.StartedRunID),
 				},
 				Identity: common.StringPtr(identityHistoryService),
 			},
 		})
 
 	default:
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("unknown parent close policy: %v", childInfo.ParentClosePolicy),
 		}
 	}

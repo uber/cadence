@@ -22,6 +22,7 @@ package domain
 
 import (
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 // domainArchivalConfigStateMachine is only used by domainHandler.
@@ -49,10 +50,10 @@ type (
 
 // the following errors represents impossible code states that should never occur
 var (
-	errInvalidState            = &shared.BadRequestError{Message: "Encountered illegal state: archival is enabled but URI is not set (should be impossible)"}
-	errInvalidEvent            = &shared.BadRequestError{Message: "Encountered illegal event: default URI is not set (should be impossible)"}
-	errCannotHandleStateChange = &shared.BadRequestError{Message: "Encountered current state and event that cannot be handled (should be impossible)"}
-	errURIUpdate               = &shared.BadRequestError{Message: "Cannot update existing archival URI"}
+	errInvalidState            = &types.BadRequestError{Message: "Encountered illegal state: archival is enabled but URI is not set (should be impossible)"}
+	errInvalidEvent            = &types.BadRequestError{Message: "Encountered illegal event: default URI is not set (should be impossible)"}
+	errCannotHandleStateChange = &types.BadRequestError{Message: "Encountered current state and event that cannot be handled (should be impossible)"}
+	errURIUpdate               = &types.BadRequestError{Message: "Cannot update existing archival URI"}
 )
 
 func neverEnabledState() *ArchivalState {

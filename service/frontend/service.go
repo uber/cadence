@@ -24,8 +24,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
-	"github.com/uber/cadence/.gen/go/health/metaserver"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/definition"
@@ -58,8 +56,9 @@ type Config struct {
 	RPS                             dynamicconfig.IntPropertyFn
 	MaxDomainRPSPerInstance         dynamicconfig.IntPropertyFnWithDomainFilter
 	GlobalDomainRPS                 dynamicconfig.IntPropertyFnWithDomainFilter
-	MaxIDLengthLimit                dynamicconfig.IntPropertyFn
+	MaxIDLengthLimit                dynamicconfig.IntPropertyFnWithDomainFilter
 	MaxIDLengthWarnLimit            dynamicconfig.IntPropertyFn
+	MaxRawTaskListNameLimit         dynamicconfig.IntPropertyFnWithDomainFilter
 	EnableClientVersionCheck        dynamicconfig.BoolPropertyFn
 	DisallowQuery                   dynamicconfig.BoolPropertyFnWithDomainFilter
 	ShutdownDrainDuration           dynamicconfig.DurationPropertyFn
@@ -105,16 +104,17 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		VisibilityMaxPageSize:                       dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityMaxPageSize, 1000),
 		EnableVisibilitySampling:                    dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),
 		EnableReadFromClosedExecutionV2:             dc.GetBoolProperty(dynamicconfig.EnableReadFromClosedExecutionV2, false),
-		VisibilityListMaxQPS:                        dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityListMaxQPS, 1),
+		VisibilityListMaxQPS:                        dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityListMaxQPS, 10),
+		ESVisibilityListMaxQPS:                      dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendESVisibilityListMaxQPS, 30),
 		EnableReadVisibilityFromES:                  dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableReadVisibilityFromES, enableReadFromES),
-		ESVisibilityListMaxQPS:                      dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendESVisibilityListMaxQPS, 3),
 		ESIndexMaxResultWindow:                      dc.GetIntProperty(dynamicconfig.FrontendESIndexMaxResultWindow, 10000),
 		HistoryMaxPageSize:                          dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendHistoryMaxPageSize, common.GetHistoryMaxPageSize),
 		RPS:                                         dc.GetIntProperty(dynamicconfig.FrontendRPS, 1200),
 		MaxDomainRPSPerInstance:                     dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxDomainRPSPerInstance, 1200),
 		GlobalDomainRPS:                             dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainRPS, 0),
-		MaxIDLengthLimit:                            dc.GetIntProperty(dynamicconfig.MaxIDLengthLimit, 1000),
-		MaxIDLengthWarnLimit:                        dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit, 150),
+		MaxIDLengthLimit:                            dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxIDLengthLimit, 1000),
+		MaxIDLengthWarnLimit:                        dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit, 128),
+		MaxRawTaskListNameLimit:                     dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxRawTaskListNameLimit, 1000),
 		HistoryMgrNumConns:                          dc.GetIntProperty(dynamicconfig.FrontendHistoryMgrNumConns, 10),
 		EnableAdminProtection:                       dc.GetBoolProperty(dynamicconfig.EnableAdminProtection, false),
 		AdminOperationToken:                         dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
@@ -149,7 +149,7 @@ type Service struct {
 
 	status       int32
 	handler      *WorkflowHandler
-	adminHandler *AdminHandler
+	adminHandler *adminHandlerImpl
 	stopC        chan struct{}
 	config       *Config
 	params       *service.BootstrapParams
@@ -254,12 +254,13 @@ func (s *Service) Start() {
 	}
 
 	// Register the latest (most decorated) handler
-	// TODO: this is temporary, will be moved to Thrift specific handler later
-	s.GetDispatcher().Register(workflowserviceserver.New(handler))
-	s.GetDispatcher().Register(metaserver.New(handler))
+	thriftHandler := NewThriftHandler(handler)
+	thriftHandler.register(s.GetDispatcher())
 
 	s.adminHandler = NewAdminHandler(s, s.params, s.config)
-	s.adminHandler.RegisterHandler()
+
+	adminThriftHandler := NewAdminThriftHandler(s.adminHandler)
+	adminThriftHandler.register(s.GetDispatcher())
 
 	// must start resource first
 	s.Resource.Start()

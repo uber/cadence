@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/reset"
 	"github.com/uber/cadence/service/history/shard"
@@ -328,6 +329,9 @@ func (r *transactionManagerImpl) backfillWorkflowEventsReapply(
 		}
 
 		baseVersionHistories := baseMutableState.GetVersionHistories()
+		if baseVersionHistories == nil {
+			return 0, execution.TransactionPolicyActive, execution.ErrMissingVersionHistories
+		}
 		baseCurrentVersionHistory, err := baseVersionHistories.GetCurrentVersionHistory()
 		if err != nil {
 			return 0, execution.TransactionPolicyActive, err
@@ -353,6 +357,7 @@ func (r *transactionManagerImpl) backfillWorkflowEventsReapply(
 			targetWorkflow,
 			EventsReapplicationResetWorkflowReason,
 			targetWorkflowEvents.Events,
+			false,
 		); err != nil {
 			return 0, execution.TransactionPolicyActive, err
 		}
@@ -396,7 +401,7 @@ func (r *transactionManagerImpl) checkWorkflowExists(
 	switch err.(type) {
 	case nil:
 		return true, nil
-	case *shared.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		return false, nil
 	default:
 		return false, err
@@ -420,7 +425,7 @@ func (r *transactionManagerImpl) getCurrentWorkflowRunID(
 	switch err.(type) {
 	case nil:
 		return resp.RunID, nil
-	case *shared.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		return "", nil
 	default:
 		return "", err

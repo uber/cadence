@@ -24,12 +24,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -111,15 +111,15 @@ func (q *nosqlQueue) EnqueueMessage(
 func (q *nosqlQueue) EnqueueMessageToDLQ(
 	ctx context.Context,
 	messagePayload []byte,
-) (int64, error) {
+) error {
 	// Use negative queue type as the dlq type
 	lastMessageID, err := q.getLastMessageID(ctx, q.getDLQTypeFromQueueType())
 	if err != nil {
-		return emptyMessageID, err
+		return err
 	}
 
-	// Use negative queue type as the dlq type
-	return q.tryEnqueue(ctx, q.getDLQTypeFromQueueType(), lastMessageID+1, messagePayload)
+	_, err = q.tryEnqueue(ctx, q.getDLQTypeFromQueueType(), lastMessageID+1, messagePayload)
+	return err
 }
 
 func (q *nosqlQueue) tryEnqueue(
@@ -134,17 +134,11 @@ func (q *nosqlQueue) tryEnqueue(
 		Payload:   messagePayload,
 	})
 	if err != nil {
-		if q.db.IsThrottlingError(err) {
-			return emptyMessageID, &shared.ServiceBusyError{
-				Message: fmt.Sprintf("Failed to enqueue message. Error: %v, Type: %v.", err, queueType),
-			}
-		}
 		if q.db.IsConditionFailedError(err) {
 			return emptyMessageID, &persistence.ConditionFailedError{Msg: fmt.Sprintf("message ID %v exists in queue", messageID)}
 		}
-		return emptyMessageID, &shared.InternalServiceError{
-			Message: fmt.Sprintf("Failed to enqueue message. Error: %v, Type: %v.", err, queueType),
-		}
+
+		return emptyMessageID, convertCommonErrors(q.db, fmt.Sprintf("EnqueueMessage, Type: %v", queueType), err)
 	}
 
 	return messageID, nil
@@ -159,15 +153,9 @@ func (q *nosqlQueue) getLastMessageID(
 	if err != nil {
 		if q.db.IsNotFoundError(err) {
 			return emptyMessageID, nil
-		} else if q.db.IsThrottlingError(err) {
-			return emptyMessageID, &shared.ServiceBusyError{
-				Message: fmt.Sprintf("Failed to get last message ID for queue %v. Error: %v", queueType, err),
-			}
 		}
 
-		return emptyMessageID, &shared.InternalServiceError{
-			Message: fmt.Sprintf("Failed to get last message ID for queue %v. Error: %v", queueType, err),
-		}
+		return emptyMessageID, convertCommonErrors(q.db, fmt.Sprintf("GetLastMessageID, Type: %v", queueType), err)
 	}
 
 	return msgID, nil
@@ -180,7 +168,7 @@ func (q *nosqlQueue) ReadMessages(
 ) ([]*persistence.InternalQueueMessage, error) {
 	messages, err := q.db.SelectMessagesFrom(ctx, q.queueType, lastMessageID, maxCount)
 	if err != nil {
-		return nil, err
+		return nil, convertCommonErrors(q.db, "ReadMessages", err)
 	}
 	var result []*persistence.InternalQueueMessage
 	for _, msg := range messages {
@@ -209,7 +197,7 @@ func (q *nosqlQueue) ReadMessagesFromDLQ(
 		NextPageToken:           pageToken,
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, convertCommonErrors(q.db, "ReadMessagesFromDLQ", err)
 	}
 	var result []*persistence.InternalQueueMessage
 	for _, msg := range response.Rows {
@@ -227,8 +215,11 @@ func (q *nosqlQueue) DeleteMessagesBefore(
 	ctx context.Context,
 	messageID int64,
 ) error {
+	if err := q.db.DeleteMessagesBefore(ctx, q.queueType, messageID); err != nil {
+		return convertCommonErrors(q.db, "DeleteMessagesBefore", err)
+	}
 
-	return q.db.DeleteMessagesBefore(ctx, q.queueType, messageID)
+	return nil
 }
 
 func (q *nosqlQueue) DeleteMessageFromDLQ(
@@ -236,7 +227,11 @@ func (q *nosqlQueue) DeleteMessageFromDLQ(
 	messageID int64,
 ) error {
 	// Use negative queue type as the dlq type
-	return q.db.DeleteMessage(ctx, q.getDLQTypeFromQueueType(), messageID)
+	if err := q.db.DeleteMessage(ctx, q.getDLQTypeFromQueueType(), messageID); err != nil {
+		return convertCommonErrors(q.db, "DeleteMessageFromDLQ", err)
+	}
+
+	return nil
 }
 
 func (q *nosqlQueue) RangeDeleteMessagesFromDLQ(
@@ -245,7 +240,11 @@ func (q *nosqlQueue) RangeDeleteMessagesFromDLQ(
 	lastMessageID int64,
 ) error {
 	// Use negative queue type as the dlq type
-	return q.db.DeleteMessagesInRange(ctx, q.getDLQTypeFromQueueType(), firstMessageID, lastMessageID)
+	if err := q.db.DeleteMessagesInRange(ctx, q.getDLQTypeFromQueueType(), firstMessageID, lastMessageID); err != nil {
+		return convertCommonErrors(q.db, "RangeDeleteMessagesFromDLQ", err)
+	}
+
+	return nil
 }
 
 func (q *nosqlQueue) insertInitialQueueMetadataRecord(
@@ -253,7 +252,11 @@ func (q *nosqlQueue) insertInitialQueueMetadataRecord(
 	queueType persistence.QueueType,
 ) error {
 	version := int64(0)
-	return q.db.InsertQueueMetadata(ctx, queueType, version)
+	if err := q.db.InsertQueueMetadata(ctx, queueType, version); err != nil {
+		return convertCommonErrors(q.db, fmt.Sprintf("InsertInitialQueueMetadataRecord, Type: %v", queueType), err)
+	}
+
+	return nil
 }
 
 func (q *nosqlQueue) UpdateAckLevel(
@@ -298,6 +301,17 @@ func (q *nosqlQueue) GetDLQAckLevels(
 	return queueMetadata.ClusterAckLevels, nil
 }
 
+func (q *nosqlQueue) GetDLQSize(
+	ctx context.Context,
+) (int64, error) {
+
+	size, err := q.db.GetQueueSize(ctx, q.getDLQTypeFromQueueType())
+	if err != nil {
+		return 0, convertCommonErrors(q.db, "GetDLQSize", err)
+	}
+	return size, err
+}
+
 func (q *nosqlQueue) getQueueMetadata(
 	ctx context.Context,
 	queueType persistence.QueueType,
@@ -307,7 +321,8 @@ func (q *nosqlQueue) getQueueMetadata(
 		if q.db.IsNotFoundError(err) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to get queue metadata: %v", err)
+
+		return nil, convertCommonErrors(q.db, "GetQueueMetadata", err)
 	}
 
 	return row, nil
@@ -320,13 +335,12 @@ func (q *nosqlQueue) updateQueueMetadata(
 	err := q.db.UpdateQueueMetadataCas(ctx, *metadata)
 	if err != nil {
 		if q.db.IsConditionFailedError(err) {
-			return &shared.InternalServiceError{
-				Message: fmt.Sprintf("UpdateAckLevel operation encounter concurrent write."),
+			return &types.InternalServiceError{
+				Message: fmt.Sprintf("UpdateQueueMetadata operation encounter concurrent write."),
 			}
 		}
-		return &shared.InternalServiceError{
-			Message: fmt.Sprintf("UpdateAckLevel operation failed. Error %v", err),
-		}
+
+		return convertCommonErrors(q.db, "UpdateQueueMetadata", err)
 	}
 
 	return nil
@@ -346,9 +360,7 @@ func (q *nosqlQueue) updateAckLevel(
 
 	queueMetadata, err := q.getQueueMetadata(ctx, queueType)
 	if err != nil {
-		return &shared.InternalServiceError{
-			Message: fmt.Sprintf("UpdateDLQAckLevel operation failed. Error %v", err),
-		}
+		return err
 	}
 
 	// Ignore possibly delayed message
@@ -362,9 +374,7 @@ func (q *nosqlQueue) updateAckLevel(
 	// Use negative queue type as the dlq type
 	err = q.updateQueueMetadata(ctx, queueMetadata)
 	if err != nil {
-		return &shared.InternalServiceError{
-			Message: fmt.Sprintf("UpdateDLQAckLevel operation failed. Error %v", err),
-		}
+		return err
 	}
 	return nil
 }

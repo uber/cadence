@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,33 +18,65 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package elasticsearch
+package gocql
 
 import (
 	"fmt"
-	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/gocql/gocql"
 )
 
-func Test_BuildPutMappingBody(t *testing.T) {
-	tests := []struct {
-		root     string
-		expected string
-	}{
-		{
-			root:     "Attr",
-			expected: "map[properties:map[Attr:map[properties:map[testKey:map[type:text]]]]]",
-		},
-		{
-			root:     "",
-			expected: "map[properties:map[testKey:map[type:text]]]",
-		},
-	}
-	k := "testKey"
-	v := "text"
+// Definition of all Consistency levels
+const (
+	Any Consistency = iota
+	One
+	Two
+	Three
+	Quorum
+	All
+	LocalQuorum
+	EachQuorum
+	LocalOne
+)
 
-	for _, test := range tests {
-		require.Equal(t, test.expected, fmt.Sprintf("%v", buildPutMappingBody(test.root, k, v)))
+// Definition of all SerialConsistency levels
+const (
+	Serial SerialConsistency = iota
+	LocalSerial
+)
+
+func mustConvertConsistency(c Consistency) gocql.Consistency {
+	switch c {
+	case Any:
+		return gocql.Any
+	case One:
+		return gocql.One
+	case Two:
+		return gocql.Two
+	case Three:
+		return gocql.Three
+	case Quorum:
+		return gocql.Quorum
+	case All:
+		return gocql.All
+	case LocalQuorum:
+		return gocql.LocalQuorum
+	case EachQuorum:
+		return gocql.EachQuorum
+	case LocalOne:
+		return gocql.LocalOne
+	default:
+		panic(fmt.Sprintf("Unknown gocql Consistency level: %v", c))
+	}
+}
+
+func mustConvertSerialConsistency(c SerialConsistency) gocql.SerialConsistency {
+	switch c {
+	case Serial:
+		return gocql.Serial
+	case LocalSerial:
+		return gocql.LocalSerial
+	default:
+		panic(fmt.Sprintf("Unknown gocql SerialConsistency level: %v", c))
 	}
 }

@@ -34,6 +34,7 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 func TestIsServiceTransientError_ContextTimeout(t *testing.T) {
@@ -60,7 +61,7 @@ func TestIsContextTimeoutError(t *testing.T) {
 	defer cancel()
 	time.Sleep(50 * time.Millisecond)
 	require.True(t, IsContextTimeoutError(ctx.Err()))
-	require.True(t, IsContextTimeoutError(&workflow.InternalServiceError{Message: ctx.Err().Error()}))
+	require.True(t, IsContextTimeoutError(&types.InternalServiceError{Message: ctx.Err().Error()}))
 
 	yarpcErr := yarpcerrors.DeadlineExceededErrorf("yarpc deadline exceeded")
 	require.True(t, IsContextTimeoutError(yarpcErr))
@@ -96,7 +97,7 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) 
 		CronSchedule: StringPtr("@every 300s"),
 	}
 	now := time.Now()
-	startRequest := CreateHistoryStartWorkflowRequest(domainID, request)
+	startRequest := CreateHistoryStartWorkflowRequest(domainID, request, now)
 
 	expirationTime := startRequest.GetExpirationTimestamp()
 	require.NotNil(t, expirationTime)
@@ -112,7 +113,7 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.
 		},
 	}
 	now := time.Now()
-	startRequest := CreateHistoryStartWorkflowRequest(domainID, request)
+	startRequest := CreateHistoryStartWorkflowRequest(domainID, request, now)
 
 	expirationTime := startRequest.GetExpirationTimestamp()
 	require.NotNil(t, expirationTime)

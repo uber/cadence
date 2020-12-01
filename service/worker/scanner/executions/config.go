@@ -35,6 +35,12 @@ type (
 		DynamicConfigInvariantCollections DynamicConfigInvariantCollections
 	}
 
+	// FixerWorkflowDynamicConfig is the dynamic config for the fixer workflow
+	FixerWorkflowDynamicConfig struct {
+		Enabled     dynamicconfig.BoolPropertyFn
+		AllowDomain dynamicconfig.BoolPropertyFnWithDomainFilter
+	}
+
 	// DynamicConfigInvariantCollections is the portion of ScannerWorkflowDynamicConfig
 	// which indicates which collections of invariants should be run
 	DynamicConfigInvariantCollections struct {

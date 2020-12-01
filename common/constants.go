@@ -177,3 +177,6 @@ const StickyTaskConditionFailedErrorMsg = "StickyTaskConditionFailedError"
 
 // MemoKeyForOperator is the memo key for operator
 const MemoKeyForOperator = "operator"
+
+// ReservedTaskListPrefix is the required naming prefix for any task list partition other than partition 0
+const ReservedTaskListPrefix = "/__cadence_sys/"

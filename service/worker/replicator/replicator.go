@@ -23,6 +23,8 @@
 package replicator
 
 import (
+	"time"
+
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/domain"
@@ -30,7 +32,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
 )
 
 type (
@@ -44,7 +45,8 @@ type (
 		metricsClient                 metrics.Client
 		hostInfo                      *membership.HostInfo
 		serviceResolver               membership.ServiceResolver
-		domainReplicationQueue        persistence.DomainReplicationQueue
+		domainReplicationQueue        domain.ReplicationQueue
+		replicationMaxRetry           time.Duration
 	}
 )
 
@@ -56,8 +58,9 @@ func NewReplicator(
 	metricsClient metrics.Client,
 	hostInfo *membership.HostInfo,
 	serviceResolver membership.ServiceResolver,
-	domainReplicationQueue persistence.DomainReplicationQueue,
+	domainReplicationQueue domain.ReplicationQueue,
 	domainReplicationTaskExecutor domain.ReplicationTaskExecutor,
+	replicationMaxRetry time.Duration,
 ) *Replicator {
 
 	logger = logger.WithTags(tag.ComponentReplicator)
@@ -70,6 +73,7 @@ func NewReplicator(
 		logger:                        logger,
 		metricsClient:                 metricsClient,
 		domainReplicationQueue:        domainReplicationQueue,
+		replicationMaxRetry:           replicationMaxRetry,
 	}
 }
 
@@ -91,6 +95,7 @@ func (r *Replicator) Start() error {
 				r.hostInfo,
 				r.serviceResolver,
 				r.domainReplicationQueue,
+				r.replicationMaxRetry,
 			)
 			r.domainProcessors = append(r.domainProcessors, processor)
 		}

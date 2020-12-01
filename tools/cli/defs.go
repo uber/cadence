@@ -75,13 +75,22 @@ var envKeysForUserName = []string{
 	"HOME",
 }
 
+const resetTypeFirstDecisionCompleted = "FirstDecisionCompleted"
+const resetTypeLastDecisionCompleted = "LastDecisionCompleted"
+const resetTypeLastContinuedAsNew = "LastContinuedAsNew"
+const resetTypeBadBinary = "BadBinary"
+const resetTypeDecisionCompletedTime = "DecisionCompletedTime"
+const resetTypeFirstDecisionScheduled = "FirstDecisionScheduled"
+const resetTypeLastDecisionScheduled = "LastDecisionScheduled"
+
 var resetTypesMap = map[string]string{
-	"FirstDecisionCompleted": "",
-	"LastDecisionCompleted":  "",
-	"FirstDecisionScheduled": "",
-	"LastDecisionScheduled":  "",
-	"LastContinuedAsNew":     "",
-	"BadBinary":              FlagResetBadBinaryChecksum,
+	resetTypeFirstDecisionCompleted: "",
+	resetTypeLastDecisionCompleted:  "",
+	resetTypeLastContinuedAsNew:     "",
+	resetTypeBadBinary:              FlagResetBadBinaryChecksum,
+	resetTypeDecisionCompletedTime:  FlagEarliestTime,
+	resetTypeFirstDecisionScheduled: "",
+	resetTypeLastDecisionScheduled:  "",
 }
 
 type jsonType int

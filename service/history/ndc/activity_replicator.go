@@ -26,8 +26,6 @@ import (
 	ctx "context"
 	"time"
 
-	"go.uber.org/cadence/.gen/go/shared"
-
 	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -36,6 +34,8 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -104,7 +104,7 @@ func (r *activityReplicatorImpl) SyncActivity(
 
 	mutableState, err := context.LoadWorkflowExecution(ctx)
 	if err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); !ok {
+		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			return err
 		}
 
@@ -237,7 +237,7 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 			return false, err
 		}
 
-		incomingVersionHistory := persistence.NewVersionHistoryFromThrift(incomingRawVersionHistory)
+		incomingVersionHistory := persistence.NewVersionHistoryFromInternalType(thrift.ToVersionHistory(incomingRawVersionHistory))
 		lastIncomingItem, err := incomingVersionHistory.GetLastItem()
 		if err != nil {
 			return false, err
@@ -289,7 +289,7 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 			}
 		}
 	} else {
-		return false, &shared.InternalServiceError{Message: "The workflow version histories is corrupted."}
+		return false, &types.InternalServiceError{Message: "The workflow version histories is corrupted."}
 	}
 
 	return true, nil

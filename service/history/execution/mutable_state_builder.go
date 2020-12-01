@@ -1,4 +1,5 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -43,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/query"
@@ -60,23 +62,25 @@ const (
 
 var (
 	// ErrWorkflowFinished indicates trying to mutate mutable state after workflow finished
-	ErrWorkflowFinished = &workflow.InternalServiceError{Message: "invalid mutable state action: mutation after finish"}
+	ErrWorkflowFinished = &types.InternalServiceError{Message: "invalid mutable state action: mutation after finish"}
 	// ErrMissingTimerInfo indicates missing timer info
-	ErrMissingTimerInfo = &workflow.InternalServiceError{Message: "unable to get timer info"}
+	ErrMissingTimerInfo = &types.InternalServiceError{Message: "unable to get timer info"}
 	// ErrMissingActivityInfo indicates missing activity info
-	ErrMissingActivityInfo = &workflow.InternalServiceError{Message: "unable to get activity info"}
+	ErrMissingActivityInfo = &types.InternalServiceError{Message: "unable to get activity info"}
 	// ErrMissingChildWorkflowInfo indicates missing child workflow info
-	ErrMissingChildWorkflowInfo = &workflow.InternalServiceError{Message: "unable to get child workflow info"}
+	ErrMissingChildWorkflowInfo = &types.InternalServiceError{Message: "unable to get child workflow info"}
 	// ErrMissingWorkflowStartEvent indicates missing workflow start event
-	ErrMissingWorkflowStartEvent = &workflow.InternalServiceError{Message: "unable to get workflow start event"}
+	ErrMissingWorkflowStartEvent = &types.InternalServiceError{Message: "unable to get workflow start event"}
 	// ErrMissingWorkflowCompletionEvent indicates missing workflow completion event
-	ErrMissingWorkflowCompletionEvent = &workflow.InternalServiceError{Message: "unable to get workflow completion event"}
+	ErrMissingWorkflowCompletionEvent = &types.InternalServiceError{Message: "unable to get workflow completion event"}
 	// ErrMissingActivityScheduledEvent indicates missing workflow activity scheduled event
-	ErrMissingActivityScheduledEvent = &workflow.InternalServiceError{Message: "unable to get activity scheduled event"}
+	ErrMissingActivityScheduledEvent = &types.InternalServiceError{Message: "unable to get activity scheduled event"}
 	// ErrMissingChildWorkflowInitiatedEvent indicates missing child workflow initiated event
-	ErrMissingChildWorkflowInitiatedEvent = &workflow.InternalServiceError{Message: "unable to get child workflow initiated event"}
+	ErrMissingChildWorkflowInitiatedEvent = &types.InternalServiceError{Message: "unable to get child workflow initiated event"}
 	// ErrEventsAfterWorkflowFinish is the error indicating server error trying to write events after workflow finish event
-	ErrEventsAfterWorkflowFinish = &workflow.InternalServiceError{Message: "error validating last event being workflow finish event"}
+	ErrEventsAfterWorkflowFinish = &types.InternalServiceError{Message: "error validating last event being workflow finish event"}
+	// ErrMissingVersionHistories is the error indicating cadence failed to process 2dc workflow type.
+	ErrMissingVersionHistories = &types.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
 )
 
 type (
@@ -94,19 +98,19 @@ type (
 
 		pendingChildExecutionInfoIDs map[int64]*persistence.ChildExecutionInfo    // Initiated Event ID -> Child Execution Info
 		updateChildExecutionInfos    map[*persistence.ChildExecutionInfo]struct{} // Modified ChildExecution Infos since last update
-		deleteChildExecutionInfo     *int64                                       // Deleted ChildExecution Info since last update
+		deleteChildExecutionInfos    map[int64]struct{}                           // Deleted ChildExecution Infos since last update
 
 		pendingRequestCancelInfoIDs map[int64]*persistence.RequestCancelInfo    // Initiated Event ID -> RequestCancelInfo
 		updateRequestCancelInfos    map[*persistence.RequestCancelInfo]struct{} // Modified RequestCancel Infos since last update, for persistence update
-		deleteRequestCancelInfo     *int64                                      // Deleted RequestCancel Info since last update, for persistence update
+		deleteRequestCancelInfos    map[int64]struct{}                          // Deleted RequestCancel Infos since last update, for persistence update
 
 		pendingSignalInfoIDs map[int64]*persistence.SignalInfo    // Initiated Event ID -> SignalInfo
 		updateSignalInfos    map[*persistence.SignalInfo]struct{} // Modified SignalInfo since last update
-		deleteSignalInfo     *int64                               // Deleted SignalInfo since last update
+		deleteSignalInfos    map[int64]struct{}                   // Deleted SignalInfos since last update
 
 		pendingSignalRequestedIDs map[string]struct{} // Set of signaled requestIds
 		updateSignalRequestedIDs  map[string]struct{} // Set of signaled requestIds since last update
-		deleteSignalRequestedID   string              // Deleted signaled requestId
+		deleteSignalRequestedIDs  map[string]struct{} // Deleted signaled requestIds
 
 		bufferedEvents       []*workflow.HistoryEvent // buffered history events that are already persisted
 		updateBufferedEvents []*workflow.HistoryEvent // buffered history events that needs to be persisted
@@ -114,6 +118,8 @@ type (
 
 		executionInfo    *persistence.WorkflowExecutionInfo // Workflow mutable state info.
 		versionHistories *persistence.VersionHistories
+		// TODO: remove this struct after all 2DC workflows complete
+		replicationState *persistence.ReplicationState
 		hBuilder         *HistoryBuilder
 
 		// in memory only attributes
@@ -187,19 +193,19 @@ func newMutableStateBuilder(
 
 		updateChildExecutionInfos:    make(map[*persistence.ChildExecutionInfo]struct{}),
 		pendingChildExecutionInfoIDs: make(map[int64]*persistence.ChildExecutionInfo),
-		deleteChildExecutionInfo:     nil,
+		deleteChildExecutionInfos:    make(map[int64]struct{}),
 
 		updateRequestCancelInfos:    make(map[*persistence.RequestCancelInfo]struct{}),
 		pendingRequestCancelInfoIDs: make(map[int64]*persistence.RequestCancelInfo),
-		deleteRequestCancelInfo:     nil,
+		deleteRequestCancelInfos:    make(map[int64]struct{}),
 
 		updateSignalInfos:    make(map[*persistence.SignalInfo]struct{}),
 		pendingSignalInfoIDs: make(map[int64]*persistence.SignalInfo),
-		deleteSignalInfo:     nil,
+		deleteSignalInfos:    make(map[int64]struct{}),
 
 		updateSignalRequestedIDs:  make(map[string]struct{}),
 		pendingSignalRequestedIDs: make(map[string]struct{}),
-		deleteSignalRequestedID:   "",
+		deleteSignalRequestedIDs:  make(map[string]struct{}),
 
 		currentVersion:        domainEntry.GetFailoverVersion(),
 		hasBufferedEventsInDB: false,
@@ -323,6 +329,8 @@ func (e *mutableStateBuilder) Load(
 	e.stateInDB = state.ExecutionInfo.State
 	e.nextEventIDInDB = state.ExecutionInfo.NextEventID
 	e.versionHistories = state.VersionHistories
+	// TODO: remove this after all 2DC workflows complete
+	e.replicationState = state.ReplicationState
 	e.checksum = state.Checksum
 
 	if len(state.Checksum.Value) > 0 {
@@ -523,6 +531,11 @@ func (e *mutableStateBuilder) UpdateCurrentVersion(
 
 func (e *mutableStateBuilder) GetCurrentVersion() int64 {
 
+	// TODO: remove this after all 2DC workflows complete
+	if e.replicationState != nil {
+		return e.replicationState.CurrentVersion
+	}
+
 	if e.versionHistories != nil {
 		return e.currentVersion
 	}
@@ -548,6 +561,11 @@ func (e *mutableStateBuilder) GetStartVersion() (int64, error) {
 }
 
 func (e *mutableStateBuilder) GetLastWriteVersion() (int64, error) {
+
+	// TODO: remove this after all 2DC workflows complete
+	if e.replicationState != nil {
+		return e.replicationState.LastWriteVersion, nil
+	}
 
 	if e.versionHistories != nil {
 		versionHistory, err := e.versionHistories.GetCurrentVersionHistory()
@@ -1154,7 +1172,7 @@ func (e *mutableStateBuilder) DeletePendingChildExecution(
 		e.logDataInconsistency()
 	}
 
-	e.deleteChildExecutionInfo = common.Int64Ptr(initiatedEventID)
+	e.deleteChildExecutionInfos[initiatedEventID] = struct{}{}
 	return nil
 }
 
@@ -1174,7 +1192,7 @@ func (e *mutableStateBuilder) DeletePendingRequestCancel(
 		e.logDataInconsistency()
 	}
 
-	e.deleteRequestCancelInfo = common.Int64Ptr(initiatedEventID)
+	e.deleteRequestCancelInfos[initiatedEventID] = struct{}{}
 	return nil
 }
 
@@ -1194,7 +1212,7 @@ func (e *mutableStateBuilder) DeletePendingSignal(
 		e.logDataInconsistency()
 	}
 
-	e.deleteSignalInfo = common.Int64Ptr(initiatedEventID)
+	e.deleteSignalInfos[initiatedEventID] = struct{}{}
 	return nil
 }
 
@@ -1573,7 +1591,7 @@ func (e *mutableStateBuilder) DeleteSignalRequested(
 ) {
 
 	delete(e.pendingSignalRequestedIDs, requestID)
-	e.deleteSignalRequestedID = requestID
+	e.deleteSignalRequestedIDs[requestID] = struct{}{}
 }
 
 func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
@@ -1965,17 +1983,17 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 // TODO: we will release the restriction when reset API allow those pending
 func (e *mutableStateBuilder) CheckResettable() error {
 	if len(e.GetPendingChildExecutionInfos()) > 0 {
-		return &workflow.BadRequestError{
+		return &types.BadRequestError{
 			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending child workflow."),
 		}
 	}
 	if len(e.GetPendingRequestCancelExternalInfos()) > 0 {
-		return &workflow.BadRequestError{
+		return &types.BadRequestError{
 			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending request cancel."),
 		}
 	}
 	if len(e.GetPendingSignalExternalInfos()) > 0 {
-		return &workflow.BadRequestError{
+		return &types.BadRequestError{
 			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending signals to send."),
 		}
 	}
@@ -3312,7 +3330,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 		attributes,
 		firstRunID,
 	); err != nil {
-		return nil, nil, &workflow.InternalServiceError{Message: "Failed to add workflow execution started event."}
+		return nil, nil, &types.InternalServiceError{Message: "Failed to add workflow execution started event."}
 	}
 
 	if err = e.ReplicateWorkflowExecutionContinuedAsNewEvent(
@@ -3813,7 +3831,7 @@ func (e *mutableStateBuilder) AddTransferTasks(
 	e.insertTransferTasks = append(e.insertTransferTasks, transferTasks...)
 }
 
-// TODO convert AddTransferTasks to prepareTimerTasks
+// TODO convert AddTimerTasks to prepareTimerTasks
 func (e *mutableStateBuilder) AddTimerTasks(
 	timerTasks ...persistence.Task,
 ) {
@@ -3922,8 +3940,6 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		}
 	}
 
-	setTaskInfo(e.GetCurrentVersion(), now, e.insertTransferTasks, e.insertTimerTasks)
-
 	// update last update time
 	e.executionInfo.LastUpdatedTimestamp = now
 
@@ -3939,17 +3955,17 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		VersionHistories: e.versionHistories,
 
 		UpsertActivityInfos:       convertUpdateActivityInfos(e.updateActivityInfos),
-		DeleteActivityInfos:       convertDeleteActivityInfos(e.deleteActivityInfos),
+		DeleteActivityInfos:       convertInt64SetToSlice(e.deleteActivityInfos),
 		UpsertTimerInfos:          convertUpdateTimerInfos(e.updateTimerInfos),
-		DeleteTimerInfos:          convertDeleteTimerInfos(e.deleteTimerInfos),
+		DeleteTimerInfos:          convertStringSetToSlice(e.deleteTimerInfos),
 		UpsertChildExecutionInfos: convertUpdateChildExecutionInfos(e.updateChildExecutionInfos),
-		DeleteChildExecutionInfo:  e.deleteChildExecutionInfo,
+		DeleteChildExecutionInfos: convertInt64SetToSlice(e.deleteChildExecutionInfos),
 		UpsertRequestCancelInfos:  convertUpdateRequestCancelInfos(e.updateRequestCancelInfos),
-		DeleteRequestCancelInfo:   e.deleteRequestCancelInfo,
+		DeleteRequestCancelInfos:  convertInt64SetToSlice(e.deleteRequestCancelInfos),
 		UpsertSignalInfos:         convertUpdateSignalInfos(e.updateSignalInfos),
-		DeleteSignalInfo:          e.deleteSignalInfo,
-		UpsertSignalRequestedIDs:  convertSignalRequestedIDs(e.updateSignalRequestedIDs),
-		DeleteSignalRequestedID:   e.deleteSignalRequestedID,
+		DeleteSignalInfos:         convertInt64SetToSlice(e.deleteSignalInfos),
+		UpsertSignalRequestedIDs:  convertStringSetToSlice(e.updateSignalRequestedIDs),
+		DeleteSignalRequestedIDs:  convertStringSetToSlice(e.deleteSignalRequestedIDs),
 		NewBufferedEvents:         e.updateBufferedEvents,
 		ClearBufferedEvents:       e.clearBufferedEvents,
 
@@ -3986,13 +4002,13 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 	}
 
 	if len(workflowEventsSeq) > 1 {
-		return nil, nil, &workflow.InternalServiceError{
+		return nil, nil, &types.InternalServiceError{
 			Message: "cannot generate workflow snapshot with transient events",
 		}
 	}
 	if len(e.bufferedEvents) > 0 {
 		// TODO do we need the functionality to generate snapshot with buffered events?
-		return nil, nil, &workflow.InternalServiceError{
+		return nil, nil, &types.InternalServiceError{
 			Message: "cannot generate workflow snapshot with buffered events",
 		}
 	}
@@ -4009,8 +4025,6 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 			return nil, nil, err
 		}
 	}
-
-	setTaskInfo(e.GetCurrentVersion(), now, e.insertTransferTasks, e.insertTimerTasks)
 
 	// update last update time
 	e.executionInfo.LastUpdatedTimestamp = now
@@ -4031,7 +4045,7 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 		ChildExecutionInfos: convertPendingChildExecutionInfos(e.pendingChildExecutionInfoIDs),
 		RequestCancelInfos:  convertPendingRequestCancelInfos(e.pendingRequestCancelInfoIDs),
 		SignalInfos:         convertPendingSignalInfos(e.pendingSignalInfoIDs),
-		SignalRequestedIDs:  convertSignalRequestedIDs(e.pendingSignalRequestedIDs),
+		SignalRequestedIDs:  convertStringSetToSlice(e.pendingSignalRequestedIDs),
 
 		TransferTasks:    e.insertTransferTasks,
 		ReplicationTasks: e.insertReplicationTasks,
@@ -4120,16 +4134,16 @@ func (e *mutableStateBuilder) cleanupTransaction(
 	e.deleteTimerInfos = make(map[string]struct{})
 
 	e.updateChildExecutionInfos = make(map[*persistence.ChildExecutionInfo]struct{})
-	e.deleteChildExecutionInfo = nil
+	e.deleteChildExecutionInfos = make(map[int64]struct{})
 
 	e.updateRequestCancelInfos = make(map[*persistence.RequestCancelInfo]struct{})
-	e.deleteRequestCancelInfo = nil
+	e.deleteRequestCancelInfos = make(map[int64]struct{})
 
 	e.updateSignalInfos = make(map[*persistence.SignalInfo]struct{})
-	e.deleteSignalInfo = nil
+	e.deleteSignalInfos = make(map[int64]struct{})
 
 	e.updateSignalRequestedIDs = make(map[string]struct{})
-	e.deleteSignalRequestedID = ""
+	e.deleteSignalRequestedIDs = make(map[string]struct{})
 
 	e.clearBufferedEvents = false
 	if e.updateBufferedEvents != nil {
@@ -4200,7 +4214,7 @@ func (e *mutableStateBuilder) prepareEventsAndReplicationTasks(
 	)
 
 	if transactionPolicy == TransactionPolicyPassive && len(e.insertReplicationTasks) > 0 {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "should not generate replication task when close transaction as passive",
 		}
 	}
@@ -4227,7 +4241,7 @@ func (e *mutableStateBuilder) eventsToReplicationTask(
 	currentCluster := e.clusterMetadata.GetCurrentClusterName()
 
 	if currentCluster != sourceCluster {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "mutableStateBuilder encounter contradicting version & transaction policy",
 		}
 	}
@@ -4371,7 +4385,7 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
 		return false, err
 	}
 	if lastWriteVersion != decision.Version {
-		return false, &workflow.InternalServiceError{Message: fmt.Sprintf(
+		return false, &types.InternalServiceError{Message: fmt.Sprintf(
 			"mutableStateBuilder encounter mismatch version, decision: %v, last write version %v",
 			decision.Version,
 			lastWriteVersion,
@@ -4395,7 +4409,7 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
 	if lastWriteSourceCluster != currentCluster && currentVersionCluster != currentCluster {
 		// do a sanity check on buffered events
 		if e.HasBufferedEvents() {
-			return false, &workflow.InternalServiceError{
+			return false, &types.InternalServiceError{
 				Message: "mutableStateBuilder encounter previous passive workflow with buffered events",
 			}
 		}
@@ -4409,7 +4423,7 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
 	if lastWriteSourceCluster != currentCluster && currentVersionCluster == currentCluster {
 		// do a sanity check on buffered events
 		if e.HasBufferedEvents() {
-			return false, &workflow.InternalServiceError{
+			return false, &types.InternalServiceError{
 				Message: "mutableStateBuilder encounter previous passive workflow with buffered events",
 			}
 		}
@@ -4616,14 +4630,14 @@ func (e *mutableStateBuilder) createInternalServerError(
 	actionTag tag.Tag,
 ) error {
 
-	return &workflow.InternalServiceError{Message: actionTag.Field().String + " operation failed"}
+	return &types.InternalServiceError{Message: actionTag.Field().String + " operation failed"}
 }
 
 func (e *mutableStateBuilder) createCallerError(
 	actionTag tag.Tag,
 ) error {
 
-	return &workflow.BadRequestError{
+	return &types.BadRequestError{
 		Message: fmt.Sprintf(mutableStateInvalidHistoryActionMsgTemplate, actionTag.Field().String),
 	}
 }

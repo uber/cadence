@@ -24,25 +24,19 @@ import (
 	"context"
 	"fmt"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/types/mapper/thrift"
-)
-
-const (
-	emptyFailoverEndTime = int64(0)
+	"github.com/uber/cadence/common/types"
 )
 
 type (
 	nosqlDomainManager struct {
 		nosqlManager
 		currentClusterName string
-		serializer         p.PayloadSerializer
 	}
 )
 
@@ -60,7 +54,6 @@ func newMetadataPersistenceV2(cfg config.Cassandra, currentClusterName string, l
 			logger: logger,
 		},
 		currentClusterName: currentClusterName,
-		serializer:         p.NewPayloadSerializer(),
 	}, nil
 }
 
@@ -85,7 +78,7 @@ func (m *nosqlDomainManager) CreateDomain(
 		FailoverVersion:             request.FailoverVersion,
 		FailoverNotificationVersion: p.InitialFailoverNotificationVersion,
 		PreviousFailoverVersion:     common.InitialPreviousFailoverVersion,
-		FailoverEndTime:             emptyFailoverEndTime,
+		FailoverEndTime:             nil,
 		IsGlobalDomain:              request.IsGlobalDomain,
 		LastUpdatedTime:             request.LastUpdatedTime,
 	}
@@ -94,13 +87,11 @@ func (m *nosqlDomainManager) CreateDomain(
 
 	if err != nil {
 		if m.db.IsConditionFailedError(err) {
-			return nil, &workflow.DomainAlreadyExistsError{
+			return nil, &types.DomainAlreadyExistsError{
 				Message: fmt.Sprintf("CreateDomain operation failed because of conditional failure, %v", err),
 			}
 		}
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("CreateDomain operation failed. Inserting into domains table. Error: %v", err),
-		}
+		return nil, convertCommonErrors(m.db, "CreateDomain", err)
 	}
 
 	return &p.CreateDomainResponse{ID: request.Info.ID}, nil
@@ -110,10 +101,6 @@ func (m *nosqlDomainManager) UpdateDomain(
 	ctx context.Context,
 	request *p.InternalUpdateDomainRequest,
 ) error {
-	failoverEndTime := emptyFailoverEndTime
-	if request.FailoverEndTime != nil {
-		failoverEndTime = *request.FailoverEndTime
-	}
 	config, err := m.toNoSQLInternalDomainConfig(request.Config)
 	if err != nil {
 		return err
@@ -127,15 +114,13 @@ func (m *nosqlDomainManager) UpdateDomain(
 		FailoverVersion:             request.FailoverVersion,
 		FailoverNotificationVersion: request.FailoverNotificationVersion,
 		PreviousFailoverVersion:     request.PreviousFailoverVersion,
-		FailoverEndTime:             failoverEndTime,
+		FailoverEndTime:             request.FailoverEndTime,
 		NotificationVersion:         request.NotificationVersion,
 	}
 
 	err = m.db.UpdateDomain(ctx, row)
 	if err != nil {
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("UpdateDomain operation failed. Error: %v", err),
-		}
+		return convertCommonErrors(m.db, "UpdateDomain", err)
 	}
 
 	return nil
@@ -146,11 +131,11 @@ func (m *nosqlDomainManager) GetDomain(
 	request *p.GetDomainRequest,
 ) (*p.InternalGetDomainResponse, error) {
 	if len(request.ID) > 0 && len(request.Name) > 0 {
-		return nil, &workflow.BadRequestError{
+		return nil, &types.BadRequestError{
 			Message: "GetDomain operation failed.  Both ID and Name specified in request.",
 		}
 	} else if len(request.ID) == 0 && len(request.Name) == 0 {
-		return nil, &workflow.BadRequestError{
+		return nil, &types.BadRequestError{
 			Message: "GetDomain operation failed.  Both ID and Name are empty.",
 		}
 	}
@@ -168,13 +153,11 @@ func (m *nosqlDomainManager) GetDomain(
 			identity = ID
 		}
 		if m.db.IsNotFoundError(err) {
-			return &workflow.EntityNotExistsError{
+			return &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Domain %s does not exist.", identity),
 			}
 		}
-		return &workflow.InternalServiceError{
-			Message: fmt.Sprintf("GetDomain operation failed. Error %v", err),
-		}
+		return convertCommonErrors(m.db, "GetDomain", err)
 	}
 
 	row, err := m.db.SelectDomain(ctx, domainID, domainName)
@@ -189,16 +172,11 @@ func (m *nosqlDomainManager) GetDomain(
 	row.ReplicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, row.ReplicationConfig.ActiveClusterName)
 	row.ReplicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, row.ReplicationConfig.Clusters)
 
-	// Note: to make it nullable
-	var responseFailoverEndTime *int64
-	if row.FailoverEndTime > emptyFailoverEndTime {
-		domainFailoverEndTime := row.FailoverEndTime
-		responseFailoverEndTime = common.Int64Ptr(domainFailoverEndTime)
-	}
-
 	domainConfig, err := m.fromNoSQLInternalDomainConfig(row.Config)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert fromNoSQLInternalDomainConfig, %v ", err)
+		return nil, &types.InternalServiceError{
+			Message: fmt.Sprintf("cannot convert fromNoSQLInternalDomainConfig, %v ", err),
+		}
 	}
 
 	return &p.InternalGetDomainResponse{
@@ -210,7 +188,7 @@ func (m *nosqlDomainManager) GetDomain(
 		FailoverVersion:             row.FailoverVersion,
 		FailoverNotificationVersion: row.FailoverNotificationVersion,
 		PreviousFailoverVersion:     row.PreviousFailoverVersion,
-		FailoverEndTime:             responseFailoverEndTime,
+		FailoverEndTime:             row.FailoverEndTime,
 		NotificationVersion:         row.NotificationVersion,
 		LastUpdatedTime:             row.LastUpdatedTime,
 	}, nil
@@ -222,9 +200,7 @@ func (m *nosqlDomainManager) ListDomains(
 ) (*p.InternalListDomainsResponse, error) {
 	rows, nextPageToken, err := m.db.SelectAllDomains(ctx, request.PageSize, request.NextPageToken)
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
-			Message: fmt.Sprintf("ListDomains operation failed. Error: %v", err),
-		}
+		return nil, convertCommonErrors(m.db, "ListDomains", err)
 	}
 	var domains []*p.InternalGetDomainResponse
 	for _, row := range rows {
@@ -234,15 +210,11 @@ func (m *nosqlDomainManager) ListDomains(
 		row.ReplicationConfig.ActiveClusterName = p.GetOrUseDefaultActiveCluster(m.currentClusterName, row.ReplicationConfig.ActiveClusterName)
 		row.ReplicationConfig.Clusters = p.GetOrUseDefaultClusters(m.currentClusterName, row.ReplicationConfig.Clusters)
 
-		// Note: to make it nullable
-		var domainFailoverEndTime *int64
-		if row.FailoverEndTime > emptyFailoverEndTime {
-			domainFailoverEndTime = common.Int64Ptr(row.FailoverEndTime)
-		}
-
 		domainConfig, err := m.fromNoSQLInternalDomainConfig(row.Config)
 		if err != nil {
-			return nil, fmt.Errorf("cannot convert fromNoSQLInternalDomainConfig, %v ", err)
+			return nil, &types.InternalServiceError{
+				Message: fmt.Sprintf("cannot convert fromNoSQLInternalDomainConfig, %v ", err),
+			}
 		}
 
 		domains = append(domains, &p.InternalGetDomainResponse{
@@ -254,7 +226,7 @@ func (m *nosqlDomainManager) ListDomains(
 			FailoverVersion:             row.FailoverVersion,
 			FailoverNotificationVersion: row.FailoverNotificationVersion,
 			PreviousFailoverVersion:     row.PreviousFailoverVersion,
-			FailoverEndTime:             domainFailoverEndTime,
+			FailoverEndTime:             row.FailoverEndTime,
 			NotificationVersion:         row.NotificationVersion,
 			LastUpdatedTime:             row.LastUpdatedTime,
 		})
@@ -270,14 +242,22 @@ func (m *nosqlDomainManager) DeleteDomain(
 	ctx context.Context,
 	request *p.DeleteDomainRequest,
 ) error {
-	return m.db.DeleteDomain(ctx, &request.ID, nil)
+	if err := m.db.DeleteDomain(ctx, &request.ID, nil); err != nil {
+		return convertCommonErrors(m.db, "DeleteDomain", err)
+	}
+
+	return nil
 }
 
 func (m *nosqlDomainManager) DeleteDomainByName(
 	ctx context.Context,
 	request *p.DeleteDomainByNameRequest,
 ) error {
-	return m.db.DeleteDomain(ctx, nil, &request.Name)
+	if err := m.db.DeleteDomain(ctx, nil, &request.Name); err != nil {
+		return convertCommonErrors(m.db, "DeleteDomainByName", err)
+	}
+
+	return nil
 }
 
 func (m *nosqlDomainManager) GetMetadata(
@@ -285,7 +265,7 @@ func (m *nosqlDomainManager) GetMetadata(
 ) (*p.GetMetadataResponse, error) {
 	notificationVersion, err := m.db.SelectDomainMetadata(ctx)
 	if err != nil {
-		return nil, err
+		return nil, convertCommonErrors(m.db, "GetMetadata", err)
 	}
 	return &p.GetMetadataResponse{NotificationVersion: notificationVersion}, nil
 }
@@ -293,13 +273,6 @@ func (m *nosqlDomainManager) GetMetadata(
 func (m *nosqlDomainManager) toNoSQLInternalDomainConfig(
 	domainConfig *p.InternalDomainConfig,
 ) (*nosqlplugin.NoSQLInternalDomainConfig, error) {
-	serializedBadBinaries, err := m.serializer.SerializeBadBinaries(
-		thrift.FromBadBinaries(&domainConfig.BadBinaries),
-		common.EncodingTypeThriftRW)
-	if err != nil {
-		return nil, err
-	}
-
 	return &nosqlplugin.NoSQLInternalDomainConfig{
 		Retention:                domainConfig.Retention,
 		EmitMetric:               domainConfig.EmitMetric,
@@ -309,18 +282,13 @@ func (m *nosqlDomainManager) toNoSQLInternalDomainConfig(
 		HistoryArchivalURI:       domainConfig.HistoryArchivalURI,
 		VisibilityArchivalStatus: domainConfig.VisibilityArchivalStatus,
 		VisibilityArchivalURI:    domainConfig.VisibilityArchivalURI,
-		BadBinaries:              p.NewDataBlob(serializedBadBinaries.Data, serializedBadBinaries.Encoding),
+		BadBinaries:              domainConfig.BadBinaries,
 	}, nil
 }
 
 func (m *nosqlDomainManager) fromNoSQLInternalDomainConfig(
 	domainConfig *nosqlplugin.NoSQLInternalDomainConfig,
 ) (*p.InternalDomainConfig, error) {
-	badBinaries, err := m.serializer.DeserializeBadBinaries(domainConfig.BadBinaries)
-	if err != nil {
-		return nil, err
-	}
-
 	return &p.InternalDomainConfig{
 		Retention:                domainConfig.Retention,
 		EmitMetric:               domainConfig.EmitMetric,
@@ -330,6 +298,6 @@ func (m *nosqlDomainManager) fromNoSQLInternalDomainConfig(
 		HistoryArchivalURI:       domainConfig.HistoryArchivalURI,
 		VisibilityArchivalStatus: domainConfig.VisibilityArchivalStatus,
 		VisibilityArchivalURI:    domainConfig.VisibilityArchivalURI,
-		BadBinaries:              *thrift.ToBadBinaries(badBinaries),
+		BadBinaries:              domainConfig.BadBinaries,
 	}, nil
 }

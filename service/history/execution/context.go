@@ -1,4 +1,5 @@
 // Copyright (c) 2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -36,6 +37,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -298,7 +301,7 @@ func (c *contextImpl) LoadWorkflowExecutionForReplication(
 			return nil, err
 		}
 		if flushBeforeReady {
-			return nil, &workflow.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: "workflowExecutionContext counter flushBeforeReady status after loading mutable state from DB",
 			}
 		}
@@ -374,7 +377,7 @@ func (c *contextImpl) LoadWorkflowExecution(
 		return nil, err
 	}
 	if flushBeforeReady {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: "workflowExecutionContext counter flushBeforeReady status after loading mutable state from DB",
 		}
 	}
@@ -699,10 +702,21 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		}
 		newWorkflowSizeSize := newContext.GetHistorySize()
 		startEvents := newWorkflowEventsSeq[0]
-		eventsSize, err := c.PersistFirstWorkflowEvents(ctx, startEvents)
-		if err != nil {
-			return err
+		firstEventID := startEvents.Events[0].GetEventId()
+		var eventsSize int64
+		if firstEventID == common.FirstEventID {
+			eventsSize, err = c.PersistFirstWorkflowEvents(ctx, startEvents)
+			if err != nil {
+				return err
+			}
+		} else {
+			// NOTE: This is the case for reset workflow, reset workflow already inserted a branch record
+			eventsSize, err = c.PersistNonFirstWorkflowEvents(ctx, startEvents)
+			if err != nil {
+				return err
+			}
 		}
+
 		newWorkflowSizeSize += eventsSize
 		newContext.SetHistorySize(newWorkflowSizeSize)
 		newWorkflow.ExecutionStats = &persistence.ExecutionStats{
@@ -848,7 +862,7 @@ func (c *contextImpl) mergeContinueAsNewReplicationTasks(
 	}
 
 	if newWorkflowSnapshot == nil || len(newWorkflowSnapshot.ReplicationTasks) != 1 {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: "unable to find replication task from new workflow for continue as new replication",
 		}
 	}
@@ -867,7 +881,7 @@ func (c *contextImpl) mergeContinueAsNewReplicationTasks(
 		}
 	}
 	if !taskUpdated {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: "unable to find replication task from current workflow for continue as new replication",
 		}
 	}
@@ -880,7 +894,7 @@ func (c *contextImpl) PersistFirstWorkflowEvents(
 ) (int64, error) {
 
 	if len(workflowEvents.Events) == 0 {
-		return 0, &workflow.InternalServiceError{
+		return 0, &types.InternalServiceError{
 			Message: "cannot persist first workflow events with empty events",
 		}
 	}
@@ -1021,7 +1035,7 @@ func (c *contextImpl) getWorkflowExecutionWithRetry(
 	switch err.(type) {
 	case nil:
 		return resp, nil
-	case *workflow.EntityNotExistsError:
+	case *types.EntityNotExistsError:
 		// it is possible that workflow does not exists
 		return nil, err
 	default:
@@ -1133,7 +1147,7 @@ func (c *contextImpl) ReapplyEvents(
 	for _, events := range eventBatches {
 		if events.DomainID != domainID ||
 			events.WorkflowID != workflowID {
-			return &workflow.InternalServiceError{
+			return &types.InternalServiceError{
 				Message: "workflowExecutionContext encounter mismatch domainID / workflowID in events reapplication.",
 			}
 		}
@@ -1151,9 +1165,9 @@ func (c *contextImpl) ReapplyEvents(
 
 	// Reapply events only reapply to the current run.
 	// The run id is only used for reapply event de-duplication
-	execution := &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
+	execution := &types.WorkflowExecution{
+		WorkflowID: common.StringPtr(workflowID),
+		RunID:      common.StringPtr(runID),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), defaultRemoteCallTimeout)
 	defer cancel()
@@ -1172,7 +1186,7 @@ func (c *contextImpl) ReapplyEvents(
 	// The active cluster of the domain is the same as current cluster.
 	// Use the history from the same cluster to reapply events
 	reapplyEventsDataBlob, err := serializer.SerializeBatchEvents(
-		reapplyEvents,
+		thrift.ToHistoryEventArray(reapplyEvents),
 		common.EncodingTypeThriftRW,
 	)
 	if err != nil {
@@ -1183,16 +1197,16 @@ func (c *contextImpl) ReapplyEvents(
 	// Reapplication only happens in active cluster
 	sourceCluster := clientBean.GetRemoteAdminClient(activeCluster)
 	if sourceCluster == nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("cannot find cluster config %v to do reapply", activeCluster),
 		}
 	}
 	return sourceCluster.ReapplyEvents(
 		ctx,
-		&workflow.ReapplyEventsRequest{
+		&types.ReapplyEventsRequest{
 			DomainName:        common.StringPtr(domainEntry.GetInfo().Name),
 			WorkflowExecution: execution,
-			Events:            reapplyEventsDataBlob.ToThrift(),
+			Events:            thrift.ToDataBlob(reapplyEventsDataBlob.ToThrift()),
 		},
 	)
 }
@@ -1206,12 +1220,12 @@ func (c *contextImpl) isPersistenceTimeoutError(
 	switch err.(type) {
 	case nil:
 		return false
-	case *workflow.WorkflowExecutionAlreadyStartedError,
+	case *types.WorkflowExecutionAlreadyStartedError,
 		*persistence.WorkflowExecutionAlreadyStartedError,
 		*persistence.CurrentWorkflowConditionFailedError,
 		*persistence.ConditionFailedError,
-		*workflow.ServiceBusyError,
-		*workflow.LimitExceededError,
+		*types.ServiceBusyError,
+		*types.LimitExceededError,
 		*persistence.ShardOwnershipLostError:
 		return false
 	case *persistence.TimeoutError:

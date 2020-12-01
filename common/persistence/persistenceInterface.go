@@ -1,4 +1,5 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,11 +26,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/common/types"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -179,12 +179,13 @@ type (
 		DeleteMessagesBefore(ctx context.Context, messageID int64) error
 		UpdateAckLevel(ctx context.Context, messageID int64, clusterName string) error
 		GetAckLevels(ctx context.Context) (map[string]int64, error)
-		EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) (int64, error)
+		EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) error
 		ReadMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*InternalQueueMessage, []byte, error)
 		DeleteMessageFromDLQ(ctx context.Context, messageID int64) error
 		RangeDeleteMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64) error
 		UpdateDLQAckLevel(ctx context.Context, messageID int64, clusterName string) error
 		GetDLQAckLevels(ctx context.Context) (map[string]int64, error)
+		GetDLQSize(ctx context.Context) (int64, error)
 	}
 
 	// InternalQueueMessage is the message that stores in the queue
@@ -242,7 +243,7 @@ type (
 		ScheduledID       int64
 		BranchToken       []byte
 		NewRunBranchToken []byte
-		CreationTime      int64
+		CreationTime      time.Time
 	}
 
 	// InternalWorkflowExecutionInfo describes a workflow execution for Persistence Interface
@@ -258,8 +259,8 @@ type (
 		CompletionEvent                    *DataBlob
 		TaskList                           string
 		WorkflowTypeName                   string
-		WorkflowTimeout                    int32
-		DecisionStartToCloseTimeout        int32
+		WorkflowTimeout                    time.Duration
+		DecisionStartToCloseTimeout        time.Duration
 		ExecutionContext                   []byte
 		State                              int
 		CloseStatus                        int
@@ -275,15 +276,15 @@ type (
 		DecisionScheduleID                 int64
 		DecisionStartedID                  int64
 		DecisionRequestID                  string
-		DecisionTimeout                    int32
+		DecisionTimeout                    time.Duration
 		DecisionAttempt                    int64
-		DecisionStartedTimestamp           int64
-		DecisionScheduledTimestamp         int64
-		DecisionOriginalScheduledTimestamp int64
+		DecisionStartedTimestamp           time.Time
+		DecisionScheduledTimestamp         time.Time
+		DecisionOriginalScheduledTimestamp time.Time
 		CancelRequested                    bool
 		CancelRequestID                    string
 		StickyTaskList                     string
-		StickyScheduleToStartTimeout       int32
+		StickyScheduleToStartTimeout       time.Duration
 		ClientLibraryVersion               string
 		ClientFeatureVersion               string
 		ClientImpl                         string
@@ -291,15 +292,15 @@ type (
 		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
-		InitialInterval    int32
+		InitialInterval    time.Duration
 		BackoffCoefficient float64
-		MaximumInterval    int32
+		MaximumInterval    time.Duration
 		ExpirationTime     time.Time
 		MaximumAttempts    int32
 		NonRetriableErrors []string
 		BranchToken        []byte
 		CronSchedule       string
-		ExpirationSeconds  int32
+		ExpirationSeconds  time.Duration
 		Memo               map[string][]byte
 		SearchAttributes   map[string][]byte
 
@@ -311,6 +312,7 @@ type (
 	InternalWorkflowMutableState struct {
 		ExecutionInfo    *InternalWorkflowExecutionInfo
 		VersionHistories *DataBlob
+		ReplicationState *ReplicationState // TODO: remove this after all 2DC workflows complete
 		ActivityInfos    map[int64]*InternalActivityInfo
 
 		TimerInfos          map[string]*TimerInfo
@@ -336,10 +338,10 @@ type (
 		ActivityID               string
 		RequestID                string
 		Details                  []byte
-		ScheduleToStartTimeout   int32
-		ScheduleToCloseTimeout   int32
-		StartToCloseTimeout      int32
-		HeartbeatTimeout         int32
+		ScheduleToStartTimeout   time.Duration
+		ScheduleToCloseTimeout   time.Duration
+		StartToCloseTimeout      time.Duration
+		HeartbeatTimeout         time.Duration
 		CancelRequested          bool
 		CancelRequestID          int64
 		LastHeartBeatUpdatedTime time.Time
@@ -350,9 +352,9 @@ type (
 		StartedIdentity    string
 		TaskList           string
 		HasRetryPolicy     bool
-		InitialInterval    int32
+		InitialInterval    time.Duration
 		BackoffCoefficient float64
-		MaximumInterval    int32
+		MaximumInterval    time.Duration
 		ExpirationTime     time.Time
 		MaximumAttempts    int32
 		NonRetriableErrors []string
@@ -376,7 +378,7 @@ type (
 		CreateRequestID       string
 		DomainName            string
 		WorkflowTypeName      string
-		ParentClosePolicy     workflow.ParentClosePolicy
+		ParentClosePolicy     types.ParentClosePolicy
 	}
 
 	// InternalUpdateWorkflowExecutionRequest is used to update a workflow execution for Persistence Interface
@@ -437,13 +439,13 @@ type (
 		UpsertTimerInfos          []*TimerInfo
 		DeleteTimerInfos          []string
 		UpsertChildExecutionInfos []*InternalChildExecutionInfo
-		DeleteChildExecutionInfo  *int64
+		DeleteChildExecutionInfos []int64
 		UpsertRequestCancelInfos  []*RequestCancelInfo
-		DeleteRequestCancelInfo   *int64
+		DeleteRequestCancelInfos  []int64
 		UpsertSignalInfos         []*SignalInfo
-		DeleteSignalInfo          *int64
+		DeleteSignalInfos         []int64
 		UpsertSignalRequestedIDs  []string
-		DeleteSignalRequestedID   string
+		DeleteSignalRequestedIDs  []string
 		NewBufferedEvents         *DataBlob
 		ClearBufferedEvents       bool
 
@@ -498,7 +500,7 @@ type (
 		// The info for clean up data in background
 		Info string
 		// The branch to be appended
-		BranchInfo workflow.HistoryBranch
+		BranchInfo types.HistoryBranch
 		// The first eventID becomes the nodeID to be appended
 		NodeID int64
 		// The events to be appended
@@ -512,7 +514,7 @@ type (
 	// InternalGetWorkflowExecutionRequest is used to retrieve the info of a workflow execution
 	InternalGetWorkflowExecutionRequest struct {
 		DomainID  string
-		Execution workflow.WorkflowExecution
+		Execution types.WorkflowExecution
 	}
 
 	// InternalGetWorkflowExecutionResponse is the response to GetWorkflowExecution for Persistence Interface
@@ -535,7 +537,7 @@ type (
 	// InternalForkHistoryBranchRequest is used to fork a history branch
 	InternalForkHistoryBranchRequest struct {
 		// The base branch to fork from
-		ForkBranchInfo workflow.HistoryBranch
+		ForkBranchInfo types.HistoryBranch
 		// The nodeID to fork from, the new branch will start from ( inclusive ), the base branch will stop at(exclusive)
 		ForkNodeID int64
 		// branchID of the new branch
@@ -549,13 +551,13 @@ type (
 	// InternalForkHistoryBranchResponse is the response to ForkHistoryBranchRequest
 	InternalForkHistoryBranchResponse struct {
 		// branchInfo to represent the new branch
-		NewBranchInfo workflow.HistoryBranch
+		NewBranchInfo types.HistoryBranch
 	}
 
 	// InternalDeleteHistoryBranchRequest is used to remove a history branch
 	InternalDeleteHistoryBranchRequest struct {
 		// branch to be deleted
-		BranchInfo workflow.HistoryBranch
+		BranchInfo types.HistoryBranch
 		// Used in sharded data stores to identify which shard to use
 		ShardID int
 	}
@@ -617,7 +619,7 @@ type (
 	// InternalGetHistoryTreeResponse is the response to GetHistoryTree
 	InternalGetHistoryTreeResponse struct {
 		// all branches of a tree
-		Branches []*workflow.HistoryBranch
+		Branches []*types.HistoryBranch
 	}
 
 	// InternalVisibilityWorkflowExecutionInfo is visibility info for internal response
@@ -630,7 +632,7 @@ type (
 		CloseTime        time.Time
 		Status           *types.WorkflowExecutionCloseStatus
 		HistoryLength    int64
-		Memo             *types.Memo
+		Memo             *DataBlob
 		TaskList         string
 		SearchAttributes map[string]interface{}
 	}
@@ -679,11 +681,11 @@ type (
 		WorkflowID         string
 		RunID              string
 		WorkflowTypeName   string
-		StartTimestamp     int64
-		ExecutionTimestamp int64
-		WorkflowTimeout    int64
+		StartTimestamp     time.Time
+		ExecutionTimestamp time.Time
+		WorkflowTimeout    time.Duration
 		TaskID             int64
-		Memo               *types.Memo
+		Memo               *DataBlob
 		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
@@ -694,16 +696,16 @@ type (
 		WorkflowID         string
 		RunID              string
 		WorkflowTypeName   string
-		StartTimestamp     int64
-		ExecutionTimestamp int64
+		StartTimestamp     time.Time
+		ExecutionTimestamp time.Time
 		TaskID             int64
-		Memo               *types.Memo
+		Memo               *DataBlob
 		TaskList           string
 		SearchAttributes   map[string][]byte
-		CloseTimestamp     int64
+		CloseTimestamp     time.Time
 		Status             types.WorkflowExecutionCloseStatus
 		HistoryLength      int64
-		RetentionSeconds   int64
+		RetentionSeconds   time.Duration
 	}
 
 	// InternalUpsertWorkflowExecutionRequest is request to UpsertWorkflowExecution
@@ -712,11 +714,11 @@ type (
 		WorkflowID         string
 		RunID              string
 		WorkflowTypeName   string
-		StartTimestamp     int64
-		ExecutionTimestamp int64
-		WorkflowTimeout    int64
+		StartTimestamp     time.Time
+		ExecutionTimestamp time.Time
+		WorkflowTimeout    time.Duration
 		TaskID             int64
-		Memo               *types.Memo
+		Memo               *DataBlob
 		TaskList           string
 		SearchAttributes   map[string][]byte
 	}
@@ -726,9 +728,9 @@ type (
 		DomainUUID string
 		Domain     string // domain name is not persisted, but used as config filter key
 		// The earliest end of the time range
-		EarliestTime int64
+		EarliestTime time.Time
 		// The latest end of the time range
-		LatestTime int64
+		LatestTime time.Time
 		// Maximum number of workflow executions per page
 		PageSize int
 		// Token to continue reading next page of workflow executions.
@@ -738,8 +740,7 @@ type (
 
 	// InternalDomainConfig describes the domain configuration
 	InternalDomainConfig struct {
-		// NOTE: this retention is in days, not in seconds
-		Retention                int32
+		Retention                time.Duration
 		EmitMetric               bool                 // deprecated
 		ArchivalBucket           string               // deprecated
 		ArchivalStatus           types.ArchivalStatus // deprecated
@@ -747,7 +748,7 @@ type (
 		HistoryArchivalURI       string
 		VisibilityArchivalStatus types.ArchivalStatus
 		VisibilityArchivalURI    string
-		BadBinaries              types.BadBinaries
+		BadBinaries              *DataBlob
 	}
 
 	// InternalCreateDomainRequest is used to create the domain
@@ -758,7 +759,7 @@ type (
 		IsGlobalDomain    bool
 		ConfigVersion     int64
 		FailoverVersion   int64
-		LastUpdatedTime   int64
+		LastUpdatedTime   time.Time
 	}
 
 	// InternalGetDomainResponse is the response for GetDomain
@@ -771,8 +772,8 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
-		FailoverEndTime             *int64
-		LastUpdatedTime             int64
+		FailoverEndTime             *time.Time
+		LastUpdatedTime             time.Time
 		NotificationVersion         int64
 	}
 
@@ -785,8 +786,8 @@ type (
 		FailoverVersion             int64
 		FailoverNotificationVersion int64
 		PreviousFailoverVersion     int64
-		FailoverEndTime             *int64
-		LastUpdatedTime             int64
+		FailoverEndTime             *time.Time
+		LastUpdatedTime             time.Time
 		NotificationVersion         int64
 	}
 
@@ -846,7 +847,7 @@ type (
 		RunID                  string
 		TaskID                 int64
 		ScheduleID             int64
-		ScheduleToStartTimeout int32
+		ScheduleToStartTimeout time.Duration
 		Expiry                 time.Time
 		CreatedTime            time.Time
 	}

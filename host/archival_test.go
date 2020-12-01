@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -200,7 +201,7 @@ func (s *integrationSuite) isMutableStateDeleted(domainID string, execution *wor
 		ctx, cancel := context.WithTimeout(context.Background(), defaultTestPersistenceTimeout)
 		_, err := s.testCluster.testBase.ExecutionManager.GetWorkflowExecution(ctx, request)
 		cancel()
-		if _, ok := err.(*workflow.EntityNotExistsError); ok {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
 			return true
 		}
 		time.Sleep(retryBackoffTime)
@@ -335,7 +336,7 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 			s.Nil(err)
 		}
 
-		_, err = poller.PollAndProcessDecisionTask(true, false)
+		_, err = poller.PollAndProcessDecisionTask(false, false)
 		s.Nil(err)
 	}
 

@@ -43,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	pes "github.com/uber/cadence/common/persistence/elasticsearch"
@@ -81,7 +82,7 @@ type (
 		MessagingClientConfig *MessagingClientConfig
 		Persistence           persistencetests.TestBaseOptions
 		HistoryConfig         *HistoryConfig
-		ESConfig              *elasticsearch.Config
+		ESConfig              *config.ElasticSearchConfig
 		WorkerConfig          *WorkerConfig
 		MockAdminClient       map[string]adminClient.Client
 	}
@@ -146,13 +147,18 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
 	archiverBase := newArchiverBase(options.EnableArchival, logger)
 	messagingClient := getMessagingClient(options.MessagingClientConfig, logger)
-	var esClient elasticsearch.Client
+	var esClient elasticsearch.GenericClient
 	var esVisibilityMgr persistence.VisibilityManager
 	advancedVisibilityWritingMode := dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff)
 	if options.WorkerConfig.EnableIndexer {
 		advancedVisibilityWritingMode = dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOn)
 		var err error
-		esClient, err = elasticsearch.NewClient(options.ESConfig)
+		visConfig := &config.VisibilityConfig{
+			VisibilityListMaxQPS:   dynamicconfig.GetIntPropertyFilteredByDomain(2000),
+			ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(defaultTestValueOfESIndexMaxResultWindow),
+			ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		}
+		esClient, err = elasticsearch.NewGenericClient(options.ESConfig, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -162,11 +168,6 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		if err != nil {
 			return nil, err
 		}
-		visConfig := &config.VisibilityConfig{
-			VisibilityListMaxQPS:   dynamicconfig.GetIntPropertyFilteredByDomain(2000),
-			ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(defaultTestValueOfESIndexMaxResultWindow),
-			ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
-		}
 		esVisibilityStore := pes.NewElasticSearchVisibilityStore(esClient, indexName, visProducer, visConfig, logger)
 		esVisibilityMgr = persistence.NewVisibilityManagerImpl(esVisibilityStore, logger)
 	}
@@ -175,6 +176,14 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 
 	pConfig := testBase.Config()
 	pConfig.NumHistoryShards = options.HistoryConfig.NumHistoryShards
+	scope := tally.NewTestScope("integration-test", nil)
+	metricsClient := metrics.NewClient(scope, metrics.ServiceIdx(0))
+	domainReplicationQueue := domain.NewReplicationQueue(
+		testBase.DomainReplicationQueueMgr,
+		options.ClusterMetadata.CurrentClusterName,
+		metricsClient,
+		logger,
+	)
 	cadenceParams := &CadenceParams{
 		ClusterMetadata:               clusterMetadata,
 		PersistenceConfig:             pConfig,
@@ -184,7 +193,7 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		ShardMgr:                      testBase.ShardMgr,
 		HistoryV2Mgr:                  testBase.HistoryV2Mgr,
 		ExecutionMgrFactory:           testBase.ExecutionMgrFactory,
-		DomainReplicationQueue:        testBase.DomainReplicationQueue,
+		DomainReplicationQueue:        domainReplicationQueue,
 		TaskMgr:                       testBase.TaskMgr,
 		VisibilityMgr:                 visibilityMgr,
 		Logger:                        logger,

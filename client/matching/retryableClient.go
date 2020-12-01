@@ -25,9 +25,8 @@ import (
 
 	"go.uber.org/yarpc"
 
-	m "github.com/uber/cadence/.gen/go/matching"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/types"
 )
 
 var _ Client = (*retryableClient)(nil)
@@ -39,7 +38,11 @@ type retryableClient struct {
 }
 
 // NewRetryableClient creates a new instance of Client with retry policy
-func NewRetryableClient(client Client, policy backoff.RetryPolicy, isRetryable backoff.IsRetryable) Client {
+func NewRetryableClient(
+	client Client,
+	policy backoff.RetryPolicy,
+	isRetryable backoff.IsRetryable,
+) Client {
 	return &retryableClient{
 		client:      client,
 		policy:      policy,
@@ -49,8 +52,9 @@ func NewRetryableClient(client Client, policy backoff.RetryPolicy, isRetryable b
 
 func (c *retryableClient) AddActivityTask(
 	ctx context.Context,
-	addRequest *m.AddActivityTaskRequest,
-	opts ...yarpc.CallOption) error {
+	addRequest *types.AddActivityTaskRequest,
+	opts ...yarpc.CallOption,
+) error {
 	op := func() error {
 		return c.client.AddActivityTask(ctx, addRequest, opts...)
 	}
@@ -60,8 +64,9 @@ func (c *retryableClient) AddActivityTask(
 
 func (c *retryableClient) AddDecisionTask(
 	ctx context.Context,
-	addRequest *m.AddDecisionTaskRequest,
-	opts ...yarpc.CallOption) error {
+	addRequest *types.AddDecisionTaskRequest,
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		return c.client.AddDecisionTask(ctx, addRequest, opts...)
@@ -72,10 +77,11 @@ func (c *retryableClient) AddDecisionTask(
 
 func (c *retryableClient) PollForActivityTask(
 	ctx context.Context,
-	pollRequest *m.PollForActivityTaskRequest,
-	opts ...yarpc.CallOption) (*workflow.PollForActivityTaskResponse, error) {
+	pollRequest *types.MatchingPollForActivityTaskRequest,
+	opts ...yarpc.CallOption,
+) (*types.PollForActivityTaskResponse, error) {
 
-	var resp *workflow.PollForActivityTaskResponse
+	var resp *types.PollForActivityTaskResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.PollForActivityTask(ctx, pollRequest, opts...)
@@ -88,10 +94,11 @@ func (c *retryableClient) PollForActivityTask(
 
 func (c *retryableClient) PollForDecisionTask(
 	ctx context.Context,
-	pollRequest *m.PollForDecisionTaskRequest,
-	opts ...yarpc.CallOption) (*m.PollForDecisionTaskResponse, error) {
+	pollRequest *types.MatchingPollForDecisionTaskRequest,
+	opts ...yarpc.CallOption,
+) (*types.MatchingPollForDecisionTaskResponse, error) {
 
-	var resp *m.PollForDecisionTaskResponse
+	var resp *types.MatchingPollForDecisionTaskResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.PollForDecisionTask(ctx, pollRequest, opts...)
@@ -104,10 +111,11 @@ func (c *retryableClient) PollForDecisionTask(
 
 func (c *retryableClient) QueryWorkflow(
 	ctx context.Context,
-	queryRequest *m.QueryWorkflowRequest,
-	opts ...yarpc.CallOption) (*workflow.QueryWorkflowResponse, error) {
+	queryRequest *types.MatchingQueryWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (*types.QueryWorkflowResponse, error) {
 
-	var resp *workflow.QueryWorkflowResponse
+	var resp *types.QueryWorkflowResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.QueryWorkflow(ctx, queryRequest, opts...)
@@ -120,8 +128,9 @@ func (c *retryableClient) QueryWorkflow(
 
 func (c *retryableClient) RespondQueryTaskCompleted(
 	ctx context.Context,
-	request *m.RespondQueryTaskCompletedRequest,
-	opts ...yarpc.CallOption) error {
+	request *types.MatchingRespondQueryTaskCompletedRequest,
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		return c.client.RespondQueryTaskCompleted(ctx, request, opts...)
@@ -132,8 +141,9 @@ func (c *retryableClient) RespondQueryTaskCompleted(
 
 func (c *retryableClient) CancelOutstandingPoll(
 	ctx context.Context,
-	request *m.CancelOutstandingPollRequest,
-	opts ...yarpc.CallOption) error {
+	request *types.CancelOutstandingPollRequest,
+	opts ...yarpc.CallOption,
+) error {
 
 	op := func() error {
 		return c.client.CancelOutstandingPoll(ctx, request, opts...)
@@ -144,10 +154,11 @@ func (c *retryableClient) CancelOutstandingPoll(
 
 func (c *retryableClient) DescribeTaskList(
 	ctx context.Context,
-	request *m.DescribeTaskListRequest,
-	opts ...yarpc.CallOption) (*workflow.DescribeTaskListResponse, error) {
+	request *types.MatchingDescribeTaskListRequest,
+	opts ...yarpc.CallOption,
+) (*types.DescribeTaskListResponse, error) {
 
-	var resp *workflow.DescribeTaskListResponse
+	var resp *types.DescribeTaskListResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.DescribeTaskList(ctx, request, opts...)
@@ -160,10 +171,11 @@ func (c *retryableClient) DescribeTaskList(
 
 func (c *retryableClient) ListTaskListPartitions(
 	ctx context.Context,
-	request *m.ListTaskListPartitionsRequest,
-	opts ...yarpc.CallOption) (*workflow.ListTaskListPartitionsResponse, error) {
+	request *types.MatchingListTaskListPartitionsRequest,
+	opts ...yarpc.CallOption,
+) (*types.ListTaskListPartitionsResponse, error) {
 
-	var resp *workflow.ListTaskListPartitionsResponse
+	var resp *types.ListTaskListPartitionsResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.ListTaskListPartitions(ctx, request, opts...)

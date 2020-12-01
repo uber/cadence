@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -226,7 +227,7 @@ func loadMutableStateForTimerTask(
 ) (execution.MutableState, error) {
 	msBuilder, err := wfContext.LoadWorkflowExecution(ctx)
 	if err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); ok {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 			return nil, nil
 		}
@@ -272,7 +273,7 @@ func loadMutableStateForTransferTask(
 
 	msBuilder, err := wfContext.LoadWorkflowExecution(ctx)
 	if err != nil {
-		if _, ok := err.(*workflow.EntityNotExistsError); ok {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 			return nil, nil
 		}

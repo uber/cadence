@@ -1,4 +1,5 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -32,6 +33,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/codec"
+	"github.com/uber/cadence/common/types"
 )
 
 // Domain status
@@ -243,24 +245,24 @@ type (
 
 	// ShardInfo describes a shard
 	ShardInfo struct {
-		ShardID                       int                              `json:"shard_id"`
-		Owner                         string                           `json:"owner"`
-		RangeID                       int64                            `json:"range_id"`
-		StolenSinceRenew              int                              `json:"stolen_since_renew"`
-		UpdatedAt                     time.Time                        `json:"updated_at"`
-		ReplicationAckLevel           int64                            `json:"replication_ack_level"`
-		ReplicationDLQAckLevel        map[string]int64                 `json:"replication_dlq_ack_level"`
-		TransferAckLevel              int64                            `json:"transfer_ack_level"`
-		TimerAckLevel                 time.Time                        `json:"timer_ack_level"`
-		ClusterTransferAckLevel       map[string]int64                 `json:"cluster_transfer_ack_level"`
-		ClusterTimerAckLevel          map[string]time.Time             `json:"cluster_timer_ack_level"`
-		TransferProcessingQueueStates *DataBlob                        `json:"transfer_processing_queue_states"`
-		TimerProcessingQueueStates    *DataBlob                        `json:"timer_processing_queue_states"`
-		TransferFailoverLevels        map[string]TransferFailoverLevel // uuid -> TransferFailoverLevel
-		TimerFailoverLevels           map[string]TimerFailoverLevel    // uuid -> TimerFailoverLevel
-		ClusterReplicationLevel       map[string]int64                 `json:"cluster_replication_level"`
-		DomainNotificationVersion     int64                            `json:"domain_notification_version"`
-		PendingFailoverMarkers        *DataBlob                        `json:"pending_failover_markers"`
+		ShardID                       int                               `json:"shard_id"`
+		Owner                         string                            `json:"owner"`
+		RangeID                       int64                             `json:"range_id"`
+		StolenSinceRenew              int                               `json:"stolen_since_renew"`
+		UpdatedAt                     time.Time                         `json:"updated_at"`
+		ReplicationAckLevel           int64                             `json:"replication_ack_level"`
+		ReplicationDLQAckLevel        map[string]int64                  `json:"replication_dlq_ack_level"`
+		TransferAckLevel              int64                             `json:"transfer_ack_level"`
+		TimerAckLevel                 time.Time                         `json:"timer_ack_level"`
+		ClusterTransferAckLevel       map[string]int64                  `json:"cluster_transfer_ack_level"`
+		ClusterTimerAckLevel          map[string]time.Time              `json:"cluster_timer_ack_level"`
+		TransferProcessingQueueStates *types.ProcessingQueueStates      `json:"transfer_processing_queue_states"`
+		TimerProcessingQueueStates    *types.ProcessingQueueStates      `json:"timer_processing_queue_states"`
+		TransferFailoverLevels        map[string]TransferFailoverLevel  // uuid -> TransferFailoverLevel
+		TimerFailoverLevels           map[string]TimerFailoverLevel     // uuid -> TimerFailoverLevel
+		ClusterReplicationLevel       map[string]int64                  `json:"cluster_replication_level"`
+		DomainNotificationVersion     int64                             `json:"domain_notification_version"`
+		PendingFailoverMarkers        []*types.FailoverMarkerAttributes `json:"pending_failover_markers"`
 	}
 
 	// TransferFailoverLevel contains corresponding start / end level
@@ -344,6 +346,17 @@ type (
 	// ExecutionStats is the statistics about workflow execution
 	ExecutionStats struct {
 		HistorySize int64
+	}
+
+	// ReplicationState represents mutable state information for global domains.
+	// This information is used by replication protocol when applying events from remote clusters
+	// TODO: remove this struct after all 2DC workflows complete
+	ReplicationState struct {
+		CurrentVersion      int64
+		StartVersion        int64
+		LastWriteVersion    int64
+		LastWriteEventID    int64
+		LastReplicationInfo map[string]*ReplicationInfo
 	}
 
 	// CurrentWorkflowExecution describes a current execution record
@@ -646,6 +659,7 @@ type (
 		ExecutionStats      *ExecutionStats
 		BufferedEvents      []*workflow.HistoryEvent
 		VersionHistories    *VersionHistories
+		ReplicationState    *ReplicationState // TODO: remove this after all 2DC workflows complete
 		Checksum            checksum.Checksum
 	}
 
@@ -911,13 +925,13 @@ type (
 		UpsertTimerInfos          []*TimerInfo
 		DeleteTimerInfos          []string
 		UpsertChildExecutionInfos []*ChildExecutionInfo
-		DeleteChildExecutionInfo  *int64
+		DeleteChildExecutionInfos []int64
 		UpsertRequestCancelInfos  []*RequestCancelInfo
-		DeleteRequestCancelInfo   *int64
+		DeleteRequestCancelInfos  []int64
 		UpsertSignalInfos         []*SignalInfo
-		DeleteSignalInfo          *int64
+		DeleteSignalInfos         []int64
 		UpsertSignalRequestedIDs  []string
-		DeleteSignalRequestedID   string
+		DeleteSignalRequestedIDs  []string
 		NewBufferedEvents         []*workflow.HistoryEvent
 		ClearBufferedEvents       bool
 
@@ -1114,7 +1128,7 @@ type (
 
 	// CreateTaskInfo describes a task to be created in CreateTasksRequest
 	CreateTaskInfo struct {
-		Execution workflow.WorkflowExecution
+		Execution types.WorkflowExecution
 		Data      *TaskInfo
 		TaskID    int64
 	}
@@ -1625,12 +1639,13 @@ type (
 		DeleteMessagesBefore(ctx context.Context, messageID int64) error
 		UpdateAckLevel(ctx context.Context, messageID int64, clusterName string) error
 		GetAckLevels(ctx context.Context) (map[string]int64, error)
-		EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) (int64, error)
+		EnqueueMessageToDLQ(ctx context.Context, messagePayload []byte) error
 		ReadMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*QueueMessage, []byte, error)
 		DeleteMessageFromDLQ(ctx context.Context, messageID int64) error
 		RangeDeleteMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64) error
 		UpdateDLQAckLevel(ctx context.Context, messageID int64, clusterName string) error
 		GetDLQAckLevels(ctx context.Context) (map[string]int64, error)
+		GetDLQSize(ctx context.Context) (int64, error)
 	}
 
 	// QueueMessage is the message that stores in the queue

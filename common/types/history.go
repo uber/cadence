@@ -22,8 +22,8 @@ package types
 
 // DescribeMutableStateRequest is an internal type (TBD...)
 type DescribeMutableStateRequest struct {
-	DomainUUID *string
-	Execution  *WorkflowExecution
+	DomainUUID *string            `json:"domainUUID,omitempty"`
+	Execution  *WorkflowExecution `json:"execution,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -44,8 +44,8 @@ func (v *DescribeMutableStateRequest) GetExecution() (o *WorkflowExecution) {
 
 // DescribeMutableStateResponse is an internal type (TBD...)
 type DescribeMutableStateResponse struct {
-	MutableStateInCache    *string
-	MutableStateInDatabase *string
+	MutableStateInCache    *string `json:"mutableStateInCache,omitempty"`
+	MutableStateInDatabase *string `json:"mutableStateInDatabase,omitempty"`
 }
 
 // GetMutableStateInCache is an internal getter (TBD...)
@@ -66,8 +66,8 @@ func (v *DescribeMutableStateResponse) GetMutableStateInDatabase() (o string) {
 
 // HistoryDescribeWorkflowExecutionRequest is an internal type (TBD...)
 type HistoryDescribeWorkflowExecutionRequest struct {
-	DomainUUID *string
-	Request    *DescribeWorkflowExecutionRequest
+	DomainUUID *string                           `json:"domainUUID,omitempty"`
+	Request    *DescribeWorkflowExecutionRequest `json:"request,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -88,8 +88,8 @@ func (v *HistoryDescribeWorkflowExecutionRequest) GetRequest() (o *DescribeWorkf
 
 // DomainFilter is an internal type (TBD...)
 type DomainFilter struct {
-	DomainIDs    []string
-	ReverseMatch *bool
+	DomainIDs    []string `json:"domainIDs,omitempty"`
+	ReverseMatch *bool    `json:"reverseMatch,omitempty"`
 }
 
 // GetDomainIDs is an internal getter (TBD...)
@@ -110,7 +110,7 @@ func (v *DomainFilter) GetReverseMatch() (o bool) {
 
 // EventAlreadyStartedError is an internal type (TBD...)
 type EventAlreadyStartedError struct {
-	Message string
+	Message string `json:"message,required"`
 }
 
 // GetMessage is an internal getter (TBD...)
@@ -123,8 +123,8 @@ func (v *EventAlreadyStartedError) GetMessage() (o string) {
 
 // FailoverMarkerToken is an internal type (TBD...)
 type FailoverMarkerToken struct {
-	ShardIDs       []int32
-	FailoverMarker *FailoverMarkerAttributes
+	ShardIDs       []int32                   `json:"shardIDs,omitempty"`
+	FailoverMarker *FailoverMarkerAttributes `json:"failoverMarker,omitempty"`
 }
 
 // GetShardIDs is an internal getter (TBD...)
@@ -145,10 +145,10 @@ func (v *FailoverMarkerToken) GetFailoverMarker() (o *FailoverMarkerAttributes) 
 
 // GetMutableStateRequest is an internal type (TBD...)
 type GetMutableStateRequest struct {
-	DomainUUID          *string
-	Execution           *WorkflowExecution
-	ExpectedNextEventID *int64
-	CurrentBranchToken  []byte
+	DomainUUID          *string            `json:"domainUUID,omitempty"`
+	Execution           *WorkflowExecution `json:"execution,omitempty"`
+	ExpectedNextEventID *int64             `json:"expectedNextEventId,omitempty"`
+	CurrentBranchToken  []byte             `json:"currentBranchToken,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -185,24 +185,24 @@ func (v *GetMutableStateRequest) GetCurrentBranchToken() (o []byte) {
 
 // GetMutableStateResponse is an internal type (TBD...)
 type GetMutableStateResponse struct {
-	Execution                            *WorkflowExecution
-	WorkflowType                         *WorkflowType
-	NextEventID                          *int64
-	PreviousStartedEventID               *int64
-	LastFirstEventID                     *int64
-	TaskList                             *TaskList
-	StickyTaskList                       *TaskList
-	ClientLibraryVersion                 *string
-	ClientFeatureVersion                 *string
-	ClientImpl                           *string
-	IsWorkflowRunning                    *bool
-	StickyTaskListScheduleToStartTimeout *int32
-	EventStoreVersion                    *int32
-	CurrentBranchToken                   []byte
-	WorkflowState                        *int32
-	WorkflowCloseState                   *int32
-	VersionHistories                     *VersionHistories
-	IsStickyTaskListEnabled              *bool
+	Execution                            *WorkflowExecution `json:"execution,omitempty"`
+	WorkflowType                         *WorkflowType      `json:"workflowType,omitempty"`
+	NextEventID                          *int64             `json:"NextEventId,omitempty"`
+	PreviousStartedEventID               *int64             `json:"PreviousStartedEventId,omitempty"`
+	LastFirstEventID                     *int64             `json:"LastFirstEventId,omitempty"`
+	TaskList                             *TaskList          `json:"taskList,omitempty"`
+	StickyTaskList                       *TaskList          `json:"stickyTaskList,omitempty"`
+	ClientLibraryVersion                 *string            `json:"clientLibraryVersion,omitempty"`
+	ClientFeatureVersion                 *string            `json:"clientFeatureVersion,omitempty"`
+	ClientImpl                           *string            `json:"clientImpl,omitempty"`
+	IsWorkflowRunning                    *bool              `json:"isWorkflowRunning,omitempty"`
+	StickyTaskListScheduleToStartTimeout *int32             `json:"stickyTaskListScheduleToStartTimeout,omitempty"`
+	EventStoreVersion                    *int32             `json:"eventStoreVersion,omitempty"`
+	CurrentBranchToken                   []byte             `json:"currentBranchToken,omitempty"`
+	WorkflowState                        *int32             `json:"workflowState,omitempty"`
+	WorkflowCloseState                   *int32             `json:"workflowCloseState,omitempty"`
+	VersionHistories                     *VersionHistories  `json:"versionHistories,omitempty"`
+	IsStickyTaskListEnabled              *bool              `json:"isStickyTaskListEnabled,omitempty"`
 }
 
 // GetExecution is an internal getter (TBD...)
@@ -349,28 +349,28 @@ func (v *GetMutableStateResponse) GetIsStickyTaskListEnabled() (o bool) {
 	return
 }
 
-// HistoryService_CloseShard_Args is an internal type (TBD...)
-type HistoryService_CloseShard_Args struct {
-	Request *CloseShardRequest
+// HistoryServiceCloseShardArgs is an internal type (TBD...)
+type HistoryServiceCloseShardArgs struct {
+	Request *CloseShardRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
-func (v *HistoryService_CloseShard_Args) GetRequest() (o *CloseShardRequest) {
+func (v *HistoryServiceCloseShardArgs) GetRequest() (o *CloseShardRequest) {
 	if v != nil && v.Request != nil {
 		return v.Request
 	}
 	return
 }
 
-// HistoryService_CloseShard_Result is an internal type (TBD...)
-type HistoryService_CloseShard_Result struct {
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	AccessDeniedError    *AccessDeniedError
+// HistoryServiceCloseShardResult is an internal type (TBD...)
+type HistoryServiceCloseShardResult struct {
+	BadRequestError      *BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError `json:"internalServiceError,omitempty"`
+	AccessDeniedError    *AccessDeniedError    `json:"accessDeniedError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_CloseShard_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceCloseShardResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -378,7 +378,7 @@ func (v *HistoryService_CloseShard_Result) GetBadRequestError() (o *BadRequestEr
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_CloseShard_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceCloseShardResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -386,36 +386,36 @@ func (v *HistoryService_CloseShard_Result) GetInternalServiceError() (o *Interna
 }
 
 // GetAccessDeniedError is an internal getter (TBD...)
-func (v *HistoryService_CloseShard_Result) GetAccessDeniedError() (o *AccessDeniedError) {
+func (v *HistoryServiceCloseShardResult) GetAccessDeniedError() (o *AccessDeniedError) {
 	if v != nil && v.AccessDeniedError != nil {
 		return v.AccessDeniedError
 	}
 	return
 }
 
-// HistoryService_DescribeHistoryHost_Args is an internal type (TBD...)
-type HistoryService_DescribeHistoryHost_Args struct {
-	Request *DescribeHistoryHostRequest
+// HistoryServiceDescribeHistoryHostArgs is an internal type (TBD...)
+type HistoryServiceDescribeHistoryHostArgs struct {
+	Request *DescribeHistoryHostRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
-func (v *HistoryService_DescribeHistoryHost_Args) GetRequest() (o *DescribeHistoryHostRequest) {
+func (v *HistoryServiceDescribeHistoryHostArgs) GetRequest() (o *DescribeHistoryHostRequest) {
 	if v != nil && v.Request != nil {
 		return v.Request
 	}
 	return
 }
 
-// HistoryService_DescribeHistoryHost_Result is an internal type (TBD...)
-type HistoryService_DescribeHistoryHost_Result struct {
-	Success              *DescribeHistoryHostResponse
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	AccessDeniedError    *AccessDeniedError
+// HistoryServiceDescribeHistoryHostResult is an internal type (TBD...)
+type HistoryServiceDescribeHistoryHostResult struct {
+	Success              *DescribeHistoryHostResponse `json:"success,omitempty"`
+	BadRequestError      *BadRequestError             `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError        `json:"internalServiceError,omitempty"`
+	AccessDeniedError    *AccessDeniedError           `json:"accessDeniedError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_DescribeHistoryHost_Result) GetSuccess() (o *DescribeHistoryHostResponse) {
+func (v *HistoryServiceDescribeHistoryHostResult) GetSuccess() (o *DescribeHistoryHostResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -423,7 +423,7 @@ func (v *HistoryService_DescribeHistoryHost_Result) GetSuccess() (o *DescribeHis
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_DescribeHistoryHost_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceDescribeHistoryHostResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -431,7 +431,7 @@ func (v *HistoryService_DescribeHistoryHost_Result) GetBadRequestError() (o *Bad
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_DescribeHistoryHost_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceDescribeHistoryHostResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -439,39 +439,39 @@ func (v *HistoryService_DescribeHistoryHost_Result) GetInternalServiceError() (o
 }
 
 // GetAccessDeniedError is an internal getter (TBD...)
-func (v *HistoryService_DescribeHistoryHost_Result) GetAccessDeniedError() (o *AccessDeniedError) {
+func (v *HistoryServiceDescribeHistoryHostResult) GetAccessDeniedError() (o *AccessDeniedError) {
 	if v != nil && v.AccessDeniedError != nil {
 		return v.AccessDeniedError
 	}
 	return
 }
 
-// HistoryService_DescribeMutableState_Args is an internal type (TBD...)
-type HistoryService_DescribeMutableState_Args struct {
-	Request *DescribeMutableStateRequest
+// HistoryServiceDescribeMutableStateArgs is an internal type (TBD...)
+type HistoryServiceDescribeMutableStateArgs struct {
+	Request *DescribeMutableStateRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
-func (v *HistoryService_DescribeMutableState_Args) GetRequest() (o *DescribeMutableStateRequest) {
+func (v *HistoryServiceDescribeMutableStateArgs) GetRequest() (o *DescribeMutableStateRequest) {
 	if v != nil && v.Request != nil {
 		return v.Request
 	}
 	return
 }
 
-// HistoryService_DescribeMutableState_Result is an internal type (TBD...)
-type HistoryService_DescribeMutableState_Result struct {
-	Success                 *DescribeMutableStateResponse
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	AccessDeniedError       *AccessDeniedError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	LimitExceededError      *LimitExceededError
+// HistoryServiceDescribeMutableStateResult is an internal type (TBD...)
+type HistoryServiceDescribeMutableStateResult struct {
+	Success                 *DescribeMutableStateResponse `json:"success,omitempty"`
+	BadRequestError         *BadRequestError              `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError         `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError         `json:"entityNotExistError,omitempty"`
+	AccessDeniedError       *AccessDeniedError            `json:"accessDeniedError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError      `json:"shardOwnershipLostError,omitempty"`
+	LimitExceededError      *LimitExceededError           `json:"limitExceededError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_DescribeMutableState_Result) GetSuccess() (o *DescribeMutableStateResponse) {
+func (v *HistoryServiceDescribeMutableStateResult) GetSuccess() (o *DescribeMutableStateResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -479,7 +479,7 @@ func (v *HistoryService_DescribeMutableState_Result) GetSuccess() (o *DescribeMu
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_DescribeMutableState_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceDescribeMutableStateResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -487,7 +487,7 @@ func (v *HistoryService_DescribeMutableState_Result) GetBadRequestError() (o *Ba
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_DescribeMutableState_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceDescribeMutableStateResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -495,7 +495,7 @@ func (v *HistoryService_DescribeMutableState_Result) GetInternalServiceError() (
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_DescribeMutableState_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceDescribeMutableStateResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -503,7 +503,7 @@ func (v *HistoryService_DescribeMutableState_Result) GetEntityNotExistError() (o
 }
 
 // GetAccessDeniedError is an internal getter (TBD...)
-func (v *HistoryService_DescribeMutableState_Result) GetAccessDeniedError() (o *AccessDeniedError) {
+func (v *HistoryServiceDescribeMutableStateResult) GetAccessDeniedError() (o *AccessDeniedError) {
 	if v != nil && v.AccessDeniedError != nil {
 		return v.AccessDeniedError
 	}
@@ -511,7 +511,7 @@ func (v *HistoryService_DescribeMutableState_Result) GetAccessDeniedError() (o *
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_DescribeMutableState_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceDescribeMutableStateResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -519,36 +519,36 @@ func (v *HistoryService_DescribeMutableState_Result) GetShardOwnershipLostError(
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_DescribeMutableState_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceDescribeMutableStateResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
 	return
 }
 
-// HistoryService_DescribeQueue_Args is an internal type (TBD...)
-type HistoryService_DescribeQueue_Args struct {
-	Request *DescribeQueueRequest
+// HistoryServiceDescribeQueueArgs is an internal type (TBD...)
+type HistoryServiceDescribeQueueArgs struct {
+	Request *DescribeQueueRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
-func (v *HistoryService_DescribeQueue_Args) GetRequest() (o *DescribeQueueRequest) {
+func (v *HistoryServiceDescribeQueueArgs) GetRequest() (o *DescribeQueueRequest) {
 	if v != nil && v.Request != nil {
 		return v.Request
 	}
 	return
 }
 
-// HistoryService_DescribeQueue_Result is an internal type (TBD...)
-type HistoryService_DescribeQueue_Result struct {
-	Success              *DescribeQueueResponse
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	AccessDeniedError    *AccessDeniedError
+// HistoryServiceDescribeQueueResult is an internal type (TBD...)
+type HistoryServiceDescribeQueueResult struct {
+	Success              *DescribeQueueResponse `json:"success,omitempty"`
+	BadRequestError      *BadRequestError       `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError  `json:"internalServiceError,omitempty"`
+	AccessDeniedError    *AccessDeniedError     `json:"accessDeniedError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_DescribeQueue_Result) GetSuccess() (o *DescribeQueueResponse) {
+func (v *HistoryServiceDescribeQueueResult) GetSuccess() (o *DescribeQueueResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -556,7 +556,7 @@ func (v *HistoryService_DescribeQueue_Result) GetSuccess() (o *DescribeQueueResp
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_DescribeQueue_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceDescribeQueueResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -564,7 +564,7 @@ func (v *HistoryService_DescribeQueue_Result) GetBadRequestError() (o *BadReques
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_DescribeQueue_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceDescribeQueueResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -572,39 +572,39 @@ func (v *HistoryService_DescribeQueue_Result) GetInternalServiceError() (o *Inte
 }
 
 // GetAccessDeniedError is an internal getter (TBD...)
-func (v *HistoryService_DescribeQueue_Result) GetAccessDeniedError() (o *AccessDeniedError) {
+func (v *HistoryServiceDescribeQueueResult) GetAccessDeniedError() (o *AccessDeniedError) {
 	if v != nil && v.AccessDeniedError != nil {
 		return v.AccessDeniedError
 	}
 	return
 }
 
-// HistoryService_DescribeWorkflowExecution_Args is an internal type (TBD...)
-type HistoryService_DescribeWorkflowExecution_Args struct {
-	DescribeRequest *HistoryDescribeWorkflowExecutionRequest
+// HistoryServiceDescribeWorkflowExecutionArgs is an internal type (TBD...)
+type HistoryServiceDescribeWorkflowExecutionArgs struct {
+	DescribeRequest *HistoryDescribeWorkflowExecutionRequest `json:"describeRequest,omitempty"`
 }
 
 // GetDescribeRequest is an internal getter (TBD...)
-func (v *HistoryService_DescribeWorkflowExecution_Args) GetDescribeRequest() (o *HistoryDescribeWorkflowExecutionRequest) {
+func (v *HistoryServiceDescribeWorkflowExecutionArgs) GetDescribeRequest() (o *HistoryDescribeWorkflowExecutionRequest) {
 	if v != nil && v.DescribeRequest != nil {
 		return v.DescribeRequest
 	}
 	return
 }
 
-// HistoryService_DescribeWorkflowExecution_Result is an internal type (TBD...)
-type HistoryService_DescribeWorkflowExecution_Result struct {
-	Success                 *DescribeWorkflowExecutionResponse
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	LimitExceededError      *LimitExceededError
-	ServiceBusyError        *ServiceBusyError
+// HistoryServiceDescribeWorkflowExecutionResult is an internal type (TBD...)
+type HistoryServiceDescribeWorkflowExecutionResult struct {
+	Success                 *DescribeWorkflowExecutionResponse `json:"success,omitempty"`
+	BadRequestError         *BadRequestError                   `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError              `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError              `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError           `json:"shardOwnershipLostError,omitempty"`
+	LimitExceededError      *LimitExceededError                `json:"limitExceededError,omitempty"`
+	ServiceBusyError        *ServiceBusyError                  `json:"serviceBusyError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_DescribeWorkflowExecution_Result) GetSuccess() (o *DescribeWorkflowExecutionResponse) {
+func (v *HistoryServiceDescribeWorkflowExecutionResult) GetSuccess() (o *DescribeWorkflowExecutionResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -612,7 +612,7 @@ func (v *HistoryService_DescribeWorkflowExecution_Result) GetSuccess() (o *Descr
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_DescribeWorkflowExecution_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceDescribeWorkflowExecutionResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -620,7 +620,7 @@ func (v *HistoryService_DescribeWorkflowExecution_Result) GetBadRequestError() (
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_DescribeWorkflowExecution_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceDescribeWorkflowExecutionResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -628,7 +628,7 @@ func (v *HistoryService_DescribeWorkflowExecution_Result) GetInternalServiceErro
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_DescribeWorkflowExecution_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceDescribeWorkflowExecutionResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -636,7 +636,7 @@ func (v *HistoryService_DescribeWorkflowExecution_Result) GetEntityNotExistError
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_DescribeWorkflowExecution_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceDescribeWorkflowExecutionResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -644,7 +644,7 @@ func (v *HistoryService_DescribeWorkflowExecution_Result) GetShardOwnershipLostE
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_DescribeWorkflowExecution_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceDescribeWorkflowExecutionResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -652,37 +652,37 @@ func (v *HistoryService_DescribeWorkflowExecution_Result) GetLimitExceededError(
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_DescribeWorkflowExecution_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceDescribeWorkflowExecutionResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_GetDLQReplicationMessages_Args is an internal type (TBD...)
-type HistoryService_GetDLQReplicationMessages_Args struct {
-	Request *GetDLQReplicationMessagesRequest
+// HistoryServiceGetDLQReplicationMessagesArgs is an internal type (TBD...)
+type HistoryServiceGetDLQReplicationMessagesArgs struct {
+	Request *GetDLQReplicationMessagesRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
-func (v *HistoryService_GetDLQReplicationMessages_Args) GetRequest() (o *GetDLQReplicationMessagesRequest) {
+func (v *HistoryServiceGetDLQReplicationMessagesArgs) GetRequest() (o *GetDLQReplicationMessagesRequest) {
 	if v != nil && v.Request != nil {
 		return v.Request
 	}
 	return
 }
 
-// HistoryService_GetDLQReplicationMessages_Result is an internal type (TBD...)
-type HistoryService_GetDLQReplicationMessages_Result struct {
-	Success              *GetDLQReplicationMessagesResponse
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	ServiceBusyError     *ServiceBusyError
-	EntityNotExistError  *EntityNotExistsError
+// HistoryServiceGetDLQReplicationMessagesResult is an internal type (TBD...)
+type HistoryServiceGetDLQReplicationMessagesResult struct {
+	Success              *GetDLQReplicationMessagesResponse `json:"success,omitempty"`
+	BadRequestError      *BadRequestError                   `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError              `json:"internalServiceError,omitempty"`
+	ServiceBusyError     *ServiceBusyError                  `json:"serviceBusyError,omitempty"`
+	EntityNotExistError  *EntityNotExistsError              `json:"entityNotExistError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_GetDLQReplicationMessages_Result) GetSuccess() (o *GetDLQReplicationMessagesResponse) {
+func (v *HistoryServiceGetDLQReplicationMessagesResult) GetSuccess() (o *GetDLQReplicationMessagesResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -690,7 +690,7 @@ func (v *HistoryService_GetDLQReplicationMessages_Result) GetSuccess() (o *GetDL
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_GetDLQReplicationMessages_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceGetDLQReplicationMessagesResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -698,7 +698,7 @@ func (v *HistoryService_GetDLQReplicationMessages_Result) GetBadRequestError() (
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_GetDLQReplicationMessages_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceGetDLQReplicationMessagesResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -706,7 +706,7 @@ func (v *HistoryService_GetDLQReplicationMessages_Result) GetInternalServiceErro
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_GetDLQReplicationMessages_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceGetDLQReplicationMessagesResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -714,40 +714,40 @@ func (v *HistoryService_GetDLQReplicationMessages_Result) GetServiceBusyError() 
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_GetDLQReplicationMessages_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceGetDLQReplicationMessagesResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
 	return
 }
 
-// HistoryService_GetMutableState_Args is an internal type (TBD...)
-type HistoryService_GetMutableState_Args struct {
-	GetRequest *GetMutableStateRequest
+// HistoryServiceGetMutableStateArgs is an internal type (TBD...)
+type HistoryServiceGetMutableStateArgs struct {
+	GetRequest *GetMutableStateRequest `json:"getRequest,omitempty"`
 }
 
 // GetGetRequest is an internal getter (TBD...)
-func (v *HistoryService_GetMutableState_Args) GetGetRequest() (o *GetMutableStateRequest) {
+func (v *HistoryServiceGetMutableStateArgs) GetGetRequest() (o *GetMutableStateRequest) {
 	if v != nil && v.GetRequest != nil {
 		return v.GetRequest
 	}
 	return
 }
 
-// HistoryService_GetMutableState_Result is an internal type (TBD...)
-type HistoryService_GetMutableState_Result struct {
-	Success                   *GetMutableStateResponse
-	BadRequestError           *BadRequestError
-	InternalServiceError      *InternalServiceError
-	EntityNotExistError       *EntityNotExistsError
-	ShardOwnershipLostError   *ShardOwnershipLostError
-	LimitExceededError        *LimitExceededError
-	ServiceBusyError          *ServiceBusyError
-	CurrentBranchChangedError *CurrentBranchChangedError
+// HistoryServiceGetMutableStateResult is an internal type (TBD...)
+type HistoryServiceGetMutableStateResult struct {
+	Success                   *GetMutableStateResponse   `json:"success,omitempty"`
+	BadRequestError           *BadRequestError           `json:"badRequestError,omitempty"`
+	InternalServiceError      *InternalServiceError      `json:"internalServiceError,omitempty"`
+	EntityNotExistError       *EntityNotExistsError      `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError   *ShardOwnershipLostError   `json:"shardOwnershipLostError,omitempty"`
+	LimitExceededError        *LimitExceededError        `json:"limitExceededError,omitempty"`
+	ServiceBusyError          *ServiceBusyError          `json:"serviceBusyError,omitempty"`
+	CurrentBranchChangedError *CurrentBranchChangedError `json:"currentBranchChangedError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_GetMutableState_Result) GetSuccess() (o *GetMutableStateResponse) {
+func (v *HistoryServiceGetMutableStateResult) GetSuccess() (o *GetMutableStateResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -755,7 +755,7 @@ func (v *HistoryService_GetMutableState_Result) GetSuccess() (o *GetMutableState
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_GetMutableState_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceGetMutableStateResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -763,7 +763,7 @@ func (v *HistoryService_GetMutableState_Result) GetBadRequestError() (o *BadRequ
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_GetMutableState_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceGetMutableStateResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -771,7 +771,7 @@ func (v *HistoryService_GetMutableState_Result) GetInternalServiceError() (o *In
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_GetMutableState_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceGetMutableStateResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -779,7 +779,7 @@ func (v *HistoryService_GetMutableState_Result) GetEntityNotExistError() (o *Ent
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_GetMutableState_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceGetMutableStateResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -787,7 +787,7 @@ func (v *HistoryService_GetMutableState_Result) GetShardOwnershipLostError() (o 
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_GetMutableState_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceGetMutableStateResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -795,7 +795,7 @@ func (v *HistoryService_GetMutableState_Result) GetLimitExceededError() (o *Limi
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_GetMutableState_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceGetMutableStateResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -803,38 +803,38 @@ func (v *HistoryService_GetMutableState_Result) GetServiceBusyError() (o *Servic
 }
 
 // GetCurrentBranchChangedError is an internal getter (TBD...)
-func (v *HistoryService_GetMutableState_Result) GetCurrentBranchChangedError() (o *CurrentBranchChangedError) {
+func (v *HistoryServiceGetMutableStateResult) GetCurrentBranchChangedError() (o *CurrentBranchChangedError) {
 	if v != nil && v.CurrentBranchChangedError != nil {
 		return v.CurrentBranchChangedError
 	}
 	return
 }
 
-// HistoryService_GetReplicationMessages_Args is an internal type (TBD...)
-type HistoryService_GetReplicationMessages_Args struct {
-	Request *GetReplicationMessagesRequest
+// HistoryServiceGetReplicationMessagesArgs is an internal type (TBD...)
+type HistoryServiceGetReplicationMessagesArgs struct {
+	Request *GetReplicationMessagesRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
-func (v *HistoryService_GetReplicationMessages_Args) GetRequest() (o *GetReplicationMessagesRequest) {
+func (v *HistoryServiceGetReplicationMessagesArgs) GetRequest() (o *GetReplicationMessagesRequest) {
 	if v != nil && v.Request != nil {
 		return v.Request
 	}
 	return
 }
 
-// HistoryService_GetReplicationMessages_Result is an internal type (TBD...)
-type HistoryService_GetReplicationMessages_Result struct {
-	Success                        *GetReplicationMessagesResponse
-	BadRequestError                *BadRequestError
-	InternalServiceError           *InternalServiceError
-	LimitExceededError             *LimitExceededError
-	ServiceBusyError               *ServiceBusyError
-	ClientVersionNotSupportedError *ClientVersionNotSupportedError
+// HistoryServiceGetReplicationMessagesResult is an internal type (TBD...)
+type HistoryServiceGetReplicationMessagesResult struct {
+	Success                        *GetReplicationMessagesResponse `json:"success,omitempty"`
+	BadRequestError                *BadRequestError                `json:"badRequestError,omitempty"`
+	InternalServiceError           *InternalServiceError           `json:"internalServiceError,omitempty"`
+	LimitExceededError             *LimitExceededError             `json:"limitExceededError,omitempty"`
+	ServiceBusyError               *ServiceBusyError               `json:"serviceBusyError,omitempty"`
+	ClientVersionNotSupportedError *ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_GetReplicationMessages_Result) GetSuccess() (o *GetReplicationMessagesResponse) {
+func (v *HistoryServiceGetReplicationMessagesResult) GetSuccess() (o *GetReplicationMessagesResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -842,7 +842,7 @@ func (v *HistoryService_GetReplicationMessages_Result) GetSuccess() (o *GetRepli
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_GetReplicationMessages_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceGetReplicationMessagesResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -850,7 +850,7 @@ func (v *HistoryService_GetReplicationMessages_Result) GetBadRequestError() (o *
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_GetReplicationMessages_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceGetReplicationMessagesResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -858,7 +858,7 @@ func (v *HistoryService_GetReplicationMessages_Result) GetInternalServiceError()
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_GetReplicationMessages_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceGetReplicationMessagesResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -866,7 +866,7 @@ func (v *HistoryService_GetReplicationMessages_Result) GetLimitExceededError() (
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_GetReplicationMessages_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceGetReplicationMessagesResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -874,38 +874,38 @@ func (v *HistoryService_GetReplicationMessages_Result) GetServiceBusyError() (o 
 }
 
 // GetClientVersionNotSupportedError is an internal getter (TBD...)
-func (v *HistoryService_GetReplicationMessages_Result) GetClientVersionNotSupportedError() (o *ClientVersionNotSupportedError) {
+func (v *HistoryServiceGetReplicationMessagesResult) GetClientVersionNotSupportedError() (o *ClientVersionNotSupportedError) {
 	if v != nil && v.ClientVersionNotSupportedError != nil {
 		return v.ClientVersionNotSupportedError
 	}
 	return
 }
 
-// HistoryService_MergeDLQMessages_Args is an internal type (TBD...)
-type HistoryService_MergeDLQMessages_Args struct {
-	Request *MergeDLQMessagesRequest
+// HistoryServiceMergeDLQMessagesArgs is an internal type (TBD...)
+type HistoryServiceMergeDLQMessagesArgs struct {
+	Request *MergeDLQMessagesRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
-func (v *HistoryService_MergeDLQMessages_Args) GetRequest() (o *MergeDLQMessagesRequest) {
+func (v *HistoryServiceMergeDLQMessagesArgs) GetRequest() (o *MergeDLQMessagesRequest) {
 	if v != nil && v.Request != nil {
 		return v.Request
 	}
 	return
 }
 
-// HistoryService_MergeDLQMessages_Result is an internal type (TBD...)
-type HistoryService_MergeDLQMessages_Result struct {
-	Success                 *MergeDLQMessagesResponse
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	ServiceBusyError        *ServiceBusyError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
+// HistoryServiceMergeDLQMessagesResult is an internal type (TBD...)
+type HistoryServiceMergeDLQMessagesResult struct {
+	Success                 *MergeDLQMessagesResponse `json:"success,omitempty"`
+	BadRequestError         *BadRequestError          `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError     `json:"internalServiceError,omitempty"`
+	ServiceBusyError        *ServiceBusyError         `json:"serviceBusyError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError     `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError  `json:"shardOwnershipLostError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_MergeDLQMessages_Result) GetSuccess() (o *MergeDLQMessagesResponse) {
+func (v *HistoryServiceMergeDLQMessagesResult) GetSuccess() (o *MergeDLQMessagesResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -913,7 +913,7 @@ func (v *HistoryService_MergeDLQMessages_Result) GetSuccess() (o *MergeDLQMessag
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_MergeDLQMessages_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceMergeDLQMessagesResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -921,7 +921,7 @@ func (v *HistoryService_MergeDLQMessages_Result) GetBadRequestError() (o *BadReq
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_MergeDLQMessages_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceMergeDLQMessagesResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -929,7 +929,7 @@ func (v *HistoryService_MergeDLQMessages_Result) GetInternalServiceError() (o *I
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_MergeDLQMessages_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceMergeDLQMessagesResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -937,7 +937,7 @@ func (v *HistoryService_MergeDLQMessages_Result) GetServiceBusyError() (o *Servi
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_MergeDLQMessages_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceMergeDLQMessagesResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -945,35 +945,35 @@ func (v *HistoryService_MergeDLQMessages_Result) GetEntityNotExistError() (o *En
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_MergeDLQMessages_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceMergeDLQMessagesResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
 	return
 }
 
-// HistoryService_NotifyFailoverMarkers_Args is an internal type (TBD...)
-type HistoryService_NotifyFailoverMarkers_Args struct {
-	Request *NotifyFailoverMarkersRequest
+// HistoryServiceNotifyFailoverMarkersArgs is an internal type (TBD...)
+type HistoryServiceNotifyFailoverMarkersArgs struct {
+	Request *NotifyFailoverMarkersRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
-func (v *HistoryService_NotifyFailoverMarkers_Args) GetRequest() (o *NotifyFailoverMarkersRequest) {
+func (v *HistoryServiceNotifyFailoverMarkersArgs) GetRequest() (o *NotifyFailoverMarkersRequest) {
 	if v != nil && v.Request != nil {
 		return v.Request
 	}
 	return
 }
 
-// HistoryService_NotifyFailoverMarkers_Result is an internal type (TBD...)
-type HistoryService_NotifyFailoverMarkers_Result struct {
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	ServiceBusyError     *ServiceBusyError
+// HistoryServiceNotifyFailoverMarkersResult is an internal type (TBD...)
+type HistoryServiceNotifyFailoverMarkersResult struct {
+	BadRequestError      *BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError `json:"internalServiceError,omitempty"`
+	ServiceBusyError     *ServiceBusyError     `json:"serviceBusyError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_NotifyFailoverMarkers_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceNotifyFailoverMarkersResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -981,7 +981,7 @@ func (v *HistoryService_NotifyFailoverMarkers_Result) GetBadRequestError() (o *B
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_NotifyFailoverMarkers_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceNotifyFailoverMarkersResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -989,40 +989,40 @@ func (v *HistoryService_NotifyFailoverMarkers_Result) GetInternalServiceError() 
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_NotifyFailoverMarkers_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceNotifyFailoverMarkersResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_PollMutableState_Args is an internal type (TBD...)
-type HistoryService_PollMutableState_Args struct {
-	PollRequest *PollMutableStateRequest
+// HistoryServicePollMutableStateArgs is an internal type (TBD...)
+type HistoryServicePollMutableStateArgs struct {
+	PollRequest *PollMutableStateRequest `json:"pollRequest,omitempty"`
 }
 
 // GetPollRequest is an internal getter (TBD...)
-func (v *HistoryService_PollMutableState_Args) GetPollRequest() (o *PollMutableStateRequest) {
+func (v *HistoryServicePollMutableStateArgs) GetPollRequest() (o *PollMutableStateRequest) {
 	if v != nil && v.PollRequest != nil {
 		return v.PollRequest
 	}
 	return
 }
 
-// HistoryService_PollMutableState_Result is an internal type (TBD...)
-type HistoryService_PollMutableState_Result struct {
-	Success                   *PollMutableStateResponse
-	BadRequestError           *BadRequestError
-	InternalServiceError      *InternalServiceError
-	EntityNotExistError       *EntityNotExistsError
-	ShardOwnershipLostError   *ShardOwnershipLostError
-	LimitExceededError        *LimitExceededError
-	ServiceBusyError          *ServiceBusyError
-	CurrentBranchChangedError *CurrentBranchChangedError
+// HistoryServicePollMutableStateResult is an internal type (TBD...)
+type HistoryServicePollMutableStateResult struct {
+	Success                   *PollMutableStateResponse  `json:"success,omitempty"`
+	BadRequestError           *BadRequestError           `json:"badRequestError,omitempty"`
+	InternalServiceError      *InternalServiceError      `json:"internalServiceError,omitempty"`
+	EntityNotExistError       *EntityNotExistsError      `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError   *ShardOwnershipLostError   `json:"shardOwnershipLostError,omitempty"`
+	LimitExceededError        *LimitExceededError        `json:"limitExceededError,omitempty"`
+	ServiceBusyError          *ServiceBusyError          `json:"serviceBusyError,omitempty"`
+	CurrentBranchChangedError *CurrentBranchChangedError `json:"currentBranchChangedError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_PollMutableState_Result) GetSuccess() (o *PollMutableStateResponse) {
+func (v *HistoryServicePollMutableStateResult) GetSuccess() (o *PollMutableStateResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -1030,7 +1030,7 @@ func (v *HistoryService_PollMutableState_Result) GetSuccess() (o *PollMutableSta
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_PollMutableState_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServicePollMutableStateResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -1038,7 +1038,7 @@ func (v *HistoryService_PollMutableState_Result) GetBadRequestError() (o *BadReq
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_PollMutableState_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServicePollMutableStateResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -1046,7 +1046,7 @@ func (v *HistoryService_PollMutableState_Result) GetInternalServiceError() (o *I
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_PollMutableState_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServicePollMutableStateResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -1054,7 +1054,7 @@ func (v *HistoryService_PollMutableState_Result) GetEntityNotExistError() (o *En
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_PollMutableState_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServicePollMutableStateResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -1062,7 +1062,7 @@ func (v *HistoryService_PollMutableState_Result) GetShardOwnershipLostError() (o
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_PollMutableState_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServicePollMutableStateResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -1070,7 +1070,7 @@ func (v *HistoryService_PollMutableState_Result) GetLimitExceededError() (o *Lim
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_PollMutableState_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServicePollMutableStateResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -1078,37 +1078,37 @@ func (v *HistoryService_PollMutableState_Result) GetServiceBusyError() (o *Servi
 }
 
 // GetCurrentBranchChangedError is an internal getter (TBD...)
-func (v *HistoryService_PollMutableState_Result) GetCurrentBranchChangedError() (o *CurrentBranchChangedError) {
+func (v *HistoryServicePollMutableStateResult) GetCurrentBranchChangedError() (o *CurrentBranchChangedError) {
 	if v != nil && v.CurrentBranchChangedError != nil {
 		return v.CurrentBranchChangedError
 	}
 	return
 }
 
-// HistoryService_PurgeDLQMessages_Args is an internal type (TBD...)
-type HistoryService_PurgeDLQMessages_Args struct {
-	Request *PurgeDLQMessagesRequest
+// HistoryServicePurgeDLQMessagesArgs is an internal type (TBD...)
+type HistoryServicePurgeDLQMessagesArgs struct {
+	Request *PurgeDLQMessagesRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
-func (v *HistoryService_PurgeDLQMessages_Args) GetRequest() (o *PurgeDLQMessagesRequest) {
+func (v *HistoryServicePurgeDLQMessagesArgs) GetRequest() (o *PurgeDLQMessagesRequest) {
 	if v != nil && v.Request != nil {
 		return v.Request
 	}
 	return
 }
 
-// HistoryService_PurgeDLQMessages_Result is an internal type (TBD...)
-type HistoryService_PurgeDLQMessages_Result struct {
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	ServiceBusyError        *ServiceBusyError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
+// HistoryServicePurgeDLQMessagesResult is an internal type (TBD...)
+type HistoryServicePurgeDLQMessagesResult struct {
+	BadRequestError         *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError    `json:"internalServiceError,omitempty"`
+	ServiceBusyError        *ServiceBusyError        `json:"serviceBusyError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError    `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError `json:"shardOwnershipLostError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_PurgeDLQMessages_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServicePurgeDLQMessagesResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -1116,7 +1116,7 @@ func (v *HistoryService_PurgeDLQMessages_Result) GetBadRequestError() (o *BadReq
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_PurgeDLQMessages_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServicePurgeDLQMessagesResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -1124,7 +1124,7 @@ func (v *HistoryService_PurgeDLQMessages_Result) GetInternalServiceError() (o *I
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_PurgeDLQMessages_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServicePurgeDLQMessagesResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -1132,7 +1132,7 @@ func (v *HistoryService_PurgeDLQMessages_Result) GetServiceBusyError() (o *Servi
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_PurgeDLQMessages_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServicePurgeDLQMessagesResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -1140,40 +1140,40 @@ func (v *HistoryService_PurgeDLQMessages_Result) GetEntityNotExistError() (o *En
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_PurgeDLQMessages_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServicePurgeDLQMessagesResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
 	return
 }
 
-// HistoryService_QueryWorkflow_Args is an internal type (TBD...)
-type HistoryService_QueryWorkflow_Args struct {
-	QueryRequest *HistoryQueryWorkflowRequest
+// HistoryServiceQueryWorkflowArgs is an internal type (TBD...)
+type HistoryServiceQueryWorkflowArgs struct {
+	QueryRequest *HistoryQueryWorkflowRequest `json:"queryRequest,omitempty"`
 }
 
 // GetQueryRequest is an internal getter (TBD...)
-func (v *HistoryService_QueryWorkflow_Args) GetQueryRequest() (o *HistoryQueryWorkflowRequest) {
+func (v *HistoryServiceQueryWorkflowArgs) GetQueryRequest() (o *HistoryQueryWorkflowRequest) {
 	if v != nil && v.QueryRequest != nil {
 		return v.QueryRequest
 	}
 	return
 }
 
-// HistoryService_QueryWorkflow_Result is an internal type (TBD...)
-type HistoryService_QueryWorkflow_Result struct {
-	Success                        *HistoryQueryWorkflowResponse
-	BadRequestError                *BadRequestError
-	InternalServiceError           *InternalServiceError
-	EntityNotExistError            *EntityNotExistsError
-	QueryFailedError               *QueryFailedError
-	LimitExceededError             *LimitExceededError
-	ServiceBusyError               *ServiceBusyError
-	ClientVersionNotSupportedError *ClientVersionNotSupportedError
+// HistoryServiceQueryWorkflowResult is an internal type (TBD...)
+type HistoryServiceQueryWorkflowResult struct {
+	Success                        *HistoryQueryWorkflowResponse   `json:"success,omitempty"`
+	BadRequestError                *BadRequestError                `json:"badRequestError,omitempty"`
+	InternalServiceError           *InternalServiceError           `json:"internalServiceError,omitempty"`
+	EntityNotExistError            *EntityNotExistsError           `json:"entityNotExistError,omitempty"`
+	QueryFailedError               *QueryFailedError               `json:"queryFailedError,omitempty"`
+	LimitExceededError             *LimitExceededError             `json:"limitExceededError,omitempty"`
+	ServiceBusyError               *ServiceBusyError               `json:"serviceBusyError,omitempty"`
+	ClientVersionNotSupportedError *ClientVersionNotSupportedError `json:"clientVersionNotSupportedError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_QueryWorkflow_Result) GetSuccess() (o *HistoryQueryWorkflowResponse) {
+func (v *HistoryServiceQueryWorkflowResult) GetSuccess() (o *HistoryQueryWorkflowResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -1181,7 +1181,7 @@ func (v *HistoryService_QueryWorkflow_Result) GetSuccess() (o *HistoryQueryWorkf
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_QueryWorkflow_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceQueryWorkflowResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -1189,7 +1189,7 @@ func (v *HistoryService_QueryWorkflow_Result) GetBadRequestError() (o *BadReques
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_QueryWorkflow_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceQueryWorkflowResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -1197,7 +1197,7 @@ func (v *HistoryService_QueryWorkflow_Result) GetInternalServiceError() (o *Inte
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_QueryWorkflow_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceQueryWorkflowResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -1205,7 +1205,7 @@ func (v *HistoryService_QueryWorkflow_Result) GetEntityNotExistError() (o *Entit
 }
 
 // GetQueryFailedError is an internal getter (TBD...)
-func (v *HistoryService_QueryWorkflow_Result) GetQueryFailedError() (o *QueryFailedError) {
+func (v *HistoryServiceQueryWorkflowResult) GetQueryFailedError() (o *QueryFailedError) {
 	if v != nil && v.QueryFailedError != nil {
 		return v.QueryFailedError
 	}
@@ -1213,7 +1213,7 @@ func (v *HistoryService_QueryWorkflow_Result) GetQueryFailedError() (o *QueryFai
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_QueryWorkflow_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceQueryWorkflowResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -1221,7 +1221,7 @@ func (v *HistoryService_QueryWorkflow_Result) GetLimitExceededError() (o *LimitE
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_QueryWorkflow_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceQueryWorkflowResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -1229,38 +1229,38 @@ func (v *HistoryService_QueryWorkflow_Result) GetServiceBusyError() (o *ServiceB
 }
 
 // GetClientVersionNotSupportedError is an internal getter (TBD...)
-func (v *HistoryService_QueryWorkflow_Result) GetClientVersionNotSupportedError() (o *ClientVersionNotSupportedError) {
+func (v *HistoryServiceQueryWorkflowResult) GetClientVersionNotSupportedError() (o *ClientVersionNotSupportedError) {
 	if v != nil && v.ClientVersionNotSupportedError != nil {
 		return v.ClientVersionNotSupportedError
 	}
 	return
 }
 
-// HistoryService_ReadDLQMessages_Args is an internal type (TBD...)
-type HistoryService_ReadDLQMessages_Args struct {
-	Request *ReadDLQMessagesRequest
+// HistoryServiceReadDLQMessagesArgs is an internal type (TBD...)
+type HistoryServiceReadDLQMessagesArgs struct {
+	Request *ReadDLQMessagesRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
-func (v *HistoryService_ReadDLQMessages_Args) GetRequest() (o *ReadDLQMessagesRequest) {
+func (v *HistoryServiceReadDLQMessagesArgs) GetRequest() (o *ReadDLQMessagesRequest) {
 	if v != nil && v.Request != nil {
 		return v.Request
 	}
 	return
 }
 
-// HistoryService_ReadDLQMessages_Result is an internal type (TBD...)
-type HistoryService_ReadDLQMessages_Result struct {
-	Success                 *ReadDLQMessagesResponse
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	ServiceBusyError        *ServiceBusyError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
+// HistoryServiceReadDLQMessagesResult is an internal type (TBD...)
+type HistoryServiceReadDLQMessagesResult struct {
+	Success                 *ReadDLQMessagesResponse `json:"success,omitempty"`
+	BadRequestError         *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError    `json:"internalServiceError,omitempty"`
+	ServiceBusyError        *ServiceBusyError        `json:"serviceBusyError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError    `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError `json:"shardOwnershipLostError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_ReadDLQMessages_Result) GetSuccess() (o *ReadDLQMessagesResponse) {
+func (v *HistoryServiceReadDLQMessagesResult) GetSuccess() (o *ReadDLQMessagesResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -1268,7 +1268,7 @@ func (v *HistoryService_ReadDLQMessages_Result) GetSuccess() (o *ReadDLQMessages
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_ReadDLQMessages_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceReadDLQMessagesResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -1276,7 +1276,7 @@ func (v *HistoryService_ReadDLQMessages_Result) GetBadRequestError() (o *BadRequ
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_ReadDLQMessages_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceReadDLQMessagesResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -1284,7 +1284,7 @@ func (v *HistoryService_ReadDLQMessages_Result) GetInternalServiceError() (o *In
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_ReadDLQMessages_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceReadDLQMessagesResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -1292,7 +1292,7 @@ func (v *HistoryService_ReadDLQMessages_Result) GetServiceBusyError() (o *Servic
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_ReadDLQMessages_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceReadDLQMessagesResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -1300,39 +1300,39 @@ func (v *HistoryService_ReadDLQMessages_Result) GetEntityNotExistError() (o *Ent
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_ReadDLQMessages_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceReadDLQMessagesResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
 	return
 }
 
-// HistoryService_ReapplyEvents_Args is an internal type (TBD...)
-type HistoryService_ReapplyEvents_Args struct {
-	ReapplyEventsRequest *HistoryReapplyEventsRequest
+// HistoryServiceReapplyEventsArgs is an internal type (TBD...)
+type HistoryServiceReapplyEventsArgs struct {
+	ReapplyEventsRequest *HistoryReapplyEventsRequest `json:"reapplyEventsRequest,omitempty"`
 }
 
 // GetReapplyEventsRequest is an internal getter (TBD...)
-func (v *HistoryService_ReapplyEvents_Args) GetReapplyEventsRequest() (o *HistoryReapplyEventsRequest) {
+func (v *HistoryServiceReapplyEventsArgs) GetReapplyEventsRequest() (o *HistoryReapplyEventsRequest) {
 	if v != nil && v.ReapplyEventsRequest != nil {
 		return v.ReapplyEventsRequest
 	}
 	return
 }
 
-// HistoryService_ReapplyEvents_Result is an internal type (TBD...)
-type HistoryService_ReapplyEvents_Result struct {
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	DomainNotActiveError    *DomainNotActiveError
-	LimitExceededError      *LimitExceededError
-	ServiceBusyError        *ServiceBusyError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	EntityNotExistError     *EntityNotExistsError
+// HistoryServiceReapplyEventsResult is an internal type (TBD...)
+type HistoryServiceReapplyEventsResult struct {
+	BadRequestError         *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError    `json:"internalServiceError,omitempty"`
+	DomainNotActiveError    *DomainNotActiveError    `json:"domainNotActiveError,omitempty"`
+	LimitExceededError      *LimitExceededError      `json:"limitExceededError,omitempty"`
+	ServiceBusyError        *ServiceBusyError        `json:"serviceBusyError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError `json:"shardOwnershipLostError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError    `json:"entityNotExistError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_ReapplyEvents_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceReapplyEventsResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -1340,7 +1340,7 @@ func (v *HistoryService_ReapplyEvents_Result) GetBadRequestError() (o *BadReques
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_ReapplyEvents_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceReapplyEventsResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -1348,7 +1348,7 @@ func (v *HistoryService_ReapplyEvents_Result) GetInternalServiceError() (o *Inte
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_ReapplyEvents_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceReapplyEventsResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -1356,7 +1356,7 @@ func (v *HistoryService_ReapplyEvents_Result) GetDomainNotActiveError() (o *Doma
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_ReapplyEvents_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceReapplyEventsResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -1364,7 +1364,7 @@ func (v *HistoryService_ReapplyEvents_Result) GetLimitExceededError() (o *LimitE
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_ReapplyEvents_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceReapplyEventsResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -1372,7 +1372,7 @@ func (v *HistoryService_ReapplyEvents_Result) GetServiceBusyError() (o *ServiceB
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_ReapplyEvents_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceReapplyEventsResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -1380,40 +1380,40 @@ func (v *HistoryService_ReapplyEvents_Result) GetShardOwnershipLostError() (o *S
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_ReapplyEvents_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceReapplyEventsResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
 	return
 }
 
-// HistoryService_RecordActivityTaskHeartbeat_Args is an internal type (TBD...)
-type HistoryService_RecordActivityTaskHeartbeat_Args struct {
-	HeartbeatRequest *HistoryRecordActivityTaskHeartbeatRequest
+// HistoryServiceRecordActivityTaskHeartbeatArgs is an internal type (TBD...)
+type HistoryServiceRecordActivityTaskHeartbeatArgs struct {
+	HeartbeatRequest *HistoryRecordActivityTaskHeartbeatRequest `json:"heartbeatRequest,omitempty"`
 }
 
 // GetHeartbeatRequest is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskHeartbeat_Args) GetHeartbeatRequest() (o *HistoryRecordActivityTaskHeartbeatRequest) {
+func (v *HistoryServiceRecordActivityTaskHeartbeatArgs) GetHeartbeatRequest() (o *HistoryRecordActivityTaskHeartbeatRequest) {
 	if v != nil && v.HeartbeatRequest != nil {
 		return v.HeartbeatRequest
 	}
 	return
 }
 
-// HistoryService_RecordActivityTaskHeartbeat_Result is an internal type (TBD...)
-type HistoryService_RecordActivityTaskHeartbeat_Result struct {
-	Success                 *RecordActivityTaskHeartbeatResponse
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	DomainNotActiveError    *DomainNotActiveError
-	LimitExceededError      *LimitExceededError
-	ServiceBusyError        *ServiceBusyError
+// HistoryServiceRecordActivityTaskHeartbeatResult is an internal type (TBD...)
+type HistoryServiceRecordActivityTaskHeartbeatResult struct {
+	Success                 *RecordActivityTaskHeartbeatResponse `json:"success,omitempty"`
+	BadRequestError         *BadRequestError                     `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError                `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError                `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError             `json:"shardOwnershipLostError,omitempty"`
+	DomainNotActiveError    *DomainNotActiveError                `json:"domainNotActiveError,omitempty"`
+	LimitExceededError      *LimitExceededError                  `json:"limitExceededError,omitempty"`
+	ServiceBusyError        *ServiceBusyError                    `json:"serviceBusyError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskHeartbeat_Result) GetSuccess() (o *RecordActivityTaskHeartbeatResponse) {
+func (v *HistoryServiceRecordActivityTaskHeartbeatResult) GetSuccess() (o *RecordActivityTaskHeartbeatResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -1421,7 +1421,7 @@ func (v *HistoryService_RecordActivityTaskHeartbeat_Result) GetSuccess() (o *Rec
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskHeartbeat_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceRecordActivityTaskHeartbeatResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -1429,7 +1429,7 @@ func (v *HistoryService_RecordActivityTaskHeartbeat_Result) GetBadRequestError()
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskHeartbeat_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceRecordActivityTaskHeartbeatResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -1437,7 +1437,7 @@ func (v *HistoryService_RecordActivityTaskHeartbeat_Result) GetInternalServiceEr
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskHeartbeat_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceRecordActivityTaskHeartbeatResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -1445,7 +1445,7 @@ func (v *HistoryService_RecordActivityTaskHeartbeat_Result) GetEntityNotExistErr
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskHeartbeat_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceRecordActivityTaskHeartbeatResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -1453,7 +1453,7 @@ func (v *HistoryService_RecordActivityTaskHeartbeat_Result) GetShardOwnershipLos
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskHeartbeat_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceRecordActivityTaskHeartbeatResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -1461,7 +1461,7 @@ func (v *HistoryService_RecordActivityTaskHeartbeat_Result) GetDomainNotActiveEr
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskHeartbeat_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceRecordActivityTaskHeartbeatResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -1469,41 +1469,41 @@ func (v *HistoryService_RecordActivityTaskHeartbeat_Result) GetLimitExceededErro
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskHeartbeat_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceRecordActivityTaskHeartbeatResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_RecordActivityTaskStarted_Args is an internal type (TBD...)
-type HistoryService_RecordActivityTaskStarted_Args struct {
-	AddRequest *RecordActivityTaskStartedRequest
+// HistoryServiceRecordActivityTaskStartedArgs is an internal type (TBD...)
+type HistoryServiceRecordActivityTaskStartedArgs struct {
+	AddRequest *RecordActivityTaskStartedRequest `json:"addRequest,omitempty"`
 }
 
 // GetAddRequest is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskStarted_Args) GetAddRequest() (o *RecordActivityTaskStartedRequest) {
+func (v *HistoryServiceRecordActivityTaskStartedArgs) GetAddRequest() (o *RecordActivityTaskStartedRequest) {
 	if v != nil && v.AddRequest != nil {
 		return v.AddRequest
 	}
 	return
 }
 
-// HistoryService_RecordActivityTaskStarted_Result is an internal type (TBD...)
-type HistoryService_RecordActivityTaskStarted_Result struct {
-	Success                  *RecordActivityTaskStartedResponse
-	BadRequestError          *BadRequestError
-	InternalServiceError     *InternalServiceError
-	EventAlreadyStartedError *EventAlreadyStartedError
-	EntityNotExistError      *EntityNotExistsError
-	ShardOwnershipLostError  *ShardOwnershipLostError
-	DomainNotActiveError     *DomainNotActiveError
-	LimitExceededError       *LimitExceededError
-	ServiceBusyError         *ServiceBusyError
+// HistoryServiceRecordActivityTaskStartedResult is an internal type (TBD...)
+type HistoryServiceRecordActivityTaskStartedResult struct {
+	Success                  *RecordActivityTaskStartedResponse `json:"success,omitempty"`
+	BadRequestError          *BadRequestError                   `json:"badRequestError,omitempty"`
+	InternalServiceError     *InternalServiceError              `json:"internalServiceError,omitempty"`
+	EventAlreadyStartedError *EventAlreadyStartedError          `json:"eventAlreadyStartedError,omitempty"`
+	EntityNotExistError      *EntityNotExistsError              `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError  *ShardOwnershipLostError           `json:"shardOwnershipLostError,omitempty"`
+	DomainNotActiveError     *DomainNotActiveError              `json:"domainNotActiveError,omitempty"`
+	LimitExceededError       *LimitExceededError                `json:"limitExceededError,omitempty"`
+	ServiceBusyError         *ServiceBusyError                  `json:"serviceBusyError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskStarted_Result) GetSuccess() (o *RecordActivityTaskStartedResponse) {
+func (v *HistoryServiceRecordActivityTaskStartedResult) GetSuccess() (o *RecordActivityTaskStartedResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -1511,7 +1511,7 @@ func (v *HistoryService_RecordActivityTaskStarted_Result) GetSuccess() (o *Recor
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskStarted_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceRecordActivityTaskStartedResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -1519,7 +1519,7 @@ func (v *HistoryService_RecordActivityTaskStarted_Result) GetBadRequestError() (
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskStarted_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceRecordActivityTaskStartedResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -1527,7 +1527,7 @@ func (v *HistoryService_RecordActivityTaskStarted_Result) GetInternalServiceErro
 }
 
 // GetEventAlreadyStartedError is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskStarted_Result) GetEventAlreadyStartedError() (o *EventAlreadyStartedError) {
+func (v *HistoryServiceRecordActivityTaskStartedResult) GetEventAlreadyStartedError() (o *EventAlreadyStartedError) {
 	if v != nil && v.EventAlreadyStartedError != nil {
 		return v.EventAlreadyStartedError
 	}
@@ -1535,7 +1535,7 @@ func (v *HistoryService_RecordActivityTaskStarted_Result) GetEventAlreadyStarted
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskStarted_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceRecordActivityTaskStartedResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -1543,7 +1543,7 @@ func (v *HistoryService_RecordActivityTaskStarted_Result) GetEntityNotExistError
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskStarted_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceRecordActivityTaskStartedResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -1551,7 +1551,7 @@ func (v *HistoryService_RecordActivityTaskStarted_Result) GetShardOwnershipLostE
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskStarted_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceRecordActivityTaskStartedResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -1559,7 +1559,7 @@ func (v *HistoryService_RecordActivityTaskStarted_Result) GetDomainNotActiveErro
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskStarted_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceRecordActivityTaskStartedResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -1567,39 +1567,39 @@ func (v *HistoryService_RecordActivityTaskStarted_Result) GetLimitExceededError(
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_RecordActivityTaskStarted_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceRecordActivityTaskStartedResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_RecordChildExecutionCompleted_Args is an internal type (TBD...)
-type HistoryService_RecordChildExecutionCompleted_Args struct {
-	CompletionRequest *RecordChildExecutionCompletedRequest
+// HistoryServiceRecordChildExecutionCompletedArgs is an internal type (TBD...)
+type HistoryServiceRecordChildExecutionCompletedArgs struct {
+	CompletionRequest *RecordChildExecutionCompletedRequest `json:"completionRequest,omitempty"`
 }
 
 // GetCompletionRequest is an internal getter (TBD...)
-func (v *HistoryService_RecordChildExecutionCompleted_Args) GetCompletionRequest() (o *RecordChildExecutionCompletedRequest) {
+func (v *HistoryServiceRecordChildExecutionCompletedArgs) GetCompletionRequest() (o *RecordChildExecutionCompletedRequest) {
 	if v != nil && v.CompletionRequest != nil {
 		return v.CompletionRequest
 	}
 	return
 }
 
-// HistoryService_RecordChildExecutionCompleted_Result is an internal type (TBD...)
-type HistoryService_RecordChildExecutionCompleted_Result struct {
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	DomainNotActiveError    *DomainNotActiveError
-	LimitExceededError      *LimitExceededError
-	ServiceBusyError        *ServiceBusyError
+// HistoryServiceRecordChildExecutionCompletedResult is an internal type (TBD...)
+type HistoryServiceRecordChildExecutionCompletedResult struct {
+	BadRequestError         *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError    `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError    `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError `json:"shardOwnershipLostError,omitempty"`
+	DomainNotActiveError    *DomainNotActiveError    `json:"domainNotActiveError,omitempty"`
+	LimitExceededError      *LimitExceededError      `json:"limitExceededError,omitempty"`
+	ServiceBusyError        *ServiceBusyError        `json:"serviceBusyError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_RecordChildExecutionCompleted_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceRecordChildExecutionCompletedResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -1607,7 +1607,7 @@ func (v *HistoryService_RecordChildExecutionCompleted_Result) GetBadRequestError
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_RecordChildExecutionCompleted_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceRecordChildExecutionCompletedResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -1615,7 +1615,7 @@ func (v *HistoryService_RecordChildExecutionCompleted_Result) GetInternalService
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_RecordChildExecutionCompleted_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceRecordChildExecutionCompletedResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -1623,7 +1623,7 @@ func (v *HistoryService_RecordChildExecutionCompleted_Result) GetEntityNotExistE
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_RecordChildExecutionCompleted_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceRecordChildExecutionCompletedResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -1631,7 +1631,7 @@ func (v *HistoryService_RecordChildExecutionCompleted_Result) GetShardOwnershipL
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_RecordChildExecutionCompleted_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceRecordChildExecutionCompletedResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -1639,7 +1639,7 @@ func (v *HistoryService_RecordChildExecutionCompleted_Result) GetDomainNotActive
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_RecordChildExecutionCompleted_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceRecordChildExecutionCompletedResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -1647,41 +1647,41 @@ func (v *HistoryService_RecordChildExecutionCompleted_Result) GetLimitExceededEr
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_RecordChildExecutionCompleted_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceRecordChildExecutionCompletedResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_RecordDecisionTaskStarted_Args is an internal type (TBD...)
-type HistoryService_RecordDecisionTaskStarted_Args struct {
-	AddRequest *RecordDecisionTaskStartedRequest
+// HistoryServiceRecordDecisionTaskStartedArgs is an internal type (TBD...)
+type HistoryServiceRecordDecisionTaskStartedArgs struct {
+	AddRequest *RecordDecisionTaskStartedRequest `json:"addRequest,omitempty"`
 }
 
 // GetAddRequest is an internal getter (TBD...)
-func (v *HistoryService_RecordDecisionTaskStarted_Args) GetAddRequest() (o *RecordDecisionTaskStartedRequest) {
+func (v *HistoryServiceRecordDecisionTaskStartedArgs) GetAddRequest() (o *RecordDecisionTaskStartedRequest) {
 	if v != nil && v.AddRequest != nil {
 		return v.AddRequest
 	}
 	return
 }
 
-// HistoryService_RecordDecisionTaskStarted_Result is an internal type (TBD...)
-type HistoryService_RecordDecisionTaskStarted_Result struct {
-	Success                  *RecordDecisionTaskStartedResponse
-	BadRequestError          *BadRequestError
-	InternalServiceError     *InternalServiceError
-	EventAlreadyStartedError *EventAlreadyStartedError
-	EntityNotExistError      *EntityNotExistsError
-	ShardOwnershipLostError  *ShardOwnershipLostError
-	DomainNotActiveError     *DomainNotActiveError
-	LimitExceededError       *LimitExceededError
-	ServiceBusyError         *ServiceBusyError
+// HistoryServiceRecordDecisionTaskStartedResult is an internal type (TBD...)
+type HistoryServiceRecordDecisionTaskStartedResult struct {
+	Success                  *RecordDecisionTaskStartedResponse `json:"success,omitempty"`
+	BadRequestError          *BadRequestError                   `json:"badRequestError,omitempty"`
+	InternalServiceError     *InternalServiceError              `json:"internalServiceError,omitempty"`
+	EventAlreadyStartedError *EventAlreadyStartedError          `json:"eventAlreadyStartedError,omitempty"`
+	EntityNotExistError      *EntityNotExistsError              `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError  *ShardOwnershipLostError           `json:"shardOwnershipLostError,omitempty"`
+	DomainNotActiveError     *DomainNotActiveError              `json:"domainNotActiveError,omitempty"`
+	LimitExceededError       *LimitExceededError                `json:"limitExceededError,omitempty"`
+	ServiceBusyError         *ServiceBusyError                  `json:"serviceBusyError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_RecordDecisionTaskStarted_Result) GetSuccess() (o *RecordDecisionTaskStartedResponse) {
+func (v *HistoryServiceRecordDecisionTaskStartedResult) GetSuccess() (o *RecordDecisionTaskStartedResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -1689,7 +1689,7 @@ func (v *HistoryService_RecordDecisionTaskStarted_Result) GetSuccess() (o *Recor
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_RecordDecisionTaskStarted_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceRecordDecisionTaskStartedResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -1697,7 +1697,7 @@ func (v *HistoryService_RecordDecisionTaskStarted_Result) GetBadRequestError() (
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_RecordDecisionTaskStarted_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceRecordDecisionTaskStartedResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -1705,7 +1705,7 @@ func (v *HistoryService_RecordDecisionTaskStarted_Result) GetInternalServiceErro
 }
 
 // GetEventAlreadyStartedError is an internal getter (TBD...)
-func (v *HistoryService_RecordDecisionTaskStarted_Result) GetEventAlreadyStartedError() (o *EventAlreadyStartedError) {
+func (v *HistoryServiceRecordDecisionTaskStartedResult) GetEventAlreadyStartedError() (o *EventAlreadyStartedError) {
 	if v != nil && v.EventAlreadyStartedError != nil {
 		return v.EventAlreadyStartedError
 	}
@@ -1713,7 +1713,7 @@ func (v *HistoryService_RecordDecisionTaskStarted_Result) GetEventAlreadyStarted
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_RecordDecisionTaskStarted_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceRecordDecisionTaskStartedResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -1721,7 +1721,7 @@ func (v *HistoryService_RecordDecisionTaskStarted_Result) GetEntityNotExistError
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_RecordDecisionTaskStarted_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceRecordDecisionTaskStartedResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -1729,7 +1729,7 @@ func (v *HistoryService_RecordDecisionTaskStarted_Result) GetShardOwnershipLostE
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_RecordDecisionTaskStarted_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceRecordDecisionTaskStartedResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -1737,7 +1737,7 @@ func (v *HistoryService_RecordDecisionTaskStarted_Result) GetDomainNotActiveErro
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_RecordDecisionTaskStarted_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceRecordDecisionTaskStartedResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -1745,38 +1745,38 @@ func (v *HistoryService_RecordDecisionTaskStarted_Result) GetLimitExceededError(
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_RecordDecisionTaskStarted_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceRecordDecisionTaskStartedResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_RefreshWorkflowTasks_Args is an internal type (TBD...)
-type HistoryService_RefreshWorkflowTasks_Args struct {
-	Request *HistoryRefreshWorkflowTasksRequest
+// HistoryServiceRefreshWorkflowTasksArgs is an internal type (TBD...)
+type HistoryServiceRefreshWorkflowTasksArgs struct {
+	Request *HistoryRefreshWorkflowTasksRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
-func (v *HistoryService_RefreshWorkflowTasks_Args) GetRequest() (o *HistoryRefreshWorkflowTasksRequest) {
+func (v *HistoryServiceRefreshWorkflowTasksArgs) GetRequest() (o *HistoryRefreshWorkflowTasksRequest) {
 	if v != nil && v.Request != nil {
 		return v.Request
 	}
 	return
 }
 
-// HistoryService_RefreshWorkflowTasks_Result is an internal type (TBD...)
-type HistoryService_RefreshWorkflowTasks_Result struct {
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	DomainNotActiveError    *DomainNotActiveError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	ServiceBusyError        *ServiceBusyError
-	EntityNotExistError     *EntityNotExistsError
+// HistoryServiceRefreshWorkflowTasksResult is an internal type (TBD...)
+type HistoryServiceRefreshWorkflowTasksResult struct {
+	BadRequestError         *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError    `json:"internalServiceError,omitempty"`
+	DomainNotActiveError    *DomainNotActiveError    `json:"domainNotActiveError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError `json:"shardOwnershipLostError,omitempty"`
+	ServiceBusyError        *ServiceBusyError        `json:"serviceBusyError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError    `json:"entityNotExistError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_RefreshWorkflowTasks_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceRefreshWorkflowTasksResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -1784,7 +1784,7 @@ func (v *HistoryService_RefreshWorkflowTasks_Result) GetBadRequestError() (o *Ba
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_RefreshWorkflowTasks_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceRefreshWorkflowTasksResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -1792,7 +1792,7 @@ func (v *HistoryService_RefreshWorkflowTasks_Result) GetInternalServiceError() (
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_RefreshWorkflowTasks_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceRefreshWorkflowTasksResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -1800,7 +1800,7 @@ func (v *HistoryService_RefreshWorkflowTasks_Result) GetDomainNotActiveError() (
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_RefreshWorkflowTasks_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceRefreshWorkflowTasksResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -1808,7 +1808,7 @@ func (v *HistoryService_RefreshWorkflowTasks_Result) GetShardOwnershipLostError(
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_RefreshWorkflowTasks_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceRefreshWorkflowTasksResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -1816,39 +1816,39 @@ func (v *HistoryService_RefreshWorkflowTasks_Result) GetServiceBusyError() (o *S
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_RefreshWorkflowTasks_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceRefreshWorkflowTasksResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
 	return
 }
 
-// HistoryService_RemoveSignalMutableState_Args is an internal type (TBD...)
-type HistoryService_RemoveSignalMutableState_Args struct {
-	RemoveRequest *RemoveSignalMutableStateRequest
+// HistoryServiceRemoveSignalMutableStateArgs is an internal type (TBD...)
+type HistoryServiceRemoveSignalMutableStateArgs struct {
+	RemoveRequest *RemoveSignalMutableStateRequest `json:"removeRequest,omitempty"`
 }
 
 // GetRemoveRequest is an internal getter (TBD...)
-func (v *HistoryService_RemoveSignalMutableState_Args) GetRemoveRequest() (o *RemoveSignalMutableStateRequest) {
+func (v *HistoryServiceRemoveSignalMutableStateArgs) GetRemoveRequest() (o *RemoveSignalMutableStateRequest) {
 	if v != nil && v.RemoveRequest != nil {
 		return v.RemoveRequest
 	}
 	return
 }
 
-// HistoryService_RemoveSignalMutableState_Result is an internal type (TBD...)
-type HistoryService_RemoveSignalMutableState_Result struct {
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	DomainNotActiveError    *DomainNotActiveError
-	LimitExceededError      *LimitExceededError
-	ServiceBusyError        *ServiceBusyError
+// HistoryServiceRemoveSignalMutableStateResult is an internal type (TBD...)
+type HistoryServiceRemoveSignalMutableStateResult struct {
+	BadRequestError         *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError    `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError    `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError `json:"shardOwnershipLostError,omitempty"`
+	DomainNotActiveError    *DomainNotActiveError    `json:"domainNotActiveError,omitempty"`
+	LimitExceededError      *LimitExceededError      `json:"limitExceededError,omitempty"`
+	ServiceBusyError        *ServiceBusyError        `json:"serviceBusyError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_RemoveSignalMutableState_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceRemoveSignalMutableStateResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -1856,7 +1856,7 @@ func (v *HistoryService_RemoveSignalMutableState_Result) GetBadRequestError() (o
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_RemoveSignalMutableState_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceRemoveSignalMutableStateResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -1864,7 +1864,7 @@ func (v *HistoryService_RemoveSignalMutableState_Result) GetInternalServiceError
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_RemoveSignalMutableState_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceRemoveSignalMutableStateResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -1872,7 +1872,7 @@ func (v *HistoryService_RemoveSignalMutableState_Result) GetEntityNotExistError(
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_RemoveSignalMutableState_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceRemoveSignalMutableStateResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -1880,7 +1880,7 @@ func (v *HistoryService_RemoveSignalMutableState_Result) GetShardOwnershipLostEr
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_RemoveSignalMutableState_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceRemoveSignalMutableStateResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -1888,7 +1888,7 @@ func (v *HistoryService_RemoveSignalMutableState_Result) GetDomainNotActiveError
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_RemoveSignalMutableState_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceRemoveSignalMutableStateResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -1896,35 +1896,35 @@ func (v *HistoryService_RemoveSignalMutableState_Result) GetLimitExceededError()
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_RemoveSignalMutableState_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceRemoveSignalMutableStateResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_RemoveTask_Args is an internal type (TBD...)
-type HistoryService_RemoveTask_Args struct {
-	Request *RemoveTaskRequest
+// HistoryServiceRemoveTaskArgs is an internal type (TBD...)
+type HistoryServiceRemoveTaskArgs struct {
+	Request *RemoveTaskRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
-func (v *HistoryService_RemoveTask_Args) GetRequest() (o *RemoveTaskRequest) {
+func (v *HistoryServiceRemoveTaskArgs) GetRequest() (o *RemoveTaskRequest) {
 	if v != nil && v.Request != nil {
 		return v.Request
 	}
 	return
 }
 
-// HistoryService_RemoveTask_Result is an internal type (TBD...)
-type HistoryService_RemoveTask_Result struct {
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	AccessDeniedError    *AccessDeniedError
+// HistoryServiceRemoveTaskResult is an internal type (TBD...)
+type HistoryServiceRemoveTaskResult struct {
+	BadRequestError      *BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError `json:"internalServiceError,omitempty"`
+	AccessDeniedError    *AccessDeniedError    `json:"accessDeniedError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_RemoveTask_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceRemoveTaskResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -1932,7 +1932,7 @@ func (v *HistoryService_RemoveTask_Result) GetBadRequestError() (o *BadRequestEr
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_RemoveTask_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceRemoveTaskResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -1940,39 +1940,39 @@ func (v *HistoryService_RemoveTask_Result) GetInternalServiceError() (o *Interna
 }
 
 // GetAccessDeniedError is an internal getter (TBD...)
-func (v *HistoryService_RemoveTask_Result) GetAccessDeniedError() (o *AccessDeniedError) {
+func (v *HistoryServiceRemoveTaskResult) GetAccessDeniedError() (o *AccessDeniedError) {
 	if v != nil && v.AccessDeniedError != nil {
 		return v.AccessDeniedError
 	}
 	return
 }
 
-// HistoryService_ReplicateEventsV2_Args is an internal type (TBD...)
-type HistoryService_ReplicateEventsV2_Args struct {
-	ReplicateV2Request *ReplicateEventsV2Request
+// HistoryServiceReplicateEventsV2Args is an internal type (TBD...)
+type HistoryServiceReplicateEventsV2Args struct {
+	ReplicateV2Request *ReplicateEventsV2Request `json:"replicateV2Request,omitempty"`
 }
 
 // GetReplicateV2Request is an internal getter (TBD...)
-func (v *HistoryService_ReplicateEventsV2_Args) GetReplicateV2Request() (o *ReplicateEventsV2Request) {
+func (v *HistoryServiceReplicateEventsV2Args) GetReplicateV2Request() (o *ReplicateEventsV2Request) {
 	if v != nil && v.ReplicateV2Request != nil {
 		return v.ReplicateV2Request
 	}
 	return
 }
 
-// HistoryService_ReplicateEventsV2_Result is an internal type (TBD...)
-type HistoryService_ReplicateEventsV2_Result struct {
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	LimitExceededError      *LimitExceededError
-	RetryTaskError          *RetryTaskV2Error
-	ServiceBusyError        *ServiceBusyError
+// HistoryServiceReplicateEventsV2Result is an internal type (TBD...)
+type HistoryServiceReplicateEventsV2Result struct {
+	BadRequestError         *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError    `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError    `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError `json:"shardOwnershipLostError,omitempty"`
+	LimitExceededError      *LimitExceededError      `json:"limitExceededError,omitempty"`
+	RetryTaskError          *RetryTaskV2Error        `json:"retryTaskError,omitempty"`
+	ServiceBusyError        *ServiceBusyError        `json:"serviceBusyError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_ReplicateEventsV2_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceReplicateEventsV2Result) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -1980,7 +1980,7 @@ func (v *HistoryService_ReplicateEventsV2_Result) GetBadRequestError() (o *BadRe
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_ReplicateEventsV2_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceReplicateEventsV2Result) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -1988,7 +1988,7 @@ func (v *HistoryService_ReplicateEventsV2_Result) GetInternalServiceError() (o *
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_ReplicateEventsV2_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceReplicateEventsV2Result) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -1996,7 +1996,7 @@ func (v *HistoryService_ReplicateEventsV2_Result) GetEntityNotExistError() (o *E
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_ReplicateEventsV2_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceReplicateEventsV2Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -2004,7 +2004,7 @@ func (v *HistoryService_ReplicateEventsV2_Result) GetShardOwnershipLostError() (
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_ReplicateEventsV2_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceReplicateEventsV2Result) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -2012,7 +2012,7 @@ func (v *HistoryService_ReplicateEventsV2_Result) GetLimitExceededError() (o *Li
 }
 
 // GetRetryTaskError is an internal getter (TBD...)
-func (v *HistoryService_ReplicateEventsV2_Result) GetRetryTaskError() (o *RetryTaskV2Error) {
+func (v *HistoryServiceReplicateEventsV2Result) GetRetryTaskError() (o *RetryTaskV2Error) {
 	if v != nil && v.RetryTaskError != nil {
 		return v.RetryTaskError
 	}
@@ -2020,40 +2020,40 @@ func (v *HistoryService_ReplicateEventsV2_Result) GetRetryTaskError() (o *RetryT
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_ReplicateEventsV2_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceReplicateEventsV2Result) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_RequestCancelWorkflowExecution_Args is an internal type (TBD...)
-type HistoryService_RequestCancelWorkflowExecution_Args struct {
-	CancelRequest *HistoryRequestCancelWorkflowExecutionRequest
+// HistoryServiceRequestCancelWorkflowExecutionArgs is an internal type (TBD...)
+type HistoryServiceRequestCancelWorkflowExecutionArgs struct {
+	CancelRequest *HistoryRequestCancelWorkflowExecutionRequest `json:"cancelRequest,omitempty"`
 }
 
 // GetCancelRequest is an internal getter (TBD...)
-func (v *HistoryService_RequestCancelWorkflowExecution_Args) GetCancelRequest() (o *HistoryRequestCancelWorkflowExecutionRequest) {
+func (v *HistoryServiceRequestCancelWorkflowExecutionArgs) GetCancelRequest() (o *HistoryRequestCancelWorkflowExecutionRequest) {
 	if v != nil && v.CancelRequest != nil {
 		return v.CancelRequest
 	}
 	return
 }
 
-// HistoryService_RequestCancelWorkflowExecution_Result is an internal type (TBD...)
-type HistoryService_RequestCancelWorkflowExecution_Result struct {
-	BadRequestError                   *BadRequestError
-	InternalServiceError              *InternalServiceError
-	EntityNotExistError               *EntityNotExistsError
-	ShardOwnershipLostError           *ShardOwnershipLostError
-	CancellationAlreadyRequestedError *CancellationAlreadyRequestedError
-	DomainNotActiveError              *DomainNotActiveError
-	LimitExceededError                *LimitExceededError
-	ServiceBusyError                  *ServiceBusyError
+// HistoryServiceRequestCancelWorkflowExecutionResult is an internal type (TBD...)
+type HistoryServiceRequestCancelWorkflowExecutionResult struct {
+	BadRequestError                   *BadRequestError                   `json:"badRequestError,omitempty"`
+	InternalServiceError              *InternalServiceError              `json:"internalServiceError,omitempty"`
+	EntityNotExistError               *EntityNotExistsError              `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError           *ShardOwnershipLostError           `json:"shardOwnershipLostError,omitempty"`
+	CancellationAlreadyRequestedError *CancellationAlreadyRequestedError `json:"cancellationAlreadyRequestedError,omitempty"`
+	DomainNotActiveError              *DomainNotActiveError              `json:"domainNotActiveError,omitempty"`
+	LimitExceededError                *LimitExceededError                `json:"limitExceededError,omitempty"`
+	ServiceBusyError                  *ServiceBusyError                  `json:"serviceBusyError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_RequestCancelWorkflowExecution_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceRequestCancelWorkflowExecutionResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -2061,7 +2061,7 @@ func (v *HistoryService_RequestCancelWorkflowExecution_Result) GetBadRequestErro
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_RequestCancelWorkflowExecution_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceRequestCancelWorkflowExecutionResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -2069,7 +2069,7 @@ func (v *HistoryService_RequestCancelWorkflowExecution_Result) GetInternalServic
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_RequestCancelWorkflowExecution_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceRequestCancelWorkflowExecutionResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -2077,7 +2077,7 @@ func (v *HistoryService_RequestCancelWorkflowExecution_Result) GetEntityNotExist
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_RequestCancelWorkflowExecution_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceRequestCancelWorkflowExecutionResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -2085,7 +2085,7 @@ func (v *HistoryService_RequestCancelWorkflowExecution_Result) GetShardOwnership
 }
 
 // GetCancellationAlreadyRequestedError is an internal getter (TBD...)
-func (v *HistoryService_RequestCancelWorkflowExecution_Result) GetCancellationAlreadyRequestedError() (o *CancellationAlreadyRequestedError) {
+func (v *HistoryServiceRequestCancelWorkflowExecutionResult) GetCancellationAlreadyRequestedError() (o *CancellationAlreadyRequestedError) {
 	if v != nil && v.CancellationAlreadyRequestedError != nil {
 		return v.CancellationAlreadyRequestedError
 	}
@@ -2093,7 +2093,7 @@ func (v *HistoryService_RequestCancelWorkflowExecution_Result) GetCancellationAl
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_RequestCancelWorkflowExecution_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceRequestCancelWorkflowExecutionResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -2101,7 +2101,7 @@ func (v *HistoryService_RequestCancelWorkflowExecution_Result) GetDomainNotActiv
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_RequestCancelWorkflowExecution_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceRequestCancelWorkflowExecutionResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -2109,35 +2109,35 @@ func (v *HistoryService_RequestCancelWorkflowExecution_Result) GetLimitExceededE
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_RequestCancelWorkflowExecution_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceRequestCancelWorkflowExecutionResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_ResetQueue_Args is an internal type (TBD...)
-type HistoryService_ResetQueue_Args struct {
-	Request *ResetQueueRequest
+// HistoryServiceResetQueueArgs is an internal type (TBD...)
+type HistoryServiceResetQueueArgs struct {
+	Request *ResetQueueRequest `json:"request,omitempty"`
 }
 
 // GetRequest is an internal getter (TBD...)
-func (v *HistoryService_ResetQueue_Args) GetRequest() (o *ResetQueueRequest) {
+func (v *HistoryServiceResetQueueArgs) GetRequest() (o *ResetQueueRequest) {
 	if v != nil && v.Request != nil {
 		return v.Request
 	}
 	return
 }
 
-// HistoryService_ResetQueue_Result is an internal type (TBD...)
-type HistoryService_ResetQueue_Result struct {
-	BadRequestError      *BadRequestError
-	InternalServiceError *InternalServiceError
-	AccessDeniedError    *AccessDeniedError
+// HistoryServiceResetQueueResult is an internal type (TBD...)
+type HistoryServiceResetQueueResult struct {
+	BadRequestError      *BadRequestError      `json:"badRequestError,omitempty"`
+	InternalServiceError *InternalServiceError `json:"internalServiceError,omitempty"`
+	AccessDeniedError    *AccessDeniedError    `json:"accessDeniedError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_ResetQueue_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceResetQueueResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -2145,7 +2145,7 @@ func (v *HistoryService_ResetQueue_Result) GetBadRequestError() (o *BadRequestEr
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_ResetQueue_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceResetQueueResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -2153,39 +2153,39 @@ func (v *HistoryService_ResetQueue_Result) GetInternalServiceError() (o *Interna
 }
 
 // GetAccessDeniedError is an internal getter (TBD...)
-func (v *HistoryService_ResetQueue_Result) GetAccessDeniedError() (o *AccessDeniedError) {
+func (v *HistoryServiceResetQueueResult) GetAccessDeniedError() (o *AccessDeniedError) {
 	if v != nil && v.AccessDeniedError != nil {
 		return v.AccessDeniedError
 	}
 	return
 }
 
-// HistoryService_ResetStickyTaskList_Args is an internal type (TBD...)
-type HistoryService_ResetStickyTaskList_Args struct {
-	ResetRequest *HistoryResetStickyTaskListRequest
+// HistoryServiceResetStickyTaskListArgs is an internal type (TBD...)
+type HistoryServiceResetStickyTaskListArgs struct {
+	ResetRequest *HistoryResetStickyTaskListRequest `json:"resetRequest,omitempty"`
 }
 
 // GetResetRequest is an internal getter (TBD...)
-func (v *HistoryService_ResetStickyTaskList_Args) GetResetRequest() (o *HistoryResetStickyTaskListRequest) {
+func (v *HistoryServiceResetStickyTaskListArgs) GetResetRequest() (o *HistoryResetStickyTaskListRequest) {
 	if v != nil && v.ResetRequest != nil {
 		return v.ResetRequest
 	}
 	return
 }
 
-// HistoryService_ResetStickyTaskList_Result is an internal type (TBD...)
-type HistoryService_ResetStickyTaskList_Result struct {
-	Success                 *HistoryResetStickyTaskListResponse
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	LimitExceededError      *LimitExceededError
-	ServiceBusyError        *ServiceBusyError
+// HistoryServiceResetStickyTaskListResult is an internal type (TBD...)
+type HistoryServiceResetStickyTaskListResult struct {
+	Success                 *HistoryResetStickyTaskListResponse `json:"success,omitempty"`
+	BadRequestError         *BadRequestError                    `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError               `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError               `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError            `json:"shardOwnershipLostError,omitempty"`
+	LimitExceededError      *LimitExceededError                 `json:"limitExceededError,omitempty"`
+	ServiceBusyError        *ServiceBusyError                   `json:"serviceBusyError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_ResetStickyTaskList_Result) GetSuccess() (o *HistoryResetStickyTaskListResponse) {
+func (v *HistoryServiceResetStickyTaskListResult) GetSuccess() (o *HistoryResetStickyTaskListResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -2193,7 +2193,7 @@ func (v *HistoryService_ResetStickyTaskList_Result) GetSuccess() (o *HistoryRese
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_ResetStickyTaskList_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceResetStickyTaskListResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -2201,7 +2201,7 @@ func (v *HistoryService_ResetStickyTaskList_Result) GetBadRequestError() (o *Bad
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_ResetStickyTaskList_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceResetStickyTaskListResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -2209,7 +2209,7 @@ func (v *HistoryService_ResetStickyTaskList_Result) GetInternalServiceError() (o
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_ResetStickyTaskList_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceResetStickyTaskListResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -2217,7 +2217,7 @@ func (v *HistoryService_ResetStickyTaskList_Result) GetEntityNotExistError() (o 
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_ResetStickyTaskList_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceResetStickyTaskListResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -2225,7 +2225,7 @@ func (v *HistoryService_ResetStickyTaskList_Result) GetShardOwnershipLostError()
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_ResetStickyTaskList_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceResetStickyTaskListResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -2233,40 +2233,40 @@ func (v *HistoryService_ResetStickyTaskList_Result) GetLimitExceededError() (o *
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_ResetStickyTaskList_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceResetStickyTaskListResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_ResetWorkflowExecution_Args is an internal type (TBD...)
-type HistoryService_ResetWorkflowExecution_Args struct {
-	ResetRequest *HistoryResetWorkflowExecutionRequest
+// HistoryServiceResetWorkflowExecutionArgs is an internal type (TBD...)
+type HistoryServiceResetWorkflowExecutionArgs struct {
+	ResetRequest *HistoryResetWorkflowExecutionRequest `json:"resetRequest,omitempty"`
 }
 
 // GetResetRequest is an internal getter (TBD...)
-func (v *HistoryService_ResetWorkflowExecution_Args) GetResetRequest() (o *HistoryResetWorkflowExecutionRequest) {
+func (v *HistoryServiceResetWorkflowExecutionArgs) GetResetRequest() (o *HistoryResetWorkflowExecutionRequest) {
 	if v != nil && v.ResetRequest != nil {
 		return v.ResetRequest
 	}
 	return
 }
 
-// HistoryService_ResetWorkflowExecution_Result is an internal type (TBD...)
-type HistoryService_ResetWorkflowExecution_Result struct {
-	Success                 *ResetWorkflowExecutionResponse
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	DomainNotActiveError    *DomainNotActiveError
-	LimitExceededError      *LimitExceededError
-	ServiceBusyError        *ServiceBusyError
+// HistoryServiceResetWorkflowExecutionResult is an internal type (TBD...)
+type HistoryServiceResetWorkflowExecutionResult struct {
+	Success                 *ResetWorkflowExecutionResponse `json:"success,omitempty"`
+	BadRequestError         *BadRequestError                `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError           `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError           `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError        `json:"shardOwnershipLostError,omitempty"`
+	DomainNotActiveError    *DomainNotActiveError           `json:"domainNotActiveError,omitempty"`
+	LimitExceededError      *LimitExceededError             `json:"limitExceededError,omitempty"`
+	ServiceBusyError        *ServiceBusyError               `json:"serviceBusyError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_ResetWorkflowExecution_Result) GetSuccess() (o *ResetWorkflowExecutionResponse) {
+func (v *HistoryServiceResetWorkflowExecutionResult) GetSuccess() (o *ResetWorkflowExecutionResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -2274,7 +2274,7 @@ func (v *HistoryService_ResetWorkflowExecution_Result) GetSuccess() (o *ResetWor
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_ResetWorkflowExecution_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceResetWorkflowExecutionResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -2282,7 +2282,7 @@ func (v *HistoryService_ResetWorkflowExecution_Result) GetBadRequestError() (o *
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_ResetWorkflowExecution_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceResetWorkflowExecutionResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -2290,7 +2290,7 @@ func (v *HistoryService_ResetWorkflowExecution_Result) GetInternalServiceError()
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_ResetWorkflowExecution_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceResetWorkflowExecutionResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -2298,7 +2298,7 @@ func (v *HistoryService_ResetWorkflowExecution_Result) GetEntityNotExistError() 
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_ResetWorkflowExecution_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceResetWorkflowExecutionResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -2306,7 +2306,7 @@ func (v *HistoryService_ResetWorkflowExecution_Result) GetShardOwnershipLostErro
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_ResetWorkflowExecution_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceResetWorkflowExecutionResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -2314,7 +2314,7 @@ func (v *HistoryService_ResetWorkflowExecution_Result) GetDomainNotActiveError()
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_ResetWorkflowExecution_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceResetWorkflowExecutionResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -2322,39 +2322,39 @@ func (v *HistoryService_ResetWorkflowExecution_Result) GetLimitExceededError() (
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_ResetWorkflowExecution_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceResetWorkflowExecutionResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_RespondActivityTaskCanceled_Args is an internal type (TBD...)
-type HistoryService_RespondActivityTaskCanceled_Args struct {
-	CanceledRequest *HistoryRespondActivityTaskCanceledRequest
+// HistoryServiceRespondActivityTaskCanceledArgs is an internal type (TBD...)
+type HistoryServiceRespondActivityTaskCanceledArgs struct {
+	CanceledRequest *HistoryRespondActivityTaskCanceledRequest `json:"canceledRequest,omitempty"`
 }
 
 // GetCanceledRequest is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskCanceled_Args) GetCanceledRequest() (o *HistoryRespondActivityTaskCanceledRequest) {
+func (v *HistoryServiceRespondActivityTaskCanceledArgs) GetCanceledRequest() (o *HistoryRespondActivityTaskCanceledRequest) {
 	if v != nil && v.CanceledRequest != nil {
 		return v.CanceledRequest
 	}
 	return
 }
 
-// HistoryService_RespondActivityTaskCanceled_Result is an internal type (TBD...)
-type HistoryService_RespondActivityTaskCanceled_Result struct {
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	DomainNotActiveError    *DomainNotActiveError
-	LimitExceededError      *LimitExceededError
-	ServiceBusyError        *ServiceBusyError
+// HistoryServiceRespondActivityTaskCanceledResult is an internal type (TBD...)
+type HistoryServiceRespondActivityTaskCanceledResult struct {
+	BadRequestError         *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError    `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError    `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError `json:"shardOwnershipLostError,omitempty"`
+	DomainNotActiveError    *DomainNotActiveError    `json:"domainNotActiveError,omitempty"`
+	LimitExceededError      *LimitExceededError      `json:"limitExceededError,omitempty"`
+	ServiceBusyError        *ServiceBusyError        `json:"serviceBusyError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskCanceled_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceRespondActivityTaskCanceledResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -2362,7 +2362,7 @@ func (v *HistoryService_RespondActivityTaskCanceled_Result) GetBadRequestError()
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskCanceled_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceRespondActivityTaskCanceledResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -2370,7 +2370,7 @@ func (v *HistoryService_RespondActivityTaskCanceled_Result) GetInternalServiceEr
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskCanceled_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceRespondActivityTaskCanceledResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -2378,7 +2378,7 @@ func (v *HistoryService_RespondActivityTaskCanceled_Result) GetEntityNotExistErr
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskCanceled_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceRespondActivityTaskCanceledResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -2386,7 +2386,7 @@ func (v *HistoryService_RespondActivityTaskCanceled_Result) GetShardOwnershipLos
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskCanceled_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceRespondActivityTaskCanceledResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -2394,7 +2394,7 @@ func (v *HistoryService_RespondActivityTaskCanceled_Result) GetDomainNotActiveEr
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskCanceled_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceRespondActivityTaskCanceledResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -2402,39 +2402,39 @@ func (v *HistoryService_RespondActivityTaskCanceled_Result) GetLimitExceededErro
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskCanceled_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceRespondActivityTaskCanceledResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_RespondActivityTaskCompleted_Args is an internal type (TBD...)
-type HistoryService_RespondActivityTaskCompleted_Args struct {
-	CompleteRequest *HistoryRespondActivityTaskCompletedRequest
+// HistoryServiceRespondActivityTaskCompletedArgs is an internal type (TBD...)
+type HistoryServiceRespondActivityTaskCompletedArgs struct {
+	CompleteRequest *HistoryRespondActivityTaskCompletedRequest `json:"completeRequest,omitempty"`
 }
 
 // GetCompleteRequest is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskCompleted_Args) GetCompleteRequest() (o *HistoryRespondActivityTaskCompletedRequest) {
+func (v *HistoryServiceRespondActivityTaskCompletedArgs) GetCompleteRequest() (o *HistoryRespondActivityTaskCompletedRequest) {
 	if v != nil && v.CompleteRequest != nil {
 		return v.CompleteRequest
 	}
 	return
 }
 
-// HistoryService_RespondActivityTaskCompleted_Result is an internal type (TBD...)
-type HistoryService_RespondActivityTaskCompleted_Result struct {
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	DomainNotActiveError    *DomainNotActiveError
-	LimitExceededError      *LimitExceededError
-	ServiceBusyError        *ServiceBusyError
+// HistoryServiceRespondActivityTaskCompletedResult is an internal type (TBD...)
+type HistoryServiceRespondActivityTaskCompletedResult struct {
+	BadRequestError         *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError    `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError    `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError `json:"shardOwnershipLostError,omitempty"`
+	DomainNotActiveError    *DomainNotActiveError    `json:"domainNotActiveError,omitempty"`
+	LimitExceededError      *LimitExceededError      `json:"limitExceededError,omitempty"`
+	ServiceBusyError        *ServiceBusyError        `json:"serviceBusyError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskCompleted_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceRespondActivityTaskCompletedResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -2442,7 +2442,7 @@ func (v *HistoryService_RespondActivityTaskCompleted_Result) GetBadRequestError(
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskCompleted_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceRespondActivityTaskCompletedResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -2450,7 +2450,7 @@ func (v *HistoryService_RespondActivityTaskCompleted_Result) GetInternalServiceE
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskCompleted_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceRespondActivityTaskCompletedResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -2458,7 +2458,7 @@ func (v *HistoryService_RespondActivityTaskCompleted_Result) GetEntityNotExistEr
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskCompleted_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceRespondActivityTaskCompletedResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -2466,7 +2466,7 @@ func (v *HistoryService_RespondActivityTaskCompleted_Result) GetShardOwnershipLo
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskCompleted_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceRespondActivityTaskCompletedResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -2474,7 +2474,7 @@ func (v *HistoryService_RespondActivityTaskCompleted_Result) GetDomainNotActiveE
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskCompleted_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceRespondActivityTaskCompletedResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -2482,39 +2482,39 @@ func (v *HistoryService_RespondActivityTaskCompleted_Result) GetLimitExceededErr
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskCompleted_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceRespondActivityTaskCompletedResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_RespondActivityTaskFailed_Args is an internal type (TBD...)
-type HistoryService_RespondActivityTaskFailed_Args struct {
-	FailRequest *HistoryRespondActivityTaskFailedRequest
+// HistoryServiceRespondActivityTaskFailedArgs is an internal type (TBD...)
+type HistoryServiceRespondActivityTaskFailedArgs struct {
+	FailRequest *HistoryRespondActivityTaskFailedRequest `json:"failRequest,omitempty"`
 }
 
 // GetFailRequest is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskFailed_Args) GetFailRequest() (o *HistoryRespondActivityTaskFailedRequest) {
+func (v *HistoryServiceRespondActivityTaskFailedArgs) GetFailRequest() (o *HistoryRespondActivityTaskFailedRequest) {
 	if v != nil && v.FailRequest != nil {
 		return v.FailRequest
 	}
 	return
 }
 
-// HistoryService_RespondActivityTaskFailed_Result is an internal type (TBD...)
-type HistoryService_RespondActivityTaskFailed_Result struct {
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	DomainNotActiveError    *DomainNotActiveError
-	LimitExceededError      *LimitExceededError
-	ServiceBusyError        *ServiceBusyError
+// HistoryServiceRespondActivityTaskFailedResult is an internal type (TBD...)
+type HistoryServiceRespondActivityTaskFailedResult struct {
+	BadRequestError         *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError    `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError    `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError `json:"shardOwnershipLostError,omitempty"`
+	DomainNotActiveError    *DomainNotActiveError    `json:"domainNotActiveError,omitempty"`
+	LimitExceededError      *LimitExceededError      `json:"limitExceededError,omitempty"`
+	ServiceBusyError        *ServiceBusyError        `json:"serviceBusyError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskFailed_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceRespondActivityTaskFailedResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -2522,7 +2522,7 @@ func (v *HistoryService_RespondActivityTaskFailed_Result) GetBadRequestError() (
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskFailed_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceRespondActivityTaskFailedResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -2530,7 +2530,7 @@ func (v *HistoryService_RespondActivityTaskFailed_Result) GetInternalServiceErro
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskFailed_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceRespondActivityTaskFailedResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -2538,7 +2538,7 @@ func (v *HistoryService_RespondActivityTaskFailed_Result) GetEntityNotExistError
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskFailed_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceRespondActivityTaskFailedResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -2546,7 +2546,7 @@ func (v *HistoryService_RespondActivityTaskFailed_Result) GetShardOwnershipLostE
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskFailed_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceRespondActivityTaskFailedResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -2554,7 +2554,7 @@ func (v *HistoryService_RespondActivityTaskFailed_Result) GetDomainNotActiveErro
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskFailed_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceRespondActivityTaskFailedResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -2562,40 +2562,40 @@ func (v *HistoryService_RespondActivityTaskFailed_Result) GetLimitExceededError(
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_RespondActivityTaskFailed_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceRespondActivityTaskFailedResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_RespondDecisionTaskCompleted_Args is an internal type (TBD...)
-type HistoryService_RespondDecisionTaskCompleted_Args struct {
-	CompleteRequest *HistoryRespondDecisionTaskCompletedRequest
+// HistoryServiceRespondDecisionTaskCompletedArgs is an internal type (TBD...)
+type HistoryServiceRespondDecisionTaskCompletedArgs struct {
+	CompleteRequest *HistoryRespondDecisionTaskCompletedRequest `json:"completeRequest,omitempty"`
 }
 
 // GetCompleteRequest is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskCompleted_Args) GetCompleteRequest() (o *HistoryRespondDecisionTaskCompletedRequest) {
+func (v *HistoryServiceRespondDecisionTaskCompletedArgs) GetCompleteRequest() (o *HistoryRespondDecisionTaskCompletedRequest) {
 	if v != nil && v.CompleteRequest != nil {
 		return v.CompleteRequest
 	}
 	return
 }
 
-// HistoryService_RespondDecisionTaskCompleted_Result is an internal type (TBD...)
-type HistoryService_RespondDecisionTaskCompleted_Result struct {
-	Success                 *HistoryRespondDecisionTaskCompletedResponse
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	DomainNotActiveError    *DomainNotActiveError
-	LimitExceededError      *LimitExceededError
-	ServiceBusyError        *ServiceBusyError
+// HistoryServiceRespondDecisionTaskCompletedResult is an internal type (TBD...)
+type HistoryServiceRespondDecisionTaskCompletedResult struct {
+	Success                 *HistoryRespondDecisionTaskCompletedResponse `json:"success,omitempty"`
+	BadRequestError         *BadRequestError                             `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError                        `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError                        `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError                     `json:"shardOwnershipLostError,omitempty"`
+	DomainNotActiveError    *DomainNotActiveError                        `json:"domainNotActiveError,omitempty"`
+	LimitExceededError      *LimitExceededError                          `json:"limitExceededError,omitempty"`
+	ServiceBusyError        *ServiceBusyError                            `json:"serviceBusyError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskCompleted_Result) GetSuccess() (o *HistoryRespondDecisionTaskCompletedResponse) {
+func (v *HistoryServiceRespondDecisionTaskCompletedResult) GetSuccess() (o *HistoryRespondDecisionTaskCompletedResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -2603,7 +2603,7 @@ func (v *HistoryService_RespondDecisionTaskCompleted_Result) GetSuccess() (o *Hi
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskCompleted_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceRespondDecisionTaskCompletedResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -2611,7 +2611,7 @@ func (v *HistoryService_RespondDecisionTaskCompleted_Result) GetBadRequestError(
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskCompleted_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceRespondDecisionTaskCompletedResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -2619,7 +2619,7 @@ func (v *HistoryService_RespondDecisionTaskCompleted_Result) GetInternalServiceE
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskCompleted_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceRespondDecisionTaskCompletedResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -2627,7 +2627,7 @@ func (v *HistoryService_RespondDecisionTaskCompleted_Result) GetEntityNotExistEr
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskCompleted_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceRespondDecisionTaskCompletedResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -2635,7 +2635,7 @@ func (v *HistoryService_RespondDecisionTaskCompleted_Result) GetShardOwnershipLo
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskCompleted_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceRespondDecisionTaskCompletedResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -2643,7 +2643,7 @@ func (v *HistoryService_RespondDecisionTaskCompleted_Result) GetDomainNotActiveE
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskCompleted_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceRespondDecisionTaskCompletedResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -2651,39 +2651,39 @@ func (v *HistoryService_RespondDecisionTaskCompleted_Result) GetLimitExceededErr
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskCompleted_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceRespondDecisionTaskCompletedResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_RespondDecisionTaskFailed_Args is an internal type (TBD...)
-type HistoryService_RespondDecisionTaskFailed_Args struct {
-	FailedRequest *HistoryRespondDecisionTaskFailedRequest
+// HistoryServiceRespondDecisionTaskFailedArgs is an internal type (TBD...)
+type HistoryServiceRespondDecisionTaskFailedArgs struct {
+	FailedRequest *HistoryRespondDecisionTaskFailedRequest `json:"failedRequest,omitempty"`
 }
 
 // GetFailedRequest is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskFailed_Args) GetFailedRequest() (o *HistoryRespondDecisionTaskFailedRequest) {
+func (v *HistoryServiceRespondDecisionTaskFailedArgs) GetFailedRequest() (o *HistoryRespondDecisionTaskFailedRequest) {
 	if v != nil && v.FailedRequest != nil {
 		return v.FailedRequest
 	}
 	return
 }
 
-// HistoryService_RespondDecisionTaskFailed_Result is an internal type (TBD...)
-type HistoryService_RespondDecisionTaskFailed_Result struct {
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	DomainNotActiveError    *DomainNotActiveError
-	LimitExceededError      *LimitExceededError
-	ServiceBusyError        *ServiceBusyError
+// HistoryServiceRespondDecisionTaskFailedResult is an internal type (TBD...)
+type HistoryServiceRespondDecisionTaskFailedResult struct {
+	BadRequestError         *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError    `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError    `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError `json:"shardOwnershipLostError,omitempty"`
+	DomainNotActiveError    *DomainNotActiveError    `json:"domainNotActiveError,omitempty"`
+	LimitExceededError      *LimitExceededError      `json:"limitExceededError,omitempty"`
+	ServiceBusyError        *ServiceBusyError        `json:"serviceBusyError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskFailed_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceRespondDecisionTaskFailedResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -2691,7 +2691,7 @@ func (v *HistoryService_RespondDecisionTaskFailed_Result) GetBadRequestError() (
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskFailed_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceRespondDecisionTaskFailedResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -2699,7 +2699,7 @@ func (v *HistoryService_RespondDecisionTaskFailed_Result) GetInternalServiceErro
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskFailed_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceRespondDecisionTaskFailedResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -2707,7 +2707,7 @@ func (v *HistoryService_RespondDecisionTaskFailed_Result) GetEntityNotExistError
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskFailed_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceRespondDecisionTaskFailedResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -2715,7 +2715,7 @@ func (v *HistoryService_RespondDecisionTaskFailed_Result) GetShardOwnershipLostE
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskFailed_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceRespondDecisionTaskFailedResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -2723,7 +2723,7 @@ func (v *HistoryService_RespondDecisionTaskFailed_Result) GetDomainNotActiveErro
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskFailed_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceRespondDecisionTaskFailedResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -2731,39 +2731,39 @@ func (v *HistoryService_RespondDecisionTaskFailed_Result) GetLimitExceededError(
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_RespondDecisionTaskFailed_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceRespondDecisionTaskFailedResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_ScheduleDecisionTask_Args is an internal type (TBD...)
-type HistoryService_ScheduleDecisionTask_Args struct {
-	ScheduleRequest *ScheduleDecisionTaskRequest
+// HistoryServiceScheduleDecisionTaskArgs is an internal type (TBD...)
+type HistoryServiceScheduleDecisionTaskArgs struct {
+	ScheduleRequest *ScheduleDecisionTaskRequest `json:"scheduleRequest,omitempty"`
 }
 
 // GetScheduleRequest is an internal getter (TBD...)
-func (v *HistoryService_ScheduleDecisionTask_Args) GetScheduleRequest() (o *ScheduleDecisionTaskRequest) {
+func (v *HistoryServiceScheduleDecisionTaskArgs) GetScheduleRequest() (o *ScheduleDecisionTaskRequest) {
 	if v != nil && v.ScheduleRequest != nil {
 		return v.ScheduleRequest
 	}
 	return
 }
 
-// HistoryService_ScheduleDecisionTask_Result is an internal type (TBD...)
-type HistoryService_ScheduleDecisionTask_Result struct {
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	DomainNotActiveError    *DomainNotActiveError
-	LimitExceededError      *LimitExceededError
-	ServiceBusyError        *ServiceBusyError
+// HistoryServiceScheduleDecisionTaskResult is an internal type (TBD...)
+type HistoryServiceScheduleDecisionTaskResult struct {
+	BadRequestError         *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError    `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError    `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError `json:"shardOwnershipLostError,omitempty"`
+	DomainNotActiveError    *DomainNotActiveError    `json:"domainNotActiveError,omitempty"`
+	LimitExceededError      *LimitExceededError      `json:"limitExceededError,omitempty"`
+	ServiceBusyError        *ServiceBusyError        `json:"serviceBusyError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_ScheduleDecisionTask_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceScheduleDecisionTaskResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -2771,7 +2771,7 @@ func (v *HistoryService_ScheduleDecisionTask_Result) GetBadRequestError() (o *Ba
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_ScheduleDecisionTask_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceScheduleDecisionTaskResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -2779,7 +2779,7 @@ func (v *HistoryService_ScheduleDecisionTask_Result) GetInternalServiceError() (
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_ScheduleDecisionTask_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceScheduleDecisionTaskResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -2787,7 +2787,7 @@ func (v *HistoryService_ScheduleDecisionTask_Result) GetEntityNotExistError() (o
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_ScheduleDecisionTask_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceScheduleDecisionTaskResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -2795,7 +2795,7 @@ func (v *HistoryService_ScheduleDecisionTask_Result) GetShardOwnershipLostError(
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_ScheduleDecisionTask_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceScheduleDecisionTaskResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -2803,7 +2803,7 @@ func (v *HistoryService_ScheduleDecisionTask_Result) GetDomainNotActiveError() (
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_ScheduleDecisionTask_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceScheduleDecisionTaskResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -2811,40 +2811,40 @@ func (v *HistoryService_ScheduleDecisionTask_Result) GetLimitExceededError() (o 
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_ScheduleDecisionTask_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceScheduleDecisionTaskResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_SignalWithStartWorkflowExecution_Args is an internal type (TBD...)
-type HistoryService_SignalWithStartWorkflowExecution_Args struct {
-	SignalWithStartRequest *HistorySignalWithStartWorkflowExecutionRequest
+// HistoryServiceSignalWithStartWorkflowExecutionArgs is an internal type (TBD...)
+type HistoryServiceSignalWithStartWorkflowExecutionArgs struct {
+	SignalWithStartRequest *HistorySignalWithStartWorkflowExecutionRequest `json:"signalWithStartRequest,omitempty"`
 }
 
 // GetSignalWithStartRequest is an internal getter (TBD...)
-func (v *HistoryService_SignalWithStartWorkflowExecution_Args) GetSignalWithStartRequest() (o *HistorySignalWithStartWorkflowExecutionRequest) {
+func (v *HistoryServiceSignalWithStartWorkflowExecutionArgs) GetSignalWithStartRequest() (o *HistorySignalWithStartWorkflowExecutionRequest) {
 	if v != nil && v.SignalWithStartRequest != nil {
 		return v.SignalWithStartRequest
 	}
 	return
 }
 
-// HistoryService_SignalWithStartWorkflowExecution_Result is an internal type (TBD...)
-type HistoryService_SignalWithStartWorkflowExecution_Result struct {
-	Success                     *StartWorkflowExecutionResponse
-	BadRequestError             *BadRequestError
-	InternalServiceError        *InternalServiceError
-	ShardOwnershipLostError     *ShardOwnershipLostError
-	DomainNotActiveError        *DomainNotActiveError
-	LimitExceededError          *LimitExceededError
-	ServiceBusyError            *ServiceBusyError
-	WorkflowAlreadyStartedError *WorkflowExecutionAlreadyStartedError
+// HistoryServiceSignalWithStartWorkflowExecutionResult is an internal type (TBD...)
+type HistoryServiceSignalWithStartWorkflowExecutionResult struct {
+	Success                     *StartWorkflowExecutionResponse       `json:"success,omitempty"`
+	BadRequestError             *BadRequestError                      `json:"badRequestError,omitempty"`
+	InternalServiceError        *InternalServiceError                 `json:"internalServiceError,omitempty"`
+	ShardOwnershipLostError     *ShardOwnershipLostError              `json:"shardOwnershipLostError,omitempty"`
+	DomainNotActiveError        *DomainNotActiveError                 `json:"domainNotActiveError,omitempty"`
+	LimitExceededError          *LimitExceededError                   `json:"limitExceededError,omitempty"`
+	ServiceBusyError            *ServiceBusyError                     `json:"serviceBusyError,omitempty"`
+	WorkflowAlreadyStartedError *WorkflowExecutionAlreadyStartedError `json:"workflowAlreadyStartedError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_SignalWithStartWorkflowExecution_Result) GetSuccess() (o *StartWorkflowExecutionResponse) {
+func (v *HistoryServiceSignalWithStartWorkflowExecutionResult) GetSuccess() (o *StartWorkflowExecutionResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -2852,7 +2852,7 @@ func (v *HistoryService_SignalWithStartWorkflowExecution_Result) GetSuccess() (o
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_SignalWithStartWorkflowExecution_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceSignalWithStartWorkflowExecutionResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -2860,7 +2860,7 @@ func (v *HistoryService_SignalWithStartWorkflowExecution_Result) GetBadRequestEr
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_SignalWithStartWorkflowExecution_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceSignalWithStartWorkflowExecutionResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -2868,7 +2868,7 @@ func (v *HistoryService_SignalWithStartWorkflowExecution_Result) GetInternalServ
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_SignalWithStartWorkflowExecution_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceSignalWithStartWorkflowExecutionResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -2876,7 +2876,7 @@ func (v *HistoryService_SignalWithStartWorkflowExecution_Result) GetShardOwnersh
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_SignalWithStartWorkflowExecution_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceSignalWithStartWorkflowExecutionResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -2884,7 +2884,7 @@ func (v *HistoryService_SignalWithStartWorkflowExecution_Result) GetDomainNotAct
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_SignalWithStartWorkflowExecution_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceSignalWithStartWorkflowExecutionResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -2892,7 +2892,7 @@ func (v *HistoryService_SignalWithStartWorkflowExecution_Result) GetLimitExceede
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_SignalWithStartWorkflowExecution_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceSignalWithStartWorkflowExecutionResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -2900,39 +2900,39 @@ func (v *HistoryService_SignalWithStartWorkflowExecution_Result) GetServiceBusyE
 }
 
 // GetWorkflowAlreadyStartedError is an internal getter (TBD...)
-func (v *HistoryService_SignalWithStartWorkflowExecution_Result) GetWorkflowAlreadyStartedError() (o *WorkflowExecutionAlreadyStartedError) {
+func (v *HistoryServiceSignalWithStartWorkflowExecutionResult) GetWorkflowAlreadyStartedError() (o *WorkflowExecutionAlreadyStartedError) {
 	if v != nil && v.WorkflowAlreadyStartedError != nil {
 		return v.WorkflowAlreadyStartedError
 	}
 	return
 }
 
-// HistoryService_SignalWorkflowExecution_Args is an internal type (TBD...)
-type HistoryService_SignalWorkflowExecution_Args struct {
-	SignalRequest *HistorySignalWorkflowExecutionRequest
+// HistoryServiceSignalWorkflowExecutionArgs is an internal type (TBD...)
+type HistoryServiceSignalWorkflowExecutionArgs struct {
+	SignalRequest *HistorySignalWorkflowExecutionRequest `json:"signalRequest,omitempty"`
 }
 
 // GetSignalRequest is an internal getter (TBD...)
-func (v *HistoryService_SignalWorkflowExecution_Args) GetSignalRequest() (o *HistorySignalWorkflowExecutionRequest) {
+func (v *HistoryServiceSignalWorkflowExecutionArgs) GetSignalRequest() (o *HistorySignalWorkflowExecutionRequest) {
 	if v != nil && v.SignalRequest != nil {
 		return v.SignalRequest
 	}
 	return
 }
 
-// HistoryService_SignalWorkflowExecution_Result is an internal type (TBD...)
-type HistoryService_SignalWorkflowExecution_Result struct {
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	DomainNotActiveError    *DomainNotActiveError
-	ServiceBusyError        *ServiceBusyError
-	LimitExceededError      *LimitExceededError
+// HistoryServiceSignalWorkflowExecutionResult is an internal type (TBD...)
+type HistoryServiceSignalWorkflowExecutionResult struct {
+	BadRequestError         *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError    `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError    `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError `json:"shardOwnershipLostError,omitempty"`
+	DomainNotActiveError    *DomainNotActiveError    `json:"domainNotActiveError,omitempty"`
+	ServiceBusyError        *ServiceBusyError        `json:"serviceBusyError,omitempty"`
+	LimitExceededError      *LimitExceededError      `json:"limitExceededError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_SignalWorkflowExecution_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceSignalWorkflowExecutionResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -2940,7 +2940,7 @@ func (v *HistoryService_SignalWorkflowExecution_Result) GetBadRequestError() (o 
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_SignalWorkflowExecution_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceSignalWorkflowExecutionResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -2948,7 +2948,7 @@ func (v *HistoryService_SignalWorkflowExecution_Result) GetInternalServiceError(
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_SignalWorkflowExecution_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceSignalWorkflowExecutionResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -2956,7 +2956,7 @@ func (v *HistoryService_SignalWorkflowExecution_Result) GetEntityNotExistError()
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_SignalWorkflowExecution_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceSignalWorkflowExecutionResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -2964,7 +2964,7 @@ func (v *HistoryService_SignalWorkflowExecution_Result) GetShardOwnershipLostErr
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_SignalWorkflowExecution_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceSignalWorkflowExecutionResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -2972,7 +2972,7 @@ func (v *HistoryService_SignalWorkflowExecution_Result) GetDomainNotActiveError(
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_SignalWorkflowExecution_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceSignalWorkflowExecutionResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -2980,40 +2980,40 @@ func (v *HistoryService_SignalWorkflowExecution_Result) GetServiceBusyError() (o
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_SignalWorkflowExecution_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceSignalWorkflowExecutionResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
 	return
 }
 
-// HistoryService_StartWorkflowExecution_Args is an internal type (TBD...)
-type HistoryService_StartWorkflowExecution_Args struct {
-	StartRequest *HistoryStartWorkflowExecutionRequest
+// HistoryServiceStartWorkflowExecutionArgs is an internal type (TBD...)
+type HistoryServiceStartWorkflowExecutionArgs struct {
+	StartRequest *HistoryStartWorkflowExecutionRequest `json:"startRequest,omitempty"`
 }
 
 // GetStartRequest is an internal getter (TBD...)
-func (v *HistoryService_StartWorkflowExecution_Args) GetStartRequest() (o *HistoryStartWorkflowExecutionRequest) {
+func (v *HistoryServiceStartWorkflowExecutionArgs) GetStartRequest() (o *HistoryStartWorkflowExecutionRequest) {
 	if v != nil && v.StartRequest != nil {
 		return v.StartRequest
 	}
 	return
 }
 
-// HistoryService_StartWorkflowExecution_Result is an internal type (TBD...)
-type HistoryService_StartWorkflowExecution_Result struct {
-	Success                  *StartWorkflowExecutionResponse
-	BadRequestError          *BadRequestError
-	InternalServiceError     *InternalServiceError
-	SessionAlreadyExistError *WorkflowExecutionAlreadyStartedError
-	ShardOwnershipLostError  *ShardOwnershipLostError
-	DomainNotActiveError     *DomainNotActiveError
-	LimitExceededError       *LimitExceededError
-	ServiceBusyError         *ServiceBusyError
+// HistoryServiceStartWorkflowExecutionResult is an internal type (TBD...)
+type HistoryServiceStartWorkflowExecutionResult struct {
+	Success                  *StartWorkflowExecutionResponse       `json:"success,omitempty"`
+	BadRequestError          *BadRequestError                      `json:"badRequestError,omitempty"`
+	InternalServiceError     *InternalServiceError                 `json:"internalServiceError,omitempty"`
+	SessionAlreadyExistError *WorkflowExecutionAlreadyStartedError `json:"sessionAlreadyExistError,omitempty"`
+	ShardOwnershipLostError  *ShardOwnershipLostError              `json:"shardOwnershipLostError,omitempty"`
+	DomainNotActiveError     *DomainNotActiveError                 `json:"domainNotActiveError,omitempty"`
+	LimitExceededError       *LimitExceededError                   `json:"limitExceededError,omitempty"`
+	ServiceBusyError         *ServiceBusyError                     `json:"serviceBusyError,omitempty"`
 }
 
 // GetSuccess is an internal getter (TBD...)
-func (v *HistoryService_StartWorkflowExecution_Result) GetSuccess() (o *StartWorkflowExecutionResponse) {
+func (v *HistoryServiceStartWorkflowExecutionResult) GetSuccess() (o *StartWorkflowExecutionResponse) {
 	if v != nil && v.Success != nil {
 		return v.Success
 	}
@@ -3021,7 +3021,7 @@ func (v *HistoryService_StartWorkflowExecution_Result) GetSuccess() (o *StartWor
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_StartWorkflowExecution_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceStartWorkflowExecutionResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -3029,7 +3029,7 @@ func (v *HistoryService_StartWorkflowExecution_Result) GetBadRequestError() (o *
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_StartWorkflowExecution_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceStartWorkflowExecutionResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -3037,7 +3037,7 @@ func (v *HistoryService_StartWorkflowExecution_Result) GetInternalServiceError()
 }
 
 // GetSessionAlreadyExistError is an internal getter (TBD...)
-func (v *HistoryService_StartWorkflowExecution_Result) GetSessionAlreadyExistError() (o *WorkflowExecutionAlreadyStartedError) {
+func (v *HistoryServiceStartWorkflowExecutionResult) GetSessionAlreadyExistError() (o *WorkflowExecutionAlreadyStartedError) {
 	if v != nil && v.SessionAlreadyExistError != nil {
 		return v.SessionAlreadyExistError
 	}
@@ -3045,7 +3045,7 @@ func (v *HistoryService_StartWorkflowExecution_Result) GetSessionAlreadyExistErr
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_StartWorkflowExecution_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceStartWorkflowExecutionResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -3053,7 +3053,7 @@ func (v *HistoryService_StartWorkflowExecution_Result) GetShardOwnershipLostErro
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_StartWorkflowExecution_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceStartWorkflowExecutionResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -3061,7 +3061,7 @@ func (v *HistoryService_StartWorkflowExecution_Result) GetDomainNotActiveError()
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_StartWorkflowExecution_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceStartWorkflowExecutionResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -3069,38 +3069,38 @@ func (v *HistoryService_StartWorkflowExecution_Result) GetLimitExceededError() (
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_StartWorkflowExecution_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceStartWorkflowExecutionResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_SyncActivity_Args is an internal type (TBD...)
-type HistoryService_SyncActivity_Args struct {
-	SyncActivityRequest *SyncActivityRequest
+// HistoryServiceSyncActivityArgs is an internal type (TBD...)
+type HistoryServiceSyncActivityArgs struct {
+	SyncActivityRequest *SyncActivityRequest `json:"syncActivityRequest,omitempty"`
 }
 
 // GetSyncActivityRequest is an internal getter (TBD...)
-func (v *HistoryService_SyncActivity_Args) GetSyncActivityRequest() (o *SyncActivityRequest) {
+func (v *HistoryServiceSyncActivityArgs) GetSyncActivityRequest() (o *SyncActivityRequest) {
 	if v != nil && v.SyncActivityRequest != nil {
 		return v.SyncActivityRequest
 	}
 	return
 }
 
-// HistoryService_SyncActivity_Result is an internal type (TBD...)
-type HistoryService_SyncActivity_Result struct {
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	ServiceBusyError        *ServiceBusyError
-	RetryTaskV2Error        *RetryTaskV2Error
+// HistoryServiceSyncActivityResult is an internal type (TBD...)
+type HistoryServiceSyncActivityResult struct {
+	BadRequestError         *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError    `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError    `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError `json:"shardOwnershipLostError,omitempty"`
+	ServiceBusyError        *ServiceBusyError        `json:"serviceBusyError,omitempty"`
+	RetryTaskV2Error        *RetryTaskV2Error        `json:"retryTaskV2Error,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_SyncActivity_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceSyncActivityResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -3108,7 +3108,7 @@ func (v *HistoryService_SyncActivity_Result) GetBadRequestError() (o *BadRequest
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_SyncActivity_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceSyncActivityResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -3116,7 +3116,7 @@ func (v *HistoryService_SyncActivity_Result) GetInternalServiceError() (o *Inter
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_SyncActivity_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceSyncActivityResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -3124,7 +3124,7 @@ func (v *HistoryService_SyncActivity_Result) GetEntityNotExistError() (o *Entity
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_SyncActivity_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceSyncActivityResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -3132,7 +3132,7 @@ func (v *HistoryService_SyncActivity_Result) GetShardOwnershipLostError() (o *Sh
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_SyncActivity_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceSyncActivityResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -3140,37 +3140,37 @@ func (v *HistoryService_SyncActivity_Result) GetServiceBusyError() (o *ServiceBu
 }
 
 // GetRetryTaskV2Error is an internal getter (TBD...)
-func (v *HistoryService_SyncActivity_Result) GetRetryTaskV2Error() (o *RetryTaskV2Error) {
+func (v *HistoryServiceSyncActivityResult) GetRetryTaskV2Error() (o *RetryTaskV2Error) {
 	if v != nil && v.RetryTaskV2Error != nil {
 		return v.RetryTaskV2Error
 	}
 	return
 }
 
-// HistoryService_SyncShardStatus_Args is an internal type (TBD...)
-type HistoryService_SyncShardStatus_Args struct {
-	SyncShardStatusRequest *SyncShardStatusRequest
+// HistoryServiceSyncShardStatusArgs is an internal type (TBD...)
+type HistoryServiceSyncShardStatusArgs struct {
+	SyncShardStatusRequest *SyncShardStatusRequest `json:"syncShardStatusRequest,omitempty"`
 }
 
 // GetSyncShardStatusRequest is an internal getter (TBD...)
-func (v *HistoryService_SyncShardStatus_Args) GetSyncShardStatusRequest() (o *SyncShardStatusRequest) {
+func (v *HistoryServiceSyncShardStatusArgs) GetSyncShardStatusRequest() (o *SyncShardStatusRequest) {
 	if v != nil && v.SyncShardStatusRequest != nil {
 		return v.SyncShardStatusRequest
 	}
 	return
 }
 
-// HistoryService_SyncShardStatus_Result is an internal type (TBD...)
-type HistoryService_SyncShardStatus_Result struct {
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	LimitExceededError      *LimitExceededError
-	ServiceBusyError        *ServiceBusyError
+// HistoryServiceSyncShardStatusResult is an internal type (TBD...)
+type HistoryServiceSyncShardStatusResult struct {
+	BadRequestError         *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError    `json:"internalServiceError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError `json:"shardOwnershipLostError,omitempty"`
+	LimitExceededError      *LimitExceededError      `json:"limitExceededError,omitempty"`
+	ServiceBusyError        *ServiceBusyError        `json:"serviceBusyError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_SyncShardStatus_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceSyncShardStatusResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -3178,7 +3178,7 @@ func (v *HistoryService_SyncShardStatus_Result) GetBadRequestError() (o *BadRequ
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_SyncShardStatus_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceSyncShardStatusResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -3186,7 +3186,7 @@ func (v *HistoryService_SyncShardStatus_Result) GetInternalServiceError() (o *In
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_SyncShardStatus_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceSyncShardStatusResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -3194,7 +3194,7 @@ func (v *HistoryService_SyncShardStatus_Result) GetShardOwnershipLostError() (o 
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_SyncShardStatus_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceSyncShardStatusResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -3202,39 +3202,39 @@ func (v *HistoryService_SyncShardStatus_Result) GetLimitExceededError() (o *Limi
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_SyncShardStatus_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceSyncShardStatusResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
 	return
 }
 
-// HistoryService_TerminateWorkflowExecution_Args is an internal type (TBD...)
-type HistoryService_TerminateWorkflowExecution_Args struct {
-	TerminateRequest *HistoryTerminateWorkflowExecutionRequest
+// HistoryServiceTerminateWorkflowExecutionArgs is an internal type (TBD...)
+type HistoryServiceTerminateWorkflowExecutionArgs struct {
+	TerminateRequest *HistoryTerminateWorkflowExecutionRequest `json:"terminateRequest,omitempty"`
 }
 
 // GetTerminateRequest is an internal getter (TBD...)
-func (v *HistoryService_TerminateWorkflowExecution_Args) GetTerminateRequest() (o *HistoryTerminateWorkflowExecutionRequest) {
+func (v *HistoryServiceTerminateWorkflowExecutionArgs) GetTerminateRequest() (o *HistoryTerminateWorkflowExecutionRequest) {
 	if v != nil && v.TerminateRequest != nil {
 		return v.TerminateRequest
 	}
 	return
 }
 
-// HistoryService_TerminateWorkflowExecution_Result is an internal type (TBD...)
-type HistoryService_TerminateWorkflowExecution_Result struct {
-	BadRequestError         *BadRequestError
-	InternalServiceError    *InternalServiceError
-	EntityNotExistError     *EntityNotExistsError
-	ShardOwnershipLostError *ShardOwnershipLostError
-	DomainNotActiveError    *DomainNotActiveError
-	LimitExceededError      *LimitExceededError
-	ServiceBusyError        *ServiceBusyError
+// HistoryServiceTerminateWorkflowExecutionResult is an internal type (TBD...)
+type HistoryServiceTerminateWorkflowExecutionResult struct {
+	BadRequestError         *BadRequestError         `json:"badRequestError,omitempty"`
+	InternalServiceError    *InternalServiceError    `json:"internalServiceError,omitempty"`
+	EntityNotExistError     *EntityNotExistsError    `json:"entityNotExistError,omitempty"`
+	ShardOwnershipLostError *ShardOwnershipLostError `json:"shardOwnershipLostError,omitempty"`
+	DomainNotActiveError    *DomainNotActiveError    `json:"domainNotActiveError,omitempty"`
+	LimitExceededError      *LimitExceededError      `json:"limitExceededError,omitempty"`
+	ServiceBusyError        *ServiceBusyError        `json:"serviceBusyError,omitempty"`
 }
 
 // GetBadRequestError is an internal getter (TBD...)
-func (v *HistoryService_TerminateWorkflowExecution_Result) GetBadRequestError() (o *BadRequestError) {
+func (v *HistoryServiceTerminateWorkflowExecutionResult) GetBadRequestError() (o *BadRequestError) {
 	if v != nil && v.BadRequestError != nil {
 		return v.BadRequestError
 	}
@@ -3242,7 +3242,7 @@ func (v *HistoryService_TerminateWorkflowExecution_Result) GetBadRequestError() 
 }
 
 // GetInternalServiceError is an internal getter (TBD...)
-func (v *HistoryService_TerminateWorkflowExecution_Result) GetInternalServiceError() (o *InternalServiceError) {
+func (v *HistoryServiceTerminateWorkflowExecutionResult) GetInternalServiceError() (o *InternalServiceError) {
 	if v != nil && v.InternalServiceError != nil {
 		return v.InternalServiceError
 	}
@@ -3250,7 +3250,7 @@ func (v *HistoryService_TerminateWorkflowExecution_Result) GetInternalServiceErr
 }
 
 // GetEntityNotExistError is an internal getter (TBD...)
-func (v *HistoryService_TerminateWorkflowExecution_Result) GetEntityNotExistError() (o *EntityNotExistsError) {
+func (v *HistoryServiceTerminateWorkflowExecutionResult) GetEntityNotExistError() (o *EntityNotExistsError) {
 	if v != nil && v.EntityNotExistError != nil {
 		return v.EntityNotExistError
 	}
@@ -3258,7 +3258,7 @@ func (v *HistoryService_TerminateWorkflowExecution_Result) GetEntityNotExistErro
 }
 
 // GetShardOwnershipLostError is an internal getter (TBD...)
-func (v *HistoryService_TerminateWorkflowExecution_Result) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
+func (v *HistoryServiceTerminateWorkflowExecutionResult) GetShardOwnershipLostError() (o *ShardOwnershipLostError) {
 	if v != nil && v.ShardOwnershipLostError != nil {
 		return v.ShardOwnershipLostError
 	}
@@ -3266,7 +3266,7 @@ func (v *HistoryService_TerminateWorkflowExecution_Result) GetShardOwnershipLost
 }
 
 // GetDomainNotActiveError is an internal getter (TBD...)
-func (v *HistoryService_TerminateWorkflowExecution_Result) GetDomainNotActiveError() (o *DomainNotActiveError) {
+func (v *HistoryServiceTerminateWorkflowExecutionResult) GetDomainNotActiveError() (o *DomainNotActiveError) {
 	if v != nil && v.DomainNotActiveError != nil {
 		return v.DomainNotActiveError
 	}
@@ -3274,7 +3274,7 @@ func (v *HistoryService_TerminateWorkflowExecution_Result) GetDomainNotActiveErr
 }
 
 // GetLimitExceededError is an internal getter (TBD...)
-func (v *HistoryService_TerminateWorkflowExecution_Result) GetLimitExceededError() (o *LimitExceededError) {
+func (v *HistoryServiceTerminateWorkflowExecutionResult) GetLimitExceededError() (o *LimitExceededError) {
 	if v != nil && v.LimitExceededError != nil {
 		return v.LimitExceededError
 	}
@@ -3282,7 +3282,7 @@ func (v *HistoryService_TerminateWorkflowExecution_Result) GetLimitExceededError
 }
 
 // GetServiceBusyError is an internal getter (TBD...)
-func (v *HistoryService_TerminateWorkflowExecution_Result) GetServiceBusyError() (o *ServiceBusyError) {
+func (v *HistoryServiceTerminateWorkflowExecutionResult) GetServiceBusyError() (o *ServiceBusyError) {
 	if v != nil && v.ServiceBusyError != nil {
 		return v.ServiceBusyError
 	}
@@ -3291,7 +3291,7 @@ func (v *HistoryService_TerminateWorkflowExecution_Result) GetServiceBusyError()
 
 // NotifyFailoverMarkersRequest is an internal type (TBD...)
 type NotifyFailoverMarkersRequest struct {
-	FailoverMarkerTokens []*FailoverMarkerToken
+	FailoverMarkerTokens []*FailoverMarkerToken `json:"failoverMarkerTokens,omitempty"`
 }
 
 // GetFailoverMarkerTokens is an internal getter (TBD...)
@@ -3304,10 +3304,10 @@ func (v *NotifyFailoverMarkersRequest) GetFailoverMarkerTokens() (o []*FailoverM
 
 // ParentExecutionInfo is an internal type (TBD...)
 type ParentExecutionInfo struct {
-	DomainUUID  *string
-	Domain      *string
-	Execution   *WorkflowExecution
-	InitiatedID *int64
+	DomainUUID  *string            `json:"domainUUID,omitempty"`
+	Domain      *string            `json:"domain,omitempty"`
+	Execution   *WorkflowExecution `json:"execution,omitempty"`
+	InitiatedID *int64             `json:"initiatedId,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -3344,10 +3344,10 @@ func (v *ParentExecutionInfo) GetInitiatedID() (o int64) {
 
 // PollMutableStateRequest is an internal type (TBD...)
 type PollMutableStateRequest struct {
-	DomainUUID          *string
-	Execution           *WorkflowExecution
-	ExpectedNextEventID *int64
-	CurrentBranchToken  []byte
+	DomainUUID          *string            `json:"domainUUID,omitempty"`
+	Execution           *WorkflowExecution `json:"execution,omitempty"`
+	ExpectedNextEventID *int64             `json:"expectedNextEventId,omitempty"`
+	CurrentBranchToken  []byte             `json:"currentBranchToken,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -3384,21 +3384,21 @@ func (v *PollMutableStateRequest) GetCurrentBranchToken() (o []byte) {
 
 // PollMutableStateResponse is an internal type (TBD...)
 type PollMutableStateResponse struct {
-	Execution                            *WorkflowExecution
-	WorkflowType                         *WorkflowType
-	NextEventID                          *int64
-	PreviousStartedEventID               *int64
-	LastFirstEventID                     *int64
-	TaskList                             *TaskList
-	StickyTaskList                       *TaskList
-	ClientLibraryVersion                 *string
-	ClientFeatureVersion                 *string
-	ClientImpl                           *string
-	StickyTaskListScheduleToStartTimeout *int32
-	CurrentBranchToken                   []byte
-	VersionHistories                     *VersionHistories
-	WorkflowState                        *int32
-	WorkflowCloseState                   *int32
+	Execution                            *WorkflowExecution `json:"execution,omitempty"`
+	WorkflowType                         *WorkflowType      `json:"workflowType,omitempty"`
+	NextEventID                          *int64             `json:"NextEventId,omitempty"`
+	PreviousStartedEventID               *int64             `json:"PreviousStartedEventId,omitempty"`
+	LastFirstEventID                     *int64             `json:"LastFirstEventId,omitempty"`
+	TaskList                             *TaskList          `json:"taskList,omitempty"`
+	StickyTaskList                       *TaskList          `json:"stickyTaskList,omitempty"`
+	ClientLibraryVersion                 *string            `json:"clientLibraryVersion,omitempty"`
+	ClientFeatureVersion                 *string            `json:"clientFeatureVersion,omitempty"`
+	ClientImpl                           *string            `json:"clientImpl,omitempty"`
+	StickyTaskListScheduleToStartTimeout *int32             `json:"stickyTaskListScheduleToStartTimeout,omitempty"`
+	CurrentBranchToken                   []byte             `json:"currentBranchToken,omitempty"`
+	VersionHistories                     *VersionHistories  `json:"versionHistories,omitempty"`
+	WorkflowState                        *int32             `json:"workflowState,omitempty"`
+	WorkflowCloseState                   *int32             `json:"workflowCloseState,omitempty"`
 }
 
 // GetExecution is an internal getter (TBD...)
@@ -3523,10 +3523,10 @@ func (v *PollMutableStateResponse) GetWorkflowCloseState() (o int32) {
 
 // ProcessingQueueState is an internal type (TBD...)
 type ProcessingQueueState struct {
-	Level        *int32
-	AckLevel     *int64
-	MaxLevel     *int64
-	DomainFilter *DomainFilter
+	Level        *int32        `json:"level,omitempty"`
+	AckLevel     *int64        `json:"ackLevel,omitempty"`
+	MaxLevel     *int64        `json:"maxLevel,omitempty"`
+	DomainFilter *DomainFilter `json:"domainFilter,omitempty"`
 }
 
 // GetLevel is an internal getter (TBD...)
@@ -3563,7 +3563,7 @@ func (v *ProcessingQueueState) GetDomainFilter() (o *DomainFilter) {
 
 // ProcessingQueueStates is an internal type (TBD...)
 type ProcessingQueueStates struct {
-	StatesByCluster map[string][]*ProcessingQueueState
+	StatesByCluster map[string][]*ProcessingQueueState `json:"statesByCluster,omitempty"`
 }
 
 // GetStatesByCluster is an internal getter (TBD...)
@@ -3576,8 +3576,8 @@ func (v *ProcessingQueueStates) GetStatesByCluster() (o map[string][]*Processing
 
 // HistoryQueryWorkflowRequest is an internal type (TBD...)
 type HistoryQueryWorkflowRequest struct {
-	DomainUUID *string
-	Request    *QueryWorkflowRequest
+	DomainUUID *string               `json:"domainUUID,omitempty"`
+	Request    *QueryWorkflowRequest `json:"request,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -3598,7 +3598,7 @@ func (v *HistoryQueryWorkflowRequest) GetRequest() (o *QueryWorkflowRequest) {
 
 // HistoryQueryWorkflowResponse is an internal type (TBD...)
 type HistoryQueryWorkflowResponse struct {
-	Response *QueryWorkflowResponse
+	Response *QueryWorkflowResponse `json:"response,omitempty"`
 }
 
 // GetResponse is an internal getter (TBD...)
@@ -3611,8 +3611,8 @@ func (v *HistoryQueryWorkflowResponse) GetResponse() (o *QueryWorkflowResponse) 
 
 // HistoryReapplyEventsRequest is an internal type (TBD...)
 type HistoryReapplyEventsRequest struct {
-	DomainUUID *string
-	Request    *ReapplyEventsRequest
+	DomainUUID *string               `json:"domainUUID,omitempty"`
+	Request    *ReapplyEventsRequest `json:"request,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -3633,8 +3633,8 @@ func (v *HistoryReapplyEventsRequest) GetRequest() (o *ReapplyEventsRequest) {
 
 // HistoryRecordActivityTaskHeartbeatRequest is an internal type (TBD...)
 type HistoryRecordActivityTaskHeartbeatRequest struct {
-	DomainUUID       *string
-	HeartbeatRequest *RecordActivityTaskHeartbeatRequest
+	DomainUUID       *string                             `json:"domainUUID,omitempty"`
+	HeartbeatRequest *RecordActivityTaskHeartbeatRequest `json:"heartbeatRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -3655,12 +3655,12 @@ func (v *HistoryRecordActivityTaskHeartbeatRequest) GetHeartbeatRequest() (o *Re
 
 // RecordActivityTaskStartedRequest is an internal type (TBD...)
 type RecordActivityTaskStartedRequest struct {
-	DomainUUID        *string
-	WorkflowExecution *WorkflowExecution
-	ScheduleID        *int64
-	TaskID            *int64
-	RequestID         *string
-	PollRequest       *PollForActivityTaskRequest
+	DomainUUID        *string                     `json:"domainUUID,omitempty"`
+	WorkflowExecution *WorkflowExecution          `json:"workflowExecution,omitempty"`
+	ScheduleID        *int64                      `json:"scheduleId,omitempty"`
+	TaskID            *int64                      `json:"taskId,omitempty"`
+	RequestID         *string                     `json:"requestId,omitempty"`
+	PollRequest       *PollForActivityTaskRequest `json:"pollRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -3713,13 +3713,13 @@ func (v *RecordActivityTaskStartedRequest) GetPollRequest() (o *PollForActivityT
 
 // RecordActivityTaskStartedResponse is an internal type (TBD...)
 type RecordActivityTaskStartedResponse struct {
-	ScheduledEvent                  *HistoryEvent
-	StartedTimestamp                *int64
-	Attempt                         *int64
-	ScheduledTimestampOfThisAttempt *int64
-	HeartbeatDetails                []byte
-	WorkflowType                    *WorkflowType
-	WorkflowDomain                  *string
+	ScheduledEvent                  *HistoryEvent `json:"scheduledEvent,omitempty"`
+	StartedTimestamp                *int64        `json:"startedTimestamp,omitempty"`
+	Attempt                         *int64        `json:"attempt,omitempty"`
+	ScheduledTimestampOfThisAttempt *int64        `json:"scheduledTimestampOfThisAttempt,omitempty"`
+	HeartbeatDetails                []byte        `json:"heartbeatDetails,omitempty"`
+	WorkflowType                    *WorkflowType `json:"workflowType,omitempty"`
+	WorkflowDomain                  *string       `json:"workflowDomain,omitempty"`
 }
 
 // GetScheduledEvent is an internal getter (TBD...)
@@ -3780,11 +3780,11 @@ func (v *RecordActivityTaskStartedResponse) GetWorkflowDomain() (o string) {
 
 // RecordChildExecutionCompletedRequest is an internal type (TBD...)
 type RecordChildExecutionCompletedRequest struct {
-	DomainUUID         *string
-	WorkflowExecution  *WorkflowExecution
-	InitiatedID        *int64
-	CompletedExecution *WorkflowExecution
-	CompletionEvent    *HistoryEvent
+	DomainUUID         *string            `json:"domainUUID,omitempty"`
+	WorkflowExecution  *WorkflowExecution `json:"workflowExecution,omitempty"`
+	InitiatedID        *int64             `json:"initiatedId,omitempty"`
+	CompletedExecution *WorkflowExecution `json:"completedExecution,omitempty"`
+	CompletionEvent    *HistoryEvent      `json:"completionEvent,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -3829,12 +3829,12 @@ func (v *RecordChildExecutionCompletedRequest) GetCompletionEvent() (o *HistoryE
 
 // RecordDecisionTaskStartedRequest is an internal type (TBD...)
 type RecordDecisionTaskStartedRequest struct {
-	DomainUUID        *string
-	WorkflowExecution *WorkflowExecution
-	ScheduleID        *int64
-	TaskID            *int64
-	RequestID         *string
-	PollRequest       *PollForDecisionTaskRequest
+	DomainUUID        *string                     `json:"domainUUID,omitempty"`
+	WorkflowExecution *WorkflowExecution          `json:"workflowExecution,omitempty"`
+	ScheduleID        *int64                      `json:"scheduleId,omitempty"`
+	TaskID            *int64                      `json:"taskId,omitempty"`
+	RequestID         *string                     `json:"requestId,omitempty"`
+	PollRequest       *PollForDecisionTaskRequest `json:"pollRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -3887,20 +3887,20 @@ func (v *RecordDecisionTaskStartedRequest) GetPollRequest() (o *PollForDecisionT
 
 // RecordDecisionTaskStartedResponse is an internal type (TBD...)
 type RecordDecisionTaskStartedResponse struct {
-	WorkflowType              *WorkflowType
-	PreviousStartedEventID    *int64
-	ScheduledEventID          *int64
-	StartedEventID            *int64
-	NextEventID               *int64
-	Attempt                   *int64
-	StickyExecutionEnabled    *bool
-	DecisionInfo              *TransientDecisionInfo
-	WorkflowExecutionTaskList *TaskList
-	EventStoreVersion         *int32
-	BranchToken               []byte
-	ScheduledTimestamp        *int64
-	StartedTimestamp          *int64
-	Queries                   map[string]*WorkflowQuery
+	WorkflowType              *WorkflowType             `json:"workflowType,omitempty"`
+	PreviousStartedEventID    *int64                    `json:"previousStartedEventId,omitempty"`
+	ScheduledEventID          *int64                    `json:"scheduledEventId,omitempty"`
+	StartedEventID            *int64                    `json:"startedEventId,omitempty"`
+	NextEventID               *int64                    `json:"nextEventId,omitempty"`
+	Attempt                   *int64                    `json:"attempt,omitempty"`
+	StickyExecutionEnabled    *bool                     `json:"stickyExecutionEnabled,omitempty"`
+	DecisionInfo              *TransientDecisionInfo    `json:"decisionInfo,omitempty"`
+	WorkflowExecutionTaskList *TaskList                 `json:"WorkflowExecutionTaskList,omitempty"`
+	EventStoreVersion         *int32                    `json:"eventStoreVersion,omitempty"`
+	BranchToken               []byte                    `json:"branchToken,omitempty"`
+	ScheduledTimestamp        *int64                    `json:"scheduledTimestamp,omitempty"`
+	StartedTimestamp          *int64                    `json:"startedTimestamp,omitempty"`
+	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
 }
 
 // GetWorkflowType is an internal getter (TBD...)
@@ -4017,8 +4017,8 @@ func (v *RecordDecisionTaskStartedResponse) GetQueries() (o map[string]*Workflow
 
 // HistoryRefreshWorkflowTasksRequest is an internal type (TBD...)
 type HistoryRefreshWorkflowTasksRequest struct {
-	DomainUIID *string
-	Request    *RefreshWorkflowTasksRequest
+	DomainUIID *string                      `json:"domainUIID,omitempty"`
+	Request    *RefreshWorkflowTasksRequest `json:"request,omitempty"`
 }
 
 // GetDomainUIID is an internal getter (TBD...)
@@ -4039,9 +4039,9 @@ func (v *HistoryRefreshWorkflowTasksRequest) GetRequest() (o *RefreshWorkflowTas
 
 // RemoveSignalMutableStateRequest is an internal type (TBD...)
 type RemoveSignalMutableStateRequest struct {
-	DomainUUID        *string
-	WorkflowExecution *WorkflowExecution
-	RequestID         *string
+	DomainUUID        *string            `json:"domainUUID,omitempty"`
+	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
+	RequestID         *string            `json:"requestId,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4070,11 +4070,11 @@ func (v *RemoveSignalMutableStateRequest) GetRequestID() (o string) {
 
 // ReplicateEventsV2Request is an internal type (TBD...)
 type ReplicateEventsV2Request struct {
-	DomainUUID          *string
-	WorkflowExecution   *WorkflowExecution
-	VersionHistoryItems []*VersionHistoryItem
-	Events              *DataBlob
-	NewRunEvents        *DataBlob
+	DomainUUID          *string               `json:"domainUUID,omitempty"`
+	WorkflowExecution   *WorkflowExecution    `json:"workflowExecution,omitempty"`
+	VersionHistoryItems []*VersionHistoryItem `json:"versionHistoryItems,omitempty"`
+	Events              *DataBlob             `json:"events,omitempty"`
+	NewRunEvents        *DataBlob             `json:"newRunEvents,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4119,11 +4119,11 @@ func (v *ReplicateEventsV2Request) GetNewRunEvents() (o *DataBlob) {
 
 // HistoryRequestCancelWorkflowExecutionRequest is an internal type (TBD...)
 type HistoryRequestCancelWorkflowExecutionRequest struct {
-	DomainUUID                *string
-	CancelRequest             *RequestCancelWorkflowExecutionRequest
-	ExternalInitiatedEventID  *int64
-	ExternalWorkflowExecution *WorkflowExecution
-	ChildWorkflowOnly         *bool
+	DomainUUID                *string                                `json:"domainUUID,omitempty"`
+	CancelRequest             *RequestCancelWorkflowExecutionRequest `json:"cancelRequest,omitempty"`
+	ExternalInitiatedEventID  *int64                                 `json:"externalInitiatedEventId,omitempty"`
+	ExternalWorkflowExecution *WorkflowExecution                     `json:"externalWorkflowExecution,omitempty"`
+	ChildWorkflowOnly         *bool                                  `json:"childWorkflowOnly,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4168,8 +4168,8 @@ func (v *HistoryRequestCancelWorkflowExecutionRequest) GetChildWorkflowOnly() (o
 
 // HistoryResetStickyTaskListRequest is an internal type (TBD...)
 type HistoryResetStickyTaskListRequest struct {
-	DomainUUID *string
-	Execution  *WorkflowExecution
+	DomainUUID *string            `json:"domainUUID,omitempty"`
+	Execution  *WorkflowExecution `json:"execution,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4194,8 +4194,8 @@ type HistoryResetStickyTaskListResponse struct {
 
 // HistoryResetWorkflowExecutionRequest is an internal type (TBD...)
 type HistoryResetWorkflowExecutionRequest struct {
-	DomainUUID   *string
-	ResetRequest *ResetWorkflowExecutionRequest
+	DomainUUID   *string                        `json:"domainUUID,omitempty"`
+	ResetRequest *ResetWorkflowExecutionRequest `json:"resetRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4216,8 +4216,8 @@ func (v *HistoryResetWorkflowExecutionRequest) GetResetRequest() (o *ResetWorkfl
 
 // HistoryRespondActivityTaskCanceledRequest is an internal type (TBD...)
 type HistoryRespondActivityTaskCanceledRequest struct {
-	DomainUUID    *string
-	CancelRequest *RespondActivityTaskCanceledRequest
+	DomainUUID    *string                             `json:"domainUUID,omitempty"`
+	CancelRequest *RespondActivityTaskCanceledRequest `json:"cancelRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4238,8 +4238,8 @@ func (v *HistoryRespondActivityTaskCanceledRequest) GetCancelRequest() (o *Respo
 
 // HistoryRespondActivityTaskCompletedRequest is an internal type (TBD...)
 type HistoryRespondActivityTaskCompletedRequest struct {
-	DomainUUID      *string
-	CompleteRequest *RespondActivityTaskCompletedRequest
+	DomainUUID      *string                              `json:"domainUUID,omitempty"`
+	CompleteRequest *RespondActivityTaskCompletedRequest `json:"completeRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4260,8 +4260,8 @@ func (v *HistoryRespondActivityTaskCompletedRequest) GetCompleteRequest() (o *Re
 
 // HistoryRespondActivityTaskFailedRequest is an internal type (TBD...)
 type HistoryRespondActivityTaskFailedRequest struct {
-	DomainUUID    *string
-	FailedRequest *RespondActivityTaskFailedRequest
+	DomainUUID    *string                           `json:"domainUUID,omitempty"`
+	FailedRequest *RespondActivityTaskFailedRequest `json:"failedRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4282,8 +4282,8 @@ func (v *HistoryRespondActivityTaskFailedRequest) GetFailedRequest() (o *Respond
 
 // HistoryRespondDecisionTaskCompletedRequest is an internal type (TBD...)
 type HistoryRespondDecisionTaskCompletedRequest struct {
-	DomainUUID      *string
-	CompleteRequest *RespondDecisionTaskCompletedRequest
+	DomainUUID      *string                              `json:"domainUUID,omitempty"`
+	CompleteRequest *RespondDecisionTaskCompletedRequest `json:"completeRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4304,8 +4304,8 @@ func (v *HistoryRespondDecisionTaskCompletedRequest) GetCompleteRequest() (o *Re
 
 // HistoryRespondDecisionTaskCompletedResponse is an internal type (TBD...)
 type HistoryRespondDecisionTaskCompletedResponse struct {
-	StartedResponse             *RecordDecisionTaskStartedResponse
-	ActivitiesToDispatchLocally map[string]*ActivityLocalDispatchInfo
+	StartedResponse             *RecordDecisionTaskStartedResponse    `json:"startedResponse,omitempty"`
+	ActivitiesToDispatchLocally map[string]*ActivityLocalDispatchInfo `json:"activitiesToDispatchLocally,omitempty"`
 }
 
 // GetStartedResponse is an internal getter (TBD...)
@@ -4326,8 +4326,8 @@ func (v *HistoryRespondDecisionTaskCompletedResponse) GetActivitiesToDispatchLoc
 
 // HistoryRespondDecisionTaskFailedRequest is an internal type (TBD...)
 type HistoryRespondDecisionTaskFailedRequest struct {
-	DomainUUID    *string
-	FailedRequest *RespondDecisionTaskFailedRequest
+	DomainUUID    *string                           `json:"domainUUID,omitempty"`
+	FailedRequest *RespondDecisionTaskFailedRequest `json:"failedRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4348,9 +4348,9 @@ func (v *HistoryRespondDecisionTaskFailedRequest) GetFailedRequest() (o *Respond
 
 // ScheduleDecisionTaskRequest is an internal type (TBD...)
 type ScheduleDecisionTaskRequest struct {
-	DomainUUID        *string
-	WorkflowExecution *WorkflowExecution
-	IsFirstDecision   *bool
+	DomainUUID        *string            `json:"domainUUID,omitempty"`
+	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
+	IsFirstDecision   *bool              `json:"isFirstDecision,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4379,8 +4379,8 @@ func (v *ScheduleDecisionTaskRequest) GetIsFirstDecision() (o bool) {
 
 // ShardOwnershipLostError is an internal type (TBD...)
 type ShardOwnershipLostError struct {
-	Message *string
-	Owner   *string
+	Message *string `json:"message,omitempty"`
+	Owner   *string `json:"owner,omitempty"`
 }
 
 // GetMessage is an internal getter (TBD...)
@@ -4401,8 +4401,8 @@ func (v *ShardOwnershipLostError) GetOwner() (o string) {
 
 // HistorySignalWithStartWorkflowExecutionRequest is an internal type (TBD...)
 type HistorySignalWithStartWorkflowExecutionRequest struct {
-	DomainUUID             *string
-	SignalWithStartRequest *SignalWithStartWorkflowExecutionRequest
+	DomainUUID             *string                                  `json:"domainUUID,omitempty"`
+	SignalWithStartRequest *SignalWithStartWorkflowExecutionRequest `json:"signalWithStartRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4423,10 +4423,10 @@ func (v *HistorySignalWithStartWorkflowExecutionRequest) GetSignalWithStartReque
 
 // HistorySignalWorkflowExecutionRequest is an internal type (TBD...)
 type HistorySignalWorkflowExecutionRequest struct {
-	DomainUUID                *string
-	SignalRequest             *SignalWorkflowExecutionRequest
-	ExternalWorkflowExecution *WorkflowExecution
-	ChildWorkflowOnly         *bool
+	DomainUUID                *string                         `json:"domainUUID,omitempty"`
+	SignalRequest             *SignalWorkflowExecutionRequest `json:"signalRequest,omitempty"`
+	ExternalWorkflowExecution *WorkflowExecution              `json:"externalWorkflowExecution,omitempty"`
+	ChildWorkflowOnly         *bool                           `json:"childWorkflowOnly,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4463,16 +4463,16 @@ func (v *HistorySignalWorkflowExecutionRequest) GetChildWorkflowOnly() (o bool) 
 
 // HistoryStartWorkflowExecutionRequest is an internal type (TBD...)
 type HistoryStartWorkflowExecutionRequest struct {
-	DomainUUID                      *string
-	StartRequest                    *StartWorkflowExecutionRequest
-	ParentExecutionInfo             *ParentExecutionInfo
-	Attempt                         *int32
-	ExpirationTimestamp             *int64
-	ContinueAsNewInitiator          *ContinueAsNewInitiator
-	ContinuedFailureReason          *string
-	ContinuedFailureDetails         []byte
-	LastCompletionResult            []byte
-	FirstDecisionTaskBackoffSeconds *int32
+	DomainUUID                      *string                        `json:"domainUUID,omitempty"`
+	StartRequest                    *StartWorkflowExecutionRequest `json:"startRequest,omitempty"`
+	ParentExecutionInfo             *ParentExecutionInfo           `json:"parentExecutionInfo,omitempty"`
+	Attempt                         *int32                         `json:"attempt,omitempty"`
+	ExpirationTimestamp             *int64                         `json:"expirationTimestamp,omitempty"`
+	ContinueAsNewInitiator          *ContinueAsNewInitiator        `json:"continueAsNewInitiator,omitempty"`
+	ContinuedFailureReason          *string                        `json:"continuedFailureReason,omitempty"`
+	ContinuedFailureDetails         []byte                         `json:"continuedFailureDetails,omitempty"`
+	LastCompletionResult            []byte                         `json:"lastCompletionResult,omitempty"`
+	FirstDecisionTaskBackoffSeconds *int32                         `json:"firstDecisionTaskBackoffSeconds,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4557,21 +4557,21 @@ func (v *HistoryStartWorkflowExecutionRequest) GetFirstDecisionTaskBackoffSecond
 
 // SyncActivityRequest is an internal type (TBD...)
 type SyncActivityRequest struct {
-	DomainID           *string
-	WorkflowID         *string
-	RunID              *string
-	Version            *int64
-	ScheduledID        *int64
-	ScheduledTime      *int64
-	StartedID          *int64
-	StartedTime        *int64
-	LastHeartbeatTime  *int64
-	Details            []byte
-	Attempt            *int32
-	LastFailureReason  *string
-	LastWorkerIdentity *string
-	LastFailureDetails []byte
-	VersionHistory     *VersionHistory
+	DomainID           *string         `json:"domainId,omitempty"`
+	WorkflowID         *string         `json:"workflowId,omitempty"`
+	RunID              *string         `json:"runId,omitempty"`
+	Version            *int64          `json:"version,omitempty"`
+	ScheduledID        *int64          `json:"scheduledId,omitempty"`
+	ScheduledTime      *int64          `json:"scheduledTime,omitempty"`
+	StartedID          *int64          `json:"startedId,omitempty"`
+	StartedTime        *int64          `json:"startedTime,omitempty"`
+	LastHeartbeatTime  *int64          `json:"lastHeartbeatTime,omitempty"`
+	Details            []byte          `json:"details,omitempty"`
+	Attempt            *int32          `json:"attempt,omitempty"`
+	LastFailureReason  *string         `json:"lastFailureReason,omitempty"`
+	LastWorkerIdentity *string         `json:"lastWorkerIdentity,omitempty"`
+	LastFailureDetails []byte          `json:"lastFailureDetails,omitempty"`
+	VersionHistory     *VersionHistory `json:"versionHistory,omitempty"`
 }
 
 // GetDomainID is an internal getter (TBD...)
@@ -4696,9 +4696,9 @@ func (v *SyncActivityRequest) GetVersionHistory() (o *VersionHistory) {
 
 // SyncShardStatusRequest is an internal type (TBD...)
 type SyncShardStatusRequest struct {
-	SourceCluster *string
-	ShardID       *int64
-	Timestamp     *int64
+	SourceCluster *string `json:"sourceCluster,omitempty"`
+	ShardID       *int64  `json:"shardId,omitempty"`
+	Timestamp     *int64  `json:"timestamp,omitempty"`
 }
 
 // GetSourceCluster is an internal getter (TBD...)
@@ -4727,8 +4727,8 @@ func (v *SyncShardStatusRequest) GetTimestamp() (o int64) {
 
 // HistoryTerminateWorkflowExecutionRequest is an internal type (TBD...)
 type HistoryTerminateWorkflowExecutionRequest struct {
-	DomainUUID       *string
-	TerminateRequest *TerminateWorkflowExecutionRequest
+	DomainUUID       *string                            `json:"domainUUID,omitempty"`
+	TerminateRequest *TerminateWorkflowExecutionRequest `json:"terminateRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)

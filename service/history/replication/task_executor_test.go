@@ -30,12 +30,12 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/.gen/go/admin/adminservicetest"
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyservicetest"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -43,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/shard"
@@ -60,7 +61,7 @@ type (
 		historyClient      *historyservicetest.MockClient
 		mockDomainCache    *cache.MockDomainCache
 		mockClientBean     *client.MockBean
-		adminClient        *adminservicetest.MockClient
+		adminClient        *admin.MockClient
 		clusterMetadata    *cluster.MockMetadata
 		executionManager   *mocks.ExecutionManager
 		nDCHistoryResender *ndc.MockHistoryResender
@@ -126,13 +127,13 @@ func (s *taskExecutorSuite) TearDownTest() {
 }
 
 func (s *taskExecutorSuite) TestConvertRetryTaskV2Error_OK() {
-	err := &shared.RetryTaskV2Error{}
+	err := &types.RetryTaskV2Error{}
 	_, ok := s.taskHandler.convertRetryTaskV2Error(err)
 	s.True(ok)
 }
 
 func (s *taskExecutorSuite) TestConvertRetryTaskV2Error_NotOK() {
-	err := &shared.BadRequestError{}
+	err := &types.BadRequestError{}
 	_, ok := s.taskHandler.convertRetryTaskV2Error(err)
 	s.False(ok)
 }

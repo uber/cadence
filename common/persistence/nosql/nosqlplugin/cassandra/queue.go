@@ -39,6 +39,7 @@ const (
 	templateGetQueueMetadataQuery           = `SELECT cluster_ack_level, version FROM queue_metadata WHERE queue_type = ?`
 	templateInsertQueueMetadataQuery        = `INSERT INTO queue_metadata (queue_type, cluster_ack_level, version) VALUES(?, ?, ?) IF NOT EXISTS`
 	templateUpdateQueueMetadataQuery        = `UPDATE queue_metadata SET cluster_ack_level = ?, version = ? WHERE queue_type = ? IF version = ?`
+	templateGetQueueSizeQuery               = `SELECT COUNT(1) AS count FROM queue WHERE queue_type=?`
 )
 
 //Insert message into queue, return error if failed or already exists
@@ -183,7 +184,7 @@ func (db *cdb) InsertQueueMetadata(
 	query := db.session.Query(templateInsertQueueMetadataQuery, queueType, clusterAckLevels, version).WithContext(ctx)
 	_, err := query.ScanCAS()
 	if err != nil {
-		return fmt.Errorf("failed to insert initial queue metadata record: %v, Type: %v", err, queueType)
+		return err
 	}
 	// it's ok if the query is not applied, which means that the record exists already.
 	return nil
@@ -235,6 +236,20 @@ func (db *cdb) SelectQueueMetadata(
 		ClusterAckLevels: ackLevels,
 		Version:          version,
 	}, nil
+}
+
+func (db *cdb) GetQueueSize(
+	ctx context.Context,
+	queueType persistence.QueueType,
+) (int64, error) {
+
+	query := db.session.Query(templateGetQueueSizeQuery, queueType).WithContext(ctx)
+	result := make(map[string]interface{})
+
+	if err := query.MapScan(result); err != nil {
+		return 0, err
+	}
+	return result["count"].(int64), nil
 }
 
 func getMessagePayload(

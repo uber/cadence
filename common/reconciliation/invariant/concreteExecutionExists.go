@@ -26,9 +26,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -164,7 +164,7 @@ func (c *concreteExecutionExists) validateCurrentRunID(
 	})
 	if err != nil {
 		switch err.(type) {
-		case *shared.EntityNotExistsError:
+		case *types.EntityNotExistsError:
 			return nil, &CheckResult{
 				CheckResultType: CheckResultTypeHealthy,
 				InvariantName:   c.Name(),

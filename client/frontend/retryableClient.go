@@ -25,8 +25,8 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/types"
 )
 
 var _ Client = (*retryableClient)(nil)
@@ -38,7 +38,11 @@ type retryableClient struct {
 }
 
 // NewRetryableClient creates a new instance of Client with retry policy
-func NewRetryableClient(client Client, policy backoff.RetryPolicy, isRetryable backoff.IsRetryable) Client {
+func NewRetryableClient(
+	client Client,
+	policy backoff.RetryPolicy,
+	isRetryable backoff.IsRetryable,
+) Client {
 	return &retryableClient{
 		client:      client,
 		policy:      policy,
@@ -48,7 +52,7 @@ func NewRetryableClient(client Client, policy backoff.RetryPolicy, isRetryable b
 
 func (c *retryableClient) DeprecateDomain(
 	ctx context.Context,
-	request *shared.DeprecateDomainRequest,
+	request *types.DeprecateDomainRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -60,11 +64,11 @@ func (c *retryableClient) DeprecateDomain(
 
 func (c *retryableClient) DescribeDomain(
 	ctx context.Context,
-	request *shared.DescribeDomainRequest,
+	request *types.DescribeDomainRequest,
 	opts ...yarpc.CallOption,
-) (*shared.DescribeDomainResponse, error) {
+) (*types.DescribeDomainResponse, error) {
 
-	var resp *shared.DescribeDomainResponse
+	var resp *types.DescribeDomainResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.DescribeDomain(ctx, request, opts...)
@@ -76,11 +80,11 @@ func (c *retryableClient) DescribeDomain(
 
 func (c *retryableClient) DescribeTaskList(
 	ctx context.Context,
-	request *shared.DescribeTaskListRequest,
+	request *types.DescribeTaskListRequest,
 	opts ...yarpc.CallOption,
-) (*shared.DescribeTaskListResponse, error) {
+) (*types.DescribeTaskListResponse, error) {
 
-	var resp *shared.DescribeTaskListResponse
+	var resp *types.DescribeTaskListResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.DescribeTaskList(ctx, request, opts...)
@@ -92,11 +96,11 @@ func (c *retryableClient) DescribeTaskList(
 
 func (c *retryableClient) DescribeWorkflowExecution(
 	ctx context.Context,
-	request *shared.DescribeWorkflowExecutionRequest,
+	request *types.DescribeWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) (*shared.DescribeWorkflowExecutionResponse, error) {
+) (*types.DescribeWorkflowExecutionResponse, error) {
 
-	var resp *shared.DescribeWorkflowExecutionResponse
+	var resp *types.DescribeWorkflowExecutionResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.DescribeWorkflowExecution(ctx, request, opts...)
@@ -108,11 +112,11 @@ func (c *retryableClient) DescribeWorkflowExecution(
 
 func (c *retryableClient) GetWorkflowExecutionHistory(
 	ctx context.Context,
-	request *shared.GetWorkflowExecutionHistoryRequest,
+	request *types.GetWorkflowExecutionHistoryRequest,
 	opts ...yarpc.CallOption,
-) (*shared.GetWorkflowExecutionHistoryResponse, error) {
+) (*types.GetWorkflowExecutionHistoryResponse, error) {
 
-	var resp *shared.GetWorkflowExecutionHistoryResponse
+	var resp *types.GetWorkflowExecutionHistoryResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.GetWorkflowExecutionHistory(ctx, request, opts...)
@@ -124,11 +128,11 @@ func (c *retryableClient) GetWorkflowExecutionHistory(
 
 func (c *retryableClient) ListArchivedWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListArchivedWorkflowExecutionsRequest,
+	request *types.ListArchivedWorkflowExecutionsRequest,
 	opts ...yarpc.CallOption,
-) (*shared.ListArchivedWorkflowExecutionsResponse, error) {
+) (*types.ListArchivedWorkflowExecutionsResponse, error) {
 
-	var resp *shared.ListArchivedWorkflowExecutionsResponse
+	var resp *types.ListArchivedWorkflowExecutionsResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.ListArchivedWorkflowExecutions(ctx, request, opts...)
@@ -140,11 +144,11 @@ func (c *retryableClient) ListArchivedWorkflowExecutions(
 
 func (c *retryableClient) ListClosedWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListClosedWorkflowExecutionsRequest,
+	request *types.ListClosedWorkflowExecutionsRequest,
 	opts ...yarpc.CallOption,
-) (*shared.ListClosedWorkflowExecutionsResponse, error) {
+) (*types.ListClosedWorkflowExecutionsResponse, error) {
 
-	var resp *shared.ListClosedWorkflowExecutionsResponse
+	var resp *types.ListClosedWorkflowExecutionsResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.ListClosedWorkflowExecutions(ctx, request, opts...)
@@ -156,11 +160,11 @@ func (c *retryableClient) ListClosedWorkflowExecutions(
 
 func (c *retryableClient) ListDomains(
 	ctx context.Context,
-	request *shared.ListDomainsRequest,
+	request *types.ListDomainsRequest,
 	opts ...yarpc.CallOption,
-) (*shared.ListDomainsResponse, error) {
+) (*types.ListDomainsResponse, error) {
 
-	var resp *shared.ListDomainsResponse
+	var resp *types.ListDomainsResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.ListDomains(ctx, request, opts...)
@@ -172,11 +176,11 @@ func (c *retryableClient) ListDomains(
 
 func (c *retryableClient) ListOpenWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListOpenWorkflowExecutionsRequest,
+	request *types.ListOpenWorkflowExecutionsRequest,
 	opts ...yarpc.CallOption,
-) (*shared.ListOpenWorkflowExecutionsResponse, error) {
+) (*types.ListOpenWorkflowExecutionsResponse, error) {
 
-	var resp *shared.ListOpenWorkflowExecutionsResponse
+	var resp *types.ListOpenWorkflowExecutionsResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.ListOpenWorkflowExecutions(ctx, request, opts...)
@@ -188,11 +192,11 @@ func (c *retryableClient) ListOpenWorkflowExecutions(
 
 func (c *retryableClient) ListWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListWorkflowExecutionsRequest,
+	request *types.ListWorkflowExecutionsRequest,
 	opts ...yarpc.CallOption,
-) (*shared.ListWorkflowExecutionsResponse, error) {
+) (*types.ListWorkflowExecutionsResponse, error) {
 
-	var resp *shared.ListWorkflowExecutionsResponse
+	var resp *types.ListWorkflowExecutionsResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.ListWorkflowExecutions(ctx, request, opts...)
@@ -204,11 +208,11 @@ func (c *retryableClient) ListWorkflowExecutions(
 
 func (c *retryableClient) ScanWorkflowExecutions(
 	ctx context.Context,
-	request *shared.ListWorkflowExecutionsRequest,
+	request *types.ListWorkflowExecutionsRequest,
 	opts ...yarpc.CallOption,
-) (*shared.ListWorkflowExecutionsResponse, error) {
+) (*types.ListWorkflowExecutionsResponse, error) {
 
-	var resp *shared.ListWorkflowExecutionsResponse
+	var resp *types.ListWorkflowExecutionsResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.ScanWorkflowExecutions(ctx, request, opts...)
@@ -220,11 +224,11 @@ func (c *retryableClient) ScanWorkflowExecutions(
 
 func (c *retryableClient) CountWorkflowExecutions(
 	ctx context.Context,
-	request *shared.CountWorkflowExecutionsRequest,
+	request *types.CountWorkflowExecutionsRequest,
 	opts ...yarpc.CallOption,
-) (*shared.CountWorkflowExecutionsResponse, error) {
+) (*types.CountWorkflowExecutionsResponse, error) {
 
-	var resp *shared.CountWorkflowExecutionsResponse
+	var resp *types.CountWorkflowExecutionsResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.CountWorkflowExecutions(ctx, request, opts...)
@@ -237,9 +241,9 @@ func (c *retryableClient) CountWorkflowExecutions(
 func (c *retryableClient) GetSearchAttributes(
 	ctx context.Context,
 	opts ...yarpc.CallOption,
-) (*shared.GetSearchAttributesResponse, error) {
+) (*types.GetSearchAttributesResponse, error) {
 
-	var resp *shared.GetSearchAttributesResponse
+	var resp *types.GetSearchAttributesResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.GetSearchAttributes(ctx, opts...)
@@ -251,11 +255,11 @@ func (c *retryableClient) GetSearchAttributes(
 
 func (c *retryableClient) PollForActivityTask(
 	ctx context.Context,
-	request *shared.PollForActivityTaskRequest,
+	request *types.PollForActivityTaskRequest,
 	opts ...yarpc.CallOption,
-) (*shared.PollForActivityTaskResponse, error) {
+) (*types.PollForActivityTaskResponse, error) {
 
-	var resp *shared.PollForActivityTaskResponse
+	var resp *types.PollForActivityTaskResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.PollForActivityTask(ctx, request, opts...)
@@ -267,11 +271,11 @@ func (c *retryableClient) PollForActivityTask(
 
 func (c *retryableClient) PollForDecisionTask(
 	ctx context.Context,
-	request *shared.PollForDecisionTaskRequest,
+	request *types.PollForDecisionTaskRequest,
 	opts ...yarpc.CallOption,
-) (*shared.PollForDecisionTaskResponse, error) {
+) (*types.PollForDecisionTaskResponse, error) {
 
-	var resp *shared.PollForDecisionTaskResponse
+	var resp *types.PollForDecisionTaskResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.PollForDecisionTask(ctx, request, opts...)
@@ -283,11 +287,11 @@ func (c *retryableClient) PollForDecisionTask(
 
 func (c *retryableClient) QueryWorkflow(
 	ctx context.Context,
-	request *shared.QueryWorkflowRequest,
+	request *types.QueryWorkflowRequest,
 	opts ...yarpc.CallOption,
-) (*shared.QueryWorkflowResponse, error) {
+) (*types.QueryWorkflowResponse, error) {
 
-	var resp *shared.QueryWorkflowResponse
+	var resp *types.QueryWorkflowResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.QueryWorkflow(ctx, request, opts...)
@@ -299,11 +303,11 @@ func (c *retryableClient) QueryWorkflow(
 
 func (c *retryableClient) RecordActivityTaskHeartbeat(
 	ctx context.Context,
-	request *shared.RecordActivityTaskHeartbeatRequest,
+	request *types.RecordActivityTaskHeartbeatRequest,
 	opts ...yarpc.CallOption,
-) (*shared.RecordActivityTaskHeartbeatResponse, error) {
+) (*types.RecordActivityTaskHeartbeatResponse, error) {
 
-	var resp *shared.RecordActivityTaskHeartbeatResponse
+	var resp *types.RecordActivityTaskHeartbeatResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.RecordActivityTaskHeartbeat(ctx, request, opts...)
@@ -315,11 +319,11 @@ func (c *retryableClient) RecordActivityTaskHeartbeat(
 
 func (c *retryableClient) RecordActivityTaskHeartbeatByID(
 	ctx context.Context,
-	request *shared.RecordActivityTaskHeartbeatByIDRequest,
+	request *types.RecordActivityTaskHeartbeatByIDRequest,
 	opts ...yarpc.CallOption,
-) (*shared.RecordActivityTaskHeartbeatResponse, error) {
+) (*types.RecordActivityTaskHeartbeatResponse, error) {
 
-	var resp *shared.RecordActivityTaskHeartbeatResponse
+	var resp *types.RecordActivityTaskHeartbeatResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.RecordActivityTaskHeartbeatByID(ctx, request, opts...)
@@ -331,7 +335,7 @@ func (c *retryableClient) RecordActivityTaskHeartbeatByID(
 
 func (c *retryableClient) RegisterDomain(
 	ctx context.Context,
-	request *shared.RegisterDomainRequest,
+	request *types.RegisterDomainRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -343,7 +347,7 @@ func (c *retryableClient) RegisterDomain(
 
 func (c *retryableClient) RequestCancelWorkflowExecution(
 	ctx context.Context,
-	request *shared.RequestCancelWorkflowExecutionRequest,
+	request *types.RequestCancelWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -355,11 +359,11 @@ func (c *retryableClient) RequestCancelWorkflowExecution(
 
 func (c *retryableClient) ResetStickyTaskList(
 	ctx context.Context,
-	request *shared.ResetStickyTaskListRequest,
+	request *types.ResetStickyTaskListRequest,
 	opts ...yarpc.CallOption,
-) (*shared.ResetStickyTaskListResponse, error) {
+) (*types.ResetStickyTaskListResponse, error) {
 
-	var resp *shared.ResetStickyTaskListResponse
+	var resp *types.ResetStickyTaskListResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.ResetStickyTaskList(ctx, request, opts...)
@@ -371,11 +375,11 @@ func (c *retryableClient) ResetStickyTaskList(
 
 func (c *retryableClient) ResetWorkflowExecution(
 	ctx context.Context,
-	request *shared.ResetWorkflowExecutionRequest,
+	request *types.ResetWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) (*shared.ResetWorkflowExecutionResponse, error) {
+) (*types.ResetWorkflowExecutionResponse, error) {
 
-	var resp *shared.ResetWorkflowExecutionResponse
+	var resp *types.ResetWorkflowExecutionResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.ResetWorkflowExecution(ctx, request, opts...)
@@ -387,7 +391,7 @@ func (c *retryableClient) ResetWorkflowExecution(
 
 func (c *retryableClient) RespondActivityTaskCanceled(
 	ctx context.Context,
-	request *shared.RespondActivityTaskCanceledRequest,
+	request *types.RespondActivityTaskCanceledRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -399,7 +403,7 @@ func (c *retryableClient) RespondActivityTaskCanceled(
 
 func (c *retryableClient) RespondActivityTaskCanceledByID(
 	ctx context.Context,
-	request *shared.RespondActivityTaskCanceledByIDRequest,
+	request *types.RespondActivityTaskCanceledByIDRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -411,7 +415,7 @@ func (c *retryableClient) RespondActivityTaskCanceledByID(
 
 func (c *retryableClient) RespondActivityTaskCompleted(
 	ctx context.Context,
-	request *shared.RespondActivityTaskCompletedRequest,
+	request *types.RespondActivityTaskCompletedRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -423,7 +427,7 @@ func (c *retryableClient) RespondActivityTaskCompleted(
 
 func (c *retryableClient) RespondActivityTaskCompletedByID(
 	ctx context.Context,
-	request *shared.RespondActivityTaskCompletedByIDRequest,
+	request *types.RespondActivityTaskCompletedByIDRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -435,7 +439,7 @@ func (c *retryableClient) RespondActivityTaskCompletedByID(
 
 func (c *retryableClient) RespondActivityTaskFailed(
 	ctx context.Context,
-	request *shared.RespondActivityTaskFailedRequest,
+	request *types.RespondActivityTaskFailedRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -447,7 +451,7 @@ func (c *retryableClient) RespondActivityTaskFailed(
 
 func (c *retryableClient) RespondActivityTaskFailedByID(
 	ctx context.Context,
-	request *shared.RespondActivityTaskFailedByIDRequest,
+	request *types.RespondActivityTaskFailedByIDRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -459,11 +463,11 @@ func (c *retryableClient) RespondActivityTaskFailedByID(
 
 func (c *retryableClient) RespondDecisionTaskCompleted(
 	ctx context.Context,
-	request *shared.RespondDecisionTaskCompletedRequest,
+	request *types.RespondDecisionTaskCompletedRequest,
 	opts ...yarpc.CallOption,
-) (*shared.RespondDecisionTaskCompletedResponse, error) {
+) (*types.RespondDecisionTaskCompletedResponse, error) {
 
-	var resp *shared.RespondDecisionTaskCompletedResponse
+	var resp *types.RespondDecisionTaskCompletedResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.RespondDecisionTaskCompleted(ctx, request, opts...)
@@ -475,7 +479,7 @@ func (c *retryableClient) RespondDecisionTaskCompleted(
 
 func (c *retryableClient) RespondDecisionTaskFailed(
 	ctx context.Context,
-	request *shared.RespondDecisionTaskFailedRequest,
+	request *types.RespondDecisionTaskFailedRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -487,7 +491,7 @@ func (c *retryableClient) RespondDecisionTaskFailed(
 
 func (c *retryableClient) RespondQueryTaskCompleted(
 	ctx context.Context,
-	request *shared.RespondQueryTaskCompletedRequest,
+	request *types.RespondQueryTaskCompletedRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -499,11 +503,11 @@ func (c *retryableClient) RespondQueryTaskCompleted(
 
 func (c *retryableClient) SignalWithStartWorkflowExecution(
 	ctx context.Context,
-	request *shared.SignalWithStartWorkflowExecutionRequest,
+	request *types.SignalWithStartWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) (*shared.StartWorkflowExecutionResponse, error) {
+) (*types.StartWorkflowExecutionResponse, error) {
 
-	var resp *shared.StartWorkflowExecutionResponse
+	var resp *types.StartWorkflowExecutionResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.SignalWithStartWorkflowExecution(ctx, request, opts...)
@@ -515,7 +519,7 @@ func (c *retryableClient) SignalWithStartWorkflowExecution(
 
 func (c *retryableClient) SignalWorkflowExecution(
 	ctx context.Context,
-	request *shared.SignalWorkflowExecutionRequest,
+	request *types.SignalWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -527,11 +531,11 @@ func (c *retryableClient) SignalWorkflowExecution(
 
 func (c *retryableClient) StartWorkflowExecution(
 	ctx context.Context,
-	request *shared.StartWorkflowExecutionRequest,
+	request *types.StartWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) (*shared.StartWorkflowExecutionResponse, error) {
+) (*types.StartWorkflowExecutionResponse, error) {
 
-	var resp *shared.StartWorkflowExecutionResponse
+	var resp *types.StartWorkflowExecutionResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.StartWorkflowExecution(ctx, request, opts...)
@@ -543,7 +547,7 @@ func (c *retryableClient) StartWorkflowExecution(
 
 func (c *retryableClient) TerminateWorkflowExecution(
 	ctx context.Context,
-	request *shared.TerminateWorkflowExecutionRequest,
+	request *types.TerminateWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) error {
 
@@ -555,11 +559,11 @@ func (c *retryableClient) TerminateWorkflowExecution(
 
 func (c *retryableClient) UpdateDomain(
 	ctx context.Context,
-	request *shared.UpdateDomainRequest,
+	request *types.UpdateDomainRequest,
 	opts ...yarpc.CallOption,
-) (*shared.UpdateDomainResponse, error) {
+) (*types.UpdateDomainResponse, error) {
 
-	var resp *shared.UpdateDomainResponse
+	var resp *types.UpdateDomainResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.UpdateDomain(ctx, request, opts...)
@@ -572,8 +576,8 @@ func (c *retryableClient) UpdateDomain(
 func (c *retryableClient) GetClusterInfo(
 	ctx context.Context,
 	opts ...yarpc.CallOption,
-) (*shared.ClusterInfo, error) {
-	var resp *shared.ClusterInfo
+) (*types.ClusterInfo, error) {
+	var resp *types.ClusterInfo
 	op := func() error {
 		var err error
 		resp, err = c.client.GetClusterInfo(ctx, opts...)
@@ -585,10 +589,10 @@ func (c *retryableClient) GetClusterInfo(
 
 func (c *retryableClient) ListTaskListPartitions(
 	ctx context.Context,
-	request *shared.ListTaskListPartitionsRequest,
+	request *types.ListTaskListPartitionsRequest,
 	opts ...yarpc.CallOption,
-) (*shared.ListTaskListPartitionsResponse, error) {
-	var resp *shared.ListTaskListPartitionsResponse
+) (*types.ListTaskListPartitionsResponse, error) {
+	var resp *types.ListTaskListPartitionsResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.ListTaskListPartitions(ctx, request, opts...)

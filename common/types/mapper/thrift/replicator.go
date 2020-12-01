@@ -32,11 +32,11 @@ func FromDLQType(t *types.DLQType) *replicator.DLQType {
 		return nil
 	}
 	switch *t {
-	case types.DLQTypeDomain:
-		v := replicator.DLQTypeDomain
-		return &v
 	case types.DLQTypeReplication:
 		v := replicator.DLQTypeReplication
+		return &v
+	case types.DLQTypeDomain:
+		v := replicator.DLQTypeDomain
 		return &v
 	}
 	panic("unexpected enum value")
@@ -48,11 +48,11 @@ func ToDLQType(t *replicator.DLQType) *types.DLQType {
 		return nil
 	}
 	switch *t {
-	case replicator.DLQTypeDomain:
-		v := types.DLQTypeDomain
-		return &v
 	case replicator.DLQTypeReplication:
 		v := types.DLQTypeReplication
+		return &v
+	case replicator.DLQTypeDomain:
+		v := types.DLQTypeDomain
 		return &v
 	}
 	panic("unexpected enum value")
@@ -495,6 +495,7 @@ func FromReplicationTask(t *types.ReplicationTask) *replicator.ReplicationTask {
 		SyncActivityTaskAttributes:    FromSyncActivityTaskAttributes(t.SyncActivityTaskAttributes),
 		HistoryTaskV2Attributes:       FromHistoryTaskV2Attributes(t.HistoryTaskV2Attributes),
 		FailoverMarkerAttributes:      FromFailoverMarkerAttributes(t.FailoverMarkerAttributes),
+		CreationTime:                  t.CreationTime,
 	}
 }
 
@@ -511,6 +512,7 @@ func ToReplicationTask(t *replicator.ReplicationTask) *types.ReplicationTask {
 		SyncActivityTaskAttributes:    ToSyncActivityTaskAttributes(t.SyncActivityTaskAttributes),
 		HistoryTaskV2Attributes:       ToHistoryTaskV2Attributes(t.HistoryTaskV2Attributes),
 		FailoverMarkerAttributes:      ToFailoverMarkerAttributes(t.FailoverMarkerAttributes),
+		CreationTime:                  t.CreationTime,
 	}
 }
 
@@ -559,11 +561,14 @@ func FromReplicationTaskType(t *types.ReplicationTaskType) *replicator.Replicati
 	case types.ReplicationTaskTypeDomain:
 		v := replicator.ReplicationTaskTypeDomain
 		return &v
-	case types.ReplicationTaskTypeFailoverMarker:
-		v := replicator.ReplicationTaskTypeFailoverMarker
-		return &v
 	case types.ReplicationTaskTypeHistory:
 		v := replicator.ReplicationTaskTypeHistory
+		return &v
+	case types.ReplicationTaskTypeSyncShardStatus:
+		v := replicator.ReplicationTaskTypeSyncShardStatus
+		return &v
+	case types.ReplicationTaskTypeSyncActivity:
+		v := replicator.ReplicationTaskTypeSyncActivity
 		return &v
 	case types.ReplicationTaskTypeHistoryMetadata:
 		v := replicator.ReplicationTaskTypeHistoryMetadata
@@ -571,11 +576,8 @@ func FromReplicationTaskType(t *types.ReplicationTaskType) *replicator.Replicati
 	case types.ReplicationTaskTypeHistoryV2:
 		v := replicator.ReplicationTaskTypeHistoryV2
 		return &v
-	case types.ReplicationTaskTypeSyncActivity:
-		v := replicator.ReplicationTaskTypeSyncActivity
-		return &v
-	case types.ReplicationTaskTypeSyncShardStatus:
-		v := replicator.ReplicationTaskTypeSyncShardStatus
+	case types.ReplicationTaskTypeFailoverMarker:
+		v := replicator.ReplicationTaskTypeFailoverMarker
 		return &v
 	}
 	panic("unexpected enum value")
@@ -590,11 +592,14 @@ func ToReplicationTaskType(t *replicator.ReplicationTaskType) *types.Replication
 	case replicator.ReplicationTaskTypeDomain:
 		v := types.ReplicationTaskTypeDomain
 		return &v
-	case replicator.ReplicationTaskTypeFailoverMarker:
-		v := types.ReplicationTaskTypeFailoverMarker
-		return &v
 	case replicator.ReplicationTaskTypeHistory:
 		v := types.ReplicationTaskTypeHistory
+		return &v
+	case replicator.ReplicationTaskTypeSyncShardStatus:
+		v := types.ReplicationTaskTypeSyncShardStatus
+		return &v
+	case replicator.ReplicationTaskTypeSyncActivity:
+		v := types.ReplicationTaskTypeSyncActivity
 		return &v
 	case replicator.ReplicationTaskTypeHistoryMetadata:
 		v := types.ReplicationTaskTypeHistoryMetadata
@@ -602,11 +607,8 @@ func ToReplicationTaskType(t *replicator.ReplicationTaskType) *types.Replication
 	case replicator.ReplicationTaskTypeHistoryV2:
 		v := types.ReplicationTaskTypeHistoryV2
 		return &v
-	case replicator.ReplicationTaskTypeSyncActivity:
-		v := types.ReplicationTaskTypeSyncActivity
-		return &v
-	case replicator.ReplicationTaskTypeSyncShardStatus:
-		v := types.ReplicationTaskTypeSyncShardStatus
+	case replicator.ReplicationTaskTypeFailoverMarker:
+		v := types.ReplicationTaskTypeFailoverMarker
 		return &v
 	}
 	panic("unexpected enum value")
@@ -728,54 +730,6 @@ func ToSyncShardStatusTaskAttributes(t *replicator.SyncShardStatusTaskAttributes
 	}
 }
 
-// FromReplicationTaskArray converts internal ReplicationTask type array to thrift
-func FromReplicationTaskArray(t []*types.ReplicationTask) []*replicator.ReplicationTask {
-	if t == nil {
-		return nil
-	}
-	v := make([]*replicator.ReplicationTask, len(t))
-	for i := range t {
-		v[i] = FromReplicationTask(t[i])
-	}
-	return v
-}
-
-// ToReplicationTaskArray converts thrift ReplicationTask type array to internal
-func ToReplicationTaskArray(t []*replicator.ReplicationTask) []*types.ReplicationTask {
-	if t == nil {
-		return nil
-	}
-	v := make([]*types.ReplicationTask, len(t))
-	for i := range t {
-		v[i] = ToReplicationTask(t[i])
-	}
-	return v
-}
-
-// FromReplicationTokenArray converts internal ReplicationToken type array to thrift
-func FromReplicationTokenArray(t []*types.ReplicationToken) []*replicator.ReplicationToken {
-	if t == nil {
-		return nil
-	}
-	v := make([]*replicator.ReplicationToken, len(t))
-	for i := range t {
-		v[i] = FromReplicationToken(t[i])
-	}
-	return v
-}
-
-// ToReplicationTokenArray converts thrift ReplicationToken type array to internal
-func ToReplicationTokenArray(t []*replicator.ReplicationToken) []*types.ReplicationToken {
-	if t == nil {
-		return nil
-	}
-	v := make([]*types.ReplicationToken, len(t))
-	for i := range t {
-		v[i] = ToReplicationToken(t[i])
-	}
-	return v
-}
-
 // FromFailoverMarkerAttributesArray converts internal FailoverMarkerAttributes type array to thrift
 func FromFailoverMarkerAttributesArray(t []*types.FailoverMarkerAttributes) []*replicator.FailoverMarkerAttributes {
 	if t == nil {
@@ -820,6 +774,54 @@ func ToReplicationTaskInfoArray(t []*replicator.ReplicationTaskInfo) []*types.Re
 	v := make([]*types.ReplicationTaskInfo, len(t))
 	for i := range t {
 		v[i] = ToReplicationTaskInfo(t[i])
+	}
+	return v
+}
+
+// FromReplicationTaskArray converts internal ReplicationTask type array to thrift
+func FromReplicationTaskArray(t []*types.ReplicationTask) []*replicator.ReplicationTask {
+	if t == nil {
+		return nil
+	}
+	v := make([]*replicator.ReplicationTask, len(t))
+	for i := range t {
+		v[i] = FromReplicationTask(t[i])
+	}
+	return v
+}
+
+// ToReplicationTaskArray converts thrift ReplicationTask type array to internal
+func ToReplicationTaskArray(t []*replicator.ReplicationTask) []*types.ReplicationTask {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.ReplicationTask, len(t))
+	for i := range t {
+		v[i] = ToReplicationTask(t[i])
+	}
+	return v
+}
+
+// FromReplicationTokenArray converts internal ReplicationToken type array to thrift
+func FromReplicationTokenArray(t []*types.ReplicationToken) []*replicator.ReplicationToken {
+	if t == nil {
+		return nil
+	}
+	v := make([]*replicator.ReplicationToken, len(t))
+	for i := range t {
+		v[i] = FromReplicationToken(t[i])
+	}
+	return v
+}
+
+// ToReplicationTokenArray converts thrift ReplicationToken type array to internal
+func ToReplicationTokenArray(t []*replicator.ReplicationToken) []*types.ReplicationToken {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.ReplicationToken, len(t))
+	for i := range t {
+		v[i] = ToReplicationToken(t[i])
 	}
 	return v
 }

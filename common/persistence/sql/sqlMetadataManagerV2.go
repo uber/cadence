@@ -24,23 +24,20 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
-	"github.com/uber/cadence/common/persistence/serialization"
-	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
-
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
+	"github.com/uber/cadence/common/types"
 )
 
 type sqlMetadataManagerV2 struct {
 	sqlStore
 	activeClusterName string
-	serializer        persistence.PayloadSerializer
 }
 
 // newMetadataPersistenceV2 creates an instance of sqlMetadataManagerV2
@@ -56,7 +53,6 @@ func newMetadataPersistenceV2(
 			logger: logger,
 			parser: parser,
 		},
-		serializer:        persistence.NewPayloadSerializer(),
 		activeClusterName: currentClusterName,
 	}, nil
 }
@@ -64,18 +60,18 @@ func newMetadataPersistenceV2(
 func updateMetadata(ctx context.Context, tx sqlplugin.Tx, oldNotificationVersion int64) error {
 	result, err := tx.UpdateDomainMetadata(ctx, &sqlplugin.DomainMetadataRow{NotificationVersion: oldNotificationVersion})
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to update domain metadata. Error: %v", err),
 		}
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Could not verify whether domain metadata update occurred. Error: %v", err),
 		}
 	} else if rowsAffected != 1 {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to update domain metadata. <>1 rows affected. Error: %v", err),
 		}
 	}
@@ -86,7 +82,7 @@ func updateMetadata(ctx context.Context, tx sqlplugin.Tx, oldNotificationVersion
 func lockMetadata(ctx context.Context, tx sqlplugin.Tx) error {
 	err := tx.LockDomainMetadata(ctx)
 	if err != nil {
-		return &workflow.InternalServiceError{
+		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to lock domain metadata. Error: %v", err),
 		}
 	}
@@ -109,22 +105,17 @@ func (m *sqlMetadataManagerV2) CreateDomain(
 
 	var badBinaries []byte
 	var badBinariesEncoding *string
-
-	serializedBadBinaries, err := m.serializer.SerializeBadBinaries(
-		thrift.FromBadBinaries(&request.Config.BadBinaries),
-		common.EncodingTypeThriftRW)
-	if err != nil {
-		return nil, err
+	if request.Config.BadBinaries != nil {
+		badBinaries = request.Config.BadBinaries.Data
+		badBinariesEncoding = common.StringPtr(string(request.Config.BadBinaries.GetEncoding()))
 	}
-	badBinaries = serializedBadBinaries.Data
-	badBinariesEncoding = common.StringPtr(string(serializedBadBinaries.GetEncoding()))
 
 	domainInfo := &sqlblobs.DomainInfo{
 		Status:                      common.Int32Ptr(int32(request.Info.Status)),
 		Description:                 &request.Info.Description,
 		Owner:                       &request.Info.OwnerEmail,
 		Data:                        request.Info.Data,
-		RetentionDays:               common.Int16Ptr(int16(request.Config.Retention)),
+		RetentionDays:               common.Int16Ptr(int16(common.DurationToDays(request.Config.Retention))),
 		EmitMetric:                  &request.Config.EmitMetric,
 		ArchivalBucket:              &request.Config.ArchivalBucket,
 		ArchivalStatus:              common.Int16Ptr(int16(request.Config.ArchivalStatus)),
@@ -139,7 +130,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(
 		NotificationVersion:         common.Int64Ptr(metadata.NotificationVersion),
 		FailoverNotificationVersion: common.Int64Ptr(persistence.InitialFailoverNotificationVersion),
 		PreviousFailoverVersion:     common.Int64Ptr(common.InitialPreviousFailoverVersion),
-		LastUpdatedTime:             common.Int64Ptr(request.LastUpdatedTime),
+		LastUpdatedTime:             common.Int64Ptr(request.LastUpdatedTime.UnixNano()),
 		BadBinaries:                 badBinaries,
 		BadBinariesEncoding:         badBinariesEncoding,
 	}
@@ -159,7 +150,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(
 			IsGlobal:     request.IsGlobalDomain,
 		}); err1 != nil {
 			if m.db.IsDupEntryError(err1) {
-				return &workflow.DomainAlreadyExistsError{
+				return &types.DomainAlreadyExistsError{
 					Message: fmt.Sprintf("name: %v", request.Info.Name),
 				}
 			}
@@ -184,7 +175,7 @@ func (m *sqlMetadataManagerV2) GetDomain(
 	filter := &sqlplugin.DomainFilter{}
 	switch {
 	case request.Name != "" && request.ID != "":
-		return nil, &workflow.BadRequestError{
+		return nil, &types.BadRequestError{
 			Message: "GetDomain operation failed.  Both ID and Name specified in request.",
 		}
 	case request.Name != "":
@@ -192,7 +183,7 @@ func (m *sqlMetadataManagerV2) GetDomain(
 	case request.ID != "":
 		filter.ID = sqlplugin.UUIDPtr(sqlplugin.MustParseUUID(request.ID))
 	default:
-		return nil, &workflow.BadRequestError{
+		return nil, &types.BadRequestError{
 			Message: "GetDomain operation failed.  Both ID and Name are empty.",
 		}
 	}
@@ -207,11 +198,11 @@ func (m *sqlMetadataManagerV2) GetDomain(
 				identity = request.ID
 			}
 
-			return nil, &workflow.EntityNotExistsError{
+			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Domain %s does not exist.", identity),
 			}
 		default:
-			return nil, &workflow.InternalServiceError{
+			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("GetDomain operation failed. Error %v", err),
 			}
 		}
@@ -240,14 +231,10 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 	if domainInfo.BadBinaries != nil {
 		badBinaries = persistence.NewDataBlob(domainInfo.BadBinaries, common.EncodingType(*domainInfo.BadBinariesEncoding))
 	}
-	deserializedBadBinaries, err := m.serializer.DeserializeBadBinaries(badBinaries)
-	if err != nil {
-		return nil, err
-	}
 
-	var failoverEndTime *int64
+	var failoverEndTime *time.Time
 	if domainInfo.IsSetFailoverEndTime() {
-		failoverEndTime = domainInfo.FailoverEndTime
+		failoverEndTime = common.TimePtr(time.Unix(0, *domainInfo.FailoverEndTime))
 	}
 
 	return &persistence.InternalGetDomainResponse{
@@ -260,7 +247,7 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 			Data:        domainInfo.GetData(),
 		},
 		Config: &persistence.InternalDomainConfig{
-			Retention:                int32(domainInfo.GetRetentionDays()),
+			Retention:                common.DaysToDuration(int32(domainInfo.GetRetentionDays())),
 			EmitMetric:               domainInfo.GetEmitMetric(),
 			ArchivalBucket:           domainInfo.GetArchivalBucket(),
 			ArchivalStatus:           types.ArchivalStatus(*domainInfo.ArchivalStatus),
@@ -268,7 +255,7 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 			HistoryArchivalURI:       domainInfo.GetHistoryArchivalURI(),
 			VisibilityArchivalStatus: types.ArchivalStatus(*domainInfo.VisibilityArchivalStatus),
 			VisibilityArchivalURI:    domainInfo.GetVisibilityArchivalURI(),
-			BadBinaries:              *thrift.ToBadBinaries(deserializedBadBinaries),
+			BadBinaries:              badBinaries,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: persistence.GetOrUseDefaultActiveCluster(m.activeClusterName, domainInfo.GetActiveClusterName()),
@@ -281,7 +268,7 @@ func (m *sqlMetadataManagerV2) domainRowToGetDomainResponse(row *sqlplugin.Domai
 		FailoverNotificationVersion: domainInfo.GetFailoverNotificationVersion(),
 		PreviousFailoverVersion:     domainInfo.GetPreviousFailoverVersion(),
 		FailoverEndTime:             failoverEndTime,
-		LastUpdatedTime:             domainInfo.GetLastUpdatedTime(),
+		LastUpdatedTime:             time.Unix(0, domainInfo.GetLastUpdatedTime()),
 	}, nil
 }
 
@@ -297,20 +284,14 @@ func (m *sqlMetadataManagerV2) UpdateDomain(
 
 	var badBinaries []byte
 	var badBinariesEncoding *string
-
-	serializedBadBinaries, err := m.serializer.SerializeBadBinaries(
-		thrift.FromBadBinaries(&request.Config.BadBinaries),
-		common.EncodingTypeThriftRW)
-	if err != nil {
-		return err
+	if request.Config.BadBinaries != nil {
+		badBinaries = request.Config.BadBinaries.Data
+		badBinariesEncoding = common.StringPtr(string(request.Config.BadBinaries.GetEncoding()))
 	}
-
-	badBinaries = serializedBadBinaries.Data
-	badBinariesEncoding = common.StringPtr(string(serializedBadBinaries.GetEncoding()))
 
 	var failoverEndTime *int64
 	if request.FailoverEndTime != nil {
-		failoverEndTime = request.FailoverEndTime
+		failoverEndTime = common.Int64Ptr(request.FailoverEndTime.UnixNano())
 	}
 
 	domainInfo := &sqlblobs.DomainInfo{
@@ -318,7 +299,7 @@ func (m *sqlMetadataManagerV2) UpdateDomain(
 		Description:                 &request.Info.Description,
 		Owner:                       &request.Info.OwnerEmail,
 		Data:                        request.Info.Data,
-		RetentionDays:               common.Int16Ptr(int16(request.Config.Retention)),
+		RetentionDays:               common.Int16Ptr(int16(common.DurationToDays(request.Config.Retention))),
 		EmitMetric:                  &request.Config.EmitMetric,
 		ArchivalBucket:              &request.Config.ArchivalBucket,
 		ArchivalStatus:              common.Int16Ptr(int16(request.Config.ArchivalStatus)),
@@ -334,7 +315,7 @@ func (m *sqlMetadataManagerV2) UpdateDomain(
 		FailoverNotificationVersion: common.Int64Ptr(request.FailoverNotificationVersion),
 		PreviousFailoverVersion:     common.Int64Ptr(request.PreviousFailoverVersion),
 		FailoverEndTime:             failoverEndTime,
-		LastUpdatedTime:             common.Int64Ptr(request.LastUpdatedTime),
+		LastUpdatedTime:             common.Int64Ptr(request.LastUpdatedTime.UnixNano()),
 		BadBinaries:                 badBinaries,
 		BadBinariesEncoding:         badBinariesEncoding,
 	}
@@ -393,7 +374,7 @@ func (m *sqlMetadataManagerV2) GetMetadata(
 ) (*persistence.GetMetadataResponse, error) {
 	row, err := m.db.SelectFromDomainMetadata(ctx)
 	if err != nil {
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("GetMetadata operation failed. Error: %v", err),
 		}
 	}
@@ -417,7 +398,7 @@ func (m *sqlMetadataManagerV2) ListDomains(
 		if err == sql.ErrNoRows {
 			return &persistence.InternalListDomainsResponse{}, nil
 		}
-		return nil, &workflow.InternalServiceError{
+		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListDomains operation failed. Failed to get domain rows. Error: %v", err),
 		}
 	}

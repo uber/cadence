@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2017-2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,23 +18,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package elasticsearch
+package gocql
 
-import (
-	"net/url"
+import "github.com/gocql/gocql"
 
-	"github.com/uber/cadence/common"
-)
+var _ Session = (*session)(nil)
 
-// Config for connecting to ElasticSearch
 type (
-	Config struct {
-		URL     url.URL           `yaml:url`     //nolint:govet
-		Indices map[string]string `yaml:indices` //nolint:govet
+	session struct {
+		*gocql.Session
 	}
 )
 
-// GetVisibilityIndex return visibility index name
-func (cfg *Config) GetVisibilityIndex() string {
-	return cfg.Indices[common.VisibilityAppName]
+func (s *session) Query(
+	stmt string,
+	values ...interface{},
+) Query {
+	return &query{
+		Query: s.Session.Query(stmt, values...),
+	}
+}
+
+func (s *session) NewBatch(
+	batchType BatchType,
+) Batch {
+	return &batch{
+		Batch: s.Session.NewBatch(mustConvertBatchType(batchType)),
+	}
+}
+
+func (s *session) MapExecuteBatchCAS(
+	b Batch,
+	previous map[string]interface{},
+) (bool, Iter, error) {
+	return s.Session.MapExecuteBatchCAS(b.(*batch).Batch, previous)
 }

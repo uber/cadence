@@ -26,7 +26,7 @@ import (
 
 	"github.com/robfig/cron"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 // NoBackoff is used to represent backoff when no cron backoff is needed
@@ -38,7 +38,7 @@ func ValidateSchedule(cronSchedule string) error {
 		return nil
 	}
 	if _, err := cron.ParseStandard(cronSchedule); err != nil {
-		return &workflow.BadRequestError{Message: "Invalid CronSchedule."}
+		return &types.BadRequestError{Message: "Invalid CronSchedule."}
 	}
 	return nil
 }

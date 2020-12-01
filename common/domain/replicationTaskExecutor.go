@@ -31,29 +31,30 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 var (
 	// ErrEmptyDomainReplicationTask is the error to indicate empty replication task
-	ErrEmptyDomainReplicationTask = &shared.BadRequestError{Message: "empty domain replication task"}
+	ErrEmptyDomainReplicationTask = &types.BadRequestError{Message: "empty domain replication task"}
 	// ErrInvalidDomainOperation is the error to indicate empty domain operation attribute
-	ErrInvalidDomainOperation = &shared.BadRequestError{Message: "invalid domain operation attribute"}
+	ErrInvalidDomainOperation = &types.BadRequestError{Message: "invalid domain operation attribute"}
 	// ErrInvalidDomainID is the error to indicate empty rID attribute
-	ErrInvalidDomainID = &shared.BadRequestError{Message: "invalid domain ID attribute"}
+	ErrInvalidDomainID = &types.BadRequestError{Message: "invalid domain ID attribute"}
 	// ErrInvalidDomainInfo is the error to indicate empty info attribute
-	ErrInvalidDomainInfo = &shared.BadRequestError{Message: "invalid domain info attribute"}
+	ErrInvalidDomainInfo = &types.BadRequestError{Message: "invalid domain info attribute"}
 	// ErrInvalidDomainConfig is the error to indicate empty config attribute
-	ErrInvalidDomainConfig = &shared.BadRequestError{Message: "invalid domain config attribute"}
+	ErrInvalidDomainConfig = &types.BadRequestError{Message: "invalid domain config attribute"}
 	// ErrInvalidDomainReplicationConfig is the error to indicate empty replication config attribute
-	ErrInvalidDomainReplicationConfig = &shared.BadRequestError{Message: "invalid domain replication config attribute"}
+	ErrInvalidDomainReplicationConfig = &types.BadRequestError{Message: "invalid domain replication config attribute"}
 	// ErrInvalidDomainConfigVersion is the error to indicate empty config version attribute
-	ErrInvalidDomainConfigVersion = &shared.BadRequestError{Message: "invalid domain config version attribute"}
+	ErrInvalidDomainConfigVersion = &types.BadRequestError{Message: "invalid domain config version attribute"}
 	// ErrInvalidDomainFailoverVersion is the error to indicate empty failover version attribute
-	ErrInvalidDomainFailoverVersion = &shared.BadRequestError{Message: "invalid domain failover version attribute"}
+	ErrInvalidDomainFailoverVersion = &types.BadRequestError{Message: "invalid domain failover version attribute"}
 	// ErrInvalidDomainStatus is the error to indicate invalid domain status
-	ErrInvalidDomainStatus = &shared.BadRequestError{Message: "invalid domain status attribute"}
+	ErrInvalidDomainStatus = &types.BadRequestError{Message: "invalid domain status attribute"}
 	// ErrNameUUIDCollision is the error to indicate domain name / UUID collision
-	ErrNameUUIDCollision = &shared.BadRequestError{Message: "domain replication encounter name / UUID collision"}
+	ErrNameUUIDCollision = &types.BadRequestError{Message: "domain replication encounter name / UUID collision"}
 )
 
 const (
@@ -158,7 +159,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(
 			if resp.Info.ID != task.GetID() {
 				return ErrNameUUIDCollision
 			}
-		case *shared.EntityNotExistsError:
+		case *types.EntityNotExistsError:
 			// no check is necessary
 			recordExists = false
 		default:
@@ -174,7 +175,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(
 			if resp.Info.Name != task.Info.GetName() {
 				return ErrNameUUIDCollision
 			}
-		case *shared.EntityNotExistsError:
+		case *types.EntityNotExistsError:
 			// no check is necessary
 			recordExists = false
 		default:
@@ -213,7 +214,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 		Name: task.Info.GetName(),
 	})
 	if err != nil {
-		if _, ok := err.(*shared.EntityNotExistsError); ok {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
 			// this can happen if the create domain replication task is to processed.
 			// e.g. new cluster which does not have anything
 			return h.handleDomainCreationReplicationTask(ctx, task)

@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 )
 
@@ -42,11 +43,6 @@ type (
 		baseName  string // original name of the task list as specified by user
 		partition int    // partitionID of task list
 	}
-)
-
-const (
-	// taskListPartitionPrefix is the required naming prefix for any task list partition other than partition 0
-	taskListPartitionPrefix = "/__cadence_sys/"
 )
 
 // newTaskListName returns a fully qualified task list name.
@@ -103,16 +99,16 @@ func (tn *qualifiedTaskListName) mkName(partition int) string {
 	if partition == 0 {
 		return tn.baseName
 	}
-	return fmt.Sprintf("%v%v/%v", taskListPartitionPrefix, tn.baseName, partition)
+	return fmt.Sprintf("%v%v/%v", common.ReservedTaskListPrefix, tn.baseName, partition)
 }
 
 func (tn *qualifiedTaskListName) init() error {
-	if !strings.HasPrefix(tn.name, taskListPartitionPrefix) {
+	if !strings.HasPrefix(tn.name, common.ReservedTaskListPrefix) {
 		return nil
 	}
 
 	suffixOff := strings.LastIndex(tn.name, "/")
-	if suffixOff <= len(taskListPartitionPrefix) {
+	if suffixOff <= len(common.ReservedTaskListPrefix) {
 		return fmt.Errorf("invalid partitioned task list name %v", tn.name)
 	}
 
@@ -122,7 +118,7 @@ func (tn *qualifiedTaskListName) init() error {
 	}
 
 	tn.partition = p
-	tn.baseName = tn.name[len(taskListPartitionPrefix):suffixOff]
+	tn.baseName = tn.name[len(common.ReservedTaskListPrefix):suffixOff]
 	return nil
 }
 

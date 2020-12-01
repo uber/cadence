@@ -43,6 +43,7 @@ import (
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/service/config"
 	dc "github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -429,12 +430,12 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetD
 		Name:           common.StringPtr(domainName),
 		IsGlobalDomain: common.BoolPtr(isGlobalDomain),
 	})
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 
 	resp, err := s.handler.DescribeDomain(context.Background(), &shared.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	})
-	s.IsType(&shared.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 	s.Nil(resp)
 }
 
@@ -470,12 +471,12 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetD
 		Data:                                   data,
 		IsGlobalDomain:                         common.BoolPtr(isGlobalDomain),
 	})
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 
 	resp, err := s.handler.DescribeDomain(context.Background(), &shared.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	})
-	s.IsType(&shared.EntityNotExistsError{}, err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 	s.Nil(resp)
 }
 
@@ -530,7 +531,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	resp, err := s.handler.UpdateDomain(context.Background(), &shared.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
 	})
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 	s.Nil(resp)
 }
 
@@ -608,7 +609,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 			Clusters:          clusters,
 		},
 	})
-	s.IsType(&shared.BadRequestError{}, err)
+	s.IsType(&types.BadRequestError{}, err)
 	s.Nil(updateResp)
 }
 

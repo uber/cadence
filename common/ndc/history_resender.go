@@ -40,6 +40,8 @@ import (
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 var (
@@ -164,7 +166,7 @@ func (n *HistoryResenderImpl) SendSingleWorkflowHistory(
 		case nil:
 			// continue to process the events
 			break
-		case *shared.EntityNotExistsError:
+		case *types.EntityNotExistsError:
 			// Case 1: the workflow pass the retention period
 			// Case 2: the workflow is corrupted
 			if skipTask := n.fixCurrentExecution(
@@ -284,19 +286,20 @@ func (n *HistoryResenderImpl) getHistory(
 
 	ctx, cancel := context.WithTimeout(ctx, resendContextTimeout)
 	defer cancel()
-	response, err := n.adminClient.GetWorkflowExecutionRawHistoryV2(ctx, &admin.GetWorkflowExecutionRawHistoryV2Request{
+	clientResp, err := n.adminClient.GetWorkflowExecutionRawHistoryV2(ctx, &types.GetWorkflowExecutionRawHistoryV2Request{
 		Domain: common.StringPtr(domainName),
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
-		StartEventId:      startEventID,
+		StartEventID:      startEventID,
 		StartEventVersion: startEventVersion,
-		EndEventId:        endEventID,
+		EndEventID:        endEventID,
 		EndEventVersion:   endEventVersion,
 		MaximumPageSize:   common.Int32Ptr(pageSize),
 		NextPageToken:     token,
 	})
+	response := thrift.FromGetWorkflowExecutionRawHistoryV2Response(clientResp)
 	if err != nil {
 		logger.Error("error getting history", tag.Error(err))
 		return nil, err
