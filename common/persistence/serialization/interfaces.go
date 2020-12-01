@@ -60,7 +60,7 @@ type (
 		Description                 *string
 		Owner                       *string
 		Status                      *int32
-		RetentionDays               *time.Duration
+		Retention                   *time.Duration
 		EmitMetric                  *bool
 		ArchivalBucket              *string
 		ArchivalStatus              *int16
@@ -77,9 +77,9 @@ type (
 		HistoryArchivalURI          *string
 		VisibilityArchivalStatus    *int16
 		VisibilityArchivalURI       *string
-		FailoverEndTime             *time.Time
+		FailoverEndTimestamp        *time.Time
 		PreviousFailoverVersion     *int64
-		LastUpdatedTime             *time.Time
+		LastUpdatedTimestamp        *time.Time
 	}
 
 	// HistoryBranchRange blob in a serialization agnostic format
@@ -91,9 +91,9 @@ type (
 
 	// HistoryTreeInfo blob in a serialization agnostic format
 	HistoryTreeInfo struct {
-		CreatedTime *time.Time
-		Ancestors   []*HistoryBranchRange
-		Info        *string
+		CreatedTimestamp *time.Time
+		Ancestors        []*HistoryBranchRange
+		Info             *string
 	}
 
 	// WorkflowExecutionInfo blob in a serialization agnostic format
@@ -107,8 +107,8 @@ type (
 		CompletionEventEncoding            *string
 		TaskList                           *string
 		WorkflowTypeName                   *string
-		WorkflowTimeoutSeconds             *time.Duration
-		DecisionTaskTimeoutSeconds         *time.Duration
+		WorkflowTimeout                    *time.Duration
+		DecisionTaskTimeout                *time.Duration
 		ExecutionContext                   []byte
 		State                              *int32
 		CloseStatus                        *int32
@@ -117,8 +117,8 @@ type (
 		LastEventTaskID                    *int64
 		LastFirstEventID                   *int64
 		LastProcessedEvent                 *int64
-		StartTime                          *time.Time
-		LastUpdatedTime                    *time.Time
+		StartTimestamp                     *time.Time
+		LastUpdatedTimestamp               *time.Time
 		DecisionVersion                    *int64
 		DecisionScheduleID                 *int64
 		DecisionStartedID                  *int64
@@ -134,12 +134,12 @@ type (
 		StickyTaskList                     *string
 		StickyScheduleToStartTimeout       *time.Duration
 		RetryAttempt                       *int64
-		RetryInitialIntervalSeconds        *time.Duration
-		RetryMaximumIntervalSeconds        *time.Duration
+		RetryInitialInterval               *time.Duration
+		RetryMaximumInterval               *time.Duration
 		RetryMaximumAttempts               *int32
-		RetryExpirationSeconds             *time.Duration
+		RetryExpiration                    *time.Duration
 		RetryBackoffCoefficient            *float64
-		RetryExpirationTime                *time.Time
+		RetryExpirationTimestamp           *time.Time
 		RetryNonRetryableErrors            []string
 		HasRetryPolicy                     *bool
 		CronSchedule                       *string
@@ -160,37 +160,37 @@ type (
 
 	// ActivityInfo blob in a serialization agnostic format
 	ActivityInfo struct {
-		Version                       *int64
-		ScheduledEventBatchID         *int64
-		ScheduledEvent                []byte
-		ScheduledEventEncoding        *string
-		ScheduledTime                 *time.Time
-		StartedID                     *int64
-		StartedEvent                  []byte
-		StartedEventEncoding          *string
-		StartedTime                   *time.Time
-		ActivityID                    *string
-		RequestID                     *string
-		ScheduleToStartTimeoutSeconds *time.Duration
-		ScheduleToCloseTimeoutSeconds *time.Duration
-		StartToCloseTimeoutSeconds    *time.Duration
-		HeartbeatTimeoutSeconds       *time.Duration
-		CancelRequested               *bool
-		CancelRequestID               *int64
-		TimerTaskStatus               *int32
-		Attempt                       *int32
-		TaskList                      *string
-		StartedIdentity               *string
-		HasRetryPolicy                *bool
-		RetryInitialIntervalSeconds   *time.Duration
-		RetryMaximumIntervalSeconds   *time.Duration
-		RetryMaximumAttempts          *int32
-		RetryExpirationTime           *time.Time
-		RetryBackoffCoefficient       *float64
-		RetryNonRetryableErrors       []string
-		RetryLastFailureReason        *string
-		RetryLastWorkerIdentity       *string
-		RetryLastFailureDetails       []byte
+		Version                  *int64
+		ScheduledEventBatchID    *int64
+		ScheduledEvent           []byte
+		ScheduledEventEncoding   *string
+		ScheduledTimestamp       *time.Time
+		StartedID                *int64
+		StartedEvent             []byte
+		StartedEventEncoding     *string
+		StartedTimestamp         *time.Time
+		ActivityID               *string
+		RequestID                *string
+		ScheduleToStartTimeout   *time.Duration
+		ScheduleToCloseTimeout   *time.Duration
+		StartToCloseTimeout      *time.Duration
+		HeartbeatTimeout         *time.Duration
+		CancelRequested          *bool
+		CancelRequestID          *int64
+		TimerTaskStatus          *int32
+		Attempt                  *int32
+		TaskList                 *string
+		StartedIdentity          *string
+		HasRetryPolicy           *bool
+		RetryInitialInterval     *time.Duration
+		RetryMaximumInterval     *time.Duration
+		RetryMaximumAttempts     *int32
+		RetryExpirationTimestamp *time.Time
+		RetryBackoffCoefficient  *float64
+		RetryNonRetryableErrors  []string
+		RetryLastFailureReason   *string
+		RetryLastWorkerIdentity  *string
+		RetryLastFailureDetails  []byte
 	}
 
 	// ChildExecutionInfo blob in a serialization agnostic format
@@ -229,27 +229,27 @@ type (
 
 	// TimerInfo blob in a serialization agnostic format
 	TimerInfo struct {
-		Version    *int64
-		StartedID  *int64
-		ExpiryTime *time.Time
-		TaskID     *int64
+		Version         *int64
+		StartedID       *int64
+		ExpiryTimestamp *time.Time
+		TaskID          *int64
 	}
 
 	// TaskInfo blob in a serialization agnostic format
 	TaskInfo struct {
-		WorkflowID  *string
-		RunID       *string
-		ScheduleID  *int64
-		ExpiryTime  *time.Time
-		CreatedTime *time.Time
+		WorkflowID       *string
+		RunID            *string
+		ScheduleID       *int64
+		ExpiryTimestamp  *time.Time
+		CreatedTimestamp *time.Time
 	}
 
 	// TaskListInfo blob in a serialization agnostic format
 	TaskListInfo struct {
-		Kind        *int16
-		AckLevel    *int64
-		ExpiryTime  *time.Time
-		LastUpdated *time.Time
+		Kind            *int16
+		AckLevel        *int64
+		ExpiryTimestamp *time.Time
+		LastUpdated     *time.Time
 	}
 
 	// TransferTaskInfo blob in a serialization agnostic format
@@ -294,7 +294,7 @@ type (
 		NewRunEventStoreVersion *int32
 		BranchToken             []byte
 		NewRunBranchToken       []byte
-		CreationTime            *time.Time
+		CreationTimestamp       *time.Time
 	}
 )
 
