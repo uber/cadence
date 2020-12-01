@@ -26,6 +26,8 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/uber/cadence/common/persistence/serialization"
+
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
@@ -38,9 +40,9 @@ func updateSignalsRequested(
 	signalRequestedIDs []string,
 	deleteSignalRequestIDs []string,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) error {
 
 	if len(signalRequestedIDs) > 0 {
@@ -82,9 +84,9 @@ func getSignalsRequested(
 	ctx context.Context,
 	db sqlplugin.DB,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) (map[string]struct{}, error) {
 
 	rows, err := db.SelectFromSignalsRequestedSets(ctx, &sqlplugin.SignalsRequestedSetsFilter{
@@ -109,9 +111,9 @@ func deleteSignalsRequestedSet(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) error {
 
 	if _, err := tx.DeleteFromSignalsRequestedSets(ctx, &sqlplugin.SignalsRequestedSetsFilter{
@@ -132,9 +134,9 @@ func updateBufferedEvents(
 	tx sqlplugin.Tx,
 	batch *p.DataBlob,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) error {
 
 	if batch == nil {
@@ -161,9 +163,9 @@ func getBufferedEvents(
 	ctx context.Context,
 	db sqlplugin.DB,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) ([]*p.DataBlob, error) {
 
 	rows, err := db.SelectFromBufferedEvents(ctx, &sqlplugin.BufferedEventsFilter{
@@ -188,9 +190,9 @@ func deleteBufferedEvents(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) error {
 
 	if _, err := tx.DeleteFromBufferedEvents(ctx, &sqlplugin.BufferedEventsFilter{
