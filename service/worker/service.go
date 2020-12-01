@@ -155,9 +155,11 @@ func NewConfig(params *service.BootstrapParams) *Config {
 				},
 			},
 			ConcreteExecutionFixerConfig: &executions.FixerWorkflowDynamicConfig{
+				Enabled:     dc.GetBoolProperty(dynamicconfig.ConcreteExecutionFixerEnabled, false),
 				AllowDomain: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.ConcreteExecutionFixerDomainAllow, false),
 			},
 			CurrentExecutionFixerConfig: &executions.FixerWorkflowDynamicConfig{
+				Enabled:     dc.GetBoolProperty(dynamicconfig.CurrentExecutionFixerEnabled, false),
 				AllowDomain: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.CurrentExecutionFixerDomainAllow, false),
 			},
 		},

@@ -28,6 +28,7 @@ import (
 	"go.uber.org/cadence/.gen/go/shared"
 	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/worker"
+	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common"
@@ -135,7 +136,9 @@ func (s *Scanner) Start() error {
 			concreteExecutionsScannerTaskListName,
 			concreteExecutionsFixerTaskListName,
 			concreteExecutionsScannerWFTypeName,
+			concreteExecutionsFixerWFTypeName,
 			concreteExecutionsScannerWFStartOptions,
+			concreteExecutionsFixerWFStartOptions,
 			executions.ConcreteExecutionType)
 	backgroundActivityContext, workerTaskListNames :=
 		s.startExecutionWorkflowWithRetry(
@@ -147,7 +150,9 @@ func (s *Scanner) Start() error {
 			currentExecutionsScannerTaskListName,
 			currentExecutionsFixerTaskListName,
 			currentExecutionsScannerWFTypeName,
+			currentExecutionsFixerWFTypeName,
 			currentExecutionsScannerWFStartOptions,
+			currentExecutionsFixerWFStartOptions,
 			executions.CurrentExecutionType)
 	workerTaskListNames = append(workerTaskListNames, taskListNames...)
 
@@ -179,36 +184,46 @@ func (s *Scanner) startExecutionWorkflowWithRetry(
 	parentContext context.Context,
 	scannerContextKey interface{},
 	fixerContextKey interface{},
-	executionScannerConfig *executions.ScannerWorkflowDynamicConfig,
+	scannerConfig *executions.ScannerWorkflowDynamicConfig,
 	fixerConfig *executions.FixerWorkflowDynamicConfig,
 	scannerTaskListName string,
 	fixerTaskListName string,
-	executionScannerWFTypeName string,
-	startWorkflowOptions cclient.StartWorkflowOptions,
+	scannerWFTypeName string,
+	fixerWFTypeName string,
+	scannerStartWorkflowOptions cclient.StartWorkflowOptions,
+	fixerStartWorkflowOptions cclient.StartWorkflowOptions,
 	scanType executions.ScanType,
 ) (context.Context, []string) {
-	backgroundActivityContext := context.WithValue(parentContext, scannerContextKey, s.context)
-	if executionScannerConfig.Enabled() {
+	backgroundActivityContext := parentContext
+	var workerTaskListNames []string
+	if scannerConfig.Enabled() {
 		backgroundActivityContext = context.WithValue(backgroundActivityContext, scannerContextKey, executions.ScannerContext{
 			Resource:                     s.context.Resource,
 			Scope:                        s.context.Resource.GetMetricsClient().Scope(metrics.ExecutionsScannerScope),
-			ScannerWorkflowDynamicConfig: executionScannerConfig,
+			ScannerWorkflowDynamicConfig: scannerConfig,
 		})
-	}
-	backgroundActivityContext = context.WithValue(backgroundActivityContext, fixerContextKey, executions.FixerContext{
-		Resource:                   s.context.Resource,
-		Scope:                      s.context.Resource.GetMetricsClient().Scope(metrics.ExecutionsFixerScope),
-		FixerWorkflowDynamicConfig: fixerConfig,
-	})
-	workerTaskListNames := []string{fixerTaskListName}
-	if executionScannerConfig.Enabled() {
 		workerTaskListNames = append(workerTaskListNames, scannerTaskListName)
-		go s.startWorkflowWithRetry(startWorkflowOptions, executionScannerWFTypeName, executions.ScannerWorkflowParams{
+		go s.startWorkflowWithRetry(scannerStartWorkflowOptions, scannerWFTypeName, executions.ScannerWorkflowParams{
 			Shards: executions.Shards{
 				Range: &executions.ShardRange{
 					Min: 0,
 					Max: s.context.cfg.Persistence.NumHistoryShards,
 				},
+			},
+			ScanType: scanType,
+		})
+	}
+
+	if fixerConfig.Enabled() {
+		backgroundActivityContext = context.WithValue(backgroundActivityContext, fixerContextKey, executions.FixerContext{
+			Resource:                   s.context.Resource,
+			Scope:                      s.context.Resource.GetMetricsClient().Scope(metrics.ExecutionsFixerScope),
+			FixerWorkflowDynamicConfig: fixerConfig,
+		})
+		workerTaskListNames = append(workerTaskListNames, fixerTaskListName)
+		go s.startWorkflowWithRetry(fixerStartWorkflowOptions, fixerWFTypeName, executions.FixerWorkflowParams{
+			ScanExecution: workflow.Execution{
+				ID: scannerStartWorkflowOptions.ID,
 			},
 			ScanType: scanType,
 		})
