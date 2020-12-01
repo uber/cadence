@@ -292,6 +292,7 @@ var keys = map[Key]string{
 	NotifyFailoverMarkerTimerJitterCoefficient:            "history.NotifyFailoverMarkerTimerJitterCoefficient",
 	EnableDropStuckTaskByDomainID:                         "history.DropStuckTaskByDomain",
 	EnableActivityLocalDispatchByDomain:                   "history.enableActivityLocalDispatchByDomain",
+	HistoryErrorInjectionRate:                             "history.errorInjectionRate",
 
 	WorkerPersistenceMaxQPS:                                  "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                            "worker.persistenceGlobalMaxQPS",
@@ -782,6 +783,9 @@ const (
 	// EnableDropStuckTaskByDomainID is whether stuck timer/transfer task should be dropped for a domain
 	EnableDropStuckTaskByDomainID
 
+	// HistoryErrorInjectionRate is the rate for injecting random error in history client
+	HistoryErrorInjectionRate
+
 	// key for worker
 
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
@@ -942,11 +946,11 @@ const (
 	// NotifyFailoverMarkerTimerJitterCoefficient is the jitter for failover marker notifier timer
 	NotifyFailoverMarkerTimerJitterCoefficient
 
-	// lastKeyForTest must be the last one in this const group for testing purpose
-	lastKeyForTest
-
 	// EnableActivityLocalDispatchByDomain allows worker to dispatch activity tasks through local tunnel after decisions are made. This is an performance optimization to skip activity scheduling efforts.
 	EnableActivityLocalDispatchByDomain
+
+	// lastKeyForTest must be the last one in this const group for testing purpose
+	lastKeyForTest
 )
 
 // Filter represents a filter on the dynamic config key
