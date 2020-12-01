@@ -908,7 +908,6 @@ func (s *historyBuilderSuite) TestHistoryBuilder_DecisionTaskTimedOut() {
 	s.Equal(baseRunID, decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes().GetBaseRunId())
 	s.Equal(newRunID, decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes().GetNewRunId())
 	s.Equal(forkVersion, decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes().GetForkEventVersion())
-	s.Equal(workflow.DecisionTaskTimedOutCauseResetWorkflow, decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes().GetCause())
 	s.Equal(int64(5), s.getNextEventID())
 
 	decisionInfo = s.addDecisionTaskScheduledEvent()
@@ -921,7 +920,6 @@ func (s *historyBuilderSuite) TestHistoryBuilder_DecisionTaskTimedOut() {
 	s.Equal(baseRunID, decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes().GetBaseRunId())
 	s.Equal(newRunID, decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes().GetNewRunId())
 	s.Equal(forkVersion, decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes().GetForkEventVersion())
-	s.Equal(workflow.DecisionTaskTimedOutCauseResetWorkflow, decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes().GetCause())
 	s.Equal(int64(7), s.getNextEventID())
 
 }
