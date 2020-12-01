@@ -76,3 +76,5 @@ require (
 	gopkg.in/validator.v2 v2.0.0-20180514200540-135c24b11c19
 	gopkg.in/yaml.v2 v2.2.2
 )
+
+replace github.com/golang/protobuf v1.4.1 => github.com/golang/protobuf v1.3.5
