@@ -1652,7 +1652,7 @@ func (s *nDCIntegrationTestSuite) generateNewRunHistory(
 		},
 	}
 
-	eventBlob, err := s.serializer.SerializeBatchEvents([]*shared.HistoryEvent{newRunFirstEvent}, common.EncodingTypeThriftRW)
+	eventBlob, err := s.serializer.SerializeBatchEvents([]*types.HistoryEvent{thrift.ToHistoryEvent(newRunFirstEvent)}, common.EncodingTypeThriftRW)
 	s.NoError(err)
 
 	return eventBlob
@@ -1700,7 +1700,7 @@ func (s *nDCIntegrationTestSuite) generateEventBlobs(
 	)
 	// must serialize events batch after attempt on continue as new as generateNewRunHistory will
 	// modify the NewExecutionRunId attr
-	eventBlob, err := s.serializer.SerializeBatchEvents(batch.Events, common.EncodingTypeThriftRW)
+	eventBlob, err := s.serializer.SerializeBatchEvents(thrift.ToHistoryEventArray(batch.Events), common.EncodingTypeThriftRW)
 	s.NoError(err)
 	return eventBlob, newRunEventBlob
 }
@@ -1797,7 +1797,7 @@ func (s *nDCIntegrationTestSuite) toThriftVersionHistoryItems(
 		return nil
 	}
 
-	return versionHistory.ToThrift().Items
+	return thrift.FromVersionHistoryItemArray(versionHistory.ToInternalType().Items)
 }
 
 func (s *nDCIntegrationTestSuite) createContext() context.Context {

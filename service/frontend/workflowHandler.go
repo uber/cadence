@@ -3369,8 +3369,8 @@ func (wh *WorkflowHandler) getRawHistory(
 				tag.WorkflowRunID(execution.GetRunId()),
 				tag.Error(err))
 		}
-		blob, err := wh.GetPayloadSerializer().SerializeBatchEvents(
-			[]*gen.HistoryEvent{transientDecision.ScheduledEvent, transientDecision.StartedEvent}, common.EncodingTypeThriftRW)
+		blob, err := wh.GetPayloadSerializer().SerializeBatchEvents(thrift.ToHistoryEventArray(
+			[]*gen.HistoryEvent{transientDecision.ScheduledEvent, transientDecision.StartedEvent}), common.EncodingTypeThriftRW)
 		if err != nil {
 			return nil, nil, err
 		}

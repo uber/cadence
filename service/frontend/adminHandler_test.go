@@ -47,7 +47,6 @@ import (
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -231,11 +230,11 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 		persistence.NewVersionHistoryItem(int64(10), int64(100)),
 	})
 	rawVersionHistories := persistence.NewVersionHistories(versionHistory)
-	versionHistories := rawVersionHistories.ToThrift()
+	versionHistories := rawVersionHistories.ToInternalType()
 	mState := &types.GetMutableStateResponse{
 		NextEventID:        common.Int64Ptr(11),
 		CurrentBranchToken: branchToken,
-		VersionHistories:   thrift.ToVersionHistories(versionHistories),
+		VersionHistories:   versionHistories,
 	}
 	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(mState, nil).AnyTimes()
 
@@ -269,11 +268,11 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_SameStartIDAnd
 		persistence.NewVersionHistoryItem(int64(10), int64(100)),
 	})
 	rawVersionHistories := persistence.NewVersionHistories(versionHistory)
-	versionHistories := rawVersionHistories.ToThrift()
+	versionHistories := rawVersionHistories.ToInternalType()
 	mState := &types.GetMutableStateResponse{
 		NextEventID:        common.Int64Ptr(11),
 		CurrentBranchToken: branchToken,
-		VersionHistories:   thrift.ToVersionHistories(versionHistories),
+		VersionHistories:   versionHistories,
 	}
 	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(mState, nil).AnyTimes()
 

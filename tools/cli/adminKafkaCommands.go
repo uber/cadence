@@ -49,6 +49,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -559,7 +560,7 @@ func decodeReplicationTask(
 		if err != nil {
 			return nil, err
 		}
-		var newRunEvents []*shared.HistoryEvent
+		var newRunEvents []*types.HistoryEvent
 		if historyV2.IsSetNewRunEvents() {
 			newRunEvents, err = serializer.DeserializeBatchEvents(
 				persistence.NewDataBlobFromThrift(historyV2.NewRunEvents),
@@ -572,8 +573,8 @@ func decodeReplicationTask(
 		historyV2.NewRunEvents = nil
 		historyV2Attributes := &historyV2Task{
 			Task:         task,
-			Events:       events,
-			NewRunEvents: newRunEvents,
+			Events:       thrift.FromHistoryEventArray(events),
+			NewRunEvents: thrift.FromHistoryEventArray(newRunEvents),
 		}
 		return json.Marshal(historyV2Attributes)
 	default:
