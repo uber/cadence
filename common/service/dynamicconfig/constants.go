@@ -292,6 +292,7 @@ var keys = map[Key]string{
 	NotifyFailoverMarkerTimerJitterCoefficient:            "history.NotifyFailoverMarkerTimerJitterCoefficient",
 	EnableDropStuckTaskByDomainID:                         "history.DropStuckTaskByDomain",
 	EnableActivityLocalDispatchByDomain:                   "history.enableActivityLocalDispatchByDomain",
+	HistoryErrorInjectionRate:                             "history.errorInjectionRate",
 
 	WorkerPersistenceMaxQPS:                                  "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                            "worker.persistenceGlobalMaxQPS",
@@ -338,6 +339,8 @@ var keys = map[Key]string{
 	CurrentExecutionsScannerInvariantCollectionMutableState:  "worker.currentExecutionsInvariantCollectionMutableState",
 	ConcreteExecutionFixerDomainAllow:                        "worker.concreteExecutionFixerDomainAllow",
 	CurrentExecutionFixerDomainAllow:                         "worker.currentExecutionFixerDomainAllow",
+	ConcreteExecutionFixerEnabled:                            "worker.concreteExecutionFixerEnabled",
+	CurrentExecutionFixerEnabled:                             "worker.currentExecutionFixerEnabled",
 }
 
 const (
@@ -782,6 +785,9 @@ const (
 	// EnableDropStuckTaskByDomainID is whether stuck timer/transfer task should be dropped for a domain
 	EnableDropStuckTaskByDomainID
 
+	// HistoryErrorInjectionRate is the rate for injecting random error in history client
+	HistoryErrorInjectionRate
+
 	// key for worker
 
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
@@ -874,6 +880,10 @@ const (
 	ConcreteExecutionFixerDomainAllow
 	// CurrentExecutionFixerDomainAllow indicates which domains are allowed to be fixed by current fixer workflow
 	CurrentExecutionFixerDomainAllow
+	// ConcreteExecutionFixerEnabled indicates if concrete execution fixer workflow is enabled
+	ConcreteExecutionFixerEnabled
+	// CurrentExecutionFixerEnabled indicates if current execution fixer workflow is enabled
+	CurrentExecutionFixerEnabled
 	// EnableBatcher decides whether start batcher in our worker
 	EnableBatcher
 	// EnableParentClosePolicyWorker decides whether or not enable system workers for processing parent close policy task
@@ -942,11 +952,11 @@ const (
 	// NotifyFailoverMarkerTimerJitterCoefficient is the jitter for failover marker notifier timer
 	NotifyFailoverMarkerTimerJitterCoefficient
 
-	// lastKeyForTest must be the last one in this const group for testing purpose
-	lastKeyForTest
-
 	// EnableActivityLocalDispatchByDomain allows worker to dispatch activity tasks through local tunnel after decisions are made. This is an performance optimization to skip activity scheduling efforts.
 	EnableActivityLocalDispatchByDomain
+
+	// lastKeyForTest must be the last one in this const group for testing purpose
+	lastKeyForTest
 )
 
 // Filter represents a filter on the dynamic config key

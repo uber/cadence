@@ -402,7 +402,7 @@ func (s *historyResenderSuite) TestCurrentExecutionCheck() {
 }
 
 func (s *historyResenderSuite) serializeEvents(events []*shared.HistoryEvent) *shared.DataBlob {
-	blob, err := s.serializer.SerializeBatchEvents(events, common.EncodingTypeThriftRW)
+	blob, err := s.serializer.SerializeBatchEvents(thrift.ToHistoryEventArray(events), common.EncodingTypeThriftRW)
 	s.Nil(err)
 	return &shared.DataBlob{
 		EncodingType: shared.EncodingTypeThriftRW.Ptr(),

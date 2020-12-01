@@ -24,7 +24,6 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
@@ -46,9 +45,9 @@ func NewVersionHistoryItem(
 	return &VersionHistoryItem{EventID: inputEventID, Version: inputVersion}
 }
 
-// NewVersionHistoryItemFromThrift create a new version history item from thrift object
-func NewVersionHistoryItemFromThrift(
-	input *shared.VersionHistoryItem,
+// NewVersionHistoryItemFromInternalType create a new version history item from internal type object
+func NewVersionHistoryItemFromInternalType(
+	input *types.VersionHistoryItem,
 ) *VersionHistoryItem {
 
 	if input == nil {
@@ -64,10 +63,10 @@ func (item *VersionHistoryItem) Duplicate() *VersionHistoryItem {
 	return NewVersionHistoryItem(item.EventID, item.Version)
 }
 
-// ToThrift return thrift format of version history item
-func (item *VersionHistoryItem) ToThrift() *shared.VersionHistoryItem {
+// ToInternalType return internal format of version history item
+func (item *VersionHistoryItem) ToInternalType() *types.VersionHistoryItem {
 
-	return &shared.VersionHistoryItem{
+	return &types.VersionHistoryItem{
 		EventID: common.Int64Ptr(item.EventID),
 		Version: common.Int64Ptr(item.Version),
 	}
@@ -110,9 +109,9 @@ func NewVersionHistory(
 	return versionHistory
 }
 
-// NewVersionHistoryFromThrift create a new version history from thrift object
-func NewVersionHistoryFromThrift(
-	input *shared.VersionHistory,
+// NewVersionHistoryFromInternalType create a new version history from internal type object
+func NewVersionHistoryFromInternalType(
+	input *types.VersionHistory,
 ) *VersionHistory {
 
 	if input == nil {
@@ -121,7 +120,7 @@ func NewVersionHistoryFromThrift(
 
 	items := []*VersionHistoryItem{}
 	for _, item := range input.Items {
-		items = append(items, NewVersionHistoryItemFromThrift(item))
+		items = append(items, NewVersionHistoryItemFromInternalType(item))
 	}
 	return NewVersionHistory(input.BranchToken, items)
 }
@@ -132,17 +131,17 @@ func (v *VersionHistory) Duplicate() *VersionHistory {
 	return NewVersionHistory(v.BranchToken, v.Items)
 }
 
-// ToThrift return thrift format of version history
-func (v *VersionHistory) ToThrift() *shared.VersionHistory {
+// ToInternalType return internal format of version history
+func (v *VersionHistory) ToInternalType() *types.VersionHistory {
 
 	token := make([]byte, len(v.BranchToken))
 	copy(token, v.BranchToken)
-	items := []*shared.VersionHistoryItem{}
+	items := []*types.VersionHistoryItem{}
 	for _, item := range v.Items {
-		items = append(items, item.ToThrift())
+		items = append(items, item.ToInternalType())
 	}
 
-	tHistory := &shared.VersionHistory{
+	tHistory := &types.VersionHistory{
 		BranchToken: token,
 		Items:       items,
 	}
@@ -386,9 +385,9 @@ func NewVersionHistories(
 	}
 }
 
-// NewVersionHistoriesFromThrift create a new version histories from thrift object
-func NewVersionHistoriesFromThrift(
-	input *shared.VersionHistories,
+// NewVersionHistoriesFromInternalType create a new version histories from internal type object
+func NewVersionHistoriesFromInternalType(
+	input *types.VersionHistories,
 ) *VersionHistories {
 
 	if input == nil {
@@ -400,9 +399,9 @@ func NewVersionHistoriesFromThrift(
 
 	currentVersionHistoryIndex := int(input.GetCurrentVersionHistoryIndex())
 
-	versionHistories := NewVersionHistories(NewVersionHistoryFromThrift(input.Histories[0]))
+	versionHistories := NewVersionHistories(NewVersionHistoryFromInternalType(input.Histories[0]))
 	for i := 1; i < len(input.Histories); i++ {
-		_, _, err := versionHistories.AddVersionHistory(NewVersionHistoryFromThrift(input.Histories[i]))
+		_, _, err := versionHistories.AddVersionHistory(NewVersionHistoryFromInternalType(input.Histories[i]))
 		if err != nil {
 			panic(fmt.Sprintf("unable to initialize version histories: %v", err))
 		}
@@ -430,16 +429,16 @@ func (h *VersionHistories) Duplicate() *VersionHistories {
 	}
 }
 
-// ToThrift return thrift format of version histories
-func (h *VersionHistories) ToThrift() *shared.VersionHistories {
+// ToInternalType return internal format of version histories
+func (h *VersionHistories) ToInternalType() *types.VersionHistories {
 
 	currentVersionHistoryIndex := h.CurrentVersionHistoryIndex
-	histories := []*shared.VersionHistory{}
+	histories := []*types.VersionHistory{}
 	for _, history := range h.Histories {
-		histories = append(histories, history.ToThrift())
+		histories = append(histories, history.ToInternalType())
 	}
 
-	return &shared.VersionHistories{
+	return &types.VersionHistories{
 		CurrentVersionHistoryIndex: common.Int32Ptr(int32(currentVersionHistoryIndex)),
 		Histories:                  histories,
 	}

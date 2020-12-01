@@ -37,6 +37,7 @@ type (
 
 	// FixerWorkflowDynamicConfig is the dynamic config for the fixer workflow
 	FixerWorkflowDynamicConfig struct {
+		Enabled     dynamicconfig.BoolPropertyFn
 		AllowDomain dynamicconfig.BoolPropertyFnWithDomainFilter
 	}
 

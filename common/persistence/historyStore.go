@@ -221,7 +221,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(
 	}
 
 	// nodeID will be the first eventID
-	blob, err := m.historySerializer.SerializeBatchEvents(request.Events, request.Encoding)
+	blob, err := m.historySerializer.SerializeBatchEvents(thrift.ToHistoryEventArray(request.Events), request.Encoding)
 	if err != nil {
 		return nil, err
 	}
@@ -457,10 +457,11 @@ func (m *historyV2ManagerImpl) readHistoryBranch(
 	lastFirstEventID := common.EmptyEventID
 
 	for _, batch := range dataBlobs {
-		events, err := m.historySerializer.DeserializeBatchEvents(batch)
+		thriftEvents, err := m.historySerializer.DeserializeBatchEvents(batch)
 		if err != nil {
 			return nil, nil, nil, 0, 0, err
 		}
+		events := thrift.FromHistoryEventArray(thriftEvents)
 		if len(events) == 0 {
 			logger.Error("Empty events in a batch")
 			return nil, nil, nil, 0, 0, &types.InternalServiceError{

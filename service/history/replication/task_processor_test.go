@@ -201,9 +201,9 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTas
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
-	events := []*shared.HistoryEvent{
+	events := []*types.HistoryEvent{
 		{
-			EventId: common.Int64Ptr(1),
+			EventID: common.Int64Ptr(1),
 			Version: common.Int64Ptr(1),
 		},
 	}
@@ -243,9 +243,9 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeHistoryV2
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
-	events := []*shared.HistoryEvent{
+	events := []*types.HistoryEvent{
 		{
-			EventId: common.Int64Ptr(1),
+			EventID: common.Int64Ptr(1),
 			Version: common.Int64Ptr(1),
 		},
 	}

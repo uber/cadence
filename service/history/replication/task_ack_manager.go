@@ -504,7 +504,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 				if err != nil {
 					return nil, err
 				}
-				versionHistory = rawVersionHistory.ToThrift()
+				versionHistory = thrift.FromVersionHistory(rawVersionHistory.ToInternalType())
 			}
 
 			return &types.ReplicationTask{
@@ -634,5 +634,5 @@ func getVersionHistoryItems(
 	if err != nil {
 		return nil, nil, err
 	}
-	return versionHistory.ToThrift().Items, versionHistory.GetBranchToken(), nil
+	return thrift.FromVersionHistoryItemArray(versionHistory.ToInternalType().Items), versionHistory.GetBranchToken(), nil
 }
