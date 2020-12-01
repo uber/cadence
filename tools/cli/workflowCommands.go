@@ -1786,11 +1786,15 @@ func getResetEventIDByType(ctx context.Context, c *cli.Context, resetType, domai
 		if err != nil {
 			return
 		}
+		// decisionFinishID is exclusive in reset API
+		decisionFinishID++
 	case "LastDecisionScheduled":
 		resetBaseRunID, decisionFinishID, err = getLastDecisionTaskByType(ctx, domain, wid, rid, frontendClient, shared.EventTypeDecisionTaskScheduled)
 		if err != nil {
 			return
 		}
+		// decisionFinishID is exclusive in reset API
+		decisionFinishID++
 	case "LastContinuedAsNew":
 		resetBaseRunID, decisionFinishID, err = getLastContinueAsNewID(ctx, domain, wid, rid, frontendClient)
 		if err != nil {

@@ -2033,6 +2033,7 @@ func (e *mutableStateBuilder) AddDecisionTaskResetTimeoutEvent(
 	baseRunID string,
 	newRunID string,
 	forkEventVersion int64,
+	reason string,
 ) (*workflow.HistoryEvent, error) {
 	opTag := tag.WorkflowActionDecisionTaskTimedOut
 	if err := e.checkMutability(opTag); err != nil {
@@ -2043,6 +2044,7 @@ func (e *mutableStateBuilder) AddDecisionTaskResetTimeoutEvent(
 		baseRunID,
 		newRunID,
 		forkEventVersion,
+		reason,
 	)
 }
 

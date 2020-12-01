@@ -61,12 +61,6 @@ type (
 		ReplicateDecisionTaskTimedOutEvent(timeoutType workflow.TimeoutType) error
 
 		AddDecisionTaskScheduleToStartTimeoutEvent(scheduleEventID int64) (*workflow.HistoryEvent, error)
-		AddDecisionTaskResetTimeoutEvent(
-			scheduleEventID int64,
-			baseRunID string,
-			newRunID string,
-			forkEventVersion int64,
-		) (*workflow.HistoryEvent, error)
 		AddDecisionTaskScheduledEventAsHeartbeat(
 			bypassTaskGeneration bool,
 			originalScheduledTimestamp int64,
@@ -97,6 +91,13 @@ type (
 			forkEventVersion int64,
 		) (*workflow.HistoryEvent, error)
 		AddDecisionTaskTimedOutEvent(scheduleEventID int64, startedEventID int64) (*workflow.HistoryEvent, error)
+		AddDecisionTaskResetTimeoutEvent(
+			scheduleEventID int64,
+			baseRunID string,
+			newRunID string,
+			forkEventVersion int64,
+			reason string,
+		) (*workflow.HistoryEvent, error)
 
 		FailDecision(incrementAttempt bool)
 		DeleteDecision()
@@ -284,7 +285,9 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduleToStartTime
 		workflow.TimeoutTypeScheduleToStart,
 		"",
 		"",
-		common.EmptyVersion)
+		common.EmptyVersion,
+		"",
+	)
 
 	if err := m.ReplicateDecisionTaskTimedOutEvent(workflow.TimeoutTypeScheduleToStart); err != nil {
 		return nil, err
@@ -297,9 +300,10 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskResetTimeoutEvent(
 	baseRunID string,
 	newRunID string,
 	forkEventVersion int64,
+	reason string,
 ) (*workflow.HistoryEvent, error) {
 	opTag := tag.WorkflowActionDecisionTaskTimedOut
-	if m.msb.executionInfo.DecisionScheduleID != scheduleEventID || m.msb.executionInfo.DecisionStartedID > 0 {
+	if m.msb.executionInfo.DecisionScheduleID != scheduleEventID {
 		m.msb.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(m.msb.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction,
@@ -318,6 +322,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskResetTimeoutEvent(
 		baseRunID,
 		newRunID,
 		forkEventVersion,
+		reason,
 	)
 
 	if err := m.ReplicateDecisionTaskTimedOutEvent(workflow.TimeoutTypeScheduleToStart); err != nil {
@@ -608,7 +613,9 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskTimedOutEvent(
 			workflow.TimeoutTypeStartToClose,
 			"",
 			"",
-			common.EmptyVersion)
+			common.EmptyVersion,
+			"",
+		)
 	}
 
 	if err := m.ReplicateDecisionTaskTimedOutEvent(workflow.TimeoutTypeStartToClose); err != nil {

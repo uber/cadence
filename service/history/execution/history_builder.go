@@ -131,6 +131,7 @@ func (b *HistoryBuilder) AddDecisionTaskTimedOutEvent(
 	baseRunID string,
 	newRunID string,
 	forkEventVersion int64,
+	reason string,
 ) *workflow.HistoryEvent {
 
 	event := b.newDecisionTaskTimedOutEvent(
@@ -140,6 +141,7 @@ func (b *HistoryBuilder) AddDecisionTaskTimedOutEvent(
 		baseRunID,
 		newRunID,
 		forkEventVersion,
+		reason,
 	)
 	return b.addEventToHistory(event)
 }
@@ -631,6 +633,7 @@ func (b *HistoryBuilder) newDecisionTaskTimedOutEvent(
 	baseRunID string,
 	newRunID string,
 	forkEventVersion int64,
+	reason string,
 ) *workflow.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(workflow.EventTypeDecisionTaskTimedOut)
 	attributes := &workflow.DecisionTaskTimedOutEventAttributes{}
@@ -640,6 +643,7 @@ func (b *HistoryBuilder) newDecisionTaskTimedOutEvent(
 	attributes.BaseRunId = common.StringPtr(baseRunID)
 	attributes.NewRunId = common.StringPtr(newRunID)
 	attributes.ForkEventVersion = common.Int64Ptr(forkEventVersion)
+	attributes.Reason = common.StringPtr(reason)
 	historyEvent.DecisionTaskTimedOutEventAttributes = attributes
 
 	return historyEvent

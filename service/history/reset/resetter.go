@@ -202,58 +202,15 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 		return nil, err
 	}
 
-	decision, ok := resetMutableState.GetInFlightDecision()
-	if ok {
-		// reset workflow has decision task start
-		if decision.StartedID+1 != resetMutableState.GetNextEventID() {
-			return nil, &shared.BadRequestError{
-				Message: fmt.Sprintf("Can only reset workflow to DecisionTaskStarted + 1: %v", baseRebuildLastEventID+1),
-			}
-		}
-		if len(resetMutableState.GetPendingChildExecutionInfos()) > 0 {
-			return nil, &shared.BadRequestError{
-				Message: fmt.Sprintf("Can only reset workflow with pending child workflows"),
-			}
-		}
-		_, err = resetMutableState.AddDecisionTaskFailedEvent(
-			decision.ScheduleID,
-			decision.StartedID,
-			shared.DecisionTaskFailedCauseResetWorkflow,
-			nil,
-			execution.IdentityHistoryService,
-			resetReason,
-			"",
-			baseRunID,
-			resetRunID,
-			baseLastEventVersion,
-		)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	decision, ok = resetMutableState.GetPendingDecision()
-	if ok {
-		//reset workflow has decision task schedule
-		if decision.ScheduleID+1 != resetMutableState.GetNextEventID() {
-			return nil, &shared.BadRequestError{
-				Message: "Can only reset workflow to DecisionTaskScheduled.",
-			}
-		}
-		if len(resetMutableState.GetPendingChildExecutionInfos()) > 0 {
-			return nil, &shared.BadRequestError{
-				Message: fmt.Sprintf("Can only reset workflow with pending child workflows"),
-			}
-		}
-		_, err = resetMutableState.AddDecisionTaskResetTimeoutEvent(
-			decision.ScheduleID,
-			baseRunID,
-			resetRunID,
-			baseLastEventVersion,
-		)
-		if err != nil {
-			return nil, err
-		}
+	resetMutableState, err = r.closePendingDecisionTask(
+		resetMutableState,
+		baseRunID,
+		resetRunID,
+		baseLastEventVersion,
+		resetReason,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := r.failInflightActivity(resetMutableState, resetReason); err != nil {
@@ -317,20 +274,18 @@ func (r *workflowResetterImpl) persistToDB(
 	}
 
 	resetHistorySize := int64(0)
-	switch len(resetWorkflowEventsSeq) {
-	case 0:
-		// reset workflow without decision task completes
-	case 1:
-		// reset workflow with decision task completes
-		resetHistorySize, err = resetWorkflow.GetContext().PersistNonFirstWorkflowEvents(ctx, resetWorkflowEventsSeq[0])
-		if err != nil {
-			return err
-		}
-	default:
+	if len(resetWorkflowEventsSeq) != 1 {
 		return &shared.InternalServiceError{
 			Message: "there should be no more than one batch of events for reset",
 		}
 	}
+
+	// reset workflow with decision task failed or timed out
+	resetHistorySize, err = resetWorkflow.GetContext().PersistNonFirstWorkflowEvents(ctx, resetWorkflowEventsSeq[0])
+	if err != nil {
+		return err
+	}
+
 	return resetWorkflow.GetContext().CreateWorkflowExecution(
 		ctx,
 		resetWorkflowSnapshot,
@@ -651,4 +606,57 @@ func (r *workflowResetterImpl) getPaginationFn(
 		}
 		return paginateItems, token, nil
 	}
+}
+
+func (r *workflowResetterImpl) closePendingDecisionTask(
+	resetMutableState execution.MutableState,
+	baseRunID string,
+	resetRunID string,
+	baseLastEventVersion int64,
+	resetReason string,
+) (execution.MutableState, error) {
+
+	if decision, ok := resetMutableState.GetInFlightDecision(); ok {
+		// reset workflow has decision task start
+		if len(resetMutableState.GetPendingChildExecutionInfos()) > 0 {
+			return nil, &shared.BadRequestError{
+				Message: fmt.Sprintf("Can not only reset workflow with pending child workflows"),
+			}
+		}
+		_, err := resetMutableState.AddDecisionTaskFailedEvent(
+			decision.ScheduleID,
+			decision.StartedID,
+			shared.DecisionTaskFailedCauseResetWorkflow,
+			nil,
+			execution.IdentityHistoryService,
+			resetReason,
+			"",
+			baseRunID,
+			resetRunID,
+			baseLastEventVersion,
+		)
+		if err != nil {
+			return nil, err
+		}
+	} else if decision, ok := resetMutableState.GetPendingDecision(); ok {
+		if ok {
+			//reset workflow has decision task schedule
+			if len(resetMutableState.GetPendingChildExecutionInfos()) > 0 {
+				return nil, &shared.BadRequestError{
+					Message: fmt.Sprintf("Can not only reset workflow with pending child workflows"),
+				}
+			}
+			_, err := resetMutableState.AddDecisionTaskResetTimeoutEvent(
+				decision.ScheduleID,
+				baseRunID,
+				resetRunID,
+				baseLastEventVersion,
+				resetReason,
+			)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return resetMutableState, nil
 }
