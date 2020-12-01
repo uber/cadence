@@ -475,6 +475,10 @@ func CopyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.Chil
 }
 
 func deepCopyHistoryEvent(event *types.HistoryEvent) *types.HistoryEvent {
+	if event == nil {
+		return nil
+	}
+
 	// Achieve deep copy by marshaling and unmarshaling
 	bytes, err := json.Marshal(event)
 	if err != nil {
