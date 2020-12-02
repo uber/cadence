@@ -26,10 +26,9 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/uber/cadence/common/persistence/serialization"
-
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/types"
 )

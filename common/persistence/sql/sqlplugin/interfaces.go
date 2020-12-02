@@ -26,9 +26,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/uber/cadence/common/persistence/serialization"
-
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/service/config"
 )
 
