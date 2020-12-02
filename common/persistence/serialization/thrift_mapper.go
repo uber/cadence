@@ -97,9 +97,9 @@ func domainInfoToThrift(info *DomainInfo) *sqlblobs.DomainInfo {
 		VisibilityArchivalStatus:    info.VisibilityArchivalStatus,
 		VisibilityArchivalURI:       info.VisibilityArchivalURI,
 		PreviousFailoverVersion:     info.PreviousFailoverVersion,
-		RetentionDays:               durationToDays(info.RetentionDays),
-		FailoverEndTime:             unixNanoPtr(info.FailoverEndTime),
-		LastUpdatedTime:             unixNanoPtr(info.LastUpdatedTime),
+		RetentionDays:               durationToDays(info.Retention),
+		FailoverEndTime:             unixNanoPtr(info.FailoverEndTimestamp),
+		LastUpdatedTime:             unixNanoPtr(info.LastUpdatedTimestamp),
 	}
 }
 
@@ -129,9 +129,9 @@ func domainInfoFromThrift(info *sqlblobs.DomainInfo) *DomainInfo {
 		VisibilityArchivalStatus:    info.VisibilityArchivalStatus,
 		VisibilityArchivalURI:       info.VisibilityArchivalURI,
 		PreviousFailoverVersion:     info.PreviousFailoverVersion,
-		RetentionDays:               daysToDuration(info.RetentionDays),
-		FailoverEndTime:             timePtr(info.FailoverEndTime),
-		LastUpdatedTime:             timePtr(info.LastUpdatedTime),
+		Retention:                   daysToDuration(info.RetentionDays),
+		FailoverEndTimestamp:        timePtr(info.FailoverEndTime),
+		LastUpdatedTimestamp:        timePtr(info.LastUpdatedTime),
 	}
 }
 
@@ -140,7 +140,7 @@ func historyTreeInfoToThrift(info *HistoryTreeInfo) *sqlblobs.HistoryTreeInfo {
 		return nil
 	}
 	result := &sqlblobs.HistoryTreeInfo{
-		CreatedTimeNanos: unixNanoPtr(info.CreatedTime),
+		CreatedTimeNanos: unixNanoPtr(info.CreatedTimestamp),
 		Info:             info.Info,
 	}
 	if info.Ancestors != nil {
@@ -161,8 +161,8 @@ func historyTreeInfoFromThrift(info *sqlblobs.HistoryTreeInfo) *HistoryTreeInfo 
 		return nil
 	}
 	result := &HistoryTreeInfo{
-		CreatedTime: timePtr(info.CreatedTimeNanos),
-		Info:        info.Info,
+		CreatedTimestamp: timePtr(info.CreatedTimeNanos),
+		Info:             info.Info,
 	}
 	if info.Ancestors != nil {
 		result.Ancestors = make([]*HistoryBranchRange, len(info.Ancestors), len(info.Ancestors))
@@ -191,8 +191,8 @@ func workflowExecutionInfoToThrift(info *WorkflowExecutionInfo) *sqlblobs.Workfl
 		CompletionEventEncoding:                 info.CompletionEventEncoding,
 		TaskList:                                info.TaskList,
 		WorkflowTypeName:                        info.WorkflowTypeName,
-		WorkflowTimeoutSeconds:                  durationToSeconds(info.WorkflowTimeoutSeconds),
-		DecisionTaskTimeoutSeconds:              durationToSeconds(info.DecisionTaskTimeoutSeconds),
+		WorkflowTimeoutSeconds:                  durationToSeconds(info.WorkflowTimeout),
+		DecisionTaskTimeoutSeconds:              durationToSeconds(info.DecisionTaskTimeout),
 		ExecutionContext:                        info.ExecutionContext,
 		State:                                   info.State,
 		CloseStatus:                             info.CloseStatus,
@@ -201,8 +201,8 @@ func workflowExecutionInfoToThrift(info *WorkflowExecutionInfo) *sqlblobs.Workfl
 		LastEventTaskID:                         info.LastEventTaskID,
 		LastFirstEventID:                        info.LastFirstEventID,
 		LastProcessedEvent:                      info.LastProcessedEvent,
-		StartTimeNanos:                          unixNanoPtr(info.StartTime),
-		LastUpdatedTimeNanos:                    unixNanoPtr(info.LastUpdatedTime),
+		StartTimeNanos:                          unixNanoPtr(info.StartTimestamp),
+		LastUpdatedTimeNanos:                    unixNanoPtr(info.LastUpdatedTimestamp),
 		DecisionVersion:                         info.DecisionVersion,
 		DecisionScheduleID:                      info.DecisionScheduleID,
 		DecisionStartedID:                       info.DecisionStartedID,
@@ -218,12 +218,12 @@ func workflowExecutionInfoToThrift(info *WorkflowExecutionInfo) *sqlblobs.Workfl
 		StickyTaskList:                          info.StickyTaskList,
 		StickyScheduleToStartTimeout:            durationToSecondsInt64(info.StickyScheduleToStartTimeout),
 		RetryAttempt:                            info.RetryAttempt,
-		RetryInitialIntervalSeconds:             durationToSeconds(info.RetryInitialIntervalSeconds),
-		RetryMaximumIntervalSeconds:             durationToSeconds(info.RetryMaximumIntervalSeconds),
+		RetryInitialIntervalSeconds:             durationToSeconds(info.RetryInitialInterval),
+		RetryMaximumIntervalSeconds:             durationToSeconds(info.RetryMaximumInterval),
 		RetryMaximumAttempts:                    info.RetryMaximumAttempts,
-		RetryExpirationSeconds:                  durationToSeconds(info.RetryExpirationSeconds),
+		RetryExpirationSeconds:                  durationToSeconds(info.RetryExpiration),
 		RetryBackoffCoefficient:                 info.RetryBackoffCoefficient,
-		RetryExpirationTimeNanos:                unixNanoPtr(info.RetryExpirationTime),
+		RetryExpirationTimeNanos:                unixNanoPtr(info.RetryExpirationTimestamp),
 		RetryNonRetryableErrors:                 info.RetryNonRetryableErrors,
 		HasRetryPolicy:                          info.HasRetryPolicy,
 		CronSchedule:                            info.CronSchedule,
@@ -257,8 +257,8 @@ func workflowExecutionInfoFromThrift(info *sqlblobs.WorkflowExecutionInfo) *Work
 		CompletionEventEncoding:            info.CompletionEventEncoding,
 		TaskList:                           info.TaskList,
 		WorkflowTypeName:                   info.WorkflowTypeName,
-		WorkflowTimeoutSeconds:             secondsToDuration(info.WorkflowTimeoutSeconds),
-		DecisionTaskTimeoutSeconds:         secondsToDuration(info.DecisionTaskTimeoutSeconds),
+		WorkflowTimeout:                    secondsToDuration(info.WorkflowTimeoutSeconds),
+		DecisionTaskTimeout:                secondsToDuration(info.DecisionTaskTimeoutSeconds),
 		ExecutionContext:                   info.ExecutionContext,
 		State:                              info.State,
 		CloseStatus:                        info.CloseStatus,
@@ -267,8 +267,8 @@ func workflowExecutionInfoFromThrift(info *sqlblobs.WorkflowExecutionInfo) *Work
 		LastEventTaskID:                    info.LastEventTaskID,
 		LastFirstEventID:                   info.LastFirstEventID,
 		LastProcessedEvent:                 info.LastProcessedEvent,
-		StartTime:                          timePtr(info.StartTimeNanos),
-		LastUpdatedTime:                    timePtr(info.LastUpdatedTimeNanos),
+		StartTimestamp:                     timePtr(info.StartTimeNanos),
+		LastUpdatedTimestamp:               timePtr(info.LastUpdatedTimeNanos),
 		DecisionVersion:                    info.DecisionVersion,
 		DecisionScheduleID:                 info.DecisionScheduleID,
 		DecisionStartedID:                  info.DecisionStartedID,
@@ -284,12 +284,12 @@ func workflowExecutionInfoFromThrift(info *sqlblobs.WorkflowExecutionInfo) *Work
 		StickyTaskList:                     info.StickyTaskList,
 		StickyScheduleToStartTimeout:       secondsInt64ToDuration(info.StickyScheduleToStartTimeout),
 		RetryAttempt:                       info.RetryAttempt,
-		RetryInitialIntervalSeconds:        secondsToDuration(info.RetryInitialIntervalSeconds),
-		RetryMaximumIntervalSeconds:        secondsToDuration(info.RetryMaximumIntervalSeconds),
+		RetryInitialInterval:               secondsToDuration(info.RetryInitialIntervalSeconds),
+		RetryMaximumInterval:               secondsToDuration(info.RetryMaximumIntervalSeconds),
 		RetryMaximumAttempts:               info.RetryMaximumAttempts,
-		RetryExpirationSeconds:             secondsToDuration(info.RetryExpirationSeconds),
+		RetryExpiration:                    secondsToDuration(info.RetryExpirationSeconds),
 		RetryBackoffCoefficient:            info.RetryBackoffCoefficient,
-		RetryExpirationTime:                timePtr(info.RetryExpirationTimeNanos),
+		RetryExpirationTimestamp:           timePtr(info.RetryExpirationTimeNanos),
 		RetryNonRetryableErrors:            info.RetryNonRetryableErrors,
 		HasRetryPolicy:                     info.HasRetryPolicy,
 		CronSchedule:                       info.CronSchedule,
@@ -318,17 +318,17 @@ func activityInfoToThrift(info *ActivityInfo) *sqlblobs.ActivityInfo {
 		ScheduledEventBatchID:         info.ScheduledEventBatchID,
 		ScheduledEvent:                info.ScheduledEvent,
 		ScheduledEventEncoding:        info.ScheduledEventEncoding,
-		ScheduledTimeNanos:            unixNanoPtr(info.ScheduledTime),
+		ScheduledTimeNanos:            unixNanoPtr(info.ScheduledTimestamp),
 		StartedID:                     info.StartedID,
 		StartedEvent:                  info.StartedEvent,
 		StartedEventEncoding:          info.StartedEventEncoding,
-		StartedTimeNanos:              unixNanoPtr(info.StartedTime),
+		StartedTimeNanos:              unixNanoPtr(info.StartedTimestamp),
 		ActivityID:                    info.ActivityID,
 		RequestID:                     info.RequestID,
-		ScheduleToStartTimeoutSeconds: durationToSeconds(info.ScheduleToStartTimeoutSeconds),
-		ScheduleToCloseTimeoutSeconds: durationToSeconds(info.ScheduleToCloseTimeoutSeconds),
-		StartToCloseTimeoutSeconds:    durationToSeconds(info.StartToCloseTimeoutSeconds),
-		HeartbeatTimeoutSeconds:       durationToSeconds(info.HeartbeatTimeoutSeconds),
+		ScheduleToStartTimeoutSeconds: durationToSeconds(info.ScheduleToStartTimeout),
+		ScheduleToCloseTimeoutSeconds: durationToSeconds(info.ScheduleToCloseTimeout),
+		StartToCloseTimeoutSeconds:    durationToSeconds(info.StartToCloseTimeout),
+		HeartbeatTimeoutSeconds:       durationToSeconds(info.HeartbeatTimeout),
 		CancelRequested:               info.CancelRequested,
 		CancelRequestID:               info.CancelRequestID,
 		TimerTaskStatus:               info.TimerTaskStatus,
@@ -336,10 +336,10 @@ func activityInfoToThrift(info *ActivityInfo) *sqlblobs.ActivityInfo {
 		TaskList:                      info.TaskList,
 		StartedIdentity:               info.StartedIdentity,
 		HasRetryPolicy:                info.HasRetryPolicy,
-		RetryInitialIntervalSeconds:   durationToSeconds(info.RetryInitialIntervalSeconds),
-		RetryMaximumIntervalSeconds:   durationToSeconds(info.RetryMaximumIntervalSeconds),
+		RetryInitialIntervalSeconds:   durationToSeconds(info.RetryInitialInterval),
+		RetryMaximumIntervalSeconds:   durationToSeconds(info.RetryMaximumInterval),
 		RetryMaximumAttempts:          info.RetryMaximumAttempts,
-		RetryExpirationTimeNanos:      unixNanoPtr(info.RetryExpirationTime),
+		RetryExpirationTimeNanos:      unixNanoPtr(info.RetryExpirationTimestamp),
 		RetryBackoffCoefficient:       info.RetryBackoffCoefficient,
 		RetryNonRetryableErrors:       info.RetryNonRetryableErrors,
 		RetryLastFailureReason:        info.RetryLastFailureReason,
@@ -353,37 +353,37 @@ func activityInfoFromThrift(info *sqlblobs.ActivityInfo) *ActivityInfo {
 		return nil
 	}
 	return &ActivityInfo{
-		Version:                       info.Version,
-		ScheduledEventBatchID:         info.ScheduledEventBatchID,
-		ScheduledEvent:                info.ScheduledEvent,
-		ScheduledEventEncoding:        info.ScheduledEventEncoding,
-		ScheduledTime:                 timePtr(info.ScheduledTimeNanos),
-		StartedID:                     info.StartedID,
-		StartedEvent:                  info.StartedEvent,
-		StartedEventEncoding:          info.StartedEventEncoding,
-		StartedTime:                   timePtr(info.StartedTimeNanos),
-		ActivityID:                    info.ActivityID,
-		RequestID:                     info.RequestID,
-		ScheduleToStartTimeoutSeconds: secondsToDuration(info.ScheduleToStartTimeoutSeconds),
-		ScheduleToCloseTimeoutSeconds: secondsToDuration(info.ScheduleToCloseTimeoutSeconds),
-		StartToCloseTimeoutSeconds:    secondsToDuration(info.StartToCloseTimeoutSeconds),
-		HeartbeatTimeoutSeconds:       secondsToDuration(info.HeartbeatTimeoutSeconds),
-		CancelRequested:               info.CancelRequested,
-		CancelRequestID:               info.CancelRequestID,
-		TimerTaskStatus:               info.TimerTaskStatus,
-		Attempt:                       info.Attempt,
-		TaskList:                      info.TaskList,
-		StartedIdentity:               info.StartedIdentity,
-		HasRetryPolicy:                info.HasRetryPolicy,
-		RetryInitialIntervalSeconds:   secondsToDuration(info.RetryInitialIntervalSeconds),
-		RetryMaximumIntervalSeconds:   secondsToDuration(info.RetryMaximumIntervalSeconds),
-		RetryMaximumAttempts:          info.RetryMaximumAttempts,
-		RetryExpirationTime:           timePtr(info.RetryExpirationTimeNanos),
-		RetryBackoffCoefficient:       info.RetryBackoffCoefficient,
-		RetryNonRetryableErrors:       info.RetryNonRetryableErrors,
-		RetryLastFailureReason:        info.RetryLastFailureReason,
-		RetryLastWorkerIdentity:       info.RetryLastWorkerIdentity,
-		RetryLastFailureDetails:       info.RetryLastFailureDetails,
+		Version:                  info.Version,
+		ScheduledEventBatchID:    info.ScheduledEventBatchID,
+		ScheduledEvent:           info.ScheduledEvent,
+		ScheduledEventEncoding:   info.ScheduledEventEncoding,
+		ScheduledTimestamp:       timePtr(info.ScheduledTimeNanos),
+		StartedID:                info.StartedID,
+		StartedEvent:             info.StartedEvent,
+		StartedEventEncoding:     info.StartedEventEncoding,
+		StartedTimestamp:         timePtr(info.StartedTimeNanos),
+		ActivityID:               info.ActivityID,
+		RequestID:                info.RequestID,
+		ScheduleToStartTimeout:   secondsToDuration(info.ScheduleToStartTimeoutSeconds),
+		ScheduleToCloseTimeout:   secondsToDuration(info.ScheduleToCloseTimeoutSeconds),
+		StartToCloseTimeout:      secondsToDuration(info.StartToCloseTimeoutSeconds),
+		HeartbeatTimeout:         secondsToDuration(info.HeartbeatTimeoutSeconds),
+		CancelRequested:          info.CancelRequested,
+		CancelRequestID:          info.CancelRequestID,
+		TimerTaskStatus:          info.TimerTaskStatus,
+		Attempt:                  info.Attempt,
+		TaskList:                 info.TaskList,
+		StartedIdentity:          info.StartedIdentity,
+		HasRetryPolicy:           info.HasRetryPolicy,
+		RetryInitialInterval:     secondsToDuration(info.RetryInitialIntervalSeconds),
+		RetryMaximumInterval:     secondsToDuration(info.RetryMaximumIntervalSeconds),
+		RetryMaximumAttempts:     info.RetryMaximumAttempts,
+		RetryExpirationTimestamp: timePtr(info.RetryExpirationTimeNanos),
+		RetryBackoffCoefficient:  info.RetryBackoffCoefficient,
+		RetryNonRetryableErrors:  info.RetryNonRetryableErrors,
+		RetryLastFailureReason:   info.RetryLastFailureReason,
+		RetryLastWorkerIdentity:  info.RetryLastWorkerIdentity,
+		RetryLastFailureDetails:  info.RetryLastFailureDetails,
 	}
 }
 
@@ -486,7 +486,7 @@ func timerInfoToThrift(info *TimerInfo) *sqlblobs.TimerInfo {
 	return &sqlblobs.TimerInfo{
 		Version:         info.Version,
 		StartedID:       info.StartedID,
-		ExpiryTimeNanos: unixNanoPtr(info.ExpiryTime),
+		ExpiryTimeNanos: unixNanoPtr(info.ExpiryTimestamp),
 		TaskID:          info.TaskID,
 	}
 }
@@ -496,10 +496,10 @@ func timerInfoFromThrift(info *sqlblobs.TimerInfo) *TimerInfo {
 		return nil
 	}
 	return &TimerInfo{
-		Version:    info.Version,
-		StartedID:  info.StartedID,
-		ExpiryTime: timePtr(info.ExpiryTimeNanos),
-		TaskID:     info.TaskID,
+		Version:         info.Version,
+		StartedID:       info.StartedID,
+		ExpiryTimestamp: timePtr(info.ExpiryTimeNanos),
+		TaskID:          info.TaskID,
 	}
 }
 
@@ -511,8 +511,8 @@ func taskInfoToThrift(info *TaskInfo) *sqlblobs.TaskInfo {
 		WorkflowID:       info.WorkflowID,
 		RunID:            MustParsePtrUUID(info.RunID),
 		ScheduleID:       info.ScheduleID,
-		ExpiryTimeNanos:  unixNanoPtr(info.ExpiryTime),
-		CreatedTimeNanos: unixNanoPtr(info.CreatedTime),
+		ExpiryTimeNanos:  unixNanoPtr(info.ExpiryTimestamp),
+		CreatedTimeNanos: unixNanoPtr(info.CreatedTimestamp),
 	}
 }
 
@@ -521,11 +521,11 @@ func taskInfoFromThrift(info *sqlblobs.TaskInfo) *TaskInfo {
 		return nil
 	}
 	return &TaskInfo{
-		WorkflowID:  info.WorkflowID,
-		RunID:       common.StringPtr(UUID(info.RunID).String()),
-		ScheduleID:  info.ScheduleID,
-		ExpiryTime:  timePtr(info.ExpiryTimeNanos),
-		CreatedTime: timePtr(info.CreatedTimeNanos),
+		WorkflowID:       info.WorkflowID,
+		RunID:            common.StringPtr(UUID(info.RunID).String()),
+		ScheduleID:       info.ScheduleID,
+		ExpiryTimestamp:  timePtr(info.ExpiryTimeNanos),
+		CreatedTimestamp: timePtr(info.CreatedTimeNanos),
 	}
 }
 
@@ -536,7 +536,7 @@ func taskListInfoToThrift(info *TaskListInfo) *sqlblobs.TaskListInfo {
 	return &sqlblobs.TaskListInfo{
 		Kind:             info.Kind,
 		AckLevel:         info.AckLevel,
-		ExpiryTimeNanos:  unixNanoPtr(info.ExpiryTime),
+		ExpiryTimeNanos:  unixNanoPtr(info.ExpiryTimestamp),
 		LastUpdatedNanos: unixNanoPtr(info.LastUpdated),
 	}
 }
@@ -546,10 +546,10 @@ func taskListInfoFromThrift(info *sqlblobs.TaskListInfo) *TaskListInfo {
 		return nil
 	}
 	return &TaskListInfo{
-		Kind:        info.Kind,
-		AckLevel:    info.AckLevel,
-		ExpiryTime:  timePtr(info.ExpiryTimeNanos),
-		LastUpdated: timePtr(info.LastUpdatedNanos),
+		Kind:            info.Kind,
+		AckLevel:        info.AckLevel,
+		ExpiryTimestamp: timePtr(info.ExpiryTimeNanos),
+		LastUpdated:     timePtr(info.LastUpdatedNanos),
 	}
 }
 
@@ -642,7 +642,7 @@ func replicationTaskInfoToThrift(info *ReplicationTaskInfo) *sqlblobs.Replicatio
 		NewRunEventStoreVersion: info.NewRunEventStoreVersion,
 		BranchToken:             info.BranchToken,
 		NewRunBranchToken:       info.NewRunBranchToken,
-		CreationTime:            unixNanoPtr(info.CreationTime),
+		CreationTime:            unixNanoPtr(info.CreationTimestamp),
 	}
 }
 
@@ -663,7 +663,7 @@ func replicationTaskInfoFromThrift(info *sqlblobs.ReplicationTaskInfo) *Replicat
 		NewRunEventStoreVersion: info.NewRunEventStoreVersion,
 		BranchToken:             info.BranchToken,
 		NewRunBranchToken:       info.NewRunBranchToken,
-		CreationTime:            timePtr(info.CreationTime),
+		CreationTimestamp:       timePtr(info.CreationTime),
 	}
 }
 
