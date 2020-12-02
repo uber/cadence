@@ -30,7 +30,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
@@ -114,7 +113,7 @@ type (
 		CreateWorkflowExecution(ctx context.Context, request *persistence.CreateWorkflowExecutionRequest) (*persistence.CreateWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(ctx context.Context, request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error)
 		ConflictResolveWorkflowExecution(ctx context.Context, request *persistence.ConflictResolveWorkflowExecutionRequest) error
-		AppendHistoryV2Events(ctx context.Context, request *persistence.AppendHistoryNodesRequest, domainID string, execution shared.WorkflowExecution) (int, error)
+		AppendHistoryV2Events(ctx context.Context, request *persistence.AppendHistoryNodesRequest, domainID string, execution types.WorkflowExecution) (int, error)
 
 		ReplicateFailoverMarkers(ctx context.Context, makers []*persistence.FailoverMarkerTask) error
 		AddingPendingFailoverMarker(*types.FailoverMarkerAttributes) error
@@ -914,7 +913,7 @@ func (s *contextImpl) AppendHistoryV2Events(
 	ctx context.Context,
 	request *persistence.AppendHistoryNodesRequest,
 	domainID string,
-	execution shared.WorkflowExecution,
+	execution types.WorkflowExecution,
 ) (int, error) {
 
 	domainEntry, err := s.GetDomainCache().GetDomainByID(domainID)
@@ -943,8 +942,8 @@ func (s *contextImpl) AppendHistoryV2Events(
 		}
 		if size >= historySizeLogThreshold {
 			s.throttledLogger.Warn("history size threshold breached",
-				tag.WorkflowID(execution.GetWorkflowId()),
-				tag.WorkflowRunID(execution.GetRunId()),
+				tag.WorkflowID(execution.GetWorkflowID()),
+				tag.WorkflowRunID(execution.GetRunID()),
 				tag.WorkflowDomainID(domainID),
 				tag.WorkflowHistorySizeBytes(size))
 		}

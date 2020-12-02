@@ -26,7 +26,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/types"
@@ -151,9 +150,9 @@ func ExecutionStillOpen(
 ) (bool, error) {
 	req := &persistence.GetWorkflowExecutionRequest{
 		DomainID: exec.DomainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: &exec.WorkflowID,
-			RunId:      &exec.RunID,
+		Execution: types.WorkflowExecution{
+			WorkflowID: &exec.WorkflowID,
+			RunID:      &exec.RunID,
 		},
 	}
 	resp, err := pr.GetWorkflowExecution(ctx, req)

@@ -307,7 +307,7 @@ func (s *TestBase) UpdateShard(ctx context.Context, updatedInfo *p.ShardInfo, pr
 func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 	ctx context.Context,
 	domainID string,
-	workflowExecution workflow.WorkflowExecution,
+	workflowExecution types.WorkflowExecution,
 	taskList string,
 	wType string,
 	wTimeout int32,
@@ -329,8 +329,8 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 			ExecutionInfo: &p.WorkflowExecutionInfo{
 				CreateRequestID:             uuid.New(),
 				DomainID:                    domainID,
-				WorkflowID:                  workflowExecution.GetWorkflowId(),
-				RunID:                       workflowExecution.GetRunId(),
+				WorkflowID:                  workflowExecution.GetWorkflowID(),
+				RunID:                       workflowExecution.GetRunID(),
 				TaskList:                    taskList,
 				WorkflowTypeName:            wType,
 				WorkflowTimeout:             wTimeout,
@@ -370,7 +370,7 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 func (s *TestBase) CreateWorkflowExecution(
 	ctx context.Context,
 	domainID string,
-	workflowExecution workflow.WorkflowExecution,
+	workflowExecution types.WorkflowExecution,
 	taskList string,
 	wType string,
 	wTimeout int32,
@@ -390,7 +390,7 @@ func (s *TestBase) CreateWorkflowExecution(
 func (s *TestBase) CreateWorkflowExecutionWithReplication(
 	ctx context.Context,
 	domainID string,
-	workflowExecution workflow.WorkflowExecution,
+	workflowExecution types.WorkflowExecution,
 	taskList string,
 	wType string,
 	wTimeout int32,
@@ -429,8 +429,8 @@ func (s *TestBase) CreateWorkflowExecutionWithReplication(
 			ExecutionInfo: &p.WorkflowExecutionInfo{
 				CreateRequestID:             uuid.New(),
 				DomainID:                    domainID,
-				WorkflowID:                  workflowExecution.GetWorkflowId(),
-				RunID:                       workflowExecution.GetRunId(),
+				WorkflowID:                  workflowExecution.GetWorkflowID(),
+				RunID:                       workflowExecution.GetRunID(),
 				TaskList:                    taskList,
 				WorkflowTypeName:            wType,
 				WorkflowTimeout:             wTimeout,
@@ -511,8 +511,8 @@ func (s *TestBase) CreateWorkflowExecutionManyTasks(ctx context.Context, domainI
 }
 
 // CreateChildWorkflowExecution is a utility method to create child workflow executions
-func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID string, workflowExecution workflow.WorkflowExecution,
-	parentDomainID string, parentExecution workflow.WorkflowExecution, initiatedID int64, taskList, wType string,
+func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution,
+	parentDomainID string, parentExecution types.WorkflowExecution, initiatedID int64, taskList, wType string,
 	wTimeout int32, decisionTimeout int32, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
 	decisionScheduleID int64, timerTasks []p.Task) (*p.CreateWorkflowExecutionResponse, error) {
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
@@ -524,11 +524,11 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 			ExecutionInfo: &p.WorkflowExecutionInfo{
 				CreateRequestID:             uuid.New(),
 				DomainID:                    domainID,
-				WorkflowID:                  workflowExecution.GetWorkflowId(),
-				RunID:                       workflowExecution.GetRunId(),
+				WorkflowID:                  workflowExecution.GetWorkflowID(),
+				RunID:                       workflowExecution.GetRunID(),
 				ParentDomainID:              parentDomainID,
-				ParentWorkflowID:            parentExecution.GetWorkflowId(),
-				ParentRunID:                 parentExecution.GetRunId(),
+				ParentWorkflowID:            parentExecution.GetWorkflowID(),
+				ParentRunID:                 parentExecution.GetRunID(),
 				InitiatedID:                 initiatedID,
 				TaskList:                    taskList,
 				WorkflowTypeName:            wType,
@@ -563,7 +563,7 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 }
 
 // GetWorkflowExecutionInfoWithStats is a utility method to retrieve execution info with size stats
-func (s *TestBase) GetWorkflowExecutionInfoWithStats(ctx context.Context, domainID string, workflowExecution workflow.WorkflowExecution) (
+func (s *TestBase) GetWorkflowExecutionInfoWithStats(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution) (
 	*p.MutableStateStats, *p.WorkflowMutableState, error) {
 	response, err := s.ExecutionManager.GetWorkflowExecution(ctx, &p.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
@@ -577,7 +577,7 @@ func (s *TestBase) GetWorkflowExecutionInfoWithStats(ctx context.Context, domain
 }
 
 // GetWorkflowExecutionInfo is a utility method to retrieve execution info
-func (s *TestBase) GetWorkflowExecutionInfo(ctx context.Context, domainID string, workflowExecution workflow.WorkflowExecution) (
+func (s *TestBase) GetWorkflowExecutionInfo(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution) (
 	*p.WorkflowMutableState, error) {
 	response, err := s.ExecutionManager.GetWorkflowExecution(ctx, &p.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
@@ -609,7 +609,7 @@ func (s *TestBase) ContinueAsNewExecution(
 	updatedInfo *p.WorkflowExecutionInfo,
 	updatedStats *p.ExecutionStats,
 	condition int64,
-	newExecution workflow.WorkflowExecution,
+	newExecution types.WorkflowExecution,
 	nextEventID, decisionScheduleID int64,
 	prevResetPoints *workflow.ResetPoints,
 ) error {
@@ -642,8 +642,8 @@ func (s *TestBase) ContinueAsNewExecution(
 			ExecutionInfo: &p.WorkflowExecutionInfo{
 				CreateRequestID:             uuid.New(),
 				DomainID:                    updatedInfo.DomainID,
-				WorkflowID:                  newExecution.GetWorkflowId(),
-				RunID:                       newExecution.GetRunId(),
+				WorkflowID:                  newExecution.GetWorkflowID(),
+				RunID:                       newExecution.GetRunID(),
 				TaskList:                    updatedInfo.TaskList,
 				WorkflowTypeName:            updatedInfo.WorkflowTypeName,
 				WorkflowTimeout:             updatedInfo.WorkflowTimeout,
