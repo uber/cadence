@@ -120,6 +120,7 @@ type (
 		DomainID   UUID
 		WorkflowID string
 		RunID      UUID
+		Size       int
 	}
 
 	// CurrentExecutionsRow represents a row in current_executions table
@@ -580,7 +581,7 @@ type (
 
 		InsertIntoExecutions(ctx context.Context, row *ExecutionsRow) (sql.Result, error)
 		UpdateExecutions(ctx context.Context, row *ExecutionsRow) (sql.Result, error)
-		SelectFromExecutions(ctx context.Context, filter *ExecutionsFilter) (*ExecutionsRow, error)
+		SelectFromExecutions(ctx context.Context, filter *ExecutionsFilter) ([]ExecutionsRow, error)
 		DeleteFromExecutions(ctx context.Context, filter *ExecutionsFilter) (sql.Result, error)
 		ReadLockExecutions(ctx context.Context, filter *ExecutionsFilter) (int, error)
 		WriteLockExecutions(ctx context.Context, filter *ExecutionsFilter) (int, error)

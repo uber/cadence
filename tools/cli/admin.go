@@ -833,6 +833,30 @@ func newDBCommands() []cli.Command {
 			},
 		},
 		{
+			Name:  "scan-unsupport",
+			Usage: "scan executions in database and detect corruptions",
+			Flags: append(getDBFlags(),
+				cli.IntFlag{
+					Name:     FlagNumberOfShards,
+					Usage:    "NumberOfShards for the cadence cluster (see config for numHistoryShards)",
+					Required: true,
+				},
+				cli.IntFlag{
+					Name:  FlagRPS,
+					Usage: "NumberOfShards for the cadence cluster (see config for numHistoryShards)",
+					Value: 1000,
+				},
+				cli.StringFlag{
+					Name:  FlagOutputFilenameWithAlias,
+					Usage: "Output file to write to, if not provided output is written to stdout",
+				},
+			),
+
+			Action: func(c *cli.Context) {
+				AdminDBScan2DC(c)
+			},
+		},
+		{
 			Name:  "clean",
 			Usage: "clean up corrupted workflows",
 			Flags: append(getDBFlags(),
@@ -854,6 +878,11 @@ func newDBCommands() []cli.Command {
 func getDBFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
+			Name:  FlagDBType,
+			Value: "cassandra",
+			Usage: "persistence type. Current supported options are cassandra, mysql, postgres",
+		},
+		cli.StringFlag{
 			Name:  FlagDBAddress,
 			Value: "127.0.0.1",
 			Usage: "persistence address (right now only cassandra is fully supported)",
@@ -865,16 +894,33 @@ func getDBFlags() []cli.Flag {
 		},
 		cli.StringFlag{
 			Name:  FlagUsername,
-			Usage: "cassandra username",
+			Usage: "persistence username",
 		},
 		cli.StringFlag{
 			Name:  FlagPassword,
-			Usage: "cassandra password",
+			Usage: "persistence password",
 		},
 		cli.StringFlag{
 			Name:  FlagKeyspace,
 			Value: "cadence",
 			Usage: "cassandra keyspace",
+		},
+		cli.StringFlag{
+			Name:  FlagDatabaseName,
+			Value: "cadence",
+			Usage: "sql database name",
+		},
+		cli.StringFlag{
+			Name:  FlagEncodingType,
+			Value: "thriftrw",
+			Usage: "sql database encoding type",
+		},
+		cli.StringSliceFlag{
+			Name: FlagDecodingTypes,
+			Value: &cli.StringSlice{
+				"thriftrw",
+			},
+			Usage: "sql database decoding types",
 		},
 		cli.BoolFlag{
 			Name:  FlagEnableTLS,
