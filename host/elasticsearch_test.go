@@ -42,7 +42,7 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/environment"
-	"github.com/uber/cadence/host/esUtils"
+	"github.com/uber/cadence/host/esutils"
 )
 
 const (
@@ -56,7 +56,7 @@ type elasticsearchIntegrationSuite struct {
 	// not merely log an error
 	*require.Assertions
 	IntegrationBase
-	esClient esUtils.ESClient
+	esClient esutils.ESClient
 
 	testSearchAttributeKey string
 	testSearchAttributeVal string
@@ -65,7 +65,7 @@ type elasticsearchIntegrationSuite struct {
 // This cluster use customized threshold for history config
 func (s *elasticsearchIntegrationSuite) SetupSuite() {
 	s.setupSuite("testdata/integration_elasticsearch_" + environment.GetESVersion() + "_cluster.yaml")
-	s.esClient = esUtils.CreateESClient(s.Suite, s.testClusterConfig.ESConfig.URL.String(), environment.GetESVersion())
+	s.esClient = esutils.CreateESClient(s.Suite, s.testClusterConfig.ESConfig.URL.String(), environment.GetESVersion())
 	s.esClient.PutIndexTemplate(s.Suite, "testdata/es_"+environment.GetESVersion()+"_index_template.json", "test-visibility-template")
 	indexName := s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName]
 	s.esClient.CreateIndex(s.Suite, indexName)

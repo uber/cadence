@@ -48,7 +48,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/host"
-	"github.com/uber/cadence/host/esUtils"
+	"github.com/uber/cadence/host/esutils"
 )
 
 const (
@@ -66,7 +66,7 @@ type esCrossDCTestSuite struct {
 	cluster2       *host.TestCluster
 	logger         log.Logger
 	clusterConfigs []*host.TestClusterConfig
-	esClient       esUtils.ESClient
+	esClient       esutils.ESClient
 
 	testSearchAttributeKey string
 	testSearchAttributeVal string
@@ -117,7 +117,7 @@ func (s *esCrossDCTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.cluster2 = c
 
-	s.esClient = esUtils.CreateESClient(s.Suite, s.clusterConfigs[0].ESConfig.URL.String(), "v6")
+	s.esClient = esutils.CreateESClient(s.Suite, s.clusterConfigs[0].ESConfig.URL.String(), "v6")
 	//TODO Do we also want to run v7 test here?
 	s.esClient.PutIndexTemplate(s.Suite, "../testdata/es_index_v6_template.json", "test-visibility-template")
 	s.esClient.CreateIndex(s.Suite, s.clusterConfigs[0].ESConfig.Indices[common.VisibilityAppName])
