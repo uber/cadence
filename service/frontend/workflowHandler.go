@@ -1968,8 +1968,8 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 				tag.WorkflowID(getRequest.Execution.GetWorkflowId()),
 				tag.WorkflowRunID(getRequest.Execution.GetRunId()),
 			)
-			// TODO: for now we only logger the invalid timeout (this is done inside the helper function) in case
-			// this change break existing customers. Once we are sure no one is calling this API with very short timeout
+			// TODO: for now we only log the invalid timeout (this is done inside the helper function) in case
+			// this change breaks existing customers. Once we are sure no one is calling this API with very short timeout
 			// we can return the error.
 			_ = common.ValidateLongPollContextTimeout(ctx, "GetWorkflowExecutionHistory", logger)
 
