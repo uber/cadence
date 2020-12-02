@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -151,7 +152,7 @@ func newReplicationTask(
 		eventTime:      time.Unix(0, eventTime),
 		events:         events,
 		newEvents:      newEvents,
-		versionHistory: persistence.NewVersionHistoryFromThrift(versionHistory),
+		versionHistory: persistence.NewVersionHistoryFromInternalType(thrift.ToVersionHistory(versionHistory)),
 
 		startTime: taskStartTime,
 		logger:    logger,
@@ -251,9 +252,9 @@ func (t *replicationTaskImpl) splitTask(
 		}
 	}
 
-	newVersionHistory := persistence.NewVersionHistoryFromThrift(&shared.VersionHistory{
+	newVersionHistory := persistence.NewVersionHistoryFromInternalType(&types.VersionHistory{
 		BranchToken: nil,
-		Items: []*shared.VersionHistoryItem{{
+		Items: []*types.VersionHistoryItem{{
 			EventID: common.Int64Ptr(newLastEvent.GetEventId()),
 			Version: common.Int64Ptr(newLastEvent.GetVersion()),
 		}},
@@ -373,8 +374,9 @@ func deserializeBlob(
 		return nil, nil
 	}
 
-	return historySerializer.DeserializeBatchEvents(&persistence.DataBlob{
+	internalEvents, err := historySerializer.DeserializeBatchEvents(&persistence.DataBlob{
 		Encoding: common.EncodingTypeThriftRW,
 		Data:     blob.Data,
 	})
+	return thrift.FromHistoryEventArray(internalEvents), err
 }

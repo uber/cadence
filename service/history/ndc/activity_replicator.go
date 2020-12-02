@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -236,7 +237,7 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 			return false, err
 		}
 
-		incomingVersionHistory := persistence.NewVersionHistoryFromThrift(incomingRawVersionHistory)
+		incomingVersionHistory := persistence.NewVersionHistoryFromInternalType(thrift.ToVersionHistory(incomingRawVersionHistory))
 		lastIncomingItem, err := incomingVersionHistory.GetLastItem()
 		if err != nil {
 			return false, err

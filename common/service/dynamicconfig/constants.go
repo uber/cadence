@@ -86,6 +86,9 @@ var keys = map[Key]string{
 	MaxIDLengthWarnLimit:    "limit.maxIDWarnLength",
 	MaxRawTaskListNameLimit: "limit.maxRawTaskListNameLength",
 
+	// admin settings
+	AdminErrorInjectionRate: "admin.errorInjectionRate",
+
 	// frontend settings
 	FrontendPersistenceMaxQPS:                   "frontend.persistenceMaxQPS",
 	FrontendPersistenceGlobalMaxQPS:             "frontend.persistenceGlobalMaxQPS",
@@ -114,6 +117,7 @@ var keys = map[Key]string{
 	VisibilityArchivalQueryMaxQPS:               "frontend.visibilityArchivalQueryMaxQPS",
 	DomainFailoverRefreshInterval:               "frontend.domainFailoverRefreshInterval",
 	DomainFailoverRefreshTimerJitterCoefficient: "frontend.domainFailoverRefreshTimerJitterCoefficient",
+	FrontendErrorInjectionRate:                  "frontend.errorInjectionRate",
 
 	// matching settings
 	MatchingRPS:                             "matching.rps",
@@ -137,7 +141,7 @@ var keys = map[Key]string{
 	MatchingForwarderMaxRatePerSecond:       "matching.forwarderMaxRatePerSecond",
 	MatchingForwarderMaxChildrenPerNode:     "matching.forwarderMaxChildrenPerNode",
 	MatchingShutdownDrainDuration:           "matching.shutdownDrainDuration",
-	MatchingErrorInjectionRate:              "matching.ErrorInjectionRate",
+	MatchingErrorInjectionRate:              "matching.errorInjectionRate",
 
 	// history settings
 	HistoryRPS:                                            "history.rps",
@@ -288,6 +292,7 @@ var keys = map[Key]string{
 	NotifyFailoverMarkerTimerJitterCoefficient:            "history.NotifyFailoverMarkerTimerJitterCoefficient",
 	EnableDropStuckTaskByDomainID:                         "history.DropStuckTaskByDomain",
 	EnableActivityLocalDispatchByDomain:                   "history.enableActivityLocalDispatchByDomain",
+	HistoryErrorInjectionRate:                             "history.errorInjectionRate",
 
 	WorkerPersistenceMaxQPS:                                  "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                            "worker.persistenceGlobalMaxQPS",
@@ -334,6 +339,8 @@ var keys = map[Key]string{
 	CurrentExecutionsScannerInvariantCollectionMutableState:  "worker.currentExecutionsInvariantCollectionMutableState",
 	ConcreteExecutionFixerDomainAllow:                        "worker.concreteExecutionFixerDomainAllow",
 	CurrentExecutionFixerDomainAllow:                         "worker.currentExecutionFixerDomainAllow",
+	ConcreteExecutionFixerEnabled:                            "worker.concreteExecutionFixerEnabled",
+	CurrentExecutionFixerEnabled:                             "worker.currentExecutionFixerEnabled",
 }
 
 const (
@@ -420,6 +427,11 @@ const (
 	// MaxRawTaskListNameLimit is the max length of user provided task list name (non-sticky and non-scalable)
 	MaxRawTaskListNameLimit
 
+	// key for admin
+
+	// AdminErrorInjectionRate is the rate for injecting random error in admin client
+	AdminErrorInjectionRate
+
 	// key for frontend
 
 	// FrontendPersistenceMaxQPS is the max qps frontend host can query DB
@@ -476,6 +488,9 @@ const (
 	DomainFailoverRefreshInterval
 	// DomainFailoverRefreshTimerJitterCoefficient is the jitter for domain failover refresh timer jitter
 	DomainFailoverRefreshTimerJitterCoefficient
+
+	// FrontendErrorInjectionRate is the rate for injecting random error in frontend client
+	FrontendErrorInjectionRate
 
 	// key for matching
 
@@ -770,6 +785,9 @@ const (
 	// EnableDropStuckTaskByDomainID is whether stuck timer/transfer task should be dropped for a domain
 	EnableDropStuckTaskByDomainID
 
+	// HistoryErrorInjectionRate is the rate for injecting random error in history client
+	HistoryErrorInjectionRate
+
 	// key for worker
 
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
@@ -862,6 +880,10 @@ const (
 	ConcreteExecutionFixerDomainAllow
 	// CurrentExecutionFixerDomainAllow indicates which domains are allowed to be fixed by current fixer workflow
 	CurrentExecutionFixerDomainAllow
+	// ConcreteExecutionFixerEnabled indicates if concrete execution fixer workflow is enabled
+	ConcreteExecutionFixerEnabled
+	// CurrentExecutionFixerEnabled indicates if current execution fixer workflow is enabled
+	CurrentExecutionFixerEnabled
 	// EnableBatcher decides whether start batcher in our worker
 	EnableBatcher
 	// EnableParentClosePolicyWorker decides whether or not enable system workers for processing parent close policy task
@@ -930,11 +952,11 @@ const (
 	// NotifyFailoverMarkerTimerJitterCoefficient is the jitter for failover marker notifier timer
 	NotifyFailoverMarkerTimerJitterCoefficient
 
-	// lastKeyForTest must be the last one in this const group for testing purpose
-	lastKeyForTest
-
 	// EnableActivityLocalDispatchByDomain allows worker to dispatch activity tasks through local tunnel after decisions are made. This is an performance optimization to skip activity scheduling efforts.
 	EnableActivityLocalDispatchByDomain
+
+	// lastKeyForTest must be the last one in this const group for testing purpose
+	lastKeyForTest
 )
 
 // Filter represents a filter on the dynamic config key

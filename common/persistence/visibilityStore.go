@@ -29,7 +29,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -364,7 +363,7 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 		},
 		StartTime:        common.Int64Ptr(execution.StartTime.UnixNano()),
 		ExecutionTime:    common.Int64Ptr(execution.ExecutionTime.UnixNano()),
-		Memo:             thrift.ToMemo(memo),
+		Memo:             memo,
 		SearchAttributes: searchAttributes,
 		TaskList:         common.StringPtr(execution.TaskList),
 	}
@@ -408,7 +407,7 @@ func (v *visibilityManagerImpl) toInternalListWorkflowExecutionsRequest(req *Lis
 }
 
 func (v *visibilityManagerImpl) serializeMemo(visibilityMemo *types.Memo, domainID, wID, rID string) *DataBlob {
-	memo, err := v.serializer.SerializeVisibilityMemo(thrift.FromMemo(visibilityMemo), VisibilityEncoding)
+	memo, err := v.serializer.SerializeVisibilityMemo(visibilityMemo, VisibilityEncoding)
 	if err != nil {
 		v.logger.WithTags(
 			tag.WorkflowDomainID(domainID),

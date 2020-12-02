@@ -28,10 +28,11 @@ import (
 
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -61,7 +62,7 @@ func AdminGetDLQMessages(c *cli.Context) {
 	}
 
 	paginationFunc := func(paginationToken []byte) ([]interface{}, []byte, error) {
-		resp, err := adminClient.ReadDLQMessages(ctx, &replicator.ReadDLQMessagesRequest{
+		resp, err := adminClient.ReadDLQMessages(ctx, &types.ReadDLQMessagesRequest{
 			Type:                  toQueueType(dlqType),
 			SourceCluster:         common.StringPtr(sourceCluster),
 			ShardID:               common.Int32Ptr(int32(shardID)),
@@ -87,13 +88,13 @@ func AdminGetDLQMessages(c *cli.Context) {
 			ErrorAndExit(fmt.Sprintf("fail to read dlq message. Last read message id: %v", lastReadMessageID), err)
 		}
 
-		task := item.(*replicator.ReplicationTask)
-		taskStr, err := decodeReplicationTask(task, serializer)
+		task := item.(*types.ReplicationTask)
+		taskStr, err := decodeReplicationTask(thrift.FromReplicationTask(task), serializer)
 		if err != nil {
 			ErrorAndExit(fmt.Sprintf("fail to encode dlq message. Last read message id: %v", lastReadMessageID), err)
 		}
 
-		lastReadMessageID = int(*task.SourceTaskId)
+		lastReadMessageID = int(*task.SourceTaskID)
 		remainingMessageCount--
 		_, err = outputFile.WriteString(fmt.Sprintf("%v\n", string(taskStr)))
 		if err != nil {
@@ -116,7 +117,7 @@ func AdminPurgeDLQMessages(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)
 	for shardID := lowerShardBound; shardID <= upperShardBound; shardID++ {
 		ctx, cancel := newContext(c)
-		if err := adminClient.PurgeDLQMessages(ctx, &replicator.PurgeDLQMessagesRequest{
+		if err := adminClient.PurgeDLQMessages(ctx, &types.PurgeDLQMessagesRequest{
 			Type:                  toQueueType(dlqType),
 			SourceCluster:         common.StringPtr(sourceCluster),
 			ShardID:               common.Int32Ptr(int32(shardID)),
@@ -145,7 +146,7 @@ func AdminMergeDLQMessages(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)
 	for shardID := lowerShardBound; shardID <= upperShardBound; shardID++ {
 		ctx, cancel := newContext(c)
-		request := &replicator.MergeDLQMessagesRequest{
+		request := &types.MergeDLQMessagesRequest{
 			Type:                  toQueueType(dlqType),
 			SourceCluster:         common.StringPtr(sourceCluster),
 			ShardID:               common.Int32Ptr(int32(shardID)),
@@ -170,12 +171,12 @@ func AdminMergeDLQMessages(c *cli.Context) {
 	}
 }
 
-func toQueueType(dlqType string) *replicator.DLQType {
+func toQueueType(dlqType string) *types.DLQType {
 	switch dlqType {
 	case "domain":
-		return replicator.DLQTypeDomain.Ptr()
+		return types.DLQTypeDomain.Ptr()
 	case "history":
-		return replicator.DLQTypeReplication.Ptr()
+		return types.DLQTypeReplication.Ptr()
 	default:
 		ErrorAndExit("The queue type is not supported.", fmt.Errorf("the queue type is not supported. Type: %v", dlqType))
 	}

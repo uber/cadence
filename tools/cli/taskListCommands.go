@@ -23,8 +23,8 @@ package cli
 import (
 	"os"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
@@ -73,9 +73,9 @@ func ListTaskListPartitions(c *cli.Context) {
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	request := &shared.ListTaskListPartitionsRequest{
+	request := &types.ListTaskListPartitionsRequest{
 		Domain:   common.StringPtr(domain),
-		TaskList: &shared.TaskList{Name: common.StringPtr(taskList)},
+		TaskList: &types.TaskList{Name: common.StringPtr(taskList)},
 	}
 
 	response, err := frontendClient.ListTaskListPartitions(ctx, request)
@@ -90,7 +90,7 @@ func ListTaskListPartitions(c *cli.Context) {
 	}
 }
 
-func printTaskListPartitions(taskListType string, partitions []*shared.TaskListPartitionMetadata) {
+func printTaskListPartitions(taskListType string, partitions []*types.TaskListPartitionMetadata) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetBorder(false)
 	table.SetColumnSeparator("|")

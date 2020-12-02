@@ -196,6 +196,7 @@ type (
 		MaxConns int `yaml:"maxConns"`
 		// TLS configuration
 		TLS *auth.TLS `yaml:"tls"`
+		// TODO: add a field for custom gocql client
 	}
 
 	// SQL is the configuration for connecting to a SQL backed datastore

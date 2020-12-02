@@ -28,6 +28,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
@@ -131,7 +132,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(
 	}
 
 	newInfo := &WorkflowExecutionInfo{
-		CompletionEvent: completionEvent,
+		CompletionEvent: thrift.FromHistoryEvent(completionEvent),
 
 		DomainID:                           info.DomainID,
 		WorkflowID:                         info.WorkflowID,
@@ -183,7 +184,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(
 		BranchToken:                        info.BranchToken,
 		CronSchedule:                       info.CronSchedule,
 		ExpirationSeconds:                  int32(info.ExpirationSeconds.Seconds()),
-		AutoResetPoints:                    autoResetPoints,
+		AutoResetPoints:                    thrift.FromResetPoints(autoResetPoints),
 		SearchAttributes:                   info.SearchAttributes,
 		Memo:                               info.Memo,
 	}
@@ -197,7 +198,7 @@ func (m *executionManagerImpl) DeserializeBufferedEvents(
 	blobs []*DataBlob,
 ) ([]*workflow.HistoryEvent, error) {
 
-	events := make([]*workflow.HistoryEvent, 0)
+	events := make([]*types.HistoryEvent, 0)
 	for _, b := range blobs {
 		history, err := m.serializer.DeserializeBatchEvents(b)
 		if err != nil {
@@ -205,7 +206,7 @@ func (m *executionManagerImpl) DeserializeBufferedEvents(
 		}
 		events = append(events, history...)
 	}
-	return events, nil
+	return thrift.FromHistoryEventArray(events), nil
 }
 
 func (m *executionManagerImpl) DeserializeChildExecutionInfos(
@@ -223,8 +224,8 @@ func (m *executionManagerImpl) DeserializeChildExecutionInfos(
 			return nil, err
 		}
 		c := &ChildExecutionInfo{
-			InitiatedEvent: initiatedEvent,
-			StartedEvent:   startedEvent,
+			InitiatedEvent: thrift.FromHistoryEvent(initiatedEvent),
+			StartedEvent:   thrift.FromHistoryEvent(startedEvent),
 
 			Version:               v.Version,
 			InitiatedID:           v.InitiatedID,
@@ -246,8 +247,8 @@ func (m *executionManagerImpl) DeserializeChildExecutionInfos(
 		if startedEvent != nil && startedEvent.ChildWorkflowExecutionStartedEventAttributes != nil &&
 			startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowExecution != nil {
 			startedExecution := startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowExecution
-			c.StartedWorkflowID = startedExecution.GetWorkflowId()
-			c.StartedRunID = startedExecution.GetRunId()
+			c.StartedWorkflowID = startedExecution.GetWorkflowID()
+			c.StartedRunID = startedExecution.GetRunID()
 		}
 		newInfos[k] = c
 	}
@@ -269,8 +270,8 @@ func (m *executionManagerImpl) DeserializeActivityInfos(
 			return nil, err
 		}
 		a := &ActivityInfo{
-			ScheduledEvent: scheduledEvent,
-			StartedEvent:   startedEvent,
+			ScheduledEvent: thrift.FromHistoryEvent(scheduledEvent),
+			StartedEvent:   thrift.FromHistoryEvent(startedEvent),
 
 			Version:                                 v.Version,
 			ScheduleID:                              v.ScheduleID,
@@ -347,11 +348,11 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(
 
 	newInfos := make([]*InternalChildExecutionInfo, 0)
 	for _, v := range infos {
-		initiatedEvent, err := m.serializer.SerializeEvent(v.InitiatedEvent, encoding)
+		initiatedEvent, err := m.serializer.SerializeEvent(thrift.ToHistoryEvent(v.InitiatedEvent), encoding)
 		if err != nil {
 			return nil, err
 		}
-		startedEvent, err := m.serializer.SerializeEvent(v.StartedEvent, encoding)
+		startedEvent, err := m.serializer.SerializeEvent(thrift.ToHistoryEvent(v.StartedEvent), encoding)
 		if err != nil {
 			return nil, err
 		}
@@ -382,11 +383,11 @@ func (m *executionManagerImpl) SerializeUpsertActivityInfos(
 
 	newInfos := make([]*InternalActivityInfo, 0)
 	for _, v := range infos {
-		scheduledEvent, err := m.serializer.SerializeEvent(v.ScheduledEvent, encoding)
+		scheduledEvent, err := m.serializer.SerializeEvent(thrift.ToHistoryEvent(v.ScheduledEvent), encoding)
 		if err != nil {
 			return nil, err
 		}
-		startedEvent, err := m.serializer.SerializeEvent(v.StartedEvent, encoding)
+		startedEvent, err := m.serializer.SerializeEvent(thrift.ToHistoryEvent(v.StartedEvent), encoding)
 		if err != nil {
 			return nil, err
 		}
@@ -440,12 +441,12 @@ func (m *executionManagerImpl) SerializeExecutionInfo(
 	if info == nil {
 		return &InternalWorkflowExecutionInfo{}, nil
 	}
-	completionEvent, err := m.serializer.SerializeEvent(info.CompletionEvent, encoding)
+	completionEvent, err := m.serializer.SerializeEvent(thrift.ToHistoryEvent(info.CompletionEvent), encoding)
 	if err != nil {
 		return nil, err
 	}
 
-	resetPoints, err := m.serializer.SerializeResetPoints(info.AutoResetPoints, encoding)
+	resetPoints, err := m.serializer.SerializeResetPoints(thrift.ToResetPoints(info.AutoResetPoints), encoding)
 	if err != nil {
 		return nil, err
 	}
@@ -635,7 +636,7 @@ func (m *executionManagerImpl) SerializeWorkflowMutation(
 	}
 	var serializedNewBufferedEvents *DataBlob
 	if input.NewBufferedEvents != nil {
-		serializedNewBufferedEvents, err = m.serializer.SerializeBatchEvents(input.NewBufferedEvents, encoding)
+		serializedNewBufferedEvents, err = m.serializer.SerializeBatchEvents(thrift.ToHistoryEventArray(input.NewBufferedEvents), encoding)
 		if err != nil {
 			return nil, err
 		}
@@ -745,7 +746,7 @@ func (m *executionManagerImpl) SerializeVersionHistories(
 	if versionHistories == nil {
 		return nil, nil
 	}
-	return m.serializer.SerializeVersionHistories(versionHistories.ToThrift(), encoding)
+	return m.serializer.SerializeVersionHistories(versionHistories.ToInternalType(), encoding)
 }
 
 func (m *executionManagerImpl) DeserializeVersionHistories(
@@ -759,7 +760,7 @@ func (m *executionManagerImpl) DeserializeVersionHistories(
 	if err != nil {
 		return nil, err
 	}
-	return NewVersionHistoriesFromThrift(versionHistories), nil
+	return NewVersionHistoriesFromInternalType(versionHistories), nil
 }
 
 func (m *executionManagerImpl) DeleteWorkflowExecution(

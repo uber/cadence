@@ -129,7 +129,15 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 		return history.NewThriftClient(historyserviceclient.New(dispatcher.ClientConfig(common.HistoryServiceName))), nil
 	}
 
-	client := history.NewClient(cf.numberOfHistoryShards, timeout, common.NewClientCache(keyResolver, clientProvider), cf.logger)
+	client := history.NewClient(
+		cf.numberOfHistoryShards,
+		timeout,
+		common.NewClientCache(keyResolver, clientProvider),
+		cf.logger,
+	)
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.HistoryErrorInjectionRate, 0)(); errorRate != 0 {
+		client = history.NewErrorInjectionClient(client, errorRate, cf.logger)
+	}
 	if cf.metricsClient != nil {
 		client = history.NewMetricClient(client, cf.metricsClient)
 	}
@@ -199,6 +207,9 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeout(
 	}
 
 	client := frontend.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider))
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate, 0)(); errorRate != 0 {
+		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
+	}
 	if cf.metricsClient != nil {
 		client = frontend.NewMetricClient(client, cf.metricsClient)
 	}
@@ -220,6 +231,9 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndDispatcher(
 	}
 
 	client := admin.NewClient(timeout, largeTimeout, common.NewClientCache(keyResolver, clientProvider))
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate, 0)(); errorRate != 0 {
+		client = admin.NewErrorInjectionClient(client, errorRate, cf.logger)
+	}
 	if cf.metricsClient != nil {
 		client = admin.NewMetricClient(client, cf.metricsClient)
 	}
@@ -241,6 +255,9 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndDispatcher(
 	}
 
 	client := frontend.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider))
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate, 0)(); errorRate != 0 {
+		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
+	}
 	if cf.metricsClient != nil {
 		client = frontend.NewMetricClient(client, cf.metricsClient)
 	}

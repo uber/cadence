@@ -2898,7 +2898,8 @@ func FromHistoryRespondDecisionTaskCompletedResponse(t *types.HistoryRespondDeci
 		return nil
 	}
 	return &history.RespondDecisionTaskCompletedResponse{
-		StartedResponse: FromRecordDecisionTaskStartedResponse(t.StartedResponse),
+		StartedResponse:             FromRecordDecisionTaskStartedResponse(t.StartedResponse),
+		ActivitiesToDispatchLocally: FromActivityLocalDispatchInfoMap(t.ActivitiesToDispatchLocally),
 	}
 }
 
@@ -2908,7 +2909,8 @@ func ToHistoryRespondDecisionTaskCompletedResponse(t *history.RespondDecisionTas
 		return nil
 	}
 	return &types.HistoryRespondDecisionTaskCompletedResponse{
-		StartedResponse: ToRecordDecisionTaskStartedResponse(t.StartedResponse),
+		StartedResponse:             ToRecordDecisionTaskStartedResponse(t.StartedResponse),
+		ActivitiesToDispatchLocally: ToActivityLocalDispatchInfoMap(t.ActivitiesToDispatchLocally),
 	}
 }
 
