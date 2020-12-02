@@ -1963,6 +1963,15 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 
 		// we need to update the current next event ID and whether workflow is running
 		if len(token.PersistenceToken) == 0 && isLongPoll && token.IsWorkflowRunning {
+			logger := wh.GetLogger().WithTags(
+				tag.WorkflowDomainName(getRequest.GetDomain()),
+				tag.WorkflowID(getRequest.Execution.GetWorkflowId()),
+				tag.WorkflowRunID(getRequest.Execution.GetRunId()),
+			)
+			if err := common.ValidateLongPollContextTimeout(ctx, "GetWorkflowExecutionHistory", logger); err != nil {
+				return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
+			}
+
 			if !isCloseEventOnly {
 				queryNextEventID = token.NextEventID
 			}
