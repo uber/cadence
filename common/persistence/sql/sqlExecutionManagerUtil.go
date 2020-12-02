@@ -49,9 +49,9 @@ func applyWorkflowMutationTx(
 	versionHistories := workflowMutation.VersionHistories
 	startVersion := workflowMutation.StartVersion
 	lastWriteVersion := workflowMutation.LastWriteVersion
-	domainID := sqlplugin.MustParseUUID(executionInfo.DomainID)
+	domainID := serialization.MustParseUUID(executionInfo.DomainID)
 	workflowID := executionInfo.WorkflowID
-	runID := sqlplugin.MustParseUUID(executionInfo.RunID)
+	runID := serialization.MustParseUUID(executionInfo.RunID)
 
 	// TODO Remove me if UPDATE holds the lock to the end of a transaction
 	if err := lockAndCheckNextEventID(
@@ -239,9 +239,9 @@ func applyWorkflowSnapshotTxAsReset(
 	versionHistories := workflowSnapshot.VersionHistories
 	startVersion := workflowSnapshot.StartVersion
 	lastWriteVersion := workflowSnapshot.LastWriteVersion
-	domainID := sqlplugin.MustParseUUID(executionInfo.DomainID)
+	domainID := serialization.MustParseUUID(executionInfo.DomainID)
 	workflowID := executionInfo.WorkflowID
-	runID := sqlplugin.MustParseUUID(executionInfo.RunID)
+	runID := serialization.MustParseUUID(executionInfo.RunID)
 
 	// TODO Is there a way to modify the various map tables without fear of other people adding rows after we delete, without locking the executions row?
 	if err := lockAndCheckNextEventID(
@@ -478,9 +478,9 @@ func (m *sqlExecutionManager) applyWorkflowSnapshotTxAsNew(
 	versionHistories := workflowSnapshot.VersionHistories
 	startVersion := workflowSnapshot.StartVersion
 	lastWriteVersion := workflowSnapshot.LastWriteVersion
-	domainID := sqlplugin.MustParseUUID(executionInfo.DomainID)
+	domainID := serialization.MustParseUUID(executionInfo.DomainID)
 	workflowID := executionInfo.WorkflowID
-	runID := sqlplugin.MustParseUUID(executionInfo.RunID)
+	runID := serialization.MustParseUUID(executionInfo.RunID)
 
 	if err := m.createExecution(
 		ctx,
@@ -605,9 +605,9 @@ func applyTasks(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	transferTasks []p.Task,
 	replicationTasks []p.Task,
 	timerTasks []p.Task,
@@ -666,7 +666,7 @@ func lockCurrentExecutionIfExists(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
 ) (*sqlplugin.CurrentExecutionsRow, error) {
 
@@ -699,9 +699,9 @@ func createOrUpdateCurrentExecution(
 	tx sqlplugin.Tx,
 	createMode p.CreateWorkflowMode,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	state int,
 	closeStatus int,
 	createRequestID string,
@@ -775,9 +775,9 @@ func lockAndCheckNextEventID(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	condition int64,
 ) error {
 
@@ -805,9 +805,9 @@ func lockNextEventID(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) (*int64, error) {
 
 	nextEventID, err := tx.WriteLockExecutions(ctx, &sqlplugin.ExecutionsFilter{
@@ -841,9 +841,9 @@ func createTransferTasks(
 	tx sqlplugin.Tx,
 	transferTasks []p.Task,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	parser serialization.Parser,
 ) error {
 
@@ -867,35 +867,35 @@ func createTransferTasks(
 
 		switch task.GetType() {
 		case p.TransferTaskTypeActivityTask:
-			info.TargetDomainID = sqlplugin.MustParseUUID(task.(*p.ActivityTask).DomainID)
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.ActivityTask).DomainID)
 			info.TaskList = &task.(*p.ActivityTask).TaskList
 			info.ScheduleID = &task.(*p.ActivityTask).ScheduleID
 
 		case p.TransferTaskTypeDecisionTask:
-			info.TargetDomainID = sqlplugin.MustParseUUID(task.(*p.DecisionTask).DomainID)
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.DecisionTask).DomainID)
 			info.TaskList = &task.(*p.DecisionTask).TaskList
 			info.ScheduleID = &task.(*p.DecisionTask).ScheduleID
 
 		case p.TransferTaskTypeCancelExecution:
-			info.TargetDomainID = sqlplugin.MustParseUUID(task.(*p.CancelExecutionTask).TargetDomainID)
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.CancelExecutionTask).TargetDomainID)
 			info.TargetWorkflowID = &task.(*p.CancelExecutionTask).TargetWorkflowID
 			if task.(*p.CancelExecutionTask).TargetRunID != "" {
-				info.TargetRunID = sqlplugin.MustParseUUID(task.(*p.CancelExecutionTask).TargetRunID)
+				info.TargetRunID = serialization.MustParseUUID(task.(*p.CancelExecutionTask).TargetRunID)
 			}
 			info.TargetChildWorkflowOnly = &task.(*p.CancelExecutionTask).TargetChildWorkflowOnly
 			info.ScheduleID = &task.(*p.CancelExecutionTask).InitiatedID
 
 		case p.TransferTaskTypeSignalExecution:
-			info.TargetDomainID = sqlplugin.MustParseUUID(task.(*p.SignalExecutionTask).TargetDomainID)
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.SignalExecutionTask).TargetDomainID)
 			info.TargetWorkflowID = &task.(*p.SignalExecutionTask).TargetWorkflowID
 			if task.(*p.SignalExecutionTask).TargetRunID != "" {
-				info.TargetRunID = sqlplugin.MustParseUUID(task.(*p.SignalExecutionTask).TargetRunID)
+				info.TargetRunID = serialization.MustParseUUID(task.(*p.SignalExecutionTask).TargetRunID)
 			}
 			info.TargetChildWorkflowOnly = &task.(*p.SignalExecutionTask).TargetChildWorkflowOnly
 			info.ScheduleID = &task.(*p.SignalExecutionTask).InitiatedID
 
 		case p.TransferTaskTypeStartChildExecution:
-			info.TargetDomainID = sqlplugin.MustParseUUID(task.(*p.StartChildExecutionTask).TargetDomainID)
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.StartChildExecutionTask).TargetDomainID)
 			info.TargetWorkflowID = &task.(*p.StartChildExecutionTask).TargetWorkflowID
 			info.ScheduleID = &task.(*p.StartChildExecutionTask).InitiatedID
 
@@ -951,9 +951,9 @@ func createReplicationTasks(
 	tx sqlplugin.Tx,
 	replicationTasks []p.Task,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	parser serialization.Parser,
 ) error {
 
@@ -1049,9 +1049,9 @@ func createTimerTasks(
 	tx sqlplugin.Tx,
 	timerTasks []p.Task,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	parser serialization.Parser,
 ) error {
 
@@ -1141,9 +1141,9 @@ func assertNotCurrentExecution(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) error {
 	currentRow, err := tx.LockCurrentExecutions(ctx, &sqlplugin.CurrentExecutionsFilter{
 		ShardID:    int64(shardID),
@@ -1166,10 +1166,10 @@ func assertRunIDAndUpdateCurrentExecution(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	newRunID sqlplugin.UUID,
-	previousRunID sqlplugin.UUID,
+	newRunID serialization.UUID,
+	previousRunID serialization.UUID,
 	createRequestID string,
 	state int,
 	closeStatus int,
@@ -1198,10 +1198,10 @@ func assertAndUpdateCurrentExecution(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	newRunID sqlplugin.UUID,
-	previousRunID sqlplugin.UUID,
+	newRunID serialization.UUID,
+	previousRunID serialization.UUID,
 	previousLastWriteVersion int64,
 	previousState int,
 	createRequestID string,
@@ -1246,7 +1246,7 @@ func assertCurrentExecution(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
 	assertFn func(currentRow *sqlplugin.CurrentExecutionsRow) error,
 ) error {
@@ -1264,7 +1264,7 @@ func assertCurrentExecution(
 	return assertFn(currentRow)
 }
 
-func assertRunIDMismatch(runID sqlplugin.UUID, currentRunID sqlplugin.UUID) error {
+func assertRunIDMismatch(runID serialization.UUID, currentRunID serialization.UUID) error {
 	// zombie workflow creation with existence of current record, this is a noop
 	if bytes.Equal(currentRunID, runID) {
 		return &p.ConditionFailedError{Msg: fmt.Sprintf(
@@ -1280,9 +1280,9 @@ func updateCurrentExecution(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	createRequestID string,
 	state int,
 	closeStatus int,
@@ -1393,9 +1393,9 @@ func buildExecutionRow(
 	}
 
 	if executionInfo.ParentDomainID != "" {
-		info.ParentDomainID = sqlplugin.MustParseUUID(executionInfo.ParentDomainID)
+		info.ParentDomainID = serialization.MustParseUUID(executionInfo.ParentDomainID)
 		info.ParentWorkflowID = &executionInfo.ParentWorkflowID
-		info.ParentRunID = sqlplugin.MustParseUUID(executionInfo.ParentRunID)
+		info.ParentRunID = serialization.MustParseUUID(executionInfo.ParentRunID)
 		info.InitiatedID = &executionInfo.InitiatedID
 		info.CompletionEvent = nil
 	}
@@ -1412,9 +1412,9 @@ func buildExecutionRow(
 
 	return &sqlplugin.ExecutionsRow{
 		ShardID:          shardID,
-		DomainID:         sqlplugin.MustParseUUID(executionInfo.DomainID),
+		DomainID:         serialization.MustParseUUID(executionInfo.DomainID),
 		WorkflowID:       executionInfo.WorkflowID,
-		RunID:            sqlplugin.MustParseUUID(executionInfo.RunID),
+		RunID:            serialization.MustParseUUID(executionInfo.RunID),
 		NextEventID:      int64(executionInfo.NextEventID),
 		LastWriteVersion: lastWriteVersion,
 		Data:             blob.Data,
