@@ -22,10 +22,6 @@
 
 package serialization
 
-import (
-	"github.com/uber/cadence/.gen/go/sqlblobs"
-)
-
 type (
 	protoDecoder struct{}
 )
@@ -34,58 +30,58 @@ func newProtoDecoder() decoder {
 	return &protoDecoder{}
 }
 
-func (d *protoDecoder) shardInfoFromBlob(data []byte) (*sqlblobs.ShardInfo, error) {
+func (d *protoDecoder) shardInfoFromBlob(data []byte) (*ShardInfo, error) {
 	panic("not implemented")
 }
 
-func (d *protoDecoder) domainInfoFromBlob(data []byte) (*sqlblobs.DomainInfo, error) {
+func (d *protoDecoder) domainInfoFromBlob(data []byte) (*DomainInfo, error) {
 	panic("not implemented")
 }
 
-func (d *protoDecoder) historyTreeInfoFromBlob(data []byte) (*sqlblobs.HistoryTreeInfo, error) {
+func (d *protoDecoder) historyTreeInfoFromBlob(data []byte) (*HistoryTreeInfo, error) {
 	panic("not implemented")
 }
 
-func (d *protoDecoder) workflowExecutionInfoFromBlob(data []byte) (*sqlblobs.WorkflowExecutionInfo, error) {
+func (d *protoDecoder) workflowExecutionInfoFromBlob(data []byte) (*WorkflowExecutionInfo, error) {
 	panic("not implemented")
 }
 
-func (d *protoDecoder) activityInfoFromBlob(data []byte) (*sqlblobs.ActivityInfo, error) {
+func (d *protoDecoder) activityInfoFromBlob(data []byte) (*ActivityInfo, error) {
 	panic("not implemented")
 }
 
-func (d *protoDecoder) childExecutionInfoFromBlob(data []byte) (*sqlblobs.ChildExecutionInfo, error) {
+func (d *protoDecoder) childExecutionInfoFromBlob(data []byte) (*ChildExecutionInfo, error) {
 	panic("not implemented")
 }
 
-func (d *protoDecoder) signalInfoFromBlob(data []byte) (*sqlblobs.SignalInfo, error) {
+func (d *protoDecoder) signalInfoFromBlob(data []byte) (*SignalInfo, error) {
 	panic("not implemented")
 }
 
-func (d *protoDecoder) requestCancelInfoFromBlob(data []byte) (*sqlblobs.RequestCancelInfo, error) {
+func (d *protoDecoder) requestCancelInfoFromBlob(data []byte) (*RequestCancelInfo, error) {
 	panic("not implemented")
 }
 
-func (d *protoDecoder) timerInfoFromBlob(data []byte) (*sqlblobs.TimerInfo, error) {
+func (d *protoDecoder) timerInfoFromBlob(data []byte) (*TimerInfo, error) {
 	panic("not implemented")
 }
 
-func (d *protoDecoder) taskInfoFromBlob(data []byte) (*sqlblobs.TaskInfo, error) {
+func (d *protoDecoder) taskInfoFromBlob(data []byte) (*TaskInfo, error) {
 	panic("not implemented")
 }
 
-func (d *protoDecoder) taskListInfoFromBlob(data []byte) (*sqlblobs.TaskListInfo, error) {
+func (d *protoDecoder) taskListInfoFromBlob(data []byte) (*TaskListInfo, error) {
 	panic("not implemented")
 }
 
-func (d *protoDecoder) transferTaskInfoFromBlob(data []byte) (*sqlblobs.TransferTaskInfo, error) {
+func (d *protoDecoder) transferTaskInfoFromBlob(data []byte) (*TransferTaskInfo, error) {
 	panic("not implemented")
 }
 
-func (d *protoDecoder) timerTaskInfoFromBlob(data []byte) (*sqlblobs.TimerTaskInfo, error) {
+func (d *protoDecoder) timerTaskInfoFromBlob(data []byte) (*TimerTaskInfo, error) {
 	panic("not implemented")
 }
 
-func (d *protoDecoder) replicationTaskInfoFromBlob(data []byte) (*sqlblobs.ReplicationTaskInfo, error) {
+func (d *protoDecoder) replicationTaskInfoFromBlob(data []byte) (*ReplicationTaskInfo, error) {
 	panic("not implemented")
 }

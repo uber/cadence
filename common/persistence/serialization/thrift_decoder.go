@@ -39,7 +39,7 @@ func newThriftDecoder() decoder {
 	return &thriftDecoder{}
 }
 
-func (d *thriftDecoder) shardInfoFromBlob(data []byte) (*sqlblobs.ShardInfo, error) {
+func (d *thriftDecoder) shardInfoFromBlob(data []byte) (*ShardInfo, error) {
 	result := &sqlblobs.ShardInfo{}
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (d *thriftDecoder) shardInfoFromBlob(data []byte) (*sqlblobs.ShardInfo, err
 	return result, nil
 }
 
-func (d *thriftDecoder) domainInfoFromBlob(data []byte) (*sqlblobs.DomainInfo, error) {
+func (d *thriftDecoder) domainInfoFromBlob(data []byte) (*DomainInfo, error) {
 	result := &sqlblobs.DomainInfo{}
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
@@ -55,7 +55,7 @@ func (d *thriftDecoder) domainInfoFromBlob(data []byte) (*sqlblobs.DomainInfo, e
 	return result, nil
 }
 
-func (d *thriftDecoder) historyTreeInfoFromBlob(data []byte) (*sqlblobs.HistoryTreeInfo, error) {
+func (d *thriftDecoder) historyTreeInfoFromBlob(data []byte) (*HistoryTreeInfo, error) {
 	result := &sqlblobs.HistoryTreeInfo{}
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func (d *thriftDecoder) historyTreeInfoFromBlob(data []byte) (*sqlblobs.HistoryT
 	return result, nil
 }
 
-func (d *thriftDecoder) workflowExecutionInfoFromBlob(data []byte) (*sqlblobs.WorkflowExecutionInfo, error) {
+func (d *thriftDecoder) workflowExecutionInfoFromBlob(data []byte) (*WorkflowExecutionInfo, error) {
 	result := &sqlblobs.WorkflowExecutionInfo{}
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func (d *thriftDecoder) workflowExecutionInfoFromBlob(data []byte) (*sqlblobs.Wo
 	return result, nil
 }
 
-func (d *thriftDecoder) activityInfoFromBlob(data []byte) (*sqlblobs.ActivityInfo, error) {
+func (d *thriftDecoder) activityInfoFromBlob(data []byte) (*ActivityInfo, error) {
 	result := &sqlblobs.ActivityInfo{}
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func (d *thriftDecoder) activityInfoFromBlob(data []byte) (*sqlblobs.ActivityInf
 	return result, nil
 }
 
-func (d *thriftDecoder) childExecutionInfoFromBlob(data []byte) (*sqlblobs.ChildExecutionInfo, error) {
+func (d *thriftDecoder) childExecutionInfoFromBlob(data []byte) (*ChildExecutionInfo, error) {
 	result := &sqlblobs.ChildExecutionInfo{}
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func (d *thriftDecoder) childExecutionInfoFromBlob(data []byte) (*sqlblobs.Child
 	return result, nil
 }
 
-func (d *thriftDecoder) signalInfoFromBlob(data []byte) (*sqlblobs.SignalInfo, error) {
+func (d *thriftDecoder) signalInfoFromBlob(data []byte) (*SignalInfo, error) {
 	result := &sqlblobs.SignalInfo{}
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (d *thriftDecoder) signalInfoFromBlob(data []byte) (*sqlblobs.SignalInfo, e
 	return result, nil
 }
 
-func (d *thriftDecoder) requestCancelInfoFromBlob(data []byte) (*sqlblobs.RequestCancelInfo, error) {
+func (d *thriftDecoder) requestCancelInfoFromBlob(data []byte) (*RequestCancelInfo, error) {
 	result := &sqlblobs.RequestCancelInfo{}
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
@@ -103,7 +103,7 @@ func (d *thriftDecoder) requestCancelInfoFromBlob(data []byte) (*sqlblobs.Reques
 	return result, nil
 }
 
-func (d *thriftDecoder) timerInfoFromBlob(data []byte) (*sqlblobs.TimerInfo, error) {
+func (d *thriftDecoder) timerInfoFromBlob(data []byte) (*TimerInfo, error) {
 	result := &sqlblobs.TimerInfo{}
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
@@ -111,7 +111,7 @@ func (d *thriftDecoder) timerInfoFromBlob(data []byte) (*sqlblobs.TimerInfo, err
 	return result, nil
 }
 
-func (d *thriftDecoder) taskInfoFromBlob(data []byte) (*sqlblobs.TaskInfo, error) {
+func (d *thriftDecoder) taskInfoFromBlob(data []byte) (*TaskInfo, error) {
 	result := &sqlblobs.TaskInfo{}
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
@@ -119,7 +119,7 @@ func (d *thriftDecoder) taskInfoFromBlob(data []byte) (*sqlblobs.TaskInfo, error
 	return result, nil
 }
 
-func (d *thriftDecoder) taskListInfoFromBlob(data []byte) (*sqlblobs.TaskListInfo, error) {
+func (d *thriftDecoder) taskListInfoFromBlob(data []byte) (*TaskListInfo, error) {
 	result := &sqlblobs.TaskListInfo{}
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
@@ -127,7 +127,7 @@ func (d *thriftDecoder) taskListInfoFromBlob(data []byte) (*sqlblobs.TaskListInf
 	return result, nil
 }
 
-func (d *thriftDecoder) transferTaskInfoFromBlob(data []byte) (*sqlblobs.TransferTaskInfo, error) {
+func (d *thriftDecoder) transferTaskInfoFromBlob(data []byte) (*TransferTaskInfo, error) {
 	result := &sqlblobs.TransferTaskInfo{}
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
@@ -135,7 +135,7 @@ func (d *thriftDecoder) transferTaskInfoFromBlob(data []byte) (*sqlblobs.Transfe
 	return result, nil
 }
 
-func (d *thriftDecoder) timerTaskInfoFromBlob(data []byte) (*sqlblobs.TimerTaskInfo, error) {
+func (d *thriftDecoder) timerTaskInfoFromBlob(data []byte) (*TimerTaskInfo, error) {
 	result := &sqlblobs.TimerTaskInfo{}
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func (d *thriftDecoder) timerTaskInfoFromBlob(data []byte) (*sqlblobs.TimerTaskI
 	return result, nil
 }
 
-func (d *thriftDecoder) replicationTaskInfoFromBlob(data []byte) (*sqlblobs.ReplicationTaskInfo, error) {
+func (d *thriftDecoder) replicationTaskInfoFromBlob(data []byte) (*ReplicationTaskInfo, error) {
 	result := &sqlblobs.ReplicationTaskInfo{}
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
