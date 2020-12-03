@@ -29,7 +29,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
@@ -222,11 +221,11 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 	request *p.InternalGetWorkflowExecutionRequest,
 ) (*p.InternalGetWorkflowExecutionResponse, error) {
 
-	domainID := serialization.MustParseUUID(request.DomainID)
-	runID := serialization.MustParseUUID(*request.Execution.RunID)
+	domainID := request.DomainID
+	runID := *request.Execution.RunID
 	wfID := *request.Execution.WorkflowID
 	execution, err := m.db.SelectFromExecutions(ctx, &sqlplugin.ExecutionsFilter{
-		ShardID: m.shardID, DomainID: domainID, WorkflowID: wfID, RunID: runID})
+		ShardID: m.shardID, DomainID: serialization.MustParseUUID(domainID), WorkflowID: wfID, RunID: serialization.MustParseUUID(runID)})
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -256,14 +255,14 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 		NextEventID:                        execution.NextEventID,
 		TaskList:                           info.GetTaskList(),
 		WorkflowTypeName:                   info.GetWorkflowTypeName(),
-		WorkflowTimeout:                    common.SecondsToDuration(int64(info.GetWorkflowTimeoutSeconds())),
-		DecisionStartToCloseTimeout:        common.SecondsToDuration(int64(info.GetDecisionTaskTimeoutSeconds())),
+		WorkflowTimeout:                    info.GetWorkflowTimeout(),
+		DecisionStartToCloseTimeout:        info.GetDecisionTaskTimeout(),
 		State:                              int(info.GetState()),
 		CloseStatus:                        int(info.GetCloseStatus()),
 		LastFirstEventID:                   info.GetLastFirstEventID(),
 		LastProcessedEvent:                 info.GetLastProcessedEvent(),
-		StartTimestamp:                     time.Unix(0, info.GetStartTimeNanos()),
-		LastUpdatedTimestamp:               time.Unix(0, info.GetLastUpdatedTimeNanos()),
+		StartTimestamp:                     info.GetStartTimestamp(),
+		LastUpdatedTimestamp:               info.GetLastUpdatedTimestamp(),
 		CreateRequestID:                    info.GetCreateRequestID(),
 		DecisionVersion:                    info.GetDecisionVersion(),
 		DecisionScheduleID:                 info.GetDecisionScheduleID(),
@@ -271,11 +270,11 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 		DecisionRequestID:                  info.GetDecisionRequestID(),
 		DecisionTimeout:                    common.SecondsToDuration(int64(info.GetDecisionTimeout())),
 		DecisionAttempt:                    info.GetDecisionAttempt(),
-		DecisionStartedTimestamp:           time.Unix(0, info.GetDecisionStartedTimestampNanos()),
-		DecisionScheduledTimestamp:         time.Unix(0, info.GetDecisionScheduledTimestampNanos()),
-		DecisionOriginalScheduledTimestamp: time.Unix(0, info.GetDecisionOriginalScheduledTimestampNanos()),
+		DecisionStartedTimestamp:           info.GetDecisionStartedTimestamp(),
+		DecisionScheduledTimestamp:         info.GetDecisionScheduledTimestamp(),
+		DecisionOriginalScheduledTimestamp: info.GetDecisionOriginalScheduledTimestamp(),
 		StickyTaskList:                     info.GetStickyTaskList(),
-		StickyScheduleToStartTimeout:       common.SecondsToDuration(info.GetStickyScheduleToStartTimeout()),
+		StickyScheduleToStartTimeout:       info.GetStickyScheduleToStartTimeout(),
 		ClientLibraryVersion:               info.GetClientLibraryVersion(),
 		ClientFeatureVersion:               info.GetClientFeatureVersion(),
 		ClientImpl:                         info.GetClientImpl(),
@@ -285,12 +284,12 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 		CompletionEventBatchID:             common.EmptyEventID,
 		HasRetryPolicy:                     info.GetHasRetryPolicy(),
 		Attempt:                            int32(info.GetRetryAttempt()),
-		InitialInterval:                    common.SecondsToDuration(int64(info.GetRetryInitialIntervalSeconds())),
+		InitialInterval:                    info.GetRetryInitialInterval(),
 		BackoffCoefficient:                 info.GetRetryBackoffCoefficient(),
-		MaximumInterval:                    common.SecondsToDuration(int64(info.GetRetryMaximumIntervalSeconds())),
+		MaximumInterval:                    info.GetRetryMaximumInterval(),
 		MaximumAttempts:                    info.GetRetryMaximumAttempts(),
-		ExpirationSeconds:                  common.SecondsToDuration(int64(info.GetRetryExpirationSeconds())),
-		ExpirationTime:                     time.Unix(0, info.GetRetryExpirationTimeNanos()),
+		ExpirationSeconds:                  info.GetRetryExpiration(),
+		ExpirationTime:                     info.GetRetryExpirationTimestamp(),
 		BranchToken:                        info.GetEventBranchToken(),
 		ExecutionContext:                   info.GetExecutionContext(),
 		NonRetriableErrors:                 info.GetRetryNonRetryableErrors(),
@@ -314,9 +313,9 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 	}
 
 	if info.ParentDomainID != nil {
-		state.ExecutionInfo.ParentDomainID = serialization.UUID(info.ParentDomainID).String()
+		state.ExecutionInfo.ParentDomainID = info.GetParentDomainID()
 		state.ExecutionInfo.ParentWorkflowID = info.GetParentWorkflowID()
-		state.ExecutionInfo.ParentRunID = serialization.UUID(info.ParentRunID).String()
+		state.ExecutionInfo.ParentRunID = info.GetParentRunID()
 		state.ExecutionInfo.InitiatedID = info.GetInitiatedID()
 		if state.ExecutionInfo.CompletionEvent != nil {
 			state.ExecutionInfo.CompletionEvent = nil
@@ -596,16 +595,16 @@ func (m *sqlExecutionManager) resetWorkflowExecutionTx(
 
 	shardID := m.shardID
 
-	domainID := serialization.MustParseUUID(request.NewWorkflowSnapshot.ExecutionInfo.DomainID)
+	domainID := request.NewWorkflowSnapshot.ExecutionInfo.DomainID
 	workflowID := request.NewWorkflowSnapshot.ExecutionInfo.WorkflowID
 
-	baseRunID := serialization.MustParseUUID(request.BaseRunID)
+	baseRunID := request.BaseRunID
 	baseRunNextEventID := request.BaseRunNextEventID
 
-	currentRunID := serialization.MustParseUUID(request.CurrentRunID)
+	currentRunID := request.CurrentRunID
 	currentRunNextEventID := request.CurrentRunNextEventID
 
-	newWorkflowRunID := serialization.MustParseUUID(request.NewWorkflowSnapshot.ExecutionInfo.RunID)
+	newWorkflowRunID := request.NewWorkflowSnapshot.ExecutionInfo.RunID
 	newExecutionInfo := request.NewWorkflowSnapshot.ExecutionInfo
 	startVersion := request.NewWorkflowSnapshot.StartVersion
 	lastWriteVersion := request.NewWorkflowSnapshot.LastWriteVersion
@@ -631,7 +630,7 @@ func (m *sqlExecutionManager) resetWorkflowExecutionTx(
 
 	// 2. lock base run: we want to grab a read-lock for base run to prevent race condition
 	// It is only needed when base run is not current run. Because we will obtain a lock on current run anyway.
-	if !bytes.Equal(baseRunID, currentRunID) {
+	if baseRunID != currentRunID {
 		if err := lockAndCheckNextEventID(ctx, tx, shardID, domainID, workflowID, baseRunID, baseRunNextEventID); err != nil {
 			switch err.(type) {
 			case *p.ConditionFailedError:
@@ -902,13 +901,13 @@ func (m *sqlExecutionManager) GetTransferTasks(
 		}
 		resp.Tasks[i] = &p.TransferTaskInfo{
 			TaskID:                  row.TaskID,
-			DomainID:                serialization.UUID(info.DomainID).String(),
+			DomainID:                info.GetDomainID(),
 			WorkflowID:              info.GetWorkflowID(),
-			RunID:                   serialization.UUID(info.RunID).String(),
-			VisibilityTimestamp:     time.Unix(0, info.GetVisibilityTimestampNanos()),
-			TargetDomainID:          serialization.UUID(info.TargetDomainID).String(),
+			RunID:                   info.GetRunID(),
+			VisibilityTimestamp:     info.GetVisibilityTimestamp(),
+			TargetDomainID:          info.GetTargetDomainID(),
 			TargetWorkflowID:        info.GetTargetWorkflowID(),
-			TargetRunID:             serialization.UUID(info.TargetRunID).String(),
+			TargetRunID:             info.GetTargetRunID(),
 			TargetChildWorkflowOnly: info.GetTargetChildWorkflowOnly(),
 			TaskList:                info.GetTaskList(),
 			TaskType:                int(info.GetTaskType()),
@@ -1012,9 +1011,9 @@ func (m *sqlExecutionManager) populateGetReplicationTasksResponse(
 
 		tasks[i] = &p.InternalReplicationTaskInfo{
 			TaskID:            row.TaskID,
-			DomainID:          serialization.UUID(info.DomainID).String(),
+			DomainID:          info.GetDomainID(),
 			WorkflowID:        info.GetWorkflowID(),
-			RunID:             serialization.UUID(info.RunID).String(),
+			RunID:             info.GetRunID(),
 			TaskType:          int(info.GetTaskType()),
 			FirstEventID:      info.GetFirstEventID(),
 			NextEventID:       info.GetNextEventID(),
@@ -1022,7 +1021,7 @@ func (m *sqlExecutionManager) populateGetReplicationTasksResponse(
 			ScheduledID:       info.GetScheduledID(),
 			BranchToken:       info.GetBranchToken(),
 			NewRunBranchToken: info.GetNewRunBranchToken(),
-			CreationTime:      time.Unix(0, info.GetCreationTime()),
+			CreationTime:      info.GetCreationTimestamp(),
 		}
 	}
 	var nextPageToken []byte
@@ -1179,9 +1178,9 @@ func (m *sqlExecutionManager) CreateFailoverMarkerTasks(
 				tx,
 				t,
 				m.shardID,
-				serialization.MustParseUUID(task.DomainID),
+				task.DomainID,
 				emptyWorkflowID,
-				serialization.MustParseUUID(emptyReplicationRunID),
+				emptyReplicationRunID,
 				m.parser,
 			); err != nil {
 				rollBackErr := tx.Rollback()
@@ -1248,9 +1247,9 @@ func (m *sqlExecutionManager) GetTimerIndexTasks(
 		resp.Timers[i] = &p.TimerTaskInfo{
 			VisibilityTimestamp: row.VisibilityTimestamp,
 			TaskID:              row.TaskID,
-			DomainID:            serialization.UUID(info.DomainID).String(),
+			DomainID:            info.GetDomainID(),
 			WorkflowID:          info.GetWorkflowID(),
-			RunID:               serialization.UUID(info.RunID).String(),
+			RunID:               info.GetRunID(),
 			TaskType:            int(info.GetTaskType()),
 			TimeoutType:         int(info.GetTimeoutType()),
 			EventID:             info.GetEventID(),
@@ -1318,10 +1317,10 @@ func (m *sqlExecutionManager) PutReplicationTaskToDLQ(
 	request *p.InternalPutReplicationTaskToDLQRequest,
 ) error {
 	replicationTask := request.TaskInfo
-	blob, err := m.parser.ReplicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
-		DomainID:          serialization.MustParseUUID(replicationTask.DomainID),
+	blob, err := m.parser.ReplicationTaskInfoToBlob(&serialization.ReplicationTaskInfo{
+		DomainID:          &replicationTask.DomainID,
 		WorkflowID:        &replicationTask.WorkflowID,
-		RunID:             serialization.MustParseUUID(replicationTask.RunID),
+		RunID:             &replicationTask.RunID,
 		TaskType:          common.Int16Ptr(int16(replicationTask.TaskType)),
 		FirstEventID:      &replicationTask.FirstEventID,
 		NextEventID:       &replicationTask.NextEventID,

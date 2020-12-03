@@ -23,6 +23,7 @@
 package serialization
 
 import (
+	"github.com/uber/cadence/common/types"
 	"math/rand"
 	"testing"
 	"time"
@@ -133,7 +134,7 @@ func TestDomainInfo(t *testing.T) {
 func TestHistoryTreeInfo(t *testing.T) {
 	expected := &HistoryTreeInfo{
 		CreatedTimestamp: common.TimePtr(time.Now()),
-		Ancestors: []*HistoryBranchRange{
+		Ancestors: []*types.HistoryBranchRange{
 			{
 				BranchID:    common.StringPtr("branch_id"),
 				BeginNodeID: common.Int64Ptr(int64(rand.Intn(1000))),

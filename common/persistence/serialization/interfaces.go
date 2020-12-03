@@ -23,6 +23,7 @@
 package serialization
 
 import (
+	"github.com/uber/cadence/common/types"
 	"time"
 
 	"go.uber.org/thriftrw/wire"
@@ -91,7 +92,7 @@ type (
 	// HistoryTreeInfo blob in a serialization agnostic format
 	HistoryTreeInfo struct {
 		CreatedTimestamp *time.Time
-		Ancestors        []*HistoryBranchRange
+		Ancestors        []*types.HistoryBranchRange
 		Info             *string
 	}
 

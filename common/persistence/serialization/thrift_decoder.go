@@ -44,7 +44,7 @@ func (d *thriftDecoder) shardInfoFromBlob(data []byte) (*ShardInfo, error) {
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return shardInfoFromThrift(result), nil
 }
 
 func (d *thriftDecoder) domainInfoFromBlob(data []byte) (*DomainInfo, error) {
@@ -52,7 +52,7 @@ func (d *thriftDecoder) domainInfoFromBlob(data []byte) (*DomainInfo, error) {
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return domainInfoFromThrift(result), nil
 }
 
 func (d *thriftDecoder) historyTreeInfoFromBlob(data []byte) (*HistoryTreeInfo, error) {
@@ -60,7 +60,7 @@ func (d *thriftDecoder) historyTreeInfoFromBlob(data []byte) (*HistoryTreeInfo, 
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return historyTreeInfoFromThrift(result), nil
 }
 
 func (d *thriftDecoder) workflowExecutionInfoFromBlob(data []byte) (*WorkflowExecutionInfo, error) {
@@ -68,7 +68,7 @@ func (d *thriftDecoder) workflowExecutionInfoFromBlob(data []byte) (*WorkflowExe
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return workflowExecutionInfoFromThrift(result), nil
 }
 
 func (d *thriftDecoder) activityInfoFromBlob(data []byte) (*ActivityInfo, error) {
@@ -76,7 +76,7 @@ func (d *thriftDecoder) activityInfoFromBlob(data []byte) (*ActivityInfo, error)
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return activityInfoFromThrift(result), nil
 }
 
 func (d *thriftDecoder) childExecutionInfoFromBlob(data []byte) (*ChildExecutionInfo, error) {
@@ -84,7 +84,7 @@ func (d *thriftDecoder) childExecutionInfoFromBlob(data []byte) (*ChildExecution
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return childExecutionInfoFromThrift(result), nil
 }
 
 func (d *thriftDecoder) signalInfoFromBlob(data []byte) (*SignalInfo, error) {
@@ -92,7 +92,7 @@ func (d *thriftDecoder) signalInfoFromBlob(data []byte) (*SignalInfo, error) {
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return signalInfoFromThrift(result), nil
 }
 
 func (d *thriftDecoder) requestCancelInfoFromBlob(data []byte) (*RequestCancelInfo, error) {
@@ -100,7 +100,7 @@ func (d *thriftDecoder) requestCancelInfoFromBlob(data []byte) (*RequestCancelIn
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return requestCancelInfoFromThrift(result), nil
 }
 
 func (d *thriftDecoder) timerInfoFromBlob(data []byte) (*TimerInfo, error) {
@@ -108,7 +108,7 @@ func (d *thriftDecoder) timerInfoFromBlob(data []byte) (*TimerInfo, error) {
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return timerInfoFromThrift(result), nil
 }
 
 func (d *thriftDecoder) taskInfoFromBlob(data []byte) (*TaskInfo, error) {
@@ -116,7 +116,7 @@ func (d *thriftDecoder) taskInfoFromBlob(data []byte) (*TaskInfo, error) {
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return taskInfoFromThrift(result), nil
 }
 
 func (d *thriftDecoder) taskListInfoFromBlob(data []byte) (*TaskListInfo, error) {
@@ -124,7 +124,7 @@ func (d *thriftDecoder) taskListInfoFromBlob(data []byte) (*TaskListInfo, error)
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return taskListInfoFromThrift(result), nil
 }
 
 func (d *thriftDecoder) transferTaskInfoFromBlob(data []byte) (*TransferTaskInfo, error) {
@@ -132,7 +132,7 @@ func (d *thriftDecoder) transferTaskInfoFromBlob(data []byte) (*TransferTaskInfo
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return transferTaskInfoFromThrift(result), nil
 }
 
 func (d *thriftDecoder) timerTaskInfoFromBlob(data []byte) (*TimerTaskInfo, error) {
@@ -140,7 +140,7 @@ func (d *thriftDecoder) timerTaskInfoFromBlob(data []byte) (*TimerTaskInfo, erro
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return timerTaskInfoFromThrift(result), nil
 }
 
 func (d *thriftDecoder) replicationTaskInfoFromBlob(data []byte) (*ReplicationTaskInfo, error) {
@@ -148,7 +148,7 @@ func (d *thriftDecoder) replicationTaskInfoFromBlob(data []byte) (*ReplicationTa
 	if err := thriftRWDecode(data, result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return replicationTaskInfoFromThrift(result), nil
 }
 
 func thriftRWDecode(b []byte, result thriftRWType) error {

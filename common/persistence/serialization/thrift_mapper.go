@@ -23,6 +23,7 @@
 package serialization
 
 import (
+	"github.com/uber/cadence/common/types"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -187,9 +188,9 @@ func historyTreeInfoFromThrift(info *sqlblobs.HistoryTreeInfo) *HistoryTreeInfo 
 		Info:             info.Info,
 	}
 	if info.Ancestors != nil {
-		result.Ancestors = make([]*HistoryBranchRange, len(info.Ancestors), len(info.Ancestors))
+		result.Ancestors = make([]*types.HistoryBranchRange, len(info.Ancestors), len(info.Ancestors))
 		for i, a := range info.Ancestors {
-			result.Ancestors[i] = &HistoryBranchRange{
+			result.Ancestors[i] = &types.HistoryBranchRange{
 				BranchID:    a.BranchID,
 				BeginNodeID: a.BeginNodeID,
 				EndNodeID:   a.EndNodeID,
