@@ -117,9 +117,9 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(
 	startVersion := newWorkflow.StartVersion
 	lastWriteVersion := newWorkflow.LastWriteVersion
 	shardID := m.shardID
-	domainID := sqlplugin.MustParseUUID(executionInfo.DomainID)
+	domainID := serialization.MustParseUUID(executionInfo.DomainID)
 	workflowID := executionInfo.WorkflowID
-	runID := sqlplugin.MustParseUUID(executionInfo.RunID)
+	runID := serialization.MustParseUUID(executionInfo.RunID)
 
 	if err := p.ValidateCreateWorkflowModeState(
 		request.Mode,
@@ -174,13 +174,13 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(
 
 		case p.CreateWorkflowModeZombie:
 			// zombie workflow creation with existence of current record, this is a noop
-			if err := assertRunIDMismatch(sqlplugin.MustParseUUID(executionInfo.RunID), row.RunID); err != nil {
+			if err := assertRunIDMismatch(serialization.MustParseUUID(executionInfo.RunID), row.RunID); err != nil {
 				return nil, err
 			}
 
 		case p.CreateWorkflowModeContinueAsNew:
 			// continueAsNew mode expects a current run exists
-			if err := assertRunIDMismatch(sqlplugin.MustParseUUID(executionInfo.RunID), row.RunID); err != nil {
+			if err := assertRunIDMismatch(serialization.MustParseUUID(executionInfo.RunID), row.RunID); err != nil {
 				return nil, err
 			}
 
@@ -222,8 +222,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 	request *p.InternalGetWorkflowExecutionRequest,
 ) (*p.InternalGetWorkflowExecutionResponse, error) {
 
-	domainID := sqlplugin.MustParseUUID(request.DomainID)
-	runID := sqlplugin.MustParseUUID(*request.Execution.RunID)
+	domainID := serialization.MustParseUUID(request.DomainID)
+	runID := serialization.MustParseUUID(*request.Execution.RunID)
 	wfID := *request.Execution.WorkflowID
 	execution, err := m.db.SelectFromExecutions(ctx, &sqlplugin.ExecutionsFilter{
 		ShardID: m.shardID, DomainID: domainID, WorkflowID: wfID, RunID: runID})
@@ -314,9 +314,9 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 	}
 
 	if info.ParentDomainID != nil {
-		state.ExecutionInfo.ParentDomainID = sqlplugin.UUID(info.ParentDomainID).String()
+		state.ExecutionInfo.ParentDomainID = serialization.UUID(info.ParentDomainID).String()
 		state.ExecutionInfo.ParentWorkflowID = info.GetParentWorkflowID()
-		state.ExecutionInfo.ParentRunID = sqlplugin.UUID(info.ParentRunID).String()
+		state.ExecutionInfo.ParentRunID = serialization.UUID(info.ParentRunID).String()
 		state.ExecutionInfo.InitiatedID = info.GetInitiatedID()
 		if state.ExecutionInfo.CompletionEvent != nil {
 			state.ExecutionInfo.CompletionEvent = nil
@@ -482,9 +482,9 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(
 	newWorkflow := request.NewWorkflowSnapshot
 
 	executionInfo := updateWorkflow.ExecutionInfo
-	domainID := sqlplugin.MustParseUUID(executionInfo.DomainID)
+	domainID := serialization.MustParseUUID(executionInfo.DomainID)
 	workflowID := executionInfo.WorkflowID
-	runID := sqlplugin.MustParseUUID(executionInfo.RunID)
+	runID := serialization.MustParseUUID(executionInfo.RunID)
 	shardID := m.shardID
 
 	if err := p.ValidateUpdateWorkflowModeState(
@@ -512,8 +512,8 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(
 			newExecutionInfo := newWorkflow.ExecutionInfo
 			startVersion := newWorkflow.StartVersion
 			lastWriteVersion := newWorkflow.LastWriteVersion
-			newDomainID := sqlplugin.MustParseUUID(newExecutionInfo.DomainID)
-			newRunID := sqlplugin.MustParseUUID(newExecutionInfo.RunID)
+			newDomainID := serialization.MustParseUUID(newExecutionInfo.DomainID)
+			newRunID := serialization.MustParseUUID(newExecutionInfo.RunID)
 
 			if !bytes.Equal(domainID, newDomainID) {
 				return &types.InternalServiceError{
@@ -596,16 +596,16 @@ func (m *sqlExecutionManager) resetWorkflowExecutionTx(
 
 	shardID := m.shardID
 
-	domainID := sqlplugin.MustParseUUID(request.NewWorkflowSnapshot.ExecutionInfo.DomainID)
+	domainID := serialization.MustParseUUID(request.NewWorkflowSnapshot.ExecutionInfo.DomainID)
 	workflowID := request.NewWorkflowSnapshot.ExecutionInfo.WorkflowID
 
-	baseRunID := sqlplugin.MustParseUUID(request.BaseRunID)
+	baseRunID := serialization.MustParseUUID(request.BaseRunID)
 	baseRunNextEventID := request.BaseRunNextEventID
 
-	currentRunID := sqlplugin.MustParseUUID(request.CurrentRunID)
+	currentRunID := serialization.MustParseUUID(request.CurrentRunID)
 	currentRunNextEventID := request.CurrentRunNextEventID
 
-	newWorkflowRunID := sqlplugin.MustParseUUID(request.NewWorkflowSnapshot.ExecutionInfo.RunID)
+	newWorkflowRunID := serialization.MustParseUUID(request.NewWorkflowSnapshot.ExecutionInfo.RunID)
 	newExecutionInfo := request.NewWorkflowSnapshot.ExecutionInfo
 	startVersion := request.NewWorkflowSnapshot.StartVersion
 	lastWriteVersion := request.NewWorkflowSnapshot.LastWriteVersion
@@ -691,7 +691,7 @@ func (m *sqlExecutionManager) conflictResolveWorkflowExecutionTx(
 
 	shardID := m.shardID
 
-	domainID := sqlplugin.MustParseUUID(resetWorkflow.ExecutionInfo.DomainID)
+	domainID := serialization.MustParseUUID(resetWorkflow.ExecutionInfo.DomainID)
 	workflowID := resetWorkflow.ExecutionInfo.WorkflowID
 
 	if err := p.ValidateConflictResolveWorkflowModeState(
@@ -711,7 +711,7 @@ func (m *sqlExecutionManager) conflictResolveWorkflowExecutionTx(
 			shardID,
 			domainID,
 			workflowID,
-			sqlplugin.MustParseUUID(resetWorkflow.ExecutionInfo.RunID)); err != nil {
+			serialization.MustParseUUID(resetWorkflow.ExecutionInfo.RunID)); err != nil {
 			return err
 		}
 
@@ -724,13 +724,13 @@ func (m *sqlExecutionManager) conflictResolveWorkflowExecutionTx(
 			startVersion = newWorkflow.StartVersion
 			lastWriteVersion = newWorkflow.LastWriteVersion
 		}
-		runID := sqlplugin.MustParseUUID(executionInfo.RunID)
+		runID := serialization.MustParseUUID(executionInfo.RunID)
 		createRequestID := executionInfo.CreateRequestID
 		state := executionInfo.State
 		closeStatus := executionInfo.CloseStatus
 
 		if currentWorkflow != nil {
-			prevRunID := sqlplugin.MustParseUUID(currentWorkflow.ExecutionInfo.RunID)
+			prevRunID := serialization.MustParseUUID(currentWorkflow.ExecutionInfo.RunID)
 
 			if err := assertRunIDAndUpdateCurrentExecution(
 				ctx,
@@ -752,7 +752,7 @@ func (m *sqlExecutionManager) conflictResolveWorkflowExecutionTx(
 			}
 		} else {
 			// reset workflow is current
-			prevRunID := sqlplugin.MustParseUUID(resetWorkflow.ExecutionInfo.RunID)
+			prevRunID := serialization.MustParseUUID(resetWorkflow.ExecutionInfo.RunID)
 
 			if err := assertRunIDAndUpdateCurrentExecution(
 				ctx,
@@ -801,8 +801,8 @@ func (m *sqlExecutionManager) DeleteWorkflowExecution(
 	request *p.DeleteWorkflowExecutionRequest,
 ) error {
 
-	domainID := sqlplugin.MustParseUUID(request.DomainID)
-	runID := sqlplugin.MustParseUUID(request.RunID)
+	domainID := serialization.MustParseUUID(request.DomainID)
+	runID := serialization.MustParseUUID(request.RunID)
 	_, err := m.db.DeleteFromExecutions(ctx, &sqlplugin.ExecutionsFilter{
 		ShardID:    m.shardID,
 		DomainID:   domainID,
@@ -821,8 +821,8 @@ func (m *sqlExecutionManager) DeleteCurrentWorkflowExecution(
 	request *p.DeleteCurrentWorkflowExecutionRequest,
 ) error {
 
-	domainID := sqlplugin.MustParseUUID(request.DomainID)
-	runID := sqlplugin.MustParseUUID(request.RunID)
+	domainID := serialization.MustParseUUID(request.DomainID)
+	runID := serialization.MustParseUUID(request.RunID)
 	_, err := m.db.DeleteFromCurrentExecutions(ctx, &sqlplugin.CurrentExecutionsFilter{
 		ShardID:    int64(m.shardID),
 		DomainID:   domainID,
@@ -839,7 +839,7 @@ func (m *sqlExecutionManager) GetCurrentExecution(
 
 	row, err := m.db.SelectFromCurrentExecutions(ctx, &sqlplugin.CurrentExecutionsFilter{
 		ShardID:    int64(m.shardID),
-		DomainID:   sqlplugin.MustParseUUID(request.DomainID),
+		DomainID:   serialization.MustParseUUID(request.DomainID),
 		WorkflowID: request.WorkflowID,
 	})
 	if err != nil {
@@ -902,13 +902,13 @@ func (m *sqlExecutionManager) GetTransferTasks(
 		}
 		resp.Tasks[i] = &p.TransferTaskInfo{
 			TaskID:                  row.TaskID,
-			DomainID:                sqlplugin.UUID(info.DomainID).String(),
+			DomainID:                serialization.UUID(info.DomainID).String(),
 			WorkflowID:              info.GetWorkflowID(),
-			RunID:                   sqlplugin.UUID(info.RunID).String(),
+			RunID:                   serialization.UUID(info.RunID).String(),
 			VisibilityTimestamp:     time.Unix(0, info.GetVisibilityTimestampNanos()),
-			TargetDomainID:          sqlplugin.UUID(info.TargetDomainID).String(),
+			TargetDomainID:          serialization.UUID(info.TargetDomainID).String(),
 			TargetWorkflowID:        info.GetTargetWorkflowID(),
-			TargetRunID:             sqlplugin.UUID(info.TargetRunID).String(),
+			TargetRunID:             serialization.UUID(info.TargetRunID).String(),
 			TargetChildWorkflowOnly: info.GetTargetChildWorkflowOnly(),
 			TaskList:                info.GetTaskList(),
 			TaskType:                int(info.GetTaskType()),
@@ -1012,9 +1012,9 @@ func (m *sqlExecutionManager) populateGetReplicationTasksResponse(
 
 		tasks[i] = &p.InternalReplicationTaskInfo{
 			TaskID:            row.TaskID,
-			DomainID:          sqlplugin.UUID(info.DomainID).String(),
+			DomainID:          serialization.UUID(info.DomainID).String(),
 			WorkflowID:        info.GetWorkflowID(),
-			RunID:             sqlplugin.UUID(info.RunID).String(),
+			RunID:             serialization.UUID(info.RunID).String(),
 			TaskType:          int(info.GetTaskType()),
 			FirstEventID:      info.GetFirstEventID(),
 			NextEventID:       info.GetNextEventID(),
@@ -1179,9 +1179,9 @@ func (m *sqlExecutionManager) CreateFailoverMarkerTasks(
 				tx,
 				t,
 				m.shardID,
-				sqlplugin.MustParseUUID(task.DomainID),
+				serialization.MustParseUUID(task.DomainID),
 				emptyWorkflowID,
-				sqlplugin.MustParseUUID(emptyReplicationRunID),
+				serialization.MustParseUUID(emptyReplicationRunID),
 				m.parser,
 			); err != nil {
 				rollBackErr := tx.Rollback()
@@ -1248,9 +1248,9 @@ func (m *sqlExecutionManager) GetTimerIndexTasks(
 		resp.Timers[i] = &p.TimerTaskInfo{
 			VisibilityTimestamp: row.VisibilityTimestamp,
 			TaskID:              row.TaskID,
-			DomainID:            sqlplugin.UUID(info.DomainID).String(),
+			DomainID:            serialization.UUID(info.DomainID).String(),
 			WorkflowID:          info.GetWorkflowID(),
-			RunID:               sqlplugin.UUID(info.RunID).String(),
+			RunID:               serialization.UUID(info.RunID).String(),
 			TaskType:            int(info.GetTaskType()),
 			TimeoutType:         int(info.GetTimeoutType()),
 			EventID:             info.GetEventID(),
@@ -1319,9 +1319,9 @@ func (m *sqlExecutionManager) PutReplicationTaskToDLQ(
 ) error {
 	replicationTask := request.TaskInfo
 	blob, err := m.parser.ReplicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
-		DomainID:          sqlplugin.MustParseUUID(replicationTask.DomainID),
+		DomainID:          serialization.MustParseUUID(replicationTask.DomainID),
 		WorkflowID:        &replicationTask.WorkflowID,
-		RunID:             sqlplugin.MustParseUUID(replicationTask.RunID),
+		RunID:             serialization.MustParseUUID(replicationTask.RunID),
 		TaskType:          common.Int16Ptr(int16(replicationTask.TaskType)),
 		FirstEventID:      &replicationTask.FirstEventID,
 		NextEventID:       &replicationTask.NextEventID,

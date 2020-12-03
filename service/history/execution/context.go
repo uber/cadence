@@ -1186,7 +1186,7 @@ func (c *contextImpl) ReapplyEvents(
 	// The active cluster of the domain is the same as current cluster.
 	// Use the history from the same cluster to reapply events
 	reapplyEventsDataBlob, err := serializer.SerializeBatchEvents(
-		reapplyEvents,
+		thrift.ToHistoryEventArray(reapplyEvents),
 		common.EncodingTypeThriftRW,
 	)
 	if err != nil {

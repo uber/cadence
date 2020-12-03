@@ -26,6 +26,7 @@ import (
 	checksumgen "github.com/uber/cadence/.gen/go/checksum"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -70,7 +71,7 @@ func newMutableStateChecksumPayload(ms MutableState) *checksumgen.MutableStateCh
 
 	versionHistories := ms.GetVersionHistories()
 	if versionHistories != nil {
-		payload.VersionHistories = versionHistories.ToThrift()
+		payload.VersionHistories = thrift.FromVersionHistories(versionHistories.ToInternalType())
 	}
 
 	// for each of the pendingXXX ids below, sorting is needed to guarantee that

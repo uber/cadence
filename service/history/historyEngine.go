@@ -1373,7 +1373,7 @@ func (e *historyEngineImpl) getMutableState(
 	}
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories != nil {
-		retResp.VersionHistories = versionHistories.ToThrift()
+		retResp.VersionHistories = thrift.FromVersionHistories(versionHistories.ToInternalType())
 	}
 	return
 }
@@ -2971,7 +2971,7 @@ func getStartRequest(
 		Header:                              request.Header,
 	}
 
-	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req)
+	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
 	return startRequest
 }
 

@@ -27,7 +27,7 @@ import (
 	"github.com/uber-go/tally"
 	"github.com/urfave/cli"
 
-	sericeFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
@@ -214,7 +214,7 @@ var (
 
 func initializeFrontendClient(
 	context *cli.Context,
-) sericeFrontend.Interface {
+) frontend.Client {
 	return cFactory.ServerFrontendClient(context)
 }
 

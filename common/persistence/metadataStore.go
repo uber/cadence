@@ -188,7 +188,7 @@ func (m *metadataManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalD
 	if c.BadBinaries.Binaries == nil {
 		c.BadBinaries.Binaries = map[string]*types.BadBinaryInfo{}
 	}
-	badBinaries, err := m.serializer.SerializeBadBinaries(thrift.FromBadBinaries(&c.BadBinaries), common.EncodingTypeThriftRW)
+	badBinaries, err := m.serializer.SerializeBadBinaries(&c.BadBinaries, common.EncodingTypeThriftRW)
 	if err != nil {
 		return InternalDomainConfig{}, err
 	}
@@ -207,8 +207,7 @@ func (m *metadataManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig)
 	if ic == nil {
 		return DomainConfig{}, nil
 	}
-	badBinariesThrift, err := m.serializer.DeserializeBadBinaries(ic.BadBinaries)
-	badBinaries := thrift.ToBadBinaries(badBinariesThrift)
+	badBinaries, err := m.serializer.DeserializeBadBinaries(ic.BadBinaries)
 	if err != nil {
 		return DomainConfig{}, err
 	}

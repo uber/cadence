@@ -26,7 +26,6 @@ import (
 	"context"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -101,15 +100,15 @@ func (m *shardManager) toInternalShardInfo(shardInfo *ShardInfo) (*InternalShard
 	if shardInfo == nil {
 		return nil, nil
 	}
-	serializedTransferProcessingQueueStates, err := m.serializer.SerializeProcessingQueueStates(thrift.FromProcessingQueueStates(shardInfo.TransferProcessingQueueStates), common.EncodingTypeThriftRW)
+	serializedTransferProcessingQueueStates, err := m.serializer.SerializeProcessingQueueStates(shardInfo.TransferProcessingQueueStates, common.EncodingTypeThriftRW)
 	if err != nil {
 		return nil, err
 	}
-	serializedTimerProcessingQueueStates, err := m.serializer.SerializeProcessingQueueStates(thrift.FromProcessingQueueStates(shardInfo.TimerProcessingQueueStates), common.EncodingTypeThriftRW)
+	serializedTimerProcessingQueueStates, err := m.serializer.SerializeProcessingQueueStates(shardInfo.TimerProcessingQueueStates, common.EncodingTypeThriftRW)
 	if err != nil {
 		return nil, err
 	}
-	pendingFailoverMarker, err := m.serializer.SerializePendingFailoverMarkers(thrift.FromFailoverMarkerAttributesArray(shardInfo.PendingFailoverMarkers), common.EncodingTypeThriftRW)
+	pendingFailoverMarker, err := m.serializer.SerializePendingFailoverMarkers(shardInfo.PendingFailoverMarkers, common.EncodingTypeThriftRW)
 	if err != nil {
 		return nil, err
 	}
@@ -165,11 +164,11 @@ func (m *shardManager) fromInternalShardInfo(internalShardInfo *InternalShardInf
 		TimerAckLevel:                 internalShardInfo.TimerAckLevel,
 		ClusterTransferAckLevel:       internalShardInfo.ClusterTransferAckLevel,
 		ClusterTimerAckLevel:          internalShardInfo.ClusterTimerAckLevel,
-		TransferProcessingQueueStates: thrift.ToProcessingQueueStates(transferProcessingQueueStates),
-		TimerProcessingQueueStates:    thrift.ToProcessingQueueStates(timerProcessingQueueStates),
+		TransferProcessingQueueStates: transferProcessingQueueStates,
+		TimerProcessingQueueStates:    timerProcessingQueueStates,
 		ClusterReplicationLevel:       internalShardInfo.ClusterReplicationLevel,
 		DomainNotificationVersion:     internalShardInfo.DomainNotificationVersion,
-		PendingFailoverMarkers:        thrift.ToFailoverMarkerAttributesArray(pendingFailoverMarker),
+		PendingFailoverMarkers:        pendingFailoverMarker,
 		TransferFailoverLevels:        internalShardInfo.TransferFailoverLevels,
 		TimerFailoverLevels:           internalShardInfo.TimerFailoverLevels,
 	}, nil

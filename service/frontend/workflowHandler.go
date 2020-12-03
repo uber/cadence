@@ -1831,7 +1831,11 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	}
 
 	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
-	clientResp, err := wh.GetHistoryClient().StartWorkflowExecution(ctx, thrift.ToHistoryStartWorkflowExecutionRequest(common.CreateHistoryStartWorkflowRequest(domainID, startRequest)))
+	clientResp, err := wh.GetHistoryClient().
+		StartWorkflowExecution(
+			ctx, thrift.ToHistoryStartWorkflowExecutionRequest(
+				common.CreateHistoryStartWorkflowRequest(
+					domainID, startRequest, time.Now())))
 	resp = thrift.FromStartWorkflowExecutionResponse(clientResp)
 	if err != nil {
 		return nil, wh.error(err, scope)
@@ -3365,8 +3369,8 @@ func (wh *WorkflowHandler) getRawHistory(
 				tag.WorkflowRunID(execution.GetRunId()),
 				tag.Error(err))
 		}
-		blob, err := wh.GetPayloadSerializer().SerializeBatchEvents(
-			[]*gen.HistoryEvent{transientDecision.ScheduledEvent, transientDecision.StartedEvent}, common.EncodingTypeThriftRW)
+		blob, err := wh.GetPayloadSerializer().SerializeBatchEvents(thrift.ToHistoryEventArray(
+			[]*gen.HistoryEvent{transientDecision.ScheduledEvent, transientDecision.StartedEvent}), common.EncodingTypeThriftRW)
 		if err != nil {
 			return nil, nil, err
 		}

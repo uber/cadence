@@ -105,8 +105,7 @@ type (
 
 	// FixerWorkflowParams are the parameters to the fix workflow
 	FixerWorkflowParams struct {
-		ScannerWorkflowWorkflowID     string
-		ScannerWorkflowRunID          string
+		ScanExecution                 workflow.Execution
 		FixerWorkflowConfigOverwrites FixerWorkflowConfigOverwrites
 		ScanType                      ScanType
 	}
@@ -359,7 +358,6 @@ func ScannerWorkflow(
 	}).Get(ctx, nil); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -459,8 +457,8 @@ func getCorruptedKeys(
 	params FixerWorkflowParams,
 ) (*FixerCorruptedKeysActivityResult, error) {
 	fixerCorruptedKeysActivityParams := FixerCorruptedKeysActivityParams{
-		ScannerWorkflowWorkflowID: params.ScannerWorkflowWorkflowID,
-		ScannerWorkflowRunID:      params.ScannerWorkflowRunID,
+		ScannerWorkflowWorkflowID: params.ScanExecution.ID,
+		ScannerWorkflowRunID:      params.ScanExecution.RunID,
 		StartingShardID:           nil,
 		ScanType:                  params.ScanType,
 	}

@@ -25,6 +25,8 @@ package executions
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"time"
 
 	"go.uber.org/cadence"
 
@@ -295,12 +297,37 @@ func FixerCorruptedKeysActivity(
 ) (*FixerCorruptedKeysActivityResult, error) {
 	resource := activityCtx.Value(ScanTypeFixerContextKeyMap[params.ScanType]).(FixerContext).Resource
 	client := resource.GetSDKClient()
+	scanExec := &shared.WorkflowExecution{
+		WorkflowId: c.StringPtr(params.ScannerWorkflowWorkflowID),
+	}
+	if params.ScannerWorkflowRunID != "" {
+		scanExec.RunId = c.StringPtr(params.ScannerWorkflowRunID)
+	} else {
+		listResp, err := client.ListClosedWorkflowExecutions(activityCtx, &shared.ListClosedWorkflowExecutionsRequest{
+			Domain:          c.StringPtr(c.SystemLocalDomainName),
+			MaximumPageSize: c.Int32Ptr(1),
+			NextPageToken:   nil,
+			StartTimeFilter: &shared.StartTimeFilter{
+				EarliestTime: c.Int64Ptr(0),
+				LatestTime:   c.Int64Ptr(time.Now().UnixNano()),
+			},
+			ExecutionFilter: &shared.WorkflowExecutionFilter{
+				WorkflowId: c.StringPtr(params.ScannerWorkflowWorkflowID),
+			},
+			StatusFilter: shared.WorkflowExecutionCloseStatusCompleted.Ptr(),
+		})
+		if err != nil {
+			return nil, err
+		}
+		if len(listResp.Executions) != 1 {
+			return nil, errors.New("got unexpected number of executions back from list")
+		}
+		scanExec.RunId = c.StringPtr(*listResp.Executions[0].Execution.RunId)
+	}
+
 	descResp, err := client.DescribeWorkflowExecution(activityCtx, &shared.DescribeWorkflowExecutionRequest{
-		Domain: c.StringPtr(c.SystemLocalDomainName),
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: c.StringPtr(params.ScannerWorkflowWorkflowID),
-			RunId:      c.StringPtr(params.ScannerWorkflowRunID),
-		},
+		Domain:    c.StringPtr(c.SystemLocalDomainName),
+		Execution: scanExec,
 	})
 	if err != nil {
 		return nil, err
@@ -316,11 +343,8 @@ func FixerCorruptedKeysActivity(
 		return nil, cadence.NewCustomError(ErrSerialization)
 	}
 	queryResp, err := client.QueryWorkflow(activityCtx, &shared.QueryWorkflowRequest{
-		Domain: c.StringPtr(c.SystemLocalDomainName),
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: c.StringPtr(params.ScannerWorkflowWorkflowID),
-			RunId:      c.StringPtr(params.ScannerWorkflowRunID),
-		},
+		Domain:    c.StringPtr(c.SystemLocalDomainName),
+		Execution: scanExec,
 		Query: &shared.WorkflowQuery{
 			QueryType: c.StringPtr(ShardCorruptKeysQuery),
 			QueryArgs: queryArgsBytes,
