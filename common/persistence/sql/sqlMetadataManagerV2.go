@@ -144,7 +144,7 @@ func (m *sqlMetadataManagerV2) CreateDomain(
 	err = m.txExecute(ctx, "CreateDomain", func(tx sqlplugin.Tx) error {
 		if _, err1 := tx.InsertIntoDomain(ctx, &sqlplugin.DomainRow{
 			Name:         request.Info.Name,
-			ID:           sqlplugin.MustParseUUID(request.Info.ID),
+			ID:           serialization.MustParseUUID(request.Info.ID),
 			Data:         blob.Data,
 			DataEncoding: string(blob.Encoding),
 			IsGlobal:     request.IsGlobalDomain,
@@ -181,7 +181,7 @@ func (m *sqlMetadataManagerV2) GetDomain(
 	case request.Name != "":
 		filter.Name = &request.Name
 	case request.ID != "":
-		filter.ID = sqlplugin.UUIDPtr(sqlplugin.MustParseUUID(request.ID))
+		filter.ID = serialization.UUIDPtr(serialization.MustParseUUID(request.ID))
 	default:
 		return nil, &types.BadRequestError{
 			Message: "GetDomain operation failed.  Both ID and Name are empty.",
@@ -328,7 +328,7 @@ func (m *sqlMetadataManagerV2) UpdateDomain(
 	return m.txExecute(ctx, "UpdateDomain", func(tx sqlplugin.Tx) error {
 		result, err := tx.UpdateDomain(ctx, &sqlplugin.DomainRow{
 			Name:         request.Info.Name,
-			ID:           sqlplugin.MustParseUUID(request.Info.ID),
+			ID:           serialization.MustParseUUID(request.Info.ID),
 			Data:         blob.Data,
 			DataEncoding: string(blob.Encoding),
 		})
@@ -354,7 +354,7 @@ func (m *sqlMetadataManagerV2) DeleteDomain(
 	request *persistence.DeleteDomainRequest,
 ) error {
 	return m.txExecute(ctx, "DeleteDomain", func(tx sqlplugin.Tx) error {
-		_, err := tx.DeleteFromDomain(ctx, &sqlplugin.DomainFilter{ID: sqlplugin.UUIDPtr(sqlplugin.MustParseUUID(request.ID))})
+		_, err := tx.DeleteFromDomain(ctx, &sqlplugin.DomainFilter{ID: serialization.UUIDPtr(serialization.MustParseUUID(request.ID))})
 		return err
 	})
 }
@@ -385,9 +385,9 @@ func (m *sqlMetadataManagerV2) ListDomains(
 	ctx context.Context,
 	request *persistence.ListDomainsRequest,
 ) (*persistence.InternalListDomainsResponse, error) {
-	var pageToken *sqlplugin.UUID
+	var pageToken *serialization.UUID
 	if request.NextPageToken != nil {
-		token := sqlplugin.UUID(request.NextPageToken)
+		token := serialization.UUID(request.NextPageToken)
 		pageToken = &token
 	}
 	rows, err := m.db.SelectFromDomain(ctx, &sqlplugin.DomainFilter{

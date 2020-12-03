@@ -89,9 +89,9 @@ func (t AdminThriftHandler) GetDLQReplicationMessages(ctx context.Context, reque
 }
 
 // GetDomainReplicationMessages forwards request to the underlying handler
-func (t AdminThriftHandler) GetDomainReplicationMessages(ctx context.Context, request *replicator.GetDomainReplicationMessagesRequest) (response *replicator.GetDomainReplicationMessagesResponse, err error) {
-	response, err = t.h.GetDomainReplicationMessages(ctx, request)
-	return response, thrift.FromError(err)
+func (t AdminThriftHandler) GetDomainReplicationMessages(ctx context.Context, request *replicator.GetDomainReplicationMessagesRequest) (*replicator.GetDomainReplicationMessagesResponse, error) {
+	response, err := t.h.GetDomainReplicationMessages(ctx, thrift.ToGetDomainReplicationMessagesRequest(request))
+	return thrift.FromGetDomainReplicationMessagesResponse(response), thrift.FromError(err)
 }
 
 // GetReplicationMessages forwards request to the underlying handler
@@ -107,21 +107,21 @@ func (t AdminThriftHandler) GetWorkflowExecutionRawHistoryV2(ctx context.Context
 }
 
 // MergeDLQMessages forwards request to the underlying handler
-func (t AdminThriftHandler) MergeDLQMessages(ctx context.Context, request *replicator.MergeDLQMessagesRequest) (response *replicator.MergeDLQMessagesResponse, err error) {
-	response, err = t.h.MergeDLQMessages(ctx, request)
-	return response, thrift.FromError(err)
+func (t AdminThriftHandler) MergeDLQMessages(ctx context.Context, request *replicator.MergeDLQMessagesRequest) (*replicator.MergeDLQMessagesResponse, error) {
+	response, err := t.h.MergeDLQMessages(ctx, thrift.ToMergeDLQMessagesRequest(request))
+	return thrift.FromMergeDLQMessagesResponse(response), thrift.FromError(err)
 }
 
 // PurgeDLQMessages forwards request to the underlying handler
-func (t AdminThriftHandler) PurgeDLQMessages(ctx context.Context, request *replicator.PurgeDLQMessagesRequest) (err error) {
-	err = t.h.PurgeDLQMessages(ctx, request)
+func (t AdminThriftHandler) PurgeDLQMessages(ctx context.Context, request *replicator.PurgeDLQMessagesRequest) error {
+	err := t.h.PurgeDLQMessages(ctx, thrift.ToPurgeDLQMessagesRequest(request))
 	return thrift.FromError(err)
 }
 
 // ReadDLQMessages forwards request to the underlying handler
-func (t AdminThriftHandler) ReadDLQMessages(ctx context.Context, request *replicator.ReadDLQMessagesRequest) (response *replicator.ReadDLQMessagesResponse, err error) {
-	response, err = t.h.ReadDLQMessages(ctx, request)
-	return response, thrift.FromError(err)
+func (t AdminThriftHandler) ReadDLQMessages(ctx context.Context, request *replicator.ReadDLQMessagesRequest) (*replicator.ReadDLQMessagesResponse, error) {
+	response, err := t.h.ReadDLQMessages(ctx, thrift.ToReadDLQMessagesRequest(request))
+	return thrift.FromReadDLQMessagesResponse(response), thrift.FromError(err)
 }
 
 // ReapplyEvents forwards request to the underlying handler

@@ -43,7 +43,6 @@ import (
 	s "go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
@@ -1909,6 +1908,46 @@ func getFirstDecisionTaskByType(
 	}
 	if decisionFinishID == 0 {
 		return "", 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
+	}
+	return
+}
+
+func getCurrentRunID(ctx context.Context, domain, wid string, frontendClient frontend.Client) (string, error) {
+	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(wid),
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	return resp.WorkflowExecutionInfo.Execution.GetRunID(), nil
+}
+
+func getBadDecisionCompletedID(ctx context.Context, domain, wid, rid, binChecksum string, frontendClient frontend.Client) (decisionFinishID int64, err error) {
+	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(wid),
+			RunID:      common.StringPtr(rid),
+		},
+	})
+	if err != nil {
+		return 0, printErrorAndReturn("DescribeWorkflowExecution failed", err)
+	}
+
+	_, p := execution.FindAutoResetPoint(clock.NewRealTimeSource(), &types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
+			binChecksum: {},
+		},
+	}, thrift.FromResetPoints(resp.WorkflowExecutionInfo.AutoResetPoints))
+	if p != nil {
+		decisionFinishID = p.GetFirstDecisionCompletedId()
+	}
+
+	if decisionFinishID == 0 {
+		return 0, printErrorAndReturn("Get DecisionFinishID failed", &types.BadRequestError{"no DecisionFinishID"})
 	}
 	return
 }

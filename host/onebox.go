@@ -42,7 +42,6 @@ import (
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	carchiver "github.com/uber/cadence/common/archiver"
@@ -713,8 +712,8 @@ func (c *cadenceImpl) createSystemDomain() error {
 		},
 		Config: &persistence.DomainConfig{
 			Retention:                1,
-			HistoryArchivalStatus:    shared.ArchivalStatusDisabled,
-			VisibilityArchivalStatus: shared.ArchivalStatusDisabled,
+			HistoryArchivalStatus:    types.ArchivalStatusDisabled,
+			VisibilityArchivalStatus: types.ArchivalStatusDisabled,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{},
 		FailoverVersion:   common.EmptyVersion,
