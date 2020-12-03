@@ -55,7 +55,7 @@ func startHandler(c *cli.Context) {
 		log.Printf("config=\n%v\n", cfg.String())
 	}
 
-	if err := cfg.Validate(); err != nil {
+	if err := cfg.ValidateAndFillDefaults(); err != nil {
 		log.Fatalf("config validation failed: %v", err)
 	}
 	// cassandra schema version validation
