@@ -1408,7 +1408,7 @@ func (m *sqlExecutionManager) populateWorkflowMutableState(
 
 	if info.ParentDomainID != nil {
 		state.ExecutionInfo.ParentDomainID = serialization.UUID(info.ParentDomainID).String()
-		state.ExecutionInfo.ParentWorkflowID = info.GetParentWorkflowID()
+		state.ExecutionInfo.ParentWorkflowID = info.GetParentWsqlExecutionManagerorkflowID()
 		state.ExecutionInfo.ParentRunID = serialization.UUID(info.ParentRunID).String()
 		state.ExecutionInfo.InitiatedID = info.GetInitiatedID()
 		if state.ExecutionInfo.CompletionEvent != nil {
