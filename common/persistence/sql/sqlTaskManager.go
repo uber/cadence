@@ -81,10 +81,10 @@ func (m *sqlTaskManager) LeaseTaskList(
 	if err != nil {
 		if err == sql.ErrNoRows {
 			tlInfo := &serialization.TaskListInfo{
-				AckLevel:         &ackLevel,
-				Kind:             common.Int16Ptr(int16(request.TaskListKind)),
-				ExpiryTimestamp:  common.TimePtr(time.Unix(0,0)),
-				LastUpdated: common.TimePtr(time.Now()),
+				AckLevel:        &ackLevel,
+				Kind:            common.Int16Ptr(int16(request.TaskListKind)),
+				ExpiryTimestamp: common.TimePtr(time.Unix(0, 0)),
+				LastUpdated:     common.TimePtr(time.Now()),
 			}
 			blob, err := m.parser.TaskListInfoToBlob(tlInfo)
 			if err != nil {
@@ -202,10 +202,10 @@ func (m *sqlTaskManager) UpdateTaskList(
 	shardID := m.shardID(request.TaskListInfo.DomainID, request.TaskListInfo.Name)
 	domainID := serialization.MustParseUUID(request.TaskListInfo.DomainID)
 	tlInfo := &serialization.TaskListInfo{
-		AckLevel:         common.Int64Ptr(request.TaskListInfo.AckLevel),
-		Kind:             common.Int16Ptr(int16(request.TaskListInfo.Kind)),
-		ExpiryTimestamp:  common.TimePtr(time.Unix(0,0)),
-		LastUpdated: common.TimePtr(time.Now()),
+		AckLevel:        common.Int64Ptr(request.TaskListInfo.AckLevel),
+		Kind:            common.Int16Ptr(int16(request.TaskListInfo.Kind)),
+		ExpiryTimestamp: common.TimePtr(time.Unix(0, 0)),
+		LastUpdated:     common.TimePtr(time.Now()),
 	}
 	if request.TaskListInfo.Kind == persistence.TaskListKindSticky {
 		tlInfo.ExpiryTimestamp = common.TimePtr(stickyTaskListExpiry())

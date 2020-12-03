@@ -23,10 +23,11 @@
 package serialization
 
 import (
-	"github.com/uber/cadence/common/types"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"

@@ -154,7 +154,7 @@ func (m *sqlShardManager) GetShard(
 		UpdatedAt:                     shardInfo.GetUpdatedAt(),
 		ReplicationAckLevel:           shardInfo.GetReplicationAckLevel(),
 		TransferAckLevel:              shardInfo.GetTransferAckLevel(),
-		TimerAckLevel:                shardInfo.GetTimerAckLevel(),
+		TimerAckLevel:                 shardInfo.GetTimerAckLevel(),
 		ClusterTransferAckLevel:       shardInfo.ClusterTransferAckLevel,
 		ClusterTimerAckLevel:          timerAckLevel,
 		TransferProcessingQueueStates: transferPQS,
@@ -267,10 +267,10 @@ func shardInfoToShardsRow(s persistence.InternalShardInfo, parser serialization.
 
 	shardInfo := &serialization.ShardInfo{
 		StolenSinceRenew:                      common.Int32Ptr(int32(s.StolenSinceRenew)),
-		UpdatedAt:                        &s.UpdatedAt,
+		UpdatedAt:                             &s.UpdatedAt,
 		ReplicationAckLevel:                   common.Int64Ptr(s.ReplicationAckLevel),
 		TransferAckLevel:                      common.Int64Ptr(s.TransferAckLevel),
-		TimerAckLevel:                    &s.TimerAckLevel,
+		TimerAckLevel:                         &s.TimerAckLevel,
 		ClusterTransferAckLevel:               s.ClusterTransferAckLevel,
 		ClusterTimerAckLevel:                  s.ClusterTimerAckLevel,
 		TransferProcessingQueueStates:         transferPQSData,
