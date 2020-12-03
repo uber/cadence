@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/environment"
 )
 
@@ -225,11 +226,11 @@ func (s *IntegrationBase) registerArchivalDomain() error {
 		},
 		Config: &persistence.DomainConfig{
 			Retention:                0,
-			HistoryArchivalStatus:    workflow.ArchivalStatusEnabled,
+			HistoryArchivalStatus:    types.ArchivalStatusEnabled,
 			HistoryArchivalURI:       s.testCluster.archiverBase.historyURI,
-			VisibilityArchivalStatus: workflow.ArchivalStatusEnabled,
+			VisibilityArchivalStatus: types.ArchivalStatusEnabled,
 			VisibilityArchivalURI:    s.testCluster.archiverBase.visibilityURI,
-			BadBinaries:              workflow.BadBinaries{Binaries: map[string]*workflow.BadBinaryInfo{}},
+			BadBinaries:              types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: currentClusterName,

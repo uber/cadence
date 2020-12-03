@@ -31,7 +31,6 @@ import (
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
 	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
 	gen "github.com/uber/cadence/.gen/go/shared"
@@ -53,7 +52,7 @@ import (
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
-var _ adminserviceserver.Interface = (*adminHandlerImpl)(nil)
+var _ AdminHandler = (*adminHandlerImpl)(nil)
 
 const (
 	endMessageID int64 = 1<<63 - 1
@@ -63,7 +62,7 @@ var (
 	errMaxMessageIDNotSet = &types.BadRequestError{Message: "Max messageID is not set."}
 )
 
-//go:generate mockgen -copyright_file=../../LICENSE -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package frontend github.com/uber/cadence/service/frontend AdminHandler
+//go:generate mockgen -copyright_file=../../LICENSE -package $GOPACKAGE -source $GOFILE -destination adminHandler_mock.go -package frontend github.com/uber/cadence/service/frontend AdminHandler
 
 type (
 	// AdminHandler interface for admin service
@@ -75,12 +74,12 @@ type (
 		DescribeQueue(context.Context, *gen.DescribeQueueRequest) (*gen.DescribeQueueResponse, error)
 		DescribeWorkflowExecution(context.Context, *admin.DescribeWorkflowExecutionRequest) (*admin.DescribeWorkflowExecutionResponse, error)
 		GetDLQReplicationMessages(context.Context, *replicator.GetDLQReplicationMessagesRequest) (*replicator.GetDLQReplicationMessagesResponse, error)
-		GetDomainReplicationMessages(context.Context, *replicator.GetDomainReplicationMessagesRequest) (*replicator.GetDomainReplicationMessagesResponse, error)
+		GetDomainReplicationMessages(context.Context, *types.GetDomainReplicationMessagesRequest) (*types.GetDomainReplicationMessagesResponse, error)
 		GetReplicationMessages(context.Context, *replicator.GetReplicationMessagesRequest) (*replicator.GetReplicationMessagesResponse, error)
 		GetWorkflowExecutionRawHistoryV2(context.Context, *admin.GetWorkflowExecutionRawHistoryV2Request) (*admin.GetWorkflowExecutionRawHistoryV2Response, error)
-		MergeDLQMessages(context.Context, *replicator.MergeDLQMessagesRequest) (*replicator.MergeDLQMessagesResponse, error)
-		PurgeDLQMessages(context.Context, *replicator.PurgeDLQMessagesRequest) error
-		ReadDLQMessages(context.Context, *replicator.ReadDLQMessagesRequest) (*replicator.ReadDLQMessagesResponse, error)
+		MergeDLQMessages(context.Context, *types.MergeDLQMessagesRequest) (*types.MergeDLQMessagesResponse, error)
+		PurgeDLQMessages(context.Context, *types.PurgeDLQMessagesRequest) error
+		ReadDLQMessages(context.Context, *types.ReadDLQMessagesRequest) (*types.ReadDLQMessagesResponse, error)
 		ReapplyEvents(context.Context, *gen.ReapplyEventsRequest) error
 		RefreshWorkflowTasks(context.Context, *gen.RefreshWorkflowTasksRequest) error
 		RemoveTask(context.Context, *gen.RemoveTaskRequest) error
@@ -604,8 +603,8 @@ func (adh *adminHandlerImpl) GetReplicationMessages(
 // GetDomainReplicationMessages returns new domain replication tasks since last retrieved task ID.
 func (adh *adminHandlerImpl) GetDomainReplicationMessages(
 	ctx context.Context,
-	request *replicator.GetDomainReplicationMessagesRequest,
-) (resp *replicator.GetDomainReplicationMessagesResponse, err error) {
+	request *types.GetDomainReplicationMessagesRequest,
+) (resp *types.GetDomainReplicationMessagesResponse, err error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &err)
 	scope, sw := adh.startRequestProfile(metrics.AdminGetDomainReplicationMessagesScope)
@@ -620,8 +619,8 @@ func (adh *adminHandlerImpl) GetDomainReplicationMessages(
 	}
 
 	lastMessageID := defaultLastMessageID
-	if request.IsSetLastRetrievedMessageId() {
-		lastMessageID = request.GetLastRetrievedMessageId()
+	if request.LastRetrievedMessageID != nil {
+		lastMessageID = request.GetLastRetrievedMessageID()
 	}
 
 	if lastMessageID == defaultLastMessageID {
@@ -643,8 +642,8 @@ func (adh *adminHandlerImpl) GetDomainReplicationMessages(
 	}
 
 	lastProcessedMessageID := defaultLastMessageID
-	if request.IsSetLastProcessedMessageId() {
-		lastProcessedMessageID = request.GetLastProcessedMessageId()
+	if request.LastProcessedMessageID != nil {
+		lastProcessedMessageID = request.GetLastProcessedMessageID()
 	}
 
 	if lastProcessedMessageID != defaultLastMessageID {
@@ -656,10 +655,10 @@ func (adh *adminHandlerImpl) GetDomainReplicationMessages(
 		}
 	}
 
-	return &replicator.GetDomainReplicationMessagesResponse{
-		Messages: &replicator.ReplicationMessages{
+	return &types.GetDomainReplicationMessagesResponse{
+		Messages: &types.ReplicationMessages{
 			ReplicationTasks:       replicationTasks,
-			LastRetrievedMessageId: common.Int64Ptr(int64(lastMessageID)),
+			LastRetrievedMessageID: common.Int64Ptr(int64(lastMessageID)),
 		},
 	}, nil
 }
@@ -732,8 +731,8 @@ func (adh *adminHandlerImpl) ReapplyEvents(
 // ReadDLQMessages reads messages from DLQ
 func (adh *adminHandlerImpl) ReadDLQMessages(
 	ctx context.Context,
-	request *replicator.ReadDLQMessagesRequest,
-) (resp *replicator.ReadDLQMessagesResponse, err error) {
+	request *types.ReadDLQMessagesRequest,
+) (resp *types.ReadDLQMessagesResponse, err error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &err)
 	scope, sw := adh.startRequestProfile(metrics.AdminReadDLQMessagesScope)
@@ -743,7 +742,7 @@ func (adh *adminHandlerImpl) ReadDLQMessages(
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 
-	if !request.IsSetType() {
+	if request.Type == nil {
 		return nil, adh.error(errEmptyQueueType, scope)
 	}
 
@@ -751,18 +750,17 @@ func (adh *adminHandlerImpl) ReadDLQMessages(
 		request.MaximumPageSize = common.Int32Ptr(common.ReadDLQMessagesPageSize)
 	}
 
-	if !request.IsSetInclusiveEndMessageID() {
+	if request.InclusiveEndMessageID == nil {
 		request.InclusiveEndMessageID = common.Int64Ptr(common.EndMessageID)
 	}
 
-	var tasks []*replicator.ReplicationTask
+	var tasks []*types.ReplicationTask
 	var token []byte
 	var op func() error
 	switch request.GetType() {
-	case replicator.DLQTypeReplication:
-		clientResp, err := adh.GetHistoryClient().ReadDLQMessages(ctx, thrift.ToReadDLQMessagesRequest(request))
-		return thrift.FromReadDLQMessagesResponse(clientResp), err
-	case replicator.DLQTypeDomain:
+	case types.DLQTypeReplication:
+		return adh.GetHistoryClient().ReadDLQMessages(ctx, request)
+	case types.DLQTypeDomain:
 		op = func() error {
 			select {
 			case <-ctx.Done():
@@ -785,7 +783,7 @@ func (adh *adminHandlerImpl) ReadDLQMessages(
 		return nil, adh.error(err, scope)
 	}
 
-	return &replicator.ReadDLQMessagesResponse{
+	return &types.ReadDLQMessagesResponse{
 		ReplicationTasks: tasks,
 		NextPageToken:    token,
 	}, nil
@@ -794,7 +792,7 @@ func (adh *adminHandlerImpl) ReadDLQMessages(
 // PurgeDLQMessages purge messages from DLQ
 func (adh *adminHandlerImpl) PurgeDLQMessages(
 	ctx context.Context,
-	request *replicator.PurgeDLQMessagesRequest,
+	request *types.PurgeDLQMessagesRequest,
 ) (err error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &err)
@@ -805,19 +803,19 @@ func (adh *adminHandlerImpl) PurgeDLQMessages(
 		return adh.error(errRequestNotSet, scope)
 	}
 
-	if !request.IsSetType() {
+	if request.Type == nil {
 		return adh.error(errEmptyQueueType, scope)
 	}
 
-	if !request.IsSetInclusiveEndMessageID() {
+	if request.InclusiveEndMessageID == nil {
 		request.InclusiveEndMessageID = common.Int64Ptr(endMessageID)
 	}
 
 	var op func() error
 	switch request.GetType() {
-	case replicator.DLQTypeReplication:
-		return adh.GetHistoryClient().PurgeDLQMessages(ctx, thrift.ToPurgeDLQMessagesRequest(request))
-	case replicator.DLQTypeDomain:
+	case types.DLQTypeReplication:
+		return adh.GetHistoryClient().PurgeDLQMessages(ctx, request)
+	case types.DLQTypeDomain:
 		op = func() error {
 			select {
 			case <-ctx.Done():
@@ -843,8 +841,8 @@ func (adh *adminHandlerImpl) PurgeDLQMessages(
 // MergeDLQMessages merges DLQ messages
 func (adh *adminHandlerImpl) MergeDLQMessages(
 	ctx context.Context,
-	request *replicator.MergeDLQMessagesRequest,
-) (resp *replicator.MergeDLQMessagesResponse, err error) {
+	request *types.MergeDLQMessagesRequest,
+) (resp *types.MergeDLQMessagesResponse, err error) {
 
 	defer log.CapturePanic(adh.GetLogger(), &err)
 	scope, sw := adh.startRequestProfile(metrics.AdminMergeDLQMessagesScope)
@@ -854,21 +852,20 @@ func (adh *adminHandlerImpl) MergeDLQMessages(
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 
-	if !request.IsSetType() {
+	if request.Type == nil {
 		return nil, adh.error(errEmptyQueueType, scope)
 	}
 
-	if !request.IsSetInclusiveEndMessageID() {
+	if request.InclusiveEndMessageID == nil {
 		request.InclusiveEndMessageID = common.Int64Ptr(endMessageID)
 	}
 
 	var token []byte
 	var op func() error
 	switch request.GetType() {
-	case replicator.DLQTypeReplication:
-		clientResp, err := adh.GetHistoryClient().MergeDLQMessages(ctx, thrift.ToMergeDLQMessagesRequest(request))
-		return thrift.FromMergeDLQMessagesResponse(clientResp), err
-	case replicator.DLQTypeDomain:
+	case types.DLQTypeReplication:
+		return adh.GetHistoryClient().MergeDLQMessages(ctx, request)
+	case types.DLQTypeDomain:
 
 		op = func() error {
 			select {
@@ -893,7 +890,7 @@ func (adh *adminHandlerImpl) MergeDLQMessages(
 		return nil, adh.error(err, scope)
 	}
 
-	return &replicator.MergeDLQMessagesResponse{
+	return &types.MergeDLQMessagesResponse{
 		NextPageToken: token,
 	}, nil
 }

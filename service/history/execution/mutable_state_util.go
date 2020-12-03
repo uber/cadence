@@ -243,7 +243,7 @@ func ScheduleDecision(
 // FindAutoResetPoint returns the auto reset point
 func FindAutoResetPoint(
 	timeSource clock.TimeSource,
-	badBinaries *workflow.BadBinaries,
+	badBinaries *types.BadBinaries,
 	autoResetPoints *workflow.ResetPoints,
 ) (string, *workflow.ResetPointInfo) {
 	if badBinaries == nil || badBinaries.Binaries == nil || autoResetPoints == nil || autoResetPoints.Points == nil {

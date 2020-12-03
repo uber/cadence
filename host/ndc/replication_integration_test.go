@@ -32,6 +32,8 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	test "github.com/uber/cadence/common/testing"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -50,11 +52,11 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageApplication() {
 
 	for s.generator.HasNextVertex() {
 		events := s.generator.GetNextVertices()
-		historyEvents := &shared.History{}
+		historyEvents := &types.History{}
 		for _, event := range events {
-			historyEvents.Events = append(historyEvents.Events, event.GetData().(*shared.HistoryEvent))
+			historyEvents.Events = append(historyEvents.Events, event.GetData().(*types.HistoryEvent))
 		}
-		historyBatch = append(historyBatch, historyEvents)
+		historyBatch = append(historyBatch, thrift.FromHistory(historyEvents))
 	}
 
 	versionHistory := s.eventBatchesToVersionHistory(nil, historyBatch)
@@ -92,11 +94,11 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 	s.generator = test.InitializeHistoryEventGenerator(s.domainName, 1)
 
 	events := s.generator.GetNextVertices()
-	historyEvents := &shared.History{}
+	historyEvents := &types.History{}
 	for _, event := range events {
-		historyEvents.Events = append(historyEvents.Events, event.GetData().(*shared.HistoryEvent))
+		historyEvents.Events = append(historyEvents.Events, event.GetData().(*types.HistoryEvent))
 	}
-	historyBatch = append(historyBatch, historyEvents)
+	historyBatch = append(historyBatch, thrift.FromHistory(historyEvents))
 
 	versionHistory := s.eventBatchesToVersionHistory(nil, historyBatch)
 

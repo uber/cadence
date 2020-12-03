@@ -91,7 +91,7 @@ func (mr *MockHandlerMockRecorder) CountWorkflowExecutions(arg0, arg1 interface{
 }
 
 // DeprecateDomain mocks base method
-func (m *MockHandler) DeprecateDomain(arg0 context.Context, arg1 *shared.DeprecateDomainRequest) error {
+func (m *MockHandler) DeprecateDomain(arg0 context.Context, arg1 *types.DeprecateDomainRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeprecateDomain", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -105,10 +105,10 @@ func (mr *MockHandlerMockRecorder) DeprecateDomain(arg0, arg1 interface{}) *gomo
 }
 
 // DescribeDomain mocks base method
-func (m *MockHandler) DescribeDomain(arg0 context.Context, arg1 *shared.DescribeDomainRequest) (*shared.DescribeDomainResponse, error) {
+func (m *MockHandler) DescribeDomain(arg0 context.Context, arg1 *types.DescribeDomainRequest) (*types.DescribeDomainResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeDomain", arg0, arg1)
-	ret0, _ := ret[0].(*shared.DescribeDomainResponse)
+	ret0, _ := ret[0].(*types.DescribeDomainResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -225,10 +225,10 @@ func (mr *MockHandlerMockRecorder) ListClosedWorkflowExecutions(arg0, arg1 inter
 }
 
 // ListDomains mocks base method
-func (m *MockHandler) ListDomains(arg0 context.Context, arg1 *shared.ListDomainsRequest) (*shared.ListDomainsResponse, error) {
+func (m *MockHandler) ListDomains(arg0 context.Context, arg1 *types.ListDomainsRequest) (*types.ListDomainsResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListDomains", arg0, arg1)
-	ret0, _ := ret[0].(*shared.ListDomainsResponse)
+	ret0, _ := ret[0].(*types.ListDomainsResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -360,7 +360,7 @@ func (mr *MockHandlerMockRecorder) RecordActivityTaskHeartbeatByID(arg0, arg1 in
 }
 
 // RegisterDomain mocks base method
-func (m *MockHandler) RegisterDomain(arg0 context.Context, arg1 *shared.RegisterDomainRequest) error {
+func (m *MockHandler) RegisterDomain(arg0 context.Context, arg1 *types.RegisterDomainRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RegisterDomain", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -618,10 +618,10 @@ func (mr *MockHandlerMockRecorder) TerminateWorkflowExecution(arg0, arg1 interfa
 }
 
 // UpdateDomain mocks base method
-func (m *MockHandler) UpdateDomain(arg0 context.Context, arg1 *shared.UpdateDomainRequest) (*shared.UpdateDomainResponse, error) {
+func (m *MockHandler) UpdateDomain(arg0 context.Context, arg1 *types.UpdateDomainRequest) (*types.UpdateDomainResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateDomain", arg0, arg1)
-	ret0, _ := ret[0].(*shared.UpdateDomainResponse)
+	ret0, _ := ret[0].(*types.UpdateDomainResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

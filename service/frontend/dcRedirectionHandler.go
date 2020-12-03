@@ -82,7 +82,7 @@ func (handler *DCRedirectionHandlerImpl) Health(ctx context.Context) (*health.He
 // DeprecateDomain API call
 func (handler *DCRedirectionHandlerImpl) DeprecateDomain(
 	ctx context.Context,
-	request *shared.DeprecateDomainRequest,
+	request *types.DeprecateDomainRequest,
 ) (retError error) {
 
 	var cluster = handler.currentClusterName
@@ -98,8 +98,8 @@ func (handler *DCRedirectionHandlerImpl) DeprecateDomain(
 // DescribeDomain API call
 func (handler *DCRedirectionHandlerImpl) DescribeDomain(
 	ctx context.Context,
-	request *shared.DescribeDomainRequest,
-) (resp *shared.DescribeDomainResponse, retError error) {
+	request *types.DescribeDomainRequest,
+) (resp *types.DescribeDomainResponse, retError error) {
 
 	var cluster = handler.currentClusterName
 
@@ -114,8 +114,8 @@ func (handler *DCRedirectionHandlerImpl) DescribeDomain(
 // ListDomains API call
 func (handler *DCRedirectionHandlerImpl) ListDomains(
 	ctx context.Context,
-	request *shared.ListDomainsRequest,
-) (resp *shared.ListDomainsResponse, retError error) {
+	request *types.ListDomainsRequest,
+) (resp *types.ListDomainsResponse, retError error) {
 
 	var cluster = handler.currentClusterName
 
@@ -130,7 +130,7 @@ func (handler *DCRedirectionHandlerImpl) ListDomains(
 // RegisterDomain API call
 func (handler *DCRedirectionHandlerImpl) RegisterDomain(
 	ctx context.Context,
-	request *shared.RegisterDomainRequest,
+	request *types.RegisterDomainRequest,
 ) (retError error) {
 
 	var cluster = handler.currentClusterName
@@ -146,8 +146,8 @@ func (handler *DCRedirectionHandlerImpl) RegisterDomain(
 // UpdateDomain API call
 func (handler *DCRedirectionHandlerImpl) UpdateDomain(
 	ctx context.Context,
-	request *shared.UpdateDomainRequest,
-) (resp *shared.UpdateDomainResponse, retError error) {
+	request *types.UpdateDomainRequest,
+) (resp *types.UpdateDomainResponse, retError error) {
 
 	var cluster = handler.currentClusterName
 
