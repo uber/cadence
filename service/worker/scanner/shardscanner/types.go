@@ -240,7 +240,8 @@ type (
 
 	// DynamicParams is the dynamic config for scanner workflow.
 	DynamicParams struct {
-		Enabled                 dynamicconfig.BoolPropertyFn
+		ScannerEnabled          dynamicconfig.BoolPropertyFn
+		FixerEnabled            dynamicconfig.BoolPropertyFn
 		Concurrency             dynamicconfig.IntPropertyFn
 		PageSize                dynamicconfig.IntPropertyFn
 		BlobstoreFlushThreshold dynamicconfig.IntPropertyFn

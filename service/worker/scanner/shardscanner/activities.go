@@ -61,7 +61,7 @@ func ScannerConfigActivity(
 
 	result := ResolvedScannerWorkflowConfig{
 		GenericScannerConfig: GenericScannerConfig{
-			Enabled:                 dc.Enabled(),
+			Enabled:                 dc.ScannerEnabled(),
 			Concurrency:             dc.Concurrency(),
 			PageSize:                dc.PageSize(),
 			BlobstoreFlushThreshold: dc.BlobstoreFlushThreshold(),

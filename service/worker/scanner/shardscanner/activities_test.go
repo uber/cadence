@@ -284,7 +284,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 	}{
 		{
 			dynamicParams: &DynamicParams{
-				Enabled:                 dynamicconfig.GetBoolPropertyFn(true),
+				ScannerEnabled:          dynamicconfig.GetBoolPropertyFn(true),
 				Concurrency:             dynamicconfig.GetIntPropertyFn(10),
 				PageSize:                dynamicconfig.GetIntPropertyFn(100),
 				ActivityBatchSize:       dynamicconfig.GetIntPropertyFn(10),
@@ -310,7 +310,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 		},
 		{
 			dynamicParams: &DynamicParams{
-				Enabled:                 dynamicconfig.GetBoolPropertyFn(true),
+				ScannerEnabled:          dynamicconfig.GetBoolPropertyFn(true),
 				Concurrency:             dynamicconfig.GetIntPropertyFn(10),
 				PageSize:                dynamicconfig.GetIntPropertyFn(100),
 				ActivityBatchSize:       dynamicconfig.GetIntPropertyFn(10),
@@ -332,7 +332,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 		},
 		{
 			dynamicParams: &DynamicParams{
-				Enabled:                 dynamicconfig.GetBoolPropertyFn(true),
+				ScannerEnabled:          dynamicconfig.GetBoolPropertyFn(true),
 				Concurrency:             dynamicconfig.GetIntPropertyFn(10),
 				ActivityBatchSize:       dynamicconfig.GetIntPropertyFn(100),
 				PageSize:                dynamicconfig.GetIntPropertyFn(100),

@@ -128,7 +128,8 @@ func CurrentExecutionScannerConfig(dc *dynamicconfig.Collection) *shardscanner.S
 		FixerWFTypeName:   CurrentExecutionsFixerWFTypeName,
 		DynamicCollection: dc,
 		DynamicParams: shardscanner.DynamicParams{
-			Enabled:                 dc.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerEnabled, false),
+			ScannerEnabled:          dc.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerEnabled, false),
+			FixerEnabled:            dc.GetBoolProperty(dynamicconfig.CurrentExecutionFixerEnabled, false),
 			Concurrency:             dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerConcurrency, 25),
 			PageSize:                dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerPersistencePageSize, 1000),
 			BlobstoreFlushThreshold: dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerBlobstoreFlushThreshold, 100),

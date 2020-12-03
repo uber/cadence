@@ -162,7 +162,8 @@ func ConcreteExecutionScannerConfig(dc *dynamicconfig.Collection) *shardscanner.
 		ScannerWFTypeName: ConcreteExecutionsScannerWFTypeName,
 		FixerWFTypeName:   ConcreteExecutionsFixerWFTypeName,
 		DynamicParams: shardscanner.DynamicParams{
-			Enabled:                 dc.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerEnabled, false),
+			ScannerEnabled:          dc.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerEnabled, false),
+			FixerEnabled:            dc.GetBoolProperty(dynamicconfig.ConcreteExecutionFixerEnabled, false),
 			Concurrency:             dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerConcurrency, 25),
 			PageSize:                dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerPersistencePageSize, 1000),
 			BlobstoreFlushThreshold: dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerBlobstoreFlushThreshold, 100),

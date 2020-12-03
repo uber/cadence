@@ -28,7 +28,6 @@ import (
 	"go.uber.org/cadence/.gen/go/shared"
 	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/worker"
-	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common"
@@ -39,7 +38,6 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/cadence/service/worker/scanner/executions"
 	"github.com/uber/cadence/service/worker/scanner/shardscanner"
 )
 
@@ -165,9 +163,10 @@ func (s *Scanner) startShardScanner(
 ) (context.Context, []string) {
 	scannerContextKey := shardscanner.ScannerContextKey(config.ScannerWFTypeName)
 	fixerContextKey := shardscanner.ScannerContextKey(config.FixerWFTypeName)
-
+	workerTaskListNames := []string{}
 	backgroundActivityContext := context.WithValue(ctx, scannerContextKey, s.context)
-	if config.DynamicParams.Enabled() {
+
+	if config.DynamicParams.ScannerEnabled() {
 		backgroundActivityContext = context.WithValue(
 			backgroundActivityContext,
 			scannerContextKey,
@@ -180,19 +179,21 @@ func (s *Scanner) startShardScanner(
 			})
 	}
 
-	backgroundActivityContext = context.WithValue(
-		backgroundActivityContext,
-		fixerContextKey,
-		shardscanner.FixerContext{
-			Resource:   s.context.Resource,
-			Scope:      s.context.Resource.GetMetricsClient().Scope(metrics.ExecutionsFixerScope),
-			ContextKey: fixerContextKey,
-			Hooks:      config.FixerHooks(),
-		})
+	if config.DynamicParams.FixerEnabled() {
+		backgroundActivityContext = context.WithValue(
+			backgroundActivityContext,
+			fixerContextKey,
+			shardscanner.FixerContext{
+				Resource:   s.context.Resource,
+				Scope:      s.context.Resource.GetMetricsClient().Scope(metrics.ExecutionsFixerScope),
+				ContextKey: fixerContextKey,
+				Hooks:      config.FixerHooks(),
+			})
 
-	workerTaskListNames := []string{config.FixerTLName}
+		workerTaskListNames = append(workerTaskListNames, config.FixerTLName)
+	}
 
-	if config.DynamicParams.Enabled() {
+	if config.DynamicParams.ScannerEnabled() {
 		workerTaskListNames = append(workerTaskListNames, config.StartWorkflowOptions.TaskList)
 
 		go s.startWorkflowWithRetry(config.StartWorkflowOptions, config.ScannerWFTypeName, shardscanner.ScannerWorkflowParams{
@@ -205,20 +206,6 @@ func (s *Scanner) startShardScanner(
 		})
 	}
 
-	if fixerConfig.Enabled() {
-		backgroundActivityContext = context.WithValue(backgroundActivityContext, fixerContextKey, executions.FixerContext{
-			Resource:                   s.context.Resource,
-			Scope:                      s.context.Resource.GetMetricsClient().Scope(metrics.ExecutionsFixerScope),
-			FixerWorkflowDynamicConfig: fixerConfig,
-		})
-		workerTaskListNames = append(workerTaskListNames, fixerTaskListName)
-		go s.startWorkflowWithRetry(fixerStartWorkflowOptions, fixerWFTypeName, executions.FixerWorkflowParams{
-			ScanExecution: workflow.Execution{
-				ID: scannerStartWorkflowOptions.ID,
-			},
-			ScanType: scanType,
-		})
-	}
 	return backgroundActivityContext, workerTaskListNames
 }
 
