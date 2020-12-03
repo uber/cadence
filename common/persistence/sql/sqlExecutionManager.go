@@ -277,7 +277,7 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 		DecisionScheduleID:                 info.GetDecisionScheduleID(),
 		DecisionStartedID:                  info.GetDecisionStartedID(),
 		DecisionRequestID:                  info.GetDecisionRequestID(),
-		DecisionTimeout:                    common.SecondsToDuration(int64(info.GetDecisionTimeout())),
+		DecisionTimeout:                    info.GetDecisionTimeout(),
 		DecisionAttempt:                    info.GetDecisionAttempt(),
 		DecisionStartedTimestamp:           info.GetDecisionStartedTimestamp(),
 		DecisionScheduledTimestamp:         info.GetDecisionScheduledTimestamp(),
