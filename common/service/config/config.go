@@ -22,15 +22,14 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/uber/cadence/common"
 	"time"
-
-	"github.com/uber/cadence/common/auth"
 
 	"github.com/uber-go/tally/m3"
 	"github.com/uber-go/tally/prometheus"
 	"github.com/uber/ringpop-go/discovery"
 
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )

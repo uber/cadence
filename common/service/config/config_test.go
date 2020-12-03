@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"github.com/uber/cadence/common"
 )
 
@@ -53,9 +54,7 @@ func TestFillingDefaultRpcName(t *testing.T) {
 	cfg := &Config{
 		ClusterMetadata: &ClusterMetadata{
 			ClusterInformation: map[string]ClusterInformation{
-				"clusterA": {
-
-				},
+				"clusterA": {},
 			},
 		},
 	}
