@@ -814,7 +814,7 @@ func (m *sqlExecutionManager) ListConcreteExecutions(
 		filter = &sqlplugin.ExecutionsFilter{
 			ShardID:    m.shardID,
 			WorkflowID: "",
-			RunID:      sqlplugin.MustParseUUID(minUUID),
+			RunID:      serialization.MustParseUUID(minUUID),
 		}
 	}
 	filter.Size = request.PageSize
@@ -1407,9 +1407,9 @@ func (m *sqlExecutionManager) populateWorkflowMutableState(
 	}
 
 	if info.ParentDomainID != nil {
-		state.ExecutionInfo.ParentDomainID = sqlplugin.UUID(info.ParentDomainID).String()
+		state.ExecutionInfo.ParentDomainID = serialization.UUID(info.ParentDomainID).String()
 		state.ExecutionInfo.ParentWorkflowID = info.GetParentWorkflowID()
-		state.ExecutionInfo.ParentRunID = sqlplugin.UUID(info.ParentRunID).String()
+		state.ExecutionInfo.ParentRunID = serialization.UUID(info.ParentRunID).String()
 		state.ExecutionInfo.InitiatedID = info.GetInitiatedID()
 		if state.ExecutionInfo.CompletionEvent != nil {
 			state.ExecutionInfo.CompletionEvent = nil

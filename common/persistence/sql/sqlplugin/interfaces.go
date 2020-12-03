@@ -121,7 +121,7 @@ type (
 		DomainID   serialization.UUID
 		WorkflowID string
 		RunID      serialization.UUID
-    Size       int
+		Size       int
 	}
 
 	// CurrentExecutionsRow represents a row in current_executions table
