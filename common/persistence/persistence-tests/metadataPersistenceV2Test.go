@@ -35,7 +35,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	p "github.com/uber/cadence/common/persistence"
@@ -103,11 +102,11 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 	data := map[string]string{"k1": "v1"}
 	retention := int32(10)
 	emitMetric := true
-	historyArchivalStatus := gen.ArchivalStatusEnabled
+	historyArchivalStatus := types.ArchivalStatusEnabled
 	historyArchivalURI := "test://history/uri"
-	visibilityArchivalStatus := gen.ArchivalStatusEnabled
+	visibilityArchivalStatus := types.ArchivalStatusEnabled
 	visibilityArchivalURI := "test://visibility/uri"
-	badBinaries := gen.BadBinaries{map[string]*gen.BadBinaryInfo{}}
+	badBinaries := types.BadBinaries{map[string]*types.BadBinaryInfo{}}
 	isGlobalDomain := false
 	configVersion := int64(0)
 	failoverVersion := int64(0)
@@ -184,9 +183,9 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 		&p.DomainConfig{
 			Retention:                100,
 			EmitMetric:               false,
-			HistoryArchivalStatus:    gen.ArchivalStatusDisabled,
+			HistoryArchivalStatus:    types.ArchivalStatusDisabled,
 			HistoryArchivalURI:       "",
-			VisibilityArchivalStatus: gen.ArchivalStatusDisabled,
+			VisibilityArchivalStatus: types.ArchivalStatusDisabled,
 			VisibilityArchivalURI:    "",
 		},
 		&p.DomainReplicationConfig{},
@@ -213,9 +212,9 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	data := map[string]string{"k1": "v1"}
 	retention := int32(10)
 	emitMetric := true
-	historyArchivalStatus := gen.ArchivalStatusEnabled
+	historyArchivalStatus := types.ArchivalStatusEnabled
 	historyArchivalURI := "test://history/uri"
-	visibilityArchivalStatus := gen.ArchivalStatusEnabled
+	visibilityArchivalStatus := types.ArchivalStatusEnabled
 	visibilityArchivalURI := "test://visibility/uri"
 
 	clusterActive := "some random active cluster name"
@@ -236,9 +235,9 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	m.Nil(resp0)
 	m.Error(err0)
 	m.IsType(&types.EntityNotExistsError{}, err0)
-	testBinaries := gen.BadBinaries{
-		Binaries: map[string]*gen.BadBinaryInfo{
-			"abc": &gen.BadBinaryInfo{
+	testBinaries := types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
+			"abc": &types.BadBinaryInfo{
 				Reason:          common.StringPtr("test-reason"),
 				Operator:        common.StringPtr("test-operator"),
 				CreatedTimeNano: common.Int64Ptr(123),
@@ -293,7 +292,7 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	m.Equal(historyArchivalURI, resp2.Config.HistoryArchivalURI)
 	m.Equal(visibilityArchivalStatus, resp2.Config.VisibilityArchivalStatus)
 	m.Equal(visibilityArchivalURI, resp2.Config.VisibilityArchivalURI)
-	m.True(testBinaries.Equals(&resp2.Config.BadBinaries))
+	m.Equal(testBinaries, resp2.Config.BadBinaries)
 	m.Equal(clusterActive, resp2.ReplicationConfig.ActiveClusterName)
 	m.Equal(len(clusters), len(resp2.ReplicationConfig.Clusters))
 	for index := range clusters {
@@ -357,9 +356,9 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 	owner := "create-domain-test-owner"
 	retention := int32(10)
 	emitMetric := true
-	historyArchivalStatus := gen.ArchivalStatusEnabled
+	historyArchivalStatus := types.ArchivalStatusEnabled
 	historyArchivalURI := "test://history/uri"
-	visibilityArchivalStatus := gen.ArchivalStatusEnabled
+	visibilityArchivalStatus := types.ArchivalStatusEnabled
 	visibilityArchivalURI := "test://visibility/uri"
 
 	clusterActive := "some random active cluster name"
@@ -376,9 +375,9 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 		},
 	}
 
-	testBinaries := gen.BadBinaries{
-		Binaries: map[string]*gen.BadBinaryInfo{
-			"abc": &gen.BadBinaryInfo{
+	testBinaries := types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
+			"abc": &types.BadBinaryInfo{
 				Reason:          common.StringPtr("test-reason"),
 				Operator:        common.StringPtr("test-operator"),
 				CreatedTimeNano: common.Int64Ptr(123),
@@ -441,7 +440,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 	m.Equal(historyArchivalURI, resp.Config.HistoryArchivalURI)
 	m.Equal(visibilityArchivalStatus, resp.Config.VisibilityArchivalStatus)
 	m.Equal(visibilityArchivalURI, resp.Config.VisibilityArchivalURI)
-	m.True(testBinaries.Equals(&resp.Config.BadBinaries))
+	m.Equal(testBinaries, resp.Config.BadBinaries)
 	m.Equal(clusterActive, resp.ReplicationConfig.ActiveClusterName)
 	m.Equal(len(clusters), len(resp.ReplicationConfig.Clusters))
 	for index := range clusters {
@@ -473,11 +472,11 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 	data := map[string]string{"k1": "v1"}
 	retention := int32(10)
 	emitMetric := true
-	historyArchivalStatus := gen.ArchivalStatusEnabled
+	historyArchivalStatus := types.ArchivalStatusEnabled
 	historyArchivalURI := "test://history/uri"
-	visibilityArchivalStatus := gen.ArchivalStatusEnabled
+	visibilityArchivalStatus := types.ArchivalStatusEnabled
 	visibilityArchivalURI := "test://visibility/uri"
-	badBinaries := gen.BadBinaries{map[string]*gen.BadBinaryInfo{}}
+	badBinaries := types.BadBinaries{map[string]*types.BadBinaryInfo{}}
 
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
@@ -530,9 +529,9 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 	m.NoError(err)
 	notificationVersion := metadata.NotificationVersion
 
-	testBinaries := gen.BadBinaries{
-		Binaries: map[string]*gen.BadBinaryInfo{
-			"abc": &gen.BadBinaryInfo{
+	testBinaries := types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
+			"abc": &types.BadBinaryInfo{
 				Reason:          common.StringPtr("test-reason"),
 				Operator:        common.StringPtr("test-operator"),
 				CreatedTimeNano: common.Int64Ptr(123),
@@ -601,7 +600,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 	m.Equal(historyArchivalURI, resp3.Config.HistoryArchivalURI)
 	m.Equal(visibilityArchivalStatus, resp3.Config.VisibilityArchivalStatus)
 	m.Equal(visibilityArchivalURI, resp3.Config.VisibilityArchivalURI)
-	m.True(testBinaries.Equals(&resp3.Config.BadBinaries))
+	m.Equal(testBinaries, resp3.Config.BadBinaries)
 	m.Equal(clusterActive, resp3.ReplicationConfig.ActiveClusterName)
 	m.Equal(len(clusters), len(resp3.ReplicationConfig.Clusters))
 	for index := range clusters {
@@ -633,9 +632,9 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	data := map[string]string{"k1": "v1"}
 	retention := int32(10)
 	emitMetric := true
-	historyArchivalStatus := gen.ArchivalStatusEnabled
+	historyArchivalStatus := types.ArchivalStatusEnabled
 	historyArchivalURI := "test://history/uri"
-	visibilityArchivalStatus := gen.ArchivalStatusEnabled
+	visibilityArchivalStatus := types.ArchivalStatusEnabled
 	visibilityArchivalURI := "test://visibility/uri"
 
 	clusterActive := "some random active cluster name"
@@ -697,9 +696,9 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	updatedData := map[string]string{"k1": "v2"}
 	updatedRetention := int32(20)
 	updatedEmitMetric := false
-	updatedHistoryArchivalStatus := gen.ArchivalStatusDisabled
+	updatedHistoryArchivalStatus := types.ArchivalStatusDisabled
 	updatedHistoryArchivalURI := ""
-	updatedVisibilityArchivalStatus := gen.ArchivalStatusDisabled
+	updatedVisibilityArchivalStatus := types.ArchivalStatusDisabled
 	updatedVisibilityArchivalURI := ""
 
 	updateClusterActive := "other random active cluster name"
@@ -716,9 +715,9 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 			ClusterName: updateClusterStandby,
 		},
 	}
-	testBinaries := gen.BadBinaries{
-		Binaries: map[string]*gen.BadBinaryInfo{
-			"abc": &gen.BadBinaryInfo{
+	testBinaries := types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
+			"abc": &types.BadBinaryInfo{
 				Reason:          common.StringPtr("test-reason"),
 				Operator:        common.StringPtr("test-operator"),
 				CreatedTimeNano: common.Int64Ptr(123),
@@ -774,7 +773,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	m.Equal(updatedHistoryArchivalURI, resp4.Config.HistoryArchivalURI)
 	m.Equal(updatedVisibilityArchivalStatus, resp4.Config.VisibilityArchivalStatus)
 	m.Equal(updatedVisibilityArchivalURI, resp4.Config.VisibilityArchivalURI)
-	m.True(testBinaries.Equals(&resp4.Config.BadBinaries))
+	m.Equal(testBinaries, resp4.Config.BadBinaries)
 	m.Equal(updateClusterActive, resp4.ReplicationConfig.ActiveClusterName)
 	m.Equal(len(updateClusters), len(resp4.ReplicationConfig.Clusters))
 	for index := range clusters {
@@ -864,7 +863,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	m.Equal(updatedHistoryArchivalURI, resp6.Config.HistoryArchivalURI)
 	m.Equal(updatedVisibilityArchivalStatus, resp6.Config.VisibilityArchivalStatus)
 	m.Equal(updatedVisibilityArchivalURI, resp6.Config.VisibilityArchivalURI)
-	m.True(testBinaries.Equals(&resp6.Config.BadBinaries))
+	m.Equal(testBinaries, resp6.Config.BadBinaries)
 	m.Equal(updateClusterActive, resp6.ReplicationConfig.ActiveClusterName)
 	m.Equal(len(updateClusters), len(resp6.ReplicationConfig.Clusters))
 	for index := range clusters {
@@ -891,9 +890,9 @@ func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 	data := map[string]string{"k1": "v1"}
 	retention := 10
 	emitMetric := true
-	historyArchivalStatus := gen.ArchivalStatusEnabled
+	historyArchivalStatus := types.ArchivalStatusEnabled
 	historyArchivalURI := "test://history/uri"
-	visibilityArchivalStatus := gen.ArchivalStatusEnabled
+	visibilityArchivalStatus := types.ArchivalStatusEnabled
 	visibilityArchivalURI := "test://visibility/uri"
 
 	clusterActive := "some random active cluster name"
@@ -1029,18 +1028,18 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 		},
 	}
 
-	testBinaries1 := gen.BadBinaries{
-		Binaries: map[string]*gen.BadBinaryInfo{
-			"abc": &gen.BadBinaryInfo{
+	testBinaries1 := types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
+			"abc": &types.BadBinaryInfo{
 				Reason:          common.StringPtr("test-reason1"),
 				Operator:        common.StringPtr("test-operator1"),
 				CreatedTimeNano: common.Int64Ptr(123),
 			},
 		},
 	}
-	testBinaries2 := gen.BadBinaries{
-		Binaries: map[string]*gen.BadBinaryInfo{
-			"efg": &gen.BadBinaryInfo{
+	testBinaries2 := types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
+			"efg": &types.BadBinaryInfo{
 				Reason:          common.StringPtr("test-reason2"),
 				Operator:        common.StringPtr("test-operator2"),
 				CreatedTimeNano: common.Int64Ptr(456),
@@ -1061,9 +1060,9 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 			Config: &p.DomainConfig{
 				Retention:                109,
 				EmitMetric:               true,
-				HistoryArchivalStatus:    gen.ArchivalStatusEnabled,
+				HistoryArchivalStatus:    types.ArchivalStatusEnabled,
 				HistoryArchivalURI:       "test://history/uri",
-				VisibilityArchivalStatus: gen.ArchivalStatusEnabled,
+				VisibilityArchivalStatus: types.ArchivalStatusEnabled,
 				VisibilityArchivalURI:    "test://visibility/uri",
 				BadBinaries:              testBinaries1,
 			},
@@ -1088,9 +1087,9 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 			Config: &p.DomainConfig{
 				Retention:                326,
 				EmitMetric:               false,
-				HistoryArchivalStatus:    gen.ArchivalStatusDisabled,
+				HistoryArchivalStatus:    types.ArchivalStatusDisabled,
 				HistoryArchivalURI:       "",
-				VisibilityArchivalStatus: gen.ArchivalStatusDisabled,
+				VisibilityArchivalStatus: types.ArchivalStatusDisabled,
 				VisibilityArchivalURI:    "",
 				BadBinaries:              testBinaries2,
 			},

@@ -84,7 +84,7 @@ func TestAdminThriftHandler(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("GetDomainReplicationMessages", func(t *testing.T) {
-		h.EXPECT().GetDomainReplicationMessages(ctx, &replicator.GetDomainReplicationMessagesRequest{}).Return(&replicator.GetDomainReplicationMessagesResponse{}, internalErr).Times(1)
+		h.EXPECT().GetDomainReplicationMessages(ctx, &types.GetDomainReplicationMessagesRequest{}).Return(&types.GetDomainReplicationMessagesResponse{}, internalErr).Times(1)
 		resp, err := th.GetDomainReplicationMessages(ctx, &replicator.GetDomainReplicationMessagesRequest{})
 		assert.Equal(t, replicator.GetDomainReplicationMessagesResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
@@ -102,18 +102,18 @@ func TestAdminThriftHandler(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("MergeDLQMessages", func(t *testing.T) {
-		h.EXPECT().MergeDLQMessages(ctx, &replicator.MergeDLQMessagesRequest{}).Return(&replicator.MergeDLQMessagesResponse{}, internalErr).Times(1)
+		h.EXPECT().MergeDLQMessages(ctx, &types.MergeDLQMessagesRequest{}).Return(&types.MergeDLQMessagesResponse{}, internalErr).Times(1)
 		resp, err := th.MergeDLQMessages(ctx, &replicator.MergeDLQMessagesRequest{})
 		assert.Equal(t, replicator.MergeDLQMessagesResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("PurgeDLQMessages", func(t *testing.T) {
-		h.EXPECT().PurgeDLQMessages(ctx, &replicator.PurgeDLQMessagesRequest{}).Return(internalErr).Times(1)
+		h.EXPECT().PurgeDLQMessages(ctx, &types.PurgeDLQMessagesRequest{}).Return(internalErr).Times(1)
 		err := th.PurgeDLQMessages(ctx, &replicator.PurgeDLQMessagesRequest{})
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("ReadDLQMessages", func(t *testing.T) {
-		h.EXPECT().ReadDLQMessages(ctx, &replicator.ReadDLQMessagesRequest{}).Return(&replicator.ReadDLQMessagesResponse{}, internalErr).Times(1)
+		h.EXPECT().ReadDLQMessages(ctx, &types.ReadDLQMessagesRequest{}).Return(&types.ReadDLQMessagesResponse{}, internalErr).Times(1)
 		resp, err := th.ReadDLQMessages(ctx, &replicator.ReadDLQMessagesRequest{})
 		assert.Equal(t, replicator.ReadDLQMessagesResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)

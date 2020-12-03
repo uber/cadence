@@ -25,10 +25,8 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/types/mapper/thrift"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -187,18 +185,18 @@ func (m *metadataManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalD
 		return InternalDomainConfig{}, nil
 	}
 	if c.BadBinaries.Binaries == nil {
-		c.BadBinaries.Binaries = map[string]*shared.BadBinaryInfo{}
+		c.BadBinaries.Binaries = map[string]*types.BadBinaryInfo{}
 	}
-	badBinaries, err := m.serializer.SerializeBadBinaries(thrift.ToBadBinaries(&c.BadBinaries), common.EncodingTypeThriftRW)
+	badBinaries, err := m.serializer.SerializeBadBinaries(&c.BadBinaries, common.EncodingTypeThriftRW)
 	if err != nil {
 		return InternalDomainConfig{}, err
 	}
 	return InternalDomainConfig{
 		Retention:                common.DaysToDuration(c.Retention),
 		EmitMetric:               c.EmitMetric,
-		HistoryArchivalStatus:    *thrift.ToArchivalStatus(&c.HistoryArchivalStatus),
+		HistoryArchivalStatus:    c.HistoryArchivalStatus,
 		HistoryArchivalURI:       c.HistoryArchivalURI,
-		VisibilityArchivalStatus: *thrift.ToArchivalStatus(&c.VisibilityArchivalStatus),
+		VisibilityArchivalStatus: c.VisibilityArchivalStatus,
 		VisibilityArchivalURI:    c.VisibilityArchivalURI,
 		BadBinaries:              badBinaries,
 	}, nil
@@ -208,20 +206,19 @@ func (m *metadataManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig)
 	if ic == nil {
 		return DomainConfig{}, nil
 	}
-	internalBadBinaries, err := m.serializer.DeserializeBadBinaries(ic.BadBinaries)
+	badBinaries, err := m.serializer.DeserializeBadBinaries(ic.BadBinaries)
 	if err != nil {
 		return DomainConfig{}, err
 	}
-	badBinaries := thrift.FromBadBinaries(internalBadBinaries)
 	if badBinaries.Binaries == nil {
-		badBinaries.Binaries = map[string]*shared.BadBinaryInfo{}
+		badBinaries.Binaries = map[string]*types.BadBinaryInfo{}
 	}
 	return DomainConfig{
 		Retention:                common.DurationToDays(ic.Retention),
 		EmitMetric:               ic.EmitMetric,
-		HistoryArchivalStatus:    *thrift.FromArchivalStatus(&ic.HistoryArchivalStatus),
+		HistoryArchivalStatus:    ic.HistoryArchivalStatus,
 		HistoryArchivalURI:       ic.HistoryArchivalURI,
-		VisibilityArchivalStatus: *thrift.FromArchivalStatus(&ic.VisibilityArchivalStatus),
+		VisibilityArchivalStatus: ic.VisibilityArchivalStatus,
 		VisibilityArchivalURI:    ic.VisibilityArchivalURI,
 		BadBinaries:              *badBinaries,
 	}, nil
