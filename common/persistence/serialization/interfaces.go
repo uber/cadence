@@ -98,9 +98,9 @@ type (
 
 	// WorkflowExecutionInfo blob in a serialization agnostic format
 	WorkflowExecutionInfo struct {
-		ParentDomainID                     *string
+		ParentDomainID                     UUID
 		ParentWorkflowID                   *string
-		ParentRunID                        *string
+		ParentRunID                        UUID
 		InitiatedID                        *int64
 		CompletionEventBatchID             *int64
 		CompletionEvent                    []byte
@@ -201,7 +201,7 @@ type (
 		InitiatedEvent         []byte
 		InitiatedEventEncoding *string
 		StartedWorkflowID      *string
-		StartedRunID           *string
+		StartedRunID           UUID
 		StartedEvent           []byte
 		StartedEventEncoding   *string
 		CreateRequestID        *string
@@ -238,7 +238,7 @@ type (
 	// TaskInfo blob in a serialization agnostic format
 	TaskInfo struct {
 		WorkflowID       *string
-		RunID            *string
+		RunID            UUID
 		ScheduleID       *int64
 		ExpiryTimestamp  *time.Time
 		CreatedTimestamp *time.Time
@@ -254,13 +254,13 @@ type (
 
 	// TransferTaskInfo blob in a serialization agnostic format
 	TransferTaskInfo struct {
-		DomainID                *string
+		DomainID                UUID
 		WorkflowID              *string
-		RunID                   *string
+		RunID                   UUID
 		TaskType                *int16
-		TargetDomainID          *string
+		TargetDomainID          UUID
 		TargetWorkflowID        *string
-		TargetRunID             *string
+		TargetRunID             UUID
 		TaskList                *string
 		TargetChildWorkflowOnly *bool
 		ScheduleID              *int64
@@ -270,9 +270,9 @@ type (
 
 	// TimerTaskInfo blob in a serialization agnostic format
 	TimerTaskInfo struct {
-		DomainID        *string
+		DomainID        UUID
 		WorkflowID      *string
-		RunID           *string
+		RunID           UUID
 		TaskType        *int16
 		TimeoutType     *int16
 		Version         *int64
@@ -282,9 +282,9 @@ type (
 
 	// ReplicationTaskInfo blob in a serialization agnostic format
 	ReplicationTaskInfo struct {
-		DomainID                *string
+		DomainID                UUID
 		WorkflowID              *string
-		RunID                   *string
+		RunID                   UUID
 		TaskType                *int16
 		Version                 *int64
 		FirstEventID            *int64
