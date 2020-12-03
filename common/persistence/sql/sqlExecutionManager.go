@@ -243,6 +243,16 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 		}
 	}
 
+	if len(executions) == 0 {
+		return nil, &types.EntityNotExistsError{
+			Message: fmt.Sprintf(
+				"Workflow execution not found.  WorkflowId: %v, RunId: %v",
+				request.Execution.GetWorkflowID(),
+				request.Execution.GetRunID(),
+			),
+		}
+	}
+
 	if len(executions) != 1 {
 		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("GetWorkflowExecution return more than one results."),
@@ -792,12 +802,12 @@ func (m *sqlExecutionManager) ListConcreteExecutions(
 	request *p.ListConcreteExecutionsRequest,
 ) (*p.InternalListConcreteExecutionsResponse, error) {
 
-	var filter *sqlplugin.ExecutionsFilter
+	filter := &sqlplugin.ExecutionsFilter{}
 	if len(request.PageToken) > 0 {
-		err := gobDeserialize(request.PageToken, filter)
+		err := gobDeserialize(request.PageToken, &filter)
 		if err != nil {
 			return nil, &types.InternalServiceError{
-				Message: fmt.Sprintf("ListConcreteExecutions: failed. Error: %v", err),
+				Message: fmt.Sprintf("ListConcreteExecutions failed. Error: %v", err),
 			}
 		}
 	} else {
@@ -815,8 +825,12 @@ func (m *sqlExecutionManager) ListConcreteExecutions(
 			return &p.InternalListConcreteExecutionsResponse{}, nil
 		}
 		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListConcreteExecutions: failed. Error: %v", err),
+			Message: fmt.Sprintf("ListConcreteExecutions failed. Error: %v", err),
 		}
+	}
+
+	if len(executions) == 0 {
+		return &p.InternalListConcreteExecutionsResponse{}, nil
 	}
 	lastExecution := executions[len(executions)-1]
 	nextFilter := &sqlplugin.ExecutionsFilter{
@@ -827,13 +841,13 @@ func (m *sqlExecutionManager) ListConcreteExecutions(
 	token, err := gobSerialize(nextFilter)
 	if err != nil {
 		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListConcreteExecutions: failed. Error: %v", err),
+			Message: fmt.Sprintf("ListConcreteExecutions failed. Error: %v", err),
 		}
 	}
 	concreteExecutions, err := m.populateInternalListConcreteExecutions(executions)
 	if err != nil {
 		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListConcreteExecutions: failed. Error: %v", err),
+			Message: fmt.Sprintf("ListConcreteExecutions failed. Error: %v", err),
 		}
 	}
 

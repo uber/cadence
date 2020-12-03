@@ -833,8 +833,8 @@ func newDBCommands() []cli.Command {
 			},
 		},
 		{
-			Name:  "scan-unsupport",
-			Usage: "scan executions in database and detect corruptions",
+			Name:  "unsupported-workflow",
+			Usage: "use this command when upgrade the Cadence server from version less than 0.16.0. This scan database and detect unsupported workflow type.",
 			Flags: append(getDBFlags(),
 				cli.IntFlag{
 					Name:     FlagNumberOfShards,
@@ -853,7 +853,7 @@ func newDBCommands() []cli.Command {
 			),
 
 			Action: func(c *cli.Context) {
-				AdminDBScan2DC(c)
+				AdminDBScanUnsupportedWorkflow(c)
 			},
 		},
 		{

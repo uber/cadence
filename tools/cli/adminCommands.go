@@ -319,6 +319,8 @@ func connectToSQL(c *cli.Context) sqlplugin.DB {
 	if !c.IsSet(FlagDBPort) {
 		ErrorAndExit("sql port is required", nil)
 	}
+	encodingType := c.String(FlagEncodingType)
+	decodingTypesStr := c.StringSlice(FlagDecodingTypes)
 
 	sqlConfig := &config.SQL{
 		ConnectAddr: net.JoinHostPort(
@@ -329,8 +331,8 @@ func connectToSQL(c *cli.Context) sqlplugin.DB {
 		User:          c.String(FlagUsername),
 		Password:      c.String(FlagPassword),
 		DatabaseName:  getRequiredOption(c, FlagDatabaseName),
-		EncodingType:  c.String(FlagEncodingType),
-		DecodingTypes: c.StringSlice(FlagDecodingTypes),
+		EncodingType:  encodingType,
+		DecodingTypes: decodingTypesStr,
 	}
 
 	if c.Bool(FlagEnableTLS) {

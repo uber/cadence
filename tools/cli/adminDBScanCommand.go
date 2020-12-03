@@ -164,7 +164,7 @@ func checkExecution(
 	return execution, invariant.NewInvariantManager(ivs).RunChecks(ctx, execution)
 }
 
-func AdminDBScan2DC(c *cli.Context) {
+func AdminDBScanUnsupportedWorkflow(c *cli.Context) {
 	numberOfShards := c.Int(FlagNumberOfShards)
 	rps := c.Int(FlagRPS)
 	outputFile := getOutputFile(c.String(FlagOutputFilename))
@@ -211,7 +211,12 @@ func listExecutionsByShardID(
 		execution := result.(*persistence.ListConcreteExecutionsEntity)
 		executionInfo := execution.ExecutionInfo
 		if executionInfo != nil && executionInfo.CloseStatus == 0 && execution.VersionHistories == nil {
-			outStr := fmt.Sprintf("DomainID: %v, WorkflowID: %v, RunID: %v.\n", executionInfo.DomainID, executionInfo.WorkflowID, executionInfo.RunID)
+
+			outStr := fmt.Sprintf("cadence --address <host>:<port> --domain <%v> workflow reset --wid %v --rid %v --reset_type LastDecisionCompleted --reason 'release 0.16 upgrade'\n",
+				executionInfo.DomainID,
+				executionInfo.WorkflowID,
+				executionInfo.RunID,
+			)
 			if _, err = outputFile.WriteString(outStr); err != nil {
 				ErrorAndExit("Failed to write data to file", err)
 			}
