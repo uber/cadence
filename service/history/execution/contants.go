@@ -21,10 +21,10 @@
 package execution
 
 import (
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 // TODO: creates a separate package for all test constants
@@ -43,7 +43,7 @@ var testGlobalDomainEntry = cache.NewGlobalDomainCacheEntryForTest(
 	&persistence.DomainInfo{ID: testDomainID, Name: testDomainName},
 	&persistence.DomainConfig{
 		Retention:                1,
-		VisibilityArchivalStatus: shared.ArchivalStatusEnabled,
+		VisibilityArchivalStatus: types.ArchivalStatusEnabled,
 		VisibilityArchivalURI:    "test:///visibility/archival",
 	},
 	&persistence.DomainReplicationConfig{

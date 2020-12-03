@@ -31,7 +31,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
@@ -95,8 +94,8 @@ func (s *domainCacheSuite) TestListDomain() {
 		Info: &persistence.DomainInfo{ID: uuid.New(), Name: "some random domain name", Data: make(map[string]string)},
 		Config: &persistence.DomainConfig{
 			Retention: 1,
-			BadBinaries: shared.BadBinaries{
-				Binaries: map[string]*shared.BadBinaryInfo{},
+			BadBinaries: types.BadBinaries{
+				Binaries: map[string]*types.BadBinaryInfo{},
 			}},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: cluster.TestCurrentClusterName,
@@ -115,8 +114,8 @@ func (s *domainCacheSuite) TestListDomain() {
 		Info: &persistence.DomainInfo{ID: uuid.New(), Name: "another random domain name", Data: make(map[string]string)},
 		Config: &persistence.DomainConfig{
 			Retention: 2,
-			BadBinaries: shared.BadBinaries{
-				Binaries: map[string]*shared.BadBinaryInfo{},
+			BadBinaries: types.BadBinaries{
+				Binaries: map[string]*types.BadBinaryInfo{},
 			}},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: cluster.TestAlternativeClusterName,
@@ -135,8 +134,8 @@ func (s *domainCacheSuite) TestListDomain() {
 		Info: &persistence.DomainInfo{ID: uuid.New(), Name: "yet another random domain name", Data: make(map[string]string)},
 		Config: &persistence.DomainConfig{
 			Retention: 3,
-			BadBinaries: shared.BadBinaries{
-				Binaries: map[string]*shared.BadBinaryInfo{},
+			BadBinaries: types.BadBinaries{
+				Binaries: map[string]*types.BadBinaryInfo{},
 			}},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: cluster.TestAlternativeClusterName,
@@ -205,8 +204,8 @@ func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByName() {
 		Info: &persistence.DomainInfo{ID: uuid.New(), Name: "some random domain name", Data: make(map[string]string)},
 		Config: &persistence.DomainConfig{
 			Retention: 1,
-			BadBinaries: shared.BadBinaries{
-				Binaries: map[string]*shared.BadBinaryInfo{
+			BadBinaries: types.BadBinaries{
+				Binaries: map[string]*types.BadBinaryInfo{
 					"abc": {
 						Reason:          common.StringPtr("test reason"),
 						Operator:        common.StringPtr("test operator"),
@@ -249,8 +248,8 @@ func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByID() {
 		Info: &persistence.DomainInfo{ID: uuid.New(), Name: "some random domain name", Data: make(map[string]string)},
 		Config: &persistence.DomainConfig{
 			Retention: 1,
-			BadBinaries: shared.BadBinaries{
-				Binaries: map[string]*shared.BadBinaryInfo{},
+			BadBinaries: types.BadBinaries{
+				Binaries: map[string]*types.BadBinaryInfo{},
 			},
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
@@ -286,8 +285,8 @@ func (s *domainCacheSuite) TestRegisterCallback_CatchUp() {
 		Info: &persistence.DomainInfo{ID: uuid.New(), Name: "some random domain name", Data: make(map[string]string)},
 		Config: &persistence.DomainConfig{
 			Retention: 1,
-			BadBinaries: shared.BadBinaries{
-				Binaries: map[string]*shared.BadBinaryInfo{},
+			BadBinaries: types.BadBinaries{
+				Binaries: map[string]*types.BadBinaryInfo{},
 			}},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: cluster.TestCurrentClusterName,
@@ -308,8 +307,8 @@ func (s *domainCacheSuite) TestRegisterCallback_CatchUp() {
 		Info: &persistence.DomainInfo{ID: uuid.New(), Name: "another random domain name", Data: make(map[string]string)},
 		Config: &persistence.DomainConfig{
 			Retention: 2,
-			BadBinaries: shared.BadBinaries{
-				Binaries: map[string]*shared.BadBinaryInfo{},
+			BadBinaries: types.BadBinaries{
+				Binaries: map[string]*types.BadBinaryInfo{},
 			}},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: cluster.TestAlternativeClusterName,
@@ -369,8 +368,8 @@ func (s *domainCacheSuite) TestUpdateCache_TriggerCallBack() {
 		Info: &persistence.DomainInfo{ID: uuid.New(), Name: "some random domain name", Data: make(map[string]string)},
 		Config: &persistence.DomainConfig{
 			Retention: 1,
-			BadBinaries: shared.BadBinaries{
-				Binaries: map[string]*shared.BadBinaryInfo{},
+			BadBinaries: types.BadBinaries{
+				Binaries: map[string]*types.BadBinaryInfo{},
 			}},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: cluster.TestCurrentClusterName,
@@ -391,8 +390,8 @@ func (s *domainCacheSuite) TestUpdateCache_TriggerCallBack() {
 		Info: &persistence.DomainInfo{ID: uuid.New(), Name: "another random domain name", Data: make(map[string]string)},
 		Config: &persistence.DomainConfig{
 			Retention: 2,
-			BadBinaries: shared.BadBinaries{
-				Binaries: map[string]*shared.BadBinaryInfo{},
+			BadBinaries: types.BadBinaries{
+				Binaries: map[string]*types.BadBinaryInfo{},
 			}},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: cluster.TestAlternativeClusterName,
@@ -508,8 +507,8 @@ func (s *domainCacheSuite) TestGetTriggerListAndUpdateCache_ConcurrentAccess() {
 		Info: &persistence.DomainInfo{ID: id, Name: "some random domain name", Data: make(map[string]string)},
 		Config: &persistence.DomainConfig{
 			Retention: 1,
-			BadBinaries: shared.BadBinaries{
-				Binaries: map[string]*shared.BadBinaryInfo{},
+			BadBinaries: types.BadBinaries{
+				Binaries: map[string]*types.BadBinaryInfo{},
 			}},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: cluster.TestCurrentClusterName,
@@ -619,8 +618,8 @@ func Test_IsSampledForLongerRetentionEnabled(t *testing.T) {
 		},
 		config: &persistence.DomainConfig{
 			Retention: 7,
-			BadBinaries: shared.BadBinaries{
-				Binaries: map[string]*shared.BadBinaryInfo{},
+			BadBinaries: types.BadBinaries{
+				Binaries: map[string]*types.BadBinaryInfo{},
 			},
 		},
 	}
@@ -638,8 +637,8 @@ func Test_IsSampledForLongerRetention(t *testing.T) {
 		},
 		config: &persistence.DomainConfig{
 			Retention: 7,
-			BadBinaries: shared.BadBinaries{
-				Binaries: map[string]*shared.BadBinaryInfo{},
+			BadBinaries: types.BadBinaries{
+				Binaries: map[string]*types.BadBinaryInfo{},
 			},
 		},
 	}
