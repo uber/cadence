@@ -30,7 +30,6 @@ import (
 
 	"github.com/uber/cadence/common/persistence/serialization"
 
-	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
@@ -853,7 +852,7 @@ func createTransferTasks(
 
 	transferTasksRows := make([]sqlplugin.TransferTasksRow, len(transferTasks))
 	for i, task := range transferTasks {
-		info := &sqlblobs.TransferTaskInfo{
+		info := &serialization.TransferTaskInfo{
 			DomainID:         domainID,
 			WorkflowID:       &workflowID,
 			RunID:            runID,
@@ -913,7 +912,7 @@ func createTransferTasks(
 
 		info.TaskType = common.Int16Ptr(int16(task.GetType()))
 		info.Version = common.Int64Ptr(task.GetVersion())
-		info.VisibilityTimestampNanos = common.Int64Ptr(task.GetVisibilityTimestamp().UnixNano())
+		info.VisibilityTimestamp = common.TimePtr(task.GetVisibilityTimestamp())
 
 		blob, err := parser.TransferTaskInfoToBlob(info)
 		if err != nil {
@@ -997,7 +996,7 @@ func createReplicationTasks(
 			}
 		}
 
-		blob, err := parser.ReplicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
+		blob, err := parser.ReplicationTaskInfoToBlob(&serialization.ReplicationTaskInfo{
 			DomainID:                domainID,
 			WorkflowID:              &workflowID,
 			RunID:                   runID,
@@ -1010,7 +1009,7 @@ func createReplicationTasks(
 			NewRunEventStoreVersion: common.Int32Ptr(p.EventStoreVersion),
 			BranchToken:             branchToken,
 			NewRunBranchToken:       newRunBranchToken,
-			CreationTime:            common.Int64Ptr(task.GetVisibilityTimestamp().UnixNano()),
+			CreationTimestamp:            common.TimePtr(task.GetVisibilityTimestamp()),
 		})
 		if err != nil {
 			return err
@@ -1062,7 +1061,7 @@ func createTimerTasks(
 	timerTasksRows := make([]sqlplugin.TimerTasksRow, len(timerTasks))
 
 	for i, task := range timerTasks {
-		info := &sqlblobs.TimerTaskInfo{}
+		info := &serialization.TimerTaskInfo{}
 		switch t := task.(type) {
 		case *p.DecisionTimeoutTask:
 			info.EventID = &t.EventID
@@ -1329,31 +1328,31 @@ func buildExecutionRow(
 	parser serialization.Parser,
 ) (row *sqlplugin.ExecutionsRow, err error) {
 
-	info := &sqlblobs.WorkflowExecutionInfo{
+	info := &serialization.WorkflowExecutionInfo{
 		TaskList:                                &executionInfo.TaskList,
 		WorkflowTypeName:                        &executionInfo.WorkflowTypeName,
-		WorkflowTimeoutSeconds:                  common.Int32Ptr(int32(executionInfo.WorkflowTimeout.Seconds())),
-		DecisionTaskTimeoutSeconds:              common.Int32Ptr(int32(executionInfo.DecisionStartToCloseTimeout.Seconds())),
+		WorkflowTimeout:                  &executionInfo.WorkflowTimeout,
+		DecisionTaskTimeout:              &executionInfo.DecisionStartToCloseTimeout,
 		ExecutionContext:                        executionInfo.ExecutionContext,
 		State:                                   common.Int32Ptr(int32(executionInfo.State)),
 		CloseStatus:                             common.Int32Ptr(int32(executionInfo.CloseStatus)),
 		LastFirstEventID:                        &executionInfo.LastFirstEventID,
 		LastEventTaskID:                         &executionInfo.LastEventTaskID,
 		LastProcessedEvent:                      &executionInfo.LastProcessedEvent,
-		StartTimeNanos:                          common.Int64Ptr(executionInfo.StartTimestamp.UnixNano()),
-		LastUpdatedTimeNanos:                    common.Int64Ptr(executionInfo.LastUpdatedTimestamp.UnixNano()),
+		StartTimestamp:                          &executionInfo.StartTimestamp,
+		LastUpdatedTimestamp:                    &executionInfo.LastUpdatedTimestamp,
 		CreateRequestID:                         &executionInfo.CreateRequestID,
 		DecisionVersion:                         &executionInfo.DecisionVersion,
 		DecisionScheduleID:                      &executionInfo.DecisionScheduleID,
 		DecisionStartedID:                       &executionInfo.DecisionStartedID,
 		DecisionRequestID:                       &executionInfo.DecisionRequestID,
-		DecisionTimeout:                         common.Int32Ptr(int32(executionInfo.DecisionTimeout.Seconds())),
+		DecisionTimeout:                         &executionInfo.DecisionTimeout,
 		DecisionAttempt:                         &executionInfo.DecisionAttempt,
-		DecisionStartedTimestampNanos:           common.Int64Ptr(executionInfo.DecisionStartedTimestamp.UnixNano()),
-		DecisionScheduledTimestampNanos:         common.Int64Ptr(executionInfo.DecisionScheduledTimestamp.UnixNano()),
-		DecisionOriginalScheduledTimestampNanos: common.Int64Ptr(executionInfo.DecisionOriginalScheduledTimestamp.UnixNano()),
+		DecisionStartedTimestamp:           &executionInfo.DecisionStartedTimestamp,
+		DecisionScheduledTimestamp:         &executionInfo.DecisionScheduledTimestamp,
+		DecisionOriginalScheduledTimestamp: &executionInfo.DecisionOriginalScheduledTimestamp,
 		StickyTaskList:                          &executionInfo.StickyTaskList,
-		StickyScheduleToStartTimeout:            common.Int64Ptr(int64(executionInfo.StickyScheduleToStartTimeout.Seconds())),
+		StickyScheduleToStartTimeout:            &executionInfo.StickyScheduleToStartTimeout,
 		ClientLibraryVersion:                    &executionInfo.ClientLibraryVersion,
 		ClientFeatureVersion:                    &executionInfo.ClientFeatureVersion,
 		ClientImpl:                              &executionInfo.ClientImpl,
@@ -1363,12 +1362,12 @@ func buildExecutionRow(
 		CompletionEventBatchID:                  &executionInfo.CompletionEventBatchID,
 		HasRetryPolicy:                          &executionInfo.HasRetryPolicy,
 		RetryAttempt:                            common.Int64Ptr(int64(executionInfo.Attempt)),
-		RetryInitialIntervalSeconds:             common.Int32Ptr(int32(executionInfo.InitialInterval.Seconds())),
+		RetryInitialInterval:             &executionInfo.InitialInterval,
 		RetryBackoffCoefficient:                 &executionInfo.BackoffCoefficient,
-		RetryMaximumIntervalSeconds:             common.Int32Ptr(int32(executionInfo.MaximumInterval.Seconds())),
+		RetryMaximumInterval:             &executionInfo.MaximumInterval,
 		RetryMaximumAttempts:                    &executionInfo.MaximumAttempts,
-		RetryExpirationSeconds:                  common.Int32Ptr(int32(executionInfo.ExpirationSeconds.Seconds())),
-		RetryExpirationTimeNanos:                common.Int64Ptr(executionInfo.ExpirationTime.UnixNano()),
+		RetryExpiration:                  &executionInfo.ExpirationSeconds,
+		RetryExpirationTimestamp:                &executionInfo.ExpirationTime,
 		RetryNonRetryableErrors:                 executionInfo.NonRetriableErrors,
 		EventStoreVersion:                       common.Int32Ptr(p.EventStoreVersion),
 		EventBranchToken:                        executionInfo.BranchToken,

@@ -29,7 +29,6 @@ import (
 
 	"github.com/dgryski/go-farm"
 
-	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
@@ -81,11 +80,11 @@ func (m *sqlTaskManager) LeaseTaskList(
 		TaskType: common.Int64Ptr(int64(request.TaskType))})
 	if err != nil {
 		if err == sql.ErrNoRows {
-			tlInfo := &sqlblobs.TaskListInfo{
+			tlInfo := &serialization.TaskListInfo{
 				AckLevel:         &ackLevel,
 				Kind:             common.Int16Ptr(int16(request.TaskListKind)),
-				ExpiryTimeNanos:  common.Int64Ptr(0),
-				LastUpdatedNanos: common.Int64Ptr(time.Now().UnixNano()),
+				ExpiryTimestamp:  common.TimePtr(time.Unix(0,0)),
+				LastUpdated: common.TimePtr(time.Now()),
 			}
 			blob, err := m.parser.TaskListInfoToBlob(tlInfo)
 			if err != nil {
@@ -149,7 +148,7 @@ func (m *sqlTaskManager) LeaseTaskList(
 			return err1
 		}
 		now := time.Now()
-		tlInfo.LastUpdatedNanos = common.Int64Ptr(now.UnixNano())
+		tlInfo.LastUpdated = common.TimePtr(now)
 		blob, err1 := m.parser.TaskListInfoToBlob(tlInfo)
 		if err1 != nil {
 			return err1
@@ -202,14 +201,14 @@ func (m *sqlTaskManager) UpdateTaskList(
 ) (*persistence.UpdateTaskListResponse, error) {
 	shardID := m.shardID(request.TaskListInfo.DomainID, request.TaskListInfo.Name)
 	domainID := serialization.MustParseUUID(request.TaskListInfo.DomainID)
-	tlInfo := &sqlblobs.TaskListInfo{
+	tlInfo := &serialization.TaskListInfo{
 		AckLevel:         common.Int64Ptr(request.TaskListInfo.AckLevel),
 		Kind:             common.Int16Ptr(int16(request.TaskListInfo.Kind)),
-		ExpiryTimeNanos:  common.Int64Ptr(0),
-		LastUpdatedNanos: common.TimeNowNanosPtr(),
+		ExpiryTimestamp:  common.TimePtr(time.Unix(0,0)),
+		LastUpdated: common.TimePtr(time.Now()),
 	}
 	if request.TaskListInfo.Kind == persistence.TaskListKindSticky {
-		tlInfo.ExpiryTimeNanos = common.Int64Ptr(stickyTaskListExpiry().UnixNano())
+		tlInfo.ExpiryTimestamp = common.TimePtr(stickyTaskListExpiry())
 	}
 
 	var resp *persistence.UpdateTaskListResponse
@@ -328,8 +327,8 @@ func (m *sqlTaskManager) ListTaskList(
 		resp.Items[i].RangeID = rows[i].RangeID
 		resp.Items[i].Kind = int(info.GetKind())
 		resp.Items[i].AckLevel = info.GetAckLevel()
-		resp.Items[i].Expiry = time.Unix(0, info.GetExpiryTimeNanos())
-		resp.Items[i].LastUpdated = time.Unix(0, info.GetLastUpdatedNanos())
+		resp.Items[i].Expiry = info.GetExpiryTimestamp()
+		resp.Items[i].LastUpdated = info.GetLastUpdated()
 	}
 
 	return resp, nil
@@ -388,12 +387,12 @@ func (m *sqlTaskManager) CreateTasks(
 			}
 			expiryTime = time.Now().Add(ttl)
 		}
-		blob, err := m.parser.TaskInfoToBlob(&sqlblobs.TaskInfo{
+		blob, err := m.parser.TaskInfoToBlob(&serialization.TaskInfo{
 			WorkflowID:       &v.Data.WorkflowID,
 			RunID:            serialization.MustParseUUID(v.Data.RunID),
 			ScheduleID:       &v.Data.ScheduleID,
-			ExpiryTimeNanos:  common.Int64Ptr(expiryTime.UnixNano()),
-			CreatedTimeNanos: common.Int64Ptr(time.Now().UnixNano()),
+			ExpiryTimestamp:  &expiryTime,
+			CreatedTimestamp: common.TimePtr(time.Now()),
 		})
 		if err != nil {
 			return nil, err
@@ -473,11 +472,11 @@ func (m *sqlTaskManager) GetTasks(
 		tasks[i] = &persistence.InternalTaskInfo{
 			DomainID:    request.DomainID,
 			WorkflowID:  info.GetWorkflowID(),
-			RunID:       serialization.UUID(info.RunID).String(),
+			RunID:       info.RunID.String(),
 			TaskID:      v.TaskID,
 			ScheduleID:  info.GetScheduleID(),
-			Expiry:      time.Unix(0, info.GetExpiryTimeNanos()),
-			CreatedTime: time.Unix(0, info.GetCreatedTimeNanos()),
+			Expiry:      info.GetExpiryTimestamp(),
+			CreatedTime: info.GetCreatedTimestamp(),
 		}
 	}
 

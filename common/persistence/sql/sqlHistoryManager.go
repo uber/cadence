@@ -24,13 +24,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-
-	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
+	"time"
 
 	"github.com/uber/cadence/common/persistence/serialization"
+	"github.com/uber/cadence/common/types"
 
-	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
@@ -88,10 +86,10 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 			ancestors = append(ancestors, anc)
 		}
 
-		treeInfo := &sqlblobs.HistoryTreeInfo{
-			Ancestors:        thrift.FromHistoryBranchRangeArray(ancestors),
+		treeInfo := &serialization.HistoryTreeInfo{
+			Ancestors:        ancestors,
 			Info:             &request.Info,
-			CreatedTimeNanos: common.TimeNowNanosPtr(),
+			CreatedTimestamp: common.TimePtr(time.Now()),
 		}
 
 		blob, err := m.parser.HistoryTreeInfoToBlob(treeInfo)
@@ -329,10 +327,10 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 			Ancestors: newAncestors,
 		}}
 
-	treeInfo := &sqlblobs.HistoryTreeInfo{
-		Ancestors:        thrift.FromHistoryBranchRangeArray(newAncestors),
+	treeInfo := &serialization.HistoryTreeInfo{
+		Ancestors:        newAncestors,
 		Info:             &request.Info,
-		CreatedTimeNanos: common.TimeNowNanosPtr(),
+		CreatedTimestamp: common.TimePtr(time.Now()),
 	}
 
 	blob, err := m.parser.HistoryTreeInfoToBlob(treeInfo)
@@ -473,7 +471,7 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(
 		br := &types.HistoryBranch{
 			TreeID:    &request.TreeID,
 			BranchID:  common.StringPtr(row.BranchID.String()),
-			Ancestors: thrift.ToHistoryBranchRangeArray(treeInfo.Ancestors),
+			Ancestors: treeInfo.Ancestors,
 		}
 		branches = append(branches, br)
 	}

@@ -27,9 +27,9 @@ import (
 
 	"go.uber.org/thriftrw/wire"
 
-	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -92,7 +92,7 @@ type (
 	// HistoryTreeInfo blob in a serialization agnostic format
 	HistoryTreeInfo struct {
 		CreatedTimestamp *time.Time
-		Ancestors        []*HistoryBranchRange
+		Ancestors        []*types.HistoryBranchRange
 		Info             *string
 	}
 
@@ -303,72 +303,72 @@ type (
 	// a single encoder which encodes into one format and a collection of decoders.
 	// Parser selects the appropriate decoder for the provided blob.
 	Parser interface {
-		ShardInfoToBlob(*sqlblobs.ShardInfo) (persistence.DataBlob, error)
-		DomainInfoToBlob(*sqlblobs.DomainInfo) (persistence.DataBlob, error)
-		HistoryTreeInfoToBlob(*sqlblobs.HistoryTreeInfo) (persistence.DataBlob, error)
-		WorkflowExecutionInfoToBlob(*sqlblobs.WorkflowExecutionInfo) (persistence.DataBlob, error)
-		ActivityInfoToBlob(*sqlblobs.ActivityInfo) (persistence.DataBlob, error)
-		ChildExecutionInfoToBlob(*sqlblobs.ChildExecutionInfo) (persistence.DataBlob, error)
-		SignalInfoToBlob(*sqlblobs.SignalInfo) (persistence.DataBlob, error)
-		RequestCancelInfoToBlob(*sqlblobs.RequestCancelInfo) (persistence.DataBlob, error)
-		TimerInfoToBlob(*sqlblobs.TimerInfo) (persistence.DataBlob, error)
-		TaskInfoToBlob(*sqlblobs.TaskInfo) (persistence.DataBlob, error)
-		TaskListInfoToBlob(*sqlblobs.TaskListInfo) (persistence.DataBlob, error)
-		TransferTaskInfoToBlob(*sqlblobs.TransferTaskInfo) (persistence.DataBlob, error)
-		TimerTaskInfoToBlob(*sqlblobs.TimerTaskInfo) (persistence.DataBlob, error)
-		ReplicationTaskInfoToBlob(*sqlblobs.ReplicationTaskInfo) (persistence.DataBlob, error)
+		ShardInfoToBlob(*ShardInfo) (persistence.DataBlob, error)
+		DomainInfoToBlob(*DomainInfo) (persistence.DataBlob, error)
+		HistoryTreeInfoToBlob(*HistoryTreeInfo) (persistence.DataBlob, error)
+		WorkflowExecutionInfoToBlob(*WorkflowExecutionInfo) (persistence.DataBlob, error)
+		ActivityInfoToBlob(*ActivityInfo) (persistence.DataBlob, error)
+		ChildExecutionInfoToBlob(*ChildExecutionInfo) (persistence.DataBlob, error)
+		SignalInfoToBlob(*SignalInfo) (persistence.DataBlob, error)
+		RequestCancelInfoToBlob(*RequestCancelInfo) (persistence.DataBlob, error)
+		TimerInfoToBlob(*TimerInfo) (persistence.DataBlob, error)
+		TaskInfoToBlob(*TaskInfo) (persistence.DataBlob, error)
+		TaskListInfoToBlob(*TaskListInfo) (persistence.DataBlob, error)
+		TransferTaskInfoToBlob(*TransferTaskInfo) (persistence.DataBlob, error)
+		TimerTaskInfoToBlob(*TimerTaskInfo) (persistence.DataBlob, error)
+		ReplicationTaskInfoToBlob(*ReplicationTaskInfo) (persistence.DataBlob, error)
 
-		ShardInfoFromBlob([]byte, string) (*sqlblobs.ShardInfo, error)
-		DomainInfoFromBlob([]byte, string) (*sqlblobs.DomainInfo, error)
-		HistoryTreeInfoFromBlob([]byte, string) (*sqlblobs.HistoryTreeInfo, error)
-		WorkflowExecutionInfoFromBlob([]byte, string) (*sqlblobs.WorkflowExecutionInfo, error)
-		ActivityInfoFromBlob([]byte, string) (*sqlblobs.ActivityInfo, error)
-		ChildExecutionInfoFromBlob([]byte, string) (*sqlblobs.ChildExecutionInfo, error)
-		SignalInfoFromBlob([]byte, string) (*sqlblobs.SignalInfo, error)
-		RequestCancelInfoFromBlob([]byte, string) (*sqlblobs.RequestCancelInfo, error)
-		TimerInfoFromBlob([]byte, string) (*sqlblobs.TimerInfo, error)
-		TaskInfoFromBlob([]byte, string) (*sqlblobs.TaskInfo, error)
-		TaskListInfoFromBlob([]byte, string) (*sqlblobs.TaskListInfo, error)
-		TransferTaskInfoFromBlob([]byte, string) (*sqlblobs.TransferTaskInfo, error)
-		TimerTaskInfoFromBlob([]byte, string) (*sqlblobs.TimerTaskInfo, error)
-		ReplicationTaskInfoFromBlob([]byte, string) (*sqlblobs.ReplicationTaskInfo, error)
+		ShardInfoFromBlob([]byte, string) (*ShardInfo, error)
+		DomainInfoFromBlob([]byte, string) (*DomainInfo, error)
+		HistoryTreeInfoFromBlob([]byte, string) (*HistoryTreeInfo, error)
+		WorkflowExecutionInfoFromBlob([]byte, string) (*WorkflowExecutionInfo, error)
+		ActivityInfoFromBlob([]byte, string) (*ActivityInfo, error)
+		ChildExecutionInfoFromBlob([]byte, string) (*ChildExecutionInfo, error)
+		SignalInfoFromBlob([]byte, string) (*SignalInfo, error)
+		RequestCancelInfoFromBlob([]byte, string) (*RequestCancelInfo, error)
+		TimerInfoFromBlob([]byte, string) (*TimerInfo, error)
+		TaskInfoFromBlob([]byte, string) (*TaskInfo, error)
+		TaskListInfoFromBlob([]byte, string) (*TaskListInfo, error)
+		TransferTaskInfoFromBlob([]byte, string) (*TransferTaskInfo, error)
+		TimerTaskInfoFromBlob([]byte, string) (*TimerTaskInfo, error)
+		ReplicationTaskInfoFromBlob([]byte, string) (*ReplicationTaskInfo, error)
 	}
 
 	// encoder is used to serialize structs. Each encoder implementation uses one serialization format.
 	encoder interface {
-		shardInfoToBlob(*sqlblobs.ShardInfo) ([]byte, error)
-		domainInfoToBlob(*sqlblobs.DomainInfo) ([]byte, error)
-		historyTreeInfoToBlob(*sqlblobs.HistoryTreeInfo) ([]byte, error)
-		workflowExecutionInfoToBlob(*sqlblobs.WorkflowExecutionInfo) ([]byte, error)
-		activityInfoToBlob(*sqlblobs.ActivityInfo) ([]byte, error)
-		childExecutionInfoToBlob(*sqlblobs.ChildExecutionInfo) ([]byte, error)
-		signalInfoToBlob(*sqlblobs.SignalInfo) ([]byte, error)
-		requestCancelInfoToBlob(*sqlblobs.RequestCancelInfo) ([]byte, error)
-		timerInfoToBlob(*sqlblobs.TimerInfo) ([]byte, error)
-		taskInfoToBlob(*sqlblobs.TaskInfo) ([]byte, error)
-		taskListInfoToBlob(*sqlblobs.TaskListInfo) ([]byte, error)
-		transferTaskInfoToBlob(*sqlblobs.TransferTaskInfo) ([]byte, error)
-		timerTaskInfoToBlob(*sqlblobs.TimerTaskInfo) ([]byte, error)
-		replicationTaskInfoToBlob(*sqlblobs.ReplicationTaskInfo) ([]byte, error)
+		shardInfoToBlob(*ShardInfo) ([]byte, error)
+		domainInfoToBlob(*DomainInfo) ([]byte, error)
+		historyTreeInfoToBlob(*HistoryTreeInfo) ([]byte, error)
+		workflowExecutionInfoToBlob(*WorkflowExecutionInfo) ([]byte, error)
+		activityInfoToBlob(*ActivityInfo) ([]byte, error)
+		childExecutionInfoToBlob(*ChildExecutionInfo) ([]byte, error)
+		signalInfoToBlob(*SignalInfo) ([]byte, error)
+		requestCancelInfoToBlob(*RequestCancelInfo) ([]byte, error)
+		timerInfoToBlob(*TimerInfo) ([]byte, error)
+		taskInfoToBlob(*TaskInfo) ([]byte, error)
+		taskListInfoToBlob(*TaskListInfo) ([]byte, error)
+		transferTaskInfoToBlob(*TransferTaskInfo) ([]byte, error)
+		timerTaskInfoToBlob(*TimerTaskInfo) ([]byte, error)
+		replicationTaskInfoToBlob(*ReplicationTaskInfo) ([]byte, error)
 		encodingType() common.EncodingType
 	}
 
 	// decoder is used to deserialize structs. Each decoder implementation uses one serialization format.
 	decoder interface {
-		shardInfoFromBlob([]byte) (*sqlblobs.ShardInfo, error)
-		domainInfoFromBlob([]byte) (*sqlblobs.DomainInfo, error)
-		historyTreeInfoFromBlob([]byte) (*sqlblobs.HistoryTreeInfo, error)
-		workflowExecutionInfoFromBlob([]byte) (*sqlblobs.WorkflowExecutionInfo, error)
-		activityInfoFromBlob([]byte) (*sqlblobs.ActivityInfo, error)
-		childExecutionInfoFromBlob([]byte) (*sqlblobs.ChildExecutionInfo, error)
-		signalInfoFromBlob([]byte) (*sqlblobs.SignalInfo, error)
-		requestCancelInfoFromBlob([]byte) (*sqlblobs.RequestCancelInfo, error)
-		timerInfoFromBlob([]byte) (*sqlblobs.TimerInfo, error)
-		taskInfoFromBlob([]byte) (*sqlblobs.TaskInfo, error)
-		taskListInfoFromBlob([]byte) (*sqlblobs.TaskListInfo, error)
-		transferTaskInfoFromBlob([]byte) (*sqlblobs.TransferTaskInfo, error)
-		timerTaskInfoFromBlob([]byte) (*sqlblobs.TimerTaskInfo, error)
-		replicationTaskInfoFromBlob([]byte) (*sqlblobs.ReplicationTaskInfo, error)
+		shardInfoFromBlob([]byte) (*ShardInfo, error)
+		domainInfoFromBlob([]byte) (*DomainInfo, error)
+		historyTreeInfoFromBlob([]byte) (*HistoryTreeInfo, error)
+		workflowExecutionInfoFromBlob([]byte) (*WorkflowExecutionInfo, error)
+		activityInfoFromBlob([]byte) (*ActivityInfo, error)
+		childExecutionInfoFromBlob([]byte) (*ChildExecutionInfo, error)
+		signalInfoFromBlob([]byte) (*SignalInfo, error)
+		requestCancelInfoFromBlob([]byte) (*RequestCancelInfo, error)
+		timerInfoFromBlob([]byte) (*TimerInfo, error)
+		taskInfoFromBlob([]byte) (*TaskInfo, error)
+		taskListInfoFromBlob([]byte) (*TaskListInfo, error)
+		transferTaskInfoFromBlob([]byte) (*TransferTaskInfo, error)
+		timerTaskInfoFromBlob([]byte) (*TimerTaskInfo, error)
+		replicationTaskInfoFromBlob([]byte) (*ReplicationTaskInfo, error)
 	}
 
 	thriftRWType interface {

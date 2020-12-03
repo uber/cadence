@@ -28,7 +28,6 @@ import (
 
 	"github.com/uber/cadence/common/persistence/serialization"
 
-	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
@@ -115,12 +114,12 @@ func (m *sqlShardManager) GetShard(
 
 	timerAckLevel := make(map[string]time.Time, len(shardInfo.ClusterTimerAckLevel))
 	for k, v := range shardInfo.ClusterTimerAckLevel {
-		timerAckLevel[k] = time.Unix(0, v)
+		timerAckLevel[k] = v
 	}
 
 	if len(timerAckLevel) == 0 {
 		timerAckLevel = map[string]time.Time{
-			m.currentClusterName: time.Unix(0, shardInfo.GetTimerAckLevelNanos()),
+			m.currentClusterName: shardInfo.GetTimerAckLevel(),
 		}
 	}
 
@@ -152,10 +151,10 @@ func (m *sqlShardManager) GetShard(
 		RangeID:                       row.RangeID,
 		Owner:                         shardInfo.GetOwner(),
 		StolenSinceRenew:              int(shardInfo.GetStolenSinceRenew()),
-		UpdatedAt:                     time.Unix(0, shardInfo.GetUpdatedAtNanos()),
+		UpdatedAt:                     shardInfo.GetUpdatedAt(),
 		ReplicationAckLevel:           shardInfo.GetReplicationAckLevel(),
 		TransferAckLevel:              shardInfo.GetTransferAckLevel(),
-		TimerAckLevel:                 time.Unix(0, shardInfo.GetTimerAckLevelNanos()),
+		TimerAckLevel:                shardInfo.GetTimerAckLevel(),
 		ClusterTransferAckLevel:       shardInfo.ClusterTransferAckLevel,
 		ClusterTimerAckLevel:          timerAckLevel,
 		TransferProcessingQueueStates: transferPQS,
@@ -245,11 +244,6 @@ func readLockShard(ctx context.Context, tx sqlplugin.Tx, shardID int, oldRangeID
 }
 
 func shardInfoToShardsRow(s persistence.InternalShardInfo, parser serialization.Parser) (*sqlplugin.ShardsRow, error) {
-	timerAckLevels := make(map[string]int64, len(s.ClusterTimerAckLevel))
-	for k, v := range s.ClusterTimerAckLevel {
-		timerAckLevels[k] = v.UnixNano()
-	}
-
 	var markerData []byte
 	var markerEncoding string
 	if s.PendingFailoverMarkers != nil {
@@ -271,14 +265,14 @@ func shardInfoToShardsRow(s persistence.InternalShardInfo, parser serialization.
 		timerPQSEncoding = string(s.TimerProcessingQueueStates.Encoding)
 	}
 
-	shardInfo := &sqlblobs.ShardInfo{
+	shardInfo := &serialization.ShardInfo{
 		StolenSinceRenew:                      common.Int32Ptr(int32(s.StolenSinceRenew)),
-		UpdatedAtNanos:                        common.Int64Ptr(s.UpdatedAt.UnixNano()),
+		UpdatedAt:                        &s.UpdatedAt,
 		ReplicationAckLevel:                   common.Int64Ptr(s.ReplicationAckLevel),
 		TransferAckLevel:                      common.Int64Ptr(s.TransferAckLevel),
-		TimerAckLevelNanos:                    common.Int64Ptr(s.TimerAckLevel.UnixNano()),
+		TimerAckLevel:                    &s.TimerAckLevel,
 		ClusterTransferAckLevel:               s.ClusterTransferAckLevel,
-		ClusterTimerAckLevel:                  timerAckLevels,
+		ClusterTimerAckLevel:                  s.ClusterTimerAckLevel,
 		TransferProcessingQueueStates:         transferPQSData,
 		TransferProcessingQueueStatesEncoding: common.StringPtr(transferPQSEncoding),
 		TimerProcessingQueueStates:            timerPQSData,

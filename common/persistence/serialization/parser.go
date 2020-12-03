@@ -25,7 +25,6 @@ package serialization
 import (
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 )
@@ -57,7 +56,7 @@ func NewParser(encodingType common.EncodingType, decodingTypes ...common.Encodin
 	}, nil
 }
 
-func (p *parser) ShardInfoToBlob(info *sqlblobs.ShardInfo) (persistence.DataBlob, error) {
+func (p *parser) ShardInfoToBlob(info *ShardInfo) (persistence.DataBlob, error) {
 	db := persistence.DataBlob{}
 	data, err := p.encoder.shardInfoToBlob(info)
 	if err != nil {
@@ -68,7 +67,7 @@ func (p *parser) ShardInfoToBlob(info *sqlblobs.ShardInfo) (persistence.DataBlob
 	return db, nil
 }
 
-func (p *parser) DomainInfoToBlob(info *sqlblobs.DomainInfo) (persistence.DataBlob, error) {
+func (p *parser) DomainInfoToBlob(info *DomainInfo) (persistence.DataBlob, error) {
 	db := persistence.DataBlob{}
 	data, err := p.encoder.domainInfoToBlob(info)
 	if err != nil {
@@ -79,7 +78,7 @@ func (p *parser) DomainInfoToBlob(info *sqlblobs.DomainInfo) (persistence.DataBl
 	return db, nil
 }
 
-func (p *parser) HistoryTreeInfoToBlob(info *sqlblobs.HistoryTreeInfo) (persistence.DataBlob, error) {
+func (p *parser) HistoryTreeInfoToBlob(info *HistoryTreeInfo) (persistence.DataBlob, error) {
 	db := persistence.DataBlob{}
 	data, err := p.encoder.historyTreeInfoToBlob(info)
 	if err != nil {
@@ -90,7 +89,7 @@ func (p *parser) HistoryTreeInfoToBlob(info *sqlblobs.HistoryTreeInfo) (persiste
 	return db, nil
 }
 
-func (p *parser) WorkflowExecutionInfoToBlob(info *sqlblobs.WorkflowExecutionInfo) (persistence.DataBlob, error) {
+func (p *parser) WorkflowExecutionInfoToBlob(info *WorkflowExecutionInfo) (persistence.DataBlob, error) {
 	db := persistence.DataBlob{}
 	data, err := p.encoder.workflowExecutionInfoToBlob(info)
 	if err != nil {
@@ -101,7 +100,7 @@ func (p *parser) WorkflowExecutionInfoToBlob(info *sqlblobs.WorkflowExecutionInf
 	return db, nil
 }
 
-func (p *parser) ActivityInfoToBlob(info *sqlblobs.ActivityInfo) (persistence.DataBlob, error) {
+func (p *parser) ActivityInfoToBlob(info *ActivityInfo) (persistence.DataBlob, error) {
 	db := persistence.DataBlob{}
 	data, err := p.encoder.activityInfoToBlob(info)
 	if err != nil {
@@ -112,7 +111,7 @@ func (p *parser) ActivityInfoToBlob(info *sqlblobs.ActivityInfo) (persistence.Da
 	return db, nil
 }
 
-func (p *parser) ChildExecutionInfoToBlob(info *sqlblobs.ChildExecutionInfo) (persistence.DataBlob, error) {
+func (p *parser) ChildExecutionInfoToBlob(info *ChildExecutionInfo) (persistence.DataBlob, error) {
 	db := persistence.DataBlob{}
 	data, err := p.encoder.childExecutionInfoToBlob(info)
 	if err != nil {
@@ -123,7 +122,7 @@ func (p *parser) ChildExecutionInfoToBlob(info *sqlblobs.ChildExecutionInfo) (pe
 	return db, nil
 }
 
-func (p *parser) SignalInfoToBlob(info *sqlblobs.SignalInfo) (persistence.DataBlob, error) {
+func (p *parser) SignalInfoToBlob(info *SignalInfo) (persistence.DataBlob, error) {
 	db := persistence.DataBlob{}
 	data, err := p.encoder.signalInfoToBlob(info)
 	if err != nil {
@@ -134,7 +133,7 @@ func (p *parser) SignalInfoToBlob(info *sqlblobs.SignalInfo) (persistence.DataBl
 	return db, nil
 }
 
-func (p *parser) RequestCancelInfoToBlob(info *sqlblobs.RequestCancelInfo) (persistence.DataBlob, error) {
+func (p *parser) RequestCancelInfoToBlob(info *RequestCancelInfo) (persistence.DataBlob, error) {
 	db := persistence.DataBlob{}
 	data, err := p.encoder.requestCancelInfoToBlob(info)
 	if err != nil {
@@ -145,7 +144,7 @@ func (p *parser) RequestCancelInfoToBlob(info *sqlblobs.RequestCancelInfo) (pers
 	return db, nil
 }
 
-func (p *parser) TimerInfoToBlob(info *sqlblobs.TimerInfo) (persistence.DataBlob, error) {
+func (p *parser) TimerInfoToBlob(info *TimerInfo) (persistence.DataBlob, error) {
 	db := persistence.DataBlob{}
 	data, err := p.encoder.timerInfoToBlob(info)
 	if err != nil {
@@ -156,7 +155,7 @@ func (p *parser) TimerInfoToBlob(info *sqlblobs.TimerInfo) (persistence.DataBlob
 	return db, nil
 }
 
-func (p *parser) TaskInfoToBlob(info *sqlblobs.TaskInfo) (persistence.DataBlob, error) {
+func (p *parser) TaskInfoToBlob(info *TaskInfo) (persistence.DataBlob, error) {
 	db := persistence.DataBlob{}
 	data, err := p.encoder.taskInfoToBlob(info)
 	if err != nil {
@@ -167,7 +166,7 @@ func (p *parser) TaskInfoToBlob(info *sqlblobs.TaskInfo) (persistence.DataBlob, 
 	return db, nil
 }
 
-func (p *parser) TaskListInfoToBlob(info *sqlblobs.TaskListInfo) (persistence.DataBlob, error) {
+func (p *parser) TaskListInfoToBlob(info *TaskListInfo) (persistence.DataBlob, error) {
 	db := persistence.DataBlob{}
 	data, err := p.encoder.taskListInfoToBlob(info)
 	if err != nil {
@@ -178,7 +177,7 @@ func (p *parser) TaskListInfoToBlob(info *sqlblobs.TaskListInfo) (persistence.Da
 	return db, nil
 }
 
-func (p *parser) TransferTaskInfoToBlob(info *sqlblobs.TransferTaskInfo) (persistence.DataBlob, error) {
+func (p *parser) TransferTaskInfoToBlob(info *TransferTaskInfo) (persistence.DataBlob, error) {
 	db := persistence.DataBlob{}
 	data, err := p.encoder.transferTaskInfoToBlob(info)
 	if err != nil {
@@ -189,7 +188,7 @@ func (p *parser) TransferTaskInfoToBlob(info *sqlblobs.TransferTaskInfo) (persis
 	return db, nil
 }
 
-func (p *parser) TimerTaskInfoToBlob(info *sqlblobs.TimerTaskInfo) (persistence.DataBlob, error) {
+func (p *parser) TimerTaskInfoToBlob(info *TimerTaskInfo) (persistence.DataBlob, error) {
 	db := persistence.DataBlob{}
 	data, err := p.encoder.timerTaskInfoToBlob(info)
 	if err != nil {
@@ -200,7 +199,7 @@ func (p *parser) TimerTaskInfoToBlob(info *sqlblobs.TimerTaskInfo) (persistence.
 	return db, nil
 }
 
-func (p *parser) ReplicationTaskInfoToBlob(info *sqlblobs.ReplicationTaskInfo) (persistence.DataBlob, error) {
+func (p *parser) ReplicationTaskInfoToBlob(info *ReplicationTaskInfo) (persistence.DataBlob, error) {
 	db := persistence.DataBlob{}
 	data, err := p.encoder.replicationTaskInfoToBlob(info)
 	if err != nil {
@@ -211,7 +210,7 @@ func (p *parser) ReplicationTaskInfoToBlob(info *sqlblobs.ReplicationTaskInfo) (
 	return db, nil
 }
 
-func (p *parser) ShardInfoFromBlob(data []byte, encoding string) (*sqlblobs.ShardInfo, error) {
+func (p *parser) ShardInfoFromBlob(data []byte, encoding string) (*ShardInfo, error) {
 	decoder, err := p.getCachedDecoder(common.EncodingType(encoding))
 	if err != nil {
 		return nil, err
@@ -219,7 +218,7 @@ func (p *parser) ShardInfoFromBlob(data []byte, encoding string) (*sqlblobs.Shar
 	return decoder.shardInfoFromBlob(data)
 }
 
-func (p *parser) DomainInfoFromBlob(data []byte, encoding string) (*sqlblobs.DomainInfo, error) {
+func (p *parser) DomainInfoFromBlob(data []byte, encoding string) (*DomainInfo, error) {
 	decoder, err := p.getCachedDecoder(common.EncodingType(encoding))
 	if err != nil {
 		return nil, err
@@ -227,7 +226,7 @@ func (p *parser) DomainInfoFromBlob(data []byte, encoding string) (*sqlblobs.Dom
 	return decoder.domainInfoFromBlob(data)
 }
 
-func (p *parser) HistoryTreeInfoFromBlob(data []byte, encoding string) (*sqlblobs.HistoryTreeInfo, error) {
+func (p *parser) HistoryTreeInfoFromBlob(data []byte, encoding string) (*HistoryTreeInfo, error) {
 	decoder, err := p.getCachedDecoder(common.EncodingType(encoding))
 	if err != nil {
 		return nil, err
@@ -235,7 +234,7 @@ func (p *parser) HistoryTreeInfoFromBlob(data []byte, encoding string) (*sqlblob
 	return decoder.historyTreeInfoFromBlob(data)
 }
 
-func (p *parser) WorkflowExecutionInfoFromBlob(data []byte, encoding string) (*sqlblobs.WorkflowExecutionInfo, error) {
+func (p *parser) WorkflowExecutionInfoFromBlob(data []byte, encoding string) (*WorkflowExecutionInfo, error) {
 	decoder, err := p.getCachedDecoder(common.EncodingType(encoding))
 	if err != nil {
 		return nil, err
@@ -243,7 +242,7 @@ func (p *parser) WorkflowExecutionInfoFromBlob(data []byte, encoding string) (*s
 	return decoder.workflowExecutionInfoFromBlob(data)
 }
 
-func (p *parser) ActivityInfoFromBlob(data []byte, encoding string) (*sqlblobs.ActivityInfo, error) {
+func (p *parser) ActivityInfoFromBlob(data []byte, encoding string) (*ActivityInfo, error) {
 	decoder, err := p.getCachedDecoder(common.EncodingType(encoding))
 	if err != nil {
 		return nil, err
@@ -251,7 +250,7 @@ func (p *parser) ActivityInfoFromBlob(data []byte, encoding string) (*sqlblobs.A
 	return decoder.activityInfoFromBlob(data)
 }
 
-func (p *parser) ChildExecutionInfoFromBlob(data []byte, encoding string) (*sqlblobs.ChildExecutionInfo, error) {
+func (p *parser) ChildExecutionInfoFromBlob(data []byte, encoding string) (*ChildExecutionInfo, error) {
 	decoder, err := p.getCachedDecoder(common.EncodingType(encoding))
 	if err != nil {
 		return nil, err
@@ -259,7 +258,7 @@ func (p *parser) ChildExecutionInfoFromBlob(data []byte, encoding string) (*sqlb
 	return decoder.childExecutionInfoFromBlob(data)
 }
 
-func (p *parser) SignalInfoFromBlob(data []byte, encoding string) (*sqlblobs.SignalInfo, error) {
+func (p *parser) SignalInfoFromBlob(data []byte, encoding string) (*SignalInfo, error) {
 	decoder, err := p.getCachedDecoder(common.EncodingType(encoding))
 	if err != nil {
 		return nil, err
@@ -267,7 +266,7 @@ func (p *parser) SignalInfoFromBlob(data []byte, encoding string) (*sqlblobs.Sig
 	return decoder.signalInfoFromBlob(data)
 }
 
-func (p *parser) RequestCancelInfoFromBlob(data []byte, encoding string) (*sqlblobs.RequestCancelInfo, error) {
+func (p *parser) RequestCancelInfoFromBlob(data []byte, encoding string) (*RequestCancelInfo, error) {
 	decoder, err := p.getCachedDecoder(common.EncodingType(encoding))
 	if err != nil {
 		return nil, err
@@ -275,7 +274,7 @@ func (p *parser) RequestCancelInfoFromBlob(data []byte, encoding string) (*sqlbl
 	return decoder.requestCancelInfoFromBlob(data)
 }
 
-func (p *parser) TimerInfoFromBlob(data []byte, encoding string) (*sqlblobs.TimerInfo, error) {
+func (p *parser) TimerInfoFromBlob(data []byte, encoding string) (*TimerInfo, error) {
 	decoder, err := p.getCachedDecoder(common.EncodingType(encoding))
 	if err != nil {
 		return nil, err
@@ -283,7 +282,7 @@ func (p *parser) TimerInfoFromBlob(data []byte, encoding string) (*sqlblobs.Time
 	return decoder.timerInfoFromBlob(data)
 }
 
-func (p *parser) TaskInfoFromBlob(data []byte, encoding string) (*sqlblobs.TaskInfo, error) {
+func (p *parser) TaskInfoFromBlob(data []byte, encoding string) (*TaskInfo, error) {
 	decoder, err := p.getCachedDecoder(common.EncodingType(encoding))
 	if err != nil {
 		return nil, err
@@ -291,7 +290,7 @@ func (p *parser) TaskInfoFromBlob(data []byte, encoding string) (*sqlblobs.TaskI
 	return decoder.taskInfoFromBlob(data)
 }
 
-func (p *parser) TaskListInfoFromBlob(data []byte, encoding string) (*sqlblobs.TaskListInfo, error) {
+func (p *parser) TaskListInfoFromBlob(data []byte, encoding string) (*TaskListInfo, error) {
 	decoder, err := p.getCachedDecoder(common.EncodingType(encoding))
 	if err != nil {
 		return nil, err
@@ -299,7 +298,7 @@ func (p *parser) TaskListInfoFromBlob(data []byte, encoding string) (*sqlblobs.T
 	return decoder.taskListInfoFromBlob(data)
 }
 
-func (p *parser) TransferTaskInfoFromBlob(data []byte, encoding string) (*sqlblobs.TransferTaskInfo, error) {
+func (p *parser) TransferTaskInfoFromBlob(data []byte, encoding string) (*TransferTaskInfo, error) {
 	decoder, err := p.getCachedDecoder(common.EncodingType(encoding))
 	if err != nil {
 		return nil, err
@@ -307,7 +306,7 @@ func (p *parser) TransferTaskInfoFromBlob(data []byte, encoding string) (*sqlblo
 	return decoder.transferTaskInfoFromBlob(data)
 }
 
-func (p *parser) TimerTaskInfoFromBlob(data []byte, encoding string) (*sqlblobs.TimerTaskInfo, error) {
+func (p *parser) TimerTaskInfoFromBlob(data []byte, encoding string) (*TimerTaskInfo, error) {
 	decoder, err := p.getCachedDecoder(common.EncodingType(encoding))
 	if err != nil {
 		return nil, err
@@ -315,7 +314,7 @@ func (p *parser) TimerTaskInfoFromBlob(data []byte, encoding string) (*sqlblobs.
 	return decoder.timerTaskInfoFromBlob(data)
 }
 
-func (p *parser) ReplicationTaskInfoFromBlob(data []byte, encoding string) (*sqlblobs.ReplicationTaskInfo, error) {
+func (p *parser) ReplicationTaskInfoFromBlob(data []byte, encoding string) (*ReplicationTaskInfo, error) {
 	decoder, err := p.getCachedDecoder(common.EncodingType(encoding))
 	if err != nil {
 		return nil, err

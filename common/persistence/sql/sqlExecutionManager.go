@@ -29,7 +29,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
@@ -243,6 +242,7 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 		}
 	}
 
+<<<<<<< HEAD
 	if len(executions) == 0 {
 		return nil, &types.EntityNotExistsError{
 			Message: fmt.Sprintf(
@@ -250,6 +250,85 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 				request.Execution.GetWorkflowID(),
 				request.Execution.GetRunID(),
 			),
+=======
+	info, err := m.parser.WorkflowExecutionInfoFromBlob(execution.Data, execution.DataEncoding)
+	if err != nil {
+		return nil, err
+	}
+
+	var state p.InternalWorkflowMutableState
+	state.ExecutionInfo = &p.InternalWorkflowExecutionInfo{
+		DomainID:                           execution.DomainID.String(),
+		WorkflowID:                         execution.WorkflowID,
+		RunID:                              execution.RunID.String(),
+		NextEventID:                        execution.NextEventID,
+		TaskList:                           info.GetTaskList(),
+		WorkflowTypeName:                   info.GetWorkflowTypeName(),
+		WorkflowTimeout:                    info.GetWorkflowTimeout(),
+		DecisionStartToCloseTimeout:        info.GetDecisionTaskTimeout(),
+		State:                              int(info.GetState()),
+		CloseStatus:                        int(info.GetCloseStatus()),
+		LastFirstEventID:                   info.GetLastFirstEventID(),
+		LastProcessedEvent:                 info.GetLastProcessedEvent(),
+		StartTimestamp:                     info.GetStartTimestamp(),
+		LastUpdatedTimestamp:              	info.GetLastUpdatedTimestamp(),
+		CreateRequestID:                    info.GetCreateRequestID(),
+		DecisionVersion:                    info.GetDecisionVersion(),
+		DecisionScheduleID:                 info.GetDecisionScheduleID(),
+		DecisionStartedID:                  info.GetDecisionStartedID(),
+		DecisionRequestID:                  info.GetDecisionRequestID(),
+		DecisionTimeout:                    common.SecondsToDuration(int64(info.GetDecisionTimeout())),
+		DecisionAttempt:                    info.GetDecisionAttempt(),
+		DecisionStartedTimestamp:           info.GetDecisionStartedTimestamp(),
+		DecisionScheduledTimestamp:         info.GetDecisionScheduledTimestamp(),
+		DecisionOriginalScheduledTimestamp: info.GetDecisionOriginalScheduledTimestamp(),
+		StickyTaskList:                     info.GetStickyTaskList(),
+		StickyScheduleToStartTimeout:       info.GetStickyScheduleToStartTimeout(),
+		ClientLibraryVersion:               info.GetClientLibraryVersion(),
+		ClientFeatureVersion:               info.GetClientFeatureVersion(),
+		ClientImpl:                         info.GetClientImpl(),
+		SignalCount:                        int32(info.GetSignalCount()),
+		HistorySize:                        info.GetHistorySize(),
+		CronSchedule:                       info.GetCronSchedule(),
+		CompletionEventBatchID:             common.EmptyEventID,
+		HasRetryPolicy:                     info.GetHasRetryPolicy(),
+		Attempt:                            int32(info.GetRetryAttempt()),
+		InitialInterval:                    info.GetRetryInitialInterval(),
+		BackoffCoefficient:                 info.GetRetryBackoffCoefficient(),
+		MaximumInterval:                    info.GetRetryMaximumInterval(),
+		MaximumAttempts:                    info.GetRetryMaximumAttempts(),
+		ExpirationSeconds:                  info.GetRetryExpiration(),
+		ExpirationTime:                     info.GetRetryExpirationTimestamp(),
+		BranchToken:                        info.GetEventBranchToken(),
+		ExecutionContext:                   info.GetExecutionContext(),
+		NonRetriableErrors:                 info.GetRetryNonRetryableErrors(),
+		SearchAttributes:                   info.GetSearchAttributes(),
+		Memo:                               info.GetMemo(),
+	}
+
+	// TODO: remove this after all 2DC workflows complete
+	if info.LastWriteEventID != nil {
+		state.ReplicationState = &p.ReplicationState{}
+		state.ReplicationState.StartVersion = info.GetStartVersion()
+		state.ReplicationState.LastWriteVersion = execution.LastWriteVersion
+		state.ReplicationState.LastWriteEventID = info.GetLastWriteEventID()
+	}
+
+	if info.GetVersionHistories() != nil {
+		state.VersionHistories = p.NewDataBlob(
+			info.GetVersionHistories(),
+			common.EncodingType(info.GetVersionHistoriesEncoding()),
+		)
+	}
+
+	if info.ParentDomainID != nil {
+		state.ExecutionInfo.ParentDomainID = info.ParentDomainID.String()
+		state.ExecutionInfo.ParentWorkflowID = info.GetParentWorkflowID()
+		state.ExecutionInfo.ParentRunID = info.ParentRunID.String()
+		state.ExecutionInfo.InitiatedID = info.GetInitiatedID()
+		if state.ExecutionInfo.CompletionEvent != nil {
+			state.ExecutionInfo.CompletionEvent = nil
+>>>>>>> 28a6c8ea... Redo parser internal types usage
 		}
 	}
 
@@ -879,13 +958,13 @@ func (m *sqlExecutionManager) GetTransferTasks(
 		}
 		resp.Tasks[i] = &p.TransferTaskInfo{
 			TaskID:                  row.TaskID,
-			DomainID:                serialization.UUID(info.DomainID).String(),
+			DomainID:                info.DomainID.String(),
 			WorkflowID:              info.GetWorkflowID(),
-			RunID:                   serialization.UUID(info.RunID).String(),
-			VisibilityTimestamp:     time.Unix(0, info.GetVisibilityTimestampNanos()),
-			TargetDomainID:          serialization.UUID(info.TargetDomainID).String(),
+			RunID:                   info.RunID.String(),
+			VisibilityTimestamp:     info.GetVisibilityTimestamp(),
+			TargetDomainID:          info.TargetDomainID.String(),
 			TargetWorkflowID:        info.GetTargetWorkflowID(),
-			TargetRunID:             serialization.UUID(info.TargetRunID).String(),
+			TargetRunID:             info.TargetRunID.String(),
 			TargetChildWorkflowOnly: info.GetTargetChildWorkflowOnly(),
 			TaskList:                info.GetTaskList(),
 			TaskType:                int(info.GetTaskType()),
@@ -989,9 +1068,9 @@ func (m *sqlExecutionManager) populateGetReplicationTasksResponse(
 
 		tasks[i] = &p.InternalReplicationTaskInfo{
 			TaskID:            row.TaskID,
-			DomainID:          serialization.UUID(info.DomainID).String(),
+			DomainID:          info.DomainID.String(),
 			WorkflowID:        info.GetWorkflowID(),
-			RunID:             serialization.UUID(info.RunID).String(),
+			RunID:             info.RunID.String(),
 			TaskType:          int(info.GetTaskType()),
 			FirstEventID:      info.GetFirstEventID(),
 			NextEventID:       info.GetNextEventID(),
@@ -999,7 +1078,7 @@ func (m *sqlExecutionManager) populateGetReplicationTasksResponse(
 			ScheduledID:       info.GetScheduledID(),
 			BranchToken:       info.GetBranchToken(),
 			NewRunBranchToken: info.GetNewRunBranchToken(),
-			CreationTime:      time.Unix(0, info.GetCreationTime()),
+			CreationTime:      info.GetCreationTimestamp(),
 		}
 	}
 	var nextPageToken []byte
@@ -1225,9 +1304,9 @@ func (m *sqlExecutionManager) GetTimerIndexTasks(
 		resp.Timers[i] = &p.TimerTaskInfo{
 			VisibilityTimestamp: row.VisibilityTimestamp,
 			TaskID:              row.TaskID,
-			DomainID:            serialization.UUID(info.DomainID).String(),
+			DomainID:            info.DomainID.String(),
 			WorkflowID:          info.GetWorkflowID(),
-			RunID:               serialization.UUID(info.RunID).String(),
+			RunID:               info.RunID.String(),
 			TaskType:            int(info.GetTaskType()),
 			TimeoutType:         int(info.GetTimeoutType()),
 			EventID:             info.GetEventID(),
@@ -1295,7 +1374,7 @@ func (m *sqlExecutionManager) PutReplicationTaskToDLQ(
 	request *p.InternalPutReplicationTaskToDLQRequest,
 ) error {
 	replicationTask := request.TaskInfo
-	blob, err := m.parser.ReplicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
+	blob, err := m.parser.ReplicationTaskInfoToBlob(&serialization.ReplicationTaskInfo{
 		DomainID:          serialization.MustParseUUID(replicationTask.DomainID),
 		WorkflowID:        &replicationTask.WorkflowID,
 		RunID:             serialization.MustParseUUID(replicationTask.RunID),
