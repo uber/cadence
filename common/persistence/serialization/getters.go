@@ -700,7 +700,7 @@ func (w *WorkflowExecutionInfo) GetRetryInitialInterval() time.Duration {
 	return time.Duration(0)
 }
 
-// GetRetryInitialInterval internal sql blob getter
+// GetRetryMaximumInterval internal sql blob getter
 func (w *WorkflowExecutionInfo) GetRetryMaximumInterval() time.Duration {
 	if w != nil && w.RetryMaximumInterval != nil {
 		return *w.RetryMaximumInterval
