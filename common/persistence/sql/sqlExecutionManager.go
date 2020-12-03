@@ -116,9 +116,9 @@ func (m *sqlExecutionManager) createWorkflowExecutionTx(
 	startVersion := newWorkflow.StartVersion
 	lastWriteVersion := newWorkflow.LastWriteVersion
 	shardID := m.shardID
-	domainID := serialization.MustParseUUID(executionInfo.DomainID)
+	domainID := executionInfo.DomainID
 	workflowID := executionInfo.WorkflowID
-	runID := serialization.MustParseUUID(executionInfo.RunID)
+	runID := executionInfo.RunID
 
 	if err := p.ValidateCreateWorkflowModeState(
 		request.Mode,
@@ -481,9 +481,9 @@ func (m *sqlExecutionManager) updateWorkflowExecutionTx(
 	newWorkflow := request.NewWorkflowSnapshot
 
 	executionInfo := updateWorkflow.ExecutionInfo
-	domainID := serialization.MustParseUUID(executionInfo.DomainID)
+	domainID := executionInfo.DomainID
 	workflowID := executionInfo.WorkflowID
-	runID := serialization.MustParseUUID(executionInfo.RunID)
+	runID := executionInfo.RunID
 	shardID := m.shardID
 
 	if err := p.ValidateUpdateWorkflowModeState(

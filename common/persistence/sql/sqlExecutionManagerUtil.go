@@ -659,13 +659,13 @@ func lockCurrentExecutionIfExists(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID serialization.UUID,
+	domainID string,
 	workflowID string,
 ) (*sqlplugin.CurrentExecutionsRow, error) {
 
 	rows, err := tx.LockCurrentExecutionsJoinExecutions(ctx, &sqlplugin.CurrentExecutionsFilter{
 		ShardID:    int64(shardID),
-		DomainID:   domainID,
+		DomainID:   serialization.MustParseUUID(domainID),
 		WorkflowID: workflowID,
 	})
 	if err != nil {
@@ -1134,13 +1134,13 @@ func assertNotCurrentExecution(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID serialization.UUID,
+	domainID string,
 	workflowID string,
-	runID serialization.UUID,
+	runID string,
 ) error {
 	currentRow, err := tx.LockCurrentExecutions(ctx, &sqlplugin.CurrentExecutionsFilter{
 		ShardID:    int64(shardID),
-		DomainID:   domainID,
+		DomainID:   serialization.MustParseUUID(domainID),
 		WorkflowID: workflowID,
 	})
 	if err != nil {
