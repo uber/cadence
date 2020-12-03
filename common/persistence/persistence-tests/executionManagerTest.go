@@ -4328,7 +4328,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 	state.ExecutionInfo.StartTimestamp = resetReq.CurrentWorkflowMutation.ExecutionInfo.StartTimestamp
 	state.ExecutionInfo.LastUpdatedTimestamp = resetReq.CurrentWorkflowMutation.ExecutionInfo.LastUpdatedTimestamp
 	state.ExecutionInfo.ExpirationTime = resetReq.CurrentWorkflowMutation.ExecutionInfo.ExpirationTime
-	s.Equal(resetReq.CurrentWorkflowMutation.ExecutionInfo, state.ExecutionInfo)
+	s.Equal(resetReq.CurrentWorkflowMutation.ExecutionInfo, state.ExecutionInfo, fmt.Sprintf("andrew found not equal expected:%+v, actual:%+v", resetReq.CurrentWorkflowMutation.ExecutionInfo, state.ExecutionInfo))
 
 	state, err = s.GetWorkflowExecutionInfo(ctx, domainID, types.WorkflowExecution{
 		WorkflowID: common.StringPtr(workflowID),
