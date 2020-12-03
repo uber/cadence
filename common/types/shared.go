@@ -2563,7 +2563,6 @@ func (v *DomainConfiguration) GetEmitMetric() (o bool) {
 	if v != nil && v.EmitMetric != nil {
 		return *v.EmitMetric
 	}
-	o = true
 	return
 }
 

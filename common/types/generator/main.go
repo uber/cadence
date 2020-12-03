@@ -106,7 +106,7 @@ func (v *{{$.Prefix}}{{internal $.Name}}) Get{{internal .Name}}() (o {{if .Type.
 	if v != nil{{if .Type.IsMap | or .Type.IsArray | or .Type.IsPointer}} && v.{{internal .Name}} != nil{{end}} {
 		return {{if .Type.IsPointer | and (or .Type.IsPrimitive .Type.IsEnum)}}*{{end}}v.{{internal .Name}}
 	}
-	{{with .DefaultValue}}o = {{.}}
+	{{if and (eq $.Name "RegisterDomainRequest") (eq .Name "EmitMetric") }}o = true
 {{end}}return
 }
 {{end}}
@@ -301,10 +301,9 @@ type (
 
 	// Field describe a field within a struct
 	Field struct {
-		Name         string
-		Type         Type
-		Tag          string
-		DefaultValue string
+		Name string
+		Type Type
+		Tag  string
 	}
 )
 
@@ -389,10 +388,6 @@ func newStructType(s *types.Struct) Type {
 			Name: f.Name(),
 			Type: newType(f.Type()),
 			Tag:  s.Tag(i),
-		}
-		// This have default true value in thrift IDL
-		if fields[i].Name == "EmitMetric" {
-			fields[i].DefaultValue = "true"
 		}
 	}
 	return Type{
