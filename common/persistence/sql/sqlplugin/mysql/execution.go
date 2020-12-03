@@ -182,10 +182,12 @@ func (mdb *db) SelectFromExecutions(ctx context.Context, filter *sqlplugin.Execu
 			return nil, err
 		}
 	} else {
-		err = mdb.conn.GetContext(ctx, &rows, getExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+		var row sqlplugin.ExecutionsRow
+		err = mdb.conn.GetContext(ctx, &row, getExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 		if err != nil {
 			return nil, err
 		}
+		rows = append(rows, row)
 	}
 
 	return rows, err
