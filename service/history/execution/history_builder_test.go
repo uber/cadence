@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/shard"
@@ -178,7 +179,7 @@ func (s *historyBuilderSuite) TestHistoryBuilderDynamicSuccess() {
 	activity3ID := "activity3"
 	activity3Type := "dynamic-historybuilder-success-activity3-type"
 	activity3Input := []byte("dynamic-historybuilder-success-activity3-input")
-	activity3RetryPolicy := &workflow.RetryPolicy{
+	activity3RetryPolicy := &types.RetryPolicy{
 		InitialIntervalInSeconds:    common.Int32Ptr(1),
 		MaximumAttempts:             common.Int32Ptr(3),
 		MaximumIntervalInSeconds:    common.Int32Ptr(1),
@@ -213,7 +214,7 @@ func (s *historyBuilderSuite) TestHistoryBuilderDynamicSuccess() {
 	activity5ID := "activity5"
 	activity5Type := "dynamic-historybuilder-success-activity5-type"
 	activity5Input := []byte("dynamic-historybuilder-success-activity5-input")
-	activity5RetryPolicy := &workflow.RetryPolicy{
+	activity5RetryPolicy := &types.RetryPolicy{
 		InitialIntervalInSeconds:    common.Int32Ptr(1),
 		MaximumAttempts:             common.Int32Ptr(3),
 		MaximumIntervalInSeconds:    common.Int32Ptr(1),
@@ -923,13 +924,13 @@ func (s *historyBuilderSuite) addDecisionTaskCompletedEvent(scheduleID, startedI
 
 func (s *historyBuilderSuite) addActivityTaskScheduledEvent(decisionCompletedID int64, activityID, activityType,
 	taskList string, input []byte, timeout, queueTimeout, hearbeatTimeout int32,
-	retryPolicy *workflow.RetryPolicy, requestLocalDispatch bool) (*workflow.HistoryEvent,
+	retryPolicy *types.RetryPolicy, requestLocalDispatch bool) (*workflow.HistoryEvent,
 	*persistence.ActivityInfo, *workflow.ActivityLocalDispatchInfo) {
 	event, ai, activityDispatchInfo, err := s.msBuilder.AddActivityTaskScheduledEvent(decisionCompletedID,
-		&workflow.ScheduleActivityTaskDecisionAttributes{
-			ActivityId:                    common.StringPtr(activityID),
-			ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityType)},
-			TaskList:                      &workflow.TaskList{Name: common.StringPtr(taskList)},
+		&types.ScheduleActivityTaskDecisionAttributes{
+			ActivityID:                    common.StringPtr(activityID),
+			ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityType)},
+			TaskList:                      &types.TaskList{Name: common.StringPtr(taskList)},
 			Input:                         input,
 			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(timeout),
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(queueTimeout),
@@ -979,10 +980,10 @@ func (s *historyBuilderSuite) addMarkerRecordedEvent(decisionCompletedEventID in
 			fields[name] = value
 		}
 	}
-	event, err := s.msBuilder.AddRecordMarkerEvent(decisionCompletedEventID, &workflow.RecordMarkerDecisionAttributes{
+	event, err := s.msBuilder.AddRecordMarkerEvent(decisionCompletedEventID, &types.RecordMarkerDecisionAttributes{
 		MarkerName: common.StringPtr(markerName),
 		Details:    details,
-		Header: &workflow.Header{
+		Header: &types.Header{
 			Fields: fields,
 		},
 	})
@@ -996,10 +997,10 @@ func (s *historyBuilderSuite) addRequestCancelExternalWorkflowExecutionInitiated
 	event, _, err := s.msBuilder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
 		decisionCompletedEventID,
 		uuid.New(),
-		&workflow.RequestCancelExternalWorkflowExecutionDecisionAttributes{
+		&types.RequestCancelExternalWorkflowExecutionDecisionAttributes{
 			Domain:            common.StringPtr(targetDomain),
-			WorkflowId:        targetExecution.WorkflowId,
-			RunId:             targetExecution.RunId,
+			WorkflowID:        targetExecution.WorkflowId,
+			RunID:             targetExecution.RunId,
 			ChildWorkflowOnly: common.BoolPtr(childWorkflowOnly),
 		},
 	)

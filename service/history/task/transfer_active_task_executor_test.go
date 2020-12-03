@@ -835,34 +835,34 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 		},
 	}, config.DefaultHistoryMaxAutoResetPoints)
 
-	_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventId(), uuid.New(), &workflow.StartChildWorkflowExecutionDecisionAttributes{
-		WorkflowId: common.StringPtr("child workflow1"),
-		WorkflowType: &workflow.WorkflowType{
+	_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventId(), uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
+		WorkflowID: common.StringPtr("child workflow1"),
+		WorkflowType: &types.WorkflowType{
 			Name: common.StringPtr("child workflow type"),
 		},
-		TaskList:          &workflow.TaskList{Name: common.StringPtr(taskListName)},
+		TaskList:          &types.TaskList{Name: common.StringPtr(taskListName)},
 		Input:             []byte("random input"),
-		ParentClosePolicy: &parentClosePolicy1,
+		ParentClosePolicy: thrift.ToParentClosePolicy(&parentClosePolicy1),
 	})
 	s.Nil(err)
-	_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventId(), uuid.New(), &workflow.StartChildWorkflowExecutionDecisionAttributes{
-		WorkflowId: common.StringPtr("child workflow2"),
-		WorkflowType: &workflow.WorkflowType{
+	_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventId(), uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
+		WorkflowID: common.StringPtr("child workflow2"),
+		WorkflowType: &types.WorkflowType{
 			Name: common.StringPtr("child workflow type"),
 		},
-		TaskList:          &workflow.TaskList{Name: common.StringPtr(taskListName)},
+		TaskList:          &types.TaskList{Name: common.StringPtr(taskListName)},
 		Input:             []byte("random input"),
-		ParentClosePolicy: &parentClosePolicy2,
+		ParentClosePolicy: thrift.ToParentClosePolicy(&parentClosePolicy2),
 	})
 	s.Nil(err)
-	_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventId(), uuid.New(), &workflow.StartChildWorkflowExecutionDecisionAttributes{
-		WorkflowId: common.StringPtr("child workflow3"),
-		WorkflowType: &workflow.WorkflowType{
+	_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventId(), uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
+		WorkflowID: common.StringPtr("child workflow3"),
+		WorkflowType: &types.WorkflowType{
 			Name: common.StringPtr("child workflow type"),
 		},
-		TaskList:          &workflow.TaskList{Name: common.StringPtr(taskListName)},
+		TaskList:          &types.TaskList{Name: common.StringPtr(taskListName)},
 		Input:             []byte("random input"),
-		ParentClosePolicy: &parentClosePolicy3,
+		ParentClosePolicy: thrift.ToParentClosePolicy(&parentClosePolicy3),
 	})
 	s.Nil(err)
 
@@ -952,14 +952,14 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	}, config.DefaultHistoryMaxAutoResetPoints)
 
 	for i := 0; i < 10; i++ {
-		_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventId(), uuid.New(), &workflow.StartChildWorkflowExecutionDecisionAttributes{
-			WorkflowId: common.StringPtr("child workflow" + string(i)),
-			WorkflowType: &workflow.WorkflowType{
+		_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventId(), uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
+			WorkflowID: common.StringPtr("child workflow" + string(i)),
+			WorkflowType: &types.WorkflowType{
 				Name: common.StringPtr("child workflow type"),
 			},
-			TaskList:          &workflow.TaskList{Name: common.StringPtr(taskListName)},
+			TaskList:          &types.TaskList{Name: common.StringPtr(taskListName)},
 			Input:             []byte("random input"),
-			ParentClosePolicy: &parentClosePolicy,
+			ParentClosePolicy: thrift.ToParentClosePolicy(&parentClosePolicy),
 		})
 		s.Nil(err)
 	}
@@ -1049,14 +1049,14 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	}, config.DefaultHistoryMaxAutoResetPoints)
 
 	for i := 0; i < 10; i++ {
-		_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventId(), uuid.New(), &workflow.StartChildWorkflowExecutionDecisionAttributes{
-			WorkflowId: common.StringPtr("child workflow" + string(i)),
-			WorkflowType: &workflow.WorkflowType{
+		_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventId(), uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
+			WorkflowID: common.StringPtr("child workflow" + string(i)),
+			WorkflowType: &types.WorkflowType{
 				Name: common.StringPtr("child workflow type"),
 			},
-			TaskList:          &workflow.TaskList{Name: common.StringPtr(taskListName)},
+			TaskList:          &types.TaskList{Name: common.StringPtr(taskListName)},
 			Input:             []byte("random input"),
-			ParentClosePolicy: &parentClosePolicy,
+			ParentClosePolicy: thrift.ToParentClosePolicy(&parentClosePolicy),
 		})
 		s.Nil(err)
 	}
@@ -1641,7 +1641,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_WithRet
 
 	taskID := int64(59)
 
-	retryPolicy := &workflow.RetryPolicy{
+	retryPolicy := &types.RetryPolicy{
 		ExpirationIntervalInSeconds: common.Int32Ptr(100),
 		MaximumAttempts:             common.Int32Ptr(3),
 		InitialIntervalInSeconds:    common.Int32Ptr(1),

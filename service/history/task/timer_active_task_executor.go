@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -514,20 +515,20 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 	}
 
 	startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
-	continueAsNewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
-		WorkflowType:                        startAttributes.WorkflowType,
-		TaskList:                            startAttributes.TaskList,
+	continueAsNewAttributes := &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
+		WorkflowType:                        thrift.ToWorkflowType(startAttributes.WorkflowType),
+		TaskList:                            thrift.ToTaskList(startAttributes.TaskList),
 		Input:                               startAttributes.Input,
 		ExecutionStartToCloseTimeoutSeconds: startAttributes.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      startAttributes.TaskStartToCloseTimeoutSeconds,
 		BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(backoffInterval.Seconds())),
-		RetryPolicy:                         startAttributes.RetryPolicy,
-		Initiator:                           continueAsNewInitiator.Ptr(),
+		RetryPolicy:                         thrift.ToRetryPolicy(startAttributes.RetryPolicy),
+		Initiator:                           thrift.ToContinueAsNewInitiator(continueAsNewInitiator.Ptr()),
 		FailureReason:                       common.StringPtr(timeoutReason),
 		CronSchedule:                        common.StringPtr(mutableState.GetExecutionInfo().CronSchedule),
-		Header:                              startAttributes.Header,
-		Memo:                                startAttributes.Memo,
-		SearchAttributes:                    startAttributes.SearchAttributes,
+		Header:                              thrift.ToHeader(startAttributes.Header),
+		Memo:                                thrift.ToMemo(startAttributes.Memo),
+		SearchAttributes:                    thrift.ToSearchAttributes(startAttributes.SearchAttributes),
 	}
 	newMutableState, err := retryWorkflow(
 		ctx,

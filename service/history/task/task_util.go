@@ -333,7 +333,7 @@ func retryWorkflow(
 	mutableState execution.MutableState,
 	eventBatchFirstEventID int64,
 	parentDomainName string,
-	continueAsNewAttributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes,
+	continueAsNewAttributes *types.ContinueAsNewWorkflowExecutionDecisionAttributes,
 ) (execution.MutableState, error) {
 
 	if decision, ok := mutableState.GetInFlightDecision(); ok {
