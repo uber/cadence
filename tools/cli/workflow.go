@@ -89,7 +89,7 @@ func newWorkflowCommands() []cli.Command {
 		},
 		{
 			Name:  "signalwithstart",
-			Usage: "signal with start a workflow execution",
+			Usage: "signal the current open workflow if exists, or attempt to start a new run based on IDResuePolicy and signals it",
 			Flags: getFlagsForSignalWithStart(),
 			Action: func(c *cli.Context) {
 				SignalWithStartWorkflowExecution(c)

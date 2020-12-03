@@ -455,11 +455,11 @@ func getFlagsForSignal() []cli.Flag {
 			Usage: "SignalName",
 		},
 		cli.StringFlag{
-			Name:  FlagSignalInputWithAlias,
+			Name:  FlagInputWithAlias,
 			Usage: "Input for the signal, in JSON format.",
 		},
 		cli.StringFlag{
-			Name:  FlagSignalInputFileWithAlias,
+			Name:  FlagInputFileWithAlias,
 			Usage: "Input for the signal from JSON file.",
 		},
 	}
