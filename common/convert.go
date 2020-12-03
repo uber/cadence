@@ -84,6 +84,11 @@ func TimePtr(v time.Time) *time.Time {
 	return &v
 }
 
+// DurationPtr makes a copy and returns the pointer to a duration
+func DurationPtr(v time.Duration) *time.Duration {
+	return &v
+}
+
 // TaskListPtr makes a copy and returns the pointer to a TaskList.
 func TaskListPtr(v s.TaskList) *s.TaskList {
 	return &v
