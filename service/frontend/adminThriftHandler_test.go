@@ -44,41 +44,41 @@ func TestAdminThriftHandler(t *testing.T) {
 	expectedErr := &shared.InternalServiceError{Message: "test"}
 
 	t.Run("AddSearchAttribute", func(t *testing.T) {
-		h.EXPECT().AddSearchAttribute(ctx, &admin.AddSearchAttributeRequest{}).Return(internalErr).Times(1)
+		h.EXPECT().AddSearchAttribute(ctx, &types.AddSearchAttributeRequest{}).Return(internalErr).Times(1)
 		err := th.AddSearchAttribute(ctx, &admin.AddSearchAttributeRequest{})
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("CloseShard", func(t *testing.T) {
-		h.EXPECT().CloseShard(ctx, &shared.CloseShardRequest{}).Return(internalErr).Times(1)
+		h.EXPECT().CloseShard(ctx, &types.CloseShardRequest{}).Return(internalErr).Times(1)
 		err := th.CloseShard(ctx, &shared.CloseShardRequest{})
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("DescribeCluster", func(t *testing.T) {
-		h.EXPECT().DescribeCluster(ctx).Return(&admin.DescribeClusterResponse{}, internalErr).Times(1)
+		h.EXPECT().DescribeCluster(ctx).Return(&types.DescribeClusterResponse{}, internalErr).Times(1)
 		resp, err := th.DescribeCluster(ctx)
 		assert.Equal(t, admin.DescribeClusterResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("DescribeHistoryHost", func(t *testing.T) {
-		h.EXPECT().DescribeHistoryHost(ctx, &shared.DescribeHistoryHostRequest{}).Return(&shared.DescribeHistoryHostResponse{}, internalErr).Times(1)
+		h.EXPECT().DescribeHistoryHost(ctx, &types.DescribeHistoryHostRequest{}).Return(&types.DescribeHistoryHostResponse{}, internalErr).Times(1)
 		resp, err := th.DescribeHistoryHost(ctx, &shared.DescribeHistoryHostRequest{})
 		assert.Equal(t, shared.DescribeHistoryHostResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("DescribeQueue", func(t *testing.T) {
-		h.EXPECT().DescribeQueue(ctx, &shared.DescribeQueueRequest{}).Return(&shared.DescribeQueueResponse{}, internalErr).Times(1)
+		h.EXPECT().DescribeQueue(ctx, &types.DescribeQueueRequest{}).Return(&types.DescribeQueueResponse{}, internalErr).Times(1)
 		resp, err := th.DescribeQueue(ctx, &shared.DescribeQueueRequest{})
 		assert.Equal(t, shared.DescribeQueueResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("DescribeWorkflowExecution", func(t *testing.T) {
-		h.EXPECT().DescribeWorkflowExecution(ctx, &admin.DescribeWorkflowExecutionRequest{}).Return(&admin.DescribeWorkflowExecutionResponse{}, internalErr).Times(1)
+		h.EXPECT().DescribeWorkflowExecution(ctx, &types.AdminDescribeWorkflowExecutionRequest{}).Return(&types.AdminDescribeWorkflowExecutionResponse{}, internalErr).Times(1)
 		resp, err := th.DescribeWorkflowExecution(ctx, &admin.DescribeWorkflowExecutionRequest{})
 		assert.Equal(t, admin.DescribeWorkflowExecutionResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("GetDLQReplicationMessages", func(t *testing.T) {
-		h.EXPECT().GetDLQReplicationMessages(ctx, &replicator.GetDLQReplicationMessagesRequest{}).Return(&replicator.GetDLQReplicationMessagesResponse{}, internalErr).Times(1)
+		h.EXPECT().GetDLQReplicationMessages(ctx, &types.GetDLQReplicationMessagesRequest{}).Return(&types.GetDLQReplicationMessagesResponse{}, internalErr).Times(1)
 		resp, err := th.GetDLQReplicationMessages(ctx, &replicator.GetDLQReplicationMessagesRequest{})
 		assert.Equal(t, replicator.GetDLQReplicationMessagesResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
@@ -90,13 +90,13 @@ func TestAdminThriftHandler(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("GetReplicationMessages", func(t *testing.T) {
-		h.EXPECT().GetReplicationMessages(ctx, &replicator.GetReplicationMessagesRequest{}).Return(&replicator.GetReplicationMessagesResponse{}, internalErr).Times(1)
+		h.EXPECT().GetReplicationMessages(ctx, &types.GetReplicationMessagesRequest{}).Return(&types.GetReplicationMessagesResponse{}, internalErr).Times(1)
 		resp, err := th.GetReplicationMessages(ctx, &replicator.GetReplicationMessagesRequest{})
 		assert.Equal(t, replicator.GetReplicationMessagesResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("GetWorkflowExecutionRawHistoryV2", func(t *testing.T) {
-		h.EXPECT().GetWorkflowExecutionRawHistoryV2(ctx, &admin.GetWorkflowExecutionRawHistoryV2Request{}).Return(&admin.GetWorkflowExecutionRawHistoryV2Response{}, internalErr).Times(1)
+		h.EXPECT().GetWorkflowExecutionRawHistoryV2(ctx, &types.GetWorkflowExecutionRawHistoryV2Request{}).Return(&types.GetWorkflowExecutionRawHistoryV2Response{}, internalErr).Times(1)
 		resp, err := th.GetWorkflowExecutionRawHistoryV2(ctx, &admin.GetWorkflowExecutionRawHistoryV2Request{})
 		assert.Equal(t, admin.GetWorkflowExecutionRawHistoryV2Response{}, *resp)
 		assert.Equal(t, expectedErr, err)
@@ -119,27 +119,27 @@ func TestAdminThriftHandler(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("ReapplyEvents", func(t *testing.T) {
-		h.EXPECT().ReapplyEvents(ctx, &shared.ReapplyEventsRequest{}).Return(internalErr).Times(1)
+		h.EXPECT().ReapplyEvents(ctx, &types.ReapplyEventsRequest{}).Return(internalErr).Times(1)
 		err := th.ReapplyEvents(ctx, &shared.ReapplyEventsRequest{})
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("RefreshWorkflowTasks", func(t *testing.T) {
-		h.EXPECT().RefreshWorkflowTasks(ctx, &shared.RefreshWorkflowTasksRequest{}).Return(internalErr).Times(1)
+		h.EXPECT().RefreshWorkflowTasks(ctx, &types.RefreshWorkflowTasksRequest{}).Return(internalErr).Times(1)
 		err := th.RefreshWorkflowTasks(ctx, &shared.RefreshWorkflowTasksRequest{})
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("RemoveTask", func(t *testing.T) {
-		h.EXPECT().RemoveTask(ctx, &shared.RemoveTaskRequest{}).Return(internalErr).Times(1)
+		h.EXPECT().RemoveTask(ctx, &types.RemoveTaskRequest{}).Return(internalErr).Times(1)
 		err := th.RemoveTask(ctx, &shared.RemoveTaskRequest{})
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("ResendReplicationTasks", func(t *testing.T) {
-		h.EXPECT().ResendReplicationTasks(ctx, &admin.ResendReplicationTasksRequest{}).Return(internalErr).Times(1)
+		h.EXPECT().ResendReplicationTasks(ctx, &types.ResendReplicationTasksRequest{}).Return(internalErr).Times(1)
 		err := th.ResendReplicationTasks(ctx, &admin.ResendReplicationTasksRequest{})
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("ResetQueue", func(t *testing.T) {
-		h.EXPECT().ResetQueue(ctx, &shared.ResetQueueRequest{}).Return(internalErr).Times(1)
+		h.EXPECT().ResetQueue(ctx, &types.ResetQueueRequest{}).Return(internalErr).Times(1)
 		err := th.ResetQueue(ctx, &shared.ResetQueueRequest{})
 		assert.Equal(t, expectedErr, err)
 	})
