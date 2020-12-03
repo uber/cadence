@@ -35,8 +35,8 @@ type (
 	Handler interface {
 		Health(context.Context) (*health.HealthStatus, error)
 		CountWorkflowExecutions(context.Context, *types.CountWorkflowExecutionsRequest) (*types.CountWorkflowExecutionsResponse, error)
-		DeprecateDomain(context.Context, *shared.DeprecateDomainRequest) error
-		DescribeDomain(context.Context, *shared.DescribeDomainRequest) (*shared.DescribeDomainResponse, error)
+		DeprecateDomain(context.Context, *types.DeprecateDomainRequest) error
+		DescribeDomain(context.Context, *types.DescribeDomainRequest) (*types.DescribeDomainResponse, error)
 		DescribeTaskList(context.Context, *shared.DescribeTaskListRequest) (*shared.DescribeTaskListResponse, error)
 		DescribeWorkflowExecution(context.Context, *shared.DescribeWorkflowExecutionRequest) (*shared.DescribeWorkflowExecutionResponse, error)
 		GetClusterInfo(context.Context) (*shared.ClusterInfo, error)
@@ -44,7 +44,7 @@ type (
 		GetWorkflowExecutionHistory(context.Context, *shared.GetWorkflowExecutionHistoryRequest) (*shared.GetWorkflowExecutionHistoryResponse, error)
 		ListArchivedWorkflowExecutions(context.Context, *shared.ListArchivedWorkflowExecutionsRequest) (*shared.ListArchivedWorkflowExecutionsResponse, error)
 		ListClosedWorkflowExecutions(context.Context, *types.ListClosedWorkflowExecutionsRequest) (*types.ListClosedWorkflowExecutionsResponse, error)
-		ListDomains(context.Context, *shared.ListDomainsRequest) (*shared.ListDomainsResponse, error)
+		ListDomains(context.Context, *types.ListDomainsRequest) (*types.ListDomainsResponse, error)
 		ListOpenWorkflowExecutions(context.Context, *types.ListOpenWorkflowExecutionsRequest) (*types.ListOpenWorkflowExecutionsResponse, error)
 		ListTaskListPartitions(context.Context, *shared.ListTaskListPartitionsRequest) (*shared.ListTaskListPartitionsResponse, error)
 		ListWorkflowExecutions(context.Context, *types.ListWorkflowExecutionsRequest) (*types.ListWorkflowExecutionsResponse, error)
@@ -53,7 +53,7 @@ type (
 		QueryWorkflow(context.Context, *shared.QueryWorkflowRequest) (*shared.QueryWorkflowResponse, error)
 		RecordActivityTaskHeartbeat(context.Context, *shared.RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse, error)
 		RecordActivityTaskHeartbeatByID(context.Context, *shared.RecordActivityTaskHeartbeatByIDRequest) (*shared.RecordActivityTaskHeartbeatResponse, error)
-		RegisterDomain(context.Context, *shared.RegisterDomainRequest) error
+		RegisterDomain(context.Context, *types.RegisterDomainRequest) error
 		RequestCancelWorkflowExecution(context.Context, *shared.RequestCancelWorkflowExecutionRequest) error
 		ResetStickyTaskList(context.Context, *shared.ResetStickyTaskListRequest) (*shared.ResetStickyTaskListResponse, error)
 		ResetWorkflowExecution(context.Context, *shared.ResetWorkflowExecutionRequest) (*shared.ResetWorkflowExecutionResponse, error)
@@ -71,6 +71,6 @@ type (
 		SignalWorkflowExecution(context.Context, *shared.SignalWorkflowExecutionRequest) error
 		StartWorkflowExecution(context.Context, *shared.StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error)
 		TerminateWorkflowExecution(context.Context, *shared.TerminateWorkflowExecutionRequest) error
-		UpdateDomain(context.Context, *shared.UpdateDomainRequest) (*shared.UpdateDomainResponse, error)
+		UpdateDomain(context.Context, *types.UpdateDomainRequest) (*types.UpdateDomainResponse, error)
 	}
 )

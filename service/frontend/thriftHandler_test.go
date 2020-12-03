@@ -57,12 +57,12 @@ func TestThriftHandler(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("DeprecateDomain", func(t *testing.T) {
-		h.EXPECT().DeprecateDomain(ctx, &shared.DeprecateDomainRequest{}).Return(internalErr).Times(1)
+		h.EXPECT().DeprecateDomain(ctx, &types.DeprecateDomainRequest{}).Return(internalErr).Times(1)
 		err := th.DeprecateDomain(ctx, &shared.DeprecateDomainRequest{})
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("DescribeDomain", func(t *testing.T) {
-		h.EXPECT().DescribeDomain(ctx, &shared.DescribeDomainRequest{}).Return(&shared.DescribeDomainResponse{}, internalErr).Times(1)
+		h.EXPECT().DescribeDomain(ctx, &types.DescribeDomainRequest{}).Return(&types.DescribeDomainResponse{}, internalErr).Times(1)
 		resp, err := th.DescribeDomain(ctx, &shared.DescribeDomainRequest{})
 		assert.Equal(t, shared.DescribeDomainResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
@@ -110,7 +110,7 @@ func TestThriftHandler(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("ListDomains", func(t *testing.T) {
-		h.EXPECT().ListDomains(ctx, &shared.ListDomainsRequest{}).Return(&shared.ListDomainsResponse{}, internalErr).Times(1)
+		h.EXPECT().ListDomains(ctx, &types.ListDomainsRequest{}).Return(&types.ListDomainsResponse{}, internalErr).Times(1)
 		resp, err := th.ListDomains(ctx, &shared.ListDomainsRequest{})
 		assert.Equal(t, shared.ListDomainsResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
@@ -164,7 +164,7 @@ func TestThriftHandler(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("RegisterDomain", func(t *testing.T) {
-		h.EXPECT().RegisterDomain(ctx, &shared.RegisterDomainRequest{}).Return(internalErr).Times(1)
+		h.EXPECT().RegisterDomain(ctx, &types.RegisterDomainRequest{}).Return(internalErr).Times(1)
 		err := th.RegisterDomain(ctx, &shared.RegisterDomainRequest{})
 		assert.Equal(t, expectedErr, err)
 	})
@@ -260,7 +260,7 @@ func TestThriftHandler(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("UpdateDomain", func(t *testing.T) {
-		h.EXPECT().UpdateDomain(ctx, &shared.UpdateDomainRequest{}).Return(&shared.UpdateDomainResponse{}, internalErr).Times(1)
+		h.EXPECT().UpdateDomain(ctx, &types.UpdateDomainRequest{}).Return(&types.UpdateDomainResponse{}, internalErr).Times(1)
 		resp, err := th.UpdateDomain(ctx, &shared.UpdateDomainRequest{})
 		assert.Equal(t, shared.UpdateDomainResponse{}, *resp)
 		assert.Equal(t, expectedErr, err)
