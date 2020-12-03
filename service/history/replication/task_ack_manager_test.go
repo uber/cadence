@@ -42,7 +42,6 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -614,7 +613,7 @@ func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_OK() {
 	s.Equal(activityInfo.StartedTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetStartedTime())
 	s.Equal(activityInfo.LastHeartBeatUpdatedTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetLastHeartbeatTime())
 	s.Equal(activityInfo.Version, task.GetSyncActivityTaskAttributes().GetVersion())
-	s.Equal(thrift.FromVersionHistory(versionHistories.Histories[0].ToInternalType()), task.GetSyncActivityTaskAttributes().GetVersionHistory())
+	s.Equal(versionHistories.Histories[0].ToInternalType(), task.GetSyncActivityTaskAttributes().GetVersionHistory())
 }
 
 func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_Empty() {
@@ -838,7 +837,7 @@ func (s *taskAckManagerSuite) TestToReplicationTask_SyncActivity() {
 	s.Equal(activityInfo.StartedTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetStartedTime())
 	s.Equal(activityInfo.LastHeartBeatUpdatedTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetLastHeartbeatTime())
 	s.Equal(activityInfo.Version, task.GetSyncActivityTaskAttributes().GetVersion())
-	s.Equal(thrift.FromVersionHistory(versionHistories.Histories[0].ToInternalType()), task.GetSyncActivityTaskAttributes().GetVersionHistory())
+	s.Equal(versionHistories.Histories[0].ToInternalType(), task.GetSyncActivityTaskAttributes().GetVersionHistory())
 }
 
 func (s *taskAckManagerSuite) TestToReplicationTask_History() {
