@@ -87,7 +87,7 @@ func (a *AccessControlledWorkflowHandler) CountWorkflowExecutions(
 // DeprecateDomain API call
 func (a *AccessControlledWorkflowHandler) DeprecateDomain(
 	ctx context.Context,
-	request *shared.DeprecateDomainRequest,
+	request *types.DeprecateDomainRequest,
 ) error {
 
 	scope := a.getMetricsScopeWithDomainName(metrics.FrontendDeprecateDomainScope, request.GetName())
@@ -110,8 +110,8 @@ func (a *AccessControlledWorkflowHandler) DeprecateDomain(
 // DescribeDomain API call
 func (a *AccessControlledWorkflowHandler) DescribeDomain(
 	ctx context.Context,
-	request *shared.DescribeDomainRequest,
-) (*shared.DescribeDomainResponse, error) {
+	request *types.DescribeDomainRequest,
+) (*types.DescribeDomainResponse, error) {
 
 	scope := a.getMetricsScopeWithDomainName(metrics.FrontendDescribeDomainScope, request.GetName())
 
@@ -255,8 +255,8 @@ func (a *AccessControlledWorkflowHandler) ListClosedWorkflowExecutions(
 // ListDomains API call
 func (a *AccessControlledWorkflowHandler) ListDomains(
 	ctx context.Context,
-	request *shared.ListDomainsRequest,
-) (*shared.ListDomainsResponse, error) {
+	request *types.ListDomainsRequest,
+) (*types.ListDomainsResponse, error) {
 
 	scope := a.GetMetricsClient().Scope(metrics.FrontendListDomainsScope)
 
@@ -416,7 +416,7 @@ func (a *AccessControlledWorkflowHandler) RecordActivityTaskHeartbeatByID(
 // RegisterDomain API call
 func (a *AccessControlledWorkflowHandler) RegisterDomain(
 	ctx context.Context,
-	request *shared.RegisterDomainRequest,
+	request *types.RegisterDomainRequest,
 ) error {
 
 	scope := a.getMetricsScopeWithDomainName(metrics.FrontendRegisterDomainScope, request.GetName())
@@ -718,8 +718,8 @@ func (a *AccessControlledWorkflowHandler) ListTaskListPartitions(
 // UpdateDomain API call
 func (a *AccessControlledWorkflowHandler) UpdateDomain(
 	ctx context.Context,
-	request *shared.UpdateDomainRequest,
-) (*shared.UpdateDomainResponse, error) {
+	request *types.UpdateDomainRequest,
+) (*types.UpdateDomainResponse, error) {
 
 	scope := a.getMetricsScopeWithDomainName(metrics.FrontendUpdateDomainScope, request.GetName())
 

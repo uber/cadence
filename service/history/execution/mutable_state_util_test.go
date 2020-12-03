@@ -29,6 +29,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/types"
 )
 
 func TestFindAutoResetPoint(t *testing.T) {
@@ -39,7 +40,7 @@ func TestFindAutoResetPoint(t *testing.T) {
 	assert.Nil(t, pt)
 
 	// case 2: empty
-	_, pt = FindAutoResetPoint(timeSource, &workflow.BadBinaries{}, &workflow.ResetPoints{})
+	_, pt = FindAutoResetPoint(timeSource, &types.BadBinaries{}, &workflow.ResetPoints{})
 	assert.Nil(t, pt)
 
 	pt0 := &workflow.ResetPointInfo{
@@ -70,8 +71,8 @@ func TestFindAutoResetPoint(t *testing.T) {
 	}
 
 	// case 3: two intersection
-	_, pt = FindAutoResetPoint(timeSource, &workflow.BadBinaries{
-		Binaries: map[string]*workflow.BadBinaryInfo{
+	_, pt = FindAutoResetPoint(timeSource, &types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
 			"abc": {},
 			"def": {},
 		},
@@ -83,8 +84,8 @@ func TestFindAutoResetPoint(t *testing.T) {
 	assert.Equal(t, pt.String(), pt0.String())
 
 	// case 4: one intersection
-	_, pt = FindAutoResetPoint(timeSource, &workflow.BadBinaries{
-		Binaries: map[string]*workflow.BadBinaryInfo{
+	_, pt = FindAutoResetPoint(timeSource, &types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
 			"none":    {},
 			"def":     {},
 			"expired": {},
@@ -97,8 +98,8 @@ func TestFindAutoResetPoint(t *testing.T) {
 	assert.Equal(t, pt.String(), pt1.String())
 
 	// case 4: no intersection
-	_, pt = FindAutoResetPoint(timeSource, &workflow.BadBinaries{
-		Binaries: map[string]*workflow.BadBinaryInfo{
+	_, pt = FindAutoResetPoint(timeSource, &types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
 			"none1": {},
 			"none2": {},
 		},
@@ -110,8 +111,8 @@ func TestFindAutoResetPoint(t *testing.T) {
 	assert.Nil(t, pt)
 
 	// case 5: not resettable
-	_, pt = FindAutoResetPoint(timeSource, &workflow.BadBinaries{
-		Binaries: map[string]*workflow.BadBinaryInfo{
+	_, pt = FindAutoResetPoint(timeSource, &types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
 			"none1": {},
 			"ghi":   {},
 		},
@@ -123,8 +124,8 @@ func TestFindAutoResetPoint(t *testing.T) {
 	assert.Nil(t, pt)
 
 	// case 6: one intersection of expired
-	_, pt = FindAutoResetPoint(timeSource, &workflow.BadBinaries{
-		Binaries: map[string]*workflow.BadBinaryInfo{
+	_, pt = FindAutoResetPoint(timeSource, &types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
 			"none":    {},
 			"expired": {},
 		},
@@ -136,8 +137,8 @@ func TestFindAutoResetPoint(t *testing.T) {
 	assert.Nil(t, pt)
 
 	// case 7: one intersection of not expired
-	_, pt = FindAutoResetPoint(timeSource, &workflow.BadBinaries{
-		Binaries: map[string]*workflow.BadBinaryInfo{
+	_, pt = FindAutoResetPoint(timeSource, &types.BadBinaries{
+		Binaries: map[string]*types.BadBinaryInfo{
 			"none":       {},
 			"notExpired": {},
 		},
