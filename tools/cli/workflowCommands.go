@@ -2123,46 +2123,6 @@ func ObserveHistoryWithID(c *cli.Context) {
 	printWorkflowProgress(c, wid, rid)
 }
 
-func getCurrentRunID(ctx context.Context, domain, wid string, frontendClient frontend.Client) (string, error) {
-	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
-		Domain: common.StringPtr(domain),
-		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-		},
-	})
-	if err != nil {
-		return "", err
-	}
-	return resp.WorkflowExecutionInfo.Execution.GetRunID(), nil
-}
-
-func getBadDecisionCompletedID(ctx context.Context, domain, wid, rid, binChecksum string, frontendClient frontend.Client) (decisionFinishID int64, err error) {
-	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
-		Domain: common.StringPtr(domain),
-		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-			RunID:      common.StringPtr(rid),
-		},
-	})
-	if err != nil {
-		return 0, printErrorAndReturn("DescribeWorkflowExecution failed", err)
-	}
-
-	_, p := execution.FindAutoResetPoint(clock.NewRealTimeSource(), &shared.BadBinaries{
-		Binaries: map[string]*shared.BadBinaryInfo{
-			binChecksum: {},
-		},
-	}, thrift.FromResetPoints(resp.WorkflowExecutionInfo.AutoResetPoints))
-	if p != nil {
-		decisionFinishID = p.GetFirstDecisionCompletedId()
-	}
-
-	if decisionFinishID == 0 {
-		return 0, printErrorAndReturn("Get DecisionFinishID failed", &types.BadRequestError{"no DecisionFinishID"})
-	}
-	return
-}
-
 func getEarliestDecisionID(
 	ctx context.Context,
 	domain string, wid string,
