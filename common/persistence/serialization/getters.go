@@ -1,8 +1,9 @@
 package serialization
 
 import (
-	"github.com/uber/cadence/common/types"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 )
 
 // GetStolenSinceRenew internal sql blob getter
@@ -908,7 +909,6 @@ func (a *ActivityInfo) GetStartedEventEncoding() (o string) {
 	}
 	return
 }
-
 
 // GetActivityID internal sql blob getter
 func (a *ActivityInfo) GetActivityID() (o string) {

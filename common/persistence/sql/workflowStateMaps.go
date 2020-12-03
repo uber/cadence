@@ -25,6 +25,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/serialization"
@@ -51,37 +52,37 @@ func updateActivityInfos(
 			startEvent, startEncoding := persistence.FromDataBlob(activityInfo.StartedEvent)
 
 			info := &serialization.ActivityInfo{
-				Version:                       &activityInfo.Version,
-				ScheduledEventBatchID:         &activityInfo.ScheduledEventBatchID,
-				ScheduledEvent:                scheduledEvent,
-				ScheduledEventEncoding:        common.StringPtr(scheduledEncoding),
-				ScheduledTimestamp:            &activityInfo.ScheduledTime,
-				StartedID:                     &activityInfo.StartedID,
-				StartedEvent:                  startEvent,
-				StartedEventEncoding:          common.StringPtr(startEncoding),
-				StartedTimestamp:              &activityInfo.StartedTime,
-				ActivityID:                    &activityInfo.ActivityID,
-				RequestID:                     &activityInfo.RequestID,
-				ScheduleToStartTimeout: &activityInfo.ScheduleToStartTimeout,
-				ScheduleToCloseTimeout: &activityInfo.ScheduleToCloseTimeout,
-				StartToCloseTimeout:    &activityInfo.StartToCloseTimeout,
-				HeartbeatTimeout:       &activityInfo.HeartbeatTimeout,
-				CancelRequested:               &activityInfo.CancelRequested,
-				CancelRequestID:               &activityInfo.CancelRequestID,
-				TimerTaskStatus:               &activityInfo.TimerTaskStatus,
-				Attempt:                       &activityInfo.Attempt,
-				TaskList:                      &activityInfo.TaskList,
-				StartedIdentity:               &activityInfo.StartedIdentity,
-				HasRetryPolicy:                &activityInfo.HasRetryPolicy,
-				RetryInitialInterval:   &activityInfo.InitialInterval,
-				RetryBackoffCoefficient:       &activityInfo.BackoffCoefficient,
-				RetryMaximumInterval:   &activityInfo.MaximumInterval,
-				RetryExpirationTimestamp:      &activityInfo.ExpirationTime,
-				RetryMaximumAttempts:          &activityInfo.MaximumAttempts,
-				RetryNonRetryableErrors:       activityInfo.NonRetriableErrors,
-				RetryLastFailureReason:        &activityInfo.LastFailureReason,
-				RetryLastWorkerIdentity:       &activityInfo.LastWorkerIdentity,
-				RetryLastFailureDetails:       activityInfo.LastFailureDetails,
+				Version:                  &activityInfo.Version,
+				ScheduledEventBatchID:    &activityInfo.ScheduledEventBatchID,
+				ScheduledEvent:           scheduledEvent,
+				ScheduledEventEncoding:   common.StringPtr(scheduledEncoding),
+				ScheduledTimestamp:       &activityInfo.ScheduledTime,
+				StartedID:                &activityInfo.StartedID,
+				StartedEvent:             startEvent,
+				StartedEventEncoding:     common.StringPtr(startEncoding),
+				StartedTimestamp:         &activityInfo.StartedTime,
+				ActivityID:               &activityInfo.ActivityID,
+				RequestID:                &activityInfo.RequestID,
+				ScheduleToStartTimeout:   &activityInfo.ScheduleToStartTimeout,
+				ScheduleToCloseTimeout:   &activityInfo.ScheduleToCloseTimeout,
+				StartToCloseTimeout:      &activityInfo.StartToCloseTimeout,
+				HeartbeatTimeout:         &activityInfo.HeartbeatTimeout,
+				CancelRequested:          &activityInfo.CancelRequested,
+				CancelRequestID:          &activityInfo.CancelRequestID,
+				TimerTaskStatus:          &activityInfo.TimerTaskStatus,
+				Attempt:                  &activityInfo.Attempt,
+				TaskList:                 &activityInfo.TaskList,
+				StartedIdentity:          &activityInfo.StartedIdentity,
+				HasRetryPolicy:           &activityInfo.HasRetryPolicy,
+				RetryInitialInterval:     &activityInfo.InitialInterval,
+				RetryBackoffCoefficient:  &activityInfo.BackoffCoefficient,
+				RetryMaximumInterval:     &activityInfo.MaximumInterval,
+				RetryExpirationTimestamp: &activityInfo.ExpirationTime,
+				RetryMaximumAttempts:     &activityInfo.MaximumAttempts,
+				RetryNonRetryableErrors:  activityInfo.NonRetriableErrors,
+				RetryLastFailureReason:   &activityInfo.LastFailureReason,
+				RetryLastWorkerIdentity:  &activityInfo.LastWorkerIdentity,
+				RetryLastFailureDetails:  activityInfo.LastFailureDetails,
 			}
 			blob, err := parser.ActivityInfoToBlob(info)
 			if err != nil {

@@ -23,8 +23,9 @@
 package serialization
 
 import (
-	"github.com/uber/cadence/common/types"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 
 	"go.uber.org/thriftrw/wire"
 
