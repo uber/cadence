@@ -116,6 +116,9 @@ type (
 
 	// ExecutionsFilter contains the column names within executions table that
 	// can be used to filter results through a WHERE clause
+	// To get single row, it requires ShardID, DomainID, WorkflowID, RunID
+	// To get a list of rows, it requires ShardID, Size.
+	// The WorkflowID and RunID are optional for listing rows. They work as the start boundary for pagination.
 	ExecutionsFilter struct {
 		ShardID    int
 		DomainID   serialization.UUID

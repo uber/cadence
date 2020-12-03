@@ -17,11 +17,11 @@ Run the following command based on your database.
 
 Cassandra:
 
-`cadence admin db unsupported-workflow --db_type=cassandra --db_address <db address> --db_port <port number> --username=<username> --password=<password> --keyspace <keyspace> --number_of_shards=<your number of shards> --rps <scan rps> --output_filename ./cadence_scan`
+`cadence admin db unsupported-workflow --db_type=cassandra --db_address <db address> --db_port <port number> --username=<username> --password=<password> --keyspace <keyspace> --lower_shard_bound=<the start shard id> --upper_shard_bound=<the end shard id> --rps <scan rps> --output_filename ./cadence_scan`
 
 MySQL/Postgres:
 
-`cadence admin db unsupported-workflow --db_type=<mysql/postgres> --db_address <db address> --db_port <port number> --username=<username> --password=<password> --db_name <database name> --number_of_shards=<your number of shards> --rps <scan rps> --output_filename ./cadence_scan`
+`cadence admin db unsupported-workflow --db_type=<mysql/postgres> --db_address <db address> --db_port <port number> --username=<username> --password=<password> --db_name <database name> --lower_shard_bound=<the start shard id> --upper_shard_bound=<the end shard id> --rps <scan rps> --output_filename ./cadence_scan`
 
 **Note:** This CLI is a long-running process to scan the database for unsupported workflows.
 If you have TLS configurations or use customized encoding/decoding type. Please use
@@ -31,7 +31,7 @@ If you have TLS configurations or use customized encoding/decoding type. Please 
 to configurate the correct connection.
 
 
-After the CLI completes, a list of unsupported workflows will be display in the file `cadence_scan`.
+After the CLI completes, a list of unsupported workflows will be listed in the file `cadence_scan`.
 
 For example:
 

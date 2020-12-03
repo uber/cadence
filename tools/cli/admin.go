@@ -837,11 +837,6 @@ func newDBCommands() []cli.Command {
 			Usage: "use this command when upgrade the Cadence server from version less than 0.16.0. This scan database and detect unsupported workflow type.",
 			Flags: append(getDBFlags(),
 				cli.IntFlag{
-					Name:     FlagNumberOfShards,
-					Usage:    "NumberOfShards for the cadence cluster (see config for numHistoryShards)",
-					Required: true,
-				},
-				cli.IntFlag{
 					Name:  FlagRPS,
 					Usage: "NumberOfShards for the cadence cluster (see config for numHistoryShards)",
 					Value: 1000,
@@ -849,6 +844,18 @@ func newDBCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagOutputFilenameWithAlias,
 					Usage: "Output file to write to, if not provided output is written to stdout",
+				},
+				cli.IntFlag{
+					Name:     FlagLowerShardBound,
+					Usage:    "FlagLowerShardBound for the start shard to scan. (Default: 0)",
+					Value:    0,
+					Required: true,
+				},
+				cli.IntFlag{
+					Name:     FlagUpperShardBound,
+					Usage:    "FlagLowerShardBound for the end shard to scan. (Default: 16383)",
+					Value:    16383,
+					Required: true,
 				},
 			),
 

@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/urfave/cli"
 
@@ -39,12 +40,16 @@ import (
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql"
-	quotas2 "github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/reconciliation/fetcher"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/worker/scanner/executions"
+)
+
+const (
+	listContextTimeout = time.Minute
 )
 
 // AdminDBScan is used to scan over executions in database and detect corruptions.
@@ -55,7 +60,7 @@ func AdminDBScan(c *cli.Context) {
 		ErrorAndExit("unknown scan type", err)
 	}
 
-	numberOfShards := c.Int(FlagNumberOfShards)
+	numberOfShards := getRequiredIntOption(c, FlagNumberOfShards)
 	collectionSlice := c.StringSlice(FlagInvariantCollection)
 
 	var collections []invariant.Collection
@@ -164,13 +169,17 @@ func checkExecution(
 	return execution, invariant.NewInvariantManager(ivs).RunChecks(ctx, execution)
 }
 
+// AdminDBScanUnsupportedWorkflow is to scan DB for unsupported workflow for a new release
 func AdminDBScanUnsupportedWorkflow(c *cli.Context) {
-	numberOfShards := c.Int(FlagNumberOfShards)
 	rps := c.Int(FlagRPS)
 	outputFile := getOutputFile(c.String(FlagOutputFilename))
+	startShardID := c.Int(FlagLowerShardBound)
+	endShardID := c.Int(FlagUpperShardBound)
+
 	defer outputFile.Close()
-	for i := 0; i < numberOfShards; i++ {
+	for i := startShardID; i <= endShardID; i++ {
 		listExecutionsByShardID(c, i, rps, outputFile)
+		fmt.Println(fmt.Sprintf("Shard %v scan operation is completed.", i))
 	}
 }
 
@@ -185,8 +194,11 @@ func listExecutionsByShardID(
 	defer client.Close()
 
 	paginationFunc := func(paginationToken []byte) ([]interface{}, []byte, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), listContextTimeout)
+		defer cancel()
+
 		resp, err := client.ListConcreteExecutions(
-			context.Background(),
+			ctx,
 			&persistence.ListConcreteExecutionsRequest{
 				PageSize:  1000,
 				PageToken: paginationToken,
@@ -238,21 +250,21 @@ func initializeExecutionStore(
 	logger := loggerimpl.NewNopLogger()
 	switch dbType {
 	case "cassandra":
-		execStore = initialCassandraExecutionClient(c, shardID, logger)
+		execStore = initializeCassandraExecutionClient(c, shardID, logger)
 	case "mysql":
-		execStore = initialSQLExecutionStore(c, shardID, logger)
+		execStore = initializeSQLExecutionStore(c, shardID, logger)
 	case "postgres":
-		execStore = initialSQLExecutionStore(c, shardID, logger)
+		execStore = initializeSQLExecutionStore(c, shardID, logger)
 	default:
 		ErrorAndExit("The DB type is not supported. Options are: cassandra, mysql, postgres.", nil)
 	}
 
 	historyManager := persistence.NewExecutionManagerImpl(execStore, logger)
-	rateLimiter := quotas2.NewSimpleRateLimiter(rps)
+	rateLimiter := quotas.NewSimpleRateLimiter(rps)
 	return persistence.NewWorkflowExecutionPersistenceRateLimitedClient(historyManager, rateLimiter, logger)
 }
 
-func initialCassandraExecutionClient(
+func initializeCassandraExecutionClient(
 	c *cli.Context,
 	shardID int,
 	logger log.Logger,
@@ -270,7 +282,7 @@ func initialCassandraExecutionClient(
 	return execStore
 }
 
-func initialSQLExecutionStore(
+func initializeSQLExecutionStore(
 	c *cli.Context,
 	shardID int,
 	logger log.Logger,
