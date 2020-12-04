@@ -1957,8 +1957,8 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		if len(token.PersistenceToken) == 0 && isLongPoll && token.IsWorkflowRunning {
 			logger := wh.GetLogger().WithTags(
 				tag.WorkflowDomainName(getRequest.GetDomain()),
-				tag.WorkflowID(getRequest.Execution.GetWorkflowId()),
-				tag.WorkflowRunID(getRequest.Execution.GetRunId()),
+				tag.WorkflowID(getRequest.Execution.GetWorkflowID()),
+				tag.WorkflowRunID(getRequest.Execution.GetRunID()),
 			)
 			// TODO: for now we only log the invalid timeout (this is done inside the helper function) in case
 			// this change breaks existing customers. Once we are sure no one is calling this API with very short timeout
