@@ -248,7 +248,7 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 
-	if err := validateExecution(request.Execution); err != nil {
+	if err := validateExecution(thrift.ToWorkflowExecution(request.Execution)); err != nil {
 		return nil, adh.error(err, scope)
 	}
 
@@ -371,7 +371,7 @@ func (adh *adminHandlerImpl) DescribeHistoryHost(
 	}
 
 	if request.ExecutionForHost != nil {
-		if err := validateExecution(request.ExecutionForHost); err != nil {
+		if err := validateExecution(thrift.ToWorkflowExecution(request.ExecutionForHost)); err != nil {
 			return nil, adh.error(err, scope)
 		}
 	}
@@ -907,7 +907,7 @@ func (adh *adminHandlerImpl) RefreshWorkflowTasks(
 	if request == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
-	if err := validateExecution(request.Execution); err != nil {
+	if err := validateExecution(thrift.ToWorkflowExecution(request.Execution)); err != nil {
 		return adh.error(err, scope)
 	}
 	domainEntry, err := adh.GetDomainCache().GetDomain(request.GetDomain())
