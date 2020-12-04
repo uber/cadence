@@ -75,6 +75,10 @@ const (
 	FlagInputWithAlias                    = FlagInput + ", i"
 	FlagInputFile                         = "input_file"
 	FlagInputFileWithAlias                = FlagInputFile + ", if"
+	FlagSignalInput                       = "signal_input"
+	FlagSignalInputWithAlias              = FlagSignalInput + ", si"
+	FlagSignalInputFile                   = "signal_input_file"
+	FlagSignalInputFileWithAlias          = FlagSignalInputFile + ", sif"
 	FlagExcludeFile                       = "exclude_file"
 	FlagInputSeparator                    = "input_separator"
 	FlagParallism                         = "input_parallism"
@@ -434,6 +438,54 @@ func getFlagsForRun() []cli.Flag {
 	}
 	flagsForRun = append(getFlagsForStart(), flagsForRun...)
 	return flagsForRun
+}
+
+func getFlagsForSignal() []cli.Flag {
+	return []cli.Flag{
+		cli.StringFlag{
+			Name:  FlagWorkflowIDWithAlias,
+			Usage: "WorkflowID",
+		},
+		cli.StringFlag{
+			Name:  FlagRunIDWithAlias,
+			Usage: "RunID",
+		},
+		cli.StringFlag{
+			Name:  FlagNameWithAlias,
+			Usage: "SignalName",
+		},
+		cli.StringFlag{
+			Name:  FlagInputWithAlias,
+			Usage: "Input for the signal, in JSON format.",
+		},
+		cli.StringFlag{
+			Name:  FlagInputFileWithAlias,
+			Usage: "Input for the signal from JSON file.",
+		},
+	}
+}
+
+func getFlagsForSignalWithStart() []cli.Flag {
+	return append(getFlagsForStart(),
+		cli.StringFlag{
+			Name:  FlagNameWithAlias,
+			Usage: "SignalName",
+		},
+		cli.StringFlag{
+			Name:  FlagSignalInputWithAlias,
+			Usage: "Input for the signal, in JSON format.",
+		},
+		cli.StringFlag{
+			Name:  FlagSignalInputFileWithAlias,
+			Usage: "Input for the signal from JSON file.",
+		})
+}
+
+func getFlagsForTerminate() []cli.Flag {
+	return append(flagsForExecution, cli.StringFlag{
+		Name:  FlagReasonWithAlias,
+		Usage: "The reason you want to terminate the workflow",
+	})
 }
 
 func getCommonFlagsForVisibility() []cli.Flag {
