@@ -456,7 +456,7 @@ func (c *Config) fillDefaults() error {
 			c.Persistence.DataStores[k] = store
 		}
 	}
-	// filling RPCName with default value if empty
+	// filling RPCName with a default value if empty
 	if c.ClusterMetadata != nil {
 		for k, cluster := range c.ClusterMetadata.ClusterInformation {
 			if cluster.RPCName == "" {
