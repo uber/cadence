@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"strconv"
 	"time"
 
@@ -38,6 +39,8 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 	cassp "github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/persistence/sql"
+	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
@@ -309,6 +312,44 @@ func connectToCassandra(c *cli.Context) *gocql.Session {
 		ErrorAndExit("connect to Cassandra failed", err)
 	}
 	return session
+}
+
+func connectToSQL(c *cli.Context) sqlplugin.DB {
+	host := getRequiredOption(c, FlagDBAddress)
+	if !c.IsSet(FlagDBPort) {
+		ErrorAndExit("sql port is required", nil)
+	}
+	encodingType := c.String(FlagEncodingType)
+	decodingTypesStr := c.StringSlice(FlagDecodingTypes)
+
+	sqlConfig := &config.SQL{
+		ConnectAddr: net.JoinHostPort(
+			host,
+			c.String(FlagDBPort),
+		),
+		PluginName:    c.String(FlagDBType),
+		User:          c.String(FlagUsername),
+		Password:      c.String(FlagPassword),
+		DatabaseName:  getRequiredOption(c, FlagDatabaseName),
+		EncodingType:  encodingType,
+		DecodingTypes: decodingTypesStr,
+	}
+
+	if c.Bool(FlagEnableTLS) {
+		sqlConfig.TLS = &auth.TLS{
+			Enabled:                true,
+			CertFile:               c.String(FlagTLSCertPath),
+			KeyFile:                c.String(FlagTLSKeyPath),
+			CaFile:                 c.String(FlagTLSCaPath),
+			EnableHostVerification: c.Bool(FlagTLSEnableHostVerification),
+		}
+	}
+
+	db, err := sql.NewSQLDB(sqlConfig)
+	if err != nil {
+		ErrorAndExit("connect to SQL failed", err)
+	}
+	return db
 }
 
 // AdminGetDomainIDOrName map domain

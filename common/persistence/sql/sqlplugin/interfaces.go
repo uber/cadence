@@ -116,11 +116,15 @@ type (
 
 	// ExecutionsFilter contains the column names within executions table that
 	// can be used to filter results through a WHERE clause
+	// To get single row, it requires ShardID, DomainID, WorkflowID, RunID
+	// To get a list of rows, it requires ShardID, Size.
+	// The WorkflowID and RunID are optional for listing rows. They work as the start boundary for pagination.
 	ExecutionsFilter struct {
 		ShardID    int
 		DomainID   serialization.UUID
 		WorkflowID string
 		RunID      serialization.UUID
+		Size       int
 	}
 
 	// CurrentExecutionsRow represents a row in current_executions table
@@ -581,7 +585,7 @@ type (
 
 		InsertIntoExecutions(ctx context.Context, row *ExecutionsRow) (sql.Result, error)
 		UpdateExecutions(ctx context.Context, row *ExecutionsRow) (sql.Result, error)
-		SelectFromExecutions(ctx context.Context, filter *ExecutionsFilter) (*ExecutionsRow, error)
+		SelectFromExecutions(ctx context.Context, filter *ExecutionsFilter) ([]ExecutionsRow, error)
 		DeleteFromExecutions(ctx context.Context, filter *ExecutionsFilter) (sql.Result, error)
 		ReadLockExecutions(ctx context.Context, filter *ExecutionsFilter) (int, error)
 		WriteLockExecutions(ctx context.Context, filter *ExecutionsFilter) (int, error)
