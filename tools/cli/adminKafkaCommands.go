@@ -174,6 +174,7 @@ func getOutputFile(outputFile string) *os.File {
 	if err != nil {
 		ErrorAndExit("failed to create output file", err)
 	}
+
 	return f
 }
 

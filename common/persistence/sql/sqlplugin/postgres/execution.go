@@ -40,6 +40,9 @@ const (
 	getExecutionQuery = `SELECT ` + executionsColumns + ` FROM executions
  WHERE shard_id = $1 AND domain_id = $2 AND workflow_id = $3 AND run_id = $4`
 
+	listExecutionQuery = `SELECT ` + executionsColumns + ` FROM executions
+ WHERE shard_id = $1 AND workflow_id > $2 AND run_id > $3 ORDER BY workflow_id, run_id LIMIT $4`
+
 	deleteExecutionQuery = `DELETE FROM executions 
  WHERE shard_id = $1 AND domain_id = $2 AND workflow_id = $3 AND run_id = $4`
 
@@ -168,13 +171,24 @@ func (pdb *db) UpdateExecutions(ctx context.Context, row *sqlplugin.ExecutionsRo
 }
 
 // SelectFromExecutions reads a single row from executions table
-func (pdb *db) SelectFromExecutions(ctx context.Context, filter *sqlplugin.ExecutionsFilter) (*sqlplugin.ExecutionsRow, error) {
-	var row sqlplugin.ExecutionsRow
-	err := pdb.conn.GetContext(ctx, &row, getExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
-	if err != nil {
-		return nil, err
+func (pdb *db) SelectFromExecutions(ctx context.Context, filter *sqlplugin.ExecutionsFilter) ([]sqlplugin.ExecutionsRow, error) {
+	var rows []sqlplugin.ExecutionsRow
+	var err error
+	if len(filter.DomainID) == 0 && filter.Size > 0 {
+		err = pdb.conn.SelectContext(ctx, &rows, listExecutionQuery, filter.ShardID, filter.WorkflowID, filter.RunID, filter.Size)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		var row sqlplugin.ExecutionsRow
+		err = pdb.conn.GetContext(ctx, &row, getExecutionQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, row)
 	}
-	return &row, err
+
+	return rows, err
 }
 
 // DeleteFromExecutions deletes a single row from executions table
