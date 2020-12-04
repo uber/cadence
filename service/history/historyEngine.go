@@ -78,6 +78,10 @@ const (
 	replicationTimeout                        = 30 * time.Second
 	contextLockTimeout                        = 500 * time.Millisecond
 
+	// pollMutableStateBufferDuration should be smaller than minPollMutableStateTimeout
+	pollMutableStateBufferDuration = 50 * time.Millisecond
+	minPollMutableStateTimeout     = 100 * time.Millisecond
+
 	// TerminateIfRunningReason reason for terminateIfRunning
 	TerminateIfRunningReason = "TerminateIfRunning Policy"
 	// TerminateIfRunningDetailsTemplate details template for terminateIfRunning
@@ -1031,7 +1035,25 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 		if err != nil {
 			return nil, err
 		}
-		timer := time.NewTimer(e.shard.GetConfig().LongPollExpirationInterval(domainCache.GetInfo().Name))
+
+		expirationInterval := e.shard.GetConfig().LongPollExpirationInterval(domainCache.GetInfo().Name)
+		if deadline, ok := ctx.Deadline(); ok {
+			timeout := deadline.Sub(e.shard.GetTimeSource().Now())
+			if timeout < minPollMutableStateTimeout {
+				// timeout is too short, return directly
+				// note that minPollMutableStateTimeout is larger than pollMutableStateBufferDuration,
+				// this ensure that:
+				//     1. timeout-pollMutableStateBufferDuration > 0
+				//     2. leaves a reasonable amount of time to poll mutable state
+				return response, nil
+			}
+			expirationInterval = common.MinDuration(
+				expirationInterval,
+				timeout-pollMutableStateBufferDuration,
+			)
+		}
+
+		timer := time.NewTimer(expirationInterval)
 		defer timer.Stop()
 		for {
 			select {
@@ -1052,8 +1074,6 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 				}
 			case <-timer.C:
 				return response, nil
-			case <-ctx.Done():
-				return nil, ctx.Err()
 			}
 		}
 	}
