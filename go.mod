@@ -54,6 +54,7 @@ require (
 	github.com/uber/tchannel-go v1.16.0
 	github.com/urfave/cli v1.22.4
 	github.com/valyala/fastjson v1.4.1
+	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.uber.org/atomic v1.5.1
 	go.uber.org/cadence v0.14.1
