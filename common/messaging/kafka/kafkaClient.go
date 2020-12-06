@@ -18,12 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package messaging
+package kafka
 
 import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"github.com/uber/cadence/common/messaging"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -45,7 +46,7 @@ type (
 	}
 )
 
-var _ Client = (*kafkaClient)(nil)
+var _ messaging.Client = (*kafkaClient)(nil)
 
 // NewKafkaClient is used to create an instance of KafkaClient
 func NewKafkaClient(
@@ -54,7 +55,7 @@ func NewKafkaClient(
 	logger log.Logger,
 	_ tally.Scope,
 	checkApp bool,
-) Client {
+) messaging.Client {
 	kc.Validate(checkApp)
 
 	// mapping from cluster name to list of broker ip addresses
@@ -82,7 +83,7 @@ func NewKafkaClient(
 }
 
 // NewConsumer is used to create a Kafka consumer
-func (c *kafkaClient) NewConsumer(app, consumerName string, _ int) (Consumer, error) {
+func (c *kafkaClient) NewConsumer(app, consumerName string, _ int) (messaging.Consumer, error) {
 	topics := c.config.getTopicsForApplication(app)
 	saramaConfig := sarama.NewConfig()
 	// bellow config is copied from uber/kafka-client bo keep the same behavior
@@ -101,12 +102,12 @@ func (c *kafkaClient) NewConsumer(app, consumerName string, _ int) (Consumer, er
 }
 
 // NewProducer is used to create a Kafka producer
-func (c *kafkaClient) NewProducer(app string) (Producer, error) {
+func (c *kafkaClient) NewProducer(app string) (messaging.Producer, error) {
 	topics := c.config.getTopicsForApplication(app)
 	return c.newProducerHelper(topics.Topic)
 }
 
-func (c *kafkaClient) newProducerHelper(topic string) (Producer, error) {
+func (c *kafkaClient) newProducerHelper(topic string) (messaging.Producer, error) {
 	kafkaClusterName := c.config.getKafkaClusterForTopic(topic)
 	brokers := c.config.getBrokersForKafkaCluster(kafkaClusterName)
 
@@ -124,7 +125,7 @@ func (c *kafkaClient) newProducerHelper(topic string) (Producer, error) {
 
 	if c.metricsClient != nil {
 		c.logger.Info("Create producer with metricsClient")
-		return NewMetricProducer(NewKafkaProducer(topic, producer, c.logger), c.metricsClient), nil
+		return messaging.NewMetricProducer(NewKafkaProducer(topic, producer, c.logger), c.metricsClient), nil
 	}
 	return NewKafkaProducer(topic, producer, c.logger), nil
 }

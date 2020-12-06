@@ -18,11 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package messaging
+package kafka
 
 import (
 	"context"
 	"errors"
+	"github.com/uber/cadence/common/messaging"
 
 	"github.com/Shopify/sarama"
 
@@ -41,10 +42,10 @@ type (
 	}
 )
 
-var _ Producer = (*kafkaProducer)(nil)
+var _ messaging.Producer = (*kafkaProducer)(nil)
 
 // NewKafkaProducer is used to create the Kafka based producer implementation
-func NewKafkaProducer(topic string, producer sarama.SyncProducer, logger log.Logger) Producer {
+func NewKafkaProducer(topic string, producer sarama.SyncProducer, logger log.Logger) messaging.Producer {
 	return &kafkaProducer{
 		topic:      topic,
 		producer:   producer,
@@ -110,7 +111,7 @@ func (p *kafkaProducer) getProducerMessage(message interface{}) (*sarama.Produce
 func (p *kafkaProducer) convertErr(err error) error {
 	switch err {
 	case sarama.ErrMessageSizeTooLarge:
-		return ErrMessageSizeLimit
+		return messaging.ErrMessageSizeLimit
 	default:
 		return err
 	}

@@ -65,4 +65,22 @@ type (
 		Producer
 		Close() error
 	}
+
+	// AckManager convert out of order acks into ackLevel movement.
+	AckManager interface {
+		// Read an item into backlog for processing for ack
+		ReadItem(id int64) error
+		// Get current max ID from read items
+		GetReadLevel() int64
+		// Set current max ID from read items
+		SetReadLevel(readLevel int64)
+		// Mark an item as done processing, and remove from backlog
+		AckItem(id int64) (ackLevel int64)
+		// Get current max level that can safely ack
+		GetAckLevel() int64
+		// Set current max level that can safely ack
+		SetAckLevel(ackLevel int64)
+		// GetBacklogCount return the of items that are waiting for ack
+		GetBacklogCount() int64
+	}
 )

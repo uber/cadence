@@ -138,7 +138,7 @@ getTasksPumpLoop:
 				}
 
 				if len(tasks) == 0 {
-					tr.tlMgr.taskAckManager.setReadLevel(readLevel)
+					tr.tlMgr.taskAckManager.SetReadLevel(readLevel)
 					if !isReadBatchDone {
 						tr.Signal()
 					}
@@ -198,7 +198,7 @@ func (tr *taskReader) getTaskBatchWithRange(readLevel int64, maxReadLevel int64)
 // Also return a bool to indicate whether read is finished
 func (tr *taskReader) getTaskBatch() ([]*persistence.TaskInfo, int64, bool, error) {
 	var tasks []*persistence.TaskInfo
-	readLevel := tr.tlMgr.taskAckManager.getReadLevel()
+	readLevel := tr.tlMgr.taskAckManager.GetReadLevel()
 	maxReadLevel := tr.tlMgr.taskWriter.GetMaxReadLevel()
 
 	// counter i is used to break and let caller check whether tasklist is still alive and need resume read.
@@ -230,7 +230,7 @@ func (tr *taskReader) isIdle(lastWriteTime time.Time) bool {
 
 func (tr *taskReader) handleIdleTimeout() {
 	tr.persistAckLevel() //nolint:errcheck
-	tr.tlMgr.taskGC.RunNow(tr.tlMgr.taskAckManager.getAckLevel())
+	tr.tlMgr.taskGC.RunNow(tr.tlMgr.taskAckManager.GetAckLevel())
 	tr.tlMgr.Stop()
 }
 
@@ -242,7 +242,7 @@ func (tr *taskReader) addTasksToBuffer(
 			tr.scope().IncCounter(metrics.ExpiredTasksPerTaskListCounter)
 			// Also increment readLevel for expired tasks otherwise it could result in
 			// looping over the same tasks if all tasks read in the batch are expired
-			tr.tlMgr.taskAckManager.setReadLevel(t.TaskID)
+			tr.tlMgr.taskAckManager.SetReadLevel(t.TaskID)
 			continue
 		}
 		if !tr.addSingleTaskToBuffer(t, lastWriteTime, idleTimer) {
@@ -254,7 +254,7 @@ func (tr *taskReader) addTasksToBuffer(
 
 func (tr *taskReader) addSingleTaskToBuffer(
 	task *persistence.TaskInfo, lastWriteTime time.Time, idleTimer *time.Timer) bool {
-	tr.tlMgr.taskAckManager.addTask(task.TaskID)
+	tr.tlMgr.taskAckManager.ReadItem(task.TaskID)
 	for {
 		select {
 		case tr.taskBuffer <- task:
@@ -271,7 +271,7 @@ func (tr *taskReader) addSingleTaskToBuffer(
 }
 
 func (tr *taskReader) persistAckLevel() error {
-	return tr.tlMgr.db.UpdateState(tr.tlMgr.taskAckManager.getAckLevel())
+	return tr.tlMgr.db.UpdateState(tr.tlMgr.taskAckManager.GetAckLevel())
 }
 
 func (tr *taskReader) isTaskAddedRecently(lastAddTime time.Time) bool {

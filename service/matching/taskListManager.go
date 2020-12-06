@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/messaging"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -86,8 +87,8 @@ type (
 		taskWriter       *taskWriter
 		taskReader       *taskReader // reads tasks from db and async matches it with poller
 		taskGC           *taskGC
-		taskAckManager   ackManager   // tracks ackLevel for delivered messages
-		matcher          *TaskMatcher // for matching a task producer with a poller
+		taskAckManager   messaging.AckManager // tracks ackLevel for delivered messages
+		matcher          *TaskMatcher         // for matching a task producer with a poller
 		domainCache      cache.DomainCache
 		logger           log.Logger
 		metricsClient    metrics.Client
@@ -147,7 +148,7 @@ func newTaskListManager(
 		logger: e.logger.WithTags(tag.WorkflowTaskListName(taskList.name),
 			tag.WorkflowTaskListType(taskList.taskType)),
 		db:                  db,
-		taskAckManager:      newAckManager(e.logger),
+		taskAckManager:      messaging.NewAckManager(e.logger),
 		taskGC:              newTaskGC(db, taskListConfig),
 		config:              taskListConfig,
 		pollerHistory:       newPollerHistory(),
@@ -189,7 +190,7 @@ func (c *taskListManagerImpl) Start() error {
 		return err
 	}
 
-	c.taskAckManager.setAckLevel(state.ackLevel)
+	c.taskAckManager.SetAckLevel(state.ackLevel)
 	c.taskWriter.Start(c.rangeIDToTaskIDBlock(state.rangeID))
 	c.taskReader.Start()
 
@@ -278,7 +279,7 @@ func (c *taskListManagerImpl) GetTask(
 		return nil, err
 	}
 	task.domainName = c.domainName()
-	task.backlogCountHint = c.taskAckManager.getBacklogCountHint()
+	task.backlogCountHint = c.taskAckManager.GetBacklogCount()
 	return task, nil
 }
 
@@ -354,9 +355,9 @@ func (c *taskListManagerImpl) DescribeTaskList(includeTaskListStatus bool) *type
 
 	taskIDBlock := c.rangeIDToTaskIDBlock(c.db.RangeID())
 	response.TaskListStatus = &types.TaskListStatus{
-		ReadLevel:        common.Int64Ptr(c.taskAckManager.getReadLevel()),
-		AckLevel:         common.Int64Ptr(c.taskAckManager.getAckLevel()),
-		BacklogCountHint: common.Int64Ptr(c.taskAckManager.getBacklogCountHint()),
+		ReadLevel:        common.Int64Ptr(c.taskAckManager.GetReadLevel()),
+		AckLevel:         common.Int64Ptr(c.taskAckManager.GetAckLevel()),
+		BacklogCountHint: common.Int64Ptr(c.taskAckManager.GetBacklogCount()),
 		RatePerSecond:    common.Float64Ptr(c.matcher.Rate()),
 		TaskIDBlock: &types.TaskIDBlock{
 			StartID: common.Int64Ptr(taskIDBlock.start),
@@ -378,8 +379,8 @@ func (c *taskListManagerImpl) String() string {
 	fmt.Fprintf(buf, " task list %v\n", c.taskListID.name)
 	fmt.Fprintf(buf, "RangeID=%v\n", rangeID)
 	fmt.Fprintf(buf, "TaskIDBlock=%+v\n", c.rangeIDToTaskIDBlock(rangeID))
-	fmt.Fprintf(buf, "AckLevel=%v\n", c.taskAckManager.ackLevel)
-	fmt.Fprintf(buf, "MaxReadLevel=%v\n", c.taskAckManager.getReadLevel())
+	fmt.Fprintf(buf, "AckLevel=%v\n", c.taskAckManager.GetAckLevel())
+	fmt.Fprintf(buf, "MaxReadLevel=%v\n", c.taskAckManager.GetReadLevel())
 
 	return buf.String()
 }
@@ -416,7 +417,7 @@ func (c *taskListManagerImpl) completeTask(task *persistence.TaskInfo, err error
 		}
 		c.taskReader.Signal()
 	}
-	ackLevel := c.taskAckManager.completeTask(task.TaskID)
+	ackLevel := c.taskAckManager.AckItem(task.TaskID)
 	c.taskGC.Run(ackLevel)
 }
 

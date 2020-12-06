@@ -21,6 +21,7 @@
 package cadence
 
 import (
+	"github.com/uber/cadence/common/messaging/kafka"
 	"log"
 	"time"
 
@@ -36,7 +37,6 @@ import (
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"
@@ -160,7 +160,7 @@ func (s *server) startService() common.Daemon {
 	)()
 	isAdvancedVisEnabled := advancedVisMode != common.AdvancedVisibilityWritingModeOff
 	if isAdvancedVisEnabled {
-		params.MessagingClient = messaging.NewKafkaClient(&s.cfg.Kafka, params.MetricsClient, params.Logger, params.MetricScope, isAdvancedVisEnabled)
+		params.MessagingClient = kafka.NewKafkaClient(&s.cfg.Kafka, params.MetricsClient, params.Logger, params.MetricScope, isAdvancedVisEnabled)
 	} else {
 		params.MessagingClient = nil
 	}

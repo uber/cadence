@@ -18,9 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package messaging
+package kafka
 
 import (
+	"github.com/uber/cadence/common/messaging"
 	"sync"
 
 	"github.com/Shopify/sarama"
@@ -39,7 +40,7 @@ type (
 		consumerHandler *consumerHandlerImpl
 		consumerGroup   sarama.ConsumerGroup
 		logger          log.Logger
-		msgChan         <-chan Message
+		msgChan         <-chan messaging.Message
 		cancelFunc      context.CancelFunc
 	}
 
@@ -49,8 +50,8 @@ type (
 		sync.RWMutex
 		topic          string
 		currentSession sarama.ConsumerGroupSession
-		msgChan        chan<- Message
-		manager        *partitionAckManager
+		msgChan        chan<- messaging.Message
+		manager        *kafkaPartitionAckManager
 		logger         log.Logger
 	}
 
@@ -62,8 +63,8 @@ type (
 	}
 )
 
-var _ Message = (*messageImpl)(nil)
-var _ Consumer = (*kafkaConsumer)(nil)
+var _ messaging.Message = (*messageImpl)(nil)
+var _ messaging.Consumer = (*kafkaConsumer)(nil)
 
 // TODO add metrics
 func newKafkaConsumer(
@@ -72,7 +73,7 @@ func newKafkaConsumer(
 	consumerName string,
 	saramaConfig *sarama.Config,
 	logger log.Logger,
-) (Consumer, error) {
+) (messaging.Consumer, error) {
 	clusterName := kafkaConfig.getKafkaClusterForTopic(topics.Topic)
 	brokers := kafkaConfig.getBrokersForKafkaCluster(clusterName)
 	consumerGroup, err := sarama.NewConsumerGroup(brokers, consumerName, saramaConfig)
@@ -80,7 +81,7 @@ func newKafkaConsumer(
 		return nil, err
 	}
 
-	msgChan := make(chan Message, rcvBufferSize)
+	msgChan := make(chan messaging.Message, rcvBufferSize)
 	consumerHandler := newConsumerHandlerImpl(topics.Topic, msgChan, logger)
 
 	return &kafkaConsumer{
@@ -125,11 +126,11 @@ func (c *kafkaConsumer) Stop() {
 }
 
 // Messages return the message channel for this consumer
-func (c *kafkaConsumer) Messages() <-chan Message {
+func (c *kafkaConsumer) Messages() <-chan messaging.Message {
 	return c.msgChan
 }
 
-func newConsumerHandlerImpl(topic string, msgChan chan<- Message, logger log.Logger) *consumerHandlerImpl {
+func newConsumerHandlerImpl(topic string, msgChan chan<- messaging.Message, logger log.Logger) *consumerHandlerImpl {
 	return &consumerHandlerImpl{
 		topic:   topic,
 		logger:  logger,

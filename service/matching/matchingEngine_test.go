@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/messaging"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -149,54 +150,54 @@ func newMatchingEngine(
 }
 
 func (s *matchingEngineSuite) TestAckManager() {
-	m := newAckManager(s.logger)
-	m.setAckLevel(100)
-	s.EqualValues(100, m.getAckLevel())
-	s.EqualValues(100, m.getReadLevel())
+	m := messaging.NewAckManager(s.logger)
+	m.SetAckLevel(100)
+	s.EqualValues(100, m.GetAckLevel())
+	s.EqualValues(100, m.GetReadLevel())
 	const t1 = 200
 	const t2 = 220
 	const t3 = 320
 	const t4 = 340
 	const t5 = 360
 
-	m.addTask(t1)
-	s.EqualValues(100, m.getAckLevel())
-	s.EqualValues(t1, m.getReadLevel())
+	m.ReadItem(t1)
+	s.EqualValues(100, m.GetAckLevel())
+	s.EqualValues(t1, m.GetReadLevel())
 
-	m.addTask(t2)
-	s.EqualValues(100, m.getAckLevel())
-	s.EqualValues(t2, m.getReadLevel())
+	m.ReadItem(t2)
+	s.EqualValues(100, m.GetAckLevel())
+	s.EqualValues(t2, m.GetReadLevel())
 
-	m.completeTask(t2)
-	s.EqualValues(100, m.getAckLevel())
-	s.EqualValues(t2, m.getReadLevel())
+	m.AckItem(t2)
+	s.EqualValues(100, m.GetAckLevel())
+	s.EqualValues(t2, m.GetReadLevel())
 
-	m.completeTask(t1)
-	s.EqualValues(t2, m.getAckLevel())
-	s.EqualValues(t2, m.getReadLevel())
+	m.AckItem(t1)
+	s.EqualValues(t2, m.GetAckLevel())
+	s.EqualValues(t2, m.GetReadLevel())
 
-	m.setAckLevel(300)
-	s.EqualValues(300, m.getAckLevel())
-	s.EqualValues(300, m.getReadLevel())
+	m.SetAckLevel(300)
+	s.EqualValues(300, m.GetAckLevel())
+	s.EqualValues(300, m.GetReadLevel())
 
-	m.addTask(t3)
-	s.EqualValues(300, m.getAckLevel())
-	s.EqualValues(t3, m.getReadLevel())
+	m.ReadItem(t3)
+	s.EqualValues(300, m.GetAckLevel())
+	s.EqualValues(t3, m.GetReadLevel())
 
-	m.addTask(t4)
-	s.EqualValues(300, m.getAckLevel())
-	s.EqualValues(t4, m.getReadLevel())
+	m.ReadItem(t4)
+	s.EqualValues(300, m.GetAckLevel())
+	s.EqualValues(t4, m.GetReadLevel())
 
-	m.completeTask(t3)
-	s.EqualValues(t3, m.getAckLevel())
-	s.EqualValues(t4, m.getReadLevel())
+	m.AckItem(t3)
+	s.EqualValues(t3, m.GetAckLevel())
+	s.EqualValues(t4, m.GetReadLevel())
 
-	m.completeTask(t4)
-	s.EqualValues(t4, m.getAckLevel())
-	s.EqualValues(t4, m.getReadLevel())
+	m.AckItem(t4)
+	s.EqualValues(t4, m.GetAckLevel())
+	s.EqualValues(t4, m.GetReadLevel())
 
-	m.setReadLevel(t5)
-	s.EqualValues(t5, m.getReadLevel())
+	m.SetReadLevel(t5)
+	s.EqualValues(t5, m.GetReadLevel())
 }
 
 func (s *matchingEngineSuite) TestPollForActivityTasksEmptyResult() {
@@ -1484,16 +1485,16 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 	close(tlMgr.shutdownCh)
 	tlMgr.taskWriter.Stop()
 
-	// setReadLevel should NEVER be called without updating ackManager.outstandingTasks
+	// SetReadLevel should NEVER be called without updating ackManager.outstandingTasks
 	// This is only for unit test purpose
-	tlMgr.taskAckManager.setReadLevel(tlMgr.taskWriter.GetMaxReadLevel())
+	tlMgr.taskAckManager.SetReadLevel(tlMgr.taskWriter.GetMaxReadLevel())
 	tasks, readLevel, isReadBatchDone, err := tlMgr.taskReader.getTaskBatch()
 	s.Nil(err)
 	s.EqualValues(0, len(tasks))
 	s.EqualValues(tlMgr.taskWriter.GetMaxReadLevel(), readLevel)
 	s.True(isReadBatchDone)
 
-	tlMgr.taskAckManager.setReadLevel(0)
+	tlMgr.taskAckManager.SetReadLevel(0)
 	tasks, readLevel, isReadBatchDone, err = tlMgr.taskReader.getTaskBatch()
 	s.Nil(err)
 	s.EqualValues(rangeSize, len(tasks))
@@ -1505,7 +1506,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 	// reset the ackManager readLevel to the buffer size and consume
 	// the in-memory tasks by calling Poll API - assert ackMgr state
 	// at the end
-	tlMgr.taskAckManager.setReadLevel(int64(expectedBufSize))
+	tlMgr.taskAckManager.SetReadLevel(int64(expectedBufSize))
 
 	// complete rangeSize events
 	for i := int64(0); i < rangeSize; i++ {
@@ -1549,7 +1550,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch_ReadBatchDone() {
 	tlMgr, ok := tlMgr0.(*taskListManagerImpl)
 	s.True(ok)
 
-	tlMgr.taskAckManager.setReadLevel(0)
+	tlMgr.taskAckManager.SetReadLevel(0)
 	atomic.StoreInt64(&tlMgr.taskWriter.maxReadLevel, maxReadLevel)
 	tasks, readLevel, isReadBatchDone, err := tlMgr.taskReader.getTaskBatch()
 	s.Empty(tasks)
@@ -1557,7 +1558,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch_ReadBatchDone() {
 	s.False(isReadBatchDone)
 	s.NoError(err)
 
-	tlMgr.taskAckManager.setReadLevel(readLevel)
+	tlMgr.taskAckManager.SetReadLevel(readLevel)
 	tasks, readLevel, isReadBatchDone, err = tlMgr.taskReader.getTaskBatch()
 	s.Empty(tasks)
 	s.Equal(maxReadLevel, readLevel)

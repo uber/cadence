@@ -22,6 +22,7 @@ package host
 
 import (
 	"context"
+	"github.com/uber/cadence/common/messaging/kafka"
 	"io/ioutil"
 	"os"
 	"time"
@@ -89,7 +90,7 @@ type (
 	// MessagingClientConfig is the config for messaging config
 	MessagingClientConfig struct {
 		UseMock     bool
-		KafkaConfig *messaging.KafkaConfig
+		KafkaConfig *kafka.KafkaConfig
 	}
 
 	// WorkerConfig is the config for enabling/disabling cadence worker
@@ -280,7 +281,7 @@ func getMessagingClient(config *MessagingClientConfig, logger log.Logger) messag
 		return mocks.NewMockMessagingClient(&mocks.KafkaProducer{}, nil)
 	}
 	checkApp := len(config.KafkaConfig.Applications) != 0
-	return messaging.NewKafkaClient(config.KafkaConfig, nil, logger, tally.NoopScope, checkApp)
+	return kafka.NewKafkaClient(config.KafkaConfig, nil, logger, tally.NoopScope, checkApp)
 }
 
 // TearDownCluster tears down the test cluster
