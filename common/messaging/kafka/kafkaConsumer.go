@@ -190,6 +190,10 @@ func (h *consumerHandlerImpl) completeMessage(message *messageImpl, isAck bool) 
 			h.logger.Error("Fail to publish message to DLQ when nacking message, please take action!!",
 				tag.KafkaPartition(message.Partition()),
 				tag.KafkaOffset(message.Offset()))
+		} else {
+			h.logger.Warn("nack message and publish to DLQ",
+				tag.KafkaPartition(message.Partition()),
+				tag.KafkaOffset(message.Offset()))
 		}
 	}
 	cancel()

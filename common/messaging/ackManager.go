@@ -81,7 +81,7 @@ func (m *ackManager) ReadItem(itemID int64) error {
 		// because of ordering, the first itemID is the minimum to ack
 		m.ackLevel = itemID - 1
 		m.logger.Info("this is the very first itemID being read in this ackManager",
-			tag.KafkaOffset(itemID),
+			tag.TaskID(itemID),
 		)
 	}
 	m.outstandingMessages[itemID] = false // true is for acked
@@ -96,7 +96,7 @@ func (m *ackManager) AckItem(itemID int64) (ackLevel int64) {
 		m.backlogCounter.Dec()
 	} else {
 		m.logger.Warn("Duplicated completion for item",
-			tag.KafkaOffset(itemID))
+			tag.TaskID(itemID))
 	}
 
 	// Update ackLevel
