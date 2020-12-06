@@ -80,12 +80,12 @@ func (pam *kafkaPartitionAckManager) AddMessage(partitionID int32, messageID int
 }
 
 // CompleteMessage complete the message from ack/nack kafka message
-func (pam *kafkaPartitionAckManager) CompleteMessage(partitionID int32, messageID int64, ack bool) (ackLevel int64) {
+func (pam *kafkaPartitionAckManager) CompleteMessage(partitionID int32, messageID int64, isAck bool) (ackLevel int64) {
 	pam.RLock()
 	defer pam.RUnlock()
 	if am, ok := pam.ackMgrs[partitionID]; ok {
 		ackLevel = am.AckItem(messageID)
-		if ack {
+		if isAck {
 			pam.scopes[partitionID].IncCounter(metrics.KafkaConsumerMessageAck)
 		} else {
 			pam.scopes[partitionID].IncCounter(metrics.KafkaConsumerMessageNack)

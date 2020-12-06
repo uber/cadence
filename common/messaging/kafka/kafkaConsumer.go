@@ -165,11 +165,11 @@ func (h *consumerHandlerImpl) getCurrentSession() sarama.ConsumerGroupSession {
 	return h.currentSession
 }
 
-func (h *consumerHandlerImpl) completeMessage(message *messageImpl, ack bool) {
+func (h *consumerHandlerImpl) completeMessage(message *messageImpl, isAck bool) {
 	h.RLock()
 	defer h.RUnlock()
 
-	ackLevel := h.manager.CompleteMessage(message.Partition(), message.Offset(), ack)
+	ackLevel := h.manager.CompleteMessage(message.Partition(), message.Offset(), isAck)
 	h.currentSession.MarkOffset(h.topic, message.Partition(), ackLevel+1, "")
 }
 
