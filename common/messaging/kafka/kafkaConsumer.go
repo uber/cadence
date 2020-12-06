@@ -247,8 +247,6 @@ func (m *messageImpl) Ack() error {
 }
 
 func (m *messageImpl) Nack() error {
-	// TODO publish to DLQ
-
 	if m.isFromPreviousSession() {
 		return nil
 	}
