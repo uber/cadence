@@ -24,12 +24,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/messaging"
 	"net/http"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/messaging"
 
 	"github.com/golang/mock/gomock"
 

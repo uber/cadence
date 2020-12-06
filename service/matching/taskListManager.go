@@ -24,10 +24,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/messaging"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common/messaging"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"

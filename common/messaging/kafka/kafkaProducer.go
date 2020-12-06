@@ -23,6 +23,7 @@ package kafka
 import (
 	"context"
 	"errors"
+
 	"github.com/uber/cadence/common/messaging"
 
 	"github.com/Shopify/sarama"

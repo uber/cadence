@@ -24,10 +24,11 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/uber/cadence/common/messaging"
 	"io/ioutil"
 	"strings"
 	"time"
+
+	"github.com/uber/cadence/common/messaging"
 
 	"github.com/Shopify/sarama"
 	"github.com/uber-go/tally"

@@ -27,12 +27,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/messaging/kafka"
 	"io"
 	"os"
 	"regexp"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common/messaging/kafka"
 
 	"github.com/gocql/gocql"
 	"github.com/urfave/cli"

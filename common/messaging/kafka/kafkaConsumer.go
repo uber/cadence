@@ -21,10 +21,11 @@
 package kafka
 
 import (
-	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/metrics"
 	"sync"
 	"time"
+
+	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/metrics"
 
 	"github.com/Shopify/sarama"
 	"golang.org/x/net/context"

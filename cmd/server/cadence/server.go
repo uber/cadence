@@ -21,9 +21,10 @@
 package cadence
 
 import (
-	"github.com/uber/cadence/common/messaging/kafka"
 	"log"
 	"time"
+
+	"github.com/uber/cadence/common/messaging/kafka"
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 

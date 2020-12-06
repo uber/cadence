@@ -22,10 +22,11 @@ package host
 
 import (
 	"context"
-	"github.com/uber/cadence/common/messaging/kafka"
 	"io/ioutil"
 	"os"
 	"time"
+
+	"github.com/uber/cadence/common/messaging/kafka"
 
 	"github.com/uber-go/tally"
 

@@ -22,8 +22,9 @@ package messaging
 
 import (
 	"fmt"
-	"go.uber.org/atomic"
 	"sync"
+
+	"go.uber.org/atomic"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -130,4 +131,3 @@ func (m *ackManager) SetAckLevel(ackLevel int64) {
 func (m *ackManager) GetBacklogCount() int64 {
 	return m.backlogCounter.Load()
 }
-

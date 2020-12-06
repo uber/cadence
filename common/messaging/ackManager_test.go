@@ -8,7 +8,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 )
 
-func  TestAckManager(t *testing.T) {
+func TestAckManager(t *testing.T) {
 	logger, err := loggerimpl.NewDevelopment()
 	assert.Nil(t, err)
 	m := NewAckManager(logger)
@@ -39,7 +39,7 @@ func  TestAckManager(t *testing.T) {
 	assert.EqualValues(t, t2, m.GetAckLevel())
 	assert.EqualValues(t, t2, m.GetReadLevel())
 
-	m.SetAckLevel(  300)
+	m.SetAckLevel(300)
 	assert.EqualValues(t, 300, m.GetAckLevel())
 	assert.EqualValues(t, 300, m.GetReadLevel())
 
