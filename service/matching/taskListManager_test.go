@@ -186,7 +186,8 @@ func TestDescribeTaskList(t *testing.T) {
 	tlm.taskAckManager.SetAckLevel(tlm.db.ackLevel)
 
 	for i := int64(0); i < taskCount; i++ {
-		tlm.taskAckManager.ReadItem(startTaskID + i)
+		err := tlm.taskAckManager.ReadItem(startTaskID + i)
+		assert.Nil(t, err)
 	}
 
 	includeTaskStatus := false

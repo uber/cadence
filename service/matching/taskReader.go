@@ -254,7 +254,10 @@ func (tr *taskReader) addTasksToBuffer(
 
 func (tr *taskReader) addSingleTaskToBuffer(
 	task *persistence.TaskInfo, lastWriteTime time.Time, idleTimer *time.Timer) bool {
-	tr.tlMgr.taskAckManager.ReadItem(task.TaskID)
+	err := tr.tlMgr.taskAckManager.ReadItem(task.TaskID)
+	if err != nil {
+		tr.logger().Fatal("critical bug when adding item to ackManager")
+	}
 	for {
 		select {
 		case tr.taskBuffer <- task:
