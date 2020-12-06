@@ -80,7 +80,7 @@ func (m *ackManager) ReadItem(itemID int64) error {
 	if m.ackLevel == -1 {
 		// because of ordering, the first itemID is the minimum to ack
 		m.ackLevel = itemID - 1
-		m.logger.Info("add very first item itemID",
+		m.logger.Info("this is the very first itemID being read in this ackManager",
 			tag.KafkaOffset(itemID),
 		)
 	}
