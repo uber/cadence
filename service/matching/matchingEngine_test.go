@@ -30,8 +30,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/messaging"
-
 	"github.com/golang/mock/gomock"
 
 	"github.com/uber/cadence/client/history"
@@ -148,57 +146,6 @@ func newMatchingEngine(
 		config:          config,
 		domainCache:     mockDomainCache,
 	}
-}
-
-func (s *matchingEngineSuite) TestAckManager() {
-	m := messaging.NewAckManager(s.logger)
-	m.SetAckLevel(100)
-	s.EqualValues(100, m.GetAckLevel())
-	s.EqualValues(100, m.GetReadLevel())
-	const t1 = 200
-	const t2 = 220
-	const t3 = 320
-	const t4 = 340
-	const t5 = 360
-
-	m.ReadItem(t1)
-	s.EqualValues(100, m.GetAckLevel())
-	s.EqualValues(t1, m.GetReadLevel())
-
-	m.ReadItem(t2)
-	s.EqualValues(100, m.GetAckLevel())
-	s.EqualValues(t2, m.GetReadLevel())
-
-	m.AckItem(t2)
-	s.EqualValues(100, m.GetAckLevel())
-	s.EqualValues(t2, m.GetReadLevel())
-
-	m.AckItem(t1)
-	s.EqualValues(t2, m.GetAckLevel())
-	s.EqualValues(t2, m.GetReadLevel())
-
-	m.SetAckLevel(300)
-	s.EqualValues(300, m.GetAckLevel())
-	s.EqualValues(300, m.GetReadLevel())
-
-	m.ReadItem(t3)
-	s.EqualValues(300, m.GetAckLevel())
-	s.EqualValues(t3, m.GetReadLevel())
-
-	m.ReadItem(t4)
-	s.EqualValues(300, m.GetAckLevel())
-	s.EqualValues(t4, m.GetReadLevel())
-
-	m.AckItem(t3)
-	s.EqualValues(t3, m.GetAckLevel())
-	s.EqualValues(t4, m.GetReadLevel())
-
-	m.AckItem(t4)
-	s.EqualValues(t4, m.GetAckLevel())
-	s.EqualValues(t4, m.GetReadLevel())
-
-	m.SetReadLevel(t5)
-	s.EqualValues(t5, m.GetReadLevel())
 }
 
 func (s *matchingEngineSuite) TestPollForActivityTasksEmptyResult() {
