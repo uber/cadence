@@ -22,6 +22,7 @@ package kafka
 
 import (
 	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/metrics"
 	"sync"
 
 	"github.com/Shopify/sarama"
@@ -39,9 +40,10 @@ type (
 		topics          TopicList
 		consumerHandler *consumerHandlerImpl
 		consumerGroup   sarama.ConsumerGroup
-		logger          log.Logger
 		msgChan         <-chan messaging.Message
 		cancelFunc      context.CancelFunc
+
+		logger log.Logger
 	}
 
 	// consumerHandlerImpl represents a Sarama consumer group consumer
@@ -52,7 +54,9 @@ type (
 		currentSession sarama.ConsumerGroupSession
 		msgChan        chan<- messaging.Message
 		manager        *kafkaPartitionAckManager
-		logger         log.Logger
+
+		metricsClient metrics.Client
+		logger        log.Logger
 	}
 
 	messageImpl struct {
@@ -66,12 +70,12 @@ type (
 var _ messaging.Message = (*messageImpl)(nil)
 var _ messaging.Consumer = (*kafkaConsumer)(nil)
 
-// TODO add metrics
 func newKafkaConsumer(
 	kafkaConfig *KafkaConfig,
 	topics TopicList,
 	consumerName string,
 	saramaConfig *sarama.Config,
+	metricsClient metrics.Client,
 	logger log.Logger,
 ) (messaging.Consumer, error) {
 	clusterName := kafkaConfig.getKafkaClusterForTopic(topics.Topic)
@@ -82,15 +86,16 @@ func newKafkaConsumer(
 	}
 
 	msgChan := make(chan messaging.Message, rcvBufferSize)
-	consumerHandler := newConsumerHandlerImpl(topics.Topic, msgChan, logger)
+	consumerHandler := newConsumerHandlerImpl(topics.Topic, msgChan, metricsClient, logger)
 
 	return &kafkaConsumer{
 		topics: topics,
 
 		consumerHandler: consumerHandler,
 		consumerGroup:   consumerGroup,
-		logger:          logger,
 		msgChan:         msgChan,
+
+		logger: logger,
 	}, nil
 }
 
@@ -130,11 +135,13 @@ func (c *kafkaConsumer) Messages() <-chan messaging.Message {
 	return c.msgChan
 }
 
-func newConsumerHandlerImpl(topic string, msgChan chan<- messaging.Message, logger log.Logger) *consumerHandlerImpl {
+func newConsumerHandlerImpl(topic string, msgChan chan<- messaging.Message, metricsClient metrics.Client, logger log.Logger) *consumerHandlerImpl {
 	return &consumerHandlerImpl{
 		topic:   topic,
-		logger:  logger,
 		msgChan: msgChan,
+
+		metricsClient: metricsClient,
+		logger:        logger,
 	}
 }
 
@@ -144,8 +151,10 @@ func (h *consumerHandlerImpl) Setup(session sarama.ConsumerGroupSession) error {
 	defer h.Unlock()
 
 	h.currentSession = session
-	h.manager = newPartitionAckManager(h.logger)
+	h.manager = newPartitionAckManager(h.metricsClient, h.logger)
 	h.logger.Info("start consumer group session", tag.Name(string(session.GenerationID())))
+	h.metricsClient.IncCounter(metrics.MessagingClientConsumerScope, metrics.KafkaConsumerSessionStart)
+
 	return nil
 }
 
@@ -156,11 +165,11 @@ func (h *consumerHandlerImpl) getCurrentSession() sarama.ConsumerGroupSession {
 	return h.currentSession
 }
 
-func (h *consumerHandlerImpl) completeMessage(message *messageImpl) {
+func (h *consumerHandlerImpl) completeMessage(message *messageImpl, ack bool) {
 	h.RLock()
 	defer h.RUnlock()
 
-	ackLevel := h.manager.CompleteMessage(message.Partition(), message.Offset())
+	ackLevel := h.manager.CompleteMessage(message.Partition(), message.Offset(), ack)
 	h.currentSession.MarkOffset(h.topic, message.Partition(), ackLevel+1, "")
 }
 
@@ -209,7 +218,7 @@ func (m *messageImpl) Ack() error {
 	if m.isFromPreviousSession() {
 		return nil
 	}
-	m.handler.completeMessage(m)
+	m.handler.completeMessage(m, true)
 	return nil
 }
 
@@ -219,7 +228,7 @@ func (m *messageImpl) Nack() error {
 	if m.isFromPreviousSession() {
 		return nil
 	}
-	m.handler.completeMessage(m)
+	m.handler.completeMessage(m, false)
 	return nil
 }
 

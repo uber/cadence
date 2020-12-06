@@ -20,6 +20,8 @@
 
 package metrics
 
+import "strconv"
+
 const (
 	revisionTag     = "revision"
 	branchTag       = "branch"
@@ -27,15 +29,16 @@ const (
 	buildVersionTag = "build_version"
 	goVersionTag    = "go_version"
 
-	instance      = "instance"
-	domain        = "domain"
-	targetCluster = "target_cluster"
-	activeCluster = "active_cluster"
-	taskList      = "tasklist"
-	workflowType  = "workflowType"
-	activityType  = "activityType"
-	decisionType  = "decisionType"
-	invariantType = "invariantType"
+	instance       = "instance"
+	domain         = "domain"
+	targetCluster  = "target_cluster"
+	activeCluster  = "active_cluster"
+	taskList       = "tasklist"
+	workflowType   = "workflowType"
+	activityType   = "activityType"
+	decisionType   = "decisionType"
+	invariantType  = "invariantType"
+	kafkaPartition = "kafkaPartition"
 
 	domainAllValue = "all"
 	unknownValue   = "_unknown_"
@@ -85,6 +88,10 @@ type (
 	}
 
 	invariantTypeTag struct {
+		value string
+	}
+
+	kafkaPartitionTag struct {
 		value string
 	}
 )
@@ -277,5 +284,20 @@ func (d invariantTypeTag) Key() string {
 
 // Value returns the value of invariant type tag
 func (d invariantTypeTag) Value() string {
+	return d.value
+}
+
+// KafkaPartitionTag returns a new KafkaPartition type tag.
+func KafkaPartitionTag(value int32) Tag {
+	return kafkaPartitionTag{strconv.Itoa(int(value))}
+}
+
+// Key returns the key of the decision type tag
+func (d kafkaPartitionTag) Key() string {
+	return kafkaPartition
+}
+
+// Value returns the value of the decision type tag
+func (d kafkaPartitionTag) Value() string {
 	return d.value
 }

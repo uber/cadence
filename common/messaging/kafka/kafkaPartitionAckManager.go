@@ -21,6 +21,7 @@
 package kafka
 
 import (
+	"github.com/uber/cadence/common/metrics"
 	"sync"
 
 	"github.com/uber/cadence/common/log"
@@ -33,13 +34,19 @@ import (
 type kafkaPartitionAckManager struct {
 	sync.RWMutex
 	ackMgrs map[int32]messaging.AckManager //map from partition to its ackManager
-	logger  log.Logger
+	scopes  map[int32]metrics.Scope        // map from partition to its Scope
+
+	metricsClient metrics.Client
+	logger        log.Logger
 }
 
-func newPartitionAckManager(logger log.Logger) *kafkaPartitionAckManager {
+func newPartitionAckManager(metricsClient metrics.Client, logger log.Logger) *kafkaPartitionAckManager {
 	return &kafkaPartitionAckManager{
-		logger:  logger,
 		ackMgrs: make(map[int32]messaging.AckManager),
+		scopes:  make(map[int32]metrics.Scope),
+
+		metricsClient: metricsClient,
+		logger:        logger,
 	}
 }
 
@@ -49,13 +56,21 @@ func (pam *kafkaPartitionAckManager) AddMessage(partitionID int32, messageID int
 	pam.RLock()
 	if am, ok := pam.ackMgrs[partitionID]; ok {
 		err = am.ReadItem(messageID)
+		pam.scopes[partitionID].IncCounter(metrics.KafkaConsumerMessageIn)
+
 		pam.RUnlock()
 	} else {
 		pam.RUnlock()
 		pam.Lock()
+
 		partitionLogger := pam.logger.WithTags(tag.KafkaPartition(partitionID))
 		am := messaging.NewAckManager(partitionLogger)
 		pam.ackMgrs[partitionID] = am
+
+		scope := pam.metricsClient.Scope(metrics.MessagingClientConsumerScope, metrics.KafkaPartitionTag(partitionID))
+		pam.scopes[partitionID] = scope
+		scope.IncCounter(metrics.KafkaConsumerMessageIn)
+
 		err = am.ReadItem(messageID)
 		pam.Unlock()
 	}
@@ -65,11 +80,16 @@ func (pam *kafkaPartitionAckManager) AddMessage(partitionID int32, messageID int
 }
 
 // CompleteMessage complete the message from ack/nack kafka message
-func (pam *kafkaPartitionAckManager) CompleteMessage(partitionID int32, messageID int64) (ackLevel int64) {
+func (pam *kafkaPartitionAckManager) CompleteMessage(partitionID int32, messageID int64, ack bool) (ackLevel int64) {
 	pam.RLock()
 	defer pam.RUnlock()
 	if am, ok := pam.ackMgrs[partitionID]; ok {
 		ackLevel = am.AckItem(messageID)
+		if ack {
+			pam.scopes[partitionID].IncCounter(metrics.KafkaConsumerMessageAck)
+		} else {
+			pam.scopes[partitionID].IncCounter(metrics.KafkaConsumerMessageNack)
+		}
 	} else {
 		pam.logger.Fatal("complete an message that hasn't been added",
 			tag.KafkaPartition(partitionID),

@@ -83,7 +83,7 @@ func NewKafkaClient(
 }
 
 // NewConsumer is used to create a Kafka consumer
-func (c *kafkaClient) NewConsumer(app, consumerName string, _ int) (messaging.Consumer, error) {
+func (c *kafkaClient) NewConsumer(app, consumerName string) (messaging.Consumer, error) {
 	topics := c.config.getTopicsForApplication(app)
 	saramaConfig := sarama.NewConfig()
 	// bellow config is copied from uber/kafka-client bo keep the same behavior
@@ -98,7 +98,7 @@ func (c *kafkaClient) NewConsumer(app, consumerName string, _ int) (messaging.Co
 	if err != nil {
 		return nil, err
 	}
-	return newKafkaConsumer(c.config, topics, consumerName, saramaConfig, c.logger)
+	return newKafkaConsumer(c.config, topics, consumerName, saramaConfig, c.metricsClient, c.logger)
 }
 
 // NewProducer is used to create a Kafka producer

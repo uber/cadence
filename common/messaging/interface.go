@@ -27,7 +27,7 @@ import (
 type (
 	// Client is the interface used to abstract out interaction with messaging system for replication
 	Client interface {
-		NewConsumer(appName, consumerName string, concurrency int) (Consumer, error)
+		NewConsumer(appName, consumerName string) (Consumer, error)
 		NewProducer(appName string) (Producer, error)
 	}
 
