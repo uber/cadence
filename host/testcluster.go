@@ -281,7 +281,7 @@ func getMessagingClient(config *MessagingClientConfig, logger log.Logger) messag
 		return mocks.NewMockMessagingClient(&mocks.KafkaProducer{}, nil)
 	}
 	checkApp := len(config.KafkaConfig.Applications) != 0
-	return kafka.NewKafkaClient(config.KafkaConfig, nil, logger, tally.NoopScope, checkApp)
+	return kafka.NewKafkaClient(config.KafkaConfig, metrics.NewNoopMetricsClient(), logger, tally.NoopScope, checkApp)
 }
 
 // TearDownCluster tears down the test cluster
