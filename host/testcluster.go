@@ -26,8 +26,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/uber/cadence/common/messaging/kafka"
-
 	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/client"
@@ -44,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"

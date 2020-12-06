@@ -24,8 +24,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/uber/cadence/common/messaging/kafka"
-
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 
 	"github.com/uber/cadence/client"
@@ -38,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/config"

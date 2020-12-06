@@ -24,14 +24,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/metrics"
-
 	"github.com/Shopify/sarama"
 	"golang.org/x/net/context"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/metrics"
 )
 
 const rcvBufferSize = 2 * 1024

@@ -33,8 +33,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/messaging/kafka"
-
 	"github.com/gocql/gocql"
 	"github.com/urfave/cli"
 	"go.uber.org/thriftrw/protocol"
@@ -47,6 +45,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/types"

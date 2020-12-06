@@ -24,14 +24,13 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/uber/cadence/common/messaging/kafka"
-
 	"github.com/uber-go/tally/m3"
 	"github.com/uber-go/tally/prometheus"
 	"github.com/uber/ringpop-go/discovery"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/auth"
+	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 

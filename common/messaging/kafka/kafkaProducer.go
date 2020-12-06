@@ -24,14 +24,13 @@ import (
 	"context"
 	"errors"
 
-	"github.com/uber/cadence/common/messaging"
-
 	"github.com/Shopify/sarama"
 
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/messaging"
 )
 
 type (

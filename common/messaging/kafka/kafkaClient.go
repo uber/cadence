@@ -28,13 +28,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/common/messaging"
-
 	"github.com/Shopify/sarama"
 	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 )
 

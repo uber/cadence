@@ -23,11 +23,10 @@ package kafka
 import (
 	"sync"
 
-	"github.com/uber/cadence/common/metrics"
-
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/metrics"
 )
 
 // Used to convert out of order acks into ackLevel movement,
