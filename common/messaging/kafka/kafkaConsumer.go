@@ -24,6 +24,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"sync"
+	"time"
 
 	"github.com/Shopify/sarama"
 	"golang.org/x/net/context"
@@ -33,11 +34,12 @@ import (
 )
 
 const rcvBufferSize = 2 * 1024
+const dqlPublishTimeout = time.Minute * 10
 
 type (
 	// a wrapper of sarama consumer group for our consumer interface
 	kafkaConsumer struct {
-		topics          TopicList
+		topic           string
 		consumerHandler *consumerHandlerImpl
 		consumerGroup   sarama.ConsumerGroup
 		msgChan         <-chan messaging.Message
@@ -50,6 +52,8 @@ type (
 	// It's for passing into sarama consumer group API
 	consumerHandlerImpl struct {
 		sync.RWMutex
+		dlqProducer messaging.Producer
+
 		topic          string
 		currentSession sarama.ConsumerGroupSession
 		msgChan        chan<- messaging.Message
@@ -71,14 +75,15 @@ var _ messaging.Message = (*messageImpl)(nil)
 var _ messaging.Consumer = (*kafkaConsumer)(nil)
 
 func newKafkaConsumer(
+	dlqProducer messaging.Producer,
 	kafkaConfig *KafkaConfig,
-	topics TopicList,
+	topic string,
 	consumerName string,
 	saramaConfig *sarama.Config,
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) (messaging.Consumer, error) {
-	clusterName := kafkaConfig.getKafkaClusterForTopic(topics.Topic)
+	clusterName := kafkaConfig.getKafkaClusterForTopic(topic)
 	brokers := kafkaConfig.getBrokersForKafkaCluster(clusterName)
 	consumerGroup, err := sarama.NewConsumerGroup(brokers, consumerName, saramaConfig)
 	if err != nil {
@@ -86,10 +91,10 @@ func newKafkaConsumer(
 	}
 
 	msgChan := make(chan messaging.Message, rcvBufferSize)
-	consumerHandler := newConsumerHandlerImpl(topics.Topic, msgChan, metricsClient, logger)
+	consumerHandler := newConsumerHandlerImpl(dlqProducer, topic, msgChan, metricsClient, logger)
 
 	return &kafkaConsumer{
-		topics: topics,
+		topic: topic,
 
 		consumerHandler: consumerHandler,
 		consumerGroup:   consumerGroup,
@@ -110,7 +115,7 @@ func (c *kafkaConsumer) Start() error {
 			// `Consume` should be called inside an infinite loop, when a
 			// server-side rebalance happens, the consumer session will need to be
 			// recreated to get the new claims
-			if err := c.consumerGroup.Consume(ctx, []string{c.topics.Topic}, c.consumerHandler); err != nil {
+			if err := c.consumerGroup.Consume(ctx, []string{c.topic}, c.consumerHandler); err != nil {
 				c.logger.Error("Error from consumer: %v", tag.Error(err))
 			}
 			// check if context was cancelled, signaling that the consumer should stop
@@ -135,10 +140,17 @@ func (c *kafkaConsumer) Messages() <-chan messaging.Message {
 	return c.msgChan
 }
 
-func newConsumerHandlerImpl(topic string, msgChan chan<- messaging.Message, metricsClient metrics.Client, logger log.Logger) *consumerHandlerImpl {
+func newConsumerHandlerImpl(
+	dlqProducer messaging.Producer,
+	topic string,
+	msgChan chan<- messaging.Message,
+	metricsClient metrics.Client,
+	logger log.Logger,
+) *consumerHandlerImpl {
 	return &consumerHandlerImpl{
-		topic:   topic,
-		msgChan: msgChan,
+		dlqProducer: dlqProducer,
+		topic:       topic,
+		msgChan:     msgChan,
 
 		metricsClient: metricsClient,
 		logger:        logger,
@@ -169,6 +181,18 @@ func (h *consumerHandlerImpl) completeMessage(message *messageImpl, isAck bool) 
 	h.RLock()
 	defer h.RUnlock()
 
+	// NOTE: current KafkaProducer is not taking use the this context, because saramaProducer doesn't support it
+	// https://github.com/Shopify/sarama/issues/1849
+	ctx, cancel := context.WithTimeout(context.Background(), dqlPublishTimeout)
+	if !isAck {
+		err := h.dlqProducer.Publish(ctx, message.saramaMsg)
+		if err != nil {
+			h.logger.Error("Fail to publish message to DLQ when nacking message, please take action!!",
+				tag.KafkaPartition(message.Partition()),
+				tag.KafkaOffset(message.Offset()))
+		}
+	}
+	cancel()
 	ackLevel := h.manager.CompleteMessage(message.Partition(), message.Offset(), isAck)
 	h.currentSession.MarkOffset(h.topic, message.Partition(), ackLevel+1, "")
 }

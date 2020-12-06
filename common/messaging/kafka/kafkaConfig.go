@@ -50,7 +50,6 @@ type (
 	// TopicList describes the topic names for each cluster
 	TopicList struct {
 		Topic      string `yaml:"topic"`
-		RetryTopic string `yaml:"retry-topic"`
 		DLQTopic   string `yaml:"dlq-topic"`
 	}
 )

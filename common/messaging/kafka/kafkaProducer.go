@@ -55,6 +55,7 @@ func NewKafkaProducer(topic string, producer sarama.SyncProducer, logger log.Log
 }
 
 // Publish is used to send messages to other clusters through Kafka topic
+// TODO implement context when https://github.com/Shopify/sarama/issues/1849 is supported
 func (p *kafkaProducer) Publish(_ context.Context, msg interface{}) error {
 	message, err := p.getProducerMessage(msg)
 	if err != nil {
@@ -101,6 +102,13 @@ func (p *kafkaProducer) getProducerMessage(message interface{}) (*sarama.Produce
 			Topic: p.topic,
 			Key:   sarama.StringEncoder(message.GetWorkflowID()),
 			Value: sarama.ByteEncoder(payload),
+		}
+		return msg, nil
+	case *sarama.ConsumerMessage:
+		msg := &sarama.ProducerMessage{
+			Topic: p.topic,
+			Key:   sarama.ByteEncoder(message.Key),
+			Value: sarama.ByteEncoder(message.Value),
 		}
 		return msg, nil
 	default:

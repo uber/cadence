@@ -98,16 +98,22 @@ func (c *kafkaClient) NewConsumer(app, consumerName string) (messaging.Consumer,
 	if err != nil {
 		return nil, err
 	}
-	return newKafkaConsumer(c.config, topics, consumerName, saramaConfig, c.metricsClient, c.logger)
+
+	dlqProducer, err := c.newProducerByTopic(topics.DLQTopic)
+	if err != nil {
+		return nil, err
+	}
+
+	return newKafkaConsumer(dlqProducer, c.config, topics.Topic, consumerName, saramaConfig, c.metricsClient, c.logger)
 }
 
 // NewProducer is used to create a Kafka producer
 func (c *kafkaClient) NewProducer(app string) (messaging.Producer, error) {
 	topics := c.config.getTopicsForApplication(app)
-	return c.newProducerHelper(topics.Topic)
+	return c.newProducerByTopic(topics.Topic)
 }
 
-func (c *kafkaClient) newProducerHelper(topic string) (messaging.Producer, error) {
+func (c *kafkaClient) newProducerByTopic(topic string) (messaging.Producer, error) {
 	kafkaClusterName := c.config.getKafkaClusterForTopic(topic)
 	brokers := c.config.getBrokersForKafkaCluster(kafkaClusterName)
 
