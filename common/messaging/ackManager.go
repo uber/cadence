@@ -32,19 +32,35 @@ import (
 
 type ackManager struct {
 	sync.RWMutex
-	outstandingMessages map[int64]bool // key->MessageID, value->(true for acked/completed, false->for non acked)
-	readLevel           int64          // Maximum MessageID inserted into outstandingMessages
-	ackLevel            int64          // Maximum MessageID below which all messages are acked
+	outstandingMessages map[int64]bool // key->itemID, value->(true for acked/completed, false->for non acked)
+	readLevel           int64          // Maximum itemID inserted into outstandingMessages
+	ackLevel            int64          // Maximum itemID below which all messages are acked
 	backlogCounter      atomic.Int64
+	logIncontinuousErr  bool // emit error for itemID being incontinuous when consuming for potential bugs
 	logger              log.Logger
 }
 
+// NewAckManager returns a AckManager without monitoring the itemIDs continousness.
+// For example, our internal matching task queue doesn't guarantee it.
 func NewAckManager(logger log.Logger) AckManager {
+	return newAckManager(false, logger)
+}
+
+// NewContinuousAckManager returns a ContinuousAckManager
+// it will emit error logs for itemIDs being incontinuous
+// This is useful for some message queue system that guarantees continuousness
+// that we want to monitor it's behaving correctly
+func NewContinuousAckManager(logger log.Logger) AckManager {
+	return newAckManager(true, logger)
+}
+
+func newAckManager(logIncontinuousErr bool, logger log.Logger) AckManager {
 	return &ackManager{
 		logger:              logger,
 		outstandingMessages: make(map[int64]bool),
 		readLevel:           -1,
 		ackLevel:            -1,
+		logIncontinuousErr:  logIncontinuousErr,
 	}
 }
 
@@ -93,7 +109,9 @@ func (m *ackManager) AckItem(itemID int64) (ackLevel int64) {
 				return m.ackLevel
 			}
 		} else {
-			m.logger.Error("potential bug, an item is probably skipped when adding", tag.TaskID(current))
+			if m.logIncontinuousErr {
+				m.logger.Error("potential bug, an item is probably skipped when adding", tag.TaskID(current))
+			}
 		}
 	}
 	return m.ackLevel

@@ -64,7 +64,7 @@ func (pam *kafkaPartitionAckManager) AddMessage(partitionID int32, messageID int
 		pam.Lock()
 
 		partitionLogger := pam.logger.WithTags(tag.KafkaPartition(partitionID))
-		am := messaging.NewAckManager(partitionLogger)
+		am := messaging.NewContinuousAckManager(partitionLogger)
 		pam.ackMgrs[partitionID] = am
 
 		scope := pam.metricsClient.Scope(metrics.MessagingClientConsumerScope, metrics.KafkaPartitionTag(partitionID))
