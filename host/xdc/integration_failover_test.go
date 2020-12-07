@@ -41,8 +41,7 @@ import (
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 
-	wsc "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
-	workflow "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
@@ -71,7 +70,7 @@ const (
 
 var (
 	clusterName              = []string{"active", "standby"}
-	clusterReplicationConfig = []*workflow.ClusterReplicationConfiguration{
+	clusterReplicationConfig = []*types.ClusterReplicationConfiguration{
 		{
 			ClusterName: common.StringPtr(clusterName[0]),
 		},
@@ -132,7 +131,7 @@ func (s *integrationClustersTestSuite) TearDownSuite() {
 func (s *integrationClustersTestSuite) TestDomainFailover() {
 	domainName := "test-domain-for-fail-over-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
-	regReq := &workflow.RegisterDomainRequest{
+	regReq := &types.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		IsGlobalDomain:                         common.BoolPtr(true),
 		Clusters:                               clusterReplicationConfig,
@@ -142,7 +141,7 @@ func (s *integrationClustersTestSuite) TestDomainFailover() {
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
 
-	descReq := &workflow.DescribeDomainRequest{
+	descReq := &types.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	}
 	resp, err := client1.DescribeDomain(createContext(), descReq)
@@ -158,9 +157,9 @@ func (s *integrationClustersTestSuite) TestDomainFailover() {
 	s.Equal(resp, resp2)
 
 	// update domain to fail over
-	updateReq := &workflow.UpdateDomainRequest{
+	updateReq := &types.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
+		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(clusterName[1]),
 		},
 	}
@@ -171,7 +170,7 @@ func (s *integrationClustersTestSuite) TestDomainFailover() {
 	s.Equal(int64(1), updateResp.GetFailoverVersion())
 
 	updated := false
-	var resp3 *workflow.DescribeDomainResponse
+	var resp3 *types.DescribeDomainResponse
 	for i := 0; i < 30; i++ {
 		resp3, err = client2.DescribeDomain(createContext(), descReq)
 		s.NoError(err)
@@ -190,12 +189,12 @@ func (s *integrationClustersTestSuite) TestDomainFailover() {
 	wt := "integration-domain-failover-test-type"
 	tl := "integration-domain-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &workflow.WorkflowType{Name: common.StringPtr(wt)}
-	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
-	startReq := &workflow.StartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
+	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	startReq := &types.StartWorkflowExecutionRequest{
+		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowId:                          common.StringPtr(id),
+		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -203,7 +202,7 @@ func (s *integrationClustersTestSuite) TestDomainFailover() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
 	}
-	var we *workflow.StartWorkflowExecutionResponse
+	var we *types.StartWorkflowExecutionResponse
 	for i := 0; i < 30; i++ {
 		we, err = client2.StartWorkflowExecution(createContext(), startReq)
 		if err == nil {
@@ -212,13 +211,13 @@ func (s *integrationClustersTestSuite) TestDomainFailover() {
 		time.Sleep(500 * time.Millisecond)
 	}
 	s.NoError(err)
-	s.NotNil(we.GetRunId())
+	s.NotNil(we.GetRunID())
 }
 
 func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 	domainName := "test-simple-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
-	regReq := &workflow.RegisterDomainRequest{
+	regReq := &types.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		IsGlobalDomain:                         common.BoolPtr(true),
 		Clusters:                               clusterReplicationConfig,
@@ -228,7 +227,7 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
 
-	descReq := &workflow.DescribeDomainRequest{
+	descReq := &types.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	}
 	resp, err := client1.DescribeDomain(createContext(), descReq)
@@ -248,12 +247,12 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 	wt := "integration-simple-workflow-failover-test-type"
 	tl := "integration-simple-workflow-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &workflow.WorkflowType{Name: common.StringPtr(wt)}
-	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
-	startReq := &workflow.StartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
+	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	startReq := &types.StartWorkflowExecutionRequest{
+		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowId:                          common.StringPtr(id),
+		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -263,28 +262,28 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 	}
 	we, err := client1.StartWorkflowExecution(createContext(), startReq)
 	s.Nil(err)
-	s.NotNil(we.GetRunId())
-	rid := we.GetRunId()
+	s.NotNil(we.GetRunID())
+	rid := we.GetRunID()
 
-	s.logger.Info("StartWorkflowExecution \n", tag.WorkflowRunID(we.GetRunId()))
+	s.logger.Info("StartWorkflowExecution \n", tag.WorkflowRunID(we.GetRunID()))
 
 	workflowComplete := false
 	activityName := "activity_type1"
 	activityCount := int32(1)
 	activityCounter := int32(0)
-	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 		if activityCounter < activityCount {
 			activityCounter++
 			buf := new(bytes.Buffer)
 			s.Nil(binary.Write(buf, binary.LittleEndian, activityCounter))
 
-			return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
-				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
-				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-					ActivityId:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
-					TaskList:                      &workflow.TaskList{Name: &tl},
+			return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
+				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
+				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
+					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(30),
@@ -295,22 +294,22 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 		}
 
 		workflowComplete = true
-		return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
-			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
-			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+		return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
+			DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
+			CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{
 				Result: []byte("Done."),
 			},
 		}}, nil
 	}
 
-	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
+	atHandler := func(execution *types.WorkflowExecution, activityType *types.ActivityType,
 		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
 
 		return []byte("Activity Result."), false, nil
 	}
 
 	queryType := "test-query"
-	queryHandler := func(task *workflow.PollForDecisionTaskResponse) ([]byte, error) {
+	queryHandler := func(task *types.PollForDecisionTaskResponse) ([]byte, error) {
 		s.NotNil(task.Query)
 		s.NotNil(task.Query.QueryType)
 		if *task.Query.QueryType == queryType {
@@ -350,18 +349,18 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 	s.Nil(err)
 
 	type QueryResult struct {
-		Resp *workflow.QueryWorkflowResponse
+		Resp *types.QueryWorkflowResponse
 		Err  error
 	}
 	queryResultCh := make(chan QueryResult)
-	queryWorkflowFn := func(client wsc.Interface, queryType string) {
-		queryResp, err := client.QueryWorkflow(createContext(), &workflow.QueryWorkflowRequest{
+	queryWorkflowFn := func(client frontend.Client, queryType string) {
+		queryResp, err := client.QueryWorkflow(createContext(), &types.QueryWorkflowRequest{
 			Domain: common.StringPtr(domainName),
-			Execution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(id),
-				RunId:      common.StringPtr(*we.RunId),
+			Execution: &types.WorkflowExecution{
+				WorkflowID: common.StringPtr(id),
+				RunID:      common.StringPtr(*we.RunID),
 			},
-			Query: &workflow.WorkflowQuery{
+			Query: &types.WorkflowQuery{
 				QueryType: common.StringPtr(queryType),
 			},
 		})
@@ -412,9 +411,9 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 	s.Equal("query-result", queryResultString)
 
 	// update domain to fail over
-	updateReq := &workflow.UpdateDomainRequest{
+	updateReq := &types.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
+		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(clusterName[1]),
 		},
 	}
@@ -428,14 +427,14 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 	time.Sleep(cacheRefreshInterval)
 
 	// check history matched
-	getHistoryReq := &workflow.GetWorkflowExecutionHistoryRequest{
+	getHistoryReq := &types.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domainName),
-		Execution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(id),
-			RunId:      common.StringPtr(rid),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(id),
+			RunID:      common.StringPtr(rid),
 		},
 	}
-	var historyResponse *workflow.GetWorkflowExecutionHistoryResponse
+	var historyResponse *types.GetWorkflowExecutionHistoryResponse
 	eventsReplicated := false
 	for i := 0; i < 15; i++ {
 		historyResponse, err = client2.GetWorkflowExecutionHistory(createContext(), getHistoryReq)
@@ -517,7 +516,7 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	domainName := "test-sticky-decision-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
-	regReq := &workflow.RegisterDomainRequest{
+	regReq := &types.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		IsGlobalDomain:                         common.BoolPtr(true),
 		Clusters:                               clusterReplicationConfig,
@@ -527,7 +526,7 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
 
-	descReq := &workflow.DescribeDomainRequest{
+	descReq := &types.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	}
 	resp, err := client1.DescribeDomain(createContext(), descReq)
@@ -547,15 +546,15 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	identity1 := "worker1"
 	identity2 := "worker2"
 
-	workflowType := &workflow.WorkflowType{Name: common.StringPtr(wt)}
-	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
-	stickyTaskList1 := &workflow.TaskList{Name: common.StringPtr(stl1)}
-	stickyTaskList2 := &workflow.TaskList{Name: common.StringPtr(stl2)}
+	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	stickyTaskList1 := &types.TaskList{Name: common.StringPtr(stl1)}
+	stickyTaskList2 := &types.TaskList{Name: common.StringPtr(stl2)}
 	stickyTaskTimeout := common.Int32Ptr(100)
-	startReq := &workflow.StartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
+	startReq := &types.StartWorkflowExecutionRequest{
+		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowId:                          common.StringPtr(id),
+		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -565,29 +564,29 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	}
 	we, err := client1.StartWorkflowExecution(createContext(), startReq)
 	s.NoError(err)
-	s.NotNil(we.GetRunId())
+	s.NotNil(we.GetRunID())
 
-	s.logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.GetRunId()))
+	s.logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.GetRunID()))
 
 	firstDecisionMade := false
 	secondDecisionMade := false
 	workflowCompleted := false
-	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 		if !firstDecisionMade {
 			firstDecisionMade = true
-			return nil, []*workflow.Decision{}, nil
+			return nil, []*types.Decision{}, nil
 		}
 
 		if !secondDecisionMade {
 			secondDecisionMade = true
-			return nil, []*workflow.Decision{}, nil
+			return nil, []*types.Decision{}, nil
 		}
 
 		workflowCompleted = true
-		return nil, []*workflow.Decision{{
-			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
-			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+		return nil, []*types.Decision{{
+			DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
+			CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{
 				Result: []byte("Done."),
 			},
 		}}, nil
@@ -625,11 +624,11 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	// Send a signal in cluster
 	signalName := "my signal"
 	signalInput := []byte("my signal input.")
-	err = client1.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
+	err = client1.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain: common.StringPtr(domainName),
-		WorkflowExecution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(id),
-			RunId:      common.StringPtr(we.GetRunId()),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(id),
+			RunID:      common.StringPtr(we.GetRunID()),
 		},
 		SignalName: common.StringPtr(signalName),
 		Input:      signalInput,
@@ -638,9 +637,9 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	s.Nil(err)
 
 	// Update domain to fail over
-	updateReq := &workflow.UpdateDomainRequest{
+	updateReq := &types.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
+		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(clusterName[1]),
 		},
 	}
@@ -658,11 +657,11 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	s.Nil(err)
 	s.True(secondDecisionMade)
 
-	err = client2.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
+	err = client2.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain: common.StringPtr(domainName),
-		WorkflowExecution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(id),
-			RunId:      common.StringPtr(we.GetRunId()),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(id),
+			RunID:      common.StringPtr(we.GetRunID()),
 		},
 		SignalName: common.StringPtr(signalName),
 		Input:      signalInput,
@@ -671,9 +670,9 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	s.Nil(err)
 
 	// Update domain to fail over back
-	updateReq = &workflow.UpdateDomainRequest{
+	updateReq = &types.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
+		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(clusterName[0]),
 		},
 	}
@@ -692,7 +691,7 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 func (s *integrationClustersTestSuite) TestStartWorkflowExecution_Failover_WorkflowIDReusePolicy() {
 	domainName := "test-start-workflow-failover-ID-reuse-policy" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
-	regReq := &workflow.RegisterDomainRequest{
+	regReq := &types.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		IsGlobalDomain:                         common.BoolPtr(true),
 		Clusters:                               clusterReplicationConfig,
@@ -702,7 +701,7 @@ func (s *integrationClustersTestSuite) TestStartWorkflowExecution_Failover_Workf
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
 
-	descReq := &workflow.DescribeDomainRequest{
+	descReq := &types.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	}
 	resp, err := client1.DescribeDomain(createContext(), descReq)
@@ -722,33 +721,33 @@ func (s *integrationClustersTestSuite) TestStartWorkflowExecution_Failover_Workf
 	wt := "integration-start-workflow-failover-ID-reuse-policy-test-type"
 	tl := "integration-start-workflow-failover-ID-reuse-policy-test-tasklist"
 	identity := "worker1"
-	workflowType := &workflow.WorkflowType{Name: common.StringPtr(wt)}
-	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
-	startReq := &workflow.StartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
+	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	startReq := &types.StartWorkflowExecutionRequest{
+		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowId:                          common.StringPtr(id),
+		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
-		WorkflowIdReusePolicy:               workflow.WorkflowIdReusePolicyAllowDuplicate.Ptr(),
+		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
 	}
 	we, err := client1.StartWorkflowExecution(createContext(), startReq)
 	s.Nil(err)
-	s.NotNil(we.GetRunId())
-	s.logger.Info("StartWorkflowExecution in cluster 1: ", tag.WorkflowRunID(we.GetRunId()))
+	s.NotNil(we.GetRunID())
+	s.logger.Info("StartWorkflowExecution in cluster 1: ", tag.WorkflowRunID(we.GetRunID()))
 
 	workflowCompleteTimes := 0
-	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 
 		workflowCompleteTimes++
-		return nil, []*workflow.Decision{{
-			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
-			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+		return nil, []*types.Decision{{
+			DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
+			CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{
 				Result: []byte("Done."),
 			},
 		}}, nil
@@ -783,9 +782,9 @@ func (s *integrationClustersTestSuite) TestStartWorkflowExecution_Failover_Workf
 	s.Equal(1, workflowCompleteTimes)
 
 	// update domain to fail over
-	updateReq := &workflow.UpdateDomainRequest{
+	updateReq := &types.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
+		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(clusterName[1]),
 		},
 	}
@@ -799,26 +798,26 @@ func (s *integrationClustersTestSuite) TestStartWorkflowExecution_Failover_Workf
 	time.Sleep(cacheRefreshInterval)
 
 	// start the same workflow in cluster 2 is not allowed if policy is AllowDuplicateFailedOnly
-	startReq.RequestId = common.StringPtr(uuid.New())
-	startReq.WorkflowIdReusePolicy = workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly.Ptr()
+	startReq.RequestID = common.StringPtr(uuid.New())
+	startReq.WorkflowIDReusePolicy = types.WorkflowIDReusePolicyAllowDuplicateFailedOnly.Ptr()
 	we, err = client2.StartWorkflowExecution(createContext(), startReq)
 	s.IsType(&types.WorkflowExecutionAlreadyStartedError{}, err)
 	s.Nil(we)
 
 	// start the same workflow in cluster 2 is not allowed if policy is RejectDuplicate
-	startReq.RequestId = common.StringPtr(uuid.New())
-	startReq.WorkflowIdReusePolicy = workflow.WorkflowIdReusePolicyRejectDuplicate.Ptr()
+	startReq.RequestID = common.StringPtr(uuid.New())
+	startReq.WorkflowIDReusePolicy = types.WorkflowIDReusePolicyRejectDuplicate.Ptr()
 	we, err = client2.StartWorkflowExecution(createContext(), startReq)
 	s.IsType(&types.WorkflowExecutionAlreadyStartedError{}, err)
 	s.Nil(we)
 
 	// start the workflow in cluster 2
-	startReq.RequestId = common.StringPtr(uuid.New())
-	startReq.WorkflowIdReusePolicy = workflow.WorkflowIdReusePolicyAllowDuplicate.Ptr()
+	startReq.RequestID = common.StringPtr(uuid.New())
+	startReq.WorkflowIDReusePolicy = types.WorkflowIDReusePolicyAllowDuplicate.Ptr()
 	we, err = client2.StartWorkflowExecution(createContext(), startReq)
 	s.Nil(err)
-	s.NotNil(we.GetRunId())
-	s.logger.Info("StartWorkflowExecution in cluster 2: ", tag.WorkflowRunID(we.GetRunId()))
+	s.NotNil(we.GetRunID())
+	s.logger.Info("StartWorkflowExecution in cluster 2: ", tag.WorkflowRunID(we.GetRunID()))
 
 	_, err = poller2.PollAndProcessDecisionTask(false, false)
 	s.logger.Info("PollAndProcessDecisionTask 2", tag.Error(err))
@@ -829,7 +828,7 @@ func (s *integrationClustersTestSuite) TestStartWorkflowExecution_Failover_Workf
 func (s *integrationClustersTestSuite) TestTerminateFailover() {
 	domainName := "test-terminate-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
-	regReq := &workflow.RegisterDomainRequest{
+	regReq := &types.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		IsGlobalDomain:                         common.BoolPtr(true),
 		Clusters:                               clusterReplicationConfig,
@@ -839,7 +838,7 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
 
-	descReq := &workflow.DescribeDomainRequest{
+	descReq := &types.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	}
 	resp, err := client1.DescribeDomain(createContext(), descReq)
@@ -855,12 +854,12 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 	wt := "integration-terminate-workflow-failover-test-type"
 	tl := "integration-terminate-workflow-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &workflow.WorkflowType{Name: common.StringPtr(wt)}
-	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
-	startReq := &workflow.StartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
+	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	startReq := &types.StartWorkflowExecutionRequest{
+		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowId:                          common.StringPtr(id),
+		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -870,24 +869,24 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 	}
 	we, err := client1.StartWorkflowExecution(createContext(), startReq)
 	s.NoError(err)
-	s.NotNil(we.GetRunId())
+	s.NotNil(we.GetRunID())
 
 	activityName := "activity_type1"
 	activityCount := int32(1)
 	activityCounter := int32(0)
-	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 		if activityCounter < activityCount {
 			activityCounter++
 			buf := new(bytes.Buffer)
 			s.Nil(binary.Write(buf, binary.LittleEndian, activityCounter))
 
-			return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
-				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
-				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-					ActivityId:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
-					TaskList:                      &workflow.TaskList{Name: &tl},
+			return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
+				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
+				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
+					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
@@ -897,15 +896,15 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 			}}, nil
 		}
 
-		return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
-			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
-			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+		return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
+			DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
+			CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{
 				Result: []byte("Done."),
 			},
 		}}, nil
 	}
 
-	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
+	atHandler := func(execution *types.WorkflowExecution, activityType *types.ActivityType,
 		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
 
 		return []byte("Activity Result."), false, nil
@@ -928,9 +927,9 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 	s.Nil(err)
 
 	// update domain to fail over
-	updateReq := &workflow.UpdateDomainRequest{
+	updateReq := &types.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
+		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(clusterName[1]),
 		},
 	}
@@ -946,10 +945,10 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 	// terminate workflow at cluster 2
 	terminateReason := "terminate reason."
 	terminateDetails := []byte("terminate details.")
-	err = client2.TerminateWorkflowExecution(createContext(), &workflow.TerminateWorkflowExecutionRequest{
+	err = client2.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain: common.StringPtr(domainName),
-		WorkflowExecution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(id),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(id),
 		},
 		Reason:   common.StringPtr(terminateReason),
 		Details:  terminateDetails,
@@ -959,10 +958,10 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 
 	// check terminate done
 	executionTerminated := false
-	getHistoryReq := &workflow.GetWorkflowExecutionHistoryRequest{
+	getHistoryReq := &types.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domainName),
-		Execution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(id),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(id),
 		},
 	}
 GetHistoryLoop:
@@ -972,7 +971,7 @@ GetHistoryLoop:
 		history := historyResponse.History
 
 		lastEvent := history.Events[len(history.Events)-1]
-		if *lastEvent.EventType != workflow.EventTypeWorkflowExecutionTerminated {
+		if *lastEvent.EventType != types.EventTypeWorkflowExecutionTerminated {
 			s.logger.Warn("Execution not terminated yet.")
 			time.Sleep(100 * time.Millisecond)
 			continue GetHistoryLoop
@@ -988,7 +987,7 @@ GetHistoryLoop:
 	s.True(executionTerminated)
 
 	// check history replicated to the other cluster
-	var historyResponse *workflow.GetWorkflowExecutionHistoryResponse
+	var historyResponse *types.GetWorkflowExecutionHistoryResponse
 	eventsReplicated := false
 GetHistoryLoop2:
 	for i := 0; i < 15; i++ {
@@ -996,7 +995,7 @@ GetHistoryLoop2:
 		if err == nil {
 			history := historyResponse.History
 			lastEvent := history.Events[len(history.Events)-1]
-			if *lastEvent.EventType == workflow.EventTypeWorkflowExecutionTerminated {
+			if *lastEvent.EventType == types.EventTypeWorkflowExecutionTerminated {
 				terminateEventAttributes := lastEvent.WorkflowExecutionTerminatedEventAttributes
 				s.Equal(terminateReason, *terminateEventAttributes.Reason)
 				s.Equal(terminateDetails, terminateEventAttributes.Details)
@@ -1014,7 +1013,7 @@ GetHistoryLoop2:
 func (s *integrationClustersTestSuite) TestContinueAsNewFailover() {
 	domainName := "test-continueAsNew-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
-	regReq := &workflow.RegisterDomainRequest{
+	regReq := &types.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		IsGlobalDomain:                         common.BoolPtr(true),
 		Clusters:                               clusterReplicationConfig,
@@ -1024,7 +1023,7 @@ func (s *integrationClustersTestSuite) TestContinueAsNewFailover() {
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
 
-	descReq := &workflow.DescribeDomainRequest{
+	descReq := &types.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	}
 	resp, err := client1.DescribeDomain(createContext(), descReq)
@@ -1040,12 +1039,12 @@ func (s *integrationClustersTestSuite) TestContinueAsNewFailover() {
 	wt := "integration-continueAsNew-workflow-failover-test-type"
 	tl := "integration-continueAsNew-workflow-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &workflow.WorkflowType{Name: common.StringPtr(wt)}
-	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
-	startReq := &workflow.StartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
+	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	startReq := &types.StartWorkflowExecutionRequest{
+		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowId:                          common.StringPtr(id),
+		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1055,26 +1054,26 @@ func (s *integrationClustersTestSuite) TestContinueAsNewFailover() {
 	}
 	we, err := client1.StartWorkflowExecution(createContext(), startReq)
 	s.NoError(err)
-	s.NotNil(we.GetRunId())
+	s.NotNil(we.GetRunID())
 
 	workflowComplete := false
 	continueAsNewCount := int32(5)
 	continueAsNewCounter := int32(0)
 	var previousRunID string
-	var lastRunStartedEvent *workflow.HistoryEvent
-	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+	var lastRunStartedEvent *types.HistoryEvent
+	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 		if continueAsNewCounter < continueAsNewCount {
-			previousRunID = execution.GetRunId()
+			previousRunID = execution.GetRunID()
 			continueAsNewCounter++
 			buf := new(bytes.Buffer)
 			s.Nil(binary.Write(buf, binary.LittleEndian, continueAsNewCounter))
 
-			return []byte(strconv.Itoa(int(continueAsNewCounter))), []*workflow.Decision{{
-				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeContinueAsNewWorkflowExecution),
-				ContinueAsNewWorkflowExecutionDecisionAttributes: &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
+			return []byte(strconv.Itoa(int(continueAsNewCounter))), []*types.Decision{{
+				DecisionType: types.DecisionTypeContinueAsNewWorkflowExecution.Ptr(),
+				ContinueAsNewWorkflowExecutionDecisionAttributes: &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
 					WorkflowType:                        workflowType,
-					TaskList:                            &workflow.TaskList{Name: &tl},
+					TaskList:                            &types.TaskList{Name: &tl},
 					Input:                               buf.Bytes(),
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
@@ -1084,9 +1083,9 @@ func (s *integrationClustersTestSuite) TestContinueAsNewFailover() {
 
 		lastRunStartedEvent = history.Events[0]
 		workflowComplete = true
-		return []byte(strconv.Itoa(int(continueAsNewCounter))), []*workflow.Decision{{
-			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
-			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+		return []byte(strconv.Itoa(int(continueAsNewCounter))), []*types.Decision{{
+			DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
+			CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{
 				Result: []byte("Done."),
 			},
 		}}, nil
@@ -1120,9 +1119,9 @@ func (s *integrationClustersTestSuite) TestContinueAsNewFailover() {
 	}
 
 	// update domain to fail over
-	updateReq := &workflow.UpdateDomainRequest{
+	updateReq := &types.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
+		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(clusterName[1]),
 		},
 	}
@@ -1146,13 +1145,13 @@ func (s *integrationClustersTestSuite) TestContinueAsNewFailover() {
 	_, err = poller2.PollAndProcessDecisionTask(false, false)
 	s.Nil(err)
 	s.True(workflowComplete)
-	s.Equal(previousRunID, lastRunStartedEvent.WorkflowExecutionStartedEventAttributes.GetContinuedExecutionRunId())
+	s.Equal(previousRunID, lastRunStartedEvent.WorkflowExecutionStartedEventAttributes.GetContinuedExecutionRunID())
 }
 
 func (s *integrationClustersTestSuite) TestSignalFailover() {
 	domainName := "test-signal-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
-	regReq := &workflow.RegisterDomainRequest{
+	regReq := &types.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		IsGlobalDomain:                         common.BoolPtr(true),
 		Clusters:                               clusterReplicationConfig,
@@ -1162,7 +1161,7 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
 
-	descReq := &workflow.DescribeDomainRequest{
+	descReq := &types.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	}
 	resp, err := client1.DescribeDomain(createContext(), descReq)
@@ -1178,12 +1177,12 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 	wt := "integration-signal-workflow-failover-test-type"
 	tl := "integration-signal-workflow-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &workflow.WorkflowType{Name: common.StringPtr(wt)}
-	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
-	startReq := &workflow.StartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
+	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	startReq := &types.StartWorkflowExecutionRequest{
+		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowId:                          common.StringPtr(id),
+		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1193,25 +1192,25 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 	}
 	we, err := client1.StartWorkflowExecution(createContext(), startReq)
 	s.NoError(err)
-	s.NotNil(we.GetRunId())
+	s.NotNil(we.GetRunID())
 
-	s.logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.GetRunId()))
+	s.logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.GetRunID()))
 
 	eventSignaled := false
-	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 		if !eventSignaled {
 			for _, event := range history.Events[previousStartedEventID:] {
-				if *event.EventType == workflow.EventTypeWorkflowExecutionSignaled {
+				if *event.EventType == types.EventTypeWorkflowExecutionSignaled {
 					eventSignaled = true
-					return nil, []*workflow.Decision{}, nil
+					return nil, []*types.Decision{}, nil
 				}
 			}
 		}
 
-		return nil, []*workflow.Decision{{
-			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
-			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+		return nil, []*types.Decision{{
+			DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
+			CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{
 				Result: []byte("Done."),
 			},
 		}}, nil
@@ -1240,11 +1239,11 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 	// Send a signal in cluster 1
 	signalName := "my signal"
 	signalInput := []byte("my signal input.")
-	err = client1.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
+	err = client1.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain: common.StringPtr(domainName),
-		WorkflowExecution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(id),
-			RunId:      common.StringPtr(we.GetRunId()),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(id),
+			RunID:      common.StringPtr(we.GetRunID()),
 		},
 		SignalName: common.StringPtr(signalName),
 		Input:      signalInput,
@@ -1260,9 +1259,9 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 	s.True(eventSignaled)
 
 	// Update domain to fail over
-	updateReq := &workflow.UpdateDomainRequest{
+	updateReq := &types.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
+		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(clusterName[1]),
 		},
 	}
@@ -1276,13 +1275,13 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 	time.Sleep(cacheRefreshInterval)
 
 	// check history matched
-	getHistoryReq := &workflow.GetWorkflowExecutionHistoryRequest{
+	getHistoryReq := &types.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domainName),
-		Execution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(id),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(id),
 		},
 	}
-	var historyResponse *workflow.GetWorkflowExecutionHistoryResponse
+	var historyResponse *types.GetWorkflowExecutionHistoryResponse
 	eventsReplicated := false
 	for i := 0; i < 15; i++ {
 		historyResponse, err = client2.GetWorkflowExecutionHistory(createContext(), getHistoryReq)
@@ -1298,10 +1297,10 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 	// Send another signal in cluster 2
 	signalName2 := "my signal 2"
 	signalInput2 := []byte("my signal input 2.")
-	err = client2.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
+	err = client2.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain: common.StringPtr(domainName),
-		WorkflowExecution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(id),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(id),
 		},
 		SignalName: common.StringPtr(signalName2),
 		Input:      signalInput2,
@@ -1333,7 +1332,7 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 	domainName := "test-user-timer-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
-	regReq := &workflow.RegisterDomainRequest{
+	regReq := &types.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		IsGlobalDomain:                         common.BoolPtr(true),
 		Clusters:                               clusterReplicationConfig,
@@ -1343,7 +1342,7 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
 
-	descReq := &workflow.DescribeDomainRequest{
+	descReq := &types.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	}
 	resp, err := client1.DescribeDomain(createContext(), descReq)
@@ -1359,12 +1358,12 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 	wt := "integration-user-timer-workflow-failover-test-type"
 	tl := "integration-user-timer-workflow-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &workflow.WorkflowType{Name: common.StringPtr(wt)}
-	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
-	startReq := &workflow.StartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
+	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	startReq := &types.StartWorkflowExecutionRequest{
+		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowId:                          common.StringPtr(id),
+		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1372,7 +1371,7 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity),
 	}
-	var we *workflow.StartWorkflowExecutionResponse
+	var we *types.StartWorkflowExecutionResponse
 	for i := 0; i < 10; i++ {
 		we, err = client1.StartWorkflowExecution(createContext(), startReq)
 		if err == nil {
@@ -1381,15 +1380,15 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 		time.Sleep(1 * time.Second)
 	}
 	s.NoError(err)
-	s.NotNil(we.GetRunId())
+	s.NotNil(we.GetRunID())
 
-	s.logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.GetRunId()))
+	s.logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.GetRunID()))
 
 	timerCreated := false
 	timerFired := false
 	workflowCompleted := false
-	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 
 		if !timerCreated {
 			timerCreated = true
@@ -1397,49 +1396,49 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 			// Send a signal in cluster
 			signalName := "my signal"
 			signalInput := []byte("my signal input.")
-			err = client1.SignalWorkflowExecution(createContext(), &workflow.SignalWorkflowExecutionRequest{
+			err = client1.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 				Domain: common.StringPtr(domainName),
-				WorkflowExecution: &workflow.WorkflowExecution{
-					WorkflowId: common.StringPtr(id),
-					RunId:      common.StringPtr(we.GetRunId()),
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: common.StringPtr(id),
+					RunID:      common.StringPtr(we.GetRunID()),
 				},
 				SignalName: common.StringPtr(signalName),
 				Input:      signalInput,
 				Identity:   common.StringPtr(""),
 			})
 			s.Nil(err)
-			return nil, []*workflow.Decision{{
-				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeStartTimer),
-				StartTimerDecisionAttributes: &workflow.StartTimerDecisionAttributes{
-					TimerId:                   common.StringPtr("timer-id"),
+			return nil, []*types.Decision{{
+				DecisionType: types.DecisionTypeStartTimer.Ptr(),
+				StartTimerDecisionAttributes: &types.StartTimerDecisionAttributes{
+					TimerID:                   common.StringPtr("timer-id"),
 					StartToFireTimeoutSeconds: common.Int64Ptr(2),
 				},
 			}}, nil
 		}
 
 		if !timerFired {
-			resp, err := client2.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+			resp, err := client2.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 				Domain: common.StringPtr(domainName),
-				Execution: &workflow.WorkflowExecution{
-					WorkflowId: common.StringPtr(id),
-					RunId:      common.StringPtr(we.GetRunId()),
+				Execution: &types.WorkflowExecution{
+					WorkflowID: common.StringPtr(id),
+					RunID:      common.StringPtr(we.GetRunID()),
 				},
 			})
 			s.Nil(err)
 			for _, event := range resp.History.Events {
-				if event.GetEventType() == workflow.EventTypeTimerFired {
+				if event.GetEventType() == types.EventTypeTimerFired {
 					timerFired = true
 				}
 			}
 			if !timerFired {
-				return nil, []*workflow.Decision{}, nil
+				return nil, []*types.Decision{}, nil
 			}
 		}
 
 		workflowCompleted = true
-		return nil, []*workflow.Decision{{
-			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
-			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+		return nil, []*types.Decision{{
+			DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
+			CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{
 				Result: []byte("Done."),
 			},
 		}}, nil
@@ -1478,9 +1477,9 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 	s.True(timerCreated)
 
 	// Update domain to fail over
-	updateReq := &workflow.UpdateDomainRequest{
+	updateReq := &types.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
+		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(clusterName[1]),
 		},
 	}
@@ -1505,7 +1504,7 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	domainName := "test-activity-heartbeat-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
-	regReq := &workflow.RegisterDomainRequest{
+	regReq := &types.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		IsGlobalDomain:                         common.BoolPtr(true),
 		Clusters:                               clusterReplicationConfig,
@@ -1515,7 +1514,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
 
-	descReq := &workflow.DescribeDomainRequest{
+	descReq := &types.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	}
 	resp, err := client1.DescribeDomain(createContext(), descReq)
@@ -1532,12 +1531,12 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	tl := "integration-activity-heartbeat-workflow-failover-test-tasklist"
 	identity1 := "worker1"
 	identity2 := "worker2"
-	workflowType := &workflow.WorkflowType{Name: common.StringPtr(wt)}
-	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
-	startReq := &workflow.StartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
+	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	startReq := &types.StartWorkflowExecutionRequest{
+		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowId:                          common.StringPtr(id),
+		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1545,7 +1544,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 		Identity:                            common.StringPtr(identity1),
 	}
-	var we *workflow.StartWorkflowExecutionResponse
+	var we *types.StartWorkflowExecutionResponse
 	for i := 0; i < 10; i++ {
 		we, err = client1.StartWorkflowExecution(createContext(), startReq)
 		if err == nil {
@@ -1554,27 +1553,27 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 		time.Sleep(1 * time.Second)
 	}
 	s.NoError(err)
-	s.NotNil(we.GetRunId())
+	s.NotNil(we.GetRunID())
 
-	s.logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.GetRunId()))
+	s.logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.GetRunID()))
 
 	activitySent := false
-	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 		if !activitySent {
 			activitySent = true
-			return nil, []*workflow.Decision{{
-				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
-				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-					ActivityId:                    common.StringPtr(strconv.Itoa(1)),
-					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr("some random activity type")},
-					TaskList:                      &workflow.TaskList{Name: &tl},
+			return nil, []*types.Decision{{
+				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
+				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
+					ActivityID:                    common.StringPtr(strconv.Itoa(1)),
+					ActivityType:                  &types.ActivityType{Name: common.StringPtr("some random activity type")},
+					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         []byte("some random input"),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1000),
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(1000),
 					HeartbeatTimeoutSeconds:       common.Int32Ptr(3),
-					RetryPolicy: &workflow.RetryPolicy{
+					RetryPolicy: &types.RetryPolicy{
 						InitialIntervalInSeconds:    common.Int32Ptr(1),
 						MaximumAttempts:             common.Int32Ptr(3),
 						MaximumIntervalInSeconds:    common.Int32Ptr(1),
@@ -1586,9 +1585,9 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 			}}, nil
 		}
 
-		return nil, []*workflow.Decision{{
-			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
-			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+		return nil, []*types.Decision{{
+			DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
+			CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{
 				Result: []byte("Done."),
 			},
 		}}, nil
@@ -1597,10 +1596,10 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	// activity handler
 	activity1Called := false
 	heartbeatDetails := []byte("details")
-	atHandler1 := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
+	atHandler1 := func(execution *types.WorkflowExecution, activityType *types.ActivityType,
 		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
 		activity1Called = true
-		_, err = client1.RecordActivityTaskHeartbeat(createContext(), &workflow.RecordActivityTaskHeartbeatRequest{
+		_, err = client1.RecordActivityTaskHeartbeat(createContext(), &types.RecordActivityTaskHeartbeatRequest{
 			TaskToken: taskToken, Details: heartbeatDetails})
 		s.Nil(err)
 		time.Sleep(5 * time.Second)
@@ -1609,7 +1608,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 
 	// activity handler
 	activity2Called := false
-	atHandler2 := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
+	atHandler2 := func(execution *types.WorkflowExecution, activityType *types.ActivityType,
 		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
 		activity2Called = true
 		return []byte("Activity Result."), false, nil
@@ -1637,12 +1636,12 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 		T:               s.T(),
 	}
 
-	describeWorkflowExecution := func(client wsc.Interface) (*workflow.DescribeWorkflowExecutionResponse, error) {
-		return client.DescribeWorkflowExecution(createContext(), &workflow.DescribeWorkflowExecutionRequest{
+	describeWorkflowExecution := func(client frontend.Client) (*types.DescribeWorkflowExecutionResponse, error) {
+		return client.DescribeWorkflowExecution(createContext(), &types.DescribeWorkflowExecutionRequest{
 			Domain: common.StringPtr(domainName),
-			Execution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(id),
-				RunId:      we.RunId,
+			Execution: &types.WorkflowExecution{
+				WorkflowID: common.StringPtr(id),
+				RunID:      we.RunID,
 			},
 		})
 	}
@@ -1653,9 +1652,9 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	s.IsType(&types.EntityNotExistsError{}, err)
 
 	// Update domain to fail over
-	updateReq := &workflow.UpdateDomainRequest{
+	updateReq := &types.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
+		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(clusterName[1]),
 		},
 	}
@@ -1675,7 +1674,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	s.Nil(err)
 	pendingActivities := dweResponse.GetPendingActivities()
 	s.Equal(1, len(pendingActivities))
-	s.Equal(workflow.PendingActivityStateScheduled, pendingActivities[0].GetState())
+	s.Equal(types.PendingActivityStateScheduled, pendingActivities[0].GetState())
 	s.Equal(heartbeatDetails, pendingActivities[0].GetHeartbeatDetails())
 	s.Equal("cadenceInternal:Timeout HEARTBEAT", pendingActivities[0].GetLastFailureReason())
 	s.Equal(identity1, pendingActivities[0].GetLastWorkerIdentity())
@@ -1692,10 +1691,10 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	s.True(activity1Called)
 	s.True(activity2Called)
 
-	historyResponse, err := client2.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+	historyResponse, err := client2.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domainName),
-		Execution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(id),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(id),
 		},
 	})
 	s.Nil(err)
@@ -1703,7 +1702,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 
 	activityRetryFound := false
 	for _, event := range history.Events {
-		if event.GetEventType() == workflow.EventTypeActivityTaskStarted {
+		if event.GetEventType() == types.EventTypeActivityTaskStarted {
 			attribute := event.ActivityTaskStartedEventAttributes
 			s.True(attribute.GetAttempt() > 0)
 			activityRetryFound = true
@@ -1715,7 +1714,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 func (s *integrationClustersTestSuite) TestTransientDecisionFailover() {
 	domainName := "test-transient-decision-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
-	regReq := &workflow.RegisterDomainRequest{
+	regReq := &types.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		IsGlobalDomain:                         common.BoolPtr(true),
 		Clusters:                               clusterReplicationConfig,
@@ -1725,7 +1724,7 @@ func (s *integrationClustersTestSuite) TestTransientDecisionFailover() {
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
 
-	descReq := &workflow.DescribeDomainRequest{
+	descReq := &types.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	}
 	resp, err := client1.DescribeDomain(createContext(), descReq)
@@ -1741,12 +1740,12 @@ func (s *integrationClustersTestSuite) TestTransientDecisionFailover() {
 	wt := "integration-transient-decision-workflow-failover-test-type"
 	tl := "integration-transient-decision-workflow-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &workflow.WorkflowType{Name: common.StringPtr(wt)}
-	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
-	startReq := &workflow.StartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
+	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	startReq := &types.StartWorkflowExecutionRequest{
+		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowId:                          common.StringPtr(id),
+		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1754,7 +1753,7 @@ func (s *integrationClustersTestSuite) TestTransientDecisionFailover() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(8),
 		Identity:                            common.StringPtr(identity),
 	}
-	var we *workflow.StartWorkflowExecutionResponse
+	var we *types.StartWorkflowExecutionResponse
 	for i := 0; i < 10; i++ {
 		we, err = client1.StartWorkflowExecution(createContext(), startReq)
 		if err == nil {
@@ -1763,23 +1762,23 @@ func (s *integrationClustersTestSuite) TestTransientDecisionFailover() {
 		time.Sleep(1 * time.Second)
 	}
 	s.NoError(err)
-	s.NotNil(we.GetRunId())
+	s.NotNil(we.GetRunID())
 
-	s.logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.GetRunId()))
+	s.logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.GetRunID()))
 
 	decisionFailed := false
 	workflowFinished := false
-	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 		if !decisionFailed {
 			decisionFailed = true
 			return nil, nil, errors.New("random fail decision reason")
 		}
 
 		workflowFinished = true
-		return nil, []*workflow.Decision{{
-			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
-			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+		return nil, []*types.Decision{{
+			DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
+			CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{
 				Result: []byte("Done."),
 			},
 		}}, nil
@@ -1810,9 +1809,9 @@ func (s *integrationClustersTestSuite) TestTransientDecisionFailover() {
 	s.Nil(err)
 
 	// Update domain to fail over
-	updateReq := &workflow.UpdateDomainRequest{
+	updateReq := &types.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
+		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(clusterName[1]),
 		},
 	}
@@ -1836,7 +1835,7 @@ func (s *integrationClustersTestSuite) TestTransientDecisionFailover() {
 func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 	domainName := "test-cron-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
-	regReq := &workflow.RegisterDomainRequest{
+	regReq := &types.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		IsGlobalDomain:                         common.BoolPtr(true),
 		Clusters:                               clusterReplicationConfig,
@@ -1846,7 +1845,7 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
 
-	descReq := &workflow.DescribeDomainRequest{
+	descReq := &types.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	}
 	resp, err := client1.DescribeDomain(createContext(), descReq)
@@ -1862,12 +1861,12 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 	wt := "integration-cron-workflow-failover-test-type"
 	tl := "integration-cron-workflow-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &workflow.WorkflowType{Name: common.StringPtr(wt)}
-	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
-	startReq := &workflow.StartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
+	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	startReq := &types.StartWorkflowExecutionRequest{
+		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowId:                          common.StringPtr(id),
+		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1878,14 +1877,14 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 	}
 	we, err := client1.StartWorkflowExecution(createContext(), startReq)
 	s.NoError(err)
-	s.NotNil(we.GetRunId())
+	s.NotNil(we.GetRunID())
 
-	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
-		return nil, []*workflow.Decision{
+	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
+		return nil, []*types.Decision{
 			{
-				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
-				CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+				DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
+				CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{
 					Result: []byte("cron-test-result"),
 				},
 			}}, nil
@@ -1903,9 +1902,9 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 
 	// Failover during backoff
 	// Update domain to fail over
-	updateReq := &workflow.UpdateDomainRequest{
+	updateReq := &types.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
+		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(clusterName[1]),
 		},
 	}
@@ -1924,10 +1923,10 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 		s.Nil(err)
 	}
 
-	err = client2.TerminateWorkflowExecution(createContext(), &workflow.TerminateWorkflowExecutionRequest{
+	err = client2.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain: common.StringPtr(domainName),
-		WorkflowExecution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(id),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(id),
 		},
 	})
 	s.Nil(err)
@@ -1936,7 +1935,7 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
 	domainName := "test-workflow-retry-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
-	regReq := &workflow.RegisterDomainRequest{
+	regReq := &types.RegisterDomainRequest{
 		Name:                                   common.StringPtr(domainName),
 		IsGlobalDomain:                         common.BoolPtr(true),
 		Clusters:                               clusterReplicationConfig,
@@ -1946,7 +1945,7 @@ func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
 
-	descReq := &workflow.DescribeDomainRequest{
+	descReq := &types.DescribeDomainRequest{
 		Name: common.StringPtr(domainName),
 	}
 	resp, err := client1.DescribeDomain(createContext(), descReq)
@@ -1962,19 +1961,19 @@ func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
 	wt := "integration-workflow-retry-failover-test-type"
 	tl := "integration-workflow-retry-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &workflow.WorkflowType{Name: common.StringPtr(wt)}
-	taskList := &workflow.TaskList{Name: common.StringPtr(tl)}
-	startReq := &workflow.StartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
+	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	startReq := &types.StartWorkflowExecutionRequest{
+		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowId:                          common.StringPtr(id),
+		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            common.StringPtr(identity),
-		RetryPolicy: &workflow.RetryPolicy{
+		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(1),
 			MaximumAttempts:             common.Int32Ptr(3),
 			MaximumIntervalInSeconds:    common.Int32Ptr(1),
@@ -1985,16 +1984,16 @@ func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
 	}
 	we, err := client1.StartWorkflowExecution(createContext(), startReq)
 	s.NoError(err)
-	s.NotNil(we.GetRunId())
+	s.NotNil(we.GetRunID())
 
-	executions := []*workflow.WorkflowExecution{}
-	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+	executions := []*types.WorkflowExecution{}
+	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 		executions = append(executions, execution)
-		return nil, []*workflow.Decision{
+		return nil, []*types.Decision{
 			{
-				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeFailWorkflowExecution),
-				FailWorkflowExecutionDecisionAttributes: &workflow.FailWorkflowExecutionDecisionAttributes{
+				DecisionType: types.DecisionTypeFailWorkflowExecution.Ptr(),
+				FailWorkflowExecutionDecisionAttributes: &types.FailWorkflowExecutionDecisionAttributes{
 					Reason:  common.StringPtr("retryable-error"),
 					Details: nil,
 				},
@@ -2012,9 +2011,9 @@ func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
 	}
 
 	// Update domain to fail over
-	updateReq := &workflow.UpdateDomainRequest{
+	updateReq := &types.UpdateDomainRequest{
 		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &workflow.DomainReplicationConfiguration{
+		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: common.StringPtr(clusterName[1]),
 		},
 	}
@@ -2031,26 +2030,26 @@ func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
 	_, err = poller2.PollAndProcessDecisionTask(false, false)
 	s.Nil(err)
 	events := s.getHistory(client2, domainName, executions[0])
-	s.Equal(workflow.EventTypeWorkflowExecutionContinuedAsNew, events[len(events)-1].GetEventType())
+	s.Equal(types.EventTypeWorkflowExecutionContinuedAsNew, events[len(events)-1].GetEventType())
 	s.Equal(int32(0), events[0].GetWorkflowExecutionStartedEventAttributes().GetAttempt())
 
 	// second attempt
 	_, err = poller2.PollAndProcessDecisionTask(false, false)
 	s.Nil(err)
 	events = s.getHistory(client2, domainName, executions[1])
-	s.Equal(workflow.EventTypeWorkflowExecutionContinuedAsNew, events[len(events)-1].GetEventType())
+	s.Equal(types.EventTypeWorkflowExecutionContinuedAsNew, events[len(events)-1].GetEventType())
 	s.Equal(int32(1), events[0].GetWorkflowExecutionStartedEventAttributes().GetAttempt())
 
 	// third attempt. Still failing, should stop retry.
 	_, err = poller2.PollAndProcessDecisionTask(false, false)
 	s.Nil(err)
 	events = s.getHistory(client2, domainName, executions[2])
-	s.Equal(workflow.EventTypeWorkflowExecutionFailed, events[len(events)-1].GetEventType())
+	s.Equal(types.EventTypeWorkflowExecutionFailed, events[len(events)-1].GetEventType())
 	s.Equal(int32(2), events[0].GetWorkflowExecutionStartedEventAttributes().GetAttempt())
 }
 
-func (s *integrationClustersTestSuite) getHistory(client host.FrontendClient, domain string, execution *workflow.WorkflowExecution) []*workflow.HistoryEvent {
-	historyResponse, err := client.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+func (s *integrationClustersTestSuite) getHistory(client host.FrontendClient, domain string, execution *types.WorkflowExecution) []*types.HistoryEvent {
+	historyResponse, err := client.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 		Domain:          common.StringPtr(domain),
 		Execution:       execution,
 		MaximumPageSize: common.Int32Ptr(5), // Use small page size to force pagination code path
@@ -2059,7 +2058,7 @@ func (s *integrationClustersTestSuite) getHistory(client host.FrontendClient, do
 
 	events := historyResponse.History.Events
 	for historyResponse.NextPageToken != nil {
-		historyResponse, err = client.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+		historyResponse, err = client.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 			Domain:        common.StringPtr(domain),
 			Execution:     execution,
 			NextPageToken: historyResponse.NextPageToken,

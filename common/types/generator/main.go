@@ -255,6 +255,32 @@ func To{{internal .Name}}(t {{if .IsPointer}}*{{end}}{{.ThriftPackage}}.{{.Name}
 }
 `))
 
+var sharedMapperAdditions = template.Must(template.New("shared mapper additions").Parse(`
+// FromHistoryArray converts internal History array to thrift
+func FromHistoryArray(t []*types.History) []*shared.History {
+	if t == nil {
+		return nil
+	}
+	v := make([]*shared.History, len(t))
+	for i := range t {
+		v[i] = FromHistory(t[i])
+	}
+	return v
+}
+
+// ToHistoryArray converts thrift History array to internal
+func ToHistoryArray(t []*shared.History) []*types.History {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.History, len(t))
+	for i := range t {
+		v[i] = ToHistory(t[i])
+	}
+	return v
+}
+`))
+
 var historyMapperAdditions = template.Must(template.New("history mapper additions").Parse(`
 // FromProcessingQueueStateArrayMap converts internal ProcessingQueueState array map to thrift
 func FromProcessingQueueStateArrayMap(t map[string][]*types.ProcessingQueueState) map[string][]*history.ProcessingQueueState {
@@ -467,9 +493,10 @@ func main() {
 
 	packages := []Package{
 		{
-			ThriftPackage: "github.com/uber/cadence/.gen/go/shared",
-			TypesFile:     "common/types/shared.go",
-			MapperFile:    "common/types/mapper/thrift/shared.go",
+			ThriftPackage:   "github.com/uber/cadence/.gen/go/shared",
+			TypesFile:       "common/types/shared.go",
+			MapperFile:      "common/types/mapper/thrift/shared.go",
+			MapperAdditions: sharedMapperAdditions,
 		},
 		{
 			ThriftPackage: "github.com/uber/cadence/.gen/go/replicator",
