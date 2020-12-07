@@ -28,6 +28,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 func shardInfoToThrift(info *ShardInfo) *sqlblobs.ShardInfo {
@@ -187,9 +188,9 @@ func historyTreeInfoFromThrift(info *sqlblobs.HistoryTreeInfo) *HistoryTreeInfo 
 		Info:             info.Info,
 	}
 	if info.Ancestors != nil {
-		result.Ancestors = make([]*HistoryBranchRange, len(info.Ancestors), len(info.Ancestors))
+		result.Ancestors = make([]*types.HistoryBranchRange, len(info.Ancestors), len(info.Ancestors))
 		for i, a := range info.Ancestors {
-			result.Ancestors[i] = &HistoryBranchRange{
+			result.Ancestors[i] = &types.HistoryBranchRange{
 				BranchID:    a.BranchID,
 				BeginNodeID: a.BeginNodeID,
 				EndNodeID:   a.EndNodeID,
@@ -204,9 +205,9 @@ func workflowExecutionInfoToThrift(info *WorkflowExecutionInfo) *sqlblobs.Workfl
 		return nil
 	}
 	return &sqlblobs.WorkflowExecutionInfo{
-		ParentDomainID:                          MustParsePtrUUID(info.ParentDomainID),
+		ParentDomainID:                          info.ParentDomainID,
 		ParentWorkflowID:                        info.ParentWorkflowID,
-		ParentRunID:                             MustParsePtrUUID(info.ParentRunID),
+		ParentRunID:                             info.ParentRunID,
 		InitiatedID:                             info.InitiatedID,
 		CompletionEventBatchID:                  info.CompletionEventBatchID,
 		CompletionEvent:                         info.CompletionEvent,
@@ -270,9 +271,9 @@ func workflowExecutionInfoFromThrift(info *sqlblobs.WorkflowExecutionInfo) *Work
 		return nil
 	}
 	return &WorkflowExecutionInfo{
-		ParentDomainID:                     common.StringPtr(UUID(info.ParentDomainID).String()),
+		ParentDomainID:                     info.ParentDomainID,
 		ParentWorkflowID:                   info.ParentWorkflowID,
-		ParentRunID:                        common.StringPtr(UUID(info.ParentRunID).String()),
+		ParentRunID:                        info.ParentRunID,
 		InitiatedID:                        info.InitiatedID,
 		CompletionEventBatchID:             info.CompletionEventBatchID,
 		CompletionEvent:                    info.CompletionEvent,
@@ -420,7 +421,7 @@ func childExecutionInfoToThrift(info *ChildExecutionInfo) *sqlblobs.ChildExecuti
 		InitiatedEvent:         info.InitiatedEvent,
 		InitiatedEventEncoding: info.InitiatedEventEncoding,
 		StartedWorkflowID:      info.StartedWorkflowID,
-		StartedRunID:           MustParsePtrUUID(info.StartedRunID),
+		StartedRunID:           info.StartedRunID,
 		StartedEvent:           info.StartedEvent,
 		StartedEventEncoding:   info.StartedEventEncoding,
 		CreateRequestID:        info.CreateRequestID,
@@ -441,7 +442,7 @@ func childExecutionInfoFromThrift(info *sqlblobs.ChildExecutionInfo) *ChildExecu
 		InitiatedEvent:         info.InitiatedEvent,
 		InitiatedEventEncoding: info.InitiatedEventEncoding,
 		StartedWorkflowID:      info.StartedWorkflowID,
-		StartedRunID:           common.StringPtr(UUID(info.StartedRunID).String()),
+		StartedRunID:           info.StartedRunID,
 		StartedEvent:           info.StartedEvent,
 		StartedEventEncoding:   info.StartedEventEncoding,
 		CreateRequestID:        info.CreateRequestID,
@@ -531,7 +532,7 @@ func taskInfoToThrift(info *TaskInfo) *sqlblobs.TaskInfo {
 	}
 	return &sqlblobs.TaskInfo{
 		WorkflowID:       info.WorkflowID,
-		RunID:            MustParsePtrUUID(info.RunID),
+		RunID:            info.RunID,
 		ScheduleID:       info.ScheduleID,
 		ExpiryTimeNanos:  unixNanoPtr(info.ExpiryTimestamp),
 		CreatedTimeNanos: unixNanoPtr(info.CreatedTimestamp),
@@ -544,7 +545,7 @@ func taskInfoFromThrift(info *sqlblobs.TaskInfo) *TaskInfo {
 	}
 	return &TaskInfo{
 		WorkflowID:       info.WorkflowID,
-		RunID:            common.StringPtr(UUID(info.RunID).String()),
+		RunID:            info.RunID,
 		ScheduleID:       info.ScheduleID,
 		ExpiryTimestamp:  timePtr(info.ExpiryTimeNanos),
 		CreatedTimestamp: timePtr(info.CreatedTimeNanos),
@@ -580,13 +581,13 @@ func transferTaskInfoToThrift(info *TransferTaskInfo) *sqlblobs.TransferTaskInfo
 		return nil
 	}
 	return &sqlblobs.TransferTaskInfo{
-		DomainID:                 MustParsePtrUUID(info.DomainID),
+		DomainID:                 info.DomainID,
 		WorkflowID:               info.WorkflowID,
-		RunID:                    MustParsePtrUUID(info.RunID),
+		RunID:                    info.RunID,
 		TaskType:                 info.TaskType,
-		TargetDomainID:           MustParsePtrUUID(info.TargetDomainID),
+		TargetDomainID:           info.TargetDomainID,
 		TargetWorkflowID:         info.TargetWorkflowID,
-		TargetRunID:              MustParsePtrUUID(info.TargetRunID),
+		TargetRunID:              info.TargetRunID,
 		TaskList:                 info.TaskList,
 		TargetChildWorkflowOnly:  info.TargetChildWorkflowOnly,
 		ScheduleID:               info.ScheduleID,
@@ -600,13 +601,13 @@ func transferTaskInfoFromThrift(info *sqlblobs.TransferTaskInfo) *TransferTaskIn
 		return nil
 	}
 	return &TransferTaskInfo{
-		DomainID:                common.StringPtr(UUID(info.DomainID).String()),
+		DomainID:                info.DomainID,
 		WorkflowID:              info.WorkflowID,
-		RunID:                   common.StringPtr(UUID(info.RunID).String()),
+		RunID:                   info.RunID,
 		TaskType:                info.TaskType,
-		TargetDomainID:          common.StringPtr(UUID(info.TargetDomainID).String()),
+		TargetDomainID:          info.TargetDomainID,
 		TargetWorkflowID:        info.TargetWorkflowID,
-		TargetRunID:             common.StringPtr(UUID(info.TargetRunID).String()),
+		TargetRunID:             info.TargetRunID,
 		TaskList:                info.TaskList,
 		TargetChildWorkflowOnly: info.TargetChildWorkflowOnly,
 		ScheduleID:              info.ScheduleID,
@@ -620,9 +621,9 @@ func timerTaskInfoToThrift(info *TimerTaskInfo) *sqlblobs.TimerTaskInfo {
 		return nil
 	}
 	return &sqlblobs.TimerTaskInfo{
-		DomainID:        MustParsePtrUUID(info.DomainID),
+		DomainID:        info.DomainID,
 		WorkflowID:      info.WorkflowID,
-		RunID:           MustParsePtrUUID(info.RunID),
+		RunID:           info.RunID,
 		TaskType:        info.TaskType,
 		TimeoutType:     info.TimeoutType,
 		Version:         info.Version,
@@ -636,9 +637,9 @@ func timerTaskInfoFromThrift(info *sqlblobs.TimerTaskInfo) *TimerTaskInfo {
 		return nil
 	}
 	return &TimerTaskInfo{
-		DomainID:        common.StringPtr(UUID(info.DomainID).String()),
+		DomainID:        info.DomainID,
 		WorkflowID:      info.WorkflowID,
-		RunID:           common.StringPtr(UUID(info.RunID).String()),
+		RunID:           info.RunID,
 		TaskType:        info.TaskType,
 		TimeoutType:     info.TimeoutType,
 		Version:         info.Version,
@@ -652,9 +653,9 @@ func replicationTaskInfoToThrift(info *ReplicationTaskInfo) *sqlblobs.Replicatio
 		return nil
 	}
 	return &sqlblobs.ReplicationTaskInfo{
-		DomainID:                MustParsePtrUUID(info.DomainID),
+		DomainID:                info.DomainID,
 		WorkflowID:              info.WorkflowID,
-		RunID:                   MustParsePtrUUID(info.RunID),
+		RunID:                   info.RunID,
 		TaskType:                info.TaskType,
 		Version:                 info.Version,
 		FirstEventID:            info.FirstEventID,
@@ -673,9 +674,9 @@ func replicationTaskInfoFromThrift(info *sqlblobs.ReplicationTaskInfo) *Replicat
 		return nil
 	}
 	return &ReplicationTaskInfo{
-		DomainID:                common.StringPtr(UUID(info.DomainID).String()),
+		DomainID:                info.DomainID,
 		WorkflowID:              info.WorkflowID,
-		RunID:                   common.StringPtr(UUID(info.RunID).String()),
+		RunID:                   info.RunID,
 		TaskType:                info.TaskType,
 		Version:                 info.Version,
 		FirstEventID:            info.FirstEventID,
