@@ -801,6 +801,9 @@ func processJSONInputHelper(c *cli.Context, jType jsonType) string {
 	case jsonTypeHeader:
 		flagNameOfRawInput = FlagHeaderValue
 		flagNameOfInputFileName = FlagHeaderFile
+	case jsonTypeSignal:
+		flagNameOfRawInput = FlagSignalInput
+		flagNameOfInputFileName = FlagSignalInputFile
 	default:
 		return ""
 	}

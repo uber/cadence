@@ -207,9 +207,9 @@ func (s *taskAckManagerSuite) TestIsNewRunNDCEnabled_True() {
 	runID := uuid.New()
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -248,9 +248,9 @@ func (s *taskAckManagerSuite) TestIsNewRunNDCEnabled_False() {
 	runID := uuid.New()
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -374,9 +374,9 @@ func (s *taskAckManagerSuite) TestProcessReplication_OK() {
 	}
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -410,9 +410,9 @@ func (s *taskAckManagerSuite) TestProcessReplication_OK() {
 		) (*types.ReplicationTask, error) {
 			_, release, err := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 				domainID,
-				workflow.WorkflowExecution{
-					WorkflowId: common.StringPtr(workflowID),
-					RunId:      common.StringPtr(runID),
+				types.WorkflowExecution{
+					WorkflowID: common.StringPtr(workflowID),
+					RunID:      common.StringPtr(runID),
 				},
 			)
 			s.NoError(err)
@@ -423,9 +423,9 @@ func (s *taskAckManagerSuite) TestProcessReplication_OK() {
 	s.NoError(err)
 	_, release, err = s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	)
 	s.NoError(err)
@@ -441,9 +441,9 @@ func (s *taskAckManagerSuite) TestProcessReplication_OK() {
 		) (*types.ReplicationTask, error) {
 			_, release, err := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 				domainID,
-				workflow.WorkflowExecution{
-					WorkflowId: common.StringPtr(workflowID),
-					RunId:      common.StringPtr(runID),
+				types.WorkflowExecution{
+					WorkflowID: common.StringPtr(workflowID),
+					RunID:      common.StringPtr(runID),
 				},
 			)
 			s.NoError(err)
@@ -454,9 +454,9 @@ func (s *taskAckManagerSuite) TestProcessReplication_OK() {
 	s.NoError(err)
 	_, release, err = s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	)
 	s.NoError(err)
@@ -474,9 +474,9 @@ func (s *taskAckManagerSuite) TestProcessReplication_Error() {
 	}
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -514,9 +514,9 @@ func (s *taskAckManagerSuite) TestProcessReplication_Error() {
 	s.Error(err)
 	_, release, err = s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	)
 	s.NoError(err)
@@ -575,9 +575,9 @@ func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_OK() {
 	}
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -641,9 +641,9 @@ func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_Empty() {
 	}
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -699,9 +699,9 @@ func (s *taskAckManagerSuite) TestGenerateHistoryReplicationTask() {
 	}
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -799,9 +799,9 @@ func (s *taskAckManagerSuite) TestToReplicationTask_SyncActivity() {
 	}
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
@@ -868,9 +868,9 @@ func (s *taskAckManagerSuite) TestToReplicationTask_History() {
 	}
 	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 		domainID,
-		workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	)
 	workflowContext.SetWorkflowExecution(s.mockMutableState)

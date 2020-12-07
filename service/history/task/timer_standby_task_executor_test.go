@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/engine"
@@ -157,9 +158,9 @@ func (s *timerStandbyTaskExecutorSuite) TearDownTest() {
 
 func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Pending() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -168,7 +169,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Pending() {
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -204,8 +205,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Pending() {
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
-		WorkflowID:          workflowExecution.GetWorkflowId(),
-		RunID:               workflowExecution.GetRunId(),
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeUserTimer,
 		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
@@ -241,9 +242,9 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Pending() {
 
 func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Success() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -252,7 +253,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Success() {
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -287,8 +288,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Success() {
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
-		WorkflowID:          workflowExecution.GetWorkflowId(),
-		RunID:               workflowExecution.GetRunId(),
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeUserTimer,
 		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
@@ -309,9 +310,9 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Success() {
 
 func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Multiple() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -320,7 +321,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Multiple() {
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -359,8 +360,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Multiple() {
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
-		WorkflowID:          workflowExecution.GetWorkflowId(),
-		RunID:               workflowExecution.GetRunId(),
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeUserTimer,
 		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
@@ -381,9 +382,9 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Multiple() {
 
 func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Pending() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -392,7 +393,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Pending() {
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -431,8 +432,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Pending() {
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
-		WorkflowID:          workflowExecution.GetWorkflowId(),
-		RunID:               workflowExecution.GetRunId(),
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeActivityTimeout,
 		TimeoutType:         int(workflow.TimeoutTypeScheduleToClose),
@@ -467,9 +468,9 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Pending() {
 
 func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Success() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -478,7 +479,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Success() {
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -518,8 +519,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Success() {
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
-		WorkflowID:          workflowExecution.GetWorkflowId(),
-		RunID:               workflowExecution.GetRunId(),
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeActivityTimeout,
 		TimeoutType:         int(workflow.TimeoutTypeScheduleToClose),
@@ -539,9 +540,9 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Success() {
 }
 
 func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noop() {
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -550,7 +551,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noo
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -593,8 +594,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noo
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
-		WorkflowID:          workflowExecution.GetWorkflowId(),
-		RunID:               workflowExecution.GetRunId(),
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeActivityTimeout,
 		TimeoutType:         int(workflow.TimeoutTypeHeartbeat),
@@ -612,9 +613,9 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noo
 
 func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Multiple_CanUpdate() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -623,7 +624,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Multiple_CanU
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -672,8 +673,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Multiple_CanU
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
-		WorkflowID:          workflowExecution.GetWorkflowId(),
-		RunID:               workflowExecution.GetRunId(),
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeActivityTimeout,
 		TimeoutType:         int(workflow.TimeoutTypeHeartbeat),
@@ -731,9 +732,9 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Multiple_CanU
 
 func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Pending() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -742,7 +743,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Pending() {
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -766,8 +767,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Pending() {
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
-		WorkflowID:          workflowExecution.GetWorkflowId(),
-		RunID:               workflowExecution.GetRunId(),
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeDecisionTimeout,
 		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
@@ -802,9 +803,9 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Pending() {
 
 func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_ScheduleToStartTimer() {
 
-	execution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	execution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 
 	decisionScheduleID := int64(16384)
@@ -812,8 +813,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_ScheduleToSta
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
-		WorkflowID:          execution.GetWorkflowId(),
-		RunID:               execution.GetRunId(),
+		WorkflowID:          execution.GetWorkflowID(),
+		RunID:               execution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeDecisionTimeout,
 		TimeoutType:         int(workflow.TimeoutTypeScheduleToStart),
@@ -828,9 +829,9 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_ScheduleToSta
 
 func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Success() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -839,7 +840,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Success() {
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -864,8 +865,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Success() {
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
-		WorkflowID:          workflowExecution.GetWorkflowId(),
-		RunID:               workflowExecution.GetRunId(),
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeDecisionTimeout,
 		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
@@ -883,9 +884,9 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Success() {
 
 func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowBackoffTimer_Pending() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -894,7 +895,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowBackoffTimer_Pending(
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	event, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -916,8 +917,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowBackoffTimer_Pending(
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
-		WorkflowID:          workflowExecution.GetWorkflowId(),
-		RunID:               workflowExecution.GetRunId(),
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeWorkflowBackoffTimer,
 		VisibilityTimestamp: s.now,
@@ -950,9 +951,9 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowBackoffTimer_Pending(
 
 func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowBackoffTimer_Success() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -961,7 +962,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowBackoffTimer_Success(
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -983,8 +984,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowBackoffTimer_Success(
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
-		WorkflowID:          workflowExecution.GetWorkflowId(),
-		RunID:               workflowExecution.GetRunId(),
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeWorkflowBackoffTimer,
 		VisibilityTimestamp: s.now,
@@ -1000,9 +1001,9 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowBackoffTimer_Success(
 
 func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Pending() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1011,7 +1012,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Pending() {
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -1038,8 +1039,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Pending() {
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
-		WorkflowID:          workflowExecution.GetWorkflowId(),
-		RunID:               workflowExecution.GetRunId(),
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeWorkflowTimeout,
 		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
@@ -1073,9 +1074,9 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Pending() {
 
 func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Success() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1084,7 +1085,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Success() {
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -1110,8 +1111,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Success() {
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
-		WorkflowID:          workflowExecution.GetWorkflowId(),
-		RunID:               workflowExecution.GetRunId(),
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeWorkflowTimeout,
 		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
@@ -1128,9 +1129,9 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Success() {
 
 func (s *timerStandbyTaskExecutorSuite) TestProcessRetryTimeout() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1139,7 +1140,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessRetryTimeout() {
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -1159,8 +1160,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessRetryTimeout() {
 	timerTask := &persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
-		WorkflowID:          workflowExecution.GetWorkflowId(),
-		RunID:               workflowExecution.GetRunId(),
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeActivityRetryTimer,
 		TimeoutType:         int(workflow.TimeoutTypeStartToClose),

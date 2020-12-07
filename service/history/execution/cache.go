@@ -27,7 +27,6 @@ import (
 
 	"github.com/pborman/uuid"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
@@ -100,9 +99,9 @@ func (c *Cache) GetOrCreateCurrentWorkflowExecution(
 
 	// using empty run ID as current workflow run ID
 	runID := ""
-	execution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
+	execution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(workflowID),
+		RunID:      common.StringPtr(runID),
 	}
 
 	return c.getOrCreateWorkflowExecutionInternal(
@@ -119,7 +118,7 @@ func (c *Cache) GetOrCreateCurrentWorkflowExecution(
 func (c *Cache) GetAndCreateWorkflowExecution(
 	ctx context.Context,
 	domainID string,
-	execution workflow.WorkflowExecution,
+	execution types.WorkflowExecution,
 ) (Context, Context, ReleaseFunc, bool, error) {
 
 	scope := metrics.HistoryCacheGetAndCreateScope
@@ -132,7 +131,7 @@ func (c *Cache) GetAndCreateWorkflowExecution(
 		return nil, nil, nil, false, err
 	}
 
-	key := definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowId(), execution.GetRunId())
+	key := definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowID(), execution.GetRunID())
 	contextFromCache, cacheHit := c.Get(key).(Context)
 	// TODO This will create a closure on every request.
 	//  Consider revisiting this if it causes too much GC activity
@@ -160,7 +159,7 @@ func (c *Cache) GetAndCreateWorkflowExecution(
 // currently only used in tests
 func (c *Cache) GetOrCreateWorkflowExecutionForBackground(
 	domainID string,
-	execution workflow.WorkflowExecution,
+	execution types.WorkflowExecution,
 ) (Context, ReleaseFunc, error) {
 
 	return c.GetOrCreateWorkflowExecution(context.Background(), domainID, execution)
@@ -169,7 +168,7 @@ func (c *Cache) GetOrCreateWorkflowExecutionForBackground(
 // GetOrCreateWorkflowExecutionWithTimeout gets or creates workflow execution context with timeout
 func (c *Cache) GetOrCreateWorkflowExecutionWithTimeout(
 	domainID string,
-	execution workflow.WorkflowExecution,
+	execution types.WorkflowExecution,
 	timeout time.Duration,
 ) (Context, ReleaseFunc, error) {
 
@@ -183,7 +182,7 @@ func (c *Cache) GetOrCreateWorkflowExecutionWithTimeout(
 func (c *Cache) GetOrCreateWorkflowExecution(
 	ctx context.Context,
 	domainID string,
-	execution workflow.WorkflowExecution,
+	execution types.WorkflowExecution,
 ) (Context, ReleaseFunc, error) {
 
 	scope := metrics.HistoryCacheGetOrCreateScope
@@ -208,7 +207,7 @@ func (c *Cache) GetOrCreateWorkflowExecution(
 func (c *Cache) getOrCreateWorkflowExecutionInternal(
 	ctx context.Context,
 	domainID string,
-	execution workflow.WorkflowExecution,
+	execution types.WorkflowExecution,
 	scope int,
 	forceClearContext bool,
 ) (Context, ReleaseFunc, error) {
@@ -218,7 +217,7 @@ func (c *Cache) getOrCreateWorkflowExecutionInternal(
 		return NewContext(domainID, execution, c.shard, c.executionManager, c.logger), NoopReleaseFn, nil
 	}
 
-	key := definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowId(), execution.GetRunId())
+	key := definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowID(), execution.GetRunID())
 	workflowCtx, cacheHit := c.Get(key).(Context)
 	if !cacheHit {
 		c.metricsClient.IncCounter(scope, metrics.CacheMissCounter)
@@ -249,26 +248,26 @@ func (c *Cache) getOrCreateWorkflowExecutionInternal(
 func (c *Cache) validateWorkflowExecutionInfo(
 	ctx context.Context,
 	domainID string,
-	execution *workflow.WorkflowExecution,
+	execution *types.WorkflowExecution,
 ) error {
 
-	if execution.GetWorkflowId() == "" {
+	if execution.GetWorkflowID() == "" {
 		return &types.BadRequestError{Message: "Can't load workflow execution.  WorkflowId not set."}
 	}
 
 	// RunID is not provided, lets try to retrieve the RunID for current active execution
-	if execution.GetRunId() == "" {
+	if execution.GetRunID() == "" {
 		response, err := c.getCurrentExecutionWithRetry(ctx, &persistence.GetCurrentExecutionRequest{
 			DomainID:   domainID,
-			WorkflowID: execution.GetWorkflowId(),
+			WorkflowID: execution.GetWorkflowID(),
 		})
 
 		if err != nil {
 			return err
 		}
 
-		execution.RunId = common.StringPtr(response.RunID)
-	} else if uuid.Parse(execution.GetRunId()) == nil { // immediately return if invalid runID
+		execution.RunID = common.StringPtr(response.RunID)
+	} else if uuid.Parse(execution.GetRunID()) == nil { // immediately return if invalid runID
 		return &types.BadRequestError{Message: "RunID is not valid UUID."}
 	}
 	return nil

@@ -51,6 +51,7 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/events"
@@ -186,9 +187,9 @@ func (s *engineSuite) TearDownTest() {
 func (s *engineSuite) TestGetMutableStateSync() {
 	ctx := context.Background()
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("test-get-workflow-execution-event-id"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("test-get-workflow-execution-event-id"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -196,7 +197,7 @@ func (s *engineSuite) TestGetMutableStateSync() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
@@ -210,7 +211,7 @@ func (s *engineSuite) TestGetMutableStateSync() {
 	// test get the next event ID instantly
 	response, err := s.mockHistoryEngine.GetMutableState(ctx, &history.GetMutableStateRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
-		Execution:  &workflowExecution,
+		Execution:  thrift.FromWorkflowExecution(&workflowExecution),
 	})
 	s.Nil(err)
 	s.Equal(int64(4), response.GetNextEventId())
@@ -219,14 +220,14 @@ func (s *engineSuite) TestGetMutableStateSync() {
 func (s *engineSuite) TestGetMutableState_IntestRunID() {
 	ctx := context.Background()
 
-	execution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("test-get-workflow-execution-event-id"),
-		RunId:      common.StringPtr("run-id-not-valid-uuid"),
+	execution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("test-get-workflow-execution-event-id"),
+		RunID:      common.StringPtr("run-id-not-valid-uuid"),
 	}
 
 	_, err := s.mockHistoryEngine.GetMutableState(ctx, &history.GetMutableStateRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
-		Execution:  &execution,
+		Execution:  thrift.FromWorkflowExecution(&execution),
 	})
 	s.Equal(errRunIDNotValid, err)
 }
@@ -234,15 +235,15 @@ func (s *engineSuite) TestGetMutableState_IntestRunID() {
 func (s *engineSuite) TestGetMutableState_EmptyRunID() {
 	ctx := context.Background()
 
-	execution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("test-get-workflow-execution-event-id"),
+	execution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("test-get-workflow-execution-event-id"),
 	}
 
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{}).Once()
 
 	_, err := s.mockHistoryEngine.GetMutableState(ctx, &history.GetMutableStateRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
-		Execution:  &execution,
+		Execution:  thrift.FromWorkflowExecution(&execution),
 	})
 	s.Equal(&types.EntityNotExistsError{}, err)
 }
@@ -250,9 +251,9 @@ func (s *engineSuite) TestGetMutableState_EmptyRunID() {
 func (s *engineSuite) TestGetMutableStateLongPoll() {
 	ctx := context.Background()
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("test-get-workflow-execution-event-id"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("test-get-workflow-execution-event-id"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -260,7 +261,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
@@ -276,8 +277,8 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 	waitGroup.Add(1)
 	asycWorkflowUpdate := func(delay time.Duration) {
 		taskToken, _ := json.Marshal(&common.TaskToken{
-			WorkflowID: *workflowExecution.WorkflowId,
-			RunID:      *workflowExecution.RunId,
+			WorkflowID: *workflowExecution.WorkflowID,
+			RunID:      *workflowExecution.RunID,
 			ScheduleID: 2,
 		})
 		s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
@@ -301,7 +302,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 	// return immediately, since the expected next event ID appears
 	response, err := s.mockHistoryEngine.GetMutableState(ctx, &history.GetMutableStateRequest{
 		DomainUUID:          common.StringPtr(constants.TestDomainID),
-		Execution:           &workflowExecution,
+		Execution:           thrift.FromWorkflowExecution(&workflowExecution),
 		ExpectedNextEventId: common.Int64Ptr(3),
 	})
 	s.Nil(err)
@@ -312,7 +313,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 	start := time.Now()
 	pollResponse, err := s.mockHistoryEngine.PollMutableState(ctx, &history.PollMutableStateRequest{
 		DomainUUID:          common.StringPtr(constants.TestDomainID),
-		Execution:           &workflowExecution,
+		Execution:           thrift.FromWorkflowExecution(&workflowExecution),
 		ExpectedNextEventId: common.Int64Ptr(4),
 	})
 	s.True(time.Now().After(start.Add(time.Second * 1)))
@@ -324,9 +325,9 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 func (s *engineSuite) TestGetMutableStateLongPoll_CurrentBranchChanged() {
 	ctx := context.Background()
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("test-get-workflow-execution-event-id"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("test-get-workflow-execution-event-id"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -334,7 +335,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll_CurrentBranchChanged() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
@@ -349,9 +350,9 @@ func (s *engineSuite) TestGetMutableStateLongPoll_CurrentBranchChanged() {
 	asyncBranchTokenUpdate := func(delay time.Duration) {
 		timer := time.NewTimer(delay)
 		<-timer.C
-		newExecution := &workflow.WorkflowExecution{
-			WorkflowId: workflowExecution.WorkflowId,
-			RunId:      workflowExecution.RunId,
+		newExecution := &types.WorkflowExecution{
+			WorkflowID: workflowExecution.WorkflowID,
+			RunID:      workflowExecution.RunID,
 		}
 		s.mockHistoryEngine.historyEventNotifier.NotifyNewHistoryEvent(events.NewNotification(
 			"constants.TestDomainID",
@@ -367,7 +368,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll_CurrentBranchChanged() {
 	// return immediately, since the expected next event ID appears
 	response0, err := s.mockHistoryEngine.GetMutableState(ctx, &history.GetMutableStateRequest{
 		DomainUUID:          common.StringPtr(constants.TestDomainID),
-		Execution:           &workflowExecution,
+		Execution:           thrift.FromWorkflowExecution(&workflowExecution),
 		ExpectedNextEventId: common.Int64Ptr(3),
 	})
 	s.Nil(err)
@@ -378,7 +379,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll_CurrentBranchChanged() {
 	start := time.Now()
 	response1, err := s.mockHistoryEngine.GetMutableState(ctx, &history.GetMutableStateRequest{
 		DomainUUID:          common.StringPtr(constants.TestDomainID),
-		Execution:           &workflowExecution,
+		Execution:           thrift.FromWorkflowExecution(&workflowExecution),
 		ExpectedNextEventId: common.Int64Ptr(10),
 	})
 	s.True(time.Now().After(start.Add(time.Second * 1)))
@@ -389,9 +390,9 @@ func (s *engineSuite) TestGetMutableStateLongPoll_CurrentBranchChanged() {
 func (s *engineSuite) TestGetMutableStateLongPollTimeout() {
 	ctx := context.Background()
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("test-get-workflow-execution-event-id"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("test-get-workflow-execution-event-id"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -399,7 +400,7 @@ func (s *engineSuite) TestGetMutableStateLongPollTimeout() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
@@ -413,7 +414,7 @@ func (s *engineSuite) TestGetMutableStateLongPollTimeout() {
 	// long poll, no event happen after long poll timeout
 	response, err := s.mockHistoryEngine.GetMutableState(ctx, &history.GetMutableStateRequest{
 		DomainUUID:          common.StringPtr(constants.TestDomainID),
-		Execution:           &workflowExecution,
+		Execution:           thrift.FromWorkflowExecution(&workflowExecution),
 		ExpectedNextEventId: common.Int64Ptr(4),
 	})
 	s.Nil(err)
@@ -440,9 +441,9 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnNotEnabled() {
 }
 
 func (s *engineSuite) TestQueryWorkflow_RejectBasedOnCompleted() {
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("TestQueryWorkflow_RejectBasedOnCompleted"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("TestQueryWorkflow_RejectBasedOnCompleted"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -450,7 +451,7 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnCompleted() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
@@ -466,7 +467,7 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnCompleted() {
 	request := &history.QueryWorkflowRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
 		Request: &workflow.QueryWorkflowRequest{
-			Execution:            &workflowExecution,
+			Execution:            thrift.FromWorkflowExecution(&workflowExecution),
 			Query:                &workflow.WorkflowQuery{},
 			QueryRejectCondition: common.QueryRejectConditionPtr(workflow.QueryRejectConditionNotOpen),
 		},
@@ -479,9 +480,9 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnCompleted() {
 }
 
 func (s *engineSuite) TestQueryWorkflow_RejectBasedOnFailed() {
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("TestQueryWorkflow_RejectBasedOnFailed"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("TestQueryWorkflow_RejectBasedOnFailed"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -489,7 +490,7 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnFailed() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
@@ -505,7 +506,7 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnFailed() {
 	request := &history.QueryWorkflowRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
 		Request: &workflow.QueryWorkflowRequest{
-			Execution:            &workflowExecution,
+			Execution:            thrift.FromWorkflowExecution(&workflowExecution),
 			Query:                &workflow.WorkflowQuery{},
 			QueryRejectCondition: common.QueryRejectConditionPtr(workflow.QueryRejectConditionNotOpen),
 		},
@@ -519,7 +520,7 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnFailed() {
 	request = &history.QueryWorkflowRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
 		Request: &workflow.QueryWorkflowRequest{
-			Execution:            &workflowExecution,
+			Execution:            thrift.FromWorkflowExecution(&workflowExecution),
 			Query:                &workflow.WorkflowQuery{},
 			QueryRejectCondition: common.QueryRejectConditionPtr(workflow.QueryRejectConditionNotCompletedCleanly),
 		},
@@ -532,9 +533,9 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnFailed() {
 }
 
 func (s *engineSuite) TestQueryWorkflow_FirstDecisionNotCompleted() {
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("TestQueryWorkflow_FirstDecisionNotCompleted"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("TestQueryWorkflow_FirstDecisionNotCompleted"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -542,7 +543,7 @@ func (s *engineSuite) TestQueryWorkflow_FirstDecisionNotCompleted() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
@@ -555,7 +556,7 @@ func (s *engineSuite) TestQueryWorkflow_FirstDecisionNotCompleted() {
 	request := &history.QueryWorkflowRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
 		Request: &workflow.QueryWorkflowRequest{
-			Execution: &workflowExecution,
+			Execution: thrift.FromWorkflowExecution(&workflowExecution),
 			Query:     &workflow.WorkflowQuery{},
 		},
 	}
@@ -565,9 +566,9 @@ func (s *engineSuite) TestQueryWorkflow_FirstDecisionNotCompleted() {
 }
 
 func (s *engineSuite) TestQueryWorkflow_DirectlyThroughMatching() {
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("TestQueryWorkflow_DirectlyThroughMatching"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("TestQueryWorkflow_DirectlyThroughMatching"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -575,7 +576,7 @@ func (s *engineSuite) TestQueryWorkflow_DirectlyThroughMatching() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
@@ -593,7 +594,7 @@ func (s *engineSuite) TestQueryWorkflow_DirectlyThroughMatching() {
 	request := &history.QueryWorkflowRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
 		Request: &workflow.QueryWorkflowRequest{
-			Execution: &workflowExecution,
+			Execution: thrift.FromWorkflowExecution(&workflowExecution),
 			Query:     &workflow.WorkflowQuery{},
 			// since workflow is open this filter does not reject query
 			QueryRejectCondition:  common.QueryRejectConditionPtr(workflow.QueryRejectConditionNotOpen),
@@ -608,16 +609,16 @@ func (s *engineSuite) TestQueryWorkflow_DirectlyThroughMatching() {
 }
 
 func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Timeout() {
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("TestQueryWorkflow_DecisionTaskDispatch_Timeout"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("TestQueryWorkflow_DecisionTaskDispatch_Timeout"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
@@ -633,7 +634,7 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Timeout() {
 	request := &history.QueryWorkflowRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
 		Request: &workflow.QueryWorkflowRequest{
-			Execution: &workflowExecution,
+			Execution: thrift.FromWorkflowExecution(&workflowExecution),
 			Query:     &workflow.WorkflowQuery{},
 			// since workflow is open this filter does not reject query
 			QueryRejectCondition:  common.QueryRejectConditionPtr(workflow.QueryRejectConditionNotOpen),
@@ -668,16 +669,16 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Timeout() {
 }
 
 func (s *engineSuite) TestQueryWorkflow_ConsistentQueryBufferFull() {
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("TestQueryWorkflow_ConsistentQueryBufferFull"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("TestQueryWorkflow_ConsistentQueryBufferFull"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
@@ -704,7 +705,7 @@ func (s *engineSuite) TestQueryWorkflow_ConsistentQueryBufferFull() {
 	request := &history.QueryWorkflowRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
 		Request: &workflow.QueryWorkflowRequest{
-			Execution:             &workflowExecution,
+			Execution:             thrift.FromWorkflowExecution(&workflowExecution),
 			Query:                 &workflow.WorkflowQuery{},
 			QueryConsistencyLevel: common.QueryConsistencyLevelPtr(workflow.QueryConsistencyLevelStrong),
 		},
@@ -715,16 +716,16 @@ func (s *engineSuite) TestQueryWorkflow_ConsistentQueryBufferFull() {
 }
 
 func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("TestQueryWorkflow_DecisionTaskDispatch_Complete"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("TestQueryWorkflow_DecisionTaskDispatch_Complete"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
@@ -767,7 +768,7 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
 	request := &history.QueryWorkflowRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
 		Request: &workflow.QueryWorkflowRequest{
-			Execution:             &workflowExecution,
+			Execution:             thrift.FromWorkflowExecution(&workflowExecution),
 			Query:                 &workflow.WorkflowQuery{},
 			QueryConsistencyLevel: common.QueryConsistencyLevelPtr(workflow.QueryConsistencyLevelStrong),
 		},
@@ -787,16 +788,16 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
 }
 
 func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Unblocked() {
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("TestQueryWorkflow_DecisionTaskDispatch_Unblocked"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("TestQueryWorkflow_DecisionTaskDispatch_Unblocked"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
@@ -831,7 +832,7 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Unblocked() {
 	request := &history.QueryWorkflowRequest{
 		DomainUUID: common.StringPtr(constants.TestDomainID),
 		Request: &workflow.QueryWorkflowRequest{
-			Execution:             &workflowExecution,
+			Execution:             thrift.FromWorkflowExecution(&workflowExecution),
 			Query:                 &workflow.WorkflowQuery{},
 			QueryConsistencyLevel: common.QueryConsistencyLevelPtr(workflow.QueryConsistencyLevelStrong),
 		},
@@ -915,15 +916,15 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfGetExecutionFailed() {
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedUpdateExecutionFailed() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -931,7 +932,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedUpdateExecutionFailed() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -959,14 +960,14 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedUpdateExecutionFailed() {
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskCompleted() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -974,7 +975,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskCompleted() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -1000,14 +1001,14 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskCompleted() {
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskNotStarted() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -1015,7 +1016,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskNotStarted() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -1038,9 +1039,9 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskNotStarted() {
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	identity := "testIdentity"
@@ -1060,7 +1061,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -1081,7 +1082,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 
 	taskToken, _ := json.Marshal(&common.TaskToken{
 		WorkflowID: "wId",
-		RunID:      we.GetRunId(),
+		RunID:      we.GetRunID(),
 		ScheduleID: di2.ScheduleID,
 	})
 
@@ -1166,14 +1167,14 @@ func (s *engineSuite) TestValidateSignalRequest() {
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -1183,7 +1184,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -1229,9 +1230,9 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	identity := "testIdentity"
@@ -1249,7 +1250,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 25, 200, identity)
@@ -1271,8 +1272,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
 		*activity2StartedEvent.EventId, activity2Result, identity)
 
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: di2.ScheduleID,
 	})
 
@@ -1316,9 +1317,9 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowFailed() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	identity := "testIdentity"
@@ -1337,7 +1338,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowFailed() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 25, 200, identity)
@@ -1359,8 +1360,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowFailed() {
 		*activity2StartedEvent.EventId, activity2Result, identity)
 
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: di2.ScheduleID,
 	})
 
@@ -1405,9 +1406,9 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowFailed() {
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedBadDecisionAttributes() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	identity := "testIdentity"
@@ -1420,7 +1421,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadDecisionAttributes() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 25, 200, identity)
@@ -1437,8 +1438,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadDecisionAttributes() {
 	test.AddDecisionTaskStartedEvent(msBuilder, di2.ScheduleID, tl, identity)
 
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: di2.ScheduleID,
 	})
 
@@ -1527,14 +1528,14 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 
 	for _, iVar := range testIterationVariables {
 
-		we := workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr("wId"),
-			RunId:      common.StringPtr(constants.TestRunID),
+		we := types.WorkflowExecution{
+			WorkflowID: common.StringPtr("wId"),
+			RunID:      common.StringPtr(constants.TestRunID),
 		}
 		tl := "testTaskList"
 		taskToken, _ := json.Marshal(&common.TaskToken{
 			WorkflowID: "wId",
-			RunID:      we.GetRunId(),
+			RunID:      we.GetRunID(),
 			ScheduleID: 2,
 		})
 		identity := "testIdentity"
@@ -1544,7 +1545,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 		msBuilder := execution.NewMutableStateBuilderWithEventV2(
 			s.mockHistoryEngine.shard,
 			loggerimpl.NewDevelopmentForTest(s.Suite),
-			we.GetRunId(),
+			we.GetRunID(),
 			constants.TestLocalDomainEntry,
 		)
 		test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), workflowTimeout, 200, identity)
@@ -1610,14 +1611,14 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedBadBinary() {
 	domainID := uuid.New()
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
 		WorkflowID: "wId",
-		RunID:      we.GetRunId(),
+		RunID:      we.GetRunID(),
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -1639,7 +1640,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadBinary() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		domainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -1678,14 +1679,14 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadBinary() {
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDecision() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
 		WorkflowID: "wId",
-		RunID:      we.GetRunId(),
+		RunID:      we.GetRunID(),
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -1695,7 +1696,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -1754,14 +1755,14 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 
 func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatTimeout() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -1770,7 +1771,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatTimeout(
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -1802,14 +1803,14 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatTimeout(
 
 func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeout() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -1818,7 +1819,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -1850,14 +1851,14 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 
 func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeout_ZeroOrignalScheduledTime() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -1866,7 +1867,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -1898,14 +1899,14 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -1915,7 +1916,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -1956,14 +1957,14 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -1974,7 +1975,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -2016,14 +2017,14 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowSuccess() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -2032,7 +2033,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowSucc
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -2044,8 +2045,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowSucc
 		SignalExternalWorkflowExecutionDecisionAttributes: &workflow.SignalExternalWorkflowExecutionDecisionAttributes{
 			Domain: common.StringPtr(constants.TestDomainName),
 			Execution: &workflow.WorkflowExecution{
-				WorkflowId: we.WorkflowId,
-				RunId:      we.RunId,
+				WorkflowId: we.WorkflowID,
+				RunId:      we.RunID,
 			},
 			SignalName: common.StringPtr("signal"),
 			Input:      []byte("test input"),
@@ -2077,14 +2078,14 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowSucc
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithAbandonPolicy() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -2093,7 +2094,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithAban
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -2146,14 +2147,14 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithAban
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithTerminatePolicy() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -2162,7 +2163,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithTerm
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -2215,14 +2216,14 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithTerm
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFailed() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr("invalid run id"),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr("invalid run id"),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: we.GetWorkflowId(),
-		RunID:      we.GetRunId(),
+		WorkflowID: we.GetWorkflowID(),
+		RunID:      we.GetRunID(),
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -2231,7 +2232,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -2243,8 +2244,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 		SignalExternalWorkflowExecutionDecisionAttributes: &workflow.SignalExternalWorkflowExecutionDecisionAttributes{
 			Domain: common.StringPtr(constants.TestDomainID),
 			Execution: &workflow.WorkflowExecution{
-				WorkflowId: we.WorkflowId,
-				RunId:      we.RunId,
+				WorkflowId: we.WorkflowID,
+				RunId:      we.RunID,
 			},
 			SignalName: common.StringPtr("signal"),
 			Input:      []byte("test input"),
@@ -2266,14 +2267,14 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFailed_UnKnownDomain() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -2283,7 +2284,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -2295,8 +2296,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 		SignalExternalWorkflowExecutionDecisionAttributes: &workflow.SignalExternalWorkflowExecutionDecisionAttributes{
 			Domain: common.StringPtr(foreignDomain),
 			Execution: &workflow.WorkflowExecution{
-				WorkflowId: we.WorkflowId,
-				RunId:      we.RunId,
+				WorkflowId: we.WorkflowID,
+				RunId:      we.RunID,
 			},
 			SignalName: common.StringPtr("signal"),
 			Input:      []byte("test input"),
@@ -2408,9 +2409,9 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfGetExecutionFailed() {
 
 func (s *engineSuite) TestRespondActivityTaskCompletedIfNoAIdProvided() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -2451,9 +2452,9 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNotFound() {
 		ScheduleID: common.EmptyEventID,
 		ActivityID: "aid",
 	})
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -2485,14 +2486,14 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNotFound() {
 
 func (s *engineSuite) TestRespondActivityTaskCompletedUpdateExecutionFailed() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -2504,7 +2505,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedUpdateExecutionFailed() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -2537,14 +2538,14 @@ func (s *engineSuite) TestRespondActivityTaskCompletedUpdateExecutionFailed() {
 
 func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskCompleted() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -2556,7 +2557,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskCompleted() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -2590,14 +2591,14 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskCompleted() {
 
 func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskNotStarted() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -2609,7 +2610,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskNotStarted() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
@@ -2639,14 +2640,14 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskNotStarted() {
 
 func (s *engineSuite) TestRespondActivityTaskCompletedConflictOnUpdate() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -2661,7 +2662,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedConflictOnUpdate() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -2714,14 +2715,14 @@ func (s *engineSuite) TestRespondActivityTaskCompletedConflictOnUpdate() {
 
 func (s *engineSuite) TestRespondActivityTaskCompletedMaxAttemptsExceeded() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -2733,7 +2734,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedMaxAttemptsExceeded() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -2767,14 +2768,14 @@ func (s *engineSuite) TestRespondActivityTaskCompletedMaxAttemptsExceeded() {
 
 func (s *engineSuite) TestRespondActivityTaskCompletedSuccess() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -2786,7 +2787,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedSuccess() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -2829,9 +2830,9 @@ func (s *engineSuite) TestRespondActivityTaskCompletedSuccess() {
 
 func (s *engineSuite) TestRespondActivityTaskCompletedByIdSuccess() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 
@@ -2841,7 +2842,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedByIdSuccess() {
 	activityInput := []byte("input1")
 	activityResult := []byte("activity result")
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
+		WorkflowID: *we.WorkflowID,
 		ScheduleID: common.EmptyEventID,
 		ActivityID: activityID,
 	})
@@ -2849,7 +2850,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedByIdSuccess() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -2863,7 +2864,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedByIdSuccess() {
 
 	ms := execution.CreatePersistenceMutableState(msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
-	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: *we.RunId}
+	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: *we.RunID}
 
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gceResponse, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -2982,9 +2983,9 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNoAIdProvided() {
 		WorkflowID: "wId",
 		ScheduleID: common.EmptyEventID,
 	})
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -3021,9 +3022,9 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNotFound() {
 		ScheduleID: common.EmptyEventID,
 		ActivityID: "aid",
 	})
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -3055,14 +3056,14 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNotFound() {
 
 func (s *engineSuite) TestRespondActivityTaskFailedUpdateExecutionFailed() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3073,7 +3074,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedUpdateExecutionFailed() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -3105,14 +3106,14 @@ func (s *engineSuite) TestRespondActivityTaskFailedUpdateExecutionFailed() {
 
 func (s *engineSuite) TestRespondActivityTaskFailedIfTaskCompleted() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3125,7 +3126,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskCompleted() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -3160,14 +3161,14 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskCompleted() {
 
 func (s *engineSuite) TestRespondActivityTaskFailedIfTaskNotStarted() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3178,7 +3179,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskNotStarted() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -3207,14 +3208,14 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskNotStarted() {
 
 func (s *engineSuite) TestRespondActivityTaskFailedConflictOnUpdate() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3231,7 +3232,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedConflictOnUpdate() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 25, 25, identity)
@@ -3289,14 +3290,14 @@ func (s *engineSuite) TestRespondActivityTaskFailedConflictOnUpdate() {
 
 func (s *engineSuite) TestRespondActivityTaskFailedMaxAttemptsExceeded() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3307,7 +3308,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedMaxAttemptsExceeded() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -3340,14 +3341,14 @@ func (s *engineSuite) TestRespondActivityTaskFailedMaxAttemptsExceeded() {
 
 func (s *engineSuite) TestRespondActivityTaskFailedSuccess() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3360,7 +3361,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedSuccess() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -3404,9 +3405,9 @@ func (s *engineSuite) TestRespondActivityTaskFailedSuccess() {
 
 func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 
@@ -3417,7 +3418,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
 	failReason := "failed"
 	failDetails := []byte("fail details.")
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
+		WorkflowID: *we.WorkflowID,
 		ScheduleID: common.EmptyEventID,
 		ActivityID: activityID,
 	})
@@ -3425,7 +3426,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -3439,7 +3440,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
 
 	ms := execution.CreatePersistenceMutableState(msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
-	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: *we.RunId}
+	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: *we.RunID}
 
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gceResponse, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -3471,14 +3472,14 @@ func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
 
 func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_NoTimer() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3489,7 +3490,7 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_NoTimer() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -3522,14 +3523,14 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_NoTimer() {
 
 func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_TimerRunning() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3540,7 +3541,7 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_TimerRunning() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -3579,9 +3580,9 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_TimerRunning() {
 
 func (s *engineSuite) TestRecordActivityTaskHeartBeatByIDSuccess() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	identity := "testIdentity"
@@ -3589,8 +3590,8 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatByIDSuccess() {
 	activityType := "activity_type1"
 	activityInput := []byte("input1")
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: common.EmptyEventID,
 		ActivityID: activityID,
 	})
@@ -3598,7 +3599,7 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatByIDSuccess() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -3631,14 +3632,14 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatByIDSuccess() {
 
 func (s *engineSuite) TestRespondActivityTaskCanceled_Scheduled() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3649,7 +3650,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Scheduled() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -3679,14 +3680,14 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Scheduled() {
 
 func (s *engineSuite) TestRespondActivityTaskCanceled_Started() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3697,7 +3698,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Started() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -3742,9 +3743,9 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Started() {
 
 func (s *engineSuite) TestRespondActivityTaskCanceledByID_Started() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	identity := "testIdentity"
@@ -3752,7 +3753,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledByID_Started() {
 	activityType := "activity_type1"
 	activityInput := []byte("input1")
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
+		WorkflowID: *we.WorkflowID,
 		ScheduleID: common.EmptyEventID,
 		ActivityID: activityID,
 	})
@@ -3760,7 +3761,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledByID_Started() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -3776,7 +3777,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledByID_Started() {
 
 	ms := execution.CreatePersistenceMutableState(msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
-	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: *we.RunId}
+	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: *we.RunID}
 
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gceResponse, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -3891,14 +3892,14 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNotFound() {
 
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NotScheduled() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -3907,7 +3908,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NotSchedule
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -3947,14 +3948,14 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NotSchedule
 
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Scheduled() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 6,
 	})
 	identity := "testIdentity"
@@ -3965,7 +3966,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Scheduled()
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -4016,14 +4017,14 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Scheduled()
 
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Started() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 7,
 	})
 	identity := "testIdentity"
@@ -4034,7 +4035,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Started() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -4082,14 +4083,14 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Started() {
 
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Completed() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 6,
 	})
 	identity := "testIdentity"
@@ -4101,7 +4102,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Completed()
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -4155,14 +4156,14 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Completed()
 
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 7,
 	})
 	identity := "testIdentity"
@@ -4173,7 +4174,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -4223,7 +4224,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 
 	activityTaskToken, _ := json.Marshal(&common.TaskToken{
 		WorkflowID: "wId",
-		RunID:      we.GetRunId(),
+		RunID:      we.GetRunID(),
 		ScheduleID: 5,
 	})
 
@@ -4262,14 +4263,14 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 7,
 	})
 	identity := "testIdentity"
@@ -4280,7 +4281,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -4330,7 +4331,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 
 	activityTaskToken, _ := json.Marshal(&common.TaskToken{
 		WorkflowID: "wId",
-		RunID:      we.GetRunId(),
+		RunID:      we.GetRunID(),
 		ScheduleID: 5,
 	})
 
@@ -4368,14 +4369,14 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 }
 
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWithQueries() {
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 7,
 	})
 	identity := "testIdentity"
@@ -4386,7 +4387,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -4477,7 +4478,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 
 	activityTaskToken, _ := json.Marshal(&common.TaskToken{
 		WorkflowID: "wId",
-		RunID:      we.GetRunId(),
+		RunID:      we.GetRunID(),
 		ScheduleID: 5,
 	})
 
@@ -4515,14 +4516,14 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 }
 
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWithConsistentQueriesUnsupported() {
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 7,
 	})
 	identity := "testIdentity"
@@ -4533,7 +4534,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 100, identity)
@@ -4607,14 +4608,14 @@ func (s *engineSuite) constructCallContext(featureVersion string) context.Contex
 
 func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -4623,7 +4624,7 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 
@@ -4664,8 +4665,8 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 	di2 := test.AddDecisionTaskScheduledEvent(executionBuilder)
 	test.AddDecisionTaskStartedEvent(executionBuilder, di2.ScheduleID, tl, identity)
 	taskToken2, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: di2.ScheduleID,
 	})
 
@@ -4707,14 +4708,14 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 
 func (s *engineSuite) TestUserTimer_RespondDecisionTaskCompleted() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 6,
 	})
 	identity := "testIdentity"
@@ -4723,7 +4724,7 @@ func (s *engineSuite) TestUserTimer_RespondDecisionTaskCompleted() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	// Verify cancel timer with a start event.
@@ -4770,14 +4771,14 @@ func (s *engineSuite) TestUserTimer_RespondDecisionTaskCompleted() {
 
 func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_NoStartTimer() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -4786,7 +4787,7 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_NoStartTimer(
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	// Verify cancel timer with a start event.
@@ -4828,14 +4829,14 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_NoStartTimer(
 
 func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_TimerFired() {
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowId,
-		RunID:      *we.RunId,
+		WorkflowID: *we.WorkflowID,
+		RunID:      *we.RunID,
 		ScheduleID: 6,
 	})
 	identity := "testIdentity"
@@ -4844,7 +4845,7 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_TimerFired() 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	// Verify cancel timer with a start event.
@@ -4903,9 +4904,9 @@ func (s *engineSuite) TestSignalWorkflowExecution() {
 	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -4915,7 +4916,7 @@ func (s *engineSuite) TestSignalWorkflowExecution() {
 		DomainUUID: common.StringPtr(constants.TestDomainID),
 		SignalRequest: &workflow.SignalWorkflowExecutionRequest{
 			Domain:            common.StringPtr(constants.TestDomainID),
-			WorkflowExecution: &we,
+			WorkflowExecution: thrift.FromWorkflowExecution(&we),
 			Identity:          common.StringPtr(identity),
 			SignalName:        common.StringPtr(signalName),
 			Input:             input,
@@ -4925,7 +4926,7 @@ func (s *engineSuite) TestSignalWorkflowExecution() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tasklist, []byte("input"), 100, 200, identity)
@@ -4948,9 +4949,9 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest() {
 	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId2"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId2"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -4961,7 +4962,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest() {
 		DomainUUID: common.StringPtr(constants.TestDomainID),
 		SignalRequest: &workflow.SignalWorkflowExecutionRequest{
 			Domain:            common.StringPtr(constants.TestDomainID),
-			WorkflowExecution: &we,
+			WorkflowExecution: thrift.FromWorkflowExecution(&we),
 			Identity:          common.StringPtr(identity),
 			SignalName:        common.StringPtr(signalName),
 			Input:             input,
@@ -4972,7 +4973,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tasklist, []byte("input"), 100, 200, identity)
@@ -4996,9 +4997,9 @@ func (s *engineSuite) TestSignalWorkflowExecution_Failed() {
 	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
-	we := &workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := &types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -5008,7 +5009,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_Failed() {
 		DomainUUID: common.StringPtr(constants.TestDomainID),
 		SignalRequest: &workflow.SignalWorkflowExecutionRequest{
 			Domain:            common.StringPtr(constants.TestDomainID),
-			WorkflowExecution: we,
+			WorkflowExecution: thrift.FromWorkflowExecution(we),
 			Identity:          common.StringPtr(identity),
 			SignalName:        common.StringPtr(signalName),
 			Input:             input,
@@ -5018,7 +5019,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_Failed() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, *we, "wType", tasklist, []byte("input"), 100, 200, identity)
@@ -5038,16 +5039,16 @@ func (s *engineSuite) TestRemoveSignalMutableState() {
 	err := s.mockHistoryEngine.RemoveSignalMutableState(context.Background(), removeRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
 	requestID := uuid.New()
 	removeRequest = &history.RemoveSignalMutableStateRequest{
 		DomainUUID:        common.StringPtr(constants.TestDomainID),
-		WorkflowExecution: &workflowExecution,
+		WorkflowExecution: thrift.FromWorkflowExecution(&workflowExecution),
 		RequestId:         common.StringPtr(requestID),
 	}
 
@@ -5071,9 +5072,9 @@ func (s *engineSuite) TestRemoveSignalMutableState() {
 }
 
 func (s *engineSuite) TestReapplyEvents_ReturnSuccess() {
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("test-reapply"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("test-reapply"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	history := []*workflow.HistoryEvent{
 		{
@@ -5085,7 +5086,7 @@ func (s *engineSuite) TestReapplyEvents_ReturnSuccess() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	ms := execution.CreatePersistenceMutableState(msBuilder)
@@ -5098,17 +5099,17 @@ func (s *engineSuite) TestReapplyEvents_ReturnSuccess() {
 	err := s.mockHistoryEngine.ReapplyEvents(
 		context.Background(),
 		constants.TestDomainID,
-		*workflowExecution.WorkflowId,
-		*workflowExecution.RunId,
+		*workflowExecution.WorkflowID,
+		*workflowExecution.RunID,
 		history,
 	)
 	s.NoError(err)
 }
 
 func (s *engineSuite) TestReapplyEvents_IgnoreSameVersionEvents() {
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("test-reapply-same-version"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("test-reapply-same-version"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	history := []*workflow.HistoryEvent{
 		{
@@ -5120,7 +5121,7 @@ func (s *engineSuite) TestReapplyEvents_IgnoreSameVersionEvents() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 
@@ -5134,17 +5135,17 @@ func (s *engineSuite) TestReapplyEvents_IgnoreSameVersionEvents() {
 	err := s.mockHistoryEngine.ReapplyEvents(
 		context.Background(),
 		constants.TestDomainID,
-		*workflowExecution.WorkflowId,
-		*workflowExecution.RunId,
+		*workflowExecution.WorkflowID,
+		*workflowExecution.RunID,
 		history,
 	)
 	s.NoError(err)
 }
 
 func (s *engineSuite) TestReapplyEvents_ResetWorkflow() {
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("test-reapply-reset-workflow"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("test-reapply-reset-workflow"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	history := []*workflow.HistoryEvent{
 		{
@@ -5156,7 +5157,7 @@ func (s *engineSuite) TestReapplyEvents_ResetWorkflow() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.mockHistoryEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	ms := execution.CreatePersistenceMutableState(msBuilder)
@@ -5179,14 +5180,14 @@ func (s *engineSuite) TestReapplyEvents_ResetWorkflow() {
 	err = s.mockHistoryEngine.ReapplyEvents(
 		context.Background(),
 		constants.TestDomainID,
-		*workflowExecution.WorkflowId,
-		*workflowExecution.RunId,
+		*workflowExecution.WorkflowID,
+		*workflowExecution.RunID,
 		history,
 	)
 	s.NoError(err)
 }
 
-func (s *engineSuite) getBuilder(testDomainID string, we workflow.WorkflowExecution) execution.MutableState {
+func (s *engineSuite) getBuilder(testDomainID string, we types.WorkflowExecution) execution.MutableState {
 	context, release, err := s.mockHistoryEngine.executionCache.GetOrCreateWorkflowExecutionForBackground(testDomainID, we)
 	if err != nil {
 		return nil

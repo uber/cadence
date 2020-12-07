@@ -251,9 +251,9 @@ func (t *taskAckManagerImpl) processReplication(
 	) (*types.ReplicationTask, error),
 ) (retReplicationTask *types.ReplicationTask, retError error) {
 
-	execution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr(taskInfo.GetWorkflowID()),
-		RunId:      common.StringPtr(taskInfo.GetRunID()),
+	execution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(taskInfo.GetWorkflowID()),
+		RunID:      common.StringPtr(taskInfo.GetRunID()),
 	}
 
 	context, release, err := t.executionCache.GetOrCreateWorkflowExecution(ctx, taskInfo.GetDomainID(), execution)
@@ -344,9 +344,9 @@ func (t *taskAckManagerImpl) isNewRunNDCEnabled(
 	context, release, err := t.executionCache.GetOrCreateWorkflowExecution(
 		ctx,
 		domainID,
-		shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	)
 	if err != nil {

@@ -29,8 +29,6 @@ persistence:
         default:
             sql:
                 pluginName: "mysql"
-                encodingType: "thriftrw"
-                decodingTypes: ["thriftrw"]
                 databaseName: {{ default .Env.DBNAME "cadence" }}
                 connectAddr: "{{ default .Env.MYSQL_SEEDS "" }}:{{ default .Env.DB_PORT "3306" }}"
                 connectProtocol: "tcp"
@@ -43,8 +41,6 @@ persistence:
         visibility:
             sql:
                 pluginName: "mysql"
-                encodingType: "thriftrw"
-                decodingTypes: ["thriftrw"]
                 databaseName: {{ default .Env.VISIBILITY_DBNAME "cadence_visibility" }}
                 connectAddr: "{{ default .Env.MYSQL_SEEDS "" }}:{{ default .Env.DB_PORT "3306" }}"
                 connectProtocol: "tcp"

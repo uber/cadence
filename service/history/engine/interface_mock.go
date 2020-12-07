@@ -36,6 +36,7 @@ import (
 	replicator "github.com/uber/cadence/.gen/go/replicator"
 	shared "github.com/uber/cadence/.gen/go/shared"
 	persistence "github.com/uber/cadence/common/persistence"
+	types "github.com/uber/cadence/common/types"
 	events "github.com/uber/cadence/service/history/events"
 )
 
@@ -552,7 +553,7 @@ func (mr *MockEngineMockRecorder) MergeDLQMessages(ctx, messagesRequest interfac
 }
 
 // RefreshWorkflowTasks mocks base method
-func (m *MockEngine) RefreshWorkflowTasks(ctx context.Context, domainUUID string, execution shared.WorkflowExecution) error {
+func (m *MockEngine) RefreshWorkflowTasks(ctx context.Context, domainUUID string, execution types.WorkflowExecution) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RefreshWorkflowTasks", ctx, domainUUID, execution)
 	ret0, _ := ret[0].(error)

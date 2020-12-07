@@ -89,9 +89,9 @@ func (r *activityReplicatorImpl) SyncActivity(
 	// no sync activity task will be sent when active side fail / timeout activity,
 	// since standby side does not have activity retry timer
 	domainID := request.GetDomainId()
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: request.WorkflowId,
-		RunId:      request.RunId,
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: request.WorkflowId,
+		RunID:      request.RunId,
 	}
 
 	context, release, err := r.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution)
@@ -119,8 +119,8 @@ func (r *activityReplicatorImpl) SyncActivity(
 	scheduleID := request.GetScheduledId()
 	shouldApply, err := r.shouldApplySyncActivity(
 		domainID,
-		workflowExecution.GetWorkflowId(),
-		workflowExecution.GetRunId(),
+		workflowExecution.GetWorkflowID(),
+		workflowExecution.GetRunID(),
 		scheduleID,
 		version,
 		mutableState,
