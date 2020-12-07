@@ -267,7 +267,7 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 		}
 
 		clusterConfiguredForVisibilityArchival := t.shard.GetService().GetArchivalMetadata().GetVisibilityConfig().ClusterConfiguredForArchival()
-		domainConfiguredForVisibilityArchival := domainEntry.GetConfig().VisibilityArchivalStatus == workflow.ArchivalStatusEnabled
+		domainConfiguredForVisibilityArchival := domainEntry.GetConfig().VisibilityArchivalStatus == types.ArchivalStatusEnabled
 		archiveVisibility = clusterConfiguredForVisibilityArchival && domainConfiguredForVisibilityArchival
 	}
 

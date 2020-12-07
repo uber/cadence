@@ -62,15 +62,15 @@ func (t ThriftHandler) CountWorkflowExecutions(ctx context.Context, request *sha
 }
 
 // DeprecateDomain forwards request to the underlying handler
-func (t ThriftHandler) DeprecateDomain(ctx context.Context, request *shared.DeprecateDomainRequest) (err error) {
-	err = t.h.DeprecateDomain(ctx, request)
+func (t ThriftHandler) DeprecateDomain(ctx context.Context, request *shared.DeprecateDomainRequest) error {
+	err := t.h.DeprecateDomain(ctx, thrift.ToDeprecateDomainRequest(request))
 	return thrift.FromError(err)
 }
 
 // DescribeDomain forwards request to the underlying handler
-func (t ThriftHandler) DescribeDomain(ctx context.Context, request *shared.DescribeDomainRequest) (response *shared.DescribeDomainResponse, err error) {
-	response, err = t.h.DescribeDomain(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) DescribeDomain(ctx context.Context, request *shared.DescribeDomainRequest) (*shared.DescribeDomainResponse, error) {
+	response, err := t.h.DescribeDomain(ctx, thrift.ToDescribeDomainRequest(request))
+	return thrift.FromDescribeDomainResponse(response), thrift.FromError(err)
 }
 
 // DescribeTaskList forwards request to the underlying handler
@@ -116,9 +116,9 @@ func (t ThriftHandler) ListClosedWorkflowExecutions(ctx context.Context, request
 }
 
 // ListDomains forwards request to the underlying handler
-func (t ThriftHandler) ListDomains(ctx context.Context, request *shared.ListDomainsRequest) (response *shared.ListDomainsResponse, err error) {
-	response, err = t.h.ListDomains(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) ListDomains(ctx context.Context, request *shared.ListDomainsRequest) (*shared.ListDomainsResponse, error) {
+	response, err := t.h.ListDomains(ctx, thrift.ToListDomainsRequest(request))
+	return thrift.FromListDomainsResponse(response), thrift.FromError(err)
 }
 
 // ListOpenWorkflowExecutions forwards request to the underlying handler
@@ -170,8 +170,8 @@ func (t ThriftHandler) RecordActivityTaskHeartbeatByID(ctx context.Context, requ
 }
 
 // RegisterDomain forwards request to the underlying handler
-func (t ThriftHandler) RegisterDomain(ctx context.Context, request *shared.RegisterDomainRequest) (err error) {
-	err = t.h.RegisterDomain(ctx, request)
+func (t ThriftHandler) RegisterDomain(ctx context.Context, request *shared.RegisterDomainRequest) error {
+	err := t.h.RegisterDomain(ctx, thrift.ToRegisterDomainRequest(request))
 	return thrift.FromError(err)
 }
 
@@ -278,7 +278,7 @@ func (t ThriftHandler) TerminateWorkflowExecution(ctx context.Context, request *
 }
 
 // UpdateDomain forwards request to the underlying handler
-func (t ThriftHandler) UpdateDomain(ctx context.Context, request *shared.UpdateDomainRequest) (response *shared.UpdateDomainResponse, err error) {
-	response, err = t.h.UpdateDomain(ctx, request)
-	return response, thrift.FromError(err)
+func (t ThriftHandler) UpdateDomain(ctx context.Context, request *shared.UpdateDomainRequest) (*shared.UpdateDomainResponse, error) {
+	response, err := t.h.UpdateDomain(ctx, thrift.ToUpdateDomainRequest(request))
+	return thrift.FromUpdateDomainResponse(response), thrift.FromError(err)
 }

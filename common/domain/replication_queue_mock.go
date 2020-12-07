@@ -30,7 +30,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	replicator "github.com/uber/cadence/.gen/go/replicator"
+	types "github.com/uber/cadence/common/types"
 )
 
 // MockReplicationQueue is a mock of ReplicationQueue interface
@@ -109,10 +109,10 @@ func (mr *MockReplicationQueueMockRecorder) PublishToDLQ(ctx, message interface{
 }
 
 // GetReplicationMessages mocks base method
-func (m *MockReplicationQueue) GetReplicationMessages(ctx context.Context, lastMessageID int64, maxCount int) ([]*replicator.ReplicationTask, int64, error) {
+func (m *MockReplicationQueue) GetReplicationMessages(ctx context.Context, lastMessageID int64, maxCount int) ([]*types.ReplicationTask, int64, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetReplicationMessages", ctx, lastMessageID, maxCount)
-	ret0, _ := ret[0].([]*replicator.ReplicationTask)
+	ret0, _ := ret[0].([]*types.ReplicationTask)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
@@ -154,10 +154,10 @@ func (mr *MockReplicationQueueMockRecorder) GetAckLevels(ctx interface{}) *gomoc
 }
 
 // GetMessagesFromDLQ mocks base method
-func (m *MockReplicationQueue) GetMessagesFromDLQ(ctx context.Context, firstMessageID, lastMessageID int64, pageSize int, pageToken []byte) ([]*replicator.ReplicationTask, []byte, error) {
+func (m *MockReplicationQueue) GetMessagesFromDLQ(ctx context.Context, firstMessageID, lastMessageID int64, pageSize int, pageToken []byte) ([]*types.ReplicationTask, []byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMessagesFromDLQ", ctx, firstMessageID, lastMessageID, pageSize, pageToken)
-	ret0, _ := ret[0].([]*replicator.ReplicationTask)
+	ret0, _ := ret[0].([]*types.ReplicationTask)
 	ret1, _ := ret[1].([]byte)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2

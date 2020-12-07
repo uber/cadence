@@ -41,9 +41,9 @@ func updateActivityInfos(
 	activityInfos []*persistence.InternalActivityInfo,
 	deleteInfos []int64,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	parser serialization.Parser,
 ) error {
 
@@ -131,9 +131,9 @@ func getActivityInfoMap(
 	ctx context.Context,
 	db sqlplugin.DB,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	parser serialization.Parser,
 ) (map[int64]*persistence.InternalActivityInfo, error) {
 
@@ -202,9 +202,9 @@ func deleteActivityInfoMap(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) error {
 
 	if _, err := tx.DeleteFromActivityInfoMaps(ctx, &sqlplugin.ActivityInfoMapsFilter{
@@ -226,9 +226,9 @@ func updateTimerInfos(
 	timerInfos []*persistence.TimerInfo,
 	deleteInfos []string,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	parser serialization.Parser,
 ) error {
 
@@ -285,9 +285,9 @@ func getTimerInfoMap(
 	ctx context.Context,
 	db sqlplugin.DB,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	parser serialization.Parser,
 ) (map[string]*persistence.TimerInfo, error) {
 
@@ -327,9 +327,9 @@ func deleteTimerInfoMap(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) error {
 
 	if _, err := tx.DeleteFromTimerInfoMaps(ctx, &sqlplugin.TimerInfoMapsFilter{
@@ -351,9 +351,9 @@ func updateChildExecutionInfos(
 	childExecutionInfos []*persistence.InternalChildExecutionInfo,
 	deleteInfos []int64,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	parser serialization.Parser,
 ) error {
 
@@ -372,7 +372,7 @@ func updateChildExecutionInfos(
 				StartedEventEncoding:   &startEncoding,
 				StartedID:              &childExecutionInfo.StartedID,
 				StartedWorkflowID:      &childExecutionInfo.StartedWorkflowID,
-				StartedRunID:           sqlplugin.MustParseUUID(childExecutionInfo.StartedRunID),
+				StartedRunID:           serialization.MustParseUUID(childExecutionInfo.StartedRunID),
 				CreateRequestID:        &childExecutionInfo.CreateRequestID,
 				DomainName:             &childExecutionInfo.DomainName,
 				WorkflowTypeName:       &childExecutionInfo.WorkflowTypeName,
@@ -420,9 +420,9 @@ func getChildExecutionInfoMap(
 	ctx context.Context,
 	db sqlplugin.DB,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	parser serialization.Parser,
 ) (map[int64]*persistence.InternalChildExecutionInfo, error) {
 
@@ -450,7 +450,7 @@ func getChildExecutionInfoMap(
 			Version:               rowInfo.GetVersion(),
 			StartedID:             rowInfo.GetStartedID(),
 			StartedWorkflowID:     rowInfo.GetStartedWorkflowID(),
-			StartedRunID:          sqlplugin.UUID(rowInfo.GetStartedRunID()).String(),
+			StartedRunID:          serialization.UUID(rowInfo.GetStartedRunID()).String(),
 			CreateRequestID:       rowInfo.GetCreateRequestID(),
 			DomainName:            rowInfo.GetDomainName(),
 			WorkflowTypeName:      rowInfo.GetWorkflowTypeName(),
@@ -472,9 +472,9 @@ func deleteChildExecutionInfoMap(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) error {
 
 	if _, err := tx.DeleteFromChildExecutionInfoMaps(ctx, &sqlplugin.ChildExecutionInfoMapsFilter{
@@ -496,9 +496,9 @@ func updateRequestCancelInfos(
 	requestCancelInfos []*persistence.RequestCancelInfo,
 	deleteInfos []int64,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	parser serialization.Parser,
 ) error {
 
@@ -552,9 +552,9 @@ func getRequestCancelInfoMap(
 	ctx context.Context,
 	db sqlplugin.DB,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	parser serialization.Parser,
 ) (map[int64]*persistence.RequestCancelInfo, error) {
 
@@ -591,9 +591,9 @@ func deleteRequestCancelInfoMap(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) error {
 
 	if _, err := tx.DeleteFromRequestCancelInfoMaps(ctx, &sqlplugin.RequestCancelInfoMapsFilter{
@@ -615,9 +615,9 @@ func updateSignalInfos(
 	signalInfos []*persistence.SignalInfo,
 	deleteInfos []int64,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	parser serialization.Parser,
 ) error {
 
@@ -674,9 +674,9 @@ func getSignalInfoMap(
 	ctx context.Context,
 	db sqlplugin.DB,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 	parser serialization.Parser,
 ) (map[int64]*persistence.SignalInfo, error) {
 
@@ -716,9 +716,9 @@ func deleteSignalInfoMap(
 	ctx context.Context,
 	tx sqlplugin.Tx,
 	shardID int,
-	domainID sqlplugin.UUID,
+	domainID serialization.UUID,
 	workflowID string,
-	runID sqlplugin.UUID,
+	runID serialization.UUID,
 ) error {
 
 	if _, err := tx.DeleteFromSignalInfoMaps(ctx, &sqlplugin.SignalInfoMapsFilter{

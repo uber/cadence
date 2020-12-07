@@ -36,6 +36,7 @@ import (
 	admin "github.com/uber/cadence/.gen/go/admin"
 	replicator "github.com/uber/cadence/.gen/go/replicator"
 	shared "github.com/uber/cadence/.gen/go/shared"
+	types "github.com/uber/cadence/common/types"
 )
 
 // MockAdminHandler is a mock of AdminHandler interface
@@ -165,10 +166,10 @@ func (mr *MockAdminHandlerMockRecorder) GetDLQReplicationMessages(arg0, arg1 int
 }
 
 // GetDomainReplicationMessages mocks base method
-func (m *MockAdminHandler) GetDomainReplicationMessages(arg0 context.Context, arg1 *replicator.GetDomainReplicationMessagesRequest) (*replicator.GetDomainReplicationMessagesResponse, error) {
+func (m *MockAdminHandler) GetDomainReplicationMessages(arg0 context.Context, arg1 *types.GetDomainReplicationMessagesRequest) (*types.GetDomainReplicationMessagesResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetDomainReplicationMessages", arg0, arg1)
-	ret0, _ := ret[0].(*replicator.GetDomainReplicationMessagesResponse)
+	ret0, _ := ret[0].(*types.GetDomainReplicationMessagesResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -210,10 +211,10 @@ func (mr *MockAdminHandlerMockRecorder) GetWorkflowExecutionRawHistoryV2(arg0, a
 }
 
 // MergeDLQMessages mocks base method
-func (m *MockAdminHandler) MergeDLQMessages(arg0 context.Context, arg1 *replicator.MergeDLQMessagesRequest) (*replicator.MergeDLQMessagesResponse, error) {
+func (m *MockAdminHandler) MergeDLQMessages(arg0 context.Context, arg1 *types.MergeDLQMessagesRequest) (*types.MergeDLQMessagesResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MergeDLQMessages", arg0, arg1)
-	ret0, _ := ret[0].(*replicator.MergeDLQMessagesResponse)
+	ret0, _ := ret[0].(*types.MergeDLQMessagesResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -225,7 +226,7 @@ func (mr *MockAdminHandlerMockRecorder) MergeDLQMessages(arg0, arg1 interface{})
 }
 
 // PurgeDLQMessages mocks base method
-func (m *MockAdminHandler) PurgeDLQMessages(arg0 context.Context, arg1 *replicator.PurgeDLQMessagesRequest) error {
+func (m *MockAdminHandler) PurgeDLQMessages(arg0 context.Context, arg1 *types.PurgeDLQMessagesRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PurgeDLQMessages", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -239,10 +240,10 @@ func (mr *MockAdminHandlerMockRecorder) PurgeDLQMessages(arg0, arg1 interface{})
 }
 
 // ReadDLQMessages mocks base method
-func (m *MockAdminHandler) ReadDLQMessages(arg0 context.Context, arg1 *replicator.ReadDLQMessagesRequest) (*replicator.ReadDLQMessagesResponse, error) {
+func (m *MockAdminHandler) ReadDLQMessages(arg0 context.Context, arg1 *types.ReadDLQMessagesRequest) (*types.ReadDLQMessagesResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadDLQMessages", arg0, arg1)
-	ret0, _ := ret[0].(*replicator.ReadDLQMessagesResponse)
+	ret0, _ := ret[0].(*types.ReadDLQMessagesResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

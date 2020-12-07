@@ -82,50 +82,24 @@ func newWorkflowCommands() []cli.Command {
 			Name:    "signal",
 			Aliases: []string{"s"},
 			Usage:   "signal a workflow execution",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowID",
-				},
-				cli.StringFlag{
-					Name:  FlagRunIDWithAlias,
-					Usage: "RunID",
-				},
-				cli.StringFlag{
-					Name:  FlagNameWithAlias,
-					Usage: "SignalName",
-				},
-				cli.StringFlag{
-					Name:  FlagInputWithAlias,
-					Usage: "Input for the signal, in JSON format.",
-				},
-				cli.StringFlag{
-					Name:  FlagInputFileWithAlias,
-					Usage: "Input for the signal from JSON file.",
-				},
-			},
+			Flags:   getFlagsForSignal(),
 			Action: func(c *cli.Context) {
 				SignalWorkflow(c)
+			},
+		},
+		{
+			Name:  "signalwithstart",
+			Usage: "signal the current open workflow if exists, or attempt to start a new run based on IDResuePolicy and signals it",
+			Flags: getFlagsForSignalWithStart(),
+			Action: func(c *cli.Context) {
+				SignalWithStartWorkflowExecution(c)
 			},
 		},
 		{
 			Name:    "terminate",
 			Aliases: []string{"term"},
 			Usage:   "terminate a new workflow execution",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowID",
-				},
-				cli.StringFlag{
-					Name:  FlagRunIDWithAlias,
-					Usage: "RunID",
-				},
-				cli.StringFlag{
-					Name:  FlagReasonWithAlias,
-					Usage: "The reason you want to terminate the workflow",
-				},
-			},
+			Flags:   getFlagsForTerminate(),
 			Action: func(c *cli.Context) {
 				TerminateWorkflow(c)
 			},

@@ -25,7 +25,6 @@ package domain
 import (
 	"context"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
@@ -34,7 +33,7 @@ import (
 type (
 	// DLQMessageHandler is the interface handles domain DLQ messages
 	DLQMessageHandler interface {
-		Read(ctx context.Context, lastMessageID int64, pageSize int, pageToken []byte) ([]*replicator.ReplicationTask, []byte, error)
+		Read(ctx context.Context, lastMessageID int64, pageSize int, pageToken []byte) ([]*types.ReplicationTask, []byte, error)
 		Purge(ctx context.Context, lastMessageID int64) error
 		Merge(ctx context.Context, lastMessageID int64, pageSize int, pageToken []byte) ([]byte, error)
 	}
@@ -65,7 +64,7 @@ func (d *dlqMessageHandlerImpl) Read(
 	lastMessageID int64,
 	pageSize int,
 	pageToken []byte,
-) ([]*replicator.ReplicationTask, []byte, error) {
+) ([]*types.ReplicationTask, []byte, error) {
 
 	ackLevel, err := d.replicationQueue.GetDLQAckLevel(ctx)
 	if err != nil {
@@ -147,7 +146,7 @@ func (d *dlqMessageHandlerImpl) Merge(
 		); err != nil {
 			return nil, err
 		}
-		ackedMessageID = *message.SourceTaskId
+		ackedMessageID = *message.SourceTaskID
 	}
 
 	if err := d.replicationQueue.RangeDeleteMessagesFromDLQ(
