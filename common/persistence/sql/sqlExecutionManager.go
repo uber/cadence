@@ -242,7 +242,6 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 		}
 	}
 
-<<<<<<< HEAD
 	if len(executions) == 0 {
 		return nil, &types.EntityNotExistsError{
 			Message: fmt.Sprintf(
@@ -250,85 +249,6 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 				request.Execution.GetWorkflowID(),
 				request.Execution.GetRunID(),
 			),
-=======
-	info, err := m.parser.WorkflowExecutionInfoFromBlob(execution.Data, execution.DataEncoding)
-	if err != nil {
-		return nil, err
-	}
-
-	var state p.InternalWorkflowMutableState
-	state.ExecutionInfo = &p.InternalWorkflowExecutionInfo{
-		DomainID:                           execution.DomainID.String(),
-		WorkflowID:                         execution.WorkflowID,
-		RunID:                              execution.RunID.String(),
-		NextEventID:                        execution.NextEventID,
-		TaskList:                           info.GetTaskList(),
-		WorkflowTypeName:                   info.GetWorkflowTypeName(),
-		WorkflowTimeout:                    info.GetWorkflowTimeout(),
-		DecisionStartToCloseTimeout:        info.GetDecisionTaskTimeout(),
-		State:                              int(info.GetState()),
-		CloseStatus:                        int(info.GetCloseStatus()),
-		LastFirstEventID:                   info.GetLastFirstEventID(),
-		LastProcessedEvent:                 info.GetLastProcessedEvent(),
-		StartTimestamp:                     info.GetStartTimestamp(),
-		LastUpdatedTimestamp:               info.GetLastUpdatedTimestamp(),
-		CreateRequestID:                    info.GetCreateRequestID(),
-		DecisionVersion:                    info.GetDecisionVersion(),
-		DecisionScheduleID:                 info.GetDecisionScheduleID(),
-		DecisionStartedID:                  info.GetDecisionStartedID(),
-		DecisionRequestID:                  info.GetDecisionRequestID(),
-		DecisionTimeout:                    info.GetDecisionTimeout(),
-		DecisionAttempt:                    info.GetDecisionAttempt(),
-		DecisionStartedTimestamp:           info.GetDecisionStartedTimestamp(),
-		DecisionScheduledTimestamp:         info.GetDecisionScheduledTimestamp(),
-		DecisionOriginalScheduledTimestamp: info.GetDecisionOriginalScheduledTimestamp(),
-		StickyTaskList:                     info.GetStickyTaskList(),
-		StickyScheduleToStartTimeout:       info.GetStickyScheduleToStartTimeout(),
-		ClientLibraryVersion:               info.GetClientLibraryVersion(),
-		ClientFeatureVersion:               info.GetClientFeatureVersion(),
-		ClientImpl:                         info.GetClientImpl(),
-		SignalCount:                        int32(info.GetSignalCount()),
-		HistorySize:                        info.GetHistorySize(),
-		CronSchedule:                       info.GetCronSchedule(),
-		CompletionEventBatchID:             common.EmptyEventID,
-		HasRetryPolicy:                     info.GetHasRetryPolicy(),
-		Attempt:                            int32(info.GetRetryAttempt()),
-		InitialInterval:                    info.GetRetryInitialInterval(),
-		BackoffCoefficient:                 info.GetRetryBackoffCoefficient(),
-		MaximumInterval:                    info.GetRetryMaximumInterval(),
-		MaximumAttempts:                    info.GetRetryMaximumAttempts(),
-		ExpirationSeconds:                  info.GetRetryExpiration(),
-		ExpirationTime:                     info.GetRetryExpirationTimestamp(),
-		BranchToken:                        info.GetEventBranchToken(),
-		ExecutionContext:                   info.GetExecutionContext(),
-		NonRetriableErrors:                 info.GetRetryNonRetryableErrors(),
-		SearchAttributes:                   info.GetSearchAttributes(),
-		Memo:                               info.GetMemo(),
-	}
-
-	// TODO: remove this after all 2DC workflows complete
-	if info.LastWriteEventID != nil {
-		state.ReplicationState = &p.ReplicationState{}
-		state.ReplicationState.StartVersion = info.GetStartVersion()
-		state.ReplicationState.LastWriteVersion = execution.LastWriteVersion
-		state.ReplicationState.LastWriteEventID = info.GetLastWriteEventID()
-	}
-
-	if info.GetVersionHistories() != nil {
-		state.VersionHistories = p.NewDataBlob(
-			info.GetVersionHistories(),
-			common.EncodingType(info.GetVersionHistoriesEncoding()),
-		)
-	}
-
-	if info.ParentDomainID != nil {
-		state.ExecutionInfo.ParentDomainID = info.ParentDomainID.String()
-		state.ExecutionInfo.ParentWorkflowID = info.GetParentWorkflowID()
-		state.ExecutionInfo.ParentRunID = info.ParentRunID.String()
-		state.ExecutionInfo.InitiatedID = info.GetInitiatedID()
-		if state.ExecutionInfo.CompletionEvent != nil {
-			state.ExecutionInfo.CompletionEvent = nil
->>>>>>> 28a6c8ea... Redo parser internal types usage
 		}
 	}
 
@@ -1428,26 +1348,26 @@ func (m *sqlExecutionManager) populateWorkflowMutableState(
 		NextEventID:                        execution.NextEventID,
 		TaskList:                           info.GetTaskList(),
 		WorkflowTypeName:                   info.GetWorkflowTypeName(),
-		WorkflowTimeout:                    common.SecondsToDuration(int64(info.GetWorkflowTimeoutSeconds())),
-		DecisionStartToCloseTimeout:        common.SecondsToDuration(int64(info.GetDecisionTaskTimeoutSeconds())),
+		WorkflowTimeout:                    info.GetWorkflowTimeout(),
+		DecisionStartToCloseTimeout:        info.GetDecisionTaskTimeout(),
 		State:                              int(info.GetState()),
 		CloseStatus:                        int(info.GetCloseStatus()),
 		LastFirstEventID:                   info.GetLastFirstEventID(),
 		LastProcessedEvent:                 info.GetLastProcessedEvent(),
-		StartTimestamp:                     time.Unix(0, info.GetStartTimeNanos()),
-		LastUpdatedTimestamp:               time.Unix(0, info.GetLastUpdatedTimeNanos()),
+		StartTimestamp:                     info.GetStartTimestamp(),
+		LastUpdatedTimestamp:               info.GetLastUpdatedTimestamp(),
 		CreateRequestID:                    info.GetCreateRequestID(),
 		DecisionVersion:                    info.GetDecisionVersion(),
 		DecisionScheduleID:                 info.GetDecisionScheduleID(),
 		DecisionStartedID:                  info.GetDecisionStartedID(),
 		DecisionRequestID:                  info.GetDecisionRequestID(),
-		DecisionTimeout:                    common.SecondsToDuration(int64(info.GetDecisionTimeout())),
+		DecisionTimeout:                    info.GetDecisionTimeout(),
 		DecisionAttempt:                    info.GetDecisionAttempt(),
-		DecisionStartedTimestamp:           time.Unix(0, info.GetDecisionStartedTimestampNanos()),
-		DecisionScheduledTimestamp:         time.Unix(0, info.GetDecisionScheduledTimestampNanos()),
-		DecisionOriginalScheduledTimestamp: time.Unix(0, info.GetDecisionOriginalScheduledTimestampNanos()),
+		DecisionStartedTimestamp:           info.GetDecisionStartedTimestamp(),
+		DecisionScheduledTimestamp:         info.GetDecisionScheduledTimestamp(),
+		DecisionOriginalScheduledTimestamp: info.GetDecisionOriginalScheduledTimestamp(),
 		StickyTaskList:                     info.GetStickyTaskList(),
-		StickyScheduleToStartTimeout:       common.SecondsToDuration(info.GetStickyScheduleToStartTimeout()),
+		StickyScheduleToStartTimeout:       info.GetStickyScheduleToStartTimeout(),
 		ClientLibraryVersion:               info.GetClientLibraryVersion(),
 		ClientFeatureVersion:               info.GetClientFeatureVersion(),
 		ClientImpl:                         info.GetClientImpl(),
@@ -1457,12 +1377,12 @@ func (m *sqlExecutionManager) populateWorkflowMutableState(
 		CompletionEventBatchID:             common.EmptyEventID,
 		HasRetryPolicy:                     info.GetHasRetryPolicy(),
 		Attempt:                            int32(info.GetRetryAttempt()),
-		InitialInterval:                    common.SecondsToDuration(int64(info.GetRetryInitialIntervalSeconds())),
+		InitialInterval:                    info.GetRetryInitialInterval(),
 		BackoffCoefficient:                 info.GetRetryBackoffCoefficient(),
-		MaximumInterval:                    common.SecondsToDuration(int64(info.GetRetryMaximumIntervalSeconds())),
+		MaximumInterval:                    info.GetRetryMaximumInterval(),
 		MaximumAttempts:                    info.GetRetryMaximumAttempts(),
-		ExpirationSeconds:                  common.SecondsToDuration(int64(info.GetRetryExpirationSeconds())),
-		ExpirationTime:                     time.Unix(0, info.GetRetryExpirationTimeNanos()),
+		ExpirationSeconds:                  info.GetRetryExpiration(),
+		ExpirationTime:                     info.GetRetryExpirationTimestamp(),
 		BranchToken:                        info.GetEventBranchToken(),
 		ExecutionContext:                   info.GetExecutionContext(),
 		NonRetriableErrors:                 info.GetRetryNonRetryableErrors(),
@@ -1486,9 +1406,9 @@ func (m *sqlExecutionManager) populateWorkflowMutableState(
 	}
 
 	if info.ParentDomainID != nil {
-		state.ExecutionInfo.ParentDomainID = serialization.UUID(info.ParentDomainID).String()
+		state.ExecutionInfo.ParentDomainID = info.ParentDomainID.String()
 		state.ExecutionInfo.ParentWorkflowID = info.GetParentWorkflowID()
-		state.ExecutionInfo.ParentRunID = serialization.UUID(info.ParentRunID).String()
+		state.ExecutionInfo.ParentRunID = info.ParentRunID.String()
 		state.ExecutionInfo.InitiatedID = info.GetInitiatedID()
 		if state.ExecutionInfo.CompletionEvent != nil {
 			state.ExecutionInfo.CompletionEvent = nil
