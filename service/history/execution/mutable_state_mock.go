@@ -127,7 +127,7 @@ func (mr *MockMutableStateMockRecorder) AddActivityTaskFailedEvent(arg0, arg1, a
 }
 
 // AddActivityTaskScheduledEvent mocks base method
-func (m *MockMutableState) AddActivityTaskScheduledEvent(arg0 int64, arg1 *shared.ScheduleActivityTaskDecisionAttributes) (*shared.HistoryEvent, *persistence.ActivityInfo, *shared.ActivityLocalDispatchInfo, error) {
+func (m *MockMutableState) AddActivityTaskScheduledEvent(arg0 int64, arg1 *types.ScheduleActivityTaskDecisionAttributes) (*shared.HistoryEvent, *persistence.ActivityInfo, *shared.ActivityLocalDispatchInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddActivityTaskScheduledEvent", arg0, arg1)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
@@ -174,7 +174,7 @@ func (mr *MockMutableStateMockRecorder) AddActivityTaskTimedOutEvent(arg0, arg1,
 }
 
 // AddCancelTimerFailedEvent mocks base method
-func (m *MockMutableState) AddCancelTimerFailedEvent(arg0 int64, arg1 *shared.CancelTimerDecisionAttributes, arg2 string) (*shared.HistoryEvent, error) {
+func (m *MockMutableState) AddCancelTimerFailedEvent(arg0 int64, arg1 *types.CancelTimerDecisionAttributes, arg2 string) (*shared.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddCancelTimerFailedEvent", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
@@ -279,7 +279,7 @@ func (mr *MockMutableStateMockRecorder) AddChildWorkflowExecutionTimedOutEvent(a
 }
 
 // AddCompletedWorkflowEvent mocks base method
-func (m *MockMutableState) AddCompletedWorkflowEvent(arg0 int64, arg1 *shared.CompleteWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, error) {
+func (m *MockMutableState) AddCompletedWorkflowEvent(arg0 int64, arg1 *types.CompleteWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddCompletedWorkflowEvent", arg0, arg1)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
@@ -294,7 +294,7 @@ func (mr *MockMutableStateMockRecorder) AddCompletedWorkflowEvent(arg0, arg1 int
 }
 
 // AddContinueAsNewEvent mocks base method
-func (m *MockMutableState) AddContinueAsNewEvent(arg0 context.Context, arg1, arg2 int64, arg3 string, arg4 *shared.ContinueAsNewWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, MutableState, error) {
+func (m *MockMutableState) AddContinueAsNewEvent(arg0 context.Context, arg1, arg2 int64, arg3 string, arg4 *types.ContinueAsNewWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, MutableState, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddContinueAsNewEvent", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
@@ -460,7 +460,7 @@ func (mr *MockMutableStateMockRecorder) AddExternalWorkflowExecutionSignaled(arg
 }
 
 // AddFailWorkflowEvent mocks base method
-func (m *MockMutableState) AddFailWorkflowEvent(arg0 int64, arg1 *shared.FailWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, error) {
+func (m *MockMutableState) AddFailWorkflowEvent(arg0 int64, arg1 *types.FailWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddFailWorkflowEvent", arg0, arg1)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
@@ -475,7 +475,7 @@ func (mr *MockMutableStateMockRecorder) AddFailWorkflowEvent(arg0, arg1 interfac
 }
 
 // AddRecordMarkerEvent mocks base method
-func (m *MockMutableState) AddRecordMarkerEvent(arg0 int64, arg1 *shared.RecordMarkerDecisionAttributes) (*shared.HistoryEvent, error) {
+func (m *MockMutableState) AddRecordMarkerEvent(arg0 int64, arg1 *types.RecordMarkerDecisionAttributes) (*shared.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddRecordMarkerEvent", arg0, arg1)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
@@ -520,7 +520,7 @@ func (mr *MockMutableStateMockRecorder) AddRequestCancelExternalWorkflowExecutio
 }
 
 // AddRequestCancelExternalWorkflowExecutionInitiatedEvent mocks base method
-func (m *MockMutableState) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(arg0 int64, arg1 string, arg2 *shared.RequestCancelExternalWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, *persistence.RequestCancelInfo, error) {
+func (m *MockMutableState) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(arg0 int64, arg1 string, arg2 *types.RequestCancelExternalWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, *persistence.RequestCancelInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddRequestCancelExternalWorkflowExecutionInitiatedEvent", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
@@ -551,7 +551,7 @@ func (mr *MockMutableStateMockRecorder) AddSignalExternalWorkflowExecutionFailed
 }
 
 // AddSignalExternalWorkflowExecutionInitiatedEvent mocks base method
-func (m *MockMutableState) AddSignalExternalWorkflowExecutionInitiatedEvent(arg0 int64, arg1 string, arg2 *shared.SignalExternalWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, *persistence.SignalInfo, error) {
+func (m *MockMutableState) AddSignalExternalWorkflowExecutionInitiatedEvent(arg0 int64, arg1 string, arg2 *types.SignalExternalWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, *persistence.SignalInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddSignalExternalWorkflowExecutionInitiatedEvent", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
@@ -594,7 +594,7 @@ func (mr *MockMutableStateMockRecorder) AddStartChildWorkflowExecutionFailedEven
 }
 
 // AddStartChildWorkflowExecutionInitiatedEvent mocks base method
-func (m *MockMutableState) AddStartChildWorkflowExecutionInitiatedEvent(arg0 int64, arg1 string, arg2 *shared.StartChildWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, *persistence.ChildExecutionInfo, error) {
+func (m *MockMutableState) AddStartChildWorkflowExecutionInitiatedEvent(arg0 int64, arg1 string, arg2 *types.StartChildWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, *persistence.ChildExecutionInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddStartChildWorkflowExecutionInitiatedEvent", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
@@ -625,7 +625,7 @@ func (mr *MockMutableStateMockRecorder) AddTimeoutWorkflowEvent(arg0 interface{}
 }
 
 // AddTimerCanceledEvent mocks base method
-func (m *MockMutableState) AddTimerCanceledEvent(arg0 int64, arg1 *shared.CancelTimerDecisionAttributes, arg2 string) (*shared.HistoryEvent, error) {
+func (m *MockMutableState) AddTimerCanceledEvent(arg0 int64, arg1 *types.CancelTimerDecisionAttributes, arg2 string) (*shared.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddTimerCanceledEvent", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
@@ -655,7 +655,7 @@ func (mr *MockMutableStateMockRecorder) AddTimerFiredEvent(arg0 interface{}) *go
 }
 
 // AddTimerStartedEvent mocks base method
-func (m *MockMutableState) AddTimerStartedEvent(arg0 int64, arg1 *shared.StartTimerDecisionAttributes) (*shared.HistoryEvent, *persistence.TimerInfo, error) {
+func (m *MockMutableState) AddTimerStartedEvent(arg0 int64, arg1 *types.StartTimerDecisionAttributes) (*shared.HistoryEvent, *persistence.TimerInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddTimerStartedEvent", arg0, arg1)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
@@ -671,7 +671,7 @@ func (mr *MockMutableStateMockRecorder) AddTimerStartedEvent(arg0, arg1 interfac
 }
 
 // AddUpsertWorkflowSearchAttributesEvent mocks base method
-func (m *MockMutableState) AddUpsertWorkflowSearchAttributesEvent(arg0 int64, arg1 *shared.UpsertWorkflowSearchAttributesDecisionAttributes) (*shared.HistoryEvent, error) {
+func (m *MockMutableState) AddUpsertWorkflowSearchAttributesEvent(arg0 int64, arg1 *types.UpsertWorkflowSearchAttributesDecisionAttributes) (*shared.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddUpsertWorkflowSearchAttributesEvent", arg0, arg1)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
@@ -701,7 +701,7 @@ func (mr *MockMutableStateMockRecorder) AddWorkflowExecutionCancelRequestedEvent
 }
 
 // AddWorkflowExecutionCanceledEvent mocks base method
-func (m *MockMutableState) AddWorkflowExecutionCanceledEvent(arg0 int64, arg1 *shared.CancelWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, error) {
+func (m *MockMutableState) AddWorkflowExecutionCanceledEvent(arg0 int64, arg1 *types.CancelWorkflowExecutionDecisionAttributes) (*shared.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddWorkflowExecutionCanceledEvent", arg0, arg1)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
