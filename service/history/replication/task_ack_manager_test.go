@@ -34,7 +34,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -43,7 +42,6 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -409,7 +407,7 @@ func (s *taskAckManagerSuite) TestProcessReplication_OK() {
 		func(
 			activityInfo *persistence.ActivityInfo,
 			versionHistories *persistence.VersionHistories,
-		) (*replicator.ReplicationTask, error) {
+		) (*types.ReplicationTask, error) {
 			_, release, err := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 				domainID,
 				types.WorkflowExecution{
@@ -440,7 +438,7 @@ func (s *taskAckManagerSuite) TestProcessReplication_OK() {
 		func(
 			activityInfo *persistence.ActivityInfo,
 			versionHistories *persistence.VersionHistories,
-		) (*replicator.ReplicationTask, error) {
+		) (*types.ReplicationTask, error) {
 			_, release, err := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
 				domainID,
 				types.WorkflowExecution{
@@ -509,7 +507,7 @@ func (s *taskAckManagerSuite) TestProcessReplication_Error() {
 		func(
 			activityInfo *persistence.ActivityInfo,
 			versionHistories *persistence.VersionHistories,
-		) (*replicator.ReplicationTask, error) {
+		) (*types.ReplicationTask, error) {
 			return nil, nil
 		},
 	)
@@ -534,9 +532,9 @@ func (s *taskAckManagerSuite) TestGenerateFailoverMarkerTask() {
 		CreationTime: 3,
 	}
 	task := s.ackManager.generateFailoverMarkerTask(taskInfo)
-	s.Equal(task.GetSourceTaskId(), int64(1))
+	s.Equal(task.GetSourceTaskID(), int64(1))
 	s.NotNil(task.GetFailoverMarkerAttributes())
-	s.Equal(replicator.ReplicationTaskTypeFailoverMarker, task.GetTaskType())
+	s.Equal(types.ReplicationTaskTypeFailoverMarker, task.GetTaskType())
 	s.Equal(domainID, task.GetFailoverMarkerAttributes().GetDomainID())
 	s.Equal(int64(2), task.GetFailoverMarkerAttributes().GetFailoverVersion())
 	s.Equal(int64(3), task.GetCreationTime())
@@ -607,15 +605,15 @@ func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_OK() {
 	s.NoError(err)
 	s.NotNil(task)
 	s.NotNil(task.SyncActivityTaskAttributes)
-	s.Equal(replicator.ReplicationTaskTypeSyncActivity, task.GetTaskType())
-	s.Equal(activityInfo.DomainID, task.GetSyncActivityTaskAttributes().GetDomainId())
-	s.Equal(activityInfo.ScheduleID, task.GetSyncActivityTaskAttributes().GetScheduledId())
+	s.Equal(types.ReplicationTaskTypeSyncActivity, task.GetTaskType())
+	s.Equal(activityInfo.DomainID, task.GetSyncActivityTaskAttributes().GetDomainID())
+	s.Equal(activityInfo.ScheduleID, task.GetSyncActivityTaskAttributes().GetScheduledID())
 	s.Equal(activityInfo.ScheduledTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetScheduledTime())
-	s.Equal(activityInfo.StartedID, task.GetSyncActivityTaskAttributes().GetStartedId())
+	s.Equal(activityInfo.StartedID, task.GetSyncActivityTaskAttributes().GetStartedID())
 	s.Equal(activityInfo.StartedTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetStartedTime())
 	s.Equal(activityInfo.LastHeartBeatUpdatedTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetLastHeartbeatTime())
 	s.Equal(activityInfo.Version, task.GetSyncActivityTaskAttributes().GetVersion())
-	s.Equal(thrift.FromVersionHistory(versionHistories.Histories[0].ToInternalType()), task.GetSyncActivityTaskAttributes().GetVersionHistory())
+	s.Equal(versionHistories.Histories[0].ToInternalType(), task.GetSyncActivityTaskAttributes().GetVersionHistory())
 }
 
 func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_Empty() {
@@ -743,7 +741,7 @@ func (s *taskAckManagerSuite) TestGenerateHistoryReplicationTask() {
 	s.NoError(err)
 	s.NotNil(task)
 	s.NotNil(task.HistoryTaskV2Attributes)
-	s.Equal(replicator.ReplicationTaskTypeHistoryV2, task.GetTaskType())
+	s.Equal(types.ReplicationTaskTypeHistoryV2, task.GetTaskType())
 }
 
 func (s *taskAckManagerSuite) TestToReplicationTask_FailoverMarker() {
@@ -762,7 +760,7 @@ func (s *taskAckManagerSuite) TestToReplicationTask_FailoverMarker() {
 	task, err := s.ackManager.toReplicationTask(context.Background(), taskInfo)
 	s.NoError(err)
 	s.NotNil(task)
-	s.Equal(replicator.ReplicationTaskTypeFailoverMarker, task.GetTaskType())
+	s.Equal(types.ReplicationTaskTypeFailoverMarker, task.GetTaskType())
 }
 
 func (s *taskAckManagerSuite) TestToReplicationTask_SyncActivity() {
@@ -831,15 +829,15 @@ func (s *taskAckManagerSuite) TestToReplicationTask_SyncActivity() {
 	s.NoError(err)
 	s.NotNil(task)
 	s.NotNil(task.SyncActivityTaskAttributes)
-	s.Equal(replicator.ReplicationTaskTypeSyncActivity, task.GetTaskType())
-	s.Equal(activityInfo.DomainID, task.GetSyncActivityTaskAttributes().GetDomainId())
-	s.Equal(activityInfo.ScheduleID, task.GetSyncActivityTaskAttributes().GetScheduledId())
+	s.Equal(types.ReplicationTaskTypeSyncActivity, task.GetTaskType())
+	s.Equal(activityInfo.DomainID, task.GetSyncActivityTaskAttributes().GetDomainID())
+	s.Equal(activityInfo.ScheduleID, task.GetSyncActivityTaskAttributes().GetScheduledID())
 	s.Equal(activityInfo.ScheduledTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetScheduledTime())
-	s.Equal(activityInfo.StartedID, task.GetSyncActivityTaskAttributes().GetStartedId())
+	s.Equal(activityInfo.StartedID, task.GetSyncActivityTaskAttributes().GetStartedID())
 	s.Equal(activityInfo.StartedTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetStartedTime())
 	s.Equal(activityInfo.LastHeartBeatUpdatedTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetLastHeartbeatTime())
 	s.Equal(activityInfo.Version, task.GetSyncActivityTaskAttributes().GetVersion())
-	s.Equal(thrift.FromVersionHistory(versionHistories.Histories[0].ToInternalType()), task.GetSyncActivityTaskAttributes().GetVersionHistory())
+	s.Equal(versionHistories.Histories[0].ToInternalType(), task.GetSyncActivityTaskAttributes().GetVersionHistory())
 }
 
 func (s *taskAckManagerSuite) TestToReplicationTask_History() {
@@ -912,7 +910,7 @@ func (s *taskAckManagerSuite) TestToReplicationTask_History() {
 	s.NoError(err)
 	s.NotNil(task)
 	s.NotNil(task.HistoryTaskV2Attributes)
-	s.Equal(replicator.ReplicationTaskTypeHistoryV2, task.GetTaskType())
+	s.Equal(types.ReplicationTaskTypeHistoryV2, task.GetTaskType())
 }
 
 func (s *taskAckManagerSuite) TestGetTasks() {

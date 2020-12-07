@@ -33,7 +33,6 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 
 	h "github.com/uber/cadence/.gen/go/history"
-	r "github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
@@ -42,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/execution"
@@ -90,13 +90,13 @@ type (
 		lastRetrievedMessageID int64
 
 		requestChan   chan<- *request
-		syncShardChan chan *r.SyncShardStatus
+		syncShardChan chan *types.SyncShardStatus
 		done          chan struct{}
 	}
 
 	request struct {
-		token    *r.ReplicationToken
-		respChan chan<- *r.ReplicationMessages
+		token    *types.ReplicationToken
+		respChan chan<- *types.ReplicationMessages
 	}
 )
 
@@ -145,7 +145,7 @@ func NewTaskProcessor(
 		dlqRetryPolicy:         dlqRetryPolicy,
 		noTaskRetrier:          noTaskRetrier,
 		requestChan:            taskFetcher.GetRequestChan(),
-		syncShardChan:          make(chan *r.SyncShardStatus, 1),
+		syncShardChan:          make(chan *types.SyncShardStatus, 1),
 		done:                   make(chan struct{}),
 		lastProcessedMessageID: common.EmptyMessageID,
 		lastRetrievedMessageID: common.EmptyMessageID,
@@ -200,7 +200,7 @@ Loop:
 			}
 
 			p.logger.Debug("Got fetch replication messages response.",
-				tag.ReadLevel(response.GetLastRetrievedMessageId()),
+				tag.ReadLevel(response.GetLastRetrievedMessageID()),
 				tag.Bool(response.GetHasMore()),
 				tag.Counter(len(response.GetReplicationTasks())),
 			)
@@ -271,21 +271,21 @@ func (p *taskProcessorImpl) cleanupAckedReplicationTasks() error {
 	)
 }
 
-func (p *taskProcessorImpl) sendFetchMessageRequest() <-chan *r.ReplicationMessages {
-	respChan := make(chan *r.ReplicationMessages, 1)
-	// TODO: when we support prefetching, LastRetrievedMessageId can be different than LastProcessedMessageId
+func (p *taskProcessorImpl) sendFetchMessageRequest() <-chan *types.ReplicationMessages {
+	respChan := make(chan *types.ReplicationMessages, 1)
+	// TODO: when we support prefetching, LastRetrievedMessageID can be different than LastProcessedMessageID
 	p.requestChan <- &request{
-		token: &r.ReplicationToken{
+		token: &types.ReplicationToken{
 			ShardID:                common.Int32Ptr(int32(p.shard.GetShardID())),
-			LastRetrievedMessageId: common.Int64Ptr(p.lastRetrievedMessageID),
-			LastProcessedMessageId: common.Int64Ptr(p.lastProcessedMessageID),
+			LastRetrievedMessageID: common.Int64Ptr(p.lastRetrievedMessageID),
+			LastProcessedMessageID: common.Int64Ptr(p.lastProcessedMessageID),
 		},
 		respChan: respChan,
 	}
 	return respChan
 }
 
-func (p *taskProcessorImpl) processResponse(response *r.ReplicationMessages) {
+func (p *taskProcessorImpl) processResponse(response *types.ReplicationMessages) {
 
 	select {
 	case p.syncShardChan <- response.GetSyncShardStatus():
@@ -316,8 +316,8 @@ func (p *taskProcessorImpl) processResponse(response *r.ReplicationMessages) {
 		scope.RecordTimer(metrics.ReplicationTasksAppliedLatency, time.Now().Sub(batchRequestStartTime))
 	}
 
-	p.lastProcessedMessageID = response.GetLastRetrievedMessageId()
-	p.lastRetrievedMessageID = response.GetLastRetrievedMessageId()
+	p.lastProcessedMessageID = response.GetLastRetrievedMessageID()
+	p.lastRetrievedMessageID = response.GetLastRetrievedMessageID()
 	scope.UpdateGauge(metrics.LastRetrievedMessageID, float64(p.lastRetrievedMessageID))
 	p.noTaskRetrier.Reset()
 }
@@ -328,7 +328,7 @@ func (p *taskProcessorImpl) syncShardStatusLoop() {
 		p.config.ShardSyncMinInterval(),
 		p.config.ShardSyncTimerJitterCoefficient(),
 	))
-	var syncShardTask *r.SyncShardStatus
+	var syncShardTask *types.SyncShardStatus
 	for {
 		select {
 		case syncShardRequest := <-p.syncShardChan:
@@ -352,7 +352,7 @@ func (p *taskProcessorImpl) syncShardStatusLoop() {
 }
 
 func (p *taskProcessorImpl) handleSyncShardStatus(
-	status *r.SyncShardStatus,
+	status *types.SyncShardStatus,
 ) error {
 
 	if status == nil ||
@@ -370,7 +370,7 @@ func (p *taskProcessorImpl) handleSyncShardStatus(
 	})
 }
 
-func (p *taskProcessorImpl) processSingleTask(replicationTask *r.ReplicationTask) error {
+func (p *taskProcessorImpl) processSingleTask(replicationTask *types.ReplicationTask) error {
 	retryTransientError := func() error {
 		return backoff.Retry(
 			func() error {
@@ -415,14 +415,14 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *r.ReplicationTask
 	default:
 		p.logger.Error(
 			"Failed to apply replication task after retry. Putting task into DLQ.",
-			tag.TaskID(replicationTask.GetSourceTaskId()),
+			tag.TaskID(replicationTask.GetSourceTaskID()),
 			tag.Error(err),
 		)
 		return p.putReplicationTaskToDLQ(replicationTask)
 	}
 }
 
-func (p *taskProcessorImpl) processTaskOnce(replicationTask *r.ReplicationTask) error {
+func (p *taskProcessorImpl) processTaskOnce(replicationTask *types.ReplicationTask) error {
 	ts := p.shard.GetTimeSource()
 	startTime := ts.Now()
 	scope, err := p.taskExecutor.execute(
@@ -448,7 +448,7 @@ func (p *taskProcessorImpl) processTaskOnce(replicationTask *r.ReplicationTask) 
 	return err
 }
 
-func (p *taskProcessorImpl) putReplicationTaskToDLQ(replicationTask *r.ReplicationTask) error {
+func (p *taskProcessorImpl) putReplicationTaskToDLQ(replicationTask *types.ReplicationTask) error {
 	request, err := p.generateDLQRequest(replicationTask)
 	if err != nil {
 		p.logger.Error("Failed to generate DLQ replication task.", tag.Error(err))
@@ -483,26 +483,26 @@ func (p *taskProcessorImpl) putReplicationTaskToDLQ(replicationTask *r.Replicati
 }
 
 func (p *taskProcessorImpl) generateDLQRequest(
-	replicationTask *r.ReplicationTask,
+	replicationTask *types.ReplicationTask,
 ) (*persistence.PutReplicationTaskToDLQRequest, error) {
 	switch *replicationTask.TaskType {
-	case r.ReplicationTaskTypeSyncActivity:
+	case types.ReplicationTaskTypeSyncActivity:
 		taskAttributes := replicationTask.GetSyncActivityTaskAttributes()
 		return &persistence.PutReplicationTaskToDLQRequest{
 			SourceClusterName: p.sourceCluster,
 			TaskInfo: &persistence.ReplicationTaskInfo{
-				DomainID:    taskAttributes.GetDomainId(),
-				WorkflowID:  taskAttributes.GetWorkflowId(),
-				RunID:       taskAttributes.GetRunId(),
-				TaskID:      replicationTask.GetSourceTaskId(),
+				DomainID:    taskAttributes.GetDomainID(),
+				WorkflowID:  taskAttributes.GetWorkflowID(),
+				RunID:       taskAttributes.GetRunID(),
+				TaskID:      replicationTask.GetSourceTaskID(),
 				TaskType:    persistence.ReplicationTaskTypeSyncActivity,
-				ScheduledID: taskAttributes.GetScheduledId(),
+				ScheduledID: taskAttributes.GetScheduledID(),
 			},
 		}, nil
 
-	case r.ReplicationTaskTypeHistoryV2:
+	case types.ReplicationTaskTypeHistoryV2:
 		taskAttributes := replicationTask.GetHistoryTaskV2Attributes()
-		eventsDataBlob := persistence.NewDataBlobFromThrift(taskAttributes.GetEvents())
+		eventsDataBlob := persistence.NewDataBlobFromThrift(thrift.FromDataBlob(taskAttributes.GetEvents()))
 		events, err := p.historySerializer.DeserializeBatchEvents(eventsDataBlob)
 		if err != nil {
 			return nil, err
@@ -516,10 +516,10 @@ func (p *taskProcessorImpl) generateDLQRequest(
 		return &persistence.PutReplicationTaskToDLQRequest{
 			SourceClusterName: p.sourceCluster,
 			TaskInfo: &persistence.ReplicationTaskInfo{
-				DomainID:     taskAttributes.GetDomainId(),
-				WorkflowID:   taskAttributes.GetWorkflowId(),
-				RunID:        taskAttributes.GetRunId(),
-				TaskID:       replicationTask.GetSourceTaskId(),
+				DomainID:     taskAttributes.GetDomainID(),
+				WorkflowID:   taskAttributes.GetWorkflowID(),
+				RunID:        taskAttributes.GetRunID(),
+				TaskID:       replicationTask.GetSourceTaskID(),
 				TaskType:     persistence.ReplicationTaskTypeHistory,
 				FirstEventID: events[0].GetEventID(),
 				NextEventID:  events[len(events)-1].GetEventID() + 1,

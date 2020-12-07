@@ -3069,11 +3069,11 @@ func (e *historyEngineImpl) GetReplicationMessages(
 	}
 
 	//Set cluster status for sync shard info
-	replicationMessages.SyncShardStatus = &r.SyncShardStatus{
+	replicationMessages.SyncShardStatus = &types.SyncShardStatus{
 		Timestamp: common.Int64Ptr(e.timeSource.Now().UnixNano()),
 	}
 	e.logger.Debug("Successfully fetched replication messages.", tag.Counter(len(replicationMessages.ReplicationTasks)))
-	return replicationMessages, nil
+	return thrift.FromReplicationMessages(replicationMessages), nil
 }
 
 func (e *historyEngineImpl) GetDLQReplicationMessages(
@@ -3085,9 +3085,9 @@ func (e *historyEngineImpl) GetDLQReplicationMessages(
 	sw := e.metricsClient.StartTimer(scope, metrics.GetDLQReplicationMessagesLatency)
 	defer sw.Stop()
 
-	tasks := make([]*r.ReplicationTask, 0, len(taskInfos))
+	tasks := make([]*types.ReplicationTask, 0, len(taskInfos))
 	for _, taskInfo := range taskInfos {
-		task, err := e.replicationAckManager.GetTask(ctx, taskInfo)
+		task, err := e.replicationAckManager.GetTask(ctx, thrift.ToReplicationTaskInfo(taskInfo))
 		if err != nil {
 			e.logger.Error("Failed to fetch DLQ replication messages.", tag.Error(err))
 			return nil, err
@@ -3097,7 +3097,7 @@ func (e *historyEngineImpl) GetDLQReplicationMessages(
 		}
 	}
 
-	return tasks, nil
+	return thrift.FromReplicationTaskArray(tasks), nil
 }
 
 func (e *historyEngineImpl) ReapplyEvents(
@@ -3258,7 +3258,7 @@ func (e *historyEngineImpl) ReadDLQMessages(
 	}
 	return &r.ReadDLQMessagesResponse{
 		Type:             request.GetType().Ptr(),
-		ReplicationTasks: tasks,
+		ReplicationTasks: thrift.FromReplicationTaskArray(tasks),
 		NextPageToken:    token,
 	}, nil
 }
