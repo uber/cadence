@@ -44,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/events"
@@ -155,9 +156,9 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 
 	domainID := constants.TestDomainID
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	tl := "testTaskList"
 	stickyTl := "stickyTaskList"
@@ -166,7 +167,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
-		we.GetRunId(),
+		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
 	executionInfo := msBuilder.GetExecutionInfo()
@@ -188,7 +189,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 
 	request := h.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
-		WorkflowExecution: &we,
+		WorkflowExecution: thrift.FromWorkflowExecution(&we),
 		ScheduleId:        common.Int64Ptr(2),
 		TaskId:            common.Int64Ptr(100),
 		RequestId:         common.StringPtr("reqId"),

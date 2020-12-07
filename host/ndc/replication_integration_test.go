@@ -28,10 +28,10 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	test "github.com/uber/cadence/common/testing"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
@@ -45,14 +45,14 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageApplication() {
 	workflowType := "event-generator-workflow-type"
 	tasklist := "event-generator-taskList"
 
-	var historyBatch []*shared.History
+	var historyBatch []*types.History
 	s.generator = test.InitializeHistoryEventGenerator(s.domainName, 1)
 
 	for s.generator.HasNextVertex() {
 		events := s.generator.GetNextVertices()
-		historyEvents := &shared.History{}
+		historyEvents := &types.History{}
 		for _, event := range events {
-			historyEvents.Events = append(historyEvents.Events, event.GetData().(*shared.HistoryEvent))
+			historyEvents.Events = append(historyEvents.Events, event.GetData().(*types.HistoryEvent))
 		}
 		historyBatch = append(historyBatch, historyEvents)
 	}
@@ -88,13 +88,13 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 	workflowType := "event-generator-workflow-type"
 	tasklist := "event-generator-taskList"
 
-	var historyBatch []*shared.History
+	var historyBatch []*types.History
 	s.generator = test.InitializeHistoryEventGenerator(s.domainName, 1)
 
 	events := s.generator.GetNextVertices()
-	historyEvents := &shared.History{}
+	historyEvents := &types.History{}
 	for _, event := range events {
-		historyEvents.Events = append(historyEvents.Events, event.GetData().(*shared.HistoryEvent))
+		historyEvents.Events = append(historyEvents.Events, event.GetData().(*types.HistoryEvent))
 	}
 	historyBatch = append(historyBatch, historyEvents)
 
@@ -118,7 +118,7 @@ func (s *nDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 
 	expectedDLQMsgs := map[int64]bool{}
 	for _, batch := range historyBatch {
-		firstEventID := batch.Events[0].GetEventId()
+		firstEventID := batch.Events[0].GetEventID()
 		expectedDLQMsgs[firstEventID] = true
 	}
 

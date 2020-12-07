@@ -106,7 +106,8 @@ func (v *{{$.Prefix}}{{internal $.Name}}) Get{{internal .Name}}() (o {{if .Type.
 	if v != nil{{if .Type.IsMap | or .Type.IsArray | or .Type.IsPointer}} && v.{{internal .Name}} != nil{{end}} {
 		return {{if .Type.IsPointer | and (or .Type.IsPrimitive .Type.IsEnum)}}*{{end}}v.{{internal .Name}}
 	}
-	return
+	{{if and (eq $.Name "RegisterDomainRequest") (eq .Name "EmitMetric") }}o = true
+{{end}}return
 }
 {{end}}
 `))
@@ -251,6 +252,32 @@ func To{{internal .Name}}(t {{if .IsPointer}}*{{end}}{{.ThriftPackage}}.{{.Name}
 		case {{$.ThriftPackage}}.{{.}}: {{if $.IsPointer}}v := types.{{internal .}}; return &v{{else}}return types.{{internal .}}{{end}}{{end}}
 	}
 	panic("unexpected enum value")
+}
+`))
+
+var sharedMapperAdditions = template.Must(template.New("shared mapper additions").Parse(`
+// FromHistoryArray converts internal History array to thrift
+func FromHistoryArray(t []*types.History) []*shared.History {
+	if t == nil {
+		return nil
+	}
+	v := make([]*shared.History, len(t))
+	for i := range t {
+		v[i] = FromHistory(t[i])
+	}
+	return v
+}
+
+// ToHistoryArray converts thrift History array to internal
+func ToHistoryArray(t []*shared.History) []*types.History {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.History, len(t))
+	for i := range t {
+		v[i] = ToHistory(t[i])
+	}
+	return v
 }
 `))
 
@@ -466,9 +493,10 @@ func main() {
 
 	packages := []Package{
 		{
-			ThriftPackage: "github.com/uber/cadence/.gen/go/shared",
-			TypesFile:     "common/types/shared.go",
-			MapperFile:    "common/types/mapper/thrift/shared.go",
+			ThriftPackage:   "github.com/uber/cadence/.gen/go/shared",
+			TypesFile:       "common/types/shared.go",
+			MapperFile:      "common/types/mapper/thrift/shared.go",
+			MapperAdditions: sharedMapperAdditions,
 		},
 		{
 			ThriftPackage: "github.com/uber/cadence/.gen/go/replicator",

@@ -31,7 +31,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
@@ -103,9 +102,9 @@ func (s *workflowResetterSuite) SetupTest() {
 	s.baseRunID = uuid.New()
 	s.newContext = execution.NewContext(
 		s.domainID,
-		shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(s.workflowID),
-			RunId:      common.StringPtr(s.newRunID),
+		types.WorkflowExecution{
+			WorkflowID: common.StringPtr(s.workflowID),
+			RunID:      common.StringPtr(s.newRunID),
 		},
 		s.mockShard,
 		nil,

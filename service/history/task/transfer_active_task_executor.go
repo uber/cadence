@@ -861,9 +861,9 @@ func (t *transferActiveTaskExecutor) processResetWorkflow(
 		baseMutableState = currentMutableState
 		baseRelease = currentRelease
 	} else {
-		baseExecution := workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(task.WorkflowID),
-			RunId:      common.StringPtr(resetPoint.GetRunId()),
+		baseExecution := types.WorkflowExecution{
+			WorkflowID: common.StringPtr(task.WorkflowID),
+			RunID:      common.StringPtr(resetPoint.GetRunId()),
 		}
 		baseContext, baseRelease, err = t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 			task.DomainID,
@@ -923,9 +923,9 @@ func (t *transferActiveTaskExecutor) recordChildExecutionStarted(
 
 			_, err := mutableState.AddChildWorkflowExecutionStartedEvent(
 				domain,
-				&workflow.WorkflowExecution{
-					WorkflowId: common.StringPtr(task.TargetWorkflowID),
-					RunId:      common.StringPtr(runID),
+				&types.WorkflowExecution{
+					WorkflowID: common.StringPtr(task.TargetWorkflowID),
+					RunID:      common.StringPtr(runID),
 				},
 				initiatedAttributes.WorkflowType,
 				initiatedEventID,

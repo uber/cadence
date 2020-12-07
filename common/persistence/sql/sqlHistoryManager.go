@@ -73,8 +73,8 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 	}
 
 	nodeRow := &sqlplugin.HistoryNodeRow{
-		TreeID:       sqlplugin.MustParseUUID(branchInfo.GetTreeID()),
-		BranchID:     sqlplugin.MustParseUUID(branchInfo.GetBranchID()),
+		TreeID:       serialization.MustParseUUID(branchInfo.GetTreeID()),
+		BranchID:     serialization.MustParseUUID(branchInfo.GetBranchID()),
 		NodeID:       request.NodeID,
 		TxnID:        &request.TransactionID,
 		Data:         request.Events.Data,
@@ -101,8 +101,8 @@ func (m *sqlHistoryV2Manager) AppendHistoryNodes(
 
 		treeRow := &sqlplugin.HistoryTreeRow{
 			ShardID:      request.ShardID,
-			TreeID:       sqlplugin.MustParseUUID(branchInfo.GetTreeID()),
-			BranchID:     sqlplugin.MustParseUUID(branchInfo.GetBranchID()),
+			TreeID:       serialization.MustParseUUID(branchInfo.GetTreeID()),
+			BranchID:     serialization.MustParseUUID(branchInfo.GetBranchID()),
 			Data:         blob.Data,
 			DataEncoding: string(blob.Encoding),
 		}
@@ -169,8 +169,8 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 	}
 
 	filter := &sqlplugin.HistoryNodeFilter{
-		TreeID:    sqlplugin.MustParseUUID(request.TreeID),
-		BranchID:  sqlplugin.MustParseUUID(request.BranchID),
+		TreeID:    serialization.MustParseUUID(request.TreeID),
+		BranchID:  serialization.MustParseUUID(request.BranchID),
 		MinNodeID: &minNodeID,
 		MaxNodeID: &maxNodeID,
 		PageSize:  &request.PageSize,
@@ -342,8 +342,8 @@ func (m *sqlHistoryV2Manager) ForkHistoryBranch(
 
 	row := &sqlplugin.HistoryTreeRow{
 		ShardID:      request.ShardID,
-		TreeID:       sqlplugin.MustParseUUID(treeID),
-		BranchID:     sqlplugin.MustParseUUID(request.NewBranchID),
+		TreeID:       serialization.MustParseUUID(treeID),
+		BranchID:     serialization.MustParseUUID(request.NewBranchID),
 		Data:         blob.Data,
 		DataEncoding: string(blob.Encoding),
 	}
@@ -396,9 +396,9 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 	}
 
 	return m.txExecute(ctx, "DeleteHistoryBranch", func(tx sqlplugin.Tx) error {
-		branchID := sqlplugin.MustParseUUID(*branch.BranchID)
+		branchID := serialization.MustParseUUID(*branch.BranchID)
 		treeFilter := &sqlplugin.HistoryTreeFilter{
-			TreeID:   sqlplugin.MustParseUUID(treeID),
+			TreeID:   serialization.MustParseUUID(treeID),
 			BranchID: &branchID,
 			ShardID:  request.ShardID,
 		}
@@ -413,8 +413,8 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 			br := brsToDelete[i]
 			maxReferredEndNodeID, ok := validBRsMaxEndNode[*br.BranchID]
 			nodeFilter := &sqlplugin.HistoryNodeFilter{
-				TreeID:   sqlplugin.MustParseUUID(treeID),
-				BranchID: sqlplugin.MustParseUUID(*br.BranchID),
+				TreeID:   serialization.MustParseUUID(treeID),
+				BranchID: serialization.MustParseUUID(*br.BranchID),
 				ShardID:  request.ShardID,
 			}
 
@@ -454,7 +454,7 @@ func (m *sqlHistoryV2Manager) GetHistoryTree(
 	request *p.InternalGetHistoryTreeRequest,
 ) (*p.InternalGetHistoryTreeResponse, error) {
 
-	treeID := sqlplugin.MustParseUUID(request.TreeID)
+	treeID := serialization.MustParseUUID(request.TreeID)
 	branches := make([]*types.HistoryBranch, 0)
 
 	treeFilter := &sqlplugin.HistoryTreeFilter{

@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
@@ -149,9 +150,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_No
 	cronSchedule := ""
 	version := int64(1)
 	requestID := uuid.New()
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	executionInfo := &persistence.WorkflowExecutionInfo{
@@ -196,9 +197,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_Wi
 	cronSchedule := "* * * * *"
 	version := int64(1)
 	requestID := uuid.New()
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	executionInfo := &persistence.WorkflowExecutionInfo{
@@ -250,9 +251,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_Wi
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTimedOut() {
 	version := int64(1)
 	requestID := uuid.New()
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -280,9 +281,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTimedOut()
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTerminated() {
 	version := int64(1)
 	requestID := uuid.New()
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -309,9 +310,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTerminated
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionFailed() {
 	version := int64(1)
 	requestID := uuid.New()
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -339,9 +340,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionFailed() {
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCompleted() {
 	version := int64(1)
 	requestID := uuid.New()
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -369,9 +370,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCompleted(
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCanceled() {
 	version := int64(1)
 	requestID := uuid.New()
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -399,9 +400,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCanceled()
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedAsNew() {
 	version := int64(1)
 	requestID := uuid.New()
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	parentWorkflowID := "some random parent workflow ID"
 	parentRunID := uuid.New()
@@ -515,9 +516,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedAsNew_EmptyNewRunHistory() {
 	version := int64(1)
 	requestID := uuid.New()
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -557,9 +558,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionSignaled()
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -584,9 +585,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCancelRequ
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	now := time.Now()
 	evenType := shared.EventTypeWorkflowExecutionCancelRequested
@@ -611,9 +612,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeUpsertWorkflowSearchAttribu
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -641,9 +642,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeMarkerRecorded() {
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -669,9 +670,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskScheduled() {
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -720,9 +721,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskStarted() {
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -769,9 +770,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskTimedOut() {
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -816,9 +817,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskFailed() {
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -862,9 +863,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskCompleted() {
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -896,9 +897,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerStarted() {
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -937,9 +938,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerFired() {
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -967,9 +968,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeCancelTimerFailed() {
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -994,9 +995,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerCanceled() {
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1026,9 +1027,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskScheduled() {
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1085,9 +1086,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskStarted() {
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1128,9 +1129,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskTimedOut() {
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1159,9 +1160,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskFailed() {
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1189,9 +1190,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCompleted() {
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1219,9 +1220,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCancelRequested
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1246,9 +1247,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelActivityTaskFa
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1272,9 +1273,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCanceled() {
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1304,9 +1305,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	targetWorkflowID := "some random target workflow ID"
 
@@ -1353,9 +1354,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1380,9 +1381,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionStart
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1407,9 +1408,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionTimed
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1434,9 +1435,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionTermi
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1461,9 +1462,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionFaile
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1488,9 +1489,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionCompl
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1517,9 +1518,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkfl
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	targetWorkflowID := "some random target workflow ID"
@@ -1571,9 +1572,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkfl
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1598,9 +1599,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeExternalWorkflowExecutionCa
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1625,9 +1626,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionCance
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1653,9 +1654,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionCance
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecutionInitiated() {
 	version := int64(1)
 	requestID := uuid.New()
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 	targetWorkflowID := "some random target workflow ID"
 	targetRunID := uuid.New()
@@ -1712,9 +1713,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecu
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()
@@ -1739,9 +1740,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeExternalWorkflowExecutionSi
 	version := int64(1)
 	requestID := uuid.New()
 
-	workflowExecution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(constants.TestRunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(constants.TestRunID),
 	}
 
 	now := time.Now()

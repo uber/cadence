@@ -198,9 +198,9 @@ func (s *transferActiveTaskExecutorSuite) TearDownTest() {
 
 func (s *transferActiveTaskExecutorSuite) TestProcessActivityTask_Success() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -209,7 +209,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessActivityTask_Success() {
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -240,8 +240,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessActivityTask_Success() {
 		Version:        s.version,
 		DomainID:       s.domainID,
 		TargetDomainID: constants.TestTargetDomainID,
-		WorkflowID:     workflowExecution.GetWorkflowId(),
-		RunID:          workflowExecution.GetRunId(),
+		WorkflowID:     workflowExecution.GetWorkflowID(),
+		RunID:          workflowExecution.GetRunID(),
 		TaskID:         taskID,
 		TaskList:       taskListName,
 		TaskType:       persistence.TransferTaskTypeActivityTask,
@@ -258,9 +258,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessActivityTask_Success() {
 
 func (s *transferActiveTaskExecutorSuite) TestProcessActivityTask_Duplication() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -269,7 +269,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessActivityTask_Duplication() 
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -300,8 +300,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessActivityTask_Duplication() 
 		Version:        s.version,
 		DomainID:       s.domainID,
 		TargetDomainID: s.targetDomainID,
-		WorkflowID:     workflowExecution.GetWorkflowId(),
-		RunID:          workflowExecution.GetRunId(),
+		WorkflowID:     workflowExecution.GetWorkflowID(),
+		RunID:          workflowExecution.GetRunID(),
 		TaskID:         taskID,
 		TaskList:       taskListName,
 		TaskType:       persistence.TransferTaskTypeActivityTask,
@@ -322,9 +322,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessActivityTask_Duplication() 
 
 func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_FirstDecision() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -333,7 +333,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_FirstDecision(
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -356,8 +356,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_FirstDecision(
 	transferTask := &persistence.TransferTaskInfo{
 		Version:    s.version,
 		DomainID:   s.domainID,
-		WorkflowID: workflowExecution.GetWorkflowId(),
-		RunID:      workflowExecution.GetRunId(),
+		WorkflowID: workflowExecution.GetWorkflowID(),
+		RunID:      workflowExecution.GetRunID(),
 		TaskID:     taskID,
 		TaskList:   taskListName,
 		TaskType:   persistence.TransferTaskTypeDecisionTask,
@@ -374,9 +374,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_FirstDecision(
 
 func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_NonFirstDecision() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -385,7 +385,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_NonFirstDecisi
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -415,8 +415,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_NonFirstDecisi
 	transferTask := &persistence.TransferTaskInfo{
 		Version:    s.version,
 		DomainID:   s.domainID,
-		WorkflowID: workflowExecution.GetWorkflowId(),
-		RunID:      workflowExecution.GetRunId(),
+		WorkflowID: workflowExecution.GetWorkflowID(),
+		RunID:      workflowExecution.GetRunID(),
 		TaskID:     taskID,
 		TaskList:   taskListName,
 		TaskType:   persistence.TransferTaskTypeDecisionTask,
@@ -433,9 +433,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_NonFirstDecisi
 
 func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_Sticky_NonFirstDecision() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -446,7 +446,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_Sticky_NonFirs
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -480,8 +480,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_Sticky_NonFirs
 	transferTask := &persistence.TransferTaskInfo{
 		Version:    s.version,
 		DomainID:   s.domainID,
-		WorkflowID: workflowExecution.GetWorkflowId(),
-		RunID:      workflowExecution.GetRunId(),
+		WorkflowID: workflowExecution.GetWorkflowID(),
+		RunID:      workflowExecution.GetRunID(),
 		TaskID:     taskID,
 		TaskList:   stickyTaskListName,
 		TaskType:   persistence.TransferTaskTypeDecisionTask,
@@ -498,9 +498,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_Sticky_NonFirs
 
 func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_DecisionNotSticky_MutableStateSticky() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -511,7 +511,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_DecisionNotSti
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -545,8 +545,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_DecisionNotSti
 	transferTask := &persistence.TransferTaskInfo{
 		Version:    s.version,
 		DomainID:   s.domainID,
-		WorkflowID: workflowExecution.GetWorkflowId(),
-		RunID:      workflowExecution.GetRunId(),
+		WorkflowID: workflowExecution.GetWorkflowID(),
+		RunID:      workflowExecution.GetRunID(),
 		TaskID:     taskID,
 		TaskList:   taskListName,
 		TaskType:   persistence.TransferTaskTypeDecisionTask,
@@ -563,9 +563,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_DecisionNotSti
 
 func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_Duplication() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -574,7 +574,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_Duplication() 
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -600,8 +600,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_Duplication() 
 	transferTask := &persistence.TransferTaskInfo{
 		Version:    s.version,
 		DomainID:   s.domainID,
-		WorkflowID: workflowExecution.GetWorkflowId(),
-		RunID:      workflowExecution.GetRunId(),
+		WorkflowID: workflowExecution.GetWorkflowID(),
+		RunID:      workflowExecution.GetRunID(),
 		TaskID:     taskID,
 		TaskList:   taskListName,
 		TaskType:   persistence.TransferTaskTypeDecisionTask,
@@ -617,9 +617,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_Duplication() 
 
 func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -627,16 +627,16 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent() 
 	parentDomainID := "some random parent domain ID"
 	parentInitiatedID := int64(3222)
 	parentDomainName := "some random parent domain Name"
-	parentExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random parent workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	parentExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random parent workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 
 	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -652,7 +652,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent() 
 			ParentExecutionInfo: &history.ParentExecutionInfo{
 				DomainUUID:  common.StringPtr(parentDomainID),
 				Domain:      common.StringPtr(parentDomainName),
-				Execution:   &parentExecution,
+				Execution:   thrift.FromWorkflowExecution(&parentExecution),
 				InitiatedId: common.Int64Ptr(parentInitiatedID),
 			},
 		},
@@ -670,8 +670,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent() 
 	transferTask := &persistence.TransferTaskInfo{
 		Version:    s.version,
 		DomainID:   s.domainID,
-		WorkflowID: workflowExecution.GetWorkflowId(),
-		RunID:      workflowExecution.GetRunId(),
+		WorkflowID: workflowExecution.GetWorkflowID(),
+		RunID:      workflowExecution.GetRunID(),
 		TaskID:     taskID,
 		TaskList:   taskListName,
 		TaskType:   persistence.TransferTaskTypeCloseExecution,
@@ -682,9 +682,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent() 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockHistoryClient.EXPECT().RecordChildExecutionCompleted(gomock.Any(), &types.RecordChildExecutionCompletedRequest{
 		DomainUUID:         common.StringPtr(parentDomainID),
-		WorkflowExecution:  thrift.ToWorkflowExecution(&parentExecution),
+		WorkflowExecution:  &parentExecution,
 		InitiatedID:        common.Int64Ptr(parentInitiatedID),
-		CompletedExecution: thrift.ToWorkflowExecution(&workflowExecution),
+		CompletedExecution: &workflowExecution,
 		CompletionEvent:    thrift.ToHistoryEvent(event),
 	}).Return(nil).AnyTimes()
 	s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything, mock.Anything).Return(nil).Once()
@@ -696,9 +696,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent() 
 
 func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -707,7 +707,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent() {
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -735,8 +735,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent() {
 	transferTask := &persistence.TransferTaskInfo{
 		Version:    s.version,
 		DomainID:   s.domainID,
-		WorkflowID: workflowExecution.GetWorkflowId(),
-		RunID:      workflowExecution.GetRunId(),
+		WorkflowID: workflowExecution.GetWorkflowID(),
+		RunID:      workflowExecution.GetRunID(),
 		TaskID:     taskID,
 		TaskList:   taskListName,
 		TaskType:   persistence.TransferTaskTypeCloseExecution,
@@ -755,9 +755,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent() {
 
 func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_HasFewChildren() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -766,7 +766,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -874,8 +874,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	transferTask := &persistence.TransferTaskInfo{
 		Version:    s.version,
 		DomainID:   s.domainID,
-		WorkflowID: workflowExecution.GetWorkflowId(),
-		RunID:      workflowExecution.GetRunId(),
+		WorkflowID: workflowExecution.GetWorkflowID(),
+		RunID:      workflowExecution.GetRunID(),
 		TaskID:     taskID,
 		TaskList:   taskListName,
 		TaskType:   persistence.TransferTaskTypeCloseExecution,
@@ -895,9 +895,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 
 func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_HasManyChildren() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -906,7 +906,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -972,8 +972,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	transferTask := &persistence.TransferTaskInfo{
 		Version:    s.version,
 		DomainID:   s.domainID,
-		WorkflowID: workflowExecution.GetWorkflowId(),
-		RunID:      workflowExecution.GetRunId(),
+		WorkflowID: workflowExecution.GetWorkflowID(),
+		RunID:      workflowExecution.GetRunID(),
 		TaskID:     taskID,
 		TaskList:   taskListName,
 		TaskType:   persistence.TransferTaskTypeCloseExecution,
@@ -992,9 +992,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 
 func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_HasManyAbandonedChildren() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1003,7 +1003,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -1069,8 +1069,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	transferTask := &persistence.TransferTaskInfo{
 		Version:    s.version,
 		DomainID:   s.domainID,
-		WorkflowID: workflowExecution.GetWorkflowId(),
-		RunID:      workflowExecution.GetRunId(),
+		WorkflowID: workflowExecution.GetWorkflowID(),
+		RunID:      workflowExecution.GetRunID(),
 		TaskID:     taskID,
 		TaskList:   taskListName,
 		TaskType:   persistence.TransferTaskTypeCloseExecution,
@@ -1088,23 +1088,23 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 
 func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_Success() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	targetExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random target workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	targetExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random target workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 
 	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -1127,16 +1127,16 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_Success() {
 	event = test.AddDecisionTaskCompletedEvent(mutableState, di.ScheduleID, di.StartedID, nil, "some random identity")
 
 	taskID := int64(59)
-	event, rci := test.AddRequestCancelInitiatedEvent(mutableState, event.GetEventId(), uuid.New(), constants.TestTargetDomainName, targetExecution.GetWorkflowId(), targetExecution.GetRunId())
+	event, rci := test.AddRequestCancelInitiatedEvent(mutableState, event.GetEventId(), uuid.New(), constants.TestTargetDomainName, targetExecution.GetWorkflowID(), targetExecution.GetRunID())
 
 	transferTask := &persistence.TransferTaskInfo{
 		Version:          s.version,
 		DomainID:         s.domainID,
-		WorkflowID:       workflowExecution.GetWorkflowId(),
-		RunID:            workflowExecution.GetRunId(),
+		WorkflowID:       workflowExecution.GetWorkflowID(),
+		RunID:            workflowExecution.GetRunID(),
 		TargetDomainID:   s.targetDomainID,
-		TargetWorkflowID: targetExecution.GetWorkflowId(),
-		TargetRunID:      targetExecution.GetRunId(),
+		TargetWorkflowID: targetExecution.GetWorkflowID(),
+		TargetRunID:      targetExecution.GetRunID(),
 		TaskID:           taskID,
 		TaskList:         taskListName,
 		TaskType:         persistence.TransferTaskTypeCancelExecution,
@@ -1156,23 +1156,23 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_Success() {
 
 func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_Failure() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	targetExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random target workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	targetExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random target workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 
 	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -1195,17 +1195,17 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_Failure() {
 	event = test.AddDecisionTaskCompletedEvent(mutableState, di.ScheduleID, di.StartedID, nil, "some random identity")
 
 	taskID := int64(59)
-	event, rci := test.AddRequestCancelInitiatedEvent(mutableState, event.GetEventId(), uuid.New(), constants.TestTargetDomainName, targetExecution.GetWorkflowId(), targetExecution.GetRunId())
+	event, rci := test.AddRequestCancelInitiatedEvent(mutableState, event.GetEventId(), uuid.New(), constants.TestTargetDomainName, targetExecution.GetWorkflowID(), targetExecution.GetRunID())
 	mutableState.FlushBufferedEvents()
 
 	transferTask := &persistence.TransferTaskInfo{
 		Version:          s.version,
 		DomainID:         s.domainID,
-		WorkflowID:       workflowExecution.GetWorkflowId(),
-		RunID:            workflowExecution.GetRunId(),
+		WorkflowID:       workflowExecution.GetWorkflowID(),
+		RunID:            workflowExecution.GetRunID(),
 		TargetDomainID:   s.targetDomainID,
-		TargetWorkflowID: targetExecution.GetWorkflowId(),
-		TargetRunID:      targetExecution.GetRunId(),
+		TargetWorkflowID: targetExecution.GetWorkflowID(),
+		TargetRunID:      targetExecution.GetRunID(),
 		TaskID:           taskID,
 		TaskList:         taskListName,
 		TaskType:         persistence.TransferTaskTypeCancelExecution,
@@ -1225,23 +1225,23 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_Failure() {
 
 func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_Duplication() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	targetExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random target workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	targetExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random target workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 
 	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -1264,23 +1264,23 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_Duplication
 	event = test.AddDecisionTaskCompletedEvent(mutableState, di.ScheduleID, di.StartedID, nil, "some random identity")
 
 	taskID := int64(59)
-	event, _ = test.AddRequestCancelInitiatedEvent(mutableState, event.GetEventId(), uuid.New(), constants.TestTargetDomainName, targetExecution.GetWorkflowId(), targetExecution.GetRunId())
+	event, _ = test.AddRequestCancelInitiatedEvent(mutableState, event.GetEventId(), uuid.New(), constants.TestTargetDomainName, targetExecution.GetWorkflowID(), targetExecution.GetRunID())
 
 	transferTask := &persistence.TransferTaskInfo{
 		Version:          s.version,
 		DomainID:         s.domainID,
-		WorkflowID:       workflowExecution.GetWorkflowId(),
-		RunID:            workflowExecution.GetRunId(),
+		WorkflowID:       workflowExecution.GetWorkflowID(),
+		RunID:            workflowExecution.GetRunID(),
 		TargetDomainID:   s.targetDomainID,
-		TargetWorkflowID: targetExecution.GetWorkflowId(),
-		TargetRunID:      targetExecution.GetRunId(),
+		TargetWorkflowID: targetExecution.GetWorkflowID(),
+		TargetRunID:      targetExecution.GetRunID(),
 		TaskID:           taskID,
 		TaskList:         taskListName,
 		TaskType:         persistence.TransferTaskTypeCancelExecution,
 		ScheduleID:       event.GetEventId(),
 	}
 
-	event = test.AddCancelRequestedEvent(mutableState, event.GetEventId(), constants.TestTargetDomainID, targetExecution.GetWorkflowId(), targetExecution.GetRunId())
+	event = test.AddCancelRequestedEvent(mutableState, event.GetEventId(), constants.TestTargetDomainID, targetExecution.GetWorkflowID(), targetExecution.GetRunID())
 	mutableState.FlushBufferedEvents()
 
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
@@ -1292,16 +1292,16 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_Duplication
 
 func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Success() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	targetExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random target workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	targetExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random target workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	signalName := "some random signal name"
 	signalInput := []byte("some random signal input")
@@ -1311,7 +1311,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Success() {
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -1335,16 +1335,16 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Success() {
 
 	taskID := int64(59)
 	event, si := test.AddRequestSignalInitiatedEvent(mutableState, event.GetEventId(), uuid.New(),
-		constants.TestTargetDomainName, targetExecution.GetWorkflowId(), targetExecution.GetRunId(), signalName, signalInput, signalControl)
+		constants.TestTargetDomainName, targetExecution.GetWorkflowID(), targetExecution.GetRunID(), signalName, signalInput, signalControl)
 
 	transferTask := &persistence.TransferTaskInfo{
 		Version:          s.version,
 		DomainID:         s.domainID,
-		WorkflowID:       workflowExecution.GetWorkflowId(),
-		RunID:            workflowExecution.GetRunId(),
+		WorkflowID:       workflowExecution.GetWorkflowID(),
+		RunID:            workflowExecution.GetRunID(),
 		TargetDomainID:   s.targetDomainID,
-		TargetWorkflowID: targetExecution.GetWorkflowId(),
-		TargetRunID:      targetExecution.GetRunId(),
+		TargetWorkflowID: targetExecution.GetWorkflowID(),
+		TargetRunID:      targetExecution.GetRunID(),
 		TaskID:           taskID,
 		TaskList:         taskListName,
 		TaskType:         persistence.TransferTaskTypeSignalExecution,
@@ -1373,16 +1373,16 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Success() {
 
 func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Failure() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	targetExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random target workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	targetExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random target workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	signalName := "some random signal name"
 	signalInput := []byte("some random signal input")
@@ -1392,7 +1392,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Failure() {
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -1416,16 +1416,16 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Failure() {
 
 	taskID := int64(59)
 	event, si := test.AddRequestSignalInitiatedEvent(mutableState, event.GetEventId(), uuid.New(),
-		constants.TestTargetDomainName, targetExecution.GetWorkflowId(), targetExecution.GetRunId(), signalName, signalInput, signalControl)
+		constants.TestTargetDomainName, targetExecution.GetWorkflowID(), targetExecution.GetRunID(), signalName, signalInput, signalControl)
 
 	transferTask := &persistence.TransferTaskInfo{
 		Version:          s.version,
 		DomainID:         s.domainID,
-		WorkflowID:       workflowExecution.GetWorkflowId(),
-		RunID:            workflowExecution.GetRunId(),
+		WorkflowID:       workflowExecution.GetWorkflowID(),
+		RunID:            workflowExecution.GetRunID(),
 		TargetDomainID:   s.targetDomainID,
-		TargetWorkflowID: targetExecution.GetWorkflowId(),
-		TargetRunID:      targetExecution.GetRunId(),
+		TargetWorkflowID: targetExecution.GetWorkflowID(),
+		TargetRunID:      targetExecution.GetRunID(),
 		TaskID:           taskID,
 		TaskList:         taskListName,
 		TaskType:         persistence.TransferTaskTypeSignalExecution,
@@ -1445,16 +1445,16 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Failure() {
 
 func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Duplication() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	targetExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random target workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	targetExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random target workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	signalName := "some random signal name"
 	signalInput := []byte("some random signal input")
@@ -1464,7 +1464,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Duplication
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -1488,23 +1488,23 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Duplication
 
 	taskID := int64(59)
 	event, _ = test.AddRequestSignalInitiatedEvent(mutableState, event.GetEventId(), uuid.New(),
-		constants.TestTargetDomainName, targetExecution.GetWorkflowId(), targetExecution.GetRunId(), signalName, signalInput, signalControl)
+		constants.TestTargetDomainName, targetExecution.GetWorkflowID(), targetExecution.GetRunID(), signalName, signalInput, signalControl)
 
 	transferTask := &persistence.TransferTaskInfo{
 		Version:          s.version,
 		DomainID:         s.domainID,
-		WorkflowID:       workflowExecution.GetWorkflowId(),
-		RunID:            workflowExecution.GetRunId(),
+		WorkflowID:       workflowExecution.GetWorkflowID(),
+		RunID:            workflowExecution.GetRunID(),
 		TargetDomainID:   s.targetDomainID,
-		TargetWorkflowID: targetExecution.GetWorkflowId(),
-		TargetRunID:      targetExecution.GetRunId(),
+		TargetWorkflowID: targetExecution.GetWorkflowID(),
+		TargetRunID:      targetExecution.GetRunID(),
 		TaskID:           taskID,
 		TaskList:         taskListName,
 		TaskType:         persistence.TransferTaskTypeSignalExecution,
 		ScheduleID:       event.GetEventId(),
 	}
 
-	event = test.AddSignaledEvent(mutableState, event.GetEventId(), constants.TestTargetDomainName, targetExecution.GetWorkflowId(), targetExecution.GetRunId(), nil)
+	event = test.AddSignaledEvent(mutableState, event.GetEventId(), constants.TestTargetDomainName, targetExecution.GetWorkflowID(), targetExecution.GetRunID(), nil)
 	mutableState.FlushBufferedEvents()
 
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, event.GetEventId(), event.GetVersion())
@@ -1516,9 +1516,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Duplication
 
 func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1532,7 +1532,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -1562,8 +1562,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 	transferTask := &persistence.TransferTaskInfo{
 		Version:          s.version,
 		DomainID:         s.domainID,
-		WorkflowID:       workflowExecution.GetWorkflowId(),
-		RunID:            workflowExecution.GetRunId(),
+		WorkflowID:       workflowExecution.GetWorkflowID(),
+		RunID:            workflowExecution.GetRunID(),
 		TargetDomainID:   constants.TestChildDomainID,
 		TargetWorkflowID: childWorkflowID,
 		TargetRunID:      "",
@@ -1601,9 +1601,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 
 func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_WithRetry_Success() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1617,7 +1617,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_WithRet
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -1655,8 +1655,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_WithRet
 	transferTask := &persistence.TransferTaskInfo{
 		Version:          s.version,
 		DomainID:         s.domainID,
-		WorkflowID:       workflowExecution.GetWorkflowId(),
-		RunID:            workflowExecution.GetRunId(),
+		WorkflowID:       workflowExecution.GetWorkflowID(),
+		RunID:            workflowExecution.GetRunID(),
 		TargetDomainID:   constants.TestChildDomainID,
 		TargetWorkflowID: childWorkflowID,
 		TargetRunID:      "",
@@ -1696,9 +1696,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_WithRet
 
 func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Failure() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1711,7 +1711,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Failure
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -1752,8 +1752,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Failure
 	transferTask := &persistence.TransferTaskInfo{
 		Version:          s.version,
 		DomainID:         s.domainID,
-		WorkflowID:       workflowExecution.GetWorkflowId(),
-		RunID:            workflowExecution.GetRunId(),
+		WorkflowID:       workflowExecution.GetWorkflowID(),
+		RunID:            workflowExecution.GetRunID(),
 		TargetDomainID:   constants.TestChildDomainID,
 		TargetWorkflowID: childWorkflowID,
 		TargetRunID:      "",
@@ -1783,9 +1783,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Failure
 
 func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success_Dup() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1799,7 +1799,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -1840,8 +1840,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 	transferTask := &persistence.TransferTaskInfo{
 		Version:          s.version,
 		DomainID:         s.domainID,
-		WorkflowID:       workflowExecution.GetWorkflowId(),
-		RunID:            workflowExecution.GetRunId(),
+		WorkflowID:       workflowExecution.GetWorkflowID(),
+		RunID:            workflowExecution.GetRunID(),
 		TargetDomainID:   constants.TestChildDomainID,
 		TargetWorkflowID: childWorkflowID,
 		TargetRunID:      "",
@@ -1872,16 +1872,16 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 
 func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Duplication() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
 
-	childExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random child workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	childExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random child workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	childWorkflowType := "some random child workflow type"
 	childTaskListName := "some random child task list"
@@ -1890,7 +1890,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Duplica
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
@@ -1919,7 +1919,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Duplica
 		event.GetEventId(),
 		uuid.New(),
 		s.childDomainName,
-		childExecution.GetWorkflowId(),
+		childExecution.GetWorkflowID(),
 		childWorkflowType,
 		childTaskListName,
 		nil,
@@ -1931,10 +1931,10 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Duplica
 	transferTask := &persistence.TransferTaskInfo{
 		Version:          s.version,
 		DomainID:         s.domainID,
-		WorkflowID:       workflowExecution.GetWorkflowId(),
-		RunID:            workflowExecution.GetRunId(),
+		WorkflowID:       workflowExecution.GetWorkflowID(),
+		RunID:            workflowExecution.GetRunID(),
 		TargetDomainID:   constants.TestChildDomainID,
-		TargetWorkflowID: childExecution.GetWorkflowId(),
+		TargetWorkflowID: childExecution.GetWorkflowID(),
 		TargetRunID:      "",
 		TaskID:           taskID,
 		TaskList:         taskListName,
@@ -1942,7 +1942,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Duplica
 		ScheduleID:       event.GetEventId(),
 	}
 
-	event = test.AddChildWorkflowExecutionStartedEvent(mutableState, event.GetEventId(), constants.TestChildDomainID, childExecution.GetWorkflowId(), childExecution.GetRunId(), childWorkflowType)
+	event = test.AddChildWorkflowExecutionStartedEvent(mutableState, event.GetEventId(), constants.TestChildDomainID, childExecution.GetWorkflowID(), childExecution.GetRunID(), childWorkflowType)
 	ci.StartedID = event.GetEventId()
 	event = test.AddChildWorkflowExecutionCompletedEvent(mutableState, ci.InitiatedID, &childExecution, &workflow.WorkflowExecutionCompletedEventAttributes{
 		Result:                       []byte("some random child workflow execution result"),
@@ -1959,9 +1959,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Duplica
 
 func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1972,7 +1972,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask()
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 
@@ -1998,8 +1998,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask()
 	transferTask := &persistence.TransferTaskInfo{
 		Version:    s.version,
 		DomainID:   s.domainID,
-		WorkflowID: workflowExecution.GetWorkflowId(),
-		RunID:      workflowExecution.GetRunId(),
+		WorkflowID: workflowExecution.GetWorkflowID(),
+		RunID:      workflowExecution.GetRunID(),
 		TaskID:     taskID,
 		TaskList:   taskListName,
 		TaskType:   persistence.TransferTaskTypeRecordWorkflowStarted,
@@ -2016,9 +2016,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask()
 
 func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttributes() {
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -2027,7 +2027,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttribu
 		s.mockShard,
 		s.logger,
 		s.version,
-		workflowExecution.GetRunId(),
+		workflowExecution.GetRunID(),
 		constants.TestGlobalDomainEntry,
 	)
 
@@ -2051,8 +2051,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttribu
 	transferTask := &persistence.TransferTaskInfo{
 		Version:    s.version,
 		DomainID:   s.domainID,
-		WorkflowID: workflowExecution.GetWorkflowId(),
-		RunID:      workflowExecution.GetRunId(),
+		WorkflowID: workflowExecution.GetWorkflowID(),
+		RunID:      workflowExecution.GetRunID(),
 		TaskID:     taskID,
 		TaskList:   taskListName,
 		TaskType:   persistence.TransferTaskTypeUpsertWorkflowSearchAttributes,

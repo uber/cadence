@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/events"
@@ -141,9 +142,9 @@ func (s *stateRebuilderSuite) TestApplyEvents() {
 	mockStateBuilder.EXPECT().ApplyEvents(
 		s.domainID,
 		requestID,
-		shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(s.workflowID),
-			RunId:      common.StringPtr(s.runID),
+		types.WorkflowExecution{
+			WorkflowID: common.StringPtr(s.workflowID),
+			RunID:      common.StringPtr(s.runID),
 		},
 		events,
 		[]*shared.HistoryEvent(nil),

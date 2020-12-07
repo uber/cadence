@@ -538,9 +538,9 @@ func (s *mutableStateSuite) TestEventReapplied() {
 
 func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicated(version int64, runID string) (*shared.HistoryEvent, *shared.HistoryEvent) {
 	domainID := testDomainID
-	execution := shared.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(runID),
+	execution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(runID),
 	}
 
 	now := time.Now()
@@ -604,7 +604,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	eventID++
 
 	s.mockEventsCache.EXPECT().PutEvent(
-		domainID, execution.GetWorkflowId(), execution.GetRunId(),
+		domainID, execution.GetWorkflowID(), execution.GetRunID(),
 		workflowStartEvent.GetEventId(), workflowStartEvent,
 	).Times(1)
 	err := s.msBuilder.ReplicateWorkflowExecutionStartedEvent(

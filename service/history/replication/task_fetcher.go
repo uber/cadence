@@ -27,7 +27,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	r "github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
@@ -37,7 +36,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 )
 
@@ -275,8 +273,8 @@ func (f *taskFetcherImpl) fetchAndDistributeTasks(requestByShard map[int32]*requ
 
 func (f *taskFetcherImpl) getMessages(
 	requestByShard map[int32]*request,
-) (map[int32]*r.ReplicationMessages, error) {
-	var tokens []*r.ReplicationToken
+) (map[int32]*types.ReplicationMessages, error) {
+	var tokens []*types.ReplicationToken
 	for _, request := range requestByShard {
 		tokens = append(tokens, request.token)
 	}
@@ -284,12 +282,11 @@ func (f *taskFetcherImpl) getMessages(
 	ctx, cancel := context.WithTimeout(context.Background(), fetchTaskRequestTimeout)
 	defer cancel()
 
-	request := &r.GetReplicationMessagesRequest{
+	request := &types.GetReplicationMessagesRequest{
 		Tokens:      tokens,
 		ClusterName: common.StringPtr(f.currentCluster),
 	}
-	clientResp, err := f.remotePeer.GetReplicationMessages(ctx, thrift.ToGetReplicationMessagesRequest(request))
-	response := thrift.FromGetReplicationMessagesResponse(clientResp)
+	response, err := f.remotePeer.GetReplicationMessages(ctx, request)
 	if err != nil {
 		if _, ok := err.(*types.ServiceBusyError); !ok {
 			return nil, err
