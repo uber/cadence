@@ -159,6 +159,8 @@ func (c *kafkaClient) initAuth(saramaConfig *sarama.Config) error {
 		} else if c.config.SASL.Algorithm == "sha256" {
 			saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &auth.XDGSCRAMClient{HashGeneratorFcn: auth.SHA256} }
 			saramaConfig.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA256
+		} else if c.config.SASL.Algorithm == "plain" {
+			saramaConfig.Net.SASL.Mechanism = sarama.SASLTypePlaintext
 		} else {
 			return fmt.Errorf("invalid SHA algorithm %s: can be either sha256 or sha512", c.config.SASL.Algorithm)
 		}
