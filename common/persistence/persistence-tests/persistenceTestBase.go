@@ -568,7 +568,7 @@ func (s *TestBase) GetWorkflowExecutionInfoWithStats(ctx context.Context, domain
 	*p.MutableStateStats, *p.WorkflowMutableState, error) {
 	response, err := s.ExecutionManager.GetWorkflowExecution(ctx, &p.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
-		Execution: *thrift.ToWorkflowExecution(&workflowExecution),
+		Execution: workflowExecution,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -582,7 +582,7 @@ func (s *TestBase) GetWorkflowExecutionInfo(ctx context.Context, domainID string
 	*p.WorkflowMutableState, error) {
 	response, err := s.ExecutionManager.GetWorkflowExecution(ctx, &p.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
-		Execution: *thrift.ToWorkflowExecution(&workflowExecution),
+		Execution: workflowExecution,
 	})
 	if err != nil {
 		return nil, err
