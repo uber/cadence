@@ -3584,21 +3584,21 @@ func (wh *WorkflowHandler) isRawListList(t *gen.TaskList) bool {
 }
 
 func (wh *WorkflowHandler) validateExecutionAndEmitMetrics(w *gen.WorkflowExecution, scope metrics.Scope) error {
-	err := validateExecution(w)
+	err := validateExecution(thrift.ToWorkflowExecution(w))
 	if err != nil {
 		return wh.error(err, scope)
 	}
 	return nil
 }
 
-func validateExecution(w *gen.WorkflowExecution) error {
+func validateExecution(w *types.WorkflowExecution) error {
 	if w == nil {
 		return errExecutionNotSet
 	}
-	if w.WorkflowId == nil || w.GetWorkflowId() == "" {
+	if w.WorkflowID == nil || w.GetWorkflowID() == "" {
 		return errWorkflowIDNotSet
 	}
-	if w.GetRunId() != "" && uuid.Parse(w.GetRunId()) == nil {
+	if w.GetRunID() != "" && uuid.Parse(w.GetRunID()) == nil {
 		return errInvalidRunID
 	}
 	return nil
