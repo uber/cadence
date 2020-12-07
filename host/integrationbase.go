@@ -34,7 +34,6 @@ import (
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
@@ -99,12 +98,12 @@ func (s *IntegrationBase) setupSuite(defaultClusterConfigFile string) {
 	s.testRawHistoryDomainName = "TestRawHistoryDomain"
 	s.domainName = s.randomizeStr("integration-test-domain")
 	s.Require().NoError(
-		s.registerDomain(s.domainName, 1, workflow.ArchivalStatusDisabled, "", workflow.ArchivalStatusDisabled, ""))
+		s.registerDomain(s.domainName, 1, types.ArchivalStatusDisabled, "", types.ArchivalStatusDisabled, ""))
 	s.Require().NoError(
-		s.registerDomain(s.testRawHistoryDomainName, 1, workflow.ArchivalStatusDisabled, "", workflow.ArchivalStatusDisabled, ""))
+		s.registerDomain(s.testRawHistoryDomainName, 1, types.ArchivalStatusDisabled, "", types.ArchivalStatusDisabled, ""))
 	s.foreignDomainName = s.randomizeStr("integration-foreign-test-domain")
 	s.Require().NoError(
-		s.registerDomain(s.foreignDomainName, 1, workflow.ArchivalStatusDisabled, "", workflow.ArchivalStatusDisabled, ""))
+		s.registerDomain(s.foreignDomainName, 1, types.ArchivalStatusDisabled, "", types.ArchivalStatusDisabled, ""))
 
 	s.Require().NoError(s.registerArchivalDomain())
 
@@ -158,14 +157,14 @@ func (s *IntegrationBase) tearDownSuite() {
 func (s *IntegrationBase) registerDomain(
 	domain string,
 	retentionDays int,
-	historyArchivalStatus workflow.ArchivalStatus,
+	historyArchivalStatus types.ArchivalStatus,
 	historyArchivalURI string,
-	visibilityArchivalStatus workflow.ArchivalStatus,
+	visibilityArchivalStatus types.ArchivalStatus,
 	visibilityArchivalURI string,
 ) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	return s.engine.RegisterDomain(ctx, &workflow.RegisterDomainRequest{
+	return s.engine.RegisterDomain(ctx, &types.RegisterDomainRequest{
 		Name:                                   &domain,
 		Description:                            &domain,
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(retentionDays)),
@@ -180,15 +179,15 @@ func (s *IntegrationBase) randomizeStr(id string) string {
 	return fmt.Sprintf("%v-%v", id, uuid.New())
 }
 
-func (s *IntegrationBase) printWorkflowHistory(domain string, execution *workflow.WorkflowExecution) {
+func (s *IntegrationBase) printWorkflowHistory(domain string, execution *types.WorkflowExecution) {
 	events := s.getHistory(domain, execution)
-	history := &workflow.History{}
+	history := &types.History{}
 	history.Events = events
 	common.PrettyPrintHistory(history, s.Logger)
 }
 
-func (s *IntegrationBase) getHistory(domain string, execution *workflow.WorkflowExecution) []*workflow.HistoryEvent {
-	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+func (s *IntegrationBase) getHistory(domain string, execution *types.WorkflowExecution) []*types.HistoryEvent {
+	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 		Domain:          common.StringPtr(domain),
 		Execution:       execution,
 		MaximumPageSize: common.Int32Ptr(5), // Use small page size to force pagination code path
@@ -197,7 +196,7 @@ func (s *IntegrationBase) getHistory(domain string, execution *workflow.Workflow
 
 	events := historyResponse.History.Events
 	for historyResponse.NextPageToken != nil {
-		historyResponse, err = s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+		historyResponse, err = s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 			Domain:        common.StringPtr(domain),
 			Execution:     execution,
 			NextPageToken: historyResponse.NextPageToken,

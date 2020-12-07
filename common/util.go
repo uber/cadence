@@ -266,7 +266,7 @@ func DomainIDToHistoryShard(domainID string, numberOfShards int) int {
 }
 
 // PrettyPrintHistory prints history in human readable format
-func PrettyPrintHistory(history *workflow.History, logger log.Logger) {
+func PrettyPrintHistory(history *types.History, logger log.Logger) {
 	data, err := json.MarshalIndent(history, "", "    ")
 
 	if err != nil {
