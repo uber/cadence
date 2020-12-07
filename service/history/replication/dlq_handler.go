@@ -25,12 +25,10 @@ package replication
 import (
 	"context"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -51,7 +49,7 @@ type (
 			lastMessageID int64,
 			pageSize int,
 			pageToken []byte,
-		) ([]*replicator.ReplicationTask, []byte, error)
+		) ([]*types.ReplicationTask, []byte, error)
 		PurgeMessages(
 			ctx context.Context,
 			sourceCluster string,
@@ -98,7 +96,7 @@ func (r *dlqHandlerImpl) ReadMessages(
 	lastMessageID int64,
 	pageSize int,
 	pageToken []byte,
-) ([]*replicator.ReplicationTask, []byte, error) {
+) ([]*types.ReplicationTask, []byte, error) {
 
 	return r.readMessagesWithAckLevel(
 		ctx,
@@ -115,7 +113,7 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 	lastMessageID int64,
 	pageSize int,
 	pageToken []byte,
-) ([]*replicator.ReplicationTask, []byte, error) {
+) ([]*types.ReplicationTask, []byte, error) {
 
 	resp, err := r.shard.GetExecutionManager().GetReplicationTasksFromDLQ(
 		ctx,
@@ -152,15 +150,14 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 			ScheduledID:  common.Int64Ptr(task.ScheduledID),
 		})
 	}
-	response := &replicator.GetDLQReplicationMessagesResponse{}
+	response := &types.GetDLQReplicationMessagesResponse{}
 	if len(taskInfo) > 0 {
-		clientResp, err := remoteAdminClient.GetDLQReplicationMessages(
+		response, err = remoteAdminClient.GetDLQReplicationMessages(
 			ctx,
 			&types.GetDLQReplicationMessagesRequest{
 				TaskInfos: taskInfo,
 			},
 		)
-		response = thrift.FromGetDLQReplicationMessagesResponse(clientResp)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -218,8 +215,8 @@ func (r *dlqHandlerImpl) MergeMessages(
 			return nil, err
 		}
 
-		if lastMessageID < task.GetSourceTaskId() {
-			lastMessageID = task.GetSourceTaskId()
+		if lastMessageID < task.GetSourceTaskID() {
+			lastMessageID = task.GetSourceTaskID()
 		}
 	}
 
