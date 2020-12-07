@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/query"
 )
 
@@ -66,12 +67,12 @@ type (
 		AddActivityTaskStartedEvent(*persistence.ActivityInfo, int64, string, string) (*workflow.HistoryEvent, error)
 		AddActivityTaskTimedOutEvent(int64, int64, workflow.TimeoutType, []uint8) (*workflow.HistoryEvent, error)
 		AddCancelTimerFailedEvent(int64, *workflow.CancelTimerDecisionAttributes, string) (*workflow.HistoryEvent, error)
-		AddChildWorkflowExecutionCanceledEvent(int64, *workflow.WorkflowExecution, *workflow.WorkflowExecutionCanceledEventAttributes) (*workflow.HistoryEvent, error)
-		AddChildWorkflowExecutionCompletedEvent(int64, *workflow.WorkflowExecution, *workflow.WorkflowExecutionCompletedEventAttributes) (*workflow.HistoryEvent, error)
-		AddChildWorkflowExecutionFailedEvent(int64, *workflow.WorkflowExecution, *workflow.WorkflowExecutionFailedEventAttributes) (*workflow.HistoryEvent, error)
-		AddChildWorkflowExecutionStartedEvent(*string, *workflow.WorkflowExecution, *workflow.WorkflowType, int64, *workflow.Header) (*workflow.HistoryEvent, error)
-		AddChildWorkflowExecutionTerminatedEvent(int64, *workflow.WorkflowExecution, *workflow.WorkflowExecutionTerminatedEventAttributes) (*workflow.HistoryEvent, error)
-		AddChildWorkflowExecutionTimedOutEvent(int64, *workflow.WorkflowExecution, *workflow.WorkflowExecutionTimedOutEventAttributes) (*workflow.HistoryEvent, error)
+		AddChildWorkflowExecutionCanceledEvent(int64, *types.WorkflowExecution, *workflow.WorkflowExecutionCanceledEventAttributes) (*workflow.HistoryEvent, error)
+		AddChildWorkflowExecutionCompletedEvent(int64, *types.WorkflowExecution, *workflow.WorkflowExecutionCompletedEventAttributes) (*workflow.HistoryEvent, error)
+		AddChildWorkflowExecutionFailedEvent(int64, *types.WorkflowExecution, *workflow.WorkflowExecutionFailedEventAttributes) (*workflow.HistoryEvent, error)
+		AddChildWorkflowExecutionStartedEvent(*string, *types.WorkflowExecution, *workflow.WorkflowType, int64, *workflow.Header) (*workflow.HistoryEvent, error)
+		AddChildWorkflowExecutionTerminatedEvent(int64, *types.WorkflowExecution, *workflow.WorkflowExecutionTerminatedEventAttributes) (*workflow.HistoryEvent, error)
+		AddChildWorkflowExecutionTimedOutEvent(int64, *types.WorkflowExecution, *workflow.WorkflowExecutionTimedOutEventAttributes) (*workflow.HistoryEvent, error)
 		AddCompletedWorkflowEvent(int64, *workflow.CompleteWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, error)
 		AddContinueAsNewEvent(context.Context, int64, int64, string, *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, MutableState, error)
 		AddDecisionTaskCompletedEvent(int64, int64, *workflow.RespondDecisionTaskCompletedRequest, int) (*workflow.HistoryEvent, error)
@@ -102,7 +103,7 @@ type (
 		AddWorkflowExecutionCancelRequestedEvent(string, *h.RequestCancelWorkflowExecutionRequest) (*workflow.HistoryEvent, error)
 		AddWorkflowExecutionCanceledEvent(int64, *workflow.CancelWorkflowExecutionDecisionAttributes) (*workflow.HistoryEvent, error)
 		AddWorkflowExecutionSignaled(signalName string, input []byte, identity string) (*workflow.HistoryEvent, error)
-		AddWorkflowExecutionStartedEvent(workflow.WorkflowExecution, *h.StartWorkflowExecutionRequest) (*workflow.HistoryEvent, error)
+		AddWorkflowExecutionStartedEvent(types.WorkflowExecution, *h.StartWorkflowExecutionRequest) (*workflow.HistoryEvent, error)
 		AddWorkflowExecutionTerminatedEvent(firstEventID int64, reason string, details []byte, identity string) (*workflow.HistoryEvent, error)
 		ClearStickyness()
 		CheckResettable() error
@@ -202,7 +203,7 @@ type (
 		ReplicateWorkflowExecutionContinuedAsNewEvent(int64, string, *workflow.HistoryEvent) error
 		ReplicateWorkflowExecutionFailedEvent(int64, *workflow.HistoryEvent) error
 		ReplicateWorkflowExecutionSignaled(*workflow.HistoryEvent) error
-		ReplicateWorkflowExecutionStartedEvent(*string, workflow.WorkflowExecution, string, *workflow.HistoryEvent) error
+		ReplicateWorkflowExecutionStartedEvent(*string, types.WorkflowExecution, string, *workflow.HistoryEvent) error
 		ReplicateWorkflowExecutionTerminatedEvent(int64, *workflow.HistoryEvent) error
 		ReplicateWorkflowExecutionTimedoutEvent(int64, *workflow.HistoryEvent) error
 		SetCurrentBranchToken(branchToken []byte) error

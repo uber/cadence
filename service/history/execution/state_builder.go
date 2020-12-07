@@ -44,7 +44,7 @@ type (
 		ApplyEvents(
 			domainID string,
 			requestID string,
-			workflowExecution shared.WorkflowExecution,
+			workflowExecution types.WorkflowExecution,
 			history []*shared.HistoryEvent,
 			newRunHistory []*shared.HistoryEvent,
 		) (MutableState, error)
@@ -92,7 +92,7 @@ func NewStateBuilder(
 func (b *stateBuilderImpl) ApplyEvents(
 	domainID string,
 	requestID string,
-	workflowExecution shared.WorkflowExecution,
+	workflowExecution types.WorkflowExecution,
 	history []*shared.HistoryEvent,
 	newRunHistory []*shared.HistoryEvent,
 ) (MutableState, error) {
@@ -177,7 +177,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := b.mutableState.SetHistoryTree(
-				workflowExecution.GetRunId(),
+				workflowExecution.GetRunID(),
 			); err != nil {
 				return nil, err
 			}
@@ -605,9 +605,9 @@ func (b *stateBuilderImpl) ApplyEvents(
 				)
 				newRunStateBuilder := NewStateBuilder(b.shard, b.logger, newRunMutableStateBuilder, b.taskGeneratorProvider)
 				newRunID := event.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
-				newExecution := shared.WorkflowExecution{
-					WorkflowId: workflowExecution.WorkflowId,
-					RunId:      common.StringPtr(newRunID),
+				newExecution := types.WorkflowExecution{
+					WorkflowID: workflowExecution.WorkflowID,
+					RunID:      common.StringPtr(newRunID),
 				}
 				_, err := newRunStateBuilder.ApplyEvents(
 					domainID,

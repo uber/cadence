@@ -348,9 +348,9 @@ func (r *workflowResetterImpl) replayResetWorkflow(
 
 	resetContext := execution.NewContext(
 		domainID,
-		shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(resetRunID),
+		types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(resetRunID),
 		},
 		r.shard,
 		r.shard.GetExecutionManager(),
@@ -492,9 +492,9 @@ func (r *workflowResetterImpl) reapplyResetAndContinueAsNewWorkflowEvents(
 		context, release, err := r.executionCache.GetOrCreateWorkflowExecution(
 			ctx,
 			domainID,
-			shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(workflowID),
-				RunId:      common.StringPtr(runID),
+			types.WorkflowExecution{
+				WorkflowID: common.StringPtr(workflowID),
+				RunID:      common.StringPtr(runID),
 			},
 		)
 		if err != nil {

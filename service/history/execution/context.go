@@ -57,7 +57,7 @@ type (
 	Context interface {
 		GetDomainName() string
 		GetDomainID() string
-		GetExecution() *workflow.WorkflowExecution
+		GetExecution() *types.WorkflowExecution
 
 		GetWorkflowExecution() MutableState
 		SetWorkflowExecution(mutableState MutableState)
@@ -140,7 +140,7 @@ type (
 type (
 	contextImpl struct {
 		domainID          string
-		workflowExecution workflow.WorkflowExecution
+		workflowExecution types.WorkflowExecution
 		shard             shard.Context
 		executionManager  persistence.ExecutionManager
 		logger            log.Logger
@@ -162,7 +162,7 @@ var (
 // NewContext creates a new workflow execution context
 func NewContext(
 	domainID string,
-	execution workflow.WorkflowExecution,
+	execution types.WorkflowExecution,
 	shard shard.Context,
 	executionManager persistence.ExecutionManager,
 	logger log.Logger,
@@ -201,7 +201,7 @@ func (c *contextImpl) GetDomainID() string {
 	return c.domainID
 }
 
-func (c *contextImpl) GetExecution() *workflow.WorkflowExecution {
+func (c *contextImpl) GetExecution() *types.WorkflowExecution {
 	return &c.workflowExecution
 }
 
@@ -902,9 +902,9 @@ func (c *contextImpl) PersistFirstWorkflowEvents(
 	domainID := workflowEvents.DomainID
 	workflowID := workflowEvents.WorkflowID
 	runID := workflowEvents.RunID
-	execution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowEvents.WorkflowID),
-		RunId:      common.StringPtr(workflowEvents.RunID),
+	execution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(workflowEvents.WorkflowID),
+		RunID:      common.StringPtr(workflowEvents.RunID),
 	}
 	branchToken := workflowEvents.BranchToken
 	events := workflowEvents.Events
@@ -934,9 +934,9 @@ func (c *contextImpl) PersistNonFirstWorkflowEvents(
 	}
 
 	domainID := workflowEvents.DomainID
-	execution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowEvents.WorkflowID),
-		RunId:      common.StringPtr(workflowEvents.RunID),
+	execution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(workflowEvents.WorkflowID),
+		RunID:      common.StringPtr(workflowEvents.RunID),
 	}
 	branchToken := workflowEvents.BranchToken
 	events := workflowEvents.Events
@@ -958,7 +958,7 @@ func (c *contextImpl) PersistNonFirstWorkflowEvents(
 func (c *contextImpl) appendHistoryV2EventsWithRetry(
 	ctx context.Context,
 	domainID string,
-	execution workflow.WorkflowExecution,
+	execution types.WorkflowExecution,
 	request *persistence.AppendHistoryNodesRequest,
 ) (int64, error) {
 
@@ -1004,8 +1004,8 @@ func (c *contextImpl) createWorkflowExecutionWithRetry(
 	default:
 		c.logger.Error(
 			"Persistent store operation failure",
-			tag.WorkflowID(c.workflowExecution.GetWorkflowId()),
-			tag.WorkflowRunID(c.workflowExecution.GetRunId()),
+			tag.WorkflowID(c.workflowExecution.GetWorkflowID()),
+			tag.WorkflowRunID(c.workflowExecution.GetRunID()),
 			tag.WorkflowDomainID(c.domainID),
 			tag.StoreOperationCreateWorkflowExecution,
 			tag.Error(err),
@@ -1041,8 +1041,8 @@ func (c *contextImpl) getWorkflowExecutionWithRetry(
 	default:
 		c.logger.Error(
 			"Persistent fetch operation failure",
-			tag.WorkflowID(c.workflowExecution.GetWorkflowId()),
-			tag.WorkflowRunID(c.workflowExecution.GetRunId()),
+			tag.WorkflowID(c.workflowExecution.GetWorkflowID()),
+			tag.WorkflowRunID(c.workflowExecution.GetRunID()),
 			tag.WorkflowDomainID(c.domainID),
 			tag.StoreOperationGetWorkflowExecution,
 			tag.Error(err),
@@ -1076,8 +1076,8 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 	default:
 		c.logger.Error(
 			"Persistent store operation failure",
-			tag.WorkflowID(c.workflowExecution.GetWorkflowId()),
-			tag.WorkflowRunID(c.workflowExecution.GetRunId()),
+			tag.WorkflowID(c.workflowExecution.GetWorkflowID()),
+			tag.WorkflowRunID(c.workflowExecution.GetRunID()),
 			tag.WorkflowDomainID(c.domainID),
 			tag.StoreOperationUpdateWorkflowExecution,
 			tag.Error(err),

@@ -437,9 +437,9 @@ func (r *historyReplicatorImpl) applyNonStartEventsToCurrentBranch(
 		newExecutionInfo := newMutableState.GetExecutionInfo()
 		newContext := execution.NewContext(
 			newExecutionInfo.DomainID,
-			shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(newExecutionInfo.WorkflowID),
-				RunId:      common.StringPtr(newExecutionInfo.RunID),
+			types.WorkflowExecution{
+				WorkflowID: common.StringPtr(newExecutionInfo.WorkflowID),
+				RunID:      common.StringPtr(newExecutionInfo.RunID),
 			},
 			r.shard,
 			r.shard.GetExecutionManager(),
@@ -540,8 +540,8 @@ func (r *historyReplicatorImpl) applyNonStartEventsToNoneCurrentBranchWithoutCon
 		),
 		&persistence.WorkflowEvents{
 			DomainID:    task.getDomainID(),
-			WorkflowID:  task.getExecution().GetWorkflowId(),
-			RunID:       task.getExecution().GetRunId(),
+			WorkflowID:  task.getExecution().GetWorkflowID(),
+			RunID:       task.getExecution().GetRunID(),
 			BranchToken: versionHistory.GetBranchToken(),
 			Events:      task.getEvents(),
 		},

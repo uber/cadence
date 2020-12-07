@@ -546,9 +546,9 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 		t.shard.GetTimeSource().Now(),
 		execution.NewContext(
 			newExecutionInfo.DomainID,
-			workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(newExecutionInfo.WorkflowID),
-				RunId:      common.StringPtr(newExecutionInfo.RunID),
+			types.WorkflowExecution{
+				WorkflowID: common.StringPtr(newExecutionInfo.WorkflowID),
+				RunID:      common.StringPtr(newExecutionInfo.RunID),
 			},
 			t.shard,
 			t.shard.GetExecutionManager(),
