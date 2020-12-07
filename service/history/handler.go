@@ -1872,9 +1872,9 @@ func (h *handlerImpl) RefreshWorkflowTasks(
 	err = engine.RefreshWorkflowTasks(
 		ctx,
 		domainID,
-		gen.WorkflowExecution{
-			WorkflowId: execution.WorkflowId,
-			RunId:      execution.RunId,
+		types.WorkflowExecution{
+			WorkflowID: execution.WorkflowId,
+			RunID:      execution.RunId,
 		},
 	)
 

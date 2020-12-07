@@ -39,7 +39,7 @@ import (
 type (
 	replicationTask interface {
 		getDomainID() string
-		getExecution() *shared.WorkflowExecution
+		getExecution() *types.WorkflowExecution
 		getWorkflowID() string
 		getRunID() string
 		getEventTime() time.Time
@@ -59,7 +59,7 @@ type (
 	replicationTaskImpl struct {
 		sourceCluster  string
 		domainID       string
-		execution      *shared.WorkflowExecution
+		execution      *types.WorkflowExecution
 		version        int64
 		firstEvent     *shared.HistoryEvent
 		lastEvent      *shared.HistoryEvent
@@ -109,7 +109,7 @@ func newReplicationTask(
 	}
 
 	domainID := request.GetDomainUUID()
-	execution := request.WorkflowExecution
+	execution := thrift.ToWorkflowExecution(request.WorkflowExecution)
 	versionHistory := &shared.VersionHistory{
 		BranchToken: nil,
 		Items:       request.VersionHistoryItems,
@@ -134,8 +134,8 @@ func newReplicationTask(
 	}
 
 	logger = logger.WithTags(
-		tag.WorkflowID(execution.GetWorkflowId()),
-		tag.WorkflowRunID(execution.GetRunId()),
+		tag.WorkflowID(execution.GetWorkflowID()),
+		tag.WorkflowRunID(execution.GetRunID()),
 		tag.SourceCluster(sourceCluster),
 		tag.IncomingVersion(version),
 		tag.WorkflowFirstEventID(firstEvent.GetEventId()),
@@ -163,16 +163,16 @@ func (t *replicationTaskImpl) getDomainID() string {
 	return t.domainID
 }
 
-func (t *replicationTaskImpl) getExecution() *shared.WorkflowExecution {
+func (t *replicationTaskImpl) getExecution() *types.WorkflowExecution {
 	return t.execution
 }
 
 func (t *replicationTaskImpl) getWorkflowID() string {
-	return t.execution.GetWorkflowId()
+	return t.execution.GetWorkflowID()
 }
 
 func (t *replicationTaskImpl) getRunID() string {
-	return t.execution.GetRunId()
+	return t.execution.GetRunID()
 }
 
 func (t *replicationTaskImpl) getEventTime() time.Time {
@@ -261,7 +261,7 @@ func (t *replicationTaskImpl) splitTask(
 	})
 
 	logger := t.logger.WithTags(
-		tag.WorkflowID(t.getExecution().GetWorkflowId()),
+		tag.WorkflowID(t.getExecution().GetWorkflowID()),
 		tag.WorkflowRunID(newRunID),
 		tag.SourceCluster(t.sourceCluster),
 		tag.IncomingVersion(t.version),
@@ -272,9 +272,9 @@ func (t *replicationTaskImpl) splitTask(
 	newRunTask := &replicationTaskImpl{
 		sourceCluster: t.sourceCluster,
 		domainID:      t.domainID,
-		execution: &shared.WorkflowExecution{
-			WorkflowId: t.execution.WorkflowId,
-			RunId:      common.StringPtr(newRunID),
+		execution: &types.WorkflowExecution{
+			WorkflowID: t.execution.WorkflowID,
+			RunID:      common.StringPtr(newRunID),
 		},
 		version:        t.version,
 		firstEvent:     newFirstEvent,

@@ -1596,7 +1596,7 @@ func (e *mutableStateBuilder) DeleteSignalRequested(
 
 func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 	parentExecutionInfo *h.ParentExecutionInfo,
-	execution workflow.WorkflowExecution,
+	execution types.WorkflowExecution,
 	previousExecutionState MutableState,
 	attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes,
 	firstRunID string,
@@ -1625,7 +1625,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 	createRequest := &workflow.StartWorkflowExecutionRequest{
 		RequestId:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(e.domainEntry.GetInfo().Name),
-		WorkflowId:                          execution.WorkflowId,
+		WorkflowId:                          execution.WorkflowID,
 		TaskList:                            tl,
 		WorkflowType:                        wType,
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeout),
@@ -1671,7 +1671,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		parentDomainID = parentExecutionInfo.DomainUUID
 	}
 
-	event := e.hBuilder.AddWorkflowExecutionStartedEvent(req, previousExecutionInfo, firstRunID, execution.GetRunId())
+	event := e.hBuilder.AddWorkflowExecutionStartedEvent(req, previousExecutionInfo, firstRunID, execution.GetRunID())
 	if err := e.ReplicateWorkflowExecutionStartedEvent(
 		parentDomainID,
 		execution,
@@ -1709,7 +1709,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(
-	execution workflow.WorkflowExecution,
+	execution types.WorkflowExecution,
 	startRequest *h.StartWorkflowExecutionRequest,
 ) (*workflow.HistoryEvent, error) {
 
@@ -1727,7 +1727,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
-	event := e.hBuilder.AddWorkflowExecutionStartedEvent(startRequest, nil, execution.GetRunId(), execution.GetRunId())
+	event := e.hBuilder.AddWorkflowExecutionStartedEvent(startRequest, nil, execution.GetRunID(), execution.GetRunID())
 
 	var parentDomainID *string
 	if startRequest.ParentExecutionInfo != nil {
@@ -1758,7 +1758,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(
 
 func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 	parentDomainID *string,
-	execution workflow.WorkflowExecution,
+	execution types.WorkflowExecution,
 	requestID string,
 	startEvent *workflow.HistoryEvent,
 ) error {
@@ -1766,8 +1766,8 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 	event := startEvent.WorkflowExecutionStartedEventAttributes
 	e.executionInfo.CreateRequestID = requestID
 	e.executionInfo.DomainID = e.domainEntry.GetInfo().ID
-	e.executionInfo.WorkflowID = execution.GetWorkflowId()
-	e.executionInfo.RunID = execution.GetRunId()
+	e.executionInfo.WorkflowID = execution.GetWorkflowID()
+	e.executionInfo.RunID = execution.GetRunID()
 	e.executionInfo.TaskList = event.TaskList.GetName()
 	e.executionInfo.WorkflowTypeName = event.WorkflowType.GetName()
 	e.executionInfo.WorkflowTimeout = event.GetExecutionStartToCloseTimeoutSeconds()
@@ -3271,9 +3271,9 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 
 	var err error
 	newRunID := uuid.New()
-	newExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(e.executionInfo.WorkflowID),
-		RunId:      common.StringPtr(newRunID),
+	newExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(e.executionInfo.WorkflowID),
+		RunID:      common.StringPtr(newRunID),
 	}
 
 	// Extract ParentExecutionInfo from current run so it can be passed down to the next
@@ -3429,7 +3429,7 @@ func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionInitiatedEvent
 
 func (e *mutableStateBuilder) AddChildWorkflowExecutionStartedEvent(
 	domain *string,
-	execution *workflow.WorkflowExecution,
+	execution *types.WorkflowExecution,
 	workflowType *workflow.WorkflowType,
 	initiatedID int64,
 	header *workflow.Header,
@@ -3512,7 +3512,7 @@ func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionFailedEvent(
 
 func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(
 	initiatedID int64,
-	childExecution *workflow.WorkflowExecution,
+	childExecution *types.WorkflowExecution,
 	attributes *workflow.WorkflowExecutionCompletedEventAttributes,
 ) (*workflow.HistoryEvent, error) {
 
@@ -3559,7 +3559,7 @@ func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionCompletedEvent(
 
 func (e *mutableStateBuilder) AddChildWorkflowExecutionFailedEvent(
 	initiatedID int64,
-	childExecution *workflow.WorkflowExecution,
+	childExecution *types.WorkflowExecution,
 	attributes *workflow.WorkflowExecutionFailedEventAttributes,
 ) (*workflow.HistoryEvent, error) {
 
@@ -3606,7 +3606,7 @@ func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionFailedEvent(
 
 func (e *mutableStateBuilder) AddChildWorkflowExecutionCanceledEvent(
 	initiatedID int64,
-	childExecution *workflow.WorkflowExecution,
+	childExecution *types.WorkflowExecution,
 	attributes *workflow.WorkflowExecutionCanceledEventAttributes,
 ) (*workflow.HistoryEvent, error) {
 
@@ -3653,7 +3653,7 @@ func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionCanceledEvent(
 
 func (e *mutableStateBuilder) AddChildWorkflowExecutionTerminatedEvent(
 	initiatedID int64,
-	childExecution *workflow.WorkflowExecution,
+	childExecution *types.WorkflowExecution,
 	attributes *workflow.WorkflowExecutionTerminatedEventAttributes,
 ) (*workflow.HistoryEvent, error) {
 
@@ -3700,7 +3700,7 @@ func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionTerminatedEvent(
 
 func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(
 	initiatedID int64,
-	childExecution *workflow.WorkflowExecution,
+	childExecution *types.WorkflowExecution,
 	attributes *workflow.WorkflowExecutionTimedOutEventAttributes,
 ) (*workflow.HistoryEvent, error) {
 

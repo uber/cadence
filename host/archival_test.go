@@ -25,6 +25,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"strconv"
 	"time"
 
@@ -194,7 +195,7 @@ func (s *integrationSuite) isHistoryDeleted(domainID string, execution *workflow
 func (s *integrationSuite) isMutableStateDeleted(domainID string, execution *workflow.WorkflowExecution) bool {
 	request := &persistence.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
-		Execution: *execution,
+		Execution: *thrift.ToWorkflowExecution(execution),
 	}
 
 	for i := 0; i < retryLimit; i++ {
