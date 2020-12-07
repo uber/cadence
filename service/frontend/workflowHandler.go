@@ -35,8 +35,6 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/.gen/go/health"
-	h "github.com/uber/cadence/.gen/go/history"
-	m "github.com/uber/cadence/.gen/go/matching"
 	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
@@ -95,7 +93,7 @@ type (
 		NextEventID       int64
 		IsWorkflowRunning bool
 		PersistenceToken  []byte
-		TransientDecision *gen.TransientDecisionInfo
+		TransientDecision *types.TransientDecisionInfo
 		BranchToken       []byte
 	}
 
@@ -438,8 +436,8 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest
 // PollForActivityTask - Poll for an activity task.
 func (wh *WorkflowHandler) PollForActivityTask(
 	ctx context.Context,
-	pollRequest *gen.PollForActivityTaskRequest,
-) (resp *gen.PollForActivityTaskResponse, retError error) {
+	pollRequest *types.PollForActivityTaskRequest,
+) (resp *types.PollForActivityTaskResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	callTime := time.Now()
@@ -490,12 +488,11 @@ func (wh *WorkflowHandler) PollForActivityTask(
 
 	pollerID := uuid.New()
 	op := func() error {
-		clientResp, err := wh.GetMatchingClient().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
+		resp, err = wh.GetMatchingClient().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
 			DomainUUID:  common.StringPtr(domainID),
 			PollerID:    common.StringPtr(pollerID),
-			PollRequest: thrift.ToPollForActivityTaskRequest(pollRequest),
+			PollRequest: pollRequest,
 		})
-		resp = thrift.FromPollForActivityTaskResponse(clientResp)
 		return err
 	}
 
@@ -522,8 +519,8 @@ func (wh *WorkflowHandler) PollForActivityTask(
 // PollForDecisionTask - Poll for a decision task.
 func (wh *WorkflowHandler) PollForDecisionTask(
 	ctx context.Context,
-	pollRequest *gen.PollForDecisionTaskRequest,
-) (resp *gen.PollForDecisionTaskResponse, retError error) {
+	pollRequest *types.PollForDecisionTaskRequest,
+) (resp *types.PollForDecisionTaskResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	tagsForErrorLog := []tag.Tag{tag.WorkflowDomainName(pollRequest.GetDomain())}
@@ -581,14 +578,13 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	}
 
 	pollerID := uuid.New()
-	var matchingResp *m.PollForDecisionTaskResponse
+	var matchingResp *types.MatchingPollForDecisionTaskResponse
 	op := func() error {
-		clientResp, err := wh.GetMatchingClient().PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{
+		matchingResp, err = wh.GetMatchingClient().PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{
 			DomainUUID:  common.StringPtr(domainID),
 			PollerID:    common.StringPtr(pollerID),
-			PollRequest: thrift.ToPollForDecisionTaskRequest(pollRequest),
+			PollRequest: pollRequest,
 		})
-		matchingResp = thrift.FromMatchingPollForDecisionTaskResponse(clientResp)
 		return err
 	}
 
@@ -614,8 +610,8 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	}
 
 	tagsForErrorLog = append(tagsForErrorLog, []tag.Tag{tag.WorkflowID(
-		matchingResp.GetWorkflowExecution().GetWorkflowId()),
-		tag.WorkflowRunID(matchingResp.GetWorkflowExecution().GetRunId())}...)
+		matchingResp.GetWorkflowExecution().GetWorkflowID()),
+		tag.WorkflowRunID(matchingResp.GetWorkflowExecution().GetRunID())}...)
 	resp, err = wh.createPollForDecisionTaskResponse(ctx, scope, domainID, matchingResp, matchingResp.GetBranchToken())
 	if err != nil {
 		return nil, wh.error(err, scope, tagsForErrorLog...)
@@ -638,7 +634,7 @@ func (wh *WorkflowHandler) checkBadBinary(domainEntry *cache.DomainCacheEntry, b
 }
 
 func (wh *WorkflowHandler) cancelOutstandingPoll(ctx context.Context, err error, domainID string, taskListType int32,
-	taskList *gen.TaskList, pollerID string) error {
+	taskList *types.TaskList, pollerID string) error {
 	// First check if this err is due to context cancellation.  This means client connection to frontend is closed.
 	if ctx.Err() == context.Canceled {
 		// Our rpc stack does not propagates context cancellation to the other service.  Lets make an explicit
@@ -646,7 +642,7 @@ func (wh *WorkflowHandler) cancelOutstandingPoll(ctx context.Context, err error,
 		err = wh.GetMatchingClient().CancelOutstandingPoll(context.Background(), &types.CancelOutstandingPollRequest{
 			DomainUUID:   common.StringPtr(domainID),
 			TaskListType: common.Int32Ptr(taskListType),
-			TaskList:     thrift.ToTaskList(taskList),
+			TaskList:     taskList,
 			PollerID:     common.StringPtr(pollerID),
 		})
 		// We can not do much if this call fails.  Just log the error and move on
@@ -665,8 +661,8 @@ func (wh *WorkflowHandler) cancelOutstandingPoll(ctx context.Context, err error,
 // RecordActivityTaskHeartbeat - Record Activity Task Heart beat.
 func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 	ctx context.Context,
-	heartbeatRequest *gen.RecordActivityTaskHeartbeatRequest,
-) (resp *gen.RecordActivityTaskHeartbeatResponse, retError error) {
+	heartbeatRequest *types.RecordActivityTaskHeartbeatRequest,
+) (resp *types.RecordActivityTaskHeartbeatResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.getDefaultScope(metrics.FrontendRecordActivityTaskHeartbeatScope)
@@ -739,13 +735,12 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
-		resp = &gen.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(true)}
+		resp = &types.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(true)}
 	} else {
-		clientResp, err := wh.GetHistoryClient().RecordActivityTaskHeartbeat(ctx, &types.HistoryRecordActivityTaskHeartbeatRequest{
+		resp, err = wh.GetHistoryClient().RecordActivityTaskHeartbeat(ctx, &types.HistoryRecordActivityTaskHeartbeatRequest{
 			DomainUUID:       common.StringPtr(taskToken.DomainID),
-			HeartbeatRequest: thrift.ToRecordActivityTaskHeartbeatRequest(heartbeatRequest),
+			HeartbeatRequest: heartbeatRequest,
 		})
-		resp = thrift.FromRecordActivityTaskHeartbeatResponse(clientResp)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -757,8 +752,8 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 // RecordActivityTaskHeartbeatByID - Record Activity Task Heart beat.
 func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 	ctx context.Context,
-	heartbeatRequest *gen.RecordActivityTaskHeartbeatByIDRequest,
-) (resp *gen.RecordActivityTaskHeartbeatResponse, retError error) {
+	heartbeatRequest *types.RecordActivityTaskHeartbeatByIDRequest,
+) (resp *types.RecordActivityTaskHeartbeatResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendRecordActivityTaskHeartbeatByIDScope, heartbeatRequest)
@@ -846,19 +841,18 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
-		resp = &gen.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(true)}
+		resp = &types.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(true)}
 	} else {
-		req := &gen.RecordActivityTaskHeartbeatRequest{
+		req := &types.RecordActivityTaskHeartbeatRequest{
 			TaskToken: token,
 			Details:   heartbeatRequest.Details,
 			Identity:  heartbeatRequest.Identity,
 		}
 
-		clientResp, err := wh.GetHistoryClient().RecordActivityTaskHeartbeat(ctx, &types.HistoryRecordActivityTaskHeartbeatRequest{
+		resp, err = wh.GetHistoryClient().RecordActivityTaskHeartbeat(ctx, &types.HistoryRecordActivityTaskHeartbeatRequest{
 			DomainUUID:       common.StringPtr(taskToken.DomainID),
-			HeartbeatRequest: thrift.ToRecordActivityTaskHeartbeatRequest(req),
+			HeartbeatRequest: req,
 		})
-		resp = thrift.FromRecordActivityTaskHeartbeatResponse(clientResp)
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -870,7 +864,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 // RespondActivityTaskCompleted - response to an activity task
 func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 	ctx context.Context,
-	completeRequest *gen.RespondActivityTaskCompletedRequest,
+	completeRequest *types.RespondActivityTaskCompletedRequest,
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
@@ -948,7 +942,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 	} else {
 		err = wh.GetHistoryClient().RespondActivityTaskCompleted(ctx, &types.HistoryRespondActivityTaskCompletedRequest{
 			DomainUUID:      common.StringPtr(taskToken.DomainID),
-			CompleteRequest: thrift.ToRespondActivityTaskCompletedRequest(completeRequest),
+			CompleteRequest: completeRequest,
 		})
 		if err != nil {
 			return wh.error(err, scope)
@@ -961,7 +955,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 // RespondActivityTaskCompletedByID - response to an activity task
 func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 	ctx context.Context,
-	completeRequest *gen.RespondActivityTaskCompletedByIDRequest,
+	completeRequest *types.RespondActivityTaskCompletedByIDRequest,
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
@@ -1075,7 +1069,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 // RespondActivityTaskFailed - response to an activity task failure
 func (wh *WorkflowHandler) RespondActivityTaskFailed(
 	ctx context.Context,
-	failedRequest *gen.RespondActivityTaskFailedRequest,
+	failedRequest *types.RespondActivityTaskFailedRequest,
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
@@ -1144,7 +1138,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 
 	err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
 		DomainUUID:    common.StringPtr(taskToken.DomainID),
-		FailedRequest: thrift.ToRespondActivityTaskFailedRequest(failedRequest),
+		FailedRequest: failedRequest,
 	})
 	if err != nil {
 		return wh.error(err, scope)
@@ -1155,7 +1149,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 // RespondActivityTaskFailedByID - response to an activity task failure
 func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 	ctx context.Context,
-	failedRequest *gen.RespondActivityTaskFailedByIDRequest,
+	failedRequest *types.RespondActivityTaskFailedByIDRequest,
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
@@ -1257,7 +1251,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 // RespondActivityTaskCanceled - called to cancel an activity task
 func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 	ctx context.Context,
-	cancelRequest *gen.RespondActivityTaskCanceledRequest,
+	cancelRequest *types.RespondActivityTaskCanceledRequest,
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
@@ -1336,7 +1330,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 	} else {
 		err = wh.GetHistoryClient().RespondActivityTaskCanceled(ctx, &types.HistoryRespondActivityTaskCanceledRequest{
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
-			CancelRequest: thrift.ToRespondActivityTaskCanceledRequest(cancelRequest),
+			CancelRequest: cancelRequest,
 		})
 		if err != nil {
 			return wh.error(err, scope)
@@ -1349,7 +1343,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 // RespondActivityTaskCanceledByID - called to cancel an activity task
 func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 	ctx context.Context,
-	cancelRequest *gen.RespondActivityTaskCanceledByIDRequest,
+	cancelRequest *types.RespondActivityTaskCanceledByIDRequest,
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
@@ -1441,7 +1435,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 			return wh.error(err, scope)
 		}
 	} else {
-		req := &gen.RespondActivityTaskCanceledRequest{
+		req := &types.RespondActivityTaskCanceledRequest{
 			TaskToken: token,
 			Details:   cancelRequest.Details,
 			Identity:  cancelRequest.Identity,
@@ -1449,7 +1443,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 
 		err = wh.GetHistoryClient().RespondActivityTaskCanceled(ctx, &types.HistoryRespondActivityTaskCanceledRequest{
 			DomainUUID:    common.StringPtr(taskToken.DomainID),
-			CancelRequest: thrift.ToRespondActivityTaskCanceledRequest(req),
+			CancelRequest: req,
 		})
 		if err != nil {
 			return wh.error(err, scope)
@@ -1462,8 +1456,8 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 // RespondDecisionTaskCompleted - response to a decision task
 func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	ctx context.Context,
-	completeRequest *gen.RespondDecisionTaskCompletedRequest,
-) (resp *gen.RespondDecisionTaskCompletedResponse, retError error) {
+	completeRequest *types.RespondDecisionTaskCompletedRequest,
+) (resp *types.RespondDecisionTaskCompletedResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope := wh.getDefaultScope(metrics.FrontendRespondDecisionTaskCompletedScope)
@@ -1506,11 +1500,10 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		return nil, errShuttingDown
 	}
 
-	clientResp, err := wh.GetHistoryClient().RespondDecisionTaskCompleted(ctx, &types.HistoryRespondDecisionTaskCompletedRequest{
+	histResp, err := wh.GetHistoryClient().RespondDecisionTaskCompleted(ctx, &types.HistoryRespondDecisionTaskCompletedRequest{
 		DomainUUID:      common.StringPtr(taskToken.DomainID),
-		CompleteRequest: thrift.ToRespondDecisionTaskCompletedRequest(completeRequest)},
+		CompleteRequest: completeRequest},
 	)
-	histResp := thrift.FromHistoryRespondDecisionTaskCompletedResponse(clientResp)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -1519,14 +1512,14 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		return nil, wh.error(errIdentityTooLong, scope)
 	}
 
-	completedResp := &gen.RespondDecisionTaskCompletedResponse{}
+	completedResp := &types.RespondDecisionTaskCompletedResponse{}
 	completedResp.ActivitiesToDispatchLocally = histResp.ActivitiesToDispatchLocally
 	if completeRequest.GetReturnNewDecisionTask() && histResp != nil && histResp.StartedResponse != nil {
 		taskToken := &common.TaskToken{
 			DomainID:        taskToken.DomainID,
 			WorkflowID:      taskToken.WorkflowID,
 			RunID:           taskToken.RunID,
-			ScheduleID:      histResp.StartedResponse.GetScheduledEventId(),
+			ScheduleID:      histResp.StartedResponse.GetScheduledEventID(),
 			ScheduleAttempt: histResp.StartedResponse.GetAttempt(),
 		}
 		token, _ := wh.tokenSerializer.Serialize(taskToken)
@@ -1534,9 +1527,9 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 			WorkflowID: common.StringPtr(taskToken.WorkflowID),
 			RunID:      common.StringPtr(taskToken.RunID),
 		}
-		matchingResp := common.CreateMatchingPollForDecisionTaskResponse(thrift.ToRecordDecisionTaskStartedResponse(histResp.StartedResponse), workflowExecution, token)
+		matchingResp := common.CreateMatchingPollForDecisionTaskResponse(histResp.StartedResponse, workflowExecution, token)
 
-		newDecisionTask, err := wh.createPollForDecisionTaskResponse(ctx, scope, taskToken.DomainID, thrift.FromMatchingPollForDecisionTaskResponse(matchingResp), matchingResp.GetBranchToken())
+		newDecisionTask, err := wh.createPollForDecisionTaskResponse(ctx, scope, taskToken.DomainID, matchingResp, matchingResp.GetBranchToken())
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
@@ -1549,7 +1542,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 // RespondDecisionTaskFailed - failed response to a decision task
 func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 	ctx context.Context,
-	failedRequest *gen.RespondDecisionTaskFailedRequest,
+	failedRequest *types.RespondDecisionTaskFailedRequest,
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
@@ -1617,7 +1610,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 
 	err = wh.GetHistoryClient().RespondDecisionTaskFailed(ctx, &types.HistoryRespondDecisionTaskFailedRequest{
 		DomainUUID:    common.StringPtr(taskToken.DomainID),
-		FailedRequest: thrift.ToRespondDecisionTaskFailedRequest(failedRequest),
+		FailedRequest: failedRequest,
 	})
 	if err != nil {
 		return wh.error(err, scope)
@@ -1628,7 +1621,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 // RespondQueryTaskCompleted - response to a query task
 func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	ctx context.Context,
-	completeRequest *gen.RespondQueryTaskCompletedRequest,
+	completeRequest *types.RespondQueryTaskCompletedRequest,
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
@@ -1686,9 +1679,9 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 		wh.GetThrottledLogger(),
 		tag.BlobSizeViolationOperation("RespondQueryTaskCompleted"),
 	); err != nil {
-		completeRequest = &gen.RespondQueryTaskCompletedRequest{
+		completeRequest = &types.RespondQueryTaskCompletedRequest{
 			TaskToken:     completeRequest.TaskToken,
-			CompletedType: common.QueryTaskCompletedTypePtr(gen.QueryTaskCompletedTypeFailed),
+			CompletedType: types.QueryTaskCompletedTypeFailed.Ptr(),
 			QueryResult:   nil,
 			ErrorMessage:  common.StringPtr(err.Error()),
 		}
@@ -1696,18 +1689,18 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 
 	call := yarpc.CallFromContext(ctx)
 
-	completeRequest.WorkerVersionInfo = &gen.WorkerVersionInfo{
+	completeRequest.WorkerVersionInfo = &types.WorkerVersionInfo{
 		Impl:           common.StringPtr(call.Header(common.ClientImplHeaderName)),
 		FeatureVersion: common.StringPtr(call.Header(common.FeatureVersionHeaderName)),
 	}
-	matchingRequest := &m.RespondQueryTaskCompletedRequest{
+	matchingRequest := &types.MatchingRespondQueryTaskCompletedRequest{
 		DomainUUID:       common.StringPtr(queryTaskToken.DomainID),
-		TaskList:         &gen.TaskList{Name: common.StringPtr(queryTaskToken.TaskList)},
+		TaskList:         &types.TaskList{Name: common.StringPtr(queryTaskToken.TaskList)},
 		TaskID:           common.StringPtr(queryTaskToken.TaskID),
 		CompletedRequest: completeRequest,
 	}
 
-	err = wh.GetMatchingClient().RespondQueryTaskCompleted(ctx, thrift.ToMatchingRespondQueryTaskCompletedRequest(matchingRequest))
+	err = wh.GetMatchingClient().RespondQueryTaskCompleted(ctx, matchingRequest)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -1717,8 +1710,8 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 // StartWorkflowExecution - Creates a new workflow execution
 func (wh *WorkflowHandler) StartWorkflowExecution(
 	ctx context.Context,
-	startRequest *gen.StartWorkflowExecutionRequest,
-) (resp *gen.StartWorkflowExecutionResponse, retError error) {
+	startRequest *types.StartWorkflowExecutionRequest,
+) (resp *types.StartWorkflowExecutionResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendStartWorkflowExecutionScope, startRequest)
@@ -1749,15 +1742,15 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errDomainTooLong, scope)
 	}
 
-	if startRequest.GetWorkflowId() == "" {
+	if startRequest.GetWorkflowID() == "" {
 		return nil, wh.error(errWorkflowIDNotSet, scope)
 	}
 
-	if !wh.validIDLength(startRequest.GetWorkflowId(), scope, domainName) {
+	if !wh.validIDLength(startRequest.GetWorkflowID(), scope, domainName) {
 		return nil, wh.error(errWorkflowIDTooLong, scope)
 	}
 
-	if err := common.ValidateRetryPolicy(startRequest.RetryPolicy); err != nil {
+	if err := common.ValidateRetryPolicy(thrift.FromRetryPolicy(startRequest.RetryPolicy)); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -1767,7 +1760,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 
 	wh.GetLogger().Debug(
 		"Received StartWorkflowExecution. WorkflowID",
-		tag.WorkflowID(startRequest.GetWorkflowId()))
+		tag.WorkflowID(startRequest.GetWorkflowID()))
 
 	if startRequest.WorkflowType == nil || startRequest.WorkflowType.GetName() == "" {
 		return nil, wh.error(errWorkflowTypeNotSet, scope)
@@ -1789,15 +1782,15 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errInvalidTaskStartToCloseTimeoutSeconds, scope)
 	}
 
-	if startRequest.GetRequestId() == "" {
+	if startRequest.GetRequestID() == "" {
 		return nil, wh.error(errRequestIDNotSet, scope)
 	}
 
-	if !wh.validIDLength(startRequest.GetRequestId(), scope, domainName) {
+	if !wh.validIDLength(startRequest.GetRequestID(), scope, domainName) {
 		return nil, wh.error(errRequestIDTooLong, scope)
 	}
 
-	if err := wh.searchAttributesValidator.ValidateSearchAttributes(thrift.ToSearchAttributes(startRequest.SearchAttributes), domainName); err != nil {
+	if err := wh.searchAttributesValidator.ValidateSearchAttributes(startRequest.SearchAttributes, domainName); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -1821,7 +1814,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		sizeLimitWarn,
 		sizeLimitError,
 		domainID,
-		startRequest.GetWorkflowId(),
+		startRequest.GetWorkflowID(),
 		"",
 		scope,
 		wh.GetThrottledLogger(),
@@ -1831,12 +1824,11 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	}
 
 	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
-	clientResp, err := wh.GetHistoryClient().
+	resp, err = wh.GetHistoryClient().
 		StartWorkflowExecution(
 			ctx, thrift.ToHistoryStartWorkflowExecutionRequest(
 				common.CreateHistoryStartWorkflowRequest(
-					domainID, startRequest, time.Now())))
-	resp = thrift.FromStartWorkflowExecutionResponse(clientResp)
+					domainID, thrift.FromStartWorkflowExecutionRequest(startRequest), time.Now())))
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -1846,8 +1838,8 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 // GetWorkflowExecutionHistory - retrieves the history of workflow execution
 func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	ctx context.Context,
-	getRequest *gen.GetWorkflowExecutionHistoryRequest,
-) (resp *gen.GetWorkflowExecutionHistoryResponse, retError error) {
+	getRequest *types.GetWorkflowExecutionHistoryRequest,
+) (resp *types.GetWorkflowExecutionHistoryResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendGetWorkflowExecutionHistoryScope, getRequest)
@@ -1889,8 +1881,8 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	// force limit page size if exceed
 	if getRequest.GetMaximumPageSize() > common.GetHistoryMaxPageSize {
 		wh.GetThrottledLogger().Warn("GetHistory page size is larger than threshold",
-			tag.WorkflowID(getRequest.Execution.GetWorkflowId()),
-			tag.WorkflowRunID(getRequest.Execution.GetRunId()),
+			tag.WorkflowID(getRequest.Execution.GetWorkflowID()),
+			tag.WorkflowRunID(getRequest.Execution.GetRunID()),
 			tag.WorkflowDomainID(domainID),
 			tag.WorkflowSize(int64(getRequest.GetMaximumPageSize())))
 		getRequest.MaximumPageSize = common.Int32Ptr(common.GetHistoryMaxPageSize)
@@ -1913,13 +1905,13 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	// 6. error if any
 	queryHistory := func(
 		domainUUID string,
-		execution *gen.WorkflowExecution,
+		execution *types.WorkflowExecution,
 		expectedNextEventID int64,
 		currentBranchToken []byte,
 	) ([]byte, string, int64, int64, bool, error) {
 		clientResp, err := wh.GetHistoryClient().PollMutableState(ctx, &types.PollMutableStateRequest{
 			DomainUUID:          common.StringPtr(domainUUID),
-			Execution:           thrift.ToWorkflowExecution(execution),
+			Execution:           execution,
 			ExpectedNextEventID: common.Int64Ptr(expectedNextEventID),
 			CurrentBranchToken:  currentBranchToken,
 		})
@@ -1939,7 +1931,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	}
 
 	isLongPoll := getRequest.GetWaitForNewEvent()
-	isCloseEventOnly := getRequest.GetHistoryEventFilterType() == gen.HistoryEventFilterTypeCloseEvent
+	isCloseEventOnly := getRequest.GetHistoryEventFilterType() == types.HistoryEventFilterTypeCloseEvent
 	execution := getRequest.Execution
 	token := &getHistoryContinuationToken{}
 
@@ -1955,18 +1947,18 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		if err != nil {
 			return nil, wh.error(errInvalidNextPageToken, scope, getWfIDRunIDTags(wfExecution)...)
 		}
-		if execution.RunId != nil && execution.GetRunId() != token.RunID {
+		if execution.RunID != nil && execution.GetRunID() != token.RunID {
 			return nil, wh.error(errNextPageTokenRunIDMismatch, scope, getWfIDRunIDTags(wfExecution)...)
 		}
 
-		execution.RunId = common.StringPtr(token.RunID)
+		execution.RunID = common.StringPtr(token.RunID)
 
 		// we need to update the current next event ID and whether workflow is running
 		if len(token.PersistenceToken) == 0 && isLongPoll && token.IsWorkflowRunning {
 			logger := wh.GetLogger().WithTags(
 				tag.WorkflowDomainName(getRequest.GetDomain()),
-				tag.WorkflowID(getRequest.Execution.GetWorkflowId()),
-				tag.WorkflowRunID(getRequest.Execution.GetRunId()),
+				tag.WorkflowID(getRequest.Execution.GetWorkflowID()),
+				tag.WorkflowRunID(getRequest.Execution.GetRunID()),
 			)
 			// TODO: for now we only log the invalid timeout (this is done inside the helper function) in case
 			// this change breaks existing customers. Once we are sure no one is calling this API with very short timeout
@@ -1995,7 +1987,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 		}
 
-		execution.RunId = &runID
+		execution.RunID = &runID
 
 		token.RunID = runID
 		token.FirstEventID = common.FirstEventID
@@ -2010,9 +2002,9 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	supportsRawHistoryQuery := wh.versionChecker.SupportsRawHistoryQuery(clientImpl, clientFeatureVersion) == nil
 	isRawHistoryEnabled := wh.config.SendRawWorkflowHistory(domainName) && supportsRawHistoryQuery
 
-	history := &gen.History{}
-	history.Events = []*gen.HistoryEvent{}
-	var historyBlob []*gen.DataBlob
+	history := &types.History{}
+	history.Events = []*types.HistoryEvent{}
+	var historyBlob []*types.DataBlob
 
 	// helper function to just getHistory
 	getHistory := func(firstEventID, nextEventID int64, nextPageToken []byte) error {
@@ -2072,7 +2064,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		// return all events
 		if token.FirstEventID >= token.NextEventID {
 			// currently there is no new event
-			history.Events = []*gen.HistoryEvent{}
+			history.Events = []*types.HistoryEvent{}
 			if !isWorkflowRunning {
 				token = nil
 			}
@@ -2093,7 +2085,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	if err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
-	return &gen.GetWorkflowExecutionHistoryResponse{
+	return &types.GetWorkflowExecutionHistoryResponse{
 		History:       history,
 		RawHistory:    historyBlob,
 		NextPageToken: nextToken,
@@ -2105,7 +2097,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 // WorkflowExecutionSignaled event recorded in the history and a decision task being created for the execution.
 func (wh *WorkflowHandler) SignalWorkflowExecution(
 	ctx context.Context,
-	signalRequest *gen.SignalWorkflowExecutionRequest,
+	signalRequest *types.SignalWorkflowExecutionRequest,
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
@@ -2147,7 +2139,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		return wh.error(errSignalNameTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if !wh.validIDLength(signalRequest.GetRequestId(), scope, signalRequest.GetDomain()) {
+	if !wh.validIDLength(signalRequest.GetRequestID(), scope, signalRequest.GetDomain()) {
 		return wh.error(errRequestIDTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2163,8 +2155,8 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		sizeLimitWarn,
 		sizeLimitError,
 		domainID,
-		signalRequest.GetWorkflowExecution().GetWorkflowId(),
-		signalRequest.GetWorkflowExecution().GetRunId(),
+		signalRequest.GetWorkflowExecution().GetWorkflowID(),
+		signalRequest.GetWorkflowExecution().GetRunID(),
 		scope,
 		wh.GetThrottledLogger(),
 		tag.BlobSizeViolationOperation("SignalWorkflowExecution"),
@@ -2174,7 +2166,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 
 	err = wh.GetHistoryClient().SignalWorkflowExecution(ctx, &types.HistorySignalWorkflowExecutionRequest{
 		DomainUUID:    common.StringPtr(domainID),
-		SignalRequest: thrift.ToSignalWorkflowExecutionRequest(signalRequest),
+		SignalRequest: signalRequest,
 	})
 	if err != nil {
 		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
@@ -2190,8 +2182,8 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 // event recorded in history, and a decision task being created for the execution
 func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 	ctx context.Context,
-	signalWithStartRequest *gen.SignalWithStartWorkflowExecutionRequest,
-) (resp *gen.StartWorkflowExecutionResponse, retError error) {
+	signalWithStartRequest *types.SignalWithStartWorkflowExecutionRequest,
+) (resp *types.StartWorkflowExecutionResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendSignalWithStartWorkflowExecutionScope, signalWithStartRequest)
@@ -2201,8 +2193,8 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, errShuttingDown
 	}
 
-	wfExecution := &gen.WorkflowExecution{
-		WorkflowId: signalWithStartRequest.WorkflowId,
+	wfExecution := &types.WorkflowExecution{
+		WorkflowID: signalWithStartRequest.WorkflowID,
 	}
 
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
@@ -2226,12 +2218,12 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(errDomainTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if signalWithStartRequest.GetWorkflowId() == "" {
+	if signalWithStartRequest.GetWorkflowID() == "" {
 		return nil, wh.error(&types.BadRequestError{Message: "WorkflowId is not set on request."},
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if !wh.validIDLength(signalWithStartRequest.GetWorkflowId(), scope, domainName) {
+	if !wh.validIDLength(signalWithStartRequest.GetWorkflowID(), scope, domainName) {
 		return nil, wh.error(errWorkflowIDTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2257,7 +2249,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, err
 	}
 
-	if !wh.validIDLength(signalWithStartRequest.GetRequestId(), scope, domainName) {
+	if !wh.validIDLength(signalWithStartRequest.GetRequestID(), scope, domainName) {
 		return nil, wh.error(errRequestIDTooLong, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2273,7 +2265,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if err := common.ValidateRetryPolicy(signalWithStartRequest.RetryPolicy); err != nil {
+	if err := common.ValidateRetryPolicy(thrift.FromRetryPolicy(signalWithStartRequest.RetryPolicy)); err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2281,7 +2273,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if err := wh.searchAttributesValidator.ValidateSearchAttributes(thrift.ToSearchAttributes(signalWithStartRequest.SearchAttributes), domainName); err != nil {
+	if err := wh.searchAttributesValidator.ValidateSearchAttributes(signalWithStartRequest.SearchAttributes, domainName); err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -2297,7 +2289,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		sizeLimitWarn,
 		sizeLimitError,
 		domainID,
-		signalWithStartRequest.GetWorkflowId(),
+		signalWithStartRequest.GetWorkflowID(),
 		"",
 		scope,
 		wh.GetThrottledLogger(),
@@ -2311,7 +2303,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		sizeLimitWarn,
 		sizeLimitError,
 		domainID,
-		signalWithStartRequest.GetWorkflowId(),
+		signalWithStartRequest.GetWorkflowID(),
 		"",
 		scope,
 		wh.GetThrottledLogger(),
@@ -2320,11 +2312,10 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	clientResp, err := wh.GetHistoryClient().SignalWithStartWorkflowExecution(ctx, &types.HistorySignalWithStartWorkflowExecutionRequest{
+	resp, err = wh.GetHistoryClient().SignalWithStartWorkflowExecution(ctx, &types.HistorySignalWithStartWorkflowExecutionRequest{
 		DomainUUID:             common.StringPtr(domainID),
-		SignalWithStartRequest: thrift.ToSignalWithStartWorkflowExecutionRequest(signalWithStartRequest),
+		SignalWithStartRequest: signalWithStartRequest,
 	})
-	resp = thrift.FromStartWorkflowExecutionResponse(clientResp)
 	if err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
@@ -2336,7 +2327,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 // in the history and immediately terminating the execution instance.
 func (wh *WorkflowHandler) TerminateWorkflowExecution(
 	ctx context.Context,
-	terminateRequest *gen.TerminateWorkflowExecutionRequest,
+	terminateRequest *types.TerminateWorkflowExecutionRequest,
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
@@ -2376,7 +2367,7 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 
 	err = wh.GetHistoryClient().TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
 		DomainUUID:       common.StringPtr(domainID),
-		TerminateRequest: thrift.ToTerminateWorkflowExecutionRequest(terminateRequest),
+		TerminateRequest: terminateRequest,
 	})
 	if err != nil {
 		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
@@ -2389,8 +2380,8 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 // in the history and immediately terminating the current execution instance.
 func (wh *WorkflowHandler) ResetWorkflowExecution(
 	ctx context.Context,
-	resetRequest *gen.ResetWorkflowExecutionRequest,
-) (resp *gen.ResetWorkflowExecutionResponse, retError error) {
+	resetRequest *types.ResetWorkflowExecutionRequest,
+) (resp *types.ResetWorkflowExecutionResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendResetWorkflowExecutionScope, resetRequest)
@@ -2427,11 +2418,10 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	clientResp, err := wh.GetHistoryClient().ResetWorkflowExecution(ctx, &types.HistoryResetWorkflowExecutionRequest{
+	resp, err = wh.GetHistoryClient().ResetWorkflowExecution(ctx, &types.HistoryResetWorkflowExecutionRequest{
 		DomainUUID:   common.StringPtr(domainID),
-		ResetRequest: thrift.ToResetWorkflowExecutionRequest(resetRequest),
+		ResetRequest: resetRequest,
 	})
-	resp = thrift.FromResetWorkflowExecutionResponse(clientResp)
 	if err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
@@ -2442,7 +2432,7 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(
 // RequestCancelWorkflowExecution - requests to cancel a workflow execution
 func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 	ctx context.Context,
-	cancelRequest *gen.RequestCancelWorkflowExecutionRequest,
+	cancelRequest *types.RequestCancelWorkflowExecutionRequest,
 ) (retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
@@ -2482,7 +2472,7 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 
 	err = wh.GetHistoryClient().RequestCancelWorkflowExecution(ctx, &types.HistoryRequestCancelWorkflowExecutionRequest{
 		DomainUUID:    common.StringPtr(domainID),
-		CancelRequest: thrift.ToRequestCancelWorkflowExecutionRequest(cancelRequest),
+		CancelRequest: cancelRequest,
 	})
 	if err != nil {
 		return wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
@@ -2611,8 +2601,8 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 // ListArchivedWorkflowExecutions - retrieves archived info for closed workflow executions in a domain
 func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 	ctx context.Context,
-	listRequest *gen.ListArchivedWorkflowExecutionsRequest,
-) (resp *gen.ListArchivedWorkflowExecutionsResponse, retError error) {
+	listRequest *types.ListArchivedWorkflowExecutionsRequest,
+) (resp *types.ListArchivedWorkflowExecutionsResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendListArchivedWorkflowExecutionsScope, listRequest)
@@ -2694,8 +2684,8 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 		}
 	}
 
-	return &gen.ListArchivedWorkflowExecutionsResponse{
-		Executions:    thrift.FromWorkflowExecutionInfoArray(archiverResponse.Executions),
+	return &types.ListArchivedWorkflowExecutionsResponse{
+		Executions:    archiverResponse.Executions,
 		NextPageToken: archiverResponse.NextPageToken,
 	}, nil
 }
@@ -3034,7 +3024,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 }
 
 // GetSearchAttributes return valid indexed keys
-func (wh *WorkflowHandler) GetSearchAttributes(ctx context.Context) (resp *gen.GetSearchAttributesResponse, retError error) {
+func (wh *WorkflowHandler) GetSearchAttributes(ctx context.Context) (resp *types.GetSearchAttributesResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfile(metrics.FrontendGetSearchAttributesScope)
@@ -3049,7 +3039,7 @@ func (wh *WorkflowHandler) GetSearchAttributes(ctx context.Context) (resp *gen.G
 	}
 
 	keys := wh.config.ValidSearchAttributes()
-	resp = &gen.GetSearchAttributesResponse{
+	resp = &types.GetSearchAttributesResponse{
 		Keys: wh.convertIndexedKeyToThrift(keys),
 	}
 	return resp, nil
@@ -3058,8 +3048,8 @@ func (wh *WorkflowHandler) GetSearchAttributes(ctx context.Context) (resp *gen.G
 // ResetStickyTaskList reset the volatile information in mutable state of a given workflow.
 func (wh *WorkflowHandler) ResetStickyTaskList(
 	ctx context.Context,
-	resetRequest *gen.ResetStickyTaskListRequest,
-) (resp *gen.ResetStickyTaskListResponse, retError error) {
+	resetRequest *types.ResetStickyTaskListRequest,
+) (resp *types.ResetStickyTaskListResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendResetStickyTaskListScope, resetRequest)
@@ -3092,19 +3082,19 @@ func (wh *WorkflowHandler) ResetStickyTaskList(
 
 	_, err = wh.GetHistoryClient().ResetStickyTaskList(ctx, &types.HistoryResetStickyTaskListRequest{
 		DomainUUID: common.StringPtr(domainID),
-		Execution:  thrift.ToWorkflowExecution(resetRequest.Execution),
+		Execution:  resetRequest.Execution,
 	})
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
-	return &gen.ResetStickyTaskListResponse{}, nil
+	return &types.ResetStickyTaskListResponse{}, nil
 }
 
 // QueryWorkflow returns query result for a specified workflow execution
 func (wh *WorkflowHandler) QueryWorkflow(
 	ctx context.Context,
-	queryRequest *gen.QueryWorkflowRequest,
-) (resp *gen.QueryWorkflowResponse, retError error) {
+	queryRequest *types.QueryWorkflowRequest,
+) (resp *types.QueryWorkflowResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendQueryWorkflowScope, queryRequest)
@@ -3160,8 +3150,8 @@ func (wh *WorkflowHandler) QueryWorkflow(
 		sizeLimitWarn,
 		sizeLimitError,
 		domainID,
-		queryRequest.GetExecution().GetWorkflowId(),
-		queryRequest.GetExecution().GetRunId(),
+		queryRequest.GetExecution().GetWorkflowID(),
+		queryRequest.GetExecution().GetRunID(),
 		scope,
 		wh.GetThrottledLogger(),
 		tag.BlobSizeViolationOperation("QueryWorkflow")); err != nil {
@@ -3170,10 +3160,9 @@ func (wh *WorkflowHandler) QueryWorkflow(
 
 	req := &types.HistoryQueryWorkflowRequest{
 		DomainUUID: common.StringPtr(domainID),
-		Request:    thrift.ToQueryWorkflowRequest(queryRequest),
+		Request:    queryRequest,
 	}
-	clientResp, err := wh.GetHistoryClient().QueryWorkflow(ctx, req)
-	hResponse := thrift.FromHistoryQueryWorkflowResponse(clientResp)
+	hResponse, err := wh.GetHistoryClient().QueryWorkflow(ctx, req)
 	if err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
@@ -3183,8 +3172,8 @@ func (wh *WorkflowHandler) QueryWorkflow(
 // DescribeWorkflowExecution returns information about the specified workflow execution.
 func (wh *WorkflowHandler) DescribeWorkflowExecution(
 	ctx context.Context,
-	request *gen.DescribeWorkflowExecutionRequest,
-) (resp *gen.DescribeWorkflowExecutionResponse, retError error) {
+	request *types.DescribeWorkflowExecutionRequest,
+) (resp *types.DescribeWorkflowExecutionResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendDescribeWorkflowExecutionScope, request)
@@ -3220,11 +3209,10 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(
 		return nil, err
 	}
 
-	clientResp, err := wh.GetHistoryClient().DescribeWorkflowExecution(ctx, &types.HistoryDescribeWorkflowExecutionRequest{
+	response, err := wh.GetHistoryClient().DescribeWorkflowExecution(ctx, &types.HistoryDescribeWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
-		Request:    thrift.ToDescribeWorkflowExecutionRequest(request),
+		Request:    request,
 	})
-	response := thrift.FromDescribeWorkflowExecutionResponse(clientResp)
 
 	if err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
@@ -3238,8 +3226,8 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(
 // it will also return status of tasklist's ackManager (readLevel, ackLevel, backlogCountHint and taskIDBlock).
 func (wh *WorkflowHandler) DescribeTaskList(
 	ctx context.Context,
-	request *gen.DescribeTaskListRequest,
-) (resp *gen.DescribeTaskListResponse, retError error) {
+	request *types.DescribeTaskListRequest,
+) (resp *types.DescribeTaskListResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendDescribeTaskListScope, request)
@@ -3277,11 +3265,10 @@ func (wh *WorkflowHandler) DescribeTaskList(
 		return nil, err
 	}
 
-	clientResp, err := wh.GetMatchingClient().DescribeTaskList(ctx, &types.MatchingDescribeTaskListRequest{
+	response, err := wh.GetMatchingClient().DescribeTaskList(ctx, &types.MatchingDescribeTaskListRequest{
 		DomainUUID:  common.StringPtr(domainID),
-		DescRequest: thrift.ToDescribeTaskListRequest(request),
+		DescRequest: request,
 	})
-	response := thrift.FromDescribeTaskListResponse(clientResp)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -3292,8 +3279,8 @@ func (wh *WorkflowHandler) DescribeTaskList(
 // ListTaskListPartitions returns all the partition and host for a taskList
 func (wh *WorkflowHandler) ListTaskListPartitions(
 	ctx context.Context,
-	request *gen.ListTaskListPartitionsRequest,
-) (resp *gen.ListTaskListPartitionsResponse, retError error) {
+	request *types.ListTaskListPartitionsRequest,
+) (resp *types.ListTaskListPartitionsResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(metrics.FrontendListTaskListPartitionsScope, request)
@@ -3319,11 +3306,10 @@ func (wh *WorkflowHandler) ListTaskListPartitions(
 		return nil, err
 	}
 
-	clientResp, err := wh.GetMatchingClient().ListTaskListPartitions(ctx, &types.MatchingListTaskListPartitionsRequest{
+	resp, err := wh.GetMatchingClient().ListTaskListPartitions(ctx, &types.MatchingListTaskListPartitionsRequest{
 		Domain:   request.Domain,
-		TaskList: thrift.ToTaskList(request.TaskList),
+		TaskList: request.TaskList,
 	})
-	resp = thrift.FromListTaskListPartitionsResponse(clientResp)
 	return resp, err
 }
 
@@ -3331,16 +3317,16 @@ func (wh *WorkflowHandler) getRawHistory(
 	ctx context.Context,
 	scope metrics.Scope,
 	domainID string,
-	execution gen.WorkflowExecution,
+	execution types.WorkflowExecution,
 	firstEventID int64,
 	nextEventID int64,
 	pageSize int32,
 	nextPageToken []byte,
-	transientDecision *gen.TransientDecisionInfo,
+	transientDecision *types.TransientDecisionInfo,
 	branchToken []byte,
-) ([]*gen.DataBlob, []byte, error) {
-	rawHistory := []*gen.DataBlob{}
-	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, wh.config.NumHistoryShards)
+) ([]*types.DataBlob, []byte, error) {
+	rawHistory := []*types.DataBlob{}
+	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowID, wh.config.NumHistoryShards)
 
 	resp, err := wh.GetHistoryManager().ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
@@ -3354,17 +3340,17 @@ func (wh *WorkflowHandler) getRawHistory(
 		return nil, nil, err
 	}
 
-	var encoding *gen.EncodingType
+	var encoding *types.EncodingType
 	for _, data := range resp.HistoryEventBlobs {
 		switch data.Encoding {
 		case common.EncodingTypeJSON:
-			encoding = gen.EncodingTypeJSON.Ptr()
+			encoding = types.EncodingTypeJSON.Ptr()
 		case common.EncodingTypeThriftRW:
-			encoding = gen.EncodingTypeThriftRW.Ptr()
+			encoding = types.EncodingTypeThriftRW.Ptr()
 		default:
 			panic(fmt.Sprintf("Invalid encoding type for raw history, encoding type: %s", data.Encoding))
 		}
-		rawHistory = append(rawHistory, &gen.DataBlob{
+		rawHistory = append(rawHistory, &types.DataBlob{
 			EncodingType: encoding,
 			Data:         data.Data,
 		})
@@ -3375,17 +3361,17 @@ func (wh *WorkflowHandler) getRawHistory(
 			scope.IncCounter(metrics.CadenceErrIncompleteHistoryCounter)
 			wh.GetLogger().Error("getHistory error",
 				tag.WorkflowDomainID(domainID),
-				tag.WorkflowID(execution.GetWorkflowId()),
-				tag.WorkflowRunID(execution.GetRunId()),
+				tag.WorkflowID(execution.GetWorkflowID()),
+				tag.WorkflowRunID(execution.GetRunID()),
 				tag.Error(err))
 		}
-		blob, err := wh.GetPayloadSerializer().SerializeBatchEvents(thrift.ToHistoryEventArray(
-			[]*gen.HistoryEvent{transientDecision.ScheduledEvent, transientDecision.StartedEvent}), common.EncodingTypeThriftRW)
+		blob, err := wh.GetPayloadSerializer().SerializeBatchEvents(
+			[]*types.HistoryEvent{transientDecision.ScheduledEvent, transientDecision.StartedEvent}, common.EncodingTypeThriftRW)
 		if err != nil {
 			return nil, nil, err
 		}
-		rawHistory = append(rawHistory, &gen.DataBlob{
-			EncodingType: gen.EncodingTypeThriftRW.Ptr(),
+		rawHistory = append(rawHistory, &types.DataBlob{
+			EncodingType: types.EncodingTypeThriftRW.Ptr(),
 			Data:         blob.Data,
 		})
 	}
@@ -3397,21 +3383,21 @@ func (wh *WorkflowHandler) getHistory(
 	ctx context.Context,
 	scope metrics.Scope,
 	domainID string,
-	execution gen.WorkflowExecution,
+	execution types.WorkflowExecution,
 	firstEventID, nextEventID int64,
 	pageSize int32,
 	nextPageToken []byte,
-	transientDecision *gen.TransientDecisionInfo,
+	transientDecision *types.TransientDecisionInfo,
 	branchToken []byte,
-) (*gen.History, []byte, error) {
+) (*types.History, []byte, error) {
 
-	var historyEvents []*gen.HistoryEvent
+	var thriftHistoryEvents []*gen.HistoryEvent
 	var size int
 
 	isFirstPage := len(nextPageToken) == 0
-	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowId, wh.config.NumHistoryShards)
+	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowID, wh.config.NumHistoryShards)
 	var err error
-	historyEvents, size, nextPageToken, err = persistence.ReadFullPageV2Events(ctx, wh.GetHistoryManager(), &persistence.ReadHistoryBranchRequest{
+	thriftHistoryEvents, size, nextPageToken, err = persistence.ReadFullPageV2Events(ctx, wh.GetHistoryManager(), &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
@@ -3419,9 +3405,11 @@ func (wh *WorkflowHandler) getHistory(
 		NextPageToken: nextPageToken,
 		ShardID:       common.IntPtr(shardID),
 	})
+
 	if err != nil {
 		return nil, nil, err
 	}
+	historyEvents := thrift.ToHistoryEventArray(thriftHistoryEvents)
 
 	scope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
@@ -3436,8 +3424,8 @@ func (wh *WorkflowHandler) getHistory(
 		scope.IncCounter(metrics.CadenceErrIncompleteHistoryCounter)
 		wh.GetLogger().Error("getHistory: incomplete history",
 			tag.WorkflowDomainID(domainID),
-			tag.WorkflowID(execution.GetWorkflowId()),
-			tag.WorkflowRunID(execution.GetRunId()),
+			tag.WorkflowID(execution.GetWorkflowID()),
+			tag.WorkflowRunID(execution.GetRunID()),
 			tag.Error(err))
 		return nil, nil, err
 	}
@@ -3447,26 +3435,26 @@ func (wh *WorkflowHandler) getHistory(
 			scope.IncCounter(metrics.CadenceErrIncompleteHistoryCounter)
 			wh.GetLogger().Error("getHistory error",
 				tag.WorkflowDomainID(domainID),
-				tag.WorkflowID(execution.GetWorkflowId()),
-				tag.WorkflowRunID(execution.GetRunId()),
+				tag.WorkflowID(execution.GetWorkflowID()),
+				tag.WorkflowRunID(execution.GetRunID()),
 				tag.Error(err))
 		}
 		// Append the transient decision events once we are done enumerating everything from the events table
 		historyEvents = append(historyEvents, transientDecision.ScheduledEvent, transientDecision.StartedEvent)
 	}
 
-	executionHistory := &gen.History{}
+	executionHistory := &types.History{}
 	executionHistory.Events = historyEvents
 	return executionHistory, nextPageToken, nil
 }
 
 func (wh *WorkflowHandler) validateTransientDecisionEvents(
 	expectedNextEventID int64,
-	decision *gen.TransientDecisionInfo,
+	decision *types.TransientDecisionInfo,
 ) error {
 
-	if decision.ScheduledEvent.GetEventId() == expectedNextEventID &&
-		decision.StartedEvent.GetEventId() == expectedNextEventID+1 {
+	if decision.ScheduledEvent.GetEventID() == expectedNextEventID &&
+		decision.StartedEvent.GetEventID() == expectedNextEventID+1 {
 		return nil
 	}
 
@@ -3475,8 +3463,8 @@ func (wh *WorkflowHandler) validateTransientDecisionEvents(
 			"expectedScheduledEventID=%v expectedStartedEventID=%v but have scheduledEventID=%v startedEventID=%v",
 		expectedNextEventID,
 		expectedNextEventID+1,
-		decision.ScheduledEvent.GetEventId(),
-		decision.StartedEvent.GetEventId())
+		decision.ScheduledEvent.GetEventID(),
+		decision.StartedEvent.GetEventID())
 }
 
 // startRequestProfile initiates recording of request metrics
@@ -3559,14 +3547,14 @@ func (wh *WorkflowHandler) error(err error, scope metrics.Scope, tagsForErrorLog
 	return frontendInternalServiceError("cadence internal uncategorized error, msg: %v", err.Error())
 }
 
-func (wh *WorkflowHandler) validateTaskListType(t *gen.TaskListType, scope metrics.Scope) error {
+func (wh *WorkflowHandler) validateTaskListType(t *types.TaskListType, scope metrics.Scope) error {
 	if t == nil {
 		return wh.error(errTaskListTypeNotSet, scope)
 	}
 	return nil
 }
 
-func (wh *WorkflowHandler) validateTaskList(t *gen.TaskList, scope metrics.Scope, domain string) error {
+func (wh *WorkflowHandler) validateTaskList(t *types.TaskList, scope metrics.Scope, domain string) error {
 	if t == nil || t.Name == nil || t.GetName() == "" {
 		return wh.error(errTaskListNotSet, scope)
 	}
@@ -3579,12 +3567,12 @@ func (wh *WorkflowHandler) validateTaskList(t *gen.TaskList, scope metrics.Scope
 	return nil
 }
 
-func (wh *WorkflowHandler) isRawListList(t *gen.TaskList) bool {
-	return t.GetKind() != gen.TaskListKindSticky && !strings.HasPrefix(t.GetName(), common.ReservedTaskListPrefix)
+func (wh *WorkflowHandler) isRawListList(t *types.TaskList) bool {
+	return t.GetKind() != types.TaskListKindSticky && !strings.HasPrefix(t.GetName(), common.ReservedTaskListPrefix)
 }
 
-func (wh *WorkflowHandler) validateExecutionAndEmitMetrics(w *gen.WorkflowExecution, scope metrics.Scope) error {
-	err := validateExecution(thrift.ToWorkflowExecution(w))
+func (wh *WorkflowHandler) validateExecutionAndEmitMetrics(w *types.WorkflowExecution, scope metrics.Scope) error {
+	err := validateExecution(w)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -3608,24 +3596,24 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 	ctx context.Context,
 	scope metrics.Scope,
 	domainID string,
-	matchingResp *m.PollForDecisionTaskResponse,
+	matchingResp *types.MatchingPollForDecisionTaskResponse,
 	branchToken []byte,
-) (*gen.PollForDecisionTaskResponse, error) {
+) (*types.PollForDecisionTaskResponse, error) {
 
 	if matchingResp.WorkflowExecution == nil {
 		// this will happen if there is no decision task to be send to worker / caller
-		return &gen.PollForDecisionTaskResponse{}, nil
+		return &types.PollForDecisionTaskResponse{}, nil
 	}
 
-	var history *gen.History
+	var history *types.History
 	var continuation []byte
 	var err error
 
 	if matchingResp.GetStickyExecutionEnabled() && matchingResp.Query != nil {
 		// meaning sticky query, we should not return any events to worker
 		// since query task only check the current status
-		history = &gen.History{
-			Events: []*gen.HistoryEvent{},
+		history = &types.History{
+			Events: []*types.HistoryEvent{},
 		}
 	} else {
 		// here we have 3 cases:
@@ -3638,9 +3626,9 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 		var persistenceToken []byte
 
 		firstEventID := common.FirstEventID
-		nextEventID := matchingResp.GetNextEventId()
+		nextEventID := matchingResp.GetNextEventID()
 		if matchingResp.GetStickyExecutionEnabled() {
-			firstEventID = matchingResp.GetPreviousStartedEventId() + 1
+			firstEventID = matchingResp.GetPreviousStartedEventID() + 1
 		}
 		domain, dErr := wh.GetDomainCache().GetDomainByID(domainID)
 		if dErr != nil {
@@ -3665,7 +3653,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 
 		if len(persistenceToken) != 0 {
 			continuation, err = serializeHistoryToken(&getHistoryContinuationToken{
-				RunID:             matchingResp.WorkflowExecution.GetRunId(),
+				RunID:             matchingResp.WorkflowExecution.GetRunID(),
 				FirstEventID:      firstEventID,
 				NextEventID:       nextEventID,
 				PersistenceToken:  persistenceToken,
@@ -3678,12 +3666,12 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 		}
 	}
 
-	resp := &gen.PollForDecisionTaskResponse{
+	resp := &types.PollForDecisionTaskResponse{
 		TaskToken:                 matchingResp.TaskToken,
 		WorkflowExecution:         matchingResp.WorkflowExecution,
 		WorkflowType:              matchingResp.WorkflowType,
-		PreviousStartedEventId:    matchingResp.PreviousStartedEventId,
-		StartedEventId:            matchingResp.StartedEventId,
+		PreviousStartedEventID:    matchingResp.PreviousStartedEventID,
+		StartedEventID:            matchingResp.StartedEventID,
 		Query:                     matchingResp.Query,
 		BacklogCountHint:          matchingResp.BacklogCountHint,
 		Attempt:                   matchingResp.Attempt,
@@ -3699,7 +3687,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 }
 
 func verifyHistoryIsComplete(
-	events []*gen.HistoryEvent,
+	events []*types.HistoryEvent,
 	expectedFirstEventID int64,
 	expectedLastEventID int64,
 	isFirstPage bool,
@@ -3718,8 +3706,8 @@ func verifyHistoryIsComplete(
 		return fmt.Errorf("invalid history: contains zero events")
 	}
 
-	firstEventID := events[0].GetEventId()
-	lastEventID := events[nEvents-1].GetEventId()
+	firstEventID := events[0].GetEventID()
+	lastEventID := events[nEvents-1].GetEventID()
 
 	if !isFirstPage { // atleast one page of history has been read previously
 		if firstEventID <= expectedFirstEventID {
@@ -3849,15 +3837,15 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 	return nil
 }
 
-func (wh *WorkflowHandler) historyArchived(ctx context.Context, request *gen.GetWorkflowExecutionHistoryRequest, domainID string) bool {
-	if request.GetExecution() == nil || request.GetExecution().GetRunId() == "" {
+func (wh *WorkflowHandler) historyArchived(ctx context.Context, request *types.GetWorkflowExecutionHistoryRequest, domainID string) bool {
+	if request.GetExecution() == nil || request.GetExecution().GetRunID() == "" {
 		return false
 	}
-	getMutableStateRequest := &h.GetMutableStateRequest{
+	getMutableStateRequest := &types.GetMutableStateRequest{
 		DomainUUID: common.StringPtr(domainID),
 		Execution:  request.Execution,
 	}
-	_, err := wh.GetHistoryClient().GetMutableState(ctx, thrift.ToGetMutableStateRequest(getMutableStateRequest))
+	_, err := wh.GetHistoryClient().GetMutableState(ctx, getMutableStateRequest)
 	if err == nil {
 		return false
 	}
@@ -3871,10 +3859,10 @@ func (wh *WorkflowHandler) historyArchived(ctx context.Context, request *gen.Get
 
 func (wh *WorkflowHandler) getArchivedHistory(
 	ctx context.Context,
-	request *gen.GetWorkflowExecutionHistoryRequest,
+	request *types.GetWorkflowExecutionHistoryRequest,
 	domainID string,
 	scope metrics.Scope,
-) (*gen.GetWorkflowExecutionHistoryResponse, error) {
+) (*types.GetWorkflowExecutionHistoryResponse, error) {
 	wfExecution := request.GetExecution()
 	entry, err := wh.GetDomainCache().GetDomainByID(domainID)
 	if err != nil {
@@ -3901,8 +3889,8 @@ func (wh *WorkflowHandler) getArchivedHistory(
 
 	resp, err := historyArchiver.Get(ctx, URI, &archiver.GetHistoryRequest{
 		DomainID:      domainID,
-		WorkflowID:    request.GetExecution().GetWorkflowId(),
-		RunID:         request.GetExecution().GetRunId(),
+		WorkflowID:    request.GetExecution().GetWorkflowID(),
+		RunID:         request.GetExecution().GetRunID(),
 		NextPageToken: request.GetNextPageToken(),
 		PageSize:      int(request.GetMaximumPageSize()),
 	})
@@ -3914,8 +3902,8 @@ func (wh *WorkflowHandler) getArchivedHistory(
 	for _, batch := range resp.HistoryBatches {
 		history.Events = append(history.Events, batch.Events...)
 	}
-	return &gen.GetWorkflowExecutionHistoryResponse{
-		History:       thrift.FromHistory(history),
+	return &types.GetWorkflowExecutionHistoryResponse{
+		History:       history,
 		NextPageToken: resp.NextPageToken,
 		Archived:      common.BoolPtr(true),
 	}, nil
@@ -3929,10 +3917,10 @@ func (wh *WorkflowHandler) validIDLength(id string, scope metrics.Scope, domain 
 	return valid
 }
 
-func (wh *WorkflowHandler) convertIndexedKeyToThrift(keys map[string]interface{}) map[string]gen.IndexedValueType {
-	converted := make(map[string]gen.IndexedValueType)
+func (wh *WorkflowHandler) convertIndexedKeyToThrift(keys map[string]interface{}) map[string]types.IndexedValueType {
+	converted := make(map[string]types.IndexedValueType)
 	for k, v := range keys {
-		converted[k] = common.ConvertIndexedValueTypeToThriftType(v, wh.GetLogger())
+		converted[k] = thrift.ToIndexedValueType(common.ConvertIndexedValueTypeToThriftType(v, wh.GetLogger()))
 	}
 	return converted
 }
@@ -3953,7 +3941,7 @@ func (wh *WorkflowHandler) allow(d domainGetter) bool {
 // GetClusterInfo return information about cadence deployment
 func (wh *WorkflowHandler) GetClusterInfo(
 	ctx context.Context,
-) (resp *gen.ClusterInfo, err error) {
+) (resp *types.ClusterInfo, err error) {
 	defer log.CapturePanic(wh.GetLogger(), &err)
 
 	scope := wh.getDefaultScope(metrics.FrontendClientGetClusterInfoScope)
@@ -3961,8 +3949,8 @@ func (wh *WorkflowHandler) GetClusterInfo(
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
-	return &gen.ClusterInfo{
-		SupportedClientVersions: &gen.SupportedClientVersions{
+	return &types.ClusterInfo{
+		SupportedClientVersions: &types.SupportedClientVersions{
 			GoSdk:   common.StringPtr(client.SupportedGoSDKVersion),
 			JavaSdk: common.StringPtr(client.SupportedJavaSDKVersion),
 		},
@@ -4006,12 +3994,12 @@ func (hs HealthStatus) String() string {
 	}
 }
 
-func getWfIDRunIDTags(wf *gen.WorkflowExecution) []tag.Tag {
+func getWfIDRunIDTags(wf *types.WorkflowExecution) []tag.Tag {
 	if wf == nil {
 		return nil
 	}
 	return []tag.Tag{
-		tag.WorkflowID(wf.GetWorkflowId()),
-		tag.WorkflowRunID(wf.GetRunId()),
+		tag.WorkflowID(wf.GetWorkflowID()),
+		tag.WorkflowRunID(wf.GetRunID()),
 	}
 }
