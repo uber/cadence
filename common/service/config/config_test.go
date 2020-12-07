@@ -24,6 +24,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/uber/cadence/common"
 )
 
 func TestToString(t *testing.T) {
@@ -31,4 +33,32 @@ func TestToString(t *testing.T) {
 	err := Load("", "../../../config", "", &cfg)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, cfg.String())
+}
+
+func TestFillingDefaultSQLEncodingDecodingTypes(t *testing.T) {
+	cfg := &Config{
+		Persistence: Persistence{
+			DataStores: map[string]DataStore{
+				"sql": {
+					SQL: &SQL{},
+				},
+			},
+		},
+	}
+	cfg.fillDefaults()
+	assert.Equal(t, string(common.EncodingTypeThriftRW), cfg.Persistence.DataStores["sql"].SQL.EncodingType)
+	assert.Equal(t, []string{string(common.EncodingTypeThriftRW)}, cfg.Persistence.DataStores["sql"].SQL.DecodingTypes)
+}
+
+func TestFillingDefaultRpcName(t *testing.T) {
+	cfg := &Config{
+		ClusterMetadata: &ClusterMetadata{
+			ClusterInformation: map[string]ClusterInformation{
+				"clusterA": {},
+			},
+		},
+	}
+
+	cfg.fillDefaults()
+	assert.Equal(t, "cadence-frontend", cfg.ClusterMetadata.ClusterInformation["clusterA"].RPCName)
 }

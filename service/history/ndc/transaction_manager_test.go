@@ -448,9 +448,9 @@ func (s *transactionManagerSuite) TestCheckWorkflowExists_DoesNotExists() {
 
 	s.mockExecutionManager.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		Execution: types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	}).Return(nil, &types.EntityNotExistsError{}).Once()
 
@@ -467,9 +467,9 @@ func (s *transactionManagerSuite) TestCheckWorkflowExists_DoesExists() {
 
 	s.mockExecutionManager.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		Execution: types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	}).Return(&persistence.GetWorkflowExecutionResponse{}, nil).Once()
 

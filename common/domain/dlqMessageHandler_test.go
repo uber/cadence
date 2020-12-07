@@ -31,9 +31,9 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -87,10 +87,10 @@ func (s *dlqMessageHandlerSuite) TestReadMessages() {
 	pageSize := 100
 	pageToken := []byte{}
 
-	tasks := []*replicator.ReplicationTask{
+	tasks := []*types.ReplicationTask{
 		{
-			TaskType:     replicator.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskId: common.Int64Ptr(1),
+			TaskType:     types.ReplicationTaskTypeDomain.Ptr(),
+			SourceTaskID: common.Int64Ptr(1),
 		},
 	}
 	s.mockReplicationQueue.EXPECT().GetDLQAckLevel(gomock.Any()).Return(ackLevel, nil).Times(1)
@@ -109,10 +109,10 @@ func (s *dlqMessageHandlerSuite) TestReadMessages_ThrowErrorOnGetDLQAckLevel() {
 	pageSize := 100
 	pageToken := []byte{}
 
-	tasks := []*replicator.ReplicationTask{
+	tasks := []*types.ReplicationTask{
 		{
-			TaskType:     replicator.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskId: common.Int64Ptr(1),
+			TaskType:     types.ReplicationTaskTypeDomain.Ptr(),
+			SourceTaskID: common.Int64Ptr(1),
 		},
 	}
 	testError := fmt.Errorf("test")
@@ -185,14 +185,14 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages() {
 	pageToken := []byte{}
 	messageID := int64(11)
 
-	domainAttribute := &replicator.DomainTaskAttributes{
+	domainAttribute := &types.DomainTaskAttributes{
 		ID: common.StringPtr(uuid.New()),
 	}
 
-	tasks := []*replicator.ReplicationTask{
+	tasks := []*types.ReplicationTask{
 		{
-			TaskType:             replicator.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskId:         common.Int64Ptr(messageID),
+			TaskType:             types.ReplicationTaskTypeDomain.Ptr(),
+			SourceTaskID:         common.Int64Ptr(messageID),
 			DomainTaskAttributes: domainAttribute,
 		},
 	}
@@ -214,14 +214,14 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnGetDLQAckLevel() 
 	pageToken := []byte{}
 	messageID := int64(11)
 	testError := fmt.Errorf("test")
-	domainAttribute := &replicator.DomainTaskAttributes{
+	domainAttribute := &types.DomainTaskAttributes{
 		ID: common.StringPtr(uuid.New()),
 	}
 
-	tasks := []*replicator.ReplicationTask{
+	tasks := []*types.ReplicationTask{
 		{
-			TaskType:             replicator.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskId:         common.Int64Ptr(int64(messageID)),
+			TaskType:             types.ReplicationTaskTypeDomain.Ptr(),
+			SourceTaskID:         common.Int64Ptr(int64(messageID)),
 			DomainTaskAttributes: domainAttribute,
 		},
 	}
@@ -264,21 +264,21 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnHandleReceivingTa
 	messageID1 := int64(11)
 	messageID2 := int64(12)
 	testError := fmt.Errorf("test")
-	domainAttribute1 := &replicator.DomainTaskAttributes{
+	domainAttribute1 := &types.DomainTaskAttributes{
 		ID: common.StringPtr(uuid.New()),
 	}
-	domainAttribute2 := &replicator.DomainTaskAttributes{
+	domainAttribute2 := &types.DomainTaskAttributes{
 		ID: common.StringPtr(uuid.New()),
 	}
-	tasks := []*replicator.ReplicationTask{
+	tasks := []*types.ReplicationTask{
 		{
-			TaskType:             replicator.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskId:         common.Int64Ptr(messageID1),
+			TaskType:             types.ReplicationTaskTypeDomain.Ptr(),
+			SourceTaskID:         common.Int64Ptr(messageID1),
 			DomainTaskAttributes: domainAttribute1,
 		},
 		{
-			TaskType:             replicator.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskId:         common.Int64Ptr(messageID2),
+			TaskType:             types.ReplicationTaskTypeDomain.Ptr(),
+			SourceTaskID:         common.Int64Ptr(messageID2),
 			DomainTaskAttributes: domainAttribute2,
 		},
 	}
@@ -304,21 +304,21 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnDeleteMessages() 
 	messageID1 := int64(11)
 	messageID2 := int64(12)
 	testError := fmt.Errorf("test")
-	domainAttribute1 := &replicator.DomainTaskAttributes{
+	domainAttribute1 := &types.DomainTaskAttributes{
 		ID: common.StringPtr(uuid.New()),
 	}
-	domainAttribute2 := &replicator.DomainTaskAttributes{
+	domainAttribute2 := &types.DomainTaskAttributes{
 		ID: common.StringPtr(uuid.New()),
 	}
-	tasks := []*replicator.ReplicationTask{
+	tasks := []*types.ReplicationTask{
 		{
-			TaskType:             replicator.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskId:         common.Int64Ptr(messageID1),
+			TaskType:             types.ReplicationTaskTypeDomain.Ptr(),
+			SourceTaskID:         common.Int64Ptr(messageID1),
 			DomainTaskAttributes: domainAttribute1,
 		},
 		{
-			TaskType:             replicator.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskId:         common.Int64Ptr(messageID2),
+			TaskType:             types.ReplicationTaskTypeDomain.Ptr(),
+			SourceTaskID:         common.Int64Ptr(messageID2),
 			DomainTaskAttributes: domainAttribute2,
 		},
 	}
@@ -342,14 +342,14 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_IgnoreErrorOnUpdateDLQAckLeve
 	pageToken := []byte{}
 	messageID := int64(11)
 	testError := fmt.Errorf("test")
-	domainAttribute := &replicator.DomainTaskAttributes{
+	domainAttribute := &types.DomainTaskAttributes{
 		ID: common.StringPtr(uuid.New()),
 	}
 
-	tasks := []*replicator.ReplicationTask{
+	tasks := []*types.ReplicationTask{
 		{
-			TaskType:             replicator.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskId:         common.Int64Ptr(messageID),
+			TaskType:             types.ReplicationTaskTypeDomain.Ptr(),
+			SourceTaskID:         common.Int64Ptr(messageID),
 			DomainTaskAttributes: domainAttribute,
 		},
 	}

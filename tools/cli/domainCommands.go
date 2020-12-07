@@ -37,7 +37,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 var (
@@ -480,8 +479,7 @@ func (d *domainCLIImpl) listDomains(
 		return d.frontendClient.ListDomains(ctx, request)
 	}
 
-	resp, err := d.domainHandler.ListDomains(ctx, thrift.FromListDomainsRequest(request))
-	return thrift.ToListDomainsResponse(resp), err
+	return d.domainHandler.ListDomains(ctx, request)
 }
 
 func (d *domainCLIImpl) registerDomain(
@@ -493,7 +491,7 @@ func (d *domainCLIImpl) registerDomain(
 		return d.frontendClient.RegisterDomain(ctx, request)
 	}
 
-	return d.domainHandler.RegisterDomain(ctx, thrift.FromRegisterDomainRequest(request))
+	return d.domainHandler.RegisterDomain(ctx, request)
 }
 
 func (d *domainCLIImpl) updateDomain(
@@ -505,9 +503,7 @@ func (d *domainCLIImpl) updateDomain(
 		return d.frontendClient.UpdateDomain(ctx, request)
 	}
 
-	resp, err := d.domainHandler.UpdateDomain(ctx, thrift.FromUpdateDomainRequest(request))
-	return thrift.ToUpdateDomainResponse(resp), err
-
+	return d.domainHandler.UpdateDomain(ctx, request)
 }
 
 func (d *domainCLIImpl) describeDomain(
@@ -519,8 +515,7 @@ func (d *domainCLIImpl) describeDomain(
 		return d.frontendClient.DescribeDomain(ctx, request)
 	}
 
-	resp, err := d.domainHandler.DescribeDomain(ctx, thrift.FromDescribeDomainRequest(request))
-	return thrift.ToDescribeDomainResponse(resp), err
+	return d.domainHandler.DescribeDomain(ctx, request)
 }
 
 func createTableForListDomains(printAll, printFull bool) *tablewriter.Table {

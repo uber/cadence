@@ -24,12 +24,12 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/uber/cadence/common/auth"
-
 	"github.com/uber-go/tally/m3"
 	"github.com/uber-go/tally/prometheus"
 	"github.com/uber/ringpop-go/discovery"
 
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
@@ -423,12 +423,49 @@ type (
 	BootstrapMode int
 )
 
-// Validate validates this config
-func (c *Config) Validate() error {
+// ValidateAndFillDefaults validates this config and fills default values if needed
+func (c *Config) ValidateAndFillDefaults() error {
+	if err := c.validate(); err != nil {
+		return err
+	}
+	if err := c.fillDefaults(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Config) validate() error {
 	if err := c.Persistence.Validate(); err != nil {
 		return err
 	}
 	return c.Archival.Validate(&c.DomainDefaults.Archival)
+}
+
+func (c *Config) fillDefaults() error {
+	// filling default encodingType/decodingTypes for SQL persistence
+	for k, store := range c.Persistence.DataStores {
+		if store.SQL != nil {
+			if store.SQL.EncodingType == "" {
+				store.SQL.EncodingType = string(common.EncodingTypeThriftRW)
+			}
+			if len(store.SQL.DecodingTypes) == 0 {
+				store.SQL.DecodingTypes = []string{
+					string(common.EncodingTypeThriftRW),
+				}
+			}
+			c.Persistence.DataStores[k] = store
+		}
+	}
+	// filling RPCName with a default value if empty
+	if c.ClusterMetadata != nil {
+		for k, cluster := range c.ClusterMetadata.ClusterInformation {
+			if cluster.RPCName == "" {
+				cluster.RPCName = "cadence-frontend"
+				c.ClusterMetadata.ClusterInformation[k] = cluster
+			}
+		}
+	}
+	return nil
 }
 
 // String converts the config object into a string

@@ -34,7 +34,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -194,7 +193,7 @@ func (s *integrationSuite) isHistoryDeleted(domainID string, execution *types.Wo
 func (s *integrationSuite) isMutableStateDeleted(domainID string, execution *types.WorkflowExecution) bool {
 	request := &persistence.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
-		Execution: *thrift.FromWorkflowExecution(execution),
+		Execution: *execution,
 	}
 
 	for i := 0; i < retryLimit; i++ {

@@ -106,7 +106,8 @@ func (v *{{$.Prefix}}{{internal $.Name}}) Get{{internal .Name}}() (o {{if .Type.
 	if v != nil{{if .Type.IsMap | or .Type.IsArray | or .Type.IsPointer}} && v.{{internal .Name}} != nil{{end}} {
 		return {{if .Type.IsPointer | and (or .Type.IsPrimitive .Type.IsEnum)}}*{{end}}v.{{internal .Name}}
 	}
-	return
+	{{if and (eq $.Name "RegisterDomainRequest") (eq .Name "EmitMetric") }}o = true
+{{end}}return
 }
 {{end}}
 `))
