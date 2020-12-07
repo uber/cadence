@@ -74,7 +74,7 @@ func (m *executionManagerImpl) GetWorkflowExecution(
 
 	internalRequest := &InternalGetWorkflowExecutionRequest{
 		DomainID:  request.DomainID,
-		Execution: *thrift.ToWorkflowExecution(&request.Execution),
+		Execution: request.Execution,
 	}
 	response, err := m.persistence.GetWorkflowExecution(ctx, internalRequest)
 	if err != nil {

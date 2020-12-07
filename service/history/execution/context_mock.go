@@ -33,8 +33,8 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	shared "github.com/uber/cadence/.gen/go/shared"
 	persistence "github.com/uber/cadence/common/persistence"
+	types "github.com/uber/cadence/common/types"
 )
 
 // MockContext is a mock of Context interface
@@ -89,10 +89,10 @@ func (mr *MockContextMockRecorder) GetDomainID() *gomock.Call {
 }
 
 // GetExecution mocks base method
-func (m *MockContext) GetExecution() *shared.WorkflowExecution {
+func (m *MockContext) GetExecution() *types.WorkflowExecution {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetExecution")
-	ret0, _ := ret[0].(*shared.WorkflowExecution)
+	ret0, _ := ret[0].(*types.WorkflowExecution)
 	return ret0
 }
 

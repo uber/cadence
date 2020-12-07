@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/shard"
@@ -106,9 +107,9 @@ func (s *historyBuilderSuite) TestHistoryBuilderDynamicSuccess() {
 	input := []byte("dynamic-historybuilder-success-input")
 	execTimeout := int32(60)
 	taskTimeout := int32(10)
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(id),
-		RunId:      common.StringPtr(rid),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(id),
+		RunID:      common.StringPtr(rid),
 	}
 
 	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity)
@@ -410,9 +411,9 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowStartFailures() {
 	input := []byte("historybuilder-workflowstart-failures-input")
 	execTimeout := int32(60)
 	taskTimeout := int32(10)
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(id),
-		RunId:      common.StringPtr(rid),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(id),
+		RunID:      common.StringPtr(rid),
 	}
 
 	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity)
@@ -432,7 +433,7 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowStartFailures() {
 		&history.StartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(s.domainID),
 			StartRequest: &workflow.StartWorkflowExecutionRequest{
-				WorkflowId:                          common.StringPtr(*we.WorkflowId),
+				WorkflowId:                          common.StringPtr(*we.WorkflowID),
 				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(wt)},
 				TaskList:                            &workflow.TaskList{Name: common.StringPtr(tl)},
 				Input:                               input,
@@ -459,9 +460,9 @@ func (s *historyBuilderSuite) TestHistoryBuilderDecisionScheduledFailures() {
 	input := []byte("historybuilder-decisionscheduled-failures-input")
 	execTimeout := int32(60)
 	taskTimeout := int32(10)
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(id),
-		RunId:      common.StringPtr(rid),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(id),
+		RunID:      common.StringPtr(rid),
 	}
 
 	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity)
@@ -494,9 +495,9 @@ func (s *historyBuilderSuite) TestHistoryBuilderDecisionStartedFailures() {
 	input := []byte("historybuilder-decisionstarted-failures-input")
 	execTimeout := int32(60)
 	taskTimeout := int32(10)
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(id),
-		RunId:      common.StringPtr(rid),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(id),
+		RunID:      common.StringPtr(rid),
 	}
 
 	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity)
@@ -550,9 +551,9 @@ func (s *historyBuilderSuite) TestHistoryBuilderFlushBufferedEvents() {
 	input := []byte("flush-buffered-events-input")
 	execTimeout := int32(60)
 	taskTimeout := int32(10)
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(id),
-		RunId:      common.StringPtr(rid),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(id),
+		RunID:      common.StringPtr(rid),
 	}
 
 	// 1 execution started
@@ -717,9 +718,9 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowCancellationRequested() 
 	input := []byte("some random workflow input")
 	execTimeout := int32(60)
 	taskTimeout := int32(10)
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 
 	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(
@@ -789,9 +790,9 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowCancellationFailed() {
 	input := []byte("some random workflow input")
 	execTimeout := int32(60)
 	taskTimeout := int32(10)
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("some random workflow ID"),
-		RunId:      common.StringPtr(uuid.New()),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
 	}
 
 	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(
@@ -867,12 +868,12 @@ func (s *historyBuilderSuite) getPreviousDecisionStartedEventID() int64 {
 	return s.msBuilder.GetExecutionInfo().LastProcessedEvent
 }
 
-func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we workflow.WorkflowExecution, workflowType,
+func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we types.WorkflowExecution, workflowType,
 	taskList string, input []byte, executionStartToCloseTimeout, taskStartToCloseTimeout int32,
 	identity string) *workflow.HistoryEvent {
 
 	request := &workflow.StartWorkflowExecutionRequest{
-		WorkflowId:                          common.StringPtr(*we.WorkflowId),
+		WorkflowId:                          common.StringPtr(*we.WorkflowID),
 		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
 		TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
 		Input:                               input,

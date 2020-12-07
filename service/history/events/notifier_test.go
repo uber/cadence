@@ -29,12 +29,12 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -78,9 +78,9 @@ func (s *notifierSuite) TearDownTest() {
 
 func (s *notifierSuite) TestSingleSubscriberWatchingEvents() {
 	domainID := "domain ID"
-	execution := &gen.WorkflowExecution{
-		WorkflowId: common.StringPtr("workflow ID"),
-		RunId:      common.StringPtr("run ID"),
+	execution := &types.WorkflowExecution{
+		WorkflowID: common.StringPtr("workflow ID"),
+		RunID:      common.StringPtr("run ID"),
 	}
 	lastFirstEventID := int64(3)
 	previousStartedEventID := int64(5)
@@ -91,7 +91,7 @@ func (s *notifierSuite) TestSingleSubscriberWatchingEvents() {
 	historyEvent := NewNotification(domainID, execution, lastFirstEventID, nextEventID, previousStartedEventID, branchToken, workflowState, workflowCloseState)
 	timerChan := time.NewTimer(time.Second * 2).C
 
-	subscriberID, channel, err := s.historyEventNotifier.WatchHistoryEvent(definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowId(), execution.GetRunId()))
+	subscriberID, channel, err := s.historyEventNotifier.WatchHistoryEvent(definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowID(), execution.GetRunID()))
 	s.Nil(err)
 
 	go func() {
@@ -104,15 +104,15 @@ func (s *notifierSuite) TestSingleSubscriberWatchingEvents() {
 		s.Equal(historyEvent, msg)
 	}
 
-	err = s.historyEventNotifier.UnwatchHistoryEvent(definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowId(), execution.GetRunId()), subscriberID)
+	err = s.historyEventNotifier.UnwatchHistoryEvent(definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowID(), execution.GetRunID()), subscriberID)
 	s.Nil(err)
 }
 
 func (s *notifierSuite) TestMultipleSubscriberWatchingEvents() {
 	domainID := "domain ID"
-	execution := &gen.WorkflowExecution{
-		WorkflowId: common.StringPtr("workflow ID"),
-		RunId:      common.StringPtr("run ID"),
+	execution := &types.WorkflowExecution{
+		WorkflowID: common.StringPtr("workflow ID"),
+		RunID:      common.StringPtr("run ID"),
 	}
 
 	lastFirstEventID := int64(3)
@@ -129,7 +129,7 @@ func (s *notifierSuite) TestMultipleSubscriberWatchingEvents() {
 	waitGroup.Add(subscriberCount)
 
 	watchFunc := func() {
-		subscriberID, channel, err := s.historyEventNotifier.WatchHistoryEvent(definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowId(), execution.GetRunId()))
+		subscriberID, channel, err := s.historyEventNotifier.WatchHistoryEvent(definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowID(), execution.GetRunID()))
 		s.Nil(err)
 
 		timeourChan := time.NewTimer(time.Second * 10).C
@@ -140,7 +140,7 @@ func (s *notifierSuite) TestMultipleSubscriberWatchingEvents() {
 		case <-timeourChan:
 			s.Fail("subscribe to new events timeout")
 		}
-		err = s.historyEventNotifier.UnwatchHistoryEvent(definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowId(), execution.GetRunId()), subscriberID)
+		err = s.historyEventNotifier.UnwatchHistoryEvent(definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowID(), execution.GetRunID()), subscriberID)
 		s.Nil(err)
 		waitGroup.Done()
 	}

@@ -26,7 +26,6 @@ import (
 
 	"github.com/pborman/uuid"
 
-	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/collection"
@@ -85,7 +84,7 @@ var _ Notifier = (*notifierImpl)(nil)
 // NewNotification creates a new history event notification
 func NewNotification(
 	domainID string,
-	workflowExecution *gen.WorkflowExecution,
+	workflowExecution *types.WorkflowExecution,
 	lastFirstEventID int64,
 	nextEventID int64,
 	previousStartedEventID int64,
@@ -97,8 +96,8 @@ func NewNotification(
 	return &Notification{
 		ID: definition.NewWorkflowIdentifier(
 			domainID,
-			workflowExecution.GetWorkflowId(),
-			workflowExecution.GetRunId(),
+			workflowExecution.GetWorkflowID(),
+			workflowExecution.GetRunID(),
 		),
 		LastFirstEventID:       lastFirstEventID,
 		NextEventID:            nextEventID,
