@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -108,24 +107,24 @@ func (s *decisionAttrValidatorSuite) TestValidateSignalExternalWorkflowExecution
 	s.mockDomainCache.EXPECT().GetDomainByID(s.testDomainID).Return(domainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainByID(s.testTargetDomainID).Return(targetDomainEntry, nil).AnyTimes()
 
-	var attributes *workflow.SignalExternalWorkflowExecutionDecisionAttributes
+	var attributes *types.SignalExternalWorkflowExecutionDecisionAttributes
 
 	err := s.validator.validateSignalExternalWorkflowExecutionAttributes(s.testDomainID, s.testTargetDomainID, attributes)
 	s.EqualError(err, "BadRequestError{Message: SignalExternalWorkflowExecutionDecisionAttributes is not set on decision.}")
 
-	attributes = &workflow.SignalExternalWorkflowExecutionDecisionAttributes{}
+	attributes = &types.SignalExternalWorkflowExecutionDecisionAttributes{}
 	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(s.testDomainID, s.testTargetDomainID, attributes)
 	s.EqualError(err, "BadRequestError{Message: Execution is nil on decision.}")
 
-	attributes.Execution = &workflow.WorkflowExecution{}
-	attributes.Execution.WorkflowId = common.StringPtr("workflow-id")
+	attributes.Execution = &types.WorkflowExecution{}
+	attributes.Execution.WorkflowID = common.StringPtr("workflow-id")
 	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(s.testDomainID, s.testTargetDomainID, attributes)
 	s.EqualError(err, "BadRequestError{Message: SignalName is not set on decision.}")
 
-	attributes.Execution.RunId = common.StringPtr("run-id")
+	attributes.Execution.RunID = common.StringPtr("run-id")
 	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(s.testDomainID, s.testTargetDomainID, attributes)
 	s.EqualError(err, "BadRequestError{Message: Invalid RunId set on decision.}")
-	attributes.Execution.RunId = common.StringPtr(constants.TestRunID)
+	attributes.Execution.RunID = common.StringPtr(constants.TestRunID)
 
 	attributes.SignalName = common.StringPtr("my signal name")
 	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(s.testDomainID, s.testTargetDomainID, attributes)
@@ -138,16 +137,16 @@ func (s *decisionAttrValidatorSuite) TestValidateSignalExternalWorkflowExecution
 
 func (s *decisionAttrValidatorSuite) TestValidateUpsertWorkflowSearchAttributes() {
 	domainName := "testDomain"
-	var attributes *workflow.UpsertWorkflowSearchAttributesDecisionAttributes
+	var attributes *types.UpsertWorkflowSearchAttributesDecisionAttributes
 
 	err := s.validator.validateUpsertWorkflowSearchAttributes(domainName, attributes)
 	s.EqualError(err, "BadRequestError{Message: UpsertWorkflowSearchAttributesDecisionAttributes is not set on decision.}")
 
-	attributes = &workflow.UpsertWorkflowSearchAttributesDecisionAttributes{}
+	attributes = &types.UpsertWorkflowSearchAttributesDecisionAttributes{}
 	err = s.validator.validateUpsertWorkflowSearchAttributes(domainName, attributes)
 	s.EqualError(err, "BadRequestError{Message: SearchAttributes is not set on decision.}")
 
-	attributes.SearchAttributes = &workflow.SearchAttributes{}
+	attributes.SearchAttributes = &types.SearchAttributes{}
 	err = s.validator.validateUpsertWorkflowSearchAttributes(domainName, attributes)
 	s.EqualError(err, "BadRequestError{Message: IndexedFields is empty on decision.}")
 
@@ -502,23 +501,23 @@ func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_GlobalToGlobal_
 }
 
 func (s *decisionAttrValidatorSuite) TestValidateTaskListName() {
-	taskList := func(name string) *workflow.TaskList {
-		kind := workflow.TaskListKindNormal
-		return &workflow.TaskList{Name: &name, Kind: &kind}
+	taskList := func(name string) *types.TaskList {
+		kind := types.TaskListKindNormal
+		return &types.TaskList{Name: &name, Kind: &kind}
 	}
 
 	testCases := []struct {
 		defaultVal  string
-		input       *workflow.TaskList
-		output      *workflow.TaskList
+		input       *types.TaskList
+		output      *types.TaskList
 		isOutputErr bool
 	}{
-		{"tl-1", nil, &workflow.TaskList{Name: common.StringPtr("tl-1")}, false},
+		{"tl-1", nil, &types.TaskList{Name: common.StringPtr("tl-1")}, false},
 		{"", taskList("tl-1"), taskList("tl-1"), false},
 		{"tl-1", taskList("tl-1"), taskList("tl-1"), false},
 		{"", taskList("/tl-1"), taskList("/tl-1"), false},
 		{"", taskList("/__cadence_sys"), taskList("/__cadence_sys"), false},
-		{"", nil, &workflow.TaskList{}, true},
+		{"", nil, &types.TaskList{}, true},
 		{"", taskList(""), taskList(""), true},
 		{"", taskList(common.ReservedTaskListPrefix), taskList(common.ReservedTaskListPrefix), true},
 		{"tl-1", taskList(common.ReservedTaskListPrefix), taskList(common.ReservedTaskListPrefix), true},
@@ -547,13 +546,13 @@ func (s *decisionAttrValidatorSuite) TestValidateTaskListName() {
 
 func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_NoRetryPolicy() {
 	wfTimeout := int32(5)
-	attributes := &workflow.ScheduleActivityTaskDecisionAttributes{
-		ActivityId: common.StringPtr("some random activityID"),
-		ActivityType: &workflow.ActivityType{
+	attributes := &types.ScheduleActivityTaskDecisionAttributes{
+		ActivityID: common.StringPtr("some random activityID"),
+		ActivityType: &types.ActivityType{
 			Name: common.StringPtr("some random activity type"),
 		},
 		Domain: common.StringPtr(s.testDomainID),
-		TaskList: &workflow.TaskList{
+		TaskList: &types.TaskList{
 			Name: common.StringPtr("some random task list"),
 		},
 		Input:                         []byte{1, 2, 3},
@@ -563,8 +562,8 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_NoRe
 		HeartbeatTimeoutSeconds:       common.Int32Ptr(10), // larger then wfTimeout
 	}
 
-	expectedAttributesAfterValidation := &workflow.ScheduleActivityTaskDecisionAttributes{
-		ActivityId:                    attributes.ActivityId,
+	expectedAttributesAfterValidation := &types.ScheduleActivityTaskDecisionAttributes{
+		ActivityID:                    attributes.ActivityID,
 		ActivityType:                  attributes.ActivityType,
 		Domain:                        attributes.Domain,
 		TaskList:                      attributes.TaskList,
@@ -602,13 +601,13 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_NoRe
 
 func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_WithRetryPolicy_ScheduleToStartRetryable() {
 	wfTimeout := int32(3000)
-	attributes := &workflow.ScheduleActivityTaskDecisionAttributes{
-		ActivityId: common.StringPtr("some random activityID"),
-		ActivityType: &workflow.ActivityType{
+	attributes := &types.ScheduleActivityTaskDecisionAttributes{
+		ActivityID: common.StringPtr("some random activityID"),
+		ActivityType: &types.ActivityType{
 			Name: common.StringPtr("some random activity type"),
 		},
 		Domain: common.StringPtr(s.testDomainID),
-		TaskList: &workflow.TaskList{
+		TaskList: &types.TaskList{
 			Name: common.StringPtr("some random task list"),
 		},
 		Input:                         []byte{1, 2, 3},
@@ -616,7 +615,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(3),
 		StartToCloseTimeoutSeconds:    common.Int32Ptr(500), // extended ScheduleToStart + StartToClose > wfTimeout
 		HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
-		RetryPolicy: &workflow.RetryPolicy{
+		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(1),
 			BackoffCoefficient:          common.Float64Ptr(1.1),
 			ExpirationIntervalInSeconds: common.Int32Ptr(maximumScheduleToStartTimeoutForRetryInSeconds + 1000), // larger than maximumScheduleToStartTimeoutForRetryInSeconds
@@ -624,8 +623,8 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 		},
 	}
 
-	expectedAttributesAfterValidation := &workflow.ScheduleActivityTaskDecisionAttributes{
-		ActivityId:                    attributes.ActivityId,
+	expectedAttributesAfterValidation := &types.ScheduleActivityTaskDecisionAttributes{
+		ActivityID:                    attributes.ActivityID,
 		ActivityType:                  attributes.ActivityType,
 		Domain:                        attributes.Domain,
 		TaskList:                      attributes.TaskList,
@@ -664,13 +663,13 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 
 func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_WithRetryPolicy_ScheduleToStartNonRetryable() {
 	wfTimeout := int32(1000)
-	attributes := &workflow.ScheduleActivityTaskDecisionAttributes{
-		ActivityId: common.StringPtr("some random activityID"),
-		ActivityType: &workflow.ActivityType{
+	attributes := &types.ScheduleActivityTaskDecisionAttributes{
+		ActivityID: common.StringPtr("some random activityID"),
+		ActivityType: &types.ActivityType{
 			Name: common.StringPtr("some random activity type"),
 		},
 		Domain: common.StringPtr(s.testDomainID),
-		TaskList: &workflow.TaskList{
+		TaskList: &types.TaskList{
 			Name: common.StringPtr("some random task list"),
 		},
 		Input:                         []byte{1, 2, 3},
@@ -678,7 +677,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(3),
 		StartToCloseTimeoutSeconds:    common.Int32Ptr(500), // extended ScheduleToStart + StartToClose > wfTimeout
 		HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
-		RetryPolicy: &workflow.RetryPolicy{
+		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(1),
 			BackoffCoefficient:          common.Float64Ptr(1.1),
 			ExpirationIntervalInSeconds: common.Int32Ptr(maximumScheduleToStartTimeoutForRetryInSeconds + 1000), // larger than wfTimeout and maximumScheduleToStartTimeoutForRetryInSeconds
@@ -686,8 +685,8 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 		},
 	}
 
-	expectedAttributesAfterValidation := &workflow.ScheduleActivityTaskDecisionAttributes{
-		ActivityId:                    attributes.ActivityId,
+	expectedAttributesAfterValidation := &types.ScheduleActivityTaskDecisionAttributes{
+		ActivityID:                    attributes.ActivityID,
 		ActivityType:                  attributes.ActivityType,
 		Domain:                        attributes.Domain,
 		TaskList:                      attributes.TaskList,
