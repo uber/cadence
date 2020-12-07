@@ -28,12 +28,11 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -69,18 +68,18 @@ func (s *transmissionTaskSuite) TearDownTest() {
 }
 
 func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_IsGlobalDomain() {
-	taskType := replicator.ReplicationTaskTypeDomain
+	taskType := types.ReplicationTaskTypeDomain
 	id := uuid.New()
 	name := "some random domain test name"
-	status := shared.DomainStatusRegistered
+	status := types.DomainStatusRegistered
 	description := "some random test description"
 	ownerEmail := "some random test owner"
 	data := map[string]string{"k": "v"}
 	retention := int32(10)
 	emitMetric := true
-	historyArchivalStatus := shared.ArchivalStatusEnabled
+	historyArchivalStatus := types.ArchivalStatusEnabled
 	historyArchivalURI := "some random history archival uri"
-	visibilityArchivalStatus := shared.ArchivalStatusEnabled
+	visibilityArchivalStatus := types.ArchivalStatusEnabled
 	visibilityArchivalURI := "some random visibility archival uri"
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
@@ -96,7 +95,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_Is
 		},
 	}
 
-	domainOperation := replicator.DomainOperationCreate
+	domainOperation := types.DomainOperationCreate
 	info := &p.DomainInfo{
 		ID:          id,
 		Name:        name,
@@ -112,7 +111,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_Is
 		HistoryArchivalURI:       historyArchivalURI,
 		VisibilityArchivalStatus: visibilityArchivalStatus,
 		VisibilityArchivalURI:    visibilityArchivalURI,
-		BadBinaries:              shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
+		BadBinaries:              types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 	}
 	replicationConfig := &p.DomainReplicationConfig{
 		ActiveClusterName: clusterActive,
@@ -120,28 +119,28 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_Is
 	}
 	isGlobalDomain := true
 
-	s.kafkaProducer.On("Publish", mock.Anything, &replicator.ReplicationTask{
+	s.kafkaProducer.On("Publish", mock.Anything, &types.ReplicationTask{
 		TaskType: &taskType,
-		DomainTaskAttributes: &replicator.DomainTaskAttributes{
+		DomainTaskAttributes: &types.DomainTaskAttributes{
 			DomainOperation: &domainOperation,
 			ID:              common.StringPtr(id),
-			Info: &shared.DomainInfo{
+			Info: &types.DomainInfo{
 				Name:        common.StringPtr(name),
 				Status:      &status,
 				Description: common.StringPtr(description),
 				OwnerEmail:  common.StringPtr(ownerEmail),
 				Data:        data,
 			},
-			Config: &shared.DomainConfiguration{
+			Config: &types.DomainConfiguration{
 				WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
 				EmitMetric:                             common.BoolPtr(emitMetric),
-				HistoryArchivalStatus:                  common.ArchivalStatusPtr(historyArchivalStatus),
+				HistoryArchivalStatus:                  historyArchivalStatus.Ptr(),
 				HistoryArchivalURI:                     common.StringPtr(historyArchivalURI),
-				VisibilityArchivalStatus:               common.ArchivalStatusPtr(visibilityArchivalStatus),
+				VisibilityArchivalStatus:               visibilityArchivalStatus.Ptr(),
 				VisibilityArchivalURI:                  common.StringPtr(visibilityArchivalURI),
-				BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
+				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 			},
-			ReplicationConfig: &shared.DomainReplicationConfiguration{
+			ReplicationConfig: &types.DomainReplicationConfiguration{
 				ActiveClusterName: common.StringPtr(clusterActive),
 				Clusters:          s.domainReplicator.convertClusterReplicationConfigToThrift(clusters),
 			},
@@ -173,9 +172,9 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_No
 	data := map[string]string{"k": "v"}
 	retention := int32(10)
 	emitMetric := true
-	historyArchivalStatus := shared.ArchivalStatusEnabled
+	historyArchivalStatus := types.ArchivalStatusEnabled
 	historyArchivalURI := "some random history archival uri"
-	visibilityArchivalStatus := shared.ArchivalStatusEnabled
+	visibilityArchivalStatus := types.ArchivalStatusEnabled
 	visibilityArchivalURI := "some random visibility archival uri"
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
@@ -191,7 +190,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_No
 		},
 	}
 
-	domainOperation := replicator.DomainOperationCreate
+	domainOperation := types.DomainOperationCreate
 	info := &p.DomainInfo{
 		ID:          id,
 		Name:        name,
@@ -207,7 +206,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_No
 		HistoryArchivalURI:       historyArchivalURI,
 		VisibilityArchivalStatus: visibilityArchivalStatus,
 		VisibilityArchivalURI:    visibilityArchivalURI,
-		BadBinaries:              shared.BadBinaries{},
+		BadBinaries:              types.BadBinaries{},
 	}
 	replicationConfig := &p.DomainReplicationConfig{
 		ActiveClusterName: clusterActive,
@@ -230,18 +229,18 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_No
 }
 
 func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_IsGlobalDomain() {
-	taskType := replicator.ReplicationTaskTypeDomain
+	taskType := types.ReplicationTaskTypeDomain
 	id := uuid.New()
 	name := "some random domain test name"
-	status := shared.DomainStatusDeprecated
+	status := types.DomainStatusDeprecated
 	description := "some random test description"
 	ownerEmail := "some random test owner"
 	data := map[string]string{"k": "v"}
 	retention := int32(10)
 	emitMetric := true
-	historyArchivalStatus := shared.ArchivalStatusEnabled
+	historyArchivalStatus := types.ArchivalStatusEnabled
 	historyArchivalURI := "some random history archival uri"
-	visibilityArchivalStatus := shared.ArchivalStatusEnabled
+	visibilityArchivalStatus := types.ArchivalStatusEnabled
 	visibilityArchivalURI := "some random visibility archival uri"
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
@@ -257,7 +256,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_IsGl
 		},
 	}
 
-	domainOperation := replicator.DomainOperationUpdate
+	domainOperation := types.DomainOperationUpdate
 	info := &p.DomainInfo{
 		ID:          id,
 		Name:        name,
@@ -273,7 +272,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_IsGl
 		HistoryArchivalURI:       historyArchivalURI,
 		VisibilityArchivalStatus: visibilityArchivalStatus,
 		VisibilityArchivalURI:    visibilityArchivalURI,
-		BadBinaries:              shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
+		BadBinaries:              types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 	}
 	replicationConfig := &p.DomainReplicationConfig{
 		ActiveClusterName: clusterActive,
@@ -281,28 +280,28 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_IsGl
 	}
 	isGlobalDomain := true
 
-	s.kafkaProducer.On("Publish", mock.Anything, &replicator.ReplicationTask{
+	s.kafkaProducer.On("Publish", mock.Anything, &types.ReplicationTask{
 		TaskType: &taskType,
-		DomainTaskAttributes: &replicator.DomainTaskAttributes{
+		DomainTaskAttributes: &types.DomainTaskAttributes{
 			DomainOperation: &domainOperation,
 			ID:              common.StringPtr(id),
-			Info: &shared.DomainInfo{
+			Info: &types.DomainInfo{
 				Name:        common.StringPtr(name),
 				Status:      &status,
 				Description: common.StringPtr(description),
 				OwnerEmail:  common.StringPtr(ownerEmail),
 				Data:        data,
 			},
-			Config: &shared.DomainConfiguration{
+			Config: &types.DomainConfiguration{
 				WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
 				EmitMetric:                             common.BoolPtr(emitMetric),
-				HistoryArchivalStatus:                  common.ArchivalStatusPtr(historyArchivalStatus),
+				HistoryArchivalStatus:                  historyArchivalStatus.Ptr(),
 				HistoryArchivalURI:                     common.StringPtr(historyArchivalURI),
-				VisibilityArchivalStatus:               common.ArchivalStatusPtr(visibilityArchivalStatus),
+				VisibilityArchivalStatus:               visibilityArchivalStatus.Ptr(),
 				VisibilityArchivalURI:                  common.StringPtr(visibilityArchivalURI),
-				BadBinaries:                            &shared.BadBinaries{Binaries: map[string]*shared.BadBinaryInfo{}},
+				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 			},
-			ReplicationConfig: &shared.DomainReplicationConfiguration{
+			ReplicationConfig: &types.DomainReplicationConfiguration{
 				ActiveClusterName: common.StringPtr(clusterActive),
 				Clusters:          s.domainReplicator.convertClusterReplicationConfigToThrift(clusters),
 			},
@@ -334,9 +333,9 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_NotG
 	data := map[string]string{"k": "v"}
 	retention := int32(10)
 	emitMetric := true
-	historyArchivalStatus := shared.ArchivalStatusEnabled
+	historyArchivalStatus := types.ArchivalStatusEnabled
 	historyArchivalURI := "some random history archival uri"
-	visibilityArchivalStatus := shared.ArchivalStatusEnabled
+	visibilityArchivalStatus := types.ArchivalStatusEnabled
 	visibilityArchivalURI := "some random visibility archival uri"
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
@@ -352,7 +351,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_NotG
 		},
 	}
 
-	domainOperation := replicator.DomainOperationUpdate
+	domainOperation := types.DomainOperationUpdate
 	info := &p.DomainInfo{
 		ID:          id,
 		Name:        name,

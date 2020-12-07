@@ -31,14 +31,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/types/mapper/thrift"
+	"github.com/uber/cadence/common/types"
 )
 
 type domainReplicationSuite struct {
@@ -90,9 +89,9 @@ func (s *domainReplicationSuite) TearDownTest() {
 
 func (s *domainReplicationSuite) TestHandleDomainReplicationTask() {
 	domainID := uuid.New()
-	task := &replicator.ReplicationTask{
-		TaskType: replicator.ReplicationTaskTypeDomain.Ptr(),
-		DomainTaskAttributes: &replicator.DomainTaskAttributes{
+	task := &types.ReplicationTask{
+		TaskType: types.ReplicationTaskTypeDomain.Ptr(),
+		DomainTaskAttributes: &types.DomainTaskAttributes{
 			ID: common.StringPtr(domainID),
 		},
 	}
@@ -109,14 +108,14 @@ func (s *domainReplicationSuite) TestHandleDomainReplicationTask() {
 
 func (s *domainReplicationSuite) TestPutDomainReplicationTaskToDLQ() {
 	domainID := uuid.New()
-	task := &replicator.ReplicationTask{
-		TaskType: replicator.ReplicationTaskTypeDomain.Ptr(),
+	task := &types.ReplicationTask{
+		TaskType: types.ReplicationTaskTypeDomain.Ptr(),
 	}
 
 	err := s.replicationProcessor.putDomainReplicationTaskToDLQ(task)
 	s.Error(err)
 
-	task.DomainTaskAttributes = &replicator.DomainTaskAttributes{
+	task.DomainTaskAttributes = &types.DomainTaskAttributes{
 		ID: common.StringPtr(domainID),
 	}
 
@@ -133,26 +132,26 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks() {
 	domainID1 := uuid.New()
 	domainID2 := uuid.New()
 	lastMessageID := int64(1000)
-	resp := &replicator.GetDomainReplicationMessagesResponse{
-		Messages: &replicator.ReplicationMessages{
-			ReplicationTasks: []*replicator.ReplicationTask{
+	resp := &types.GetDomainReplicationMessagesResponse{
+		Messages: &types.ReplicationMessages{
+			ReplicationTasks: []*types.ReplicationTask{
 				{
-					TaskType: replicator.ReplicationTaskTypeDomain.Ptr(),
-					DomainTaskAttributes: &replicator.DomainTaskAttributes{
+					TaskType: types.ReplicationTaskTypeDomain.Ptr(),
+					DomainTaskAttributes: &types.DomainTaskAttributes{
 						ID: common.StringPtr(domainID1),
 					},
 				},
 				{
-					TaskType: replicator.ReplicationTaskTypeDomain.Ptr(),
-					DomainTaskAttributes: &replicator.DomainTaskAttributes{
+					TaskType: types.ReplicationTaskTypeDomain.Ptr(),
+					DomainTaskAttributes: &types.DomainTaskAttributes{
 						ID: common.StringPtr(domainID2),
 					},
 				},
 			},
-			LastRetrievedMessageId: common.Int64Ptr(lastMessageID),
+			LastRetrievedMessageID: common.Int64Ptr(lastMessageID),
 		},
 	}
-	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(thrift.ToGetDomainReplicationMessagesResponse(resp), nil)
+	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(resp, nil)
 	s.taskExecutor.EXPECT().Execute(resp.Messages.ReplicationTasks[0].DomainTaskAttributes).Return(nil).Times(1)
 	s.taskExecutor.EXPECT().Execute(resp.Messages.ReplicationTasks[1].DomainTaskAttributes).Return(nil).Times(1)
 
@@ -173,26 +172,26 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks_FailedOnExecuti
 	domainID1 := uuid.New()
 	domainID2 := uuid.New()
 	lastMessageID := int64(1000)
-	resp := &replicator.GetDomainReplicationMessagesResponse{
-		Messages: &replicator.ReplicationMessages{
-			ReplicationTasks: []*replicator.ReplicationTask{
+	resp := &types.GetDomainReplicationMessagesResponse{
+		Messages: &types.ReplicationMessages{
+			ReplicationTasks: []*types.ReplicationTask{
 				{
-					TaskType: replicator.ReplicationTaskTypeDomain.Ptr(),
-					DomainTaskAttributes: &replicator.DomainTaskAttributes{
+					TaskType: types.ReplicationTaskTypeDomain.Ptr(),
+					DomainTaskAttributes: &types.DomainTaskAttributes{
 						ID: common.StringPtr(domainID1),
 					},
 				},
 				{
-					TaskType: replicator.ReplicationTaskTypeDomain.Ptr(),
-					DomainTaskAttributes: &replicator.DomainTaskAttributes{
+					TaskType: types.ReplicationTaskTypeDomain.Ptr(),
+					DomainTaskAttributes: &types.DomainTaskAttributes{
 						ID: common.StringPtr(domainID2),
 					},
 				},
 			},
-			LastRetrievedMessageId: common.Int64Ptr(lastMessageID),
+			LastRetrievedMessageID: common.Int64Ptr(lastMessageID),
 		},
 	}
-	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(thrift.ToGetDomainReplicationMessagesResponse(resp), nil)
+	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(resp, nil)
 	s.taskExecutor.EXPECT().Execute(gomock.Any()).Return(errors.New("test")).AnyTimes()
 	s.domainReplicationQueue.EXPECT().PublishToDLQ(gomock.Any(), gomock.Any()).Return(nil).Times(2)
 
@@ -205,26 +204,26 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks_FailedOnDLQ() {
 	domainID1 := uuid.New()
 	domainID2 := uuid.New()
 	lastMessageID := int64(1000)
-	resp := &replicator.GetDomainReplicationMessagesResponse{
-		Messages: &replicator.ReplicationMessages{
-			ReplicationTasks: []*replicator.ReplicationTask{
+	resp := &types.GetDomainReplicationMessagesResponse{
+		Messages: &types.ReplicationMessages{
+			ReplicationTasks: []*types.ReplicationTask{
 				{
-					TaskType: replicator.ReplicationTaskTypeDomain.Ptr(),
-					DomainTaskAttributes: &replicator.DomainTaskAttributes{
+					TaskType: types.ReplicationTaskTypeDomain.Ptr(),
+					DomainTaskAttributes: &types.DomainTaskAttributes{
 						ID: common.StringPtr(domainID1),
 					},
 				},
 				{
-					TaskType: replicator.ReplicationTaskTypeDomain.Ptr(),
-					DomainTaskAttributes: &replicator.DomainTaskAttributes{
+					TaskType: types.ReplicationTaskTypeDomain.Ptr(),
+					DomainTaskAttributes: &types.DomainTaskAttributes{
 						ID: common.StringPtr(domainID2),
 					},
 				},
 			},
-			LastRetrievedMessageId: common.Int64Ptr(lastMessageID),
+			LastRetrievedMessageID: common.Int64Ptr(lastMessageID),
 		},
 	}
-	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(thrift.ToGetDomainReplicationMessagesResponse(resp), nil)
+	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(resp, nil)
 	s.taskExecutor.EXPECT().Execute(gomock.Any()).Return(nil).AnyTimes()
 	s.domainReplicationQueue.EXPECT().PublishToDLQ(gomock.Any(), gomock.Any()).Return(errors.New("test")).Times(1)
 

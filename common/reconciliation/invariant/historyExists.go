@@ -25,7 +25,6 @@ package invariant
 import (
 	"context"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	c "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
@@ -154,9 +153,9 @@ func ExecutionStillExists(
 ) (bool, error) {
 	req := &persistence.GetWorkflowExecutionRequest{
 		DomainID: exec.DomainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: &exec.WorkflowID,
-			RunId:      &exec.RunID,
+		Execution: types.WorkflowExecution{
+			WorkflowID: &exec.WorkflowID,
+			RunID:      &exec.RunID,
 		},
 	}
 	_, err := pr.GetWorkflowExecution(ctx, req)

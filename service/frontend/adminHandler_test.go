@@ -32,8 +32,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -106,35 +104,35 @@ func (s *adminHandlerSuite) TearDownTest() {
 
 func (s *adminHandlerSuite) Test_ConvertIndexedValueTypeToESDataType() {
 	tests := []struct {
-		input    shared.IndexedValueType
+		input    types.IndexedValueType
 		expected string
 	}{
 		{
-			input:    shared.IndexedValueTypeString,
+			input:    types.IndexedValueTypeString,
 			expected: "text",
 		},
 		{
-			input:    shared.IndexedValueTypeKeyword,
+			input:    types.IndexedValueTypeKeyword,
 			expected: "keyword",
 		},
 		{
-			input:    shared.IndexedValueTypeInt,
+			input:    types.IndexedValueTypeInt,
 			expected: "long",
 		},
 		{
-			input:    shared.IndexedValueTypeDouble,
+			input:    types.IndexedValueTypeDouble,
 			expected: "double",
 		},
 		{
-			input:    shared.IndexedValueTypeBool,
+			input:    types.IndexedValueTypeBool,
 			expected: "boolean",
 		},
 		{
-			input:    shared.IndexedValueTypeDatetime,
+			input:    types.IndexedValueTypeDatetime,
 			expected: "date",
 		},
 		{
-			input:    shared.IndexedValueType(-1),
+			input:    types.IndexedValueType(-1),
 			expected: "",
 		},
 	}
@@ -148,15 +146,15 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 
 	ctx := context.Background()
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
-		&admin.GetWorkflowExecutionRawHistoryV2Request{
+		&types.GetWorkflowExecutionRawHistoryV2Request{
 			Domain: common.StringPtr(s.domainName),
-			Execution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr(""),
-				RunId:      common.StringPtr(uuid.New()),
+			Execution: &types.WorkflowExecution{
+				WorkflowID: common.StringPtr(""),
+				RunID:      common.StringPtr(uuid.New()),
 			},
-			StartEventId:      common.Int64Ptr(1),
+			StartEventID:      common.Int64Ptr(1),
 			StartEventVersion: common.Int64Ptr(100),
-			EndEventId:        common.Int64Ptr(10),
+			EndEventID:        common.Int64Ptr(10),
 			EndEventVersion:   common.Int64Ptr(100),
 			MaximumPageSize:   common.Int32Ptr(1),
 			NextPageToken:     nil,
@@ -167,15 +165,15 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvalidRunID() {
 	ctx := context.Background()
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
-		&admin.GetWorkflowExecutionRawHistoryV2Request{
+		&types.GetWorkflowExecutionRawHistoryV2Request{
 			Domain: common.StringPtr(s.domainName),
-			Execution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr("workflowID"),
-				RunId:      common.StringPtr("runID"),
+			Execution: &types.WorkflowExecution{
+				WorkflowID: common.StringPtr("workflowID"),
+				RunID:      common.StringPtr("runID"),
 			},
-			StartEventId:      common.Int64Ptr(1),
+			StartEventID:      common.Int64Ptr(1),
 			StartEventVersion: common.Int64Ptr(100),
-			EndEventId:        common.Int64Ptr(10),
+			EndEventID:        common.Int64Ptr(10),
 			EndEventVersion:   common.Int64Ptr(100),
 			MaximumPageSize:   common.Int32Ptr(1),
 			NextPageToken:     nil,
@@ -186,15 +184,15 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvalidSize() {
 	ctx := context.Background()
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
-		&admin.GetWorkflowExecutionRawHistoryV2Request{
+		&types.GetWorkflowExecutionRawHistoryV2Request{
 			Domain: common.StringPtr(s.domainName),
-			Execution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr("workflowID"),
-				RunId:      common.StringPtr(uuid.New()),
+			Execution: &types.WorkflowExecution{
+				WorkflowID: common.StringPtr("workflowID"),
+				RunID:      common.StringPtr(uuid.New()),
 			},
-			StartEventId:      common.Int64Ptr(1),
+			StartEventID:      common.Int64Ptr(1),
 			StartEventVersion: common.Int64Ptr(100),
-			EndEventId:        common.Int64Ptr(10),
+			EndEventID:        common.Int64Ptr(10),
 			EndEventVersion:   common.Int64Ptr(100),
 			MaximumPageSize:   common.Int32Ptr(-1),
 			NextPageToken:     nil,
@@ -206,15 +204,15 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnDomain
 	ctx := context.Background()
 	s.mockDomainCache.EXPECT().GetDomainID(s.domainName).Return("", fmt.Errorf("test")).Times(1)
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
-		&admin.GetWorkflowExecutionRawHistoryV2Request{
+		&types.GetWorkflowExecutionRawHistoryV2Request{
 			Domain: common.StringPtr(s.domainName),
-			Execution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr("workflowID"),
-				RunId:      common.StringPtr(uuid.New()),
+			Execution: &types.WorkflowExecution{
+				WorkflowID: common.StringPtr("workflowID"),
+				RunID:      common.StringPtr(uuid.New()),
 			},
-			StartEventId:      common.Int64Ptr(1),
+			StartEventID:      common.Int64Ptr(1),
 			StartEventVersion: common.Int64Ptr(100),
-			EndEventId:        common.Int64Ptr(10),
+			EndEventID:        common.Int64Ptr(10),
 			EndEventVersion:   common.Int64Ptr(100),
 			MaximumPageSize:   common.Int32Ptr(1),
 			NextPageToken:     nil,
@@ -244,15 +242,15 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 		Size:              0,
 	}, nil)
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
-		&admin.GetWorkflowExecutionRawHistoryV2Request{
+		&types.GetWorkflowExecutionRawHistoryV2Request{
 			Domain: common.StringPtr(s.domainName),
-			Execution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr("workflowID"),
-				RunId:      common.StringPtr(uuid.New()),
+			Execution: &types.WorkflowExecution{
+				WorkflowID: common.StringPtr("workflowID"),
+				RunID:      common.StringPtr(uuid.New()),
 			},
-			StartEventId:      common.Int64Ptr(1),
+			StartEventID:      common.Int64Ptr(1),
 			StartEventVersion: common.Int64Ptr(100),
-			EndEventId:        common.Int64Ptr(10),
+			EndEventID:        common.Int64Ptr(10),
 			EndEventVersion:   common.Int64Ptr(100),
 			MaximumPageSize:   common.Int32Ptr(10),
 			NextPageToken:     nil,
@@ -277,13 +275,13 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_SameStartIDAnd
 	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(mState, nil).AnyTimes()
 
 	resp, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
-		&admin.GetWorkflowExecutionRawHistoryV2Request{
+		&types.GetWorkflowExecutionRawHistoryV2Request{
 			Domain: common.StringPtr(s.domainName),
-			Execution: &shared.WorkflowExecution{
-				WorkflowId: common.StringPtr("workflowID"),
-				RunId:      common.StringPtr(uuid.New()),
+			Execution: &types.WorkflowExecution{
+				WorkflowID: common.StringPtr("workflowID"),
+				RunID:      common.StringPtr(uuid.New()),
 			},
-			StartEventId:      common.Int64Ptr(10),
+			StartEventID:      common.Int64Ptr(10),
 			StartEventVersion: common.Int64Ptr(100),
 			MaximumPageSize:   common.Int32Ptr(1),
 			NextPageToken:     nil,
@@ -301,15 +299,15 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 	endItem := persistence.NewVersionHistoryItem(inputEndEventID, inputEndVersion)
 	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{firstItem, endItem})
 	versionHistories := persistence.NewVersionHistories(versionHistory)
-	request := &admin.GetWorkflowExecutionRawHistoryV2Request{
+	request := &types.GetWorkflowExecutionRawHistoryV2Request{
 		Domain: common.StringPtr(s.domainName),
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr("workflowID"),
-			RunId:      common.StringPtr(uuid.New()),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr("workflowID"),
+			RunID:      common.StringPtr(uuid.New()),
 		},
-		StartEventId:      common.Int64Ptr(inputStartEventID),
+		StartEventID:      common.Int64Ptr(inputStartEventID),
 		StartEventVersion: common.Int64Ptr(inputStartVersion),
-		EndEventId:        common.Int64Ptr(inputEndEventID),
+		EndEventID:        common.Int64Ptr(inputEndEventID),
 		EndEventVersion:   common.Int64Ptr(inputEndVersion),
 		MaximumPageSize:   common.Int32Ptr(10),
 		NextPageToken:     nil,
@@ -319,8 +317,8 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 		request,
 		versionHistories,
 	)
-	s.Equal(request.GetStartEventId(), inputStartEventID)
-	s.Equal(request.GetEndEventId(), inputEndEventID)
+	s.Equal(request.GetStartEventID(), inputStartEventID)
+	s.Equal(request.GetEndEventID(), inputEndEventID)
 	s.Equal(targetVersionHistory, versionHistory)
 	s.NoError(err)
 }
@@ -334,15 +332,15 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 	targetItem := persistence.NewVersionHistoryItem(inputEndEventID, inputEndVersion)
 	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{firstItem, targetItem})
 	versionHistories := persistence.NewVersionHistories(versionHistory)
-	request := &admin.GetWorkflowExecutionRawHistoryV2Request{
+	request := &types.GetWorkflowExecutionRawHistoryV2Request{
 		Domain: common.StringPtr(s.domainName),
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr("workflowID"),
-			RunId:      common.StringPtr(uuid.New()),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr("workflowID"),
+			RunID:      common.StringPtr(uuid.New()),
 		},
-		StartEventId:      nil,
+		StartEventID:      nil,
 		StartEventVersion: nil,
-		EndEventId:        common.Int64Ptr(inputEndEventID),
+		EndEventID:        common.Int64Ptr(inputEndEventID),
 		EndEventVersion:   common.Int64Ptr(inputEndVersion),
 		MaximumPageSize:   common.Int32Ptr(10),
 		NextPageToken:     nil,
@@ -352,8 +350,8 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 		request,
 		versionHistories,
 	)
-	s.Equal(request.GetStartEventId(), inputStartEventID-1)
-	s.Equal(request.GetEndEventId(), inputEndEventID)
+	s.Equal(request.GetStartEventID(), inputStartEventID-1)
+	s.Equal(request.GetEndEventID(), inputEndEventID)
 	s.Equal(targetVersionHistory, versionHistory)
 	s.NoError(err)
 }
@@ -367,15 +365,15 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 	targetItem := persistence.NewVersionHistoryItem(inputEndEventID, inputEndVersion)
 	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{firstItem, targetItem})
 	versionHistories := persistence.NewVersionHistories(versionHistory)
-	request := &admin.GetWorkflowExecutionRawHistoryV2Request{
+	request := &types.GetWorkflowExecutionRawHistoryV2Request{
 		Domain: common.StringPtr(s.domainName),
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr("workflowID"),
-			RunId:      common.StringPtr(uuid.New()),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr("workflowID"),
+			RunID:      common.StringPtr(uuid.New()),
 		},
-		StartEventId:      common.Int64Ptr(inputStartEventID),
+		StartEventID:      common.Int64Ptr(inputStartEventID),
 		StartEventVersion: common.Int64Ptr(inputStartVersion),
-		EndEventId:        nil,
+		EndEventID:        nil,
 		EndEventVersion:   nil,
 		MaximumPageSize:   common.Int32Ptr(10),
 		NextPageToken:     nil,
@@ -385,8 +383,8 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 		request,
 		versionHistories,
 	)
-	s.Equal(request.GetStartEventId(), inputStartEventID)
-	s.Equal(request.GetEndEventId(), inputEndEventID+1)
+	s.Equal(request.GetStartEventID(), inputStartEventID)
+	s.Equal(request.GetEndEventID(), inputEndEventID+1)
 	s.Equal(targetVersionHistory, versionHistory)
 	s.NoError(err)
 }
@@ -405,15 +403,15 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 	versionHistories := persistence.NewVersionHistories(versionHistory1)
 	_, _, err := versionHistories.AddVersionHistory(versionHistory2)
 	s.NoError(err)
-	request := &admin.GetWorkflowExecutionRawHistoryV2Request{
+	request := &types.GetWorkflowExecutionRawHistoryV2Request{
 		Domain: common.StringPtr(s.domainName),
-		Execution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr("workflowID"),
-			RunId:      common.StringPtr(uuid.New()),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr("workflowID"),
+			RunID:      common.StringPtr(uuid.New()),
 		},
-		StartEventId:      common.Int64Ptr(9),
+		StartEventID:      common.Int64Ptr(9),
 		StartEventVersion: common.Int64Ptr(20),
-		EndEventId:        common.Int64Ptr(inputEndEventID),
+		EndEventID:        common.Int64Ptr(inputEndEventID),
 		EndEventVersion:   common.Int64Ptr(inputEndVersion),
 		MaximumPageSize:   common.Int32Ptr(10),
 		NextPageToken:     nil,
@@ -423,8 +421,8 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 		request,
 		versionHistories,
 	)
-	s.Equal(request.GetStartEventId(), inputStartEventID)
-	s.Equal(request.GetEndEventId(), inputEndEventID)
+	s.Equal(request.GetStartEventID(), inputStartEventID)
+	s.Equal(request.GetEndEventID(), inputEndEventID)
 	s.Equal(targetVersionHistory, versionHistory1)
 	s.NoError(err)
 }
@@ -436,7 +434,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 
 	type test struct {
 		Name     string
-		Request  *admin.AddSearchAttributeRequest
+		Request  *types.AddSearchAttributeRequest
 		Expected error
 	}
 	// request validation tests
@@ -448,13 +446,13 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 		},
 		{
 			Name:     "empty request",
-			Request:  &admin.AddSearchAttributeRequest{},
+			Request:  &types.AddSearchAttributeRequest{},
 			Expected: &types.BadRequestError{Message: "SearchAttributes are not provided"},
 		},
 		{
 			Name: "no advanced config",
-			Request: &admin.AddSearchAttributeRequest{
-				SearchAttribute: map[string]shared.IndexedValueType{
+			Request: &types.AddSearchAttributeRequest{
+				SearchAttribute: map[string]types.IndexedValueType{
 					"CustomKeywordField": 1,
 				},
 			},
@@ -475,7 +473,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 	handler.esClient = esClient
 
 	mockValidAttr := map[string]interface{}{
-		"testkey": shared.IndexedValueTypeKeyword,
+		"testkey": types.IndexedValueTypeKeyword,
 	}
 	dynamicConfig.EXPECT().GetMapValue(dynamicconfig.ValidSearchAttributes, nil, definition.GetDefaultIndexedKeys()).
 		Return(mockValidAttr, nil).AnyTimes()
@@ -483,8 +481,8 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 	testCases2 := []test{
 		{
 			Name: "reserved key",
-			Request: &admin.AddSearchAttributeRequest{
-				SearchAttribute: map[string]shared.IndexedValueType{
+			Request: &types.AddSearchAttributeRequest{
+				SearchAttribute: map[string]types.IndexedValueType{
 					"WorkflowID": 1,
 				},
 			},
@@ -492,8 +490,8 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 		},
 		{
 			Name: "key already whitelisted",
-			Request: &admin.AddSearchAttributeRequest{
-				SearchAttribute: map[string]shared.IndexedValueType{
+			Request: &types.AddSearchAttributeRequest{
+				SearchAttribute: map[string]types.IndexedValueType{
 					"testkey": 1,
 				},
 			},
@@ -506,15 +504,15 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 
 	dcUpdateTest := test{
 		Name: "dynamic config update failed",
-		Request: &admin.AddSearchAttributeRequest{
-			SearchAttribute: map[string]shared.IndexedValueType{
+		Request: &types.AddSearchAttributeRequest{
+			SearchAttribute: map[string]types.IndexedValueType{
 				"testkey2": 1,
 			},
 		},
 		Expected: &types.InternalServiceError{Message: "Failed to update dynamic config, err: error"},
 	}
 	dynamicConfig.EXPECT().UpdateValue(dynamicconfig.ValidSearchAttributes, map[string]interface{}{
-		"testkey":  shared.IndexedValueTypeKeyword,
+		"testkey":  types.IndexedValueTypeKeyword,
 		"testkey2": 1,
 	}).Return(errors.New("error"))
 	s.Equal(dcUpdateTest.Expected, handler.AddSearchAttribute(ctx, dcUpdateTest.Request))
@@ -524,8 +522,8 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 
 	convertFailedTest := test{
 		Name: "unknown value type",
-		Request: &admin.AddSearchAttributeRequest{
-			SearchAttribute: map[string]shared.IndexedValueType{
+		Request: &types.AddSearchAttributeRequest{
+			SearchAttribute: map[string]types.IndexedValueType{
 				"testkey3": -1,
 			},
 		},
@@ -538,8 +536,8 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 	esClient.On("IsNotFoundError", mock.Anything).Return(false)
 	esErrorTest := test{
 		Name: "es error",
-		Request: &admin.AddSearchAttributeRequest{
-			SearchAttribute: map[string]shared.IndexedValueType{
+		Request: &types.AddSearchAttributeRequest{
+			SearchAttribute: map[string]types.IndexedValueType{
 				"testkey4": 1,
 			},
 		},
@@ -558,20 +556,20 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Permission() {
 
 	type test struct {
 		Name     string
-		Request  *admin.AddSearchAttributeRequest
+		Request  *types.AddSearchAttributeRequest
 		Expected error
 	}
 	testCases := []test{
 		{
 			Name: "unknown token",
-			Request: &admin.AddSearchAttributeRequest{
+			Request: &types.AddSearchAttributeRequest{
 				SecurityToken: common.StringPtr("unknown"),
 			},
 			Expected: errNoPermission,
 		},
 		{
 			Name: "correct token",
-			Request: &admin.AddSearchAttributeRequest{
+			Request: &types.AddSearchAttributeRequest{
 				SecurityToken: common.StringPtr(common.DefaultAdminOperationToken),
 			},
 			Expected: &types.BadRequestError{Message: "SearchAttributes are not provided"},

@@ -113,9 +113,9 @@ func (handler *decisionHandlerImpl) handleDecisionTaskScheduled(
 	}
 	domainID := domainEntry.GetInfo().ID
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: req.WorkflowExecution.WorkflowId,
-		RunId:      req.WorkflowExecution.RunId,
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: req.WorkflowExecution.WorkflowId,
+		RunID:      req.WorkflowExecution.RunId,
 	}
 
 	return handler.historyEngine.updateWorkflowExecutionWithAction(ctx, domainID, workflowExecution,
@@ -155,9 +155,9 @@ func (handler *decisionHandlerImpl) handleDecisionTaskStarted(
 	}
 	domainID := domainEntry.GetInfo().ID
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: req.WorkflowExecution.WorkflowId,
-		RunId:      req.WorkflowExecution.RunId,
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: req.WorkflowExecution.WorkflowId,
+		RunID:      req.WorkflowExecution.RunId,
 	}
 
 	scheduleID := req.GetScheduleId()
@@ -243,9 +243,9 @@ func (handler *decisionHandlerImpl) handleDecisionTaskFailed(
 		return ErrDeserializingToken
 	}
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(token.WorkflowID),
-		RunId:      common.StringPtr(token.RunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(token.WorkflowID),
+		RunID:      common.StringPtr(token.RunID),
 	}
 
 	return handler.historyEngine.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
@@ -283,9 +283,9 @@ func (handler *decisionHandlerImpl) handleDecisionTaskCompleted(
 		return nil, ErrDeserializingToken
 	}
 
-	workflowExecution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(token.WorkflowID),
-		RunId:      common.StringPtr(token.RunID),
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(token.WorkflowID),
+		RunID:      common.StringPtr(token.RunID),
 	}
 
 	call := yarpc.CallFromContext(ctx)
@@ -509,9 +509,9 @@ Update_History_Loop:
 				handler.shard.GetTimeSource().Now(),
 				execution.NewContext(
 					continueAsNewExecutionInfo.DomainID,
-					workflow.WorkflowExecution{
-						WorkflowId: common.StringPtr(continueAsNewExecutionInfo.WorkflowID),
-						RunId:      common.StringPtr(continueAsNewExecutionInfo.RunID),
+					types.WorkflowExecution{
+						WorkflowID: common.StringPtr(continueAsNewExecutionInfo.WorkflowID),
+						RunID:      common.StringPtr(continueAsNewExecutionInfo.RunID),
 					},
 					handler.shard,
 					handler.shard.GetExecutionManager(),

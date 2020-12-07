@@ -361,11 +361,11 @@ func retryWorkflow(
 
 func getWorkflowExecution(
 	taskInfo Info,
-) workflow.WorkflowExecution {
+) types.WorkflowExecution {
 
-	return workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(taskInfo.GetWorkflowID()),
-		RunId:      common.StringPtr(taskInfo.GetRunID()),
+	return types.WorkflowExecution{
+		WorkflowID: common.StringPtr(taskInfo.GetWorkflowID()),
+		RunID:      common.StringPtr(taskInfo.GetRunID()),
 	}
 }
 

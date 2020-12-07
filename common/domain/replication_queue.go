@@ -37,6 +37,8 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -84,10 +86,10 @@ type (
 		common.Daemon
 		Publish(ctx context.Context, message interface{}) error
 		PublishToDLQ(ctx context.Context, message interface{}) error
-		GetReplicationMessages(ctx context.Context, lastMessageID int64, maxCount int) ([]*replicator.ReplicationTask, int64, error)
+		GetReplicationMessages(ctx context.Context, lastMessageID int64, maxCount int) ([]*types.ReplicationTask, int64, error)
 		UpdateAckLevel(ctx context.Context, lastProcessedMessageID int64, clusterName string) error
 		GetAckLevels(ctx context.Context) (map[string]int64, error)
-		GetMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*replicator.ReplicationTask, []byte, error)
+		GetMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64, pageSize int, pageToken []byte) ([]*types.ReplicationTask, []byte, error)
 		UpdateDLQAckLevel(ctx context.Context, lastProcessedMessageID int64) error
 		GetDLQAckLevel(ctx context.Context) (int64, error)
 		RangeDeleteMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64) error
@@ -114,12 +116,12 @@ func (q *replicationQueueImpl) Publish(
 	ctx context.Context,
 	message interface{},
 ) error {
-	task, ok := message.(*replicator.ReplicationTask)
+	task, ok := message.(*types.ReplicationTask)
 	if !ok {
 		return errors.New("wrong message type")
 	}
 
-	bytes, err := q.encoder.Encode(task)
+	bytes, err := q.encoder.Encode(thrift.FromReplicationTask(task))
 	if err != nil {
 		return fmt.Errorf("failed to encode message: %v", err)
 	}
@@ -130,12 +132,12 @@ func (q *replicationQueueImpl) PublishToDLQ(
 	ctx context.Context,
 	message interface{},
 ) error {
-	task, ok := message.(*replicator.ReplicationTask)
+	task, ok := message.(*types.ReplicationTask)
 	if !ok {
 		return errors.New("wrong message type")
 	}
 
-	bytes, err := q.encoder.Encode(task)
+	bytes, err := q.encoder.Encode(thrift.FromReplicationTask(task))
 	if err != nil {
 		return fmt.Errorf("failed to encode message: %v", err)
 	}
@@ -147,14 +149,14 @@ func (q *replicationQueueImpl) GetReplicationMessages(
 	ctx context.Context,
 	lastMessageID int64,
 	maxCount int,
-) ([]*replicator.ReplicationTask, int64, error) {
+) ([]*types.ReplicationTask, int64, error) {
 
 	messages, err := q.queue.ReadMessages(ctx, lastMessageID, maxCount)
 	if err != nil {
 		return nil, lastMessageID, err
 	}
 
-	var replicationTasks []*replicator.ReplicationTask
+	var replicationTasks []*types.ReplicationTask
 	for _, message := range messages {
 		var replicationTask replicator.ReplicationTask
 		err := q.encoder.Decode(message.Payload, &replicationTask)
@@ -163,7 +165,7 @@ func (q *replicationQueueImpl) GetReplicationMessages(
 		}
 
 		lastMessageID = message.ID
-		replicationTasks = append(replicationTasks, &replicationTask)
+		replicationTasks = append(replicationTasks, thrift.ToReplicationTask(&replicationTask))
 	}
 
 	return replicationTasks, lastMessageID, nil
@@ -200,14 +202,14 @@ func (q *replicationQueueImpl) GetMessagesFromDLQ(
 	lastMessageID int64,
 	pageSize int,
 	pageToken []byte,
-) ([]*replicator.ReplicationTask, []byte, error) {
+) ([]*types.ReplicationTask, []byte, error) {
 
 	messages, token, err := q.queue.ReadMessagesFromDLQ(ctx, firstMessageID, lastMessageID, pageSize, pageToken)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var replicationTasks []*replicator.ReplicationTask
+	var replicationTasks []*types.ReplicationTask
 	for _, message := range messages {
 		var replicationTask replicator.ReplicationTask
 		err := q.encoder.Decode(message.Payload, &replicationTask)
@@ -217,7 +219,7 @@ func (q *replicationQueueImpl) GetMessagesFromDLQ(
 
 		//Overwrite to local cluster message id
 		replicationTask.SourceTaskId = common.Int64Ptr(int64(message.ID))
-		replicationTasks = append(replicationTasks, &replicationTask)
+		replicationTasks = append(replicationTasks, thrift.ToReplicationTask(&replicationTask))
 	}
 
 	return replicationTasks, token, nil

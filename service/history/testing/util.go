@@ -34,7 +34,7 @@ import (
 // AddWorkflowExecutionStartedEventWithParent adds WorkflowExecutionStarted event with parent workflow info
 func AddWorkflowExecutionStartedEventWithParent(
 	builder execution.MutableState,
-	workflowExecution workflow.WorkflowExecution,
+	workflowExecution types.WorkflowExecution,
 	workflowType string,
 	taskList string,
 	input []byte,
@@ -45,7 +45,7 @@ func AddWorkflowExecutionStartedEventWithParent(
 ) *workflow.HistoryEvent {
 
 	startRequest := &workflow.StartWorkflowExecutionRequest{
-		WorkflowId:                          common.StringPtr(*workflowExecution.WorkflowId),
+		WorkflowId:                          common.StringPtr(*workflowExecution.WorkflowID),
 		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
 		TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
 		Input:                               input,
@@ -69,7 +69,7 @@ func AddWorkflowExecutionStartedEventWithParent(
 // AddWorkflowExecutionStartedEvent adds WorkflowExecutionStarted event
 func AddWorkflowExecutionStartedEvent(
 	builder execution.MutableState,
-	workflowExecution workflow.WorkflowExecution,
+	workflowExecution types.WorkflowExecution,
 	workflowType string,
 	taskList string,
 	input []byte,
@@ -376,9 +376,9 @@ func AddChildWorkflowExecutionStartedEvent(
 ) *workflow.HistoryEvent {
 	event, _ := builder.AddChildWorkflowExecutionStartedEvent(
 		common.StringPtr(domain),
-		&workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		&types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 		&workflow.WorkflowType{Name: common.StringPtr(workflowType)},
 		initiatedID,
@@ -391,7 +391,7 @@ func AddChildWorkflowExecutionStartedEvent(
 func AddChildWorkflowExecutionCompletedEvent(
 	builder execution.MutableState,
 	initiatedID int64,
-	childExecution *workflow.WorkflowExecution,
+	childExecution *types.WorkflowExecution,
 	attributes *workflow.WorkflowExecutionCompletedEventAttributes,
 ) *workflow.HistoryEvent {
 	event, _ := builder.AddChildWorkflowExecutionCompletedEvent(initiatedID, childExecution, attributes)

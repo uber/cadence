@@ -175,6 +175,7 @@ func getOutputFile(outputFile string) *os.File {
 	if err != nil {
 		ErrorAndExit("failed to create output file", err)
 	}
+
 	return f
 }
 
@@ -473,9 +474,9 @@ func doRereplicate(
 	fmt.Printf("Start rereplicate for wid: %v, rid:%v \n", wid, rid)
 	resp, err := exeMgr.GetWorkflowExecution(ctx, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(wid),
-			RunId:      common.StringPtr(rid),
+		Execution: types.WorkflowExecution{
+			WorkflowID: common.StringPtr(wid),
+			RunID:      common.StringPtr(rid),
 		},
 	})
 	if err != nil {

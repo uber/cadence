@@ -330,3 +330,9 @@ gen-internal-types:
 	go run common/types/generator/main.go
 
 internal-types: gen-internal-types fmt copyright
+
+start-mysql: bins
+	./cadence-server --zone mysql start
+
+start-mysql: bins
+	./cadence-server --zone postgres start
