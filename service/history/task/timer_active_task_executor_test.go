@@ -505,7 +505,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
-		&workflow.RetryPolicy{
+		&types.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(1),
 			BackoffCoefficient:          common.Float64Ptr(1.2),
 			MaximumIntervalInSeconds:    common.Int32Ptr(5),
@@ -601,7 +601,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
-		&workflow.RetryPolicy{
+		&types.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(1),
 			BackoffCoefficient:          common.Float64Ptr(1.2),
 			MaximumIntervalInSeconds:    common.Int32Ptr(5),
@@ -695,7 +695,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_No
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
-		&workflow.RetryPolicy{
+		&types.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(1),
 			BackoffCoefficient:          common.Float64Ptr(1.2),
 			MaximumIntervalInSeconds:    common.Int32Ptr(5),
@@ -787,7 +787,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noop
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
 		int32(heartbeatTimerTimeout.Seconds()),
-		&workflow.RetryPolicy{
+		&types.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(1),
 			BackoffCoefficient:          common.Float64Ptr(1.2),
 			MaximumIntervalInSeconds:    common.Int32Ptr(5),
@@ -1098,7 +1098,7 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Fire() {
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
-		&workflow.RetryPolicy{
+		&types.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(1),
 			BackoffCoefficient:          common.Float64Ptr(1.2),
 			MaximumIntervalInSeconds:    common.Int32Ptr(5),
@@ -1193,7 +1193,7 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Noop() {
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
-		&workflow.RetryPolicy{
+		&types.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(1),
 			BackoffCoefficient:          common.Float64Ptr(1.2),
 			MaximumIntervalInSeconds:    common.Int32Ptr(5),

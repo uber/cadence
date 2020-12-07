@@ -26,7 +26,6 @@ import (
 
 	"github.com/pborman/uuid"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
@@ -138,7 +137,7 @@ func (c *workflowSizeChecker) failWorkflowIfBlobSizeExceedsLimit(
 		return false, nil
 	}
 
-	attributes := &workflow.FailWorkflowExecutionDecisionAttributes{
+	attributes := &types.FailWorkflowExecutionDecisionAttributes{
 		Reason:  common.StringPtr(common.FailureReasonDecisionBlobSizeExceedsLimit),
 		Details: []byte(message),
 	}
@@ -163,7 +162,7 @@ func (c *workflowSizeChecker) failWorkflowSizeExceedsLimit() (bool, error) {
 			tag.WorkflowHistorySize(historySize),
 			tag.WorkflowEventCount(historyCount))
 
-		attributes := &workflow.FailWorkflowExecutionDecisionAttributes{
+		attributes := &types.FailWorkflowExecutionDecisionAttributes{
 			Reason:  common.StringPtr(common.FailureReasonSizeExceedsLimit),
 			Details: []byte("Workflow history size / count exceeds limit."),
 		}
@@ -191,7 +190,7 @@ func (c *workflowSizeChecker) failWorkflowSizeExceedsLimit() (bool, error) {
 func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 	domainID string,
 	targetDomainID string,
-	attributes *workflow.ScheduleActivityTaskDecisionAttributes,
+	attributes *types.ScheduleActivityTaskDecisionAttributes,
 	wfTimeout int32,
 ) error {
 
@@ -211,7 +210,7 @@ func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 		return err
 	}
 
-	if attributes.GetActivityId() == "" {
+	if attributes.GetActivityID() == "" {
 		return &types.BadRequestError{Message: "ActivityId is not set on decision."}
 	}
 
@@ -219,11 +218,11 @@ func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 		return &types.BadRequestError{Message: "ActivityType is not set on decision."}
 	}
 
-	if err := common.ValidateRetryPolicy(attributes.RetryPolicy); err != nil {
+	if err := common.ValidateRetryPolicy(thrift.FromRetryPolicy(attributes.RetryPolicy)); err != nil {
 		return err
 	}
 
-	if len(attributes.GetActivityId()) > v.maxIDLengthLimit {
+	if len(attributes.GetActivityID()) > v.maxIDLengthLimit {
 		return &types.BadRequestError{Message: "ActivityID exceeds length limit."}
 	}
 
@@ -327,16 +326,16 @@ func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 }
 
 func (v *decisionAttrValidator) validateTimerScheduleAttributes(
-	attributes *workflow.StartTimerDecisionAttributes,
+	attributes *types.StartTimerDecisionAttributes,
 ) error {
 
 	if attributes == nil {
 		return &types.BadRequestError{Message: "StartTimerDecisionAttributes is not set on decision."}
 	}
-	if attributes.GetTimerId() == "" {
+	if attributes.GetTimerID() == "" {
 		return &types.BadRequestError{Message: "TimerId is not set on decision."}
 	}
-	if len(attributes.GetTimerId()) > v.maxIDLengthLimit {
+	if len(attributes.GetTimerID()) > v.maxIDLengthLimit {
 		return &types.BadRequestError{Message: "TimerId exceeds length limit."}
 	}
 	if attributes.GetStartToFireTimeoutSeconds() <= 0 {
@@ -346,39 +345,39 @@ func (v *decisionAttrValidator) validateTimerScheduleAttributes(
 }
 
 func (v *decisionAttrValidator) validateActivityCancelAttributes(
-	attributes *workflow.RequestCancelActivityTaskDecisionAttributes,
+	attributes *types.RequestCancelActivityTaskDecisionAttributes,
 ) error {
 
 	if attributes == nil {
 		return &types.BadRequestError{Message: "RequestCancelActivityTaskDecisionAttributes is not set on decision."}
 	}
-	if attributes.GetActivityId() == "" {
+	if attributes.GetActivityID() == "" {
 		return &types.BadRequestError{Message: "ActivityId is not set on decision."}
 	}
-	if len(attributes.GetActivityId()) > v.maxIDLengthLimit {
+	if len(attributes.GetActivityID()) > v.maxIDLengthLimit {
 		return &types.BadRequestError{Message: "ActivityId exceeds length limit."}
 	}
 	return nil
 }
 
 func (v *decisionAttrValidator) validateTimerCancelAttributes(
-	attributes *workflow.CancelTimerDecisionAttributes,
+	attributes *types.CancelTimerDecisionAttributes,
 ) error {
 
 	if attributes == nil {
 		return &types.BadRequestError{Message: "CancelTimerDecisionAttributes is not set on decision."}
 	}
-	if attributes.GetTimerId() == "" {
+	if attributes.GetTimerID() == "" {
 		return &types.BadRequestError{Message: "TimerId is not set on decision."}
 	}
-	if len(attributes.GetTimerId()) > v.maxIDLengthLimit {
+	if len(attributes.GetTimerID()) > v.maxIDLengthLimit {
 		return &types.BadRequestError{Message: "TimerId exceeds length limit."}
 	}
 	return nil
 }
 
 func (v *decisionAttrValidator) validateRecordMarkerAttributes(
-	attributes *workflow.RecordMarkerDecisionAttributes,
+	attributes *types.RecordMarkerDecisionAttributes,
 ) error {
 
 	if attributes == nil {
@@ -395,7 +394,7 @@ func (v *decisionAttrValidator) validateRecordMarkerAttributes(
 }
 
 func (v *decisionAttrValidator) validateCompleteWorkflowExecutionAttributes(
-	attributes *workflow.CompleteWorkflowExecutionDecisionAttributes,
+	attributes *types.CompleteWorkflowExecutionDecisionAttributes,
 ) error {
 
 	if attributes == nil {
@@ -405,7 +404,7 @@ func (v *decisionAttrValidator) validateCompleteWorkflowExecutionAttributes(
 }
 
 func (v *decisionAttrValidator) validateFailWorkflowExecutionAttributes(
-	attributes *workflow.FailWorkflowExecutionDecisionAttributes,
+	attributes *types.FailWorkflowExecutionDecisionAttributes,
 ) error {
 
 	if attributes == nil {
@@ -418,7 +417,7 @@ func (v *decisionAttrValidator) validateFailWorkflowExecutionAttributes(
 }
 
 func (v *decisionAttrValidator) validateCancelWorkflowExecutionAttributes(
-	attributes *workflow.CancelWorkflowExecutionDecisionAttributes,
+	attributes *types.CancelWorkflowExecutionDecisionAttributes,
 ) error {
 
 	if attributes == nil {
@@ -430,7 +429,7 @@ func (v *decisionAttrValidator) validateCancelWorkflowExecutionAttributes(
 func (v *decisionAttrValidator) validateCancelExternalWorkflowExecutionAttributes(
 	domainID string,
 	targetDomainID string,
-	attributes *workflow.RequestCancelExternalWorkflowExecutionDecisionAttributes,
+	attributes *types.RequestCancelExternalWorkflowExecutionDecisionAttributes,
 ) error {
 
 	if err := v.validateCrossDomainCall(
@@ -443,16 +442,16 @@ func (v *decisionAttrValidator) validateCancelExternalWorkflowExecutionAttribute
 	if attributes == nil {
 		return &types.BadRequestError{Message: "RequestCancelExternalWorkflowExecutionDecisionAttributes is not set on decision."}
 	}
-	if attributes.WorkflowId == nil {
+	if attributes.WorkflowID == nil {
 		return &types.BadRequestError{Message: "WorkflowId is not set on decision."}
 	}
 	if len(attributes.GetDomain()) > v.maxIDLengthLimit {
 		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
-	if len(attributes.GetWorkflowId()) > v.maxIDLengthLimit {
+	if len(attributes.GetWorkflowID()) > v.maxIDLengthLimit {
 		return &types.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
-	runID := attributes.GetRunId()
+	runID := attributes.GetRunID()
 	if runID != "" && uuid.Parse(runID) == nil {
 		return &types.BadRequestError{Message: "Invalid RunId set on decision."}
 	}
@@ -463,7 +462,7 @@ func (v *decisionAttrValidator) validateCancelExternalWorkflowExecutionAttribute
 func (v *decisionAttrValidator) validateSignalExternalWorkflowExecutionAttributes(
 	domainID string,
 	targetDomainID string,
-	attributes *workflow.SignalExternalWorkflowExecutionDecisionAttributes,
+	attributes *types.SignalExternalWorkflowExecutionDecisionAttributes,
 ) error {
 
 	if err := v.validateCrossDomainCall(
@@ -479,17 +478,17 @@ func (v *decisionAttrValidator) validateSignalExternalWorkflowExecutionAttribute
 	if attributes.Execution == nil {
 		return &types.BadRequestError{Message: "Execution is nil on decision."}
 	}
-	if attributes.Execution.WorkflowId == nil {
+	if attributes.Execution.WorkflowID == nil {
 		return &types.BadRequestError{Message: "WorkflowId is not set on decision."}
 	}
 	if len(attributes.GetDomain()) > v.maxIDLengthLimit {
 		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
-	if len(attributes.Execution.GetWorkflowId()) > v.maxIDLengthLimit {
+	if len(attributes.Execution.GetWorkflowID()) > v.maxIDLengthLimit {
 		return &types.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
 
-	targetRunID := attributes.Execution.GetRunId()
+	targetRunID := attributes.Execution.GetRunID()
 	if targetRunID != "" && uuid.Parse(targetRunID) == nil {
 		return &types.BadRequestError{Message: "Invalid RunId set on decision."}
 	}
@@ -502,14 +501,14 @@ func (v *decisionAttrValidator) validateSignalExternalWorkflowExecutionAttribute
 
 func (v *decisionAttrValidator) validateUpsertWorkflowSearchAttributes(
 	domainName string,
-	attributes *workflow.UpsertWorkflowSearchAttributesDecisionAttributes,
+	attributes *types.UpsertWorkflowSearchAttributesDecisionAttributes,
 ) error {
 
 	if attributes == nil {
 		return &types.BadRequestError{Message: "UpsertWorkflowSearchAttributesDecisionAttributes is not set on decision."}
 	}
 
-	if !attributes.IsSetSearchAttributes() {
+	if attributes.SearchAttributes == nil {
 		return &types.BadRequestError{Message: "SearchAttributes is not set on decision."}
 	}
 
@@ -517,11 +516,11 @@ func (v *decisionAttrValidator) validateUpsertWorkflowSearchAttributes(
 		return &types.BadRequestError{Message: "IndexedFields is empty on decision."}
 	}
 
-	return v.searchAttributesValidator.ValidateSearchAttributes(thrift.ToSearchAttributes(attributes.GetSearchAttributes()), domainName)
+	return v.searchAttributesValidator.ValidateSearchAttributes(attributes.GetSearchAttributes(), domainName)
 }
 
 func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes(
-	attributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes,
+	attributes *types.ContinueAsNewWorkflowExecutionDecisionAttributes,
 	executionInfo *persistence.WorkflowExecutionInfo,
 ) error {
 
@@ -531,7 +530,7 @@ func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes
 
 	// Inherit workflow type from previous execution if not provided on decision
 	if attributes.WorkflowType == nil || attributes.WorkflowType.GetName() == "" {
-		attributes.WorkflowType = &workflow.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)}
+		attributes.WorkflowType = &types.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)}
 	}
 
 	if len(attributes.WorkflowType.GetName()) > v.maxIDLengthLimit {
@@ -564,13 +563,13 @@ func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes
 	if err != nil {
 		return err
 	}
-	return v.searchAttributesValidator.ValidateSearchAttributes(thrift.ToSearchAttributes(attributes.GetSearchAttributes()), domainEntry.GetInfo().Name)
+	return v.searchAttributesValidator.ValidateSearchAttributes(attributes.GetSearchAttributes(), domainEntry.GetInfo().Name)
 }
 
 func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
 	domainID string,
 	targetDomainID string,
-	attributes *workflow.StartChildWorkflowExecutionDecisionAttributes,
+	attributes *types.StartChildWorkflowExecutionDecisionAttributes,
 	parentInfo *persistence.WorkflowExecutionInfo,
 ) error {
 
@@ -585,7 +584,7 @@ func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
 		return &types.BadRequestError{Message: "StartChildWorkflowExecutionDecisionAttributes is not set on decision."}
 	}
 
-	if attributes.GetWorkflowId() == "" {
+	if attributes.GetWorkflowID() == "" {
 		return &types.BadRequestError{Message: "Required field WorkflowID is not set on decision."}
 	}
 
@@ -597,7 +596,7 @@ func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
 		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
 
-	if len(attributes.GetWorkflowId()) > v.maxIDLengthLimit {
+	if len(attributes.GetWorkflowID()) > v.maxIDLengthLimit {
 		return &types.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
 
@@ -605,7 +604,7 @@ func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
 		return &types.BadRequestError{Message: "WorkflowType exceeds length limit."}
 	}
 
-	if err := common.ValidateRetryPolicy(attributes.RetryPolicy); err != nil {
+	if err := common.ValidateRetryPolicy(thrift.FromRetryPolicy(attributes.RetryPolicy)); err != nil {
 		return err
 	}
 
@@ -634,12 +633,12 @@ func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
 }
 
 func (v *decisionAttrValidator) validatedTaskList(
-	taskList *workflow.TaskList,
+	taskList *types.TaskList,
 	defaultVal string,
-) (*workflow.TaskList, error) {
+) (*types.TaskList, error) {
 
 	if taskList == nil {
-		taskList = &workflow.TaskList{}
+		taskList = &types.TaskList{}
 	}
 
 	if taskList.GetName() == "" {

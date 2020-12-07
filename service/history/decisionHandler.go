@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/query"
@@ -428,7 +429,7 @@ Update_History_Loop:
 			if decisionResults, err = decisionTaskHandler.handleDecisions(
 				ctx,
 				request.ExecutionContext,
-				request.Decisions,
+				thrift.ToDecisionArray(request.Decisions),
 			); err != nil {
 				return nil, err
 			}
@@ -437,7 +438,7 @@ Update_History_Loop:
 			// further refactor should also clean up the vars used below
 			failDecision = decisionTaskHandler.failDecision
 			if failDecision {
-				failCause = *decisionTaskHandler.failDecisionCause
+				failCause = *thrift.FromDecisionTaskFailedCause(decisionTaskHandler.failDecisionCause)
 				failMessage = *decisionTaskHandler.failMessage
 			}
 
