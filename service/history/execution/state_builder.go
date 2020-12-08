@@ -25,8 +25,6 @@ package execution
 import (
 	"time"
 
-	"github.com/uber/cadence/common/types/mapper/thrift"
-
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -37,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/shard"
 )
 
