@@ -88,9 +88,6 @@ func NewV6Client(
 	logger log.Logger,
 	clientOptFuncs ...elastic.ClientOptionFunc,
 ) (GenericClient, error) {
-	conectConfigStr, _ := json.MarshalIndent(connectConfig, "", "    ")
-	fmt.Println("debug NewV6Client", conectConfigStr)
-
 	clientOptFuncs = append(clientOptFuncs,
 		elastic.SetURL(connectConfig.URL.String()),
 		elastic.SetRetrier(elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))),
