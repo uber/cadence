@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -58,7 +59,7 @@ type (
 		) (*DecisionInfo, error)
 		ReplicateDecisionTaskCompletedEvent(event *workflow.HistoryEvent) error
 		ReplicateDecisionTaskFailedEvent() error
-		ReplicateDecisionTaskTimedOutEvent(timeoutType workflow.TimeoutType) error
+		ReplicateDecisionTaskTimedOutEvent(timeoutType types.TimeoutType) error
 
 		AddDecisionTaskScheduleToStartTimeoutEvent(scheduleEventID int64) (*workflow.HistoryEvent, error)
 		AddDecisionTaskScheduledEventAsHeartbeat(
@@ -245,11 +246,11 @@ func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskFailedEvent()
 }
 
 func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskTimedOutEvent(
-	timeoutType workflow.TimeoutType,
+	timeoutType types.TimeoutType,
 ) error {
 	incrementAttempt := true
 	// Do not increment decision attempt in the case of sticky timeout to prevent creating next decision as transient
-	if timeoutType == workflow.TimeoutTypeScheduleToStart {
+	if timeoutType == types.TimeoutTypeScheduleToStart {
 		incrementAttempt = false
 	}
 	m.FailDecision(incrementAttempt)
@@ -272,9 +273,9 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduleToStartTime
 	// Clear stickiness whenever decision fails
 	m.msb.ClearStickyness()
 
-	event := m.msb.hBuilder.AddDecisionTaskTimedOutEvent(scheduleEventID, 0, workflow.TimeoutTypeScheduleToStart)
+	event := m.msb.hBuilder.AddDecisionTaskTimedOutEvent(scheduleEventID, 0, types.TimeoutTypeScheduleToStart)
 
-	if err := m.ReplicateDecisionTaskTimedOutEvent(workflow.TimeoutTypeScheduleToStart); err != nil {
+	if err := m.ReplicateDecisionTaskTimedOutEvent(types.TimeoutTypeScheduleToStart); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -556,10 +557,10 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskTimedOutEvent(
 	var event *workflow.HistoryEvent
 	// Avoid creating new history events when decisions are continuously timing out
 	if dt.Attempt == 0 {
-		event = m.msb.hBuilder.AddDecisionTaskTimedOutEvent(scheduleEventID, startedEventID, workflow.TimeoutTypeStartToClose)
+		event = m.msb.hBuilder.AddDecisionTaskTimedOutEvent(scheduleEventID, startedEventID, types.TimeoutTypeStartToClose)
 	}
 
-	if err := m.ReplicateDecisionTaskTimedOutEvent(workflow.TimeoutTypeStartToClose); err != nil {
+	if err := m.ReplicateDecisionTaskTimedOutEvent(types.TimeoutTypeStartToClose); err != nil {
 		return nil, err
 	}
 	return event, nil

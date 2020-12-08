@@ -48,11 +48,11 @@ func (e DLQType) String() string {
 
 // UnmarshalText parses enum value from string representation
 func (e *DLQType) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "replication":
+	switch s := strings.ToUpper(string(value)); s {
+	case "REPLICATION":
 		*e = DLQTypeReplication
 		return nil
-	case "domain":
+	case "DOMAIN":
 		*e = DLQTypeDomain
 		return nil
 	default:
@@ -99,11 +99,11 @@ func (e DomainOperation) String() string {
 
 // UnmarshalText parses enum value from string representation
 func (e *DomainOperation) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "create":
+	switch s := strings.ToUpper(string(value)); s {
+	case "CREATE":
 		*e = DomainOperationCreate
 		return nil
-	case "update":
+	case "UPDATE":
 		*e = DomainOperationUpdate
 		return nil
 	default:
@@ -853,26 +853,26 @@ func (e ReplicationTaskType) String() string {
 
 // UnmarshalText parses enum value from string representation
 func (e *ReplicationTaskType) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "domain":
+	switch s := strings.ToUpper(string(value)); s {
+	case "DOMAIN":
 		*e = ReplicationTaskTypeDomain
 		return nil
-	case "history":
+	case "HISTORY":
 		*e = ReplicationTaskTypeHistory
 		return nil
-	case "syncshardstatus":
+	case "SYNCSHARDSTATUS":
 		*e = ReplicationTaskTypeSyncShardStatus
 		return nil
-	case "syncactivity":
+	case "SYNCACTIVITY":
 		*e = ReplicationTaskTypeSyncActivity
 		return nil
-	case "historymetadata":
+	case "HISTORYMETADATA":
 		*e = ReplicationTaskTypeHistoryMetadata
 		return nil
-	case "historyv2":
+	case "HISTORYV2":
 		*e = ReplicationTaskTypeHistoryV2
 		return nil
-	case "failovermarker":
+	case "FAILOVERMARKER":
 		*e = ReplicationTaskTypeFailoverMarker
 		return nil
 	default:

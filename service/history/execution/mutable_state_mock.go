@@ -159,7 +159,7 @@ func (mr *MockMutableStateMockRecorder) AddActivityTaskStartedEvent(arg0, arg1, 
 }
 
 // AddActivityTaskTimedOutEvent mocks base method
-func (m *MockMutableState) AddActivityTaskTimedOutEvent(arg0, arg1 int64, arg2 shared.TimeoutType, arg3 []uint8) (*shared.HistoryEvent, error) {
+func (m *MockMutableState) AddActivityTaskTimedOutEvent(arg0, arg1 int64, arg2 types.TimeoutType, arg3 []uint8) (*shared.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddActivityTaskTimedOutEvent", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*shared.HistoryEvent)
@@ -1864,7 +1864,7 @@ func (mr *MockMutableStateMockRecorder) ReplicateDecisionTaskStartedEvent(arg0, 
 }
 
 // ReplicateDecisionTaskTimedOutEvent mocks base method
-func (m *MockMutableState) ReplicateDecisionTaskTimedOutEvent(arg0 shared.TimeoutType) error {
+func (m *MockMutableState) ReplicateDecisionTaskTimedOutEvent(arg0 types.TimeoutType) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReplicateDecisionTaskTimedOutEvent", arg0)
 	ret0, _ := ret[0].(error)

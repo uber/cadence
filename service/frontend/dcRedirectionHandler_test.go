@@ -202,7 +202,7 @@ func (s *dcRedirectionHandlerSuite) TestListArchivedWorkflowExecutions() {
 	s.mockFrontendHandler.EXPECT().ListArchivedWorkflowExecutions(gomock.Any(), req).Return(&types.ListArchivedWorkflowExecutionsResponse{}, nil).Times(1)
 	err = callFn(s.currentClusterName)
 	s.Nil(err)
-	s.mockRemoteFrontendClient.EXPECT().ListArchivedWorkflowExecutions(gomock.Any(),req).Return(&types.ListArchivedWorkflowExecutionsResponse{}, nil).Times(1)
+	s.mockRemoteFrontendClient.EXPECT().ListArchivedWorkflowExecutions(gomock.Any(), req).Return(&types.ListArchivedWorkflowExecutionsResponse{}, nil).Times(1)
 	err = callFn(s.alternativeClusterName)
 	s.Nil(err)
 }

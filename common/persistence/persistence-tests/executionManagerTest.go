@@ -2427,7 +2427,7 @@ func (s *ExecutionManagerSuite) TestTimerTasksComplete() {
 	}
 
 	now := time.Now()
-	initialTasks := []p.Task{&p.DecisionTimeoutTask{now.Add(1 * time.Second), 1, 2, 3, int(gen.TimeoutTypeStartToClose), 11}}
+	initialTasks := []p.Task{&p.DecisionTimeoutTask{now.Add(1 * time.Second), 1, 2, 3, int(types.TimeoutTypeStartToClose), 11}}
 
 	task0, err0 := s.CreateWorkflowExecution(ctx, domainID, workflowExecution, "taskList", "wType", 20, 13, nil, 3, 0, 2, initialTasks)
 	s.NoError(err0)
@@ -2445,7 +2445,7 @@ func (s *ExecutionManagerSuite) TestTimerTasksComplete() {
 	tasks := []p.Task{
 		&p.WorkflowTimeoutTask{now.Add(2 * time.Second), 2, 12},
 		&p.DeleteHistoryEventTask{now.Add(2 * time.Second), 3, 13},
-		&p.ActivityTimeoutTask{now.Add(3 * time.Second), 4, int(gen.TimeoutTypeStartToClose), 7, 0, 14},
+		&p.ActivityTimeoutTask{now.Add(3 * time.Second), 4, int(types.TimeoutTypeStartToClose), 7, 0, 14},
 		&p.UserTimerTask{now.Add(3 * time.Second), 5, 7, 15},
 	}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
@@ -2507,10 +2507,10 @@ func (s *ExecutionManagerSuite) TestTimerTasksRangeComplete() {
 	})
 	versionHistories := p.NewVersionHistories(versionHistory)
 	tasks := []p.Task{
-		&p.DecisionTimeoutTask{time.Now(), 1, 2, 3, int(gen.TimeoutTypeStartToClose), 11},
+		&p.DecisionTimeoutTask{time.Now(), 1, 2, 3, int(types.TimeoutTypeStartToClose), 11},
 		&p.WorkflowTimeoutTask{time.Now(), 2, 12},
 		&p.DeleteHistoryEventTask{time.Now(), 3, 13},
-		&p.ActivityTimeoutTask{time.Now(), 4, int(gen.TimeoutTypeStartToClose), 7, 0, 14},
+		&p.ActivityTimeoutTask{time.Now(), 4, int(types.TimeoutTypeStartToClose), 7, 0, 14},
 		&p.UserTimerTask{time.Now(), 5, 7, 15},
 	}
 	err2 := s.UpdateWorkflowExecution(ctx, updatedInfo, updatedStats, versionHistories, []int64{int64(4)}, nil, int64(3), tasks, nil, nil, nil, nil)

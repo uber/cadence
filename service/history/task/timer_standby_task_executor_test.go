@@ -209,7 +209,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Pending() {
 		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeUserTimer,
-		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
+		TimeoutType:         int(types.TimeoutTypeStartToClose),
 		VisibilityTimestamp: task.(*persistence.UserTimerTask).GetVisibilityTimestamp(),
 		EventID:             event.GetEventId(),
 	}
@@ -292,7 +292,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Success() {
 		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeUserTimer,
-		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
+		TimeoutType:         int(types.TimeoutTypeStartToClose),
 		VisibilityTimestamp: task.(*persistence.UserTimerTask).GetVisibilityTimestamp(),
 		EventID:             event.GetEventId(),
 	}
@@ -364,7 +364,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Multiple() {
 		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeUserTimer,
-		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
+		TimeoutType:         int(types.TimeoutTypeStartToClose),
 		VisibilityTimestamp: task.(*persistence.UserTimerTask).GetVisibilityTimestamp(),
 		EventID:             event.GetEventId(),
 	}
@@ -436,7 +436,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Pending() {
 		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeActivityTimeout,
-		TimeoutType:         int(workflow.TimeoutTypeScheduleToClose),
+		TimeoutType:         int(types.TimeoutTypeScheduleToClose),
 		VisibilityTimestamp: task.(*persistence.ActivityTimeoutTask).GetVisibilityTimestamp(),
 		EventID:             scheduledEvent.GetEventId(),
 	}
@@ -523,7 +523,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Success() {
 		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeActivityTimeout,
-		TimeoutType:         int(workflow.TimeoutTypeScheduleToClose),
+		TimeoutType:         int(types.TimeoutTypeScheduleToClose),
 		VisibilityTimestamp: task.(*persistence.ActivityTimeoutTask).GetVisibilityTimestamp(),
 		EventID:             scheduledEvent.GetEventId(),
 	}
@@ -771,7 +771,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Pending() {
 		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeDecisionTimeout,
-		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
+		TimeoutType:         int(types.TimeoutTypeStartToClose),
 		VisibilityTimestamp: s.now,
 		EventID:             di.ScheduleID,
 	}
@@ -817,7 +817,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_ScheduleToSta
 		RunID:               execution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeDecisionTimeout,
-		TimeoutType:         int(workflow.TimeoutTypeScheduleToStart),
+		TimeoutType:         int(types.TimeoutTypeScheduleToStart),
 		VisibilityTimestamp: s.now,
 		EventID:             decisionScheduleID,
 	}
@@ -869,7 +869,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Success() {
 		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeDecisionTimeout,
-		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
+		TimeoutType:         int(types.TimeoutTypeStartToClose),
 		VisibilityTimestamp: s.now,
 		EventID:             di.ScheduleID,
 	}
@@ -1043,7 +1043,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Pending() {
 		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeWorkflowTimeout,
-		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
+		TimeoutType:         int(types.TimeoutTypeStartToClose),
 		VisibilityTimestamp: s.now,
 	}
 
@@ -1115,7 +1115,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Success() {
 		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeWorkflowTimeout,
-		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
+		TimeoutType:         int(types.TimeoutTypeStartToClose),
 		VisibilityTimestamp: s.now,
 	}
 
@@ -1164,7 +1164,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessRetryTimeout() {
 		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
 		TaskType:            persistence.TaskTypeActivityRetryTimer,
-		TimeoutType:         int(workflow.TimeoutTypeStartToClose),
+		TimeoutType:         int(types.TimeoutTypeStartToClose),
 		VisibilityTimestamp: s.now,
 	}
 
