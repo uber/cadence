@@ -640,9 +640,9 @@ func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 	loadedMS, err := ctx.LoadWorkflowExecution(context.Background())
 	s.NoError(err)
 	qr := query.NewRegistry()
-	id1, _ := qr.BufferQuery(&workflow.WorkflowQuery{})
-	id2, _ := qr.BufferQuery(&workflow.WorkflowQuery{})
-	id3, _ := qr.BufferQuery(&workflow.WorkflowQuery{})
+	id1, _ := qr.BufferQuery(&types.WorkflowQuery{})
+	id2, _ := qr.BufferQuery(&types.WorkflowQuery{})
+	id3, _ := qr.BufferQuery(&types.WorkflowQuery{})
 	loadedMS.SetQueryRegistry(qr)
 	release(nil)
 

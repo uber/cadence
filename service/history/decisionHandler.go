@@ -564,7 +564,7 @@ Update_History_Loop:
 			msBuilder,
 			clientImpl,
 			clientFeatureVersion,
-			req.GetCompleteRequest().GetQueryResults(),
+			thrift.ToWorkflowQueryResultMap(req.GetCompleteRequest().GetQueryResults()),
 			createNewDecisionTask,
 			domainEntry,
 			decisionHeartbeating)
@@ -645,7 +645,7 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 
 	qr := msBuilder.GetQueryRegistry()
 	buffered := qr.GetBufferedIDs()
-	queries := make(map[string]*workflow.WorkflowQuery)
+	queries := make(map[string]*types.WorkflowQuery)
 	for _, id := range buffered {
 		input, err := qr.GetQueryInput(id)
 		if err != nil {
@@ -653,7 +653,7 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 		}
 		queries[id] = input
 	}
-	response.Queries = queries
+	response.Queries = thrift.FromWorkflowQueryMap(queries)
 	return response, nil
 }
 
@@ -661,7 +661,7 @@ func (handler *decisionHandlerImpl) handleBufferedQueries(
 	msBuilder execution.MutableState,
 	clientImpl string,
 	clientFeatureVersion string,
-	queryResults map[string]*workflow.WorkflowQueryResult,
+	queryResults map[string]*types.WorkflowQueryResult,
 	createNewDecisionTask bool,
 	domainEntry *cache.DomainCacheEntry,
 	decisionHeartbeating bool,
