@@ -55,9 +55,9 @@ type (
 		*require.Assertions
 		controller *gomock.Controller
 
-		mockShard  *shard.TestContext
-		mockEngine *engine.MockEngine
-		config     *config.Config
+		mockShard        *shard.TestContext
+		mockEngine       *engine.MockEngine
+		config           *config.Config
 		historyClient    *historyservicetest.MockClient
 		taskFetcher      *MockTaskFetcher
 		mockDomainCache  *cache.MockDomainCache

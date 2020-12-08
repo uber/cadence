@@ -263,7 +263,7 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	historyAddr := historyHost.GetAddress()
 	resp2, err := adh.GetHistoryClient().DescribeMutableState(ctx, &types.DescribeMutableStateRequest{
 		DomainUUID: &domainID,
-		Execution: request.Execution,
+		Execution:  request.Execution,
 	})
 	if err != nil {
 		return &types.AdminDescribeWorkflowExecutionResponse{}, err

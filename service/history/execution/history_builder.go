@@ -127,7 +127,7 @@ func (b *HistoryBuilder) AddDecisionTaskCompletedEvent(scheduleEventID, startedE
 
 // AddDecisionTaskTimedOutEvent adds DecisionTaskTimedOut event to history
 func (b *HistoryBuilder) AddDecisionTaskTimedOutEvent(scheduleEventID int64,
-	startedEventID int64, timeoutType workflow.TimeoutType) *workflow.HistoryEvent {
+	startedEventID int64, timeoutType types.TimeoutType) *workflow.HistoryEvent {
 	event := b.newDecisionTaskTimedOutEvent(scheduleEventID, startedEventID, timeoutType)
 
 	return b.addEventToHistory(event)
@@ -182,7 +182,7 @@ func (b *HistoryBuilder) AddActivityTaskFailedEvent(scheduleEventID, startedEven
 func (b *HistoryBuilder) AddActivityTaskTimedOutEvent(
 	scheduleEventID,
 	startedEventID int64,
-	timeoutType workflow.TimeoutType,
+	timeoutType types.TimeoutType,
 	lastHeartBeatDetails []byte,
 	lastFailureReason string,
 	lastFailureDetail []byte,
@@ -613,12 +613,12 @@ func (b *HistoryBuilder) newDecisionTaskCompletedEvent(scheduleEventID, startedE
 	return historyEvent
 }
 
-func (b *HistoryBuilder) newDecisionTaskTimedOutEvent(scheduleEventID int64, startedEventID int64, timeoutType workflow.TimeoutType) *workflow.HistoryEvent {
+func (b *HistoryBuilder) newDecisionTaskTimedOutEvent(scheduleEventID int64, startedEventID int64, timeoutType types.TimeoutType) *workflow.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(workflow.EventTypeDecisionTaskTimedOut)
 	attributes := &workflow.DecisionTaskTimedOutEventAttributes{}
 	attributes.ScheduledEventId = common.Int64Ptr(scheduleEventID)
 	attributes.StartedEventId = common.Int64Ptr(startedEventID)
-	attributes.TimeoutType = common.TimeoutTypePtr(timeoutType)
+	attributes.TimeoutType = thrift.FromTimeoutType(&timeoutType)
 	historyEvent.DecisionTaskTimedOutEventAttributes = attributes
 
 	return historyEvent
@@ -686,7 +686,7 @@ func (b *HistoryBuilder) newActivityTaskCompletedEvent(scheduleEventID, startedE
 
 func (b *HistoryBuilder) newActivityTaskTimedOutEvent(
 	scheduleEventID, startedEventID int64,
-	timeoutType workflow.TimeoutType,
+	timeoutType types.TimeoutType,
 	lastHeartBeatDetails []byte,
 	lastFailureReason string,
 	lastFailureDetail []byte,
@@ -695,7 +695,7 @@ func (b *HistoryBuilder) newActivityTaskTimedOutEvent(
 	attributes := &workflow.ActivityTaskTimedOutEventAttributes{}
 	attributes.ScheduledEventId = common.Int64Ptr(scheduleEventID)
 	attributes.StartedEventId = common.Int64Ptr(startedEventID)
-	attributes.TimeoutType = common.TimeoutTypePtr(timeoutType)
+	attributes.TimeoutType = thrift.FromTimeoutType(&timeoutType)
 	attributes.Details = lastHeartBeatDetails
 	attributes.LastFailureReason = common.StringPtr(lastFailureReason)
 	attributes.LastFailureDetails = lastFailureDetail

@@ -789,7 +789,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskTimedOut() {
 			TimeoutType:      shared.TimeoutTypeStartToClose.Ptr(),
 		},
 	}
-	s.mockMutableState.EXPECT().ReplicateDecisionTaskTimedOutEvent(shared.TimeoutTypeStartToClose).Return(nil).Times(1)
+	s.mockMutableState.EXPECT().ReplicateDecisionTaskTimedOutEvent(types.TimeoutTypeStartToClose).Return(nil).Times(1)
 	tasklist := "some random tasklist"
 	newScheduleID := int64(233)
 	executionInfo := &persistence.WorkflowExecutionInfo{
