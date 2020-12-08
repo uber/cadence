@@ -238,7 +238,7 @@ Loop:
 		if _, err := mutableState.AddActivityTaskTimedOutEvent(
 			activityInfo.ScheduleID,
 			activityInfo.StartedID,
-			execution.TimerTypeToThrift(timerSequenceID.TimerType),
+			execution.TimerTypeToInternal(timerSequenceID.TimerType),
 			activityInfo.Details,
 		); err != nil {
 			return err
@@ -292,7 +292,7 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 	}
 
 	scheduleDecision := false
-	switch execution.TimerTypeFromThrift(workflow.TimeoutType(task.TimeoutType)) {
+	switch execution.TimerTypeFromInternal(types.TimeoutType(task.TimeoutType)) {
 	case execution.TimerTypeStartToClose:
 		t.emitTimeoutMetricScopeWithDomainTag(
 			mutableState.GetExecutionInfo().DomainID,

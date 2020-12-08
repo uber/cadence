@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/types"
+
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 
@@ -133,7 +135,7 @@ func TestDomainInfo(t *testing.T) {
 func TestHistoryTreeInfo(t *testing.T) {
 	expected := &HistoryTreeInfo{
 		CreatedTimestamp: common.TimePtr(time.Now()),
-		Ancestors: []*HistoryBranchRange{
+		Ancestors: []*types.HistoryBranchRange{
 			{
 				BranchID:    common.StringPtr("branch_id"),
 				BeginNodeID: common.Int64Ptr(int64(rand.Intn(1000))),
@@ -155,9 +157,9 @@ func TestHistoryTreeInfo(t *testing.T) {
 
 func TestWorkflowExecutionInfo(t *testing.T) {
 	expected := &WorkflowExecutionInfo{
-		ParentDomainID:                     common.StringPtr(uuid.New()),
+		ParentDomainID:                     UUID(uuid.New()),
 		ParentWorkflowID:                   common.StringPtr("ParentWorkflowID"),
-		ParentRunID:                        common.StringPtr(uuid.New()),
+		ParentRunID:                        UUID(uuid.New()),
 		InitiatedID:                        common.Int64Ptr(int64(rand.Intn(1000))),
 		CompletionEventBatchID:             common.Int64Ptr(int64(rand.Intn(1000))),
 		CompletionEvent:                    []byte("CompletionEvent"),
@@ -350,7 +352,7 @@ func TestChildExecutionInfo(t *testing.T) {
 		InitiatedEvent:         []byte("InitiatedEvent"),
 		InitiatedEventEncoding: common.StringPtr("InitiatedEventEncoding"),
 		StartedWorkflowID:      common.StringPtr("InitiatedEventEncoding"),
-		StartedRunID:           common.StringPtr(uuid.New()),
+		StartedRunID:           UUID(uuid.New()),
 		StartedEvent:           []byte("StartedEvent"),
 		StartedEventEncoding:   common.StringPtr("StartedEventEncoding"),
 		CreateRequestID:        common.StringPtr("CreateRequestID"),
@@ -402,7 +404,7 @@ func TestTimerInfo(t *testing.T) {
 func TestTaskInfo(t *testing.T) {
 	expected := &TaskInfo{
 		WorkflowID:       common.StringPtr("WorkflowID"),
-		RunID:            common.StringPtr(uuid.New()),
+		RunID:            UUID(uuid.New()),
 		ScheduleID:       common.Int64Ptr(int64(rand.Intn(1000))),
 		ExpiryTimestamp:  common.TimePtr(time.Now()),
 		CreatedTimestamp: common.TimePtr(time.Now()),
@@ -431,13 +433,13 @@ func TestTaskListInfo(t *testing.T) {
 
 func TestTransferTaskInfo(t *testing.T) {
 	expected := &TransferTaskInfo{
-		DomainID:                common.StringPtr(uuid.New()),
+		DomainID:                UUID(uuid.New()),
 		WorkflowID:              common.StringPtr("WorkflowID"),
-		RunID:                   common.StringPtr(uuid.New()),
+		RunID:                   UUID(uuid.New()),
 		TaskType:                common.Int16Ptr(int16(rand.Intn(1000))),
-		TargetDomainID:          common.StringPtr(uuid.New()),
+		TargetDomainID:          UUID(uuid.New()),
 		TargetWorkflowID:        common.StringPtr("TargetWorkflowID"),
-		TargetRunID:             common.StringPtr(uuid.New()),
+		TargetRunID:             UUID(uuid.New()),
 		TaskList:                common.StringPtr("TaskList"),
 		TargetChildWorkflowOnly: common.BoolPtr(true),
 		ScheduleID:              common.Int64Ptr(int64(rand.Intn(1000))),
@@ -449,9 +451,9 @@ func TestTransferTaskInfo(t *testing.T) {
 
 func TestTimerTaskInfo(t *testing.T) {
 	expected := &TimerTaskInfo{
-		DomainID:        common.StringPtr(uuid.New()),
+		DomainID:        UUID(uuid.New()),
 		WorkflowID:      common.StringPtr("WorkflowID"),
-		RunID:           common.StringPtr(uuid.New()),
+		RunID:           UUID(uuid.New()),
 		TaskType:        common.Int16Ptr(int16(rand.Intn(1000))),
 		TimeoutType:     common.Int16Ptr(int16(rand.Intn(1000))),
 		Version:         common.Int64Ptr(int64(rand.Intn(1000))),
@@ -464,9 +466,9 @@ func TestTimerTaskInfo(t *testing.T) {
 
 func TestReplicationTaskInfo(t *testing.T) {
 	expected := &ReplicationTaskInfo{
-		DomainID:                common.StringPtr(uuid.New()),
+		DomainID:                UUID(uuid.New()),
 		WorkflowID:              common.StringPtr("WorkflowID"),
-		RunID:                   common.StringPtr(uuid.New()),
+		RunID:                   UUID(uuid.New()),
 		TaskType:                common.Int16Ptr(int16(rand.Intn(1000))),
 		Version:                 common.Int64Ptr(int64(rand.Intn(1000))),
 		FirstEventID:            common.Int64Ptr(int64(rand.Intn(1000))),

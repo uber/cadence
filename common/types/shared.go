@@ -502,20 +502,20 @@ func (e ArchivalStatus) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "Disabled"
+		return "DISABLED"
 	case 1:
-		return "Enabled"
+		return "ENABLED"
 	}
 	return fmt.Sprintf("ArchivalStatus(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *ArchivalStatus) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "disabled":
+	switch s := strings.ToUpper(string(value)); s {
+	case "DISABLED":
 		*e = ArchivalStatusDisabled
 		return nil
-	case "enabled":
+	case "ENABLED":
 		*e = ArchivalStatusEnabled
 		return nil
 	default:
@@ -610,15 +610,15 @@ func (e CancelExternalWorkflowExecutionFailedCause) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "UnknownExternalWorkflowExecution"
+		return "UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION"
 	}
 	return fmt.Sprintf("CancelExternalWorkflowExecutionFailedCause(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *CancelExternalWorkflowExecutionFailedCause) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "unknownexternalworkflowexecution":
+	switch s := strings.ToUpper(string(value)); s {
+	case "UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION":
 		*e = CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution
 		return nil
 	default:
@@ -849,15 +849,15 @@ func (e ChildWorkflowExecutionFailedCause) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "WorkflowAlreadyRunning"
+		return "WORKFLOW_ALREADY_RUNNING"
 	}
 	return fmt.Sprintf("ChildWorkflowExecutionFailedCause(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *ChildWorkflowExecutionFailedCause) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "workflowalreadyrunning":
+	switch s := strings.ToUpper(string(value)); s {
+	case "WORKFLOW_ALREADY_RUNNING":
 		*e = ChildWorkflowExecutionFailedCauseWorkflowAlreadyRunning
 		return nil
 	default:
@@ -1210,14 +1210,14 @@ func (e ContinueAsNewInitiator) String() string {
 
 // UnmarshalText parses enum value from string representation
 func (e *ContinueAsNewInitiator) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "decider":
+	switch s := strings.ToUpper(string(value)); s {
+	case "DECIDER":
 		*e = ContinueAsNewInitiatorDecider
 		return nil
-	case "retrypolicy":
+	case "RETRYPOLICY":
 		*e = ContinueAsNewInitiatorRetryPolicy
 		return nil
-	case "cronschedule":
+	case "CRONSCHEDULE":
 		*e = ContinueAsNewInitiatorCronSchedule
 		return nil
 	default:
@@ -1654,125 +1654,125 @@ func (e DecisionTaskFailedCause) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "UnhandledDecision"
+		return "UNHANDLED_DECISION"
 	case 1:
-		return "BadScheduleActivityAttributes"
+		return "BAD_SCHEDULE_ACTIVITY_ATTRIBUTES"
 	case 2:
-		return "BadRequestCancelActivityAttributes"
+		return "BAD_REQUEST_CANCEL_ACTIVITY_ATTRIBUTES"
 	case 3:
-		return "BadStartTimerAttributes"
+		return "BAD_START_TIMER_ATTRIBUTES"
 	case 4:
-		return "BadCancelTimerAttributes"
+		return "BAD_CANCEL_TIMER_ATTRIBUTES"
 	case 5:
-		return "BadRecordMarkerAttributes"
+		return "BAD_RECORD_MARKER_ATTRIBUTES"
 	case 6:
-		return "BadCompleteWorkflowExecutionAttributes"
+		return "BAD_COMPLETE_WORKFLOW_EXECUTION_ATTRIBUTES"
 	case 7:
-		return "BadFailWorkflowExecutionAttributes"
+		return "BAD_FAIL_WORKFLOW_EXECUTION_ATTRIBUTES"
 	case 8:
-		return "BadCancelWorkflowExecutionAttributes"
+		return "BAD_CANCEL_WORKFLOW_EXECUTION_ATTRIBUTES"
 	case 9:
-		return "BadRequestCancelExternalWorkflowExecutionAttributes"
+		return "BAD_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_ATTRIBUTES"
 	case 10:
-		return "BadContinueAsNewAttributes"
+		return "BAD_CONTINUE_AS_NEW_ATTRIBUTES"
 	case 11:
-		return "StartTimerDuplicateID"
+		return "START_TIMER_DUPLICATE_I_D"
 	case 12:
-		return "ResetStickyTasklist"
+		return "RESET_STICKY_TASKLIST"
 	case 13:
-		return "WorkflowWorkerUnhandledFailure"
+		return "WORKFLOW_WORKER_UNHANDLED_FAILURE"
 	case 14:
-		return "BadSignalWorkflowExecutionAttributes"
+		return "BAD_SIGNAL_WORKFLOW_EXECUTION_ATTRIBUTES"
 	case 15:
-		return "BadStartChildExecutionAttributes"
+		return "BAD_START_CHILD_EXECUTION_ATTRIBUTES"
 	case 16:
-		return "ForceCloseDecision"
+		return "FORCE_CLOSE_DECISION"
 	case 17:
-		return "FailoverCloseDecision"
+		return "FAILOVER_CLOSE_DECISION"
 	case 18:
-		return "BadSignalInputSize"
+		return "BAD_SIGNAL_INPUT_SIZE"
 	case 19:
-		return "ResetWorkflow"
+		return "RESET_WORKFLOW"
 	case 20:
-		return "BadBinary"
+		return "BAD_BINARY"
 	case 21:
-		return "ScheduleActivityDuplicateID"
+		return "SCHEDULE_ACTIVITY_DUPLICATE_I_D"
 	case 22:
-		return "BadSearchAttributes"
+		return "BAD_SEARCH_ATTRIBUTES"
 	}
 	return fmt.Sprintf("DecisionTaskFailedCause(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *DecisionTaskFailedCause) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "unhandleddecision":
+	switch s := strings.ToUpper(string(value)); s {
+	case "UNHANDLED_DECISION":
 		*e = DecisionTaskFailedCauseUnhandledDecision
 		return nil
-	case "badscheduleactivityattributes":
+	case "BAD_SCHEDULE_ACTIVITY_ATTRIBUTES":
 		*e = DecisionTaskFailedCauseBadScheduleActivityAttributes
 		return nil
-	case "badrequestcancelactivityattributes":
+	case "BAD_REQUEST_CANCEL_ACTIVITY_ATTRIBUTES":
 		*e = DecisionTaskFailedCauseBadRequestCancelActivityAttributes
 		return nil
-	case "badstarttimerattributes":
+	case "BAD_START_TIMER_ATTRIBUTES":
 		*e = DecisionTaskFailedCauseBadStartTimerAttributes
 		return nil
-	case "badcanceltimerattributes":
+	case "BAD_CANCEL_TIMER_ATTRIBUTES":
 		*e = DecisionTaskFailedCauseBadCancelTimerAttributes
 		return nil
-	case "badrecordmarkerattributes":
+	case "BAD_RECORD_MARKER_ATTRIBUTES":
 		*e = DecisionTaskFailedCauseBadRecordMarkerAttributes
 		return nil
-	case "badcompleteworkflowexecutionattributes":
+	case "BAD_COMPLETE_WORKFLOW_EXECUTION_ATTRIBUTES":
 		*e = DecisionTaskFailedCauseBadCompleteWorkflowExecutionAttributes
 		return nil
-	case "badfailworkflowexecutionattributes":
+	case "BAD_FAIL_WORKFLOW_EXECUTION_ATTRIBUTES":
 		*e = DecisionTaskFailedCauseBadFailWorkflowExecutionAttributes
 		return nil
-	case "badcancelworkflowexecutionattributes":
+	case "BAD_CANCEL_WORKFLOW_EXECUTION_ATTRIBUTES":
 		*e = DecisionTaskFailedCauseBadCancelWorkflowExecutionAttributes
 		return nil
-	case "badrequestcancelexternalworkflowexecutionattributes":
+	case "BAD_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION_ATTRIBUTES":
 		*e = DecisionTaskFailedCauseBadRequestCancelExternalWorkflowExecutionAttributes
 		return nil
-	case "badcontinueasnewattributes":
+	case "BAD_CONTINUE_AS_NEW_ATTRIBUTES":
 		*e = DecisionTaskFailedCauseBadContinueAsNewAttributes
 		return nil
-	case "starttimerduplicateid":
+	case "START_TIMER_DUPLICATE_I_D":
 		*e = DecisionTaskFailedCauseStartTimerDuplicateID
 		return nil
-	case "resetstickytasklist":
+	case "RESET_STICKY_TASKLIST":
 		*e = DecisionTaskFailedCauseResetStickyTasklist
 		return nil
-	case "workflowworkerunhandledfailure":
+	case "WORKFLOW_WORKER_UNHANDLED_FAILURE":
 		*e = DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure
 		return nil
-	case "badsignalworkflowexecutionattributes":
+	case "BAD_SIGNAL_WORKFLOW_EXECUTION_ATTRIBUTES":
 		*e = DecisionTaskFailedCauseBadSignalWorkflowExecutionAttributes
 		return nil
-	case "badstartchildexecutionattributes":
+	case "BAD_START_CHILD_EXECUTION_ATTRIBUTES":
 		*e = DecisionTaskFailedCauseBadStartChildExecutionAttributes
 		return nil
-	case "forceclosedecision":
+	case "FORCE_CLOSE_DECISION":
 		*e = DecisionTaskFailedCauseForceCloseDecision
 		return nil
-	case "failoverclosedecision":
+	case "FAILOVER_CLOSE_DECISION":
 		*e = DecisionTaskFailedCauseFailoverCloseDecision
 		return nil
-	case "badsignalinputsize":
+	case "BAD_SIGNAL_INPUT_SIZE":
 		*e = DecisionTaskFailedCauseBadSignalInputSize
 		return nil
-	case "resetworkflow":
+	case "RESET_WORKFLOW":
 		*e = DecisionTaskFailedCauseResetWorkflow
 		return nil
-	case "badbinary":
+	case "BAD_BINARY":
 		*e = DecisionTaskFailedCauseBadBinary
 		return nil
-	case "scheduleactivityduplicateid":
+	case "SCHEDULE_ACTIVITY_DUPLICATE_I_D":
 		*e = DecisionTaskFailedCauseScheduleActivityDuplicateID
 		return nil
-	case "badsearchattributes":
+	case "BAD_SEARCH_ATTRIBUTES":
 		*e = DecisionTaskFailedCauseBadSearchAttributes
 		return nil
 	default:
@@ -2070,44 +2070,44 @@ func (e DecisionType) String() string {
 
 // UnmarshalText parses enum value from string representation
 func (e *DecisionType) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "scheduleactivitytask":
+	switch s := strings.ToUpper(string(value)); s {
+	case "SCHEDULEACTIVITYTASK":
 		*e = DecisionTypeScheduleActivityTask
 		return nil
-	case "requestcancelactivitytask":
+	case "REQUESTCANCELACTIVITYTASK":
 		*e = DecisionTypeRequestCancelActivityTask
 		return nil
-	case "starttimer":
+	case "STARTTIMER":
 		*e = DecisionTypeStartTimer
 		return nil
-	case "completeworkflowexecution":
+	case "COMPLETEWORKFLOWEXECUTION":
 		*e = DecisionTypeCompleteWorkflowExecution
 		return nil
-	case "failworkflowexecution":
+	case "FAILWORKFLOWEXECUTION":
 		*e = DecisionTypeFailWorkflowExecution
 		return nil
-	case "canceltimer":
+	case "CANCELTIMER":
 		*e = DecisionTypeCancelTimer
 		return nil
-	case "cancelworkflowexecution":
+	case "CANCELWORKFLOWEXECUTION":
 		*e = DecisionTypeCancelWorkflowExecution
 		return nil
-	case "requestcancelexternalworkflowexecution":
+	case "REQUESTCANCELEXTERNALWORKFLOWEXECUTION":
 		*e = DecisionTypeRequestCancelExternalWorkflowExecution
 		return nil
-	case "recordmarker":
+	case "RECORDMARKER":
 		*e = DecisionTypeRecordMarker
 		return nil
-	case "continueasnewworkflowexecution":
+	case "CONTINUEASNEWWORKFLOWEXECUTION":
 		*e = DecisionTypeContinueAsNewWorkflowExecution
 		return nil
-	case "startchildworkflowexecution":
+	case "STARTCHILDWORKFLOWEXECUTION":
 		*e = DecisionTypeStartChildWorkflowExecution
 		return nil
-	case "signalexternalworkflowexecution":
+	case "SIGNALEXTERNALWORKFLOWEXECUTION":
 		*e = DecisionTypeSignalExternalWorkflowExecution
 		return nil
-	case "upsertworkflowsearchattributes":
+	case "UPSERTWORKFLOWSEARCHATTRIBUTES":
 		*e = DecisionTypeUpsertWorkflowSearchAttributes
 		return nil
 	default:
@@ -2739,25 +2739,25 @@ func (e DomainStatus) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "Registered"
+		return "REGISTERED"
 	case 1:
-		return "Deprecated"
+		return "DEPRECATED"
 	case 2:
-		return "Deleted"
+		return "DELETED"
 	}
 	return fmt.Sprintf("DomainStatus(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *DomainStatus) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "registered":
+	switch s := strings.ToUpper(string(value)); s {
+	case "REGISTERED":
 		*e = DomainStatusRegistered
 		return nil
-	case "deprecated":
+	case "DEPRECATED":
 		*e = DomainStatusDeprecated
 		return nil
-	case "deleted":
+	case "DELETED":
 		*e = DomainStatusDeleted
 		return nil
 	default:
@@ -2806,11 +2806,11 @@ func (e EncodingType) String() string {
 
 // UnmarshalText parses enum value from string representation
 func (e *EncodingType) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "thriftrw":
+	switch s := strings.ToUpper(string(value)); s {
+	case "THRIFTRW":
 		*e = EncodingTypeThriftRW
 		return nil
-	case "json":
+	case "JSON":
 		*e = EncodingTypeJSON
 		return nil
 	default:
@@ -2968,131 +2968,131 @@ func (e EventType) String() string {
 
 // UnmarshalText parses enum value from string representation
 func (e *EventType) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "workflowexecutionstarted":
+	switch s := strings.ToUpper(string(value)); s {
+	case "WORKFLOWEXECUTIONSTARTED":
 		*e = EventTypeWorkflowExecutionStarted
 		return nil
-	case "workflowexecutioncompleted":
+	case "WORKFLOWEXECUTIONCOMPLETED":
 		*e = EventTypeWorkflowExecutionCompleted
 		return nil
-	case "workflowexecutionfailed":
+	case "WORKFLOWEXECUTIONFAILED":
 		*e = EventTypeWorkflowExecutionFailed
 		return nil
-	case "workflowexecutiontimedout":
+	case "WORKFLOWEXECUTIONTIMEDOUT":
 		*e = EventTypeWorkflowExecutionTimedOut
 		return nil
-	case "decisiontaskscheduled":
+	case "DECISIONTASKSCHEDULED":
 		*e = EventTypeDecisionTaskScheduled
 		return nil
-	case "decisiontaskstarted":
+	case "DECISIONTASKSTARTED":
 		*e = EventTypeDecisionTaskStarted
 		return nil
-	case "decisiontaskcompleted":
+	case "DECISIONTASKCOMPLETED":
 		*e = EventTypeDecisionTaskCompleted
 		return nil
-	case "decisiontasktimedout":
+	case "DECISIONTASKTIMEDOUT":
 		*e = EventTypeDecisionTaskTimedOut
 		return nil
-	case "decisiontaskfailed":
+	case "DECISIONTASKFAILED":
 		*e = EventTypeDecisionTaskFailed
 		return nil
-	case "activitytaskscheduled":
+	case "ACTIVITYTASKSCHEDULED":
 		*e = EventTypeActivityTaskScheduled
 		return nil
-	case "activitytaskstarted":
+	case "ACTIVITYTASKSTARTED":
 		*e = EventTypeActivityTaskStarted
 		return nil
-	case "activitytaskcompleted":
+	case "ACTIVITYTASKCOMPLETED":
 		*e = EventTypeActivityTaskCompleted
 		return nil
-	case "activitytaskfailed":
+	case "ACTIVITYTASKFAILED":
 		*e = EventTypeActivityTaskFailed
 		return nil
-	case "activitytasktimedout":
+	case "ACTIVITYTASKTIMEDOUT":
 		*e = EventTypeActivityTaskTimedOut
 		return nil
-	case "activitytaskcancelrequested":
+	case "ACTIVITYTASKCANCELREQUESTED":
 		*e = EventTypeActivityTaskCancelRequested
 		return nil
-	case "requestcancelactivitytaskfailed":
+	case "REQUESTCANCELACTIVITYTASKFAILED":
 		*e = EventTypeRequestCancelActivityTaskFailed
 		return nil
-	case "activitytaskcanceled":
+	case "ACTIVITYTASKCANCELED":
 		*e = EventTypeActivityTaskCanceled
 		return nil
-	case "timerstarted":
+	case "TIMERSTARTED":
 		*e = EventTypeTimerStarted
 		return nil
-	case "timerfired":
+	case "TIMERFIRED":
 		*e = EventTypeTimerFired
 		return nil
-	case "canceltimerfailed":
+	case "CANCELTIMERFAILED":
 		*e = EventTypeCancelTimerFailed
 		return nil
-	case "timercanceled":
+	case "TIMERCANCELED":
 		*e = EventTypeTimerCanceled
 		return nil
-	case "workflowexecutioncancelrequested":
+	case "WORKFLOWEXECUTIONCANCELREQUESTED":
 		*e = EventTypeWorkflowExecutionCancelRequested
 		return nil
-	case "workflowexecutioncanceled":
+	case "WORKFLOWEXECUTIONCANCELED":
 		*e = EventTypeWorkflowExecutionCanceled
 		return nil
-	case "requestcancelexternalworkflowexecutioninitiated":
+	case "REQUESTCANCELEXTERNALWORKFLOWEXECUTIONINITIATED":
 		*e = EventTypeRequestCancelExternalWorkflowExecutionInitiated
 		return nil
-	case "requestcancelexternalworkflowexecutionfailed":
+	case "REQUESTCANCELEXTERNALWORKFLOWEXECUTIONFAILED":
 		*e = EventTypeRequestCancelExternalWorkflowExecutionFailed
 		return nil
-	case "externalworkflowexecutioncancelrequested":
+	case "EXTERNALWORKFLOWEXECUTIONCANCELREQUESTED":
 		*e = EventTypeExternalWorkflowExecutionCancelRequested
 		return nil
-	case "markerrecorded":
+	case "MARKERRECORDED":
 		*e = EventTypeMarkerRecorded
 		return nil
-	case "workflowexecutionsignaled":
+	case "WORKFLOWEXECUTIONSIGNALED":
 		*e = EventTypeWorkflowExecutionSignaled
 		return nil
-	case "workflowexecutionterminated":
+	case "WORKFLOWEXECUTIONTERMINATED":
 		*e = EventTypeWorkflowExecutionTerminated
 		return nil
-	case "workflowexecutioncontinuedasnew":
+	case "WORKFLOWEXECUTIONCONTINUEDASNEW":
 		*e = EventTypeWorkflowExecutionContinuedAsNew
 		return nil
-	case "startchildworkflowexecutioninitiated":
+	case "STARTCHILDWORKFLOWEXECUTIONINITIATED":
 		*e = EventTypeStartChildWorkflowExecutionInitiated
 		return nil
-	case "startchildworkflowexecutionfailed":
+	case "STARTCHILDWORKFLOWEXECUTIONFAILED":
 		*e = EventTypeStartChildWorkflowExecutionFailed
 		return nil
-	case "childworkflowexecutionstarted":
+	case "CHILDWORKFLOWEXECUTIONSTARTED":
 		*e = EventTypeChildWorkflowExecutionStarted
 		return nil
-	case "childworkflowexecutioncompleted":
+	case "CHILDWORKFLOWEXECUTIONCOMPLETED":
 		*e = EventTypeChildWorkflowExecutionCompleted
 		return nil
-	case "childworkflowexecutionfailed":
+	case "CHILDWORKFLOWEXECUTIONFAILED":
 		*e = EventTypeChildWorkflowExecutionFailed
 		return nil
-	case "childworkflowexecutioncanceled":
+	case "CHILDWORKFLOWEXECUTIONCANCELED":
 		*e = EventTypeChildWorkflowExecutionCanceled
 		return nil
-	case "childworkflowexecutiontimedout":
+	case "CHILDWORKFLOWEXECUTIONTIMEDOUT":
 		*e = EventTypeChildWorkflowExecutionTimedOut
 		return nil
-	case "childworkflowexecutionterminated":
+	case "CHILDWORKFLOWEXECUTIONTERMINATED":
 		*e = EventTypeChildWorkflowExecutionTerminated
 		return nil
-	case "signalexternalworkflowexecutioninitiated":
+	case "SIGNALEXTERNALWORKFLOWEXECUTIONINITIATED":
 		*e = EventTypeSignalExternalWorkflowExecutionInitiated
 		return nil
-	case "signalexternalworkflowexecutionfailed":
+	case "SIGNALEXTERNALWORKFLOWEXECUTIONFAILED":
 		*e = EventTypeSignalExternalWorkflowExecutionFailed
 		return nil
-	case "externalworkflowexecutionsignaled":
+	case "EXTERNALWORKFLOWEXECUTIONSIGNALED":
 		*e = EventTypeExternalWorkflowExecutionSignaled
 		return nil
-	case "upsertworkflowsearchattributes":
+	case "UPSERTWORKFLOWSEARCHATTRIBUTES":
 		*e = EventTypeUpsertWorkflowSearchAttributes
 		return nil
 	default:
@@ -3938,20 +3938,20 @@ func (e HistoryEventFilterType) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "AllEvent"
+		return "ALL_EVENT"
 	case 1:
-		return "CloseEvent"
+		return "CLOSE_EVENT"
 	}
 	return fmt.Sprintf("HistoryEventFilterType(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *HistoryEventFilterType) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "allevent":
+	switch s := strings.ToUpper(string(value)); s {
+	case "ALL_EVENT":
 		*e = HistoryEventFilterTypeAllEvent
 		return nil
-	case "closeevent":
+	case "CLOSE_EVENT":
 		*e = HistoryEventFilterTypeCloseEvent
 		return nil
 	default:
@@ -3989,40 +3989,40 @@ func (e IndexedValueType) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "String"
+		return "STRING"
 	case 1:
-		return "Keyword"
+		return "KEYWORD"
 	case 2:
-		return "Int"
+		return "INT"
 	case 3:
-		return "Double"
+		return "DOUBLE"
 	case 4:
-		return "Bool"
+		return "BOOL"
 	case 5:
-		return "Datetime"
+		return "DATETIME"
 	}
 	return fmt.Sprintf("IndexedValueType(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *IndexedValueType) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "string":
+	switch s := strings.ToUpper(string(value)); s {
+	case "STRING":
 		*e = IndexedValueTypeString
 		return nil
-	case "keyword":
+	case "KEYWORD":
 		*e = IndexedValueTypeKeyword
 		return nil
-	case "int":
+	case "INT":
 		*e = IndexedValueTypeInt
 		return nil
-	case "double":
+	case "DOUBLE":
 		*e = IndexedValueTypeDouble
 		return nil
-	case "bool":
+	case "BOOL":
 		*e = IndexedValueTypeBool
 		return nil
-	case "datetime":
+	case "DATETIME":
 		*e = IndexedValueTypeDatetime
 		return nil
 	default:
@@ -4541,25 +4541,25 @@ func (e ParentClosePolicy) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "Abandon"
+		return "ABANDON"
 	case 1:
-		return "RequestCancel"
+		return "REQUEST_CANCEL"
 	case 2:
-		return "Terminate"
+		return "TERMINATE"
 	}
 	return fmt.Sprintf("ParentClosePolicy(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *ParentClosePolicy) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "abandon":
+	switch s := strings.ToUpper(string(value)); s {
+	case "ABANDON":
 		*e = ParentClosePolicyAbandon
 		return nil
-	case "requestcancel":
+	case "REQUEST_CANCEL":
 		*e = ParentClosePolicyRequestCancel
 		return nil
-	case "terminate":
+	case "TERMINATE":
 		*e = ParentClosePolicyTerminate
 		return nil
 	default:
@@ -4720,25 +4720,25 @@ func (e PendingActivityState) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "Scheduled"
+		return "SCHEDULED"
 	case 1:
-		return "Started"
+		return "STARTED"
 	case 2:
-		return "CancelRequested"
+		return "CANCEL_REQUESTED"
 	}
 	return fmt.Sprintf("PendingActivityState(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *PendingActivityState) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "scheduled":
+	switch s := strings.ToUpper(string(value)); s {
+	case "SCHEDULED":
 		*e = PendingActivityStateScheduled
 		return nil
-	case "started":
+	case "STARTED":
 		*e = PendingActivityStateStarted
 		return nil
-	case "cancelrequested":
+	case "CANCEL_REQUESTED":
 		*e = PendingActivityStateCancelRequested
 		return nil
 	default:
@@ -4876,20 +4876,20 @@ func (e PendingDecisionState) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "Scheduled"
+		return "SCHEDULED"
 	case 1:
-		return "Started"
+		return "STARTED"
 	}
 	return fmt.Sprintf("PendingDecisionState(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *PendingDecisionState) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "scheduled":
+	switch s := strings.ToUpper(string(value)); s {
+	case "SCHEDULED":
 		*e = PendingDecisionStateScheduled
 		return nil
-	case "started":
+	case "STARTED":
 		*e = PendingDecisionStateStarted
 		return nil
 	default:
@@ -5316,20 +5316,20 @@ func (e QueryConsistencyLevel) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "Eventual"
+		return "EVENTUAL"
 	case 1:
-		return "Strong"
+		return "STRONG"
 	}
 	return fmt.Sprintf("QueryConsistencyLevel(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *QueryConsistencyLevel) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "eventual":
+	switch s := strings.ToUpper(string(value)); s {
+	case "EVENTUAL":
 		*e = QueryConsistencyLevelEventual
 		return nil
-	case "strong":
+	case "STRONG":
 		*e = QueryConsistencyLevelStrong
 		return nil
 	default:
@@ -5380,20 +5380,20 @@ func (e QueryRejectCondition) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "NotOpen"
+		return "NOT_OPEN"
 	case 1:
-		return "NotCompletedCleanly"
+		return "NOT_COMPLETED_CLEANLY"
 	}
 	return fmt.Sprintf("QueryRejectCondition(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *QueryRejectCondition) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "notopen":
+	switch s := strings.ToUpper(string(value)); s {
+	case "NOT_OPEN":
 		*e = QueryRejectConditionNotOpen
 		return nil
-	case "notcompletedcleanly":
+	case "NOT_COMPLETED_CLEANLY":
 		*e = QueryRejectConditionNotCompletedCleanly
 		return nil
 	default:
@@ -5444,20 +5444,20 @@ func (e QueryResultType) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "Answered"
+		return "ANSWERED"
 	case 1:
-		return "Failed"
+		return "FAILED"
 	}
 	return fmt.Sprintf("QueryResultType(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *QueryResultType) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "answered":
+	switch s := strings.ToUpper(string(value)); s {
+	case "ANSWERED":
 		*e = QueryResultTypeAnswered
 		return nil
-	case "failed":
+	case "FAILED":
 		*e = QueryResultTypeFailed
 		return nil
 	default:
@@ -5495,20 +5495,20 @@ func (e QueryTaskCompletedType) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "Completed"
+		return "COMPLETED"
 	case 1:
-		return "Failed"
+		return "FAILED"
 	}
 	return fmt.Sprintf("QueryTaskCompletedType(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *QueryTaskCompletedType) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "completed":
+	switch s := strings.ToUpper(string(value)); s {
+	case "COMPLETED":
 		*e = QueryTaskCompletedTypeCompleted
 		return nil
-	case "failed":
+	case "FAILED":
 		*e = QueryTaskCompletedTypeFailed
 		return nil
 	default:
@@ -7246,15 +7246,15 @@ func (e SignalExternalWorkflowExecutionFailedCause) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "UnknownExternalWorkflowExecution"
+		return "UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION"
 	}
 	return fmt.Sprintf("SignalExternalWorkflowExecutionFailedCause(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *SignalExternalWorkflowExecutionFailedCause) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "unknownexternalworkflowexecution":
+	switch s := strings.ToUpper(string(value)); s {
+	case "UNKNOWN_EXTERNAL_WORKFLOW_EXECUTION":
 		*e = SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution
 		return nil
 	default:
@@ -8286,20 +8286,20 @@ func (e TaskListKind) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "Normal"
+		return "NORMAL"
 	case 1:
-		return "Sticky"
+		return "STICKY"
 	}
 	return fmt.Sprintf("TaskListKind(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *TaskListKind) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "normal":
+	switch s := strings.ToUpper(string(value)); s {
+	case "NORMAL":
 		*e = TaskListKindNormal
 		return nil
-	case "sticky":
+	case "STICKY":
 		*e = TaskListKindSticky
 		return nil
 	default:
@@ -8430,11 +8430,11 @@ func (e TaskListType) String() string {
 
 // UnmarshalText parses enum value from string representation
 func (e *TaskListType) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "decision":
+	switch s := strings.ToUpper(string(value)); s {
+	case "DECISION":
 		*e = TaskListTypeDecision
 		return nil
-	case "activity":
+	case "ACTIVITY":
 		*e = TaskListTypeActivity
 		return nil
 	default:
@@ -8521,30 +8521,30 @@ func (e TimeoutType) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "StartToClose"
+		return "START_TO_CLOSE"
 	case 1:
-		return "ScheduleToStart"
+		return "SCHEDULE_TO_START"
 	case 2:
-		return "ScheduleToClose"
+		return "SCHEDULE_TO_CLOSE"
 	case 3:
-		return "Heartbeat"
+		return "HEARTBEAT"
 	}
 	return fmt.Sprintf("TimeoutType(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *TimeoutType) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "starttoclose":
+	switch s := strings.ToUpper(string(value)); s {
+	case "START_TO_CLOSE":
 		*e = TimeoutTypeStartToClose
 		return nil
-	case "scheduletostart":
+	case "SCHEDULE_TO_START":
 		*e = TimeoutTypeScheduleToStart
 		return nil
-	case "scheduletoclose":
+	case "SCHEDULE_TO_CLOSE":
 		*e = TimeoutTypeScheduleToClose
 		return nil
-	case "heartbeat":
+	case "HEARTBEAT":
 		*e = TimeoutTypeHeartbeat
 		return nil
 	default:
@@ -9086,40 +9086,40 @@ func (e WorkflowExecutionCloseStatus) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "Completed"
+		return "COMPLETED"
 	case 1:
-		return "Failed"
+		return "FAILED"
 	case 2:
-		return "Canceled"
+		return "CANCELED"
 	case 3:
-		return "Terminated"
+		return "TERMINATED"
 	case 4:
-		return "ContinuedAsNew"
+		return "CONTINUED_AS_NEW"
 	case 5:
-		return "TimedOut"
+		return "TIMED_OUT"
 	}
 	return fmt.Sprintf("WorkflowExecutionCloseStatus(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *WorkflowExecutionCloseStatus) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "completed":
+	switch s := strings.ToUpper(string(value)); s {
+	case "COMPLETED":
 		*e = WorkflowExecutionCloseStatusCompleted
 		return nil
-	case "failed":
+	case "FAILED":
 		*e = WorkflowExecutionCloseStatusFailed
 		return nil
-	case "canceled":
+	case "CANCELED":
 		*e = WorkflowExecutionCloseStatusCanceled
 		return nil
-	case "terminated":
+	case "TERMINATED":
 		*e = WorkflowExecutionCloseStatusTerminated
 		return nil
-	case "continuedasnew":
+	case "CONTINUED_AS_NEW":
 		*e = WorkflowExecutionCloseStatusContinuedAsNew
 		return nil
-	case "timedout":
+	case "TIMED_OUT":
 		*e = WorkflowExecutionCloseStatusTimedOut
 		return nil
 	default:
@@ -9848,17 +9848,17 @@ func (e WorkflowIDReusePolicy) String() string {
 
 // UnmarshalText parses enum value from string representation
 func (e *WorkflowIDReusePolicy) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "allowduplicatefailedonly":
+	switch s := strings.ToUpper(string(value)); s {
+	case "ALLOWDUPLICATEFAILEDONLY":
 		*e = WorkflowIDReusePolicyAllowDuplicateFailedOnly
 		return nil
-	case "allowduplicate":
+	case "ALLOWDUPLICATE":
 		*e = WorkflowIDReusePolicyAllowDuplicate
 		return nil
-	case "rejectduplicate":
+	case "REJECTDUPLICATE":
 		*e = WorkflowIDReusePolicyRejectDuplicate
 		return nil
-	case "terminateifrunning":
+	case "TERMINATEIFRUNNING":
 		*e = WorkflowIDReusePolicyTerminateIfRunning
 		return nil
 	default:

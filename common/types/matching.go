@@ -1150,20 +1150,20 @@ func (e TaskSource) String() string {
 	w := int32(e)
 	switch w {
 	case 0:
-		return "History"
+		return "HISTORY"
 	case 1:
-		return "DbBacklog"
+		return "DB_BACKLOG"
 	}
 	return fmt.Sprintf("TaskSource(%d)", w)
 }
 
 // UnmarshalText parses enum value from string representation
 func (e *TaskSource) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s {
-	case "history":
+	switch s := strings.ToUpper(string(value)); s {
+	case "HISTORY":
 		*e = TaskSourceHistory
 		return nil
-	case "dbbacklog":
+	case "DB_BACKLOG":
 		*e = TaskSourceDbBacklog
 		return nil
 	default:

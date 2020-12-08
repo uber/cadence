@@ -65,7 +65,7 @@ type (
 		AddActivityTaskFailedEvent(int64, int64, *workflow.RespondActivityTaskFailedRequest) (*workflow.HistoryEvent, error)
 		AddActivityTaskScheduledEvent(int64, *types.ScheduleActivityTaskDecisionAttributes) (*workflow.HistoryEvent, *persistence.ActivityInfo, *workflow.ActivityLocalDispatchInfo, error)
 		AddActivityTaskStartedEvent(*persistence.ActivityInfo, int64, string, string) (*workflow.HistoryEvent, error)
-		AddActivityTaskTimedOutEvent(int64, int64, workflow.TimeoutType, []uint8) (*workflow.HistoryEvent, error)
+		AddActivityTaskTimedOutEvent(int64, int64, types.TimeoutType, []uint8) (*workflow.HistoryEvent, error)
 		AddCancelTimerFailedEvent(int64, *types.CancelTimerDecisionAttributes, string) (*workflow.HistoryEvent, error)
 		AddChildWorkflowExecutionCanceledEvent(int64, *types.WorkflowExecution, *workflow.WorkflowExecutionCanceledEventAttributes) (*workflow.HistoryEvent, error)
 		AddChildWorkflowExecutionCompletedEvent(int64, *types.WorkflowExecution, *workflow.WorkflowExecutionCompletedEventAttributes) (*workflow.HistoryEvent, error)
@@ -183,7 +183,7 @@ type (
 		ReplicateDecisionTaskFailedEvent() error
 		ReplicateDecisionTaskScheduledEvent(int64, int64, string, int32, int64, int64, int64) (*DecisionInfo, error)
 		ReplicateDecisionTaskStartedEvent(*DecisionInfo, int64, int64, int64, string, int64) (*DecisionInfo, error)
-		ReplicateDecisionTaskTimedOutEvent(workflow.TimeoutType) error
+		ReplicateDecisionTaskTimedOutEvent(types.TimeoutType) error
 		ReplicateExternalWorkflowExecutionCancelRequested(*workflow.HistoryEvent) error
 		ReplicateExternalWorkflowExecutionSignaled(*workflow.HistoryEvent) error
 		ReplicateRequestCancelExternalWorkflowExecutionFailedEvent(*workflow.HistoryEvent) error

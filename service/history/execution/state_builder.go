@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -238,7 +239,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 		case shared.EventTypeDecisionTaskTimedOut:
 			if err := b.mutableState.ReplicateDecisionTaskTimedOutEvent(
-				event.DecisionTaskTimedOutEventAttributes.GetTimeoutType(),
+				*thrift.ToTimeoutType(event.DecisionTaskTimedOutEventAttributes.GetTimeoutType().Ptr()),
 			); err != nil {
 				return nil, err
 			}
