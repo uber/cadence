@@ -98,6 +98,7 @@ func NewV6Client(
 		clientOptFuncs = append(clientOptFuncs, elastic.SetSniff(false))
 	}
 	elastic.SetSniff(false)
+	elastic.SetHealthcheck(false)
 	client, err := elastic.NewClient(clientOptFuncs...)
 	if err != nil {
 		return nil, err
