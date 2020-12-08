@@ -88,7 +88,9 @@ func NewV6Client(
 	logger log.Logger,
 	clientOptFuncs ...elastic.ClientOptionFunc,
 ) (GenericClient, error) {
-	fmt.Println("debug NewV6Client", *connectConfig)
+	conectConfigStr, _ := json.MarshalIndent(connectConfig, "", "    ")
+	fmt.Println("debug NewV6Client", conectConfigStr)
+
 	clientOptFuncs = append(clientOptFuncs,
 		elastic.SetURL(connectConfig.URL.String()),
 		elastic.SetRetrier(elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))),
@@ -97,8 +99,9 @@ func NewV6Client(
 	if connectConfig.DisableSniff {
 		clientOptFuncs = append(clientOptFuncs, elastic.SetSniff(false))
 	}
-	elastic.SetSniff(false)
-	elastic.SetHealthcheck(false)
+	if connectConfig.DisableHealthCheck {
+		clientOptFuncs = append(clientOptFuncs, elastic.SetHealthcheck(false))
+	}
 	client, err := elastic.NewClient(clientOptFuncs...)
 	if err != nil {
 		return nil, err
