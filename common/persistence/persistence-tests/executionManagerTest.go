@@ -2791,7 +2791,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateChildExecutions() {
 	s.NotNil(ci)
 	s.Equal(int64(1234), ci.Version)
 	s.Equal(int64(1), ci.InitiatedID)
-	s.Equal(gen.ParentClosePolicyTerminate, ci.ParentClosePolicy)
+	s.Equal(types.ParentClosePolicyTerminate, ci.ParentClosePolicy)
 	s.Equal(int64(1), *ci.InitiatedEvent.EventID)
 	s.Equal(int64(2), ci.StartedID)
 	s.Equal(int64(2), *ci.StartedEvent.EventID)
