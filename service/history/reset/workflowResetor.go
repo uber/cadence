@@ -28,8 +28,6 @@ import (
 	"fmt"
 	"time"
 
-	"go.uber.org/cadence/.gen/go/shared"
-
 	"github.com/pborman/uuid"
 
 	h "github.com/uber/cadence/.gen/go/history"
@@ -1105,9 +1103,9 @@ func newRetryTaskErrorWithHint(
 	workflowID string,
 	runID string,
 	nextEventID int64,
-) *shared.RetryTaskError {
+) *workflow.RetryTaskError {
 
-	return &shared.RetryTaskError{
+	return &workflow.RetryTaskError{
 		Message:     msg,
 		DomainId:    common.StringPtr(domainID),
 		WorkflowId:  common.StringPtr(workflowID),
