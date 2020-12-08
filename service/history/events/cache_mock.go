@@ -32,7 +32,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	shared "github.com/uber/cadence/.gen/go/shared"
+	types "github.com/uber/cadence/common/types"
 )
 
 // MockCache is a mock of Cache interface
@@ -59,10 +59,10 @@ func (m *MockCache) EXPECT() *MockCacheMockRecorder {
 }
 
 // GetEvent mocks base method
-func (m *MockCache) GetEvent(ctx context.Context, shardID int, domainID, workflowID, runID string, firstEventID, eventID int64, branchToken []byte) (*shared.HistoryEvent, error) {
+func (m *MockCache) GetEvent(ctx context.Context, shardID int, domainID, workflowID, runID string, firstEventID, eventID int64, branchToken []byte) (*types.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEvent", ctx, shardID, domainID, workflowID, runID, firstEventID, eventID, branchToken)
-	ret0, _ := ret[0].(*shared.HistoryEvent)
+	ret0, _ := ret[0].(*types.HistoryEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -74,7 +74,7 @@ func (mr *MockCacheMockRecorder) GetEvent(ctx, shardID, domainID, workflowID, ru
 }
 
 // PutEvent mocks base method
-func (m *MockCache) PutEvent(domainID, workflowID, runID string, eventID int64, event *shared.HistoryEvent) {
+func (m *MockCache) PutEvent(domainID, workflowID, runID string, eventID int64, event *types.HistoryEvent) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "PutEvent", domainID, workflowID, runID, eventID, event)
 }

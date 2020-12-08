@@ -1276,7 +1276,7 @@ func (s *TestBase) UpdateWorkflowExecutionForBufferEvents(
 	updatedInfo *p.WorkflowExecutionInfo,
 	updatedStats *p.ExecutionStats,
 	condition int64,
-	bufferEvents []*workflow.HistoryEvent,
+	bufferEvents []*types.HistoryEvent,
 	clearBufferedEvents bool,
 	versionHistories *p.VersionHistories,
 ) error {

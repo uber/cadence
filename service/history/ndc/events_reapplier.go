@@ -25,7 +25,6 @@ package ndc
 import (
 	ctx "context"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
@@ -39,9 +38,9 @@ type (
 		ReapplyEvents(
 			ctx ctx.Context,
 			msBuilder execution.MutableState,
-			historyEvents []*workflow.HistoryEvent,
+			historyEvents []*types.HistoryEvent,
 			runID string,
-		) ([]*workflow.HistoryEvent, error)
+		) ([]*types.HistoryEvent, error)
 	}
 
 	eventsReapplierImpl struct {
@@ -67,15 +66,15 @@ func NewEventsReapplier(
 func (r *eventsReapplierImpl) ReapplyEvents(
 	ctx ctx.Context,
 	msBuilder execution.MutableState,
-	historyEvents []*workflow.HistoryEvent,
+	historyEvents []*types.HistoryEvent,
 	runID string,
-) ([]*workflow.HistoryEvent, error) {
+) ([]*types.HistoryEvent, error) {
 
-	var reappliedEvents []*workflow.HistoryEvent
+	var reappliedEvents []*types.HistoryEvent
 	for _, event := range historyEvents {
 		switch event.GetEventType() {
-		case workflow.EventTypeWorkflowExecutionSignaled:
-			dedupResource := definition.NewEventReappliedID(runID, event.GetEventId(), event.GetVersion())
+		case types.EventTypeWorkflowExecutionSignaled:
+			dedupResource := definition.NewEventReappliedID(runID, event.GetEventID(), event.GetVersion())
 			if msBuilder.IsResourceDuplicated(dedupResource) {
 				// skip already applied event
 				continue
@@ -104,7 +103,7 @@ func (r *eventsReapplierImpl) ReapplyEvents(
 		); err != nil {
 			return nil, err
 		}
-		deDupResource := definition.NewEventReappliedID(runID, event.GetEventId(), event.GetVersion())
+		deDupResource := definition.NewEventReappliedID(runID, event.GetEventID(), event.GetVersion())
 		msBuilder.UpdateDuplicatedResource(deDupResource)
 	}
 	return reappliedEvents, nil

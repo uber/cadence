@@ -43,12 +43,12 @@ type (
 		getWorkflowID() string
 		getRunID() string
 		getEventTime() time.Time
-		getFirstEvent() *shared.HistoryEvent
-		getLastEvent() *shared.HistoryEvent
+		getFirstEvent() *types.HistoryEvent
+		getLastEvent() *types.HistoryEvent
 		getVersion() int64
 		getSourceCluster() string
-		getEvents() []*shared.HistoryEvent
-		getNewEvents() []*shared.HistoryEvent
+		getEvents() []*types.HistoryEvent
+		getNewEvents() []*types.HistoryEvent
 		getLogger() log.Logger
 		getVersionHistory() *persistence.VersionHistory
 		isWorkflowReset() bool
@@ -61,11 +61,11 @@ type (
 		domainID       string
 		execution      *types.WorkflowExecution
 		version        int64
-		firstEvent     *shared.HistoryEvent
-		lastEvent      *shared.HistoryEvent
+		firstEvent     *types.HistoryEvent
+		lastEvent      *types.HistoryEvent
 		eventTime      time.Time
-		events         []*shared.HistoryEvent
-		newEvents      []*shared.HistoryEvent
+		events         []*types.HistoryEvent
+		newEvents      []*types.HistoryEvent
 		versionHistory *persistence.VersionHistory
 
 		startTime time.Time
@@ -138,8 +138,8 @@ func newReplicationTask(
 		tag.WorkflowRunID(execution.GetRunID()),
 		tag.SourceCluster(sourceCluster),
 		tag.IncomingVersion(version),
-		tag.WorkflowFirstEventID(firstEvent.GetEventId()),
-		tag.WorkflowNextEventID(lastEvent.GetEventId()+1),
+		tag.WorkflowFirstEventID(firstEvent.GetEventID()),
+		tag.WorkflowNextEventID(lastEvent.GetEventID()+1),
 	)
 
 	return &replicationTaskImpl{
@@ -179,11 +179,11 @@ func (t *replicationTaskImpl) getEventTime() time.Time {
 	return t.eventTime
 }
 
-func (t *replicationTaskImpl) getFirstEvent() *shared.HistoryEvent {
+func (t *replicationTaskImpl) getFirstEvent() *types.HistoryEvent {
 	return t.firstEvent
 }
 
-func (t *replicationTaskImpl) getLastEvent() *shared.HistoryEvent {
+func (t *replicationTaskImpl) getLastEvent() *types.HistoryEvent {
 	return t.lastEvent
 }
 
@@ -195,11 +195,11 @@ func (t *replicationTaskImpl) getSourceCluster() string {
 	return t.sourceCluster
 }
 
-func (t *replicationTaskImpl) getEvents() []*shared.HistoryEvent {
+func (t *replicationTaskImpl) getEvents() []*types.HistoryEvent {
 	return t.events
 }
 
-func (t *replicationTaskImpl) getNewEvents() []*shared.HistoryEvent {
+func (t *replicationTaskImpl) getNewEvents() []*types.HistoryEvent {
 	return t.newEvents
 }
 
@@ -213,12 +213,12 @@ func (t *replicationTaskImpl) getVersionHistory() *persistence.VersionHistory {
 
 func (t *replicationTaskImpl) isWorkflowReset() bool {
 	switch t.getFirstEvent().GetEventType() {
-	case shared.EventTypeDecisionTaskFailed:
+	case types.EventTypeDecisionTaskFailed:
 		decisionTaskFailedEvent := t.getFirstEvent()
 		attr := decisionTaskFailedEvent.DecisionTaskFailedEventAttributes
-		baseRunID := attr.GetBaseRunId()
+		baseRunID := attr.GetBaseRunID()
 		baseEventVersion := attr.GetForkEventVersion()
-		newRunID := attr.GetNewRunId()
+		newRunID := attr.GetNewRunID()
 
 		return len(baseRunID) > 0 && baseEventVersion != 0 && len(newRunID) > 0
 
@@ -236,11 +236,11 @@ func (t *replicationTaskImpl) splitTask(
 	}
 	newHistoryEvents := t.newEvents
 
-	if t.getLastEvent().GetEventType() != shared.EventTypeWorkflowExecutionContinuedAsNew ||
+	if t.getLastEvent().GetEventType() != types.EventTypeWorkflowExecutionContinuedAsNew ||
 		t.getLastEvent().WorkflowExecutionContinuedAsNewEventAttributes == nil {
 		return nil, nil, ErrLastEventIsNotContinueAsNew
 	}
-	newRunID := t.getLastEvent().WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunId()
+	newRunID := t.getLastEvent().WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunID()
 
 	newFirstEvent := newHistoryEvents[0]
 	newLastEvent := newHistoryEvents[len(newHistoryEvents)-1]
@@ -255,7 +255,7 @@ func (t *replicationTaskImpl) splitTask(
 	newVersionHistory := persistence.NewVersionHistoryFromInternalType(&types.VersionHistory{
 		BranchToken: nil,
 		Items: []*types.VersionHistoryItem{{
-			EventID: common.Int64Ptr(newLastEvent.GetEventId()),
+			EventID: common.Int64Ptr(newLastEvent.GetEventID()),
 			Version: common.Int64Ptr(newLastEvent.GetVersion()),
 		}},
 	})
@@ -265,8 +265,8 @@ func (t *replicationTaskImpl) splitTask(
 		tag.WorkflowRunID(newRunID),
 		tag.SourceCluster(t.sourceCluster),
 		tag.IncomingVersion(t.version),
-		tag.WorkflowFirstEventID(newFirstEvent.GetEventId()),
-		tag.WorkflowNextEventID(newLastEvent.GetEventId()+1),
+		tag.WorkflowFirstEventID(newFirstEvent.GetEventID()),
+		tag.WorkflowNextEventID(newLastEvent.GetEventID()+1),
 	)
 
 	newRunTask := &replicationTaskImpl{
@@ -281,7 +281,7 @@ func (t *replicationTaskImpl) splitTask(
 		lastEvent:      newLastEvent,
 		eventTime:      time.Unix(0, newEventTime),
 		events:         newHistoryEvents,
-		newEvents:      []*shared.HistoryEvent{},
+		newEvents:      []*types.HistoryEvent{},
 		versionHistory: newVersionHistory,
 
 		startTime: taskStartTime,
@@ -295,7 +295,7 @@ func (t *replicationTaskImpl) splitTask(
 func validateReplicateEventsRequest(
 	historySerializer persistence.PayloadSerializer,
 	request *h.ReplicateEventsV2Request,
-) ([]*shared.HistoryEvent, []*shared.HistoryEvent, error) {
+) ([]*types.HistoryEvent, []*types.HistoryEvent, error) {
 
 	// TODO add validation on version history
 
@@ -348,14 +348,14 @@ func validateUUID(input string) bool {
 	return true
 }
 
-func validateEvents(events []*shared.HistoryEvent) (int64, error) {
+func validateEvents(events []*types.HistoryEvent) (int64, error) {
 
 	firstEvent := events[0]
-	firstEventID := firstEvent.GetEventId()
+	firstEventID := firstEvent.GetEventID()
 	version := firstEvent.GetVersion()
 
 	for index, event := range events {
-		if event.GetEventId() != firstEventID+int64(index) {
+		if event.GetEventID() != firstEventID+int64(index) {
 			return 0, ErrEventIDMismatch
 		}
 		if event.GetVersion() != version {
@@ -368,7 +368,7 @@ func validateEvents(events []*shared.HistoryEvent) (int64, error) {
 func deserializeBlob(
 	historySerializer persistence.PayloadSerializer,
 	blob *shared.DataBlob,
-) ([]*shared.HistoryEvent, error) {
+) ([]*types.HistoryEvent, error) {
 
 	if blob == nil {
 		return nil, nil
@@ -378,5 +378,5 @@ func deserializeBlob(
 		Encoding: common.EncodingTypeThriftRW,
 		Data:     blob.Data,
 	})
-	return thrift.FromHistoryEventArray(internalEvents), err
+	return internalEvents, err
 }

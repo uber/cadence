@@ -181,7 +181,7 @@ func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
 	bi, err := s.newHistoryBranch(treeID)
 	s.Nil(err)
 
-	historyW := &workflow.History{}
+	historyW := &types.History{}
 	events := s.genRandomEvents([]int64{1, 2, 3}, 0)
 	err = s.appendNewBranchAndFirstNode(ctx, bi, events, 1, "branchInfo")
 	s.Nil(err)
@@ -228,7 +228,7 @@ func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
 	resp, err := s.HistoryV2Mgr.ReadHistoryBranch(ctx, req)
 	s.Nil(err)
 	s.Equal(4, len(resp.HistoryEvents))
-	s.Equal(int64(6), resp.HistoryEvents[0].GetEventId())
+	s.Equal(int64(6), resp.HistoryEvents[0].GetEventID())
 
 	events = s.genRandomEvents([]int64{10}, 4)
 	err = s.appendNewNode(ctx, bi, events, 8)
@@ -276,7 +276,7 @@ func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
 	historyW.Events = append(historyW.Events, events...)
 
 	// read branch to verify
-	historyR := &workflow.History{}
+	historyR := &types.History{}
 
 	req = &p.ReadHistoryBranchRequest{
 		BranchToken:   bi2,
@@ -346,7 +346,7 @@ func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
 		s.Equal(0, len(resp.HistoryEvents))
 	}
 
-	s.True(historyW.Equals(historyR))
+	s.Equal(historyW, historyR)
 	s.Equal(0, len(resp.NextPageToken))
 
 	// MinEventID is in the middle of the last batch and this is the first request (NextPageToken
@@ -381,7 +381,7 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 			defer wg.Done()
 			bi, err := s.newHistoryBranch(treeID)
 			s.Nil(err)
-			historyW := &workflow.History{}
+			historyW := &types.History{}
 			m.Store(idx, bi)
 
 			events := s.genRandomEvents([]int64{1, 2, 3}, 1)
@@ -405,12 +405,12 @@ func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
 			historyW.Events = append(historyW.Events, events...)
 
 			// read branch to verify
-			historyR := &workflow.History{}
+			historyR := &types.History{}
 			events = s.read(ctx, bi, 1, 21)
 			s.Equal(20, len(events))
 			historyR.Events = events
 
-			s.True(historyW.Equals(historyR))
+			s.Equal(historyW, historyR)
 		}(i)
 	}
 
@@ -696,12 +696,12 @@ func (s *HistoryV2PersistenceSuite) getIDByKey(m sync.Map, k int) int64 {
 	return id
 }
 
-func (s *HistoryV2PersistenceSuite) genRandomEvents(eventIDs []int64, version int64) []*workflow.HistoryEvent {
-	var events []*workflow.HistoryEvent
+func (s *HistoryV2PersistenceSuite) genRandomEvents(eventIDs []int64, version int64) []*types.HistoryEvent {
+	var events []*types.HistoryEvent
 
 	timestamp := time.Now().UnixNano()
 	for _, eid := range eventIDs {
-		e := &workflow.HistoryEvent{EventId: common.Int64Ptr(eid), Version: common.Int64Ptr(version), Timestamp: int64Ptr(timestamp)}
+		e := &types.HistoryEvent{EventID: common.Int64Ptr(eid), Version: common.Int64Ptr(version), Timestamp: int64Ptr(timestamp)}
 		events = append(events, e)
 	}
 
@@ -747,17 +747,17 @@ func (s *HistoryV2PersistenceSuite) descTree(ctx context.Context, treeID string)
 }
 
 // persistence helper
-func (s *HistoryV2PersistenceSuite) read(ctx context.Context, branch []byte, minID, maxID int64) []*workflow.HistoryEvent {
+func (s *HistoryV2PersistenceSuite) read(ctx context.Context, branch []byte, minID, maxID int64) []*types.HistoryEvent {
 	res, err := s.readWithError(ctx, branch, minID, maxID)
 	s.Nil(err)
 	return res
 }
 
-func (s *HistoryV2PersistenceSuite) readWithError(ctx context.Context, branch []byte, minID, maxID int64) ([]*workflow.HistoryEvent, error) {
+func (s *HistoryV2PersistenceSuite) readWithError(ctx context.Context, branch []byte, minID, maxID int64) ([]*types.HistoryEvent, error) {
 
 	// use small page size to enforce pagination
 	randPageSize := 2
-	res := make([]*workflow.HistoryEvent, 0)
+	res := make([]*types.HistoryEvent, 0)
 	token := []byte{}
 	for {
 		resp, err := s.HistoryV2Mgr.ReadHistoryBranch(ctx, &p.ReadHistoryBranchRequest{
@@ -784,9 +784,9 @@ func (s *HistoryV2PersistenceSuite) readWithError(ctx context.Context, branch []
 	return res, nil
 }
 
-func (s *HistoryV2PersistenceSuite) appendOneByOne(ctx context.Context, branch []byte, events []*workflow.HistoryEvent, txnID int64) error {
+func (s *HistoryV2PersistenceSuite) appendOneByOne(ctx context.Context, branch []byte, events []*types.HistoryEvent, txnID int64) error {
 	for index, e := range events {
-		err := s.append(ctx, branch, []*workflow.HistoryEvent{e}, txnID+int64(index), false, "")
+		err := s.append(ctx, branch, []*types.HistoryEvent{e}, txnID+int64(index), false, "")
 		if err != nil {
 			return err
 		}
@@ -794,16 +794,16 @@ func (s *HistoryV2PersistenceSuite) appendOneByOne(ctx context.Context, branch [
 	return nil
 }
 
-func (s *HistoryV2PersistenceSuite) appendNewNode(ctx context.Context, branch []byte, events []*workflow.HistoryEvent, txnID int64) error {
+func (s *HistoryV2PersistenceSuite) appendNewNode(ctx context.Context, branch []byte, events []*types.HistoryEvent, txnID int64) error {
 	return s.append(ctx, branch, events, txnID, false, "")
 }
 
-func (s *HistoryV2PersistenceSuite) appendNewBranchAndFirstNode(ctx context.Context, branch []byte, events []*workflow.HistoryEvent, txnID int64, branchInfo string) error {
+func (s *HistoryV2PersistenceSuite) appendNewBranchAndFirstNode(ctx context.Context, branch []byte, events []*types.HistoryEvent, txnID int64, branchInfo string) error {
 	return s.append(ctx, branch, events, txnID, true, branchInfo)
 }
 
 // persistence helper
-func (s *HistoryV2PersistenceSuite) append(ctx context.Context, branch []byte, events []*workflow.HistoryEvent, txnID int64, isNewBranch bool, branchInfo string) error {
+func (s *HistoryV2PersistenceSuite) append(ctx context.Context, branch []byte, events []*types.HistoryEvent, txnID int64, isNewBranch bool, branchInfo string) error {
 
 	var resp *p.AppendHistoryNodesResponse
 

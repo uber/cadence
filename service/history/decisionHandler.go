@@ -260,7 +260,7 @@ func (handler *decisionHandlerImpl) handleDecisionTaskFailed(
 				return &types.EntityNotExistsError{Message: "Decision task not found."}
 			}
 
-			_, err := mutableState.AddDecisionTaskFailedEvent(decision.ScheduleID, decision.StartedID, request.GetCause(), request.Details,
+			_, err := mutableState.AddDecisionTaskFailedEvent(decision.ScheduleID, decision.StartedID, *thrift.ToDecisionTaskFailedCause(request.Cause), request.Details,
 				request.GetIdentity(), "", request.GetBinaryChecksum(), "", "", 0)
 			return err
 		})
@@ -340,7 +340,7 @@ Update_History_Loop:
 
 		decisionHeartbeating := request.GetForceCreateNewDecisionTask() && len(request.Decisions) == 0
 		var decisionHeartbeatTimeout bool
-		var completedEvent *workflow.HistoryEvent
+		var completedEvent *types.HistoryEvent
 		if decisionHeartbeating {
 			domainName := domainEntry.GetInfo().Name
 			timeout := handler.config.DecisionHeartbeatTimeout(domainName)
@@ -405,7 +405,7 @@ Update_History_Loop:
 				handler.config.HistorySizeLimitError(domainName),
 				handler.config.HistoryCountLimitWarn(domainName),
 				handler.config.HistoryCountLimitError(domainName),
-				completedEvent.GetEventId(),
+				completedEvent.GetEventID(),
 				msBuilder,
 				executionStats,
 				handler.metricsClient.Scope(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.DomainTag(domainName)),
@@ -414,7 +414,7 @@ Update_History_Loop:
 
 			decisionTaskHandler := newDecisionTaskHandler(
 				request.GetIdentity(),
-				completedEvent.GetEventId(),
+				completedEvent.GetEventID(),
 				domainEntry,
 				msBuilder,
 				handler.decisionAttrValidator,
@@ -609,7 +609,7 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 ) (*h.RecordDecisionTaskStartedResponse, error) {
 
 	response := &h.RecordDecisionTaskStartedResponse{}
-	response.WorkflowType = msBuilder.GetWorkflowType()
+	response.WorkflowType = thrift.FromWorkflowType(msBuilder.GetWorkflowType())
 	executionInfo := msBuilder.GetExecutionInfo()
 	if executionInfo.LastProcessedEvent != common.EmptyEventID {
 		response.PreviousStartedEventId = common.Int64Ptr(executionInfo.LastProcessedEvent)
@@ -634,8 +634,8 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 		// Also return schedule and started which are not written to history yet
 		scheduledEvent, startedEvent := msBuilder.CreateTransientDecisionEvents(decision, identity)
 		response.DecisionInfo = &workflow.TransientDecisionInfo{}
-		response.DecisionInfo.ScheduledEvent = scheduledEvent
-		response.DecisionInfo.StartedEvent = startedEvent
+		response.DecisionInfo.ScheduledEvent = thrift.FromHistoryEvent(scheduledEvent)
+		response.DecisionInfo.StartedEvent = thrift.FromHistoryEvent(startedEvent)
 	}
 	currentBranchToken, err := msBuilder.GetCurrentBranchToken()
 	if err != nil {

@@ -22,6 +22,8 @@
 package execution
 
 import (
+	"encoding/json"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
@@ -203,7 +205,7 @@ func convertUpdateSignalInfos(
 func FailDecision(
 	mutableState MutableState,
 	decision *DecisionInfo,
-	decisionFailureCause workflow.DecisionTaskFailedCause,
+	decisionFailureCause types.DecisionTaskFailedCause,
 ) error {
 
 	if _, err := mutableState.AddDecisionTaskFailedEvent(
@@ -291,7 +293,7 @@ func CreatePersistenceMutableState(ms MutableState) *persistence.WorkflowMutable
 	}
 
 	builder.FlushBufferedEvents() //nolint:errcheck
-	var bufferedEvents []*workflow.HistoryEvent
+	var bufferedEvents []*types.HistoryEvent
 	if len(builder.bufferedEvents) > 0 {
 		bufferedEvents = append(bufferedEvents, builder.bufferedEvents...)
 	}
@@ -380,38 +382,13 @@ func CopyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.Activit
 	details := make([]byte, len(sourceInfo.Details))
 	copy(details, sourceInfo.Details)
 
-	var scheduledEvent *workflow.HistoryEvent
-	var startedEvent *workflow.HistoryEvent
-	if sourceInfo.ScheduledEvent != nil {
-		scheduledEvent = &workflow.HistoryEvent{}
-		wv, err := sourceInfo.ScheduledEvent.ToWire()
-		if err != nil {
-			panic(err)
-		}
-		err = scheduledEvent.FromWire(wv)
-		if err != nil {
-			panic(err)
-		}
-	}
-	if sourceInfo.StartedEvent != nil {
-		startedEvent = &workflow.HistoryEvent{}
-		wv, err := sourceInfo.StartedEvent.ToWire()
-		if err != nil {
-			panic(err)
-		}
-		err = startedEvent.FromWire(wv)
-		if err != nil {
-			panic(err)
-		}
-	}
-
 	return &persistence.ActivityInfo{
 		Version:                  sourceInfo.Version,
 		ScheduleID:               sourceInfo.ScheduleID,
 		ScheduledEventBatchID:    sourceInfo.ScheduledEventBatchID,
-		ScheduledEvent:           scheduledEvent,
+		ScheduledEvent:           deepCopyHistoryEvent(sourceInfo.ScheduledEvent),
 		StartedID:                sourceInfo.StartedID,
-		StartedEvent:             startedEvent,
+		StartedEvent:             deepCopyHistoryEvent(sourceInfo.StartedEvent),
 		ActivityID:               sourceInfo.ActivityID,
 		RequestID:                sourceInfo.RequestID,
 		Details:                  details,
@@ -481,7 +458,7 @@ func CopySignalInfo(sourceInfo *persistence.SignalInfo) *persistence.SignalInfo 
 
 // CopyChildInfo copies ChildExecutionInfo
 func CopyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.ChildExecutionInfo {
-	result := &persistence.ChildExecutionInfo{
+	return &persistence.ChildExecutionInfo{
 		Version:               sourceInfo.Version,
 		InitiatedID:           sourceInfo.InitiatedID,
 		InitiatedEventBatchID: sourceInfo.InitiatedEventBatchID,
@@ -492,29 +469,23 @@ func CopyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.Chil
 		DomainName:            sourceInfo.DomainName,
 		WorkflowTypeName:      sourceInfo.WorkflowTypeName,
 		ParentClosePolicy:     sourceInfo.ParentClosePolicy,
+		InitiatedEvent:        deepCopyHistoryEvent(sourceInfo.InitiatedEvent),
+		StartedEvent:          deepCopyHistoryEvent(sourceInfo.StartedEvent),
 	}
+}
 
-	if sourceInfo.InitiatedEvent != nil {
-		result.InitiatedEvent = &workflow.HistoryEvent{}
-		wv, err := sourceInfo.InitiatedEvent.ToWire()
-		if err != nil {
-			panic(err)
-		}
-		err = result.InitiatedEvent.FromWire(wv)
-		if err != nil {
-			panic(err)
-		}
+func deepCopyHistoryEvent(e *types.HistoryEvent) *types.HistoryEvent {
+	if e == nil {
+		return nil
 	}
-	if sourceInfo.StartedEvent != nil {
-		result.StartedEvent = &workflow.HistoryEvent{}
-		wv, err := sourceInfo.StartedEvent.ToWire()
-		if err != nil {
-			panic(err)
-		}
-		err = result.StartedEvent.FromWire(wv)
-		if err != nil {
-			panic(err)
-		}
+	bytes, err := json.Marshal(e)
+	if err != nil {
+		panic(err)
 	}
-	return result
+	var copy types.HistoryEvent
+	err = json.Unmarshal(bytes, &copy)
+	if err != nil {
+		panic(err)
+	}
+	return &copy
 }

@@ -393,11 +393,11 @@ func (t *taskAckManagerImpl) getAllHistory(
 	firstEventID int64,
 	nextEventID int64,
 	branchToken []byte,
-) (*shared.History, error) {
+) (*types.History, error) {
 
 	// overall result
 	shardID := t.shard.GetShardID()
-	var historyEvents []*shared.HistoryEvent
+	var historyEvents []*types.HistoryEvent
 	historySize := 0
 	iterator := collection.NewPagingIterator(
 		t.getPaginationFunc(
@@ -414,10 +414,10 @@ func (t *taskAckManagerImpl) getAllHistory(
 		if err != nil {
 			return nil, err
 		}
-		historyEvents = append(historyEvents, event.(*shared.HistoryEvent))
+		historyEvents = append(historyEvents, event.(*types.HistoryEvent))
 	}
 	t.metricsClient.RecordTimer(metrics.ReplicatorQueueProcessorScope, metrics.HistorySize, time.Duration(historySize))
-	history := &shared.History{
+	history := &types.History{
 		Events: historyEvents,
 	}
 	return history, nil
