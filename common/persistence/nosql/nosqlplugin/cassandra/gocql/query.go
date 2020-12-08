@@ -53,8 +53,18 @@ func (q *query) Consistency(c Consistency) Query {
 	return q
 }
 
+func (q *query) WithTimestamp(timestamp int64) Query {
+	q.Query.WithTimestamp(timestamp)
+	return q
+}
+
 func (q *query) WithContext(ctx context.Context) Query {
 	return &query{
 		Query: q.Query.WithContext(ctx),
 	}
+}
+
+func (q *query) Bind(v ...interface{}) Query {
+	q.Query.Bind(v...)
+	return q
 }

@@ -47,6 +47,12 @@ func (s *session) NewBatch(
 	}
 }
 
+func (s *session) ExecuteBatch(
+	b Batch,
+) error {
+	return s.Session.ExecuteBatch(b.(*batch).Batch)
+}
+
 func (s *session) MapExecuteBatchCAS(
 	b Batch,
 	previous map[string]interface{},

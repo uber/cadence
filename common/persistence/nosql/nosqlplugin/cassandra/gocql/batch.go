@@ -48,6 +48,11 @@ func (b *batch) WithContext(ctx context.Context) Batch {
 	}
 }
 
+func (b *batch) WithTimestamp(timestamp int64) Batch {
+	b.Batch.WithTimestamp(timestamp)
+	return b
+}
+
 func mustConvertBatchType(batchType BatchType) gocql.BatchType {
 	switch batchType {
 	case LoggedBatch:
