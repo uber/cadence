@@ -24,7 +24,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
@@ -71,7 +70,7 @@ func NewDCRedirectionHandler(
 }
 
 // Health is for health check
-func (handler *DCRedirectionHandlerImpl) Health(ctx context.Context) (*health.HealthStatus, error) {
+func (handler *DCRedirectionHandlerImpl) Health(ctx context.Context) (*types.HealthStatus, error) {
 	return handler.frontendHandler.Health(ctx)
 }
 

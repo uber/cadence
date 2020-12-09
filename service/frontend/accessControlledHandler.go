@@ -23,7 +23,6 @@ package frontend
 import (
 	"context"
 
-	health "github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
@@ -56,7 +55,7 @@ func NewAccessControlledHandlerImpl(wfHandler Handler, resource resource.Resourc
 }
 
 // Health callback for for health check
-func (a *AccessControlledWorkflowHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
+func (a *AccessControlledWorkflowHandler) Health(ctx context.Context) (*types.HealthStatus, error) {
 	return a.frontendHandler.Health(ctx)
 }
 

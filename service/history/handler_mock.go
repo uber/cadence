@@ -33,7 +33,6 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	health "github.com/uber/cadence/.gen/go/health"
 	history "github.com/uber/cadence/.gen/go/history"
 	replicator "github.com/uber/cadence/.gen/go/replicator"
 	shared "github.com/uber/cadence/.gen/go/shared"
@@ -64,10 +63,10 @@ func (m *MockHandler) EXPECT() *MockHandlerMockRecorder {
 }
 
 // Health mocks base method
-func (m *MockHandler) Health(arg0 context.Context) (*health.HealthStatus, error) {
+func (m *MockHandler) Health(arg0 context.Context) (*types.HealthStatus, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Health", arg0)
-	ret0, _ := ret[0].(*health.HealthStatus)
+	ret0, _ := ret[0].(*types.HealthStatus)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

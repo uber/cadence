@@ -25,7 +25,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
@@ -41,7 +40,7 @@ var _ Handler = (*handlerImpl)(nil)
 type (
 	// Handler interface for matching service
 	Handler interface {
-		Health(context.Context) (*health.HealthStatus, error)
+		Health(context.Context) (*types.HealthStatus, error)
 		AddActivityTask(context.Context, *types.AddActivityTaskRequest) error
 		AddDecisionTask(context.Context, *types.AddDecisionTaskRequest) error
 		CancelOutstandingPoll(context.Context, *types.CancelOutstandingPollRequest) error
@@ -108,10 +107,10 @@ func (h *handlerImpl) Stop() {
 }
 
 // Health is for health check
-func (h *handlerImpl) Health(ctx context.Context) (*health.HealthStatus, error) {
+func (h *handlerImpl) Health(ctx context.Context) (*types.HealthStatus, error) {
 	h.startWG.Wait()
 	h.GetLogger().Debug("Matching service health check endpoint reached.")
-	hs := &health.HealthStatus{Ok: true, Msg: common.StringPtr("matching good")}
+	hs := &types.HealthStatus{Ok: true, Msg: common.StringPtr("matching good")}
 	return hs, nil
 }
 
