@@ -28,6 +28,7 @@ For [manual setup or upgrading](docs/persistence.md) server schema --
 * If server runs with SQL database, Use [Cadence SQL tool](tools/sql/README.md) to perform various tasks on database schema of SQL based persistence
 
 TIPS: Run `make tools` to build all tools mentioned above. 
+> NOTE: See [CONTRIBUTING](CONTRIBUTING.md) for prerequisite of make command. 
 ### Use Cadence Web
 
 Try out [Cadence Web UI](https://github.com/uber/cadence-web) to view your workflows on Cadence.
