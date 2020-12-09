@@ -27,6 +27,8 @@ import (
 	"github.com/Shopify/sarama"
 	"golang.org/x/net/context"
 
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
@@ -35,7 +37,7 @@ import (
 )
 
 const rcvBufferSize = 2 * 1024
-const dqlPublishTimeout = time.Minute * 10
+const dlqPublishTimeout = time.Minute
 
 type (
 	// a wrapper of sarama consumer group for our consumer interface
@@ -182,12 +184,18 @@ func (h *consumerHandlerImpl) completeMessage(message *messageImpl, isAck bool) 
 	h.RLock()
 	defer h.RUnlock()
 
-	// NOTE: current KafkaProducer is not taking use the this context, because saramaProducer doesn't support it
-	// https://github.com/Shopify/sarama/issues/1849
-	ctx, cancel := context.WithTimeout(context.Background(), dqlPublishTimeout)
 	if !isAck {
-		err := h.dlqProducer.Publish(ctx, message.saramaMsg)
+		op := func() error {
+			// NOTE: current KafkaProducer is not taking use the this context, because saramaProducer doesn't support it
+			// https://github.com/Shopify/sarama/issues/1849
+			ctx, cancel := context.WithTimeout(context.Background(), dlqPublishTimeout)
+			err := h.dlqProducer.Publish(ctx, message.saramaMsg)
+			cancel()
+			return err
+		}
+		err := backoff.Retry(op, common.CreateDlqPublishRetryPolicy(), nil)
 		if err != nil {
+			h.metricsClient.IncCounter(metrics.MessagingClientConsumerScope, metrics.KafkaConsumerMessageNackDlqErr)
 			h.logger.Error("Fail to publish message to DLQ when nacking message, please take action!!",
 				tag.KafkaPartition(message.Partition()),
 				tag.KafkaOffset(message.Offset()))
@@ -197,7 +205,6 @@ func (h *consumerHandlerImpl) completeMessage(message *messageImpl, isAck bool) 
 				tag.KafkaOffset(message.Offset()))
 		}
 	}
-	cancel()
 	ackLevel := h.manager.CompleteMessage(message.Partition(), message.Offset(), isAck)
 	h.currentSession.MarkOffset(h.topic, message.Partition(), ackLevel+1, "")
 }

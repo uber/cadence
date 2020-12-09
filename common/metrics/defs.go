@@ -1652,6 +1652,7 @@ const (
 	KafkaConsumerMessageIn
 	KafkaConsumerMessageAck
 	KafkaConsumerMessageNack
+	KafkaConsumerMessageNackDlqErr
 	KafkaConsumerSessionStart
 
 	HistoryArchiverArchiveNonRetryableErrorCount
@@ -2095,6 +2096,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		KafkaConsumerMessageIn:                              {metricName: "kafka_consumer_message_in", metricType: Counter},
 		KafkaConsumerMessageAck:                             {metricName: "kafka_consumer_message_ack", metricType: Counter},
 		KafkaConsumerMessageNack:                            {metricName: "kafka_consumer_message_nack", metricType: Counter},
+		KafkaConsumerMessageNackDlqErr:                      {metricName: "kafka_consumer_message_nack_dlq_err", metricType: Counter},
 		KafkaConsumerSessionStart:                           {metricName: "kafka_consumer_session_start", metricType: Counter},
 
 		HistoryArchiverArchiveNonRetryableErrorCount:              {metricName: "history_archiver_archive_non_retryable_error", metricType: Counter},
