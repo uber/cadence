@@ -540,14 +540,14 @@ func GetSizeOfMapStringToByteArray(input map[string][]byte) int {
 }
 
 // GetSizeOfHistoryEvent returns approximate size in bytes of the history event taking into account byte arrays only now
-func GetSizeOfHistoryEvent(event *workflow.HistoryEvent) uint64 {
+func GetSizeOfHistoryEvent(event *types.HistoryEvent) uint64 {
 	if event == nil {
 		return 0
 	}
 
 	res := 0
 	switch *event.EventType {
-	case workflow.EventTypeWorkflowExecutionStarted:
+	case types.EventTypeWorkflowExecutionStarted:
 		res += len(event.WorkflowExecutionStartedEventAttributes.Input)
 		res += len(event.WorkflowExecutionStartedEventAttributes.ContinuedFailureDetails)
 		res += len(event.WorkflowExecutionStartedEventAttributes.LastCompletionResult)
@@ -560,55 +560,55 @@ func GetSizeOfHistoryEvent(event *workflow.HistoryEvent) uint64 {
 		if event.WorkflowExecutionStartedEventAttributes.SearchAttributes != nil {
 			res += GetSizeOfMapStringToByteArray(event.WorkflowExecutionStartedEventAttributes.SearchAttributes.IndexedFields)
 		}
-	case workflow.EventTypeWorkflowExecutionCompleted:
+	case types.EventTypeWorkflowExecutionCompleted:
 		res += len(event.WorkflowExecutionCompletedEventAttributes.Result)
-	case workflow.EventTypeWorkflowExecutionFailed:
+	case types.EventTypeWorkflowExecutionFailed:
 		res += len(event.WorkflowExecutionFailedEventAttributes.Details)
-	case workflow.EventTypeWorkflowExecutionTimedOut:
-	case workflow.EventTypeDecisionTaskScheduled:
-	case workflow.EventTypeDecisionTaskStarted:
-	case workflow.EventTypeDecisionTaskCompleted:
+	case types.EventTypeWorkflowExecutionTimedOut:
+	case types.EventTypeDecisionTaskScheduled:
+	case types.EventTypeDecisionTaskStarted:
+	case types.EventTypeDecisionTaskCompleted:
 		res += len(event.DecisionTaskCompletedEventAttributes.ExecutionContext)
-	case workflow.EventTypeDecisionTaskTimedOut:
-	case workflow.EventTypeDecisionTaskFailed:
+	case types.EventTypeDecisionTaskTimedOut:
+	case types.EventTypeDecisionTaskFailed:
 		res += len(event.DecisionTaskFailedEventAttributes.Details)
-	case workflow.EventTypeActivityTaskScheduled:
+	case types.EventTypeActivityTaskScheduled:
 		res += len(event.ActivityTaskScheduledEventAttributes.Input)
 		if event.ActivityTaskScheduledEventAttributes.Header != nil {
 			res += GetSizeOfMapStringToByteArray(event.ActivityTaskScheduledEventAttributes.Header.Fields)
 		}
-	case workflow.EventTypeActivityTaskStarted:
+	case types.EventTypeActivityTaskStarted:
 		res += len(event.ActivityTaskStartedEventAttributes.LastFailureDetails)
-	case workflow.EventTypeActivityTaskCompleted:
+	case types.EventTypeActivityTaskCompleted:
 		res += len(event.ActivityTaskCompletedEventAttributes.Result)
-	case workflow.EventTypeActivityTaskFailed:
+	case types.EventTypeActivityTaskFailed:
 		res += len(event.ActivityTaskFailedEventAttributes.Details)
-	case workflow.EventTypeActivityTaskTimedOut:
+	case types.EventTypeActivityTaskTimedOut:
 		res += len(event.ActivityTaskTimedOutEventAttributes.Details)
 		res += len(event.ActivityTaskTimedOutEventAttributes.LastFailureDetails)
-	case workflow.EventTypeActivityTaskCancelRequested:
-	case workflow.EventTypeRequestCancelActivityTaskFailed:
-	case workflow.EventTypeActivityTaskCanceled:
+	case types.EventTypeActivityTaskCancelRequested:
+	case types.EventTypeRequestCancelActivityTaskFailed:
+	case types.EventTypeActivityTaskCanceled:
 		res += len(event.ActivityTaskCanceledEventAttributes.Details)
-	case workflow.EventTypeTimerStarted:
-	case workflow.EventTypeTimerFired:
-	case workflow.EventTypeCancelTimerFailed:
-	case workflow.EventTypeTimerCanceled:
-	case workflow.EventTypeWorkflowExecutionCancelRequested:
-	case workflow.EventTypeWorkflowExecutionCanceled:
+	case types.EventTypeTimerStarted:
+	case types.EventTypeTimerFired:
+	case types.EventTypeCancelTimerFailed:
+	case types.EventTypeTimerCanceled:
+	case types.EventTypeWorkflowExecutionCancelRequested:
+	case types.EventTypeWorkflowExecutionCanceled:
 		res += len(event.WorkflowExecutionCanceledEventAttributes.Details)
-	case workflow.EventTypeRequestCancelExternalWorkflowExecutionInitiated:
+	case types.EventTypeRequestCancelExternalWorkflowExecutionInitiated:
 		res += len(event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes.Control)
-	case workflow.EventTypeRequestCancelExternalWorkflowExecutionFailed:
+	case types.EventTypeRequestCancelExternalWorkflowExecutionFailed:
 		res += len(event.RequestCancelExternalWorkflowExecutionFailedEventAttributes.Control)
-	case workflow.EventTypeExternalWorkflowExecutionCancelRequested:
-	case workflow.EventTypeMarkerRecorded:
+	case types.EventTypeExternalWorkflowExecutionCancelRequested:
+	case types.EventTypeMarkerRecorded:
 		res += len(event.MarkerRecordedEventAttributes.Details)
-	case workflow.EventTypeWorkflowExecutionSignaled:
+	case types.EventTypeWorkflowExecutionSignaled:
 		res += len(event.WorkflowExecutionSignaledEventAttributes.Input)
-	case workflow.EventTypeWorkflowExecutionTerminated:
+	case types.EventTypeWorkflowExecutionTerminated:
 		res += len(event.WorkflowExecutionTerminatedEventAttributes.Details)
-	case workflow.EventTypeWorkflowExecutionContinuedAsNew:
+	case types.EventTypeWorkflowExecutionContinuedAsNew:
 		res += len(event.WorkflowExecutionContinuedAsNewEventAttributes.Input)
 		if event.WorkflowExecutionContinuedAsNewEventAttributes.Memo != nil {
 			res += GetSizeOfMapStringToByteArray(event.WorkflowExecutionContinuedAsNewEventAttributes.Memo.Fields)
@@ -619,7 +619,7 @@ func GetSizeOfHistoryEvent(event *workflow.HistoryEvent) uint64 {
 		if event.WorkflowExecutionContinuedAsNewEventAttributes.SearchAttributes != nil {
 			res += GetSizeOfMapStringToByteArray(event.WorkflowExecutionContinuedAsNewEventAttributes.SearchAttributes.IndexedFields)
 		}
-	case workflow.EventTypeStartChildWorkflowExecutionInitiated:
+	case types.EventTypeStartChildWorkflowExecutionInitiated:
 		res += len(event.StartChildWorkflowExecutionInitiatedEventAttributes.Input)
 		res += len(event.StartChildWorkflowExecutionInitiatedEventAttributes.Control)
 		if event.StartChildWorkflowExecutionInitiatedEventAttributes.Memo != nil {
@@ -631,31 +631,31 @@ func GetSizeOfHistoryEvent(event *workflow.HistoryEvent) uint64 {
 		if event.StartChildWorkflowExecutionInitiatedEventAttributes.SearchAttributes != nil {
 			res += GetSizeOfMapStringToByteArray(event.StartChildWorkflowExecutionInitiatedEventAttributes.SearchAttributes.IndexedFields)
 		}
-	case workflow.EventTypeStartChildWorkflowExecutionFailed:
+	case types.EventTypeStartChildWorkflowExecutionFailed:
 		res += len(event.StartChildWorkflowExecutionFailedEventAttributes.Control)
-	case workflow.EventTypeChildWorkflowExecutionStarted:
+	case types.EventTypeChildWorkflowExecutionStarted:
 		if event.ChildWorkflowExecutionStartedEventAttributes == nil {
 			return 0
 		}
 		if event.ChildWorkflowExecutionStartedEventAttributes.Header != nil {
 			res += GetSizeOfMapStringToByteArray(event.ChildWorkflowExecutionStartedEventAttributes.Header.Fields)
 		}
-	case workflow.EventTypeChildWorkflowExecutionCompleted:
+	case types.EventTypeChildWorkflowExecutionCompleted:
 		res += len(event.ChildWorkflowExecutionCompletedEventAttributes.Result)
-	case workflow.EventTypeChildWorkflowExecutionFailed:
+	case types.EventTypeChildWorkflowExecutionFailed:
 		res += len(event.ChildWorkflowExecutionFailedEventAttributes.Details)
-	case workflow.EventTypeChildWorkflowExecutionCanceled:
+	case types.EventTypeChildWorkflowExecutionCanceled:
 		res += len(event.ChildWorkflowExecutionCanceledEventAttributes.Details)
-	case workflow.EventTypeChildWorkflowExecutionTimedOut:
-	case workflow.EventTypeChildWorkflowExecutionTerminated:
-	case workflow.EventTypeSignalExternalWorkflowExecutionInitiated:
+	case types.EventTypeChildWorkflowExecutionTimedOut:
+	case types.EventTypeChildWorkflowExecutionTerminated:
+	case types.EventTypeSignalExternalWorkflowExecutionInitiated:
 		res += len(event.SignalExternalWorkflowExecutionInitiatedEventAttributes.Input)
 		res += len(event.SignalExternalWorkflowExecutionInitiatedEventAttributes.Control)
-	case workflow.EventTypeSignalExternalWorkflowExecutionFailed:
+	case types.EventTypeSignalExternalWorkflowExecutionFailed:
 		res += len(event.SignalExternalWorkflowExecutionFailedEventAttributes.Control)
-	case workflow.EventTypeExternalWorkflowExecutionSignaled:
+	case types.EventTypeExternalWorkflowExecutionSignaled:
 		res += len(event.ExternalWorkflowExecutionSignaledEventAttributes.Control)
-	case workflow.EventTypeUpsertWorkflowSearchAttributes:
+	case types.EventTypeUpsertWorkflowSearchAttributes:
 		if event.UpsertWorkflowSearchAttributesEventAttributes.SearchAttributes != nil {
 			res += GetSizeOfMapStringToByteArray(event.UpsertWorkflowSearchAttributesEventAttributes.SearchAttributes.IndexedFields)
 		}

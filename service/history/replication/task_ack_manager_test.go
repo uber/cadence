@@ -34,7 +34,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -127,11 +126,11 @@ func (s *taskAckManagerSuite) TestGetPaginationFunc() {
 	pagingFunc := s.ackManager.getPaginationFunc(context.Background(), firstEventID, nextEventID, branchToken, shardID, &historyCount)
 
 	pageToken := []byte{1}
-	event := &workflow.HistoryEvent{
-		EventId: common.Int64Ptr(1),
+	event := &types.HistoryEvent{
+		EventID: common.Int64Ptr(1),
 	}
 	s.mockHistoryMgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadHistoryBranchResponse{
-		HistoryEvents:    []*workflow.HistoryEvent{event},
+		HistoryEvents:    []*types.HistoryEvent{event},
 		NextPageToken:    pageToken,
 		Size:             1,
 		LastFirstEventID: 1,
@@ -140,7 +139,7 @@ func (s *taskAckManagerSuite) TestGetPaginationFunc() {
 	s.NoError(err)
 	s.Equal(pageToken, token)
 	s.Len(events, 1)
-	s.Equal(events[0].(*workflow.HistoryEvent), event)
+	s.Equal(events[0].(*types.HistoryEvent), event)
 	s.Equal(historyCount, 1)
 }
 
@@ -148,12 +147,12 @@ func (s *taskAckManagerSuite) TestGetAllHistory_OK() {
 	firstEventID := int64(0)
 	nextEventID := int64(1)
 	var branchToken []byte
-	event := &workflow.HistoryEvent{
-		EventId: common.Int64Ptr(1),
+	event := &types.HistoryEvent{
+		EventID: common.Int64Ptr(1),
 	}
 
 	s.mockHistoryMgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadHistoryBranchResponse{
-		HistoryEvents:    []*workflow.HistoryEvent{event},
+		HistoryEvents:    []*types.HistoryEvent{event},
 		NextPageToken:    nil,
 		Size:             1,
 		LastFirstEventID: 1,

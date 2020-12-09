@@ -32,7 +32,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -150,7 +149,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Op
 	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
-		Events: []*shared.HistoryEvent{{EventId: common.Int64Ptr(1)}},
+		Events: []*types.HistoryEvent{{EventID: common.Int64Ptr(1)}},
 	}
 
 	workflow.EXPECT().GetContext().Return(context).AnyTimes()
@@ -261,7 +260,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Passive_O
 	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
-		Events: []*shared.HistoryEvent{{EventId: common.Int64Ptr(1)}},
+		Events: []*types.HistoryEvent{{EventID: common.Int64Ptr(1)}},
 	}
 
 	workflow.EXPECT().GetContext().Return(context).AnyTimes()
@@ -349,8 +348,8 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_NotCurrentWorkflow_Active
 	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
-		Events: []*shared.HistoryEvent{{
-			EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionSignaled),
+		Events: []*types.HistoryEvent{{
+			EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		}},
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -403,8 +402,8 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_NotCurrentWorkflow_Passiv
 	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
-		Events: []*shared.HistoryEvent{{
-			EventType: common.EventTypePtr(shared.EventTypeWorkflowExecutionSignaled),
+		Events: []*types.HistoryEvent{{
+			EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		}},
 		DomainID:   domainID,
 		WorkflowID: workflowID,

@@ -531,7 +531,7 @@ func (e *historyEngineImpl) createMutableState(
 func (e *historyEngineImpl) generateFirstDecisionTask(
 	mutableState execution.MutableState,
 	parentInfo *h.ParentExecutionInfo,
-	startEvent *workflow.HistoryEvent,
+	startEvent *types.HistoryEvent,
 ) error {
 
 	if parentInfo == nil {
@@ -1562,7 +1562,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			if err != nil {
 				return nil, err
 			}
-			p.ActivityType = scheduledEvent.ActivityTaskScheduledEventAttributes.ActivityType
+			p.ActivityType = thrift.FromActivityType(scheduledEvent.ActivityTaskScheduledEventAttributes.ActivityType)
 			if state == workflow.PendingActivityStateScheduled {
 				p.ScheduledTimestamp = common.Int64Ptr(ai.ScheduledTime.UnixNano())
 			} else {
@@ -1593,7 +1593,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 				RunID:             common.StringPtr(ch.StartedRunID),
 				WorkflowTypName:   common.StringPtr(ch.WorkflowTypeName),
 				InitiatedID:       common.Int64Ptr(ch.InitiatedID),
-				ParentClosePolicy: common.ParentClosePolicyPtr(ch.ParentClosePolicy),
+				ParentClosePolicy: thrift.FromParentClosePolicy(&ch.ParentClosePolicy),
 			}
 			result.PendingChildren = append(result.PendingChildren, p)
 		}
@@ -1667,13 +1667,13 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			if err != nil {
 				return err
 			}
-			response.ScheduledEvent = scheduledEvent
+			response.ScheduledEvent = thrift.FromHistoryEvent(scheduledEvent)
 			response.ScheduledTimestampOfThisAttempt = common.Int64Ptr(ai.ScheduledTime.UnixNano())
 
 			response.Attempt = common.Int64Ptr(int64(ai.Attempt))
 			response.HeartbeatDetails = ai.Details
 
-			response.WorkflowType = mutableState.GetWorkflowType()
+			response.WorkflowType = thrift.FromWorkflowType(mutableState.GetWorkflowType())
 			response.WorkflowDomain = common.StringPtr(domainName)
 
 			if ai.StartedID != common.EmptyEventID {
@@ -2387,7 +2387,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 
 			initiatedID := *completionRequest.InitiatedId
 			completedExecution := thrift.ToWorkflowExecution(completionRequest.CompletedExecution)
-			completionEvent := completionRequest.CompletionEvent
+			completionEvent := thrift.ToHistoryEvent(completionRequest.CompletionEvent)
 
 			// Check mutable state to make sure child execution is in pending child executions
 			ci, isRunning := mutableState.GetChildExecutionInfo(initiatedID)
@@ -2396,19 +2396,19 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 			}
 
 			switch *completionEvent.EventType {
-			case workflow.EventTypeWorkflowExecutionCompleted:
+			case types.EventTypeWorkflowExecutionCompleted:
 				attributes := completionEvent.WorkflowExecutionCompletedEventAttributes
 				_, err = mutableState.AddChildWorkflowExecutionCompletedEvent(initiatedID, completedExecution, attributes)
-			case workflow.EventTypeWorkflowExecutionFailed:
+			case types.EventTypeWorkflowExecutionFailed:
 				attributes := completionEvent.WorkflowExecutionFailedEventAttributes
 				_, err = mutableState.AddChildWorkflowExecutionFailedEvent(initiatedID, completedExecution, attributes)
-			case workflow.EventTypeWorkflowExecutionCanceled:
+			case types.EventTypeWorkflowExecutionCanceled:
 				attributes := completionEvent.WorkflowExecutionCanceledEventAttributes
 				_, err = mutableState.AddChildWorkflowExecutionCanceledEvent(initiatedID, completedExecution, attributes)
-			case workflow.EventTypeWorkflowExecutionTerminated:
+			case types.EventTypeWorkflowExecutionTerminated:
 				attributes := completionEvent.WorkflowExecutionTerminatedEventAttributes
 				_, err = mutableState.AddChildWorkflowExecutionTerminatedEvent(initiatedID, completedExecution, attributes)
-			case workflow.EventTypeWorkflowExecutionTimedOut:
+			case types.EventTypeWorkflowExecutionTimedOut:
 				attributes := completionEvent.WorkflowExecutionTimedOutEventAttributes
 				_, err = mutableState.AddChildWorkflowExecutionTimedOutEvent(initiatedID, completedExecution, attributes)
 			}
@@ -2729,7 +2729,7 @@ func (e *historyEngineImpl) failDecision(
 	}
 
 	if _, err = mutableState.AddDecisionTaskFailedEvent(
-		scheduleID, startedID, cause, details, request.GetIdentity(), "", request.GetBinaryChecksum(), "", "", 0,
+		scheduleID, startedID, *thrift.ToDecisionTaskFailedCause(&cause), details, request.GetIdentity(), "", request.GetBinaryChecksum(), "", "", 0,
 	); err != nil {
 		return nil, err
 	}
@@ -3105,7 +3105,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 	domainUUID string,
 	workflowID string,
 	runID string,
-	reapplyEvents []*workflow.HistoryEvent,
+	reapplyEvents []*types.HistoryEvent,
 ) error {
 
 	domainEntry, err := e.getActiveDomainEntry(common.StringPtr(domainUUID))
@@ -3129,7 +3129,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 		currentExecution,
 		func(wfContext execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
 			// Filter out reapply event from the same cluster
-			toReapplyEvents := make([]*workflow.HistoryEvent, 0, len(reapplyEvents))
+			toReapplyEvents := make([]*types.HistoryEvent, 0, len(reapplyEvents))
 			lastWriteVersion, err := mutableState.GetLastWriteVersion()
 			if err != nil {
 				return nil, err
@@ -3139,7 +3139,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 					// The reapply is from the same cluster. Ignoring.
 					continue
 				}
-				dedupResource := definition.NewEventReappliedID(runID, event.GetEventId(), event.GetVersion())
+				dedupResource := definition.NewEventReappliedID(runID, event.GetEventID(), event.GetVersion())
 				if mutableState.IsResourceDuplicated(dedupResource) {
 					// already apply the signal
 					continue

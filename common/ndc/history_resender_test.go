@@ -136,18 +136,18 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 	startEventVersion := int64(100)
 	token := []byte{1}
 	pageSize := defaultPageSize
-	eventBatch := []*shared.HistoryEvent{
+	eventBatch := []*types.HistoryEvent{
 		{
-			EventId:   common.Int64Ptr(2),
+			EventID:   common.Int64Ptr(2),
 			Version:   common.Int64Ptr(123),
 			Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-			EventType: shared.EventTypeDecisionTaskScheduled.Ptr(),
+			EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 		},
 		{
-			EventId:   common.Int64Ptr(3),
+			EventID:   common.Int64Ptr(3),
 			Version:   common.Int64Ptr(123),
 			Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-			EventType: shared.EventTypeDecisionTaskStarted.Ptr(),
+			EventType: types.EventTypeDecisionTaskStarted.Ptr(),
 		},
 	}
 	blob := s.serializeEvents(eventBatch)
@@ -401,8 +401,8 @@ func (s *historyResenderSuite) TestCurrentExecutionCheck() {
 	s.True(skipTask)
 }
 
-func (s *historyResenderSuite) serializeEvents(events []*shared.HistoryEvent) *shared.DataBlob {
-	blob, err := s.serializer.SerializeBatchEvents(thrift.ToHistoryEventArray(events), common.EncodingTypeThriftRW)
+func (s *historyResenderSuite) serializeEvents(events []*types.HistoryEvent) *shared.DataBlob {
+	blob, err := s.serializer.SerializeBatchEvents(events, common.EncodingTypeThriftRW)
 	s.Nil(err)
 	return &shared.DataBlob{
 		EncodingType: shared.EncodingTypeThriftRW.Ptr(),

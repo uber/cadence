@@ -42,7 +42,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
@@ -1762,7 +1761,7 @@ func (h *handlerImpl) ReapplyEvents(
 		request.GetDomainUUID(),
 		execution.GetWorkflowId(),
 		execution.GetRunId(),
-		thrift.FromHistoryEventArray(historyEvents),
+		historyEvents,
 	); err != nil {
 		return h.error(err, scope, domainID, workflowID)
 	}

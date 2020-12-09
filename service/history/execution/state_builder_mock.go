@@ -31,7 +31,6 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	shared "github.com/uber/cadence/.gen/go/shared"
 	types "github.com/uber/cadence/common/types"
 )
 
@@ -59,7 +58,7 @@ func (m *MockStateBuilder) EXPECT() *MockStateBuilderMockRecorder {
 }
 
 // ApplyEvents mocks base method
-func (m *MockStateBuilder) ApplyEvents(domainID, requestID string, workflowExecution types.WorkflowExecution, history, newRunHistory []*shared.HistoryEvent) (MutableState, error) {
+func (m *MockStateBuilder) ApplyEvents(domainID, requestID string, workflowExecution types.WorkflowExecution, history, newRunHistory []*types.HistoryEvent) (MutableState, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ApplyEvents", domainID, requestID, workflowExecution, history, newRunHistory)
 	ret0, _ := ret[0].(MutableState)

@@ -32,7 +32,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -489,14 +488,14 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 
 	timeoutReason := execution.TimerTypeToReason(execution.TimerTypeStartToClose)
 	backoffInterval := mutableState.GetRetryBackoffDuration(timeoutReason)
-	continueAsNewInitiator := workflow.ContinueAsNewInitiatorRetryPolicy
+	continueAsNewInitiator := types.ContinueAsNewInitiatorRetryPolicy
 	if backoffInterval == backoff.NoBackoff {
 		// check if a cron backoff is needed
 		backoffInterval, err = mutableState.GetCronBackoffDuration(ctx)
 		if err != nil {
 			return err
 		}
-		continueAsNewInitiator = workflow.ContinueAsNewInitiatorCronSchedule
+		continueAsNewInitiator = types.ContinueAsNewInitiatorCronSchedule
 	}
 	if backoffInterval == backoff.NoBackoff {
 		if err := timeoutWorkflow(mutableState, eventBatchFirstEventID); err != nil {
@@ -516,19 +515,19 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 
 	startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
 	continueAsNewAttributes := &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
-		WorkflowType:                        thrift.ToWorkflowType(startAttributes.WorkflowType),
-		TaskList:                            thrift.ToTaskList(startAttributes.TaskList),
+		WorkflowType:                        startAttributes.WorkflowType,
+		TaskList:                            startAttributes.TaskList,
 		Input:                               startAttributes.Input,
 		ExecutionStartToCloseTimeoutSeconds: startAttributes.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      startAttributes.TaskStartToCloseTimeoutSeconds,
 		BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(backoffInterval.Seconds())),
-		RetryPolicy:                         thrift.ToRetryPolicy(startAttributes.RetryPolicy),
-		Initiator:                           thrift.ToContinueAsNewInitiator(continueAsNewInitiator.Ptr()),
+		RetryPolicy:                         startAttributes.RetryPolicy,
+		Initiator:                           continueAsNewInitiator.Ptr(),
 		FailureReason:                       common.StringPtr(timeoutReason),
 		CronSchedule:                        common.StringPtr(mutableState.GetExecutionInfo().CronSchedule),
-		Header:                              thrift.ToHeader(startAttributes.Header),
-		Memo:                                thrift.ToMemo(startAttributes.Memo),
-		SearchAttributes:                    thrift.ToSearchAttributes(startAttributes.SearchAttributes),
+		Header:                              startAttributes.Header,
+		Memo:                                startAttributes.Memo,
+		SearchAttributes:                    startAttributes.SearchAttributes,
 	}
 	newMutableState, err := retryWorkflow(
 		ctx,
