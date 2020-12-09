@@ -891,6 +891,8 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 					lastWriteVersion = common.EmptyVersion
 					if replicationState != nil {
 						lastWriteVersion = replicationState.LastWriteVersion
+					} else if previous["workflow_last_write_version"] != nil {
+						lastWriteVersion = previous["workflow_last_write_version"].(int64)
 					}
 
 					msg := fmt.Sprintf("Workflow execution already running. WorkflowId: %v, RunId: %v, rangeID: %v, columns: (%v)",
@@ -926,7 +928,10 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 				lastWriteVersion = common.EmptyVersion
 				if replicationState != nil {
 					lastWriteVersion = replicationState.LastWriteVersion
+				} else if previous["workflow_last_write_version"] != nil {
+					lastWriteVersion = previous["workflow_last_write_version"].(int64)
 				}
+
 				return nil, &p.WorkflowExecutionAlreadyStartedError{
 					Msg:              msg,
 					StartRequestID:   executionInfo.CreateRequestID,
@@ -1694,7 +1699,10 @@ func (d *cassandraPersistence) GetCurrentExecution(
 	lastWriteVersion := common.EmptyVersion
 	if replicationState != nil {
 		lastWriteVersion = replicationState.LastWriteVersion
+	} else if result["workflow_last_write_version"] != nil {
+		lastWriteVersion = result["workflow_last_write_version"].(int64)
 	}
+
 	return &p.GetCurrentExecutionResponse{
 		RunID:            currentRunID,
 		StartRequestID:   executionInfo.CreateRequestID,
