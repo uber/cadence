@@ -254,6 +254,9 @@ var keys = map[Key]string{
 	HistoryThrottledLogRPS:                                "history.throttledLogRPS",
 	StickyTTL:                                             "history.stickyTTL",
 	DecisionHeartbeatTimeout:                              "history.decisionHeartbeatTimeout",
+	DecisionRetryCriticalAttempts:                         "history.decisionRetryCriticalAttempts",
+	DecisionRetryMaxAttempts:                              "history.decisionRetryMaxAttempts",
+	EnableForceScheduleNewDecision:                        "history.enableForceScheduleNewDecision",
 	ParentClosePolicyThreshold:                            "history.parentClosePolicyThreshold",
 	NumParentClosePolicySystemWorkflows:                   "history.numParentClosePolicySystemWorkflows",
 	ReplicationTaskFetcherParallelism:                     "history.ReplicationTaskFetcherParallelism",
@@ -758,6 +761,12 @@ const (
 	StickyTTL
 	// DecisionHeartbeatTimeout for decision heartbeat
 	DecisionHeartbeatTimeout
+	// DecisionRetryCriticalAttempts is the decision attempt threshold for logging and emiting metrics
+	DecisionRetryCriticalAttempts
+	// DecisionRetryMaxAttempts is the decision attempt threshold for scheduling a new decision if EnableForceScheduleNewDecision is enabled
+	DecisionRetryMaxAttempts
+	// EnableForceScheduleNewDecision force schedule a new decision when the decision attempt reaches DecisionRetryMaxAttempts
+	EnableForceScheduleNewDecision
 
 	// EnableDropStuckTaskByDomainID is whether stuck timer/transfer task should be dropped for a domain
 	EnableDropStuckTaskByDomainID
