@@ -30,7 +30,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -237,14 +236,7 @@ func (i *historyIterator) readHistory(ctx context.Context, firstEventID int64) (
 		PageSize:    i.historyPageSize,
 		ShardID:     common.IntPtr(i.request.ShardID),
 	}
-	thriftHistoryBatches, _, _, err := persistence.ReadFullPageV2EventsByBatch(ctx, i.historyV2Manager, req)
-	if thriftHistoryBatches == nil {
-		return nil, err
-	}
-	historyBatches := make([]*types.History, len(thriftHistoryBatches))
-	for i := range historyBatches {
-		historyBatches[i] = thrift.ToHistory(thriftHistoryBatches[i])
-	}
+	historyBatches, _, _, err := persistence.ReadFullPageV2EventsByBatch(ctx, i.historyV2Manager, req)
 	return historyBatches, err
 
 }

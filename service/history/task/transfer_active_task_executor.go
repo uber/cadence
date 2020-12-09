@@ -343,7 +343,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 				WorkflowID: common.StringPtr(task.WorkflowID),
 				RunID:      common.StringPtr(task.RunID),
 			},
-			CompletionEvent: thrift.ToHistoryEvent(completionEvent),
+			CompletionEvent: completionEvent,
 		})
 
 		// Check to see if the error is non-transient, in which case reset the error and continue with processing
@@ -660,7 +660,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	}
 
 	t.logger.Debug(fmt.Sprintf("Child Execution started successfully.  task.WorkflowID: %v, RunID: %v",
-		*attributes.WorkflowId, childRunID))
+		*attributes.WorkflowID, childRunID))
 
 	// Child execution is successfully started, record ChildExecutionStartedEvent in parent execution
 	err = t.recordChildExecutionStarted(ctx, task, wfContext, attributes, childRunID)
@@ -904,7 +904,7 @@ func (t *transferActiveTaskExecutor) recordChildExecutionStarted(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 	wfContext execution.Context,
-	initiatedAttributes *workflow.StartChildWorkflowExecutionInitiatedEventAttributes,
+	initiatedAttributes *types.StartChildWorkflowExecutionInitiatedEventAttributes,
 	runID string,
 ) error {
 
@@ -940,7 +940,7 @@ func (t *transferActiveTaskExecutor) recordStartChildExecutionFailed(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 	wfContext execution.Context,
-	initiatedAttributes *workflow.StartChildWorkflowExecutionInitiatedEventAttributes,
+	initiatedAttributes *types.StartChildWorkflowExecutionInitiatedEventAttributes,
 ) error {
 
 	return t.updateWorkflowExecution(ctx, wfContext, true,
@@ -956,7 +956,7 @@ func (t *transferActiveTaskExecutor) recordStartChildExecutionFailed(
 			}
 
 			_, err := mutableState.AddStartChildWorkflowExecutionFailedEvent(initiatedEventID,
-				workflow.ChildWorkflowExecutionFailedCauseWorkflowAlreadyRunning, initiatedAttributes)
+				types.ChildWorkflowExecutionFailedCauseWorkflowAlreadyRunning, initiatedAttributes)
 
 			return err
 		})
@@ -1094,7 +1094,7 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionFailed(
 				targetDomain,
 				targetWorkflowID,
 				targetRunID,
-				workflow.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution,
+				types.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution,
 			)
 			return err
 		})
@@ -1136,7 +1136,7 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionFailed(
 				targetWorkflowID,
 				targetRunID,
 				control,
-				workflow.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution,
+				types.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution,
 			)
 			return err
 		})
@@ -1264,25 +1264,25 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 	domain string,
 	targetDomain string,
 	childInfo *persistence.ChildExecutionInfo,
-	attributes *workflow.StartChildWorkflowExecutionInitiatedEventAttributes,
+	attributes *types.StartChildWorkflowExecutionInitiatedEventAttributes,
 ) (string, error) {
 
 	frontendStartReq := &workflow.StartWorkflowExecutionRequest{
 		Domain:                              common.StringPtr(targetDomain),
-		WorkflowId:                          attributes.WorkflowId,
-		WorkflowType:                        attributes.WorkflowType,
-		TaskList:                            attributes.TaskList,
+		WorkflowId:                          attributes.WorkflowID,
+		WorkflowType:                        thrift.FromWorkflowType(attributes.WorkflowType),
+		TaskList:                            thrift.FromTaskList(attributes.TaskList),
 		Input:                               attributes.Input,
-		Header:                              attributes.Header,
+		Header:                              thrift.FromHeader(attributes.Header),
 		ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      attributes.TaskStartToCloseTimeoutSeconds,
 		// Use the same request ID to dedupe StartWorkflowExecution calls
 		RequestId:             common.StringPtr(childInfo.CreateRequestID),
-		WorkflowIdReusePolicy: attributes.WorkflowIdReusePolicy,
-		RetryPolicy:           attributes.RetryPolicy,
+		WorkflowIdReusePolicy: thrift.FromWorkflowIDReusePolicy(attributes.WorkflowIDReusePolicy),
+		RetryPolicy:           thrift.FromRetryPolicy(attributes.RetryPolicy),
 		CronSchedule:          attributes.CronSchedule,
-		Memo:                  attributes.Memo,
-		SearchAttributes:      attributes.SearchAttributes,
+		Memo:                  thrift.FromMemo(attributes.Memo),
+		SearchAttributes:      thrift.FromSearchAttributes(attributes.SearchAttributes),
 	}
 
 	now := t.shard.GetTimeSource().Now()
@@ -1411,14 +1411,14 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 
 		executions := make([]parentclosepolicy.RequestDetail, 0, len(childInfos))
 		for _, childInfo := range childInfos {
-			if childInfo.ParentClosePolicy == workflow.ParentClosePolicyAbandon {
+			if childInfo.ParentClosePolicy == types.ParentClosePolicyAbandon {
 				continue
 			}
 
 			executions = append(executions, parentclosepolicy.RequestDetail{
 				WorkflowID: childInfo.StartedWorkflowID,
 				RunID:      childInfo.StartedRunID,
-				Policy:     *thrift.ToParentClosePolicy(&childInfo.ParentClosePolicy),
+				Policy:     childInfo.ParentClosePolicy,
 			})
 		}
 
@@ -1462,11 +1462,11 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 	defer cancel()
 
 	switch childInfo.ParentClosePolicy {
-	case workflow.ParentClosePolicyAbandon:
+	case types.ParentClosePolicyAbandon:
 		// noop
 		return nil
 
-	case workflow.ParentClosePolicyTerminate:
+	case types.ParentClosePolicyTerminate:
 		return t.historyClient.TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
 			TerminateRequest: &types.TerminateWorkflowExecutionRequest{
@@ -1480,7 +1480,7 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 			},
 		})
 
-	case workflow.ParentClosePolicyRequestCancel:
+	case types.ParentClosePolicyRequestCancel:
 		return t.historyClient.RequestCancelWorkflowExecution(ctx, &types.HistoryRequestCancelWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
 			CancelRequest: &types.RequestCancelWorkflowExecutionRequest{

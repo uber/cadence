@@ -2583,13 +2583,13 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateActivities() {
 		Version:                  7789,
 		ScheduleID:               1,
 		ScheduledEventBatchID:    1,
-		ScheduledEvent:           &gen.HistoryEvent{EventId: int64Ptr(1)},
+		ScheduledEvent:           &types.HistoryEvent{EventID: int64Ptr(1)},
 		ScheduledTime:            currentTime,
 		ActivityID:               uuid.New(),
 		RequestID:                uuid.New(),
 		Details:                  []byte(uuid.New()),
 		StartedID:                2,
-		StartedEvent:             &gen.HistoryEvent{EventId: int64Ptr(2)},
+		StartedEvent:             &types.HistoryEvent{EventID: int64Ptr(2)},
 		StartedTime:              currentTime,
 		ScheduleToCloseTimeout:   1,
 		ScheduleToStartTimeout:   2,
@@ -2632,13 +2632,13 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateActivities() {
 	s.Equal(int64(7789), ai.Version)
 	s.Equal(int64(1), ai.ScheduleID)
 	s.Equal(int64(1), ai.ScheduledEventBatchID)
-	s.Equal(int64(1), *ai.ScheduledEvent.EventId)
+	s.Equal(int64(1), *ai.ScheduledEvent.EventID)
 	s.EqualTimes(currentTime, ai.ScheduledTime)
 	s.Equal(activityInfos[0].ActivityID, ai.ActivityID)
 	s.Equal(activityInfos[0].RequestID, ai.RequestID)
 	s.Equal(activityInfos[0].Details, ai.Details)
 	s.Equal(int64(2), ai.StartedID)
-	s.Equal(int64(2), *ai.StartedEvent.EventId)
+	s.Equal(int64(2), *ai.StartedEvent.EventID)
 	s.EqualTimes(currentTime, ai.StartedTime)
 	s.Equal(int32(1), ai.ScheduleToCloseTimeout)
 	s.Equal(int32(2), ai.ScheduleToStartTimeout)
@@ -2769,11 +2769,11 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateChildExecutions() {
 	childExecutionInfos := []*p.ChildExecutionInfo{{
 		Version:           1234,
 		InitiatedID:       1,
-		InitiatedEvent:    &gen.HistoryEvent{EventId: int64Ptr(1)},
+		InitiatedEvent:    &types.HistoryEvent{EventID: int64Ptr(1)},
 		StartedID:         2,
-		StartedEvent:      &gen.HistoryEvent{EventId: int64Ptr(2)},
+		StartedEvent:      &types.HistoryEvent{EventID: int64Ptr(2)},
 		CreateRequestID:   createRequestID,
-		ParentClosePolicy: gen.ParentClosePolicyTerminate,
+		ParentClosePolicy: types.ParentClosePolicyTerminate,
 	}}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{updatedInfo.LastProcessedEvent, common.EmptyVersion},
@@ -2791,10 +2791,10 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateChildExecutions() {
 	s.NotNil(ci)
 	s.Equal(int64(1234), ci.Version)
 	s.Equal(int64(1), ci.InitiatedID)
-	s.Equal(gen.ParentClosePolicyTerminate, ci.ParentClosePolicy)
-	s.Equal(int64(1), *ci.InitiatedEvent.EventId)
+	s.Equal(types.ParentClosePolicyTerminate, ci.ParentClosePolicy)
+	s.Equal(int64(1), *ci.InitiatedEvent.EventID)
 	s.Equal(int64(2), ci.StartedID)
-	s.Equal(int64(2), *ci.StartedEvent.EventId)
+	s.Equal(int64(2), *ci.StartedEvent.EventID)
 	s.Equal(createRequestID, ci.CreateRequestID)
 
 	err2 = s.DeleteChildExecutionsState(ctx, updatedInfo, updatedStats, versionHistories, int64(5), int64(1))
@@ -3250,42 +3250,42 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 	s.Equal(0, stats0.BufferedEventsCount)
 	s.Equal(0, stats0.BufferedEventsSize)
 
-	eventsBatch1 := []*gen.HistoryEvent{
+	eventsBatch1 := []*types.HistoryEvent{
 		{
-			EventId:   common.Int64Ptr(5),
-			EventType: gen.EventTypeDecisionTaskCompleted.Ptr(),
+			EventID:   common.Int64Ptr(5),
+			EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
 			Version:   common.Int64Ptr(11),
-			DecisionTaskCompletedEventAttributes: &gen.DecisionTaskCompletedEventAttributes{
-				ScheduledEventId: common.Int64Ptr(2),
-				StartedEventId:   common.Int64Ptr(3),
+			DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
+				ScheduledEventID: common.Int64Ptr(2),
+				StartedEventID:   common.Int64Ptr(3),
 				Identity:         common.StringPtr("test_worker"),
 			},
 		},
 		{
-			EventId:   common.Int64Ptr(6),
-			EventType: gen.EventTypeTimerStarted.Ptr(),
+			EventID:   common.Int64Ptr(6),
+			EventType: types.EventTypeTimerStarted.Ptr(),
 			Version:   common.Int64Ptr(11),
-			TimerStartedEventAttributes: &gen.TimerStartedEventAttributes{
-				TimerId:                      common.StringPtr("ID1"),
+			TimerStartedEventAttributes: &types.TimerStartedEventAttributes{
+				TimerID:                      common.StringPtr("ID1"),
 				StartToFireTimeoutSeconds:    common.Int64Ptr(101),
-				DecisionTaskCompletedEventId: common.Int64Ptr(5),
+				DecisionTaskCompletedEventID: common.Int64Ptr(5),
 			},
 		},
 	}
 
-	eventsBatch2 := []*gen.HistoryEvent{
+	eventsBatch2 := []*types.HistoryEvent{
 		{
-			EventId:   common.Int64Ptr(21),
-			EventType: gen.EventTypeTimerFired.Ptr(),
+			EventID:   common.Int64Ptr(21),
+			EventType: types.EventTypeTimerFired.Ptr(),
 			Version:   common.Int64Ptr(12),
-			TimerFiredEventAttributes: &gen.TimerFiredEventAttributes{
-				TimerId:        common.StringPtr("2"),
-				StartedEventId: common.Int64Ptr(3),
+			TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+				TimerID:        common.StringPtr("2"),
+				StartedEventID: common.Int64Ptr(3),
 			},
 		},
 	}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
-		{*eventsBatch2[0].EventId, common.EmptyVersion},
+		{*eventsBatch2[0].EventID, common.EmptyVersion},
 	})
 	versionHistories := p.NewVersionHistories(versionHistory)
 	updatedInfo := copyWorkflowExecutionInfo(info0)
@@ -3317,10 +3317,10 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 	s.NoError(err2)
 	s.Equal(1, stats0.BufferedEventsCount)
 	s.True(stats0.BufferedEventsSize > 0)
-	testHistory := &gen.History{Events: make([]*gen.HistoryEvent, 0)}
+	testHistory := &types.History{Events: make([]*types.HistoryEvent, 0)}
 	testHistory.Events = append(testHistory.Events, eventsBatch1...)
-	history0 := &gen.History{Events: state0.BufferedEvents}
-	s.True(testHistory.Equals(history0))
+	history0 := &types.History{Events: state0.BufferedEvents}
+	s.Equal(testHistory, history0)
 	testHistory.Events = append(testHistory.Events, eventsBatch2...)
 
 	err2 = s.UpdateWorkflowExecutionForBufferEvents(ctx, bufferUpdateInfo, bufferedUpdatedStats, bufferUpdateInfo.NextEventID, eventsBatch2, false, versionHistories)
@@ -3333,8 +3333,8 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 	s.NotNil(info1, "Valid Workflow info expected.")
 	s.Equal(2, stats1.BufferedEventsCount)
 	s.True(stats1.BufferedEventsSize > 0)
-	history1 := &gen.History{Events: state1.BufferedEvents}
-	s.True(testHistory.Equals(history1))
+	history1 := &types.History{Events: state1.BufferedEvents}
+	s.Equal(testHistory, history1)
 
 	err3 := s.UpdateWorkflowExecutionForBufferEvents(ctx, bufferUpdateInfo, bufferedUpdatedStats, bufferUpdateInfo.NextEventID, nil, true, versionHistories)
 	s.NoError(err3)
@@ -3387,37 +3387,37 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 	updatedInfo.LastProcessedEvent = int64(2)
 	currentTime := time.Now().UTC()
 	expiryTime := currentTime.Add(10 * time.Second)
-	eventsBatch1 := []*gen.HistoryEvent{
+	eventsBatch1 := []*types.HistoryEvent{
 		{
-			EventId:   common.Int64Ptr(5),
-			EventType: gen.EventTypeDecisionTaskCompleted.Ptr(),
+			EventID:   common.Int64Ptr(5),
+			EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
 			Version:   common.Int64Ptr(11),
-			DecisionTaskCompletedEventAttributes: &gen.DecisionTaskCompletedEventAttributes{
-				ScheduledEventId: common.Int64Ptr(2),
-				StartedEventId:   common.Int64Ptr(3),
+			DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
+				ScheduledEventID: common.Int64Ptr(2),
+				StartedEventID:   common.Int64Ptr(3),
 				Identity:         common.StringPtr("test_worker"),
 			},
 		},
 		{
-			EventId:   common.Int64Ptr(6),
-			EventType: gen.EventTypeTimerStarted.Ptr(),
+			EventID:   common.Int64Ptr(6),
+			EventType: types.EventTypeTimerStarted.Ptr(),
 			Version:   common.Int64Ptr(11),
-			TimerStartedEventAttributes: &gen.TimerStartedEventAttributes{
-				TimerId:                      common.StringPtr("ID1"),
+			TimerStartedEventAttributes: &types.TimerStartedEventAttributes{
+				TimerID:                      common.StringPtr("ID1"),
 				StartToFireTimeoutSeconds:    common.Int64Ptr(101),
-				DecisionTaskCompletedEventId: common.Int64Ptr(5),
+				DecisionTaskCompletedEventID: common.Int64Ptr(5),
 			},
 		},
 	}
 
-	eventsBatch2 := []*gen.HistoryEvent{
+	eventsBatch2 := []*types.HistoryEvent{
 		{
-			EventId:   common.Int64Ptr(21),
-			EventType: gen.EventTypeTimerFired.Ptr(),
+			EventID:   common.Int64Ptr(21),
+			EventType: types.EventTypeTimerFired.Ptr(),
 			Version:   common.Int64Ptr(12),
-			TimerFiredEventAttributes: &gen.TimerFiredEventAttributes{
-				TimerId:        common.StringPtr("2"),
-				StartedEventId: common.Int64Ptr(3),
+			TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+				TimerID:        common.StringPtr("2"),
+				StartedEventID: common.Int64Ptr(3),
 			},
 		},
 	}
@@ -3436,10 +3436,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 				Version:                  7789,
 				ScheduleID:               4,
 				ScheduledEventBatchID:    3,
-				ScheduledEvent:           &gen.HistoryEvent{EventId: int64Ptr(40)},
+				ScheduledEvent:           &types.HistoryEvent{EventID: int64Ptr(40)},
 				ScheduledTime:            currentTime,
 				StartedID:                6,
-				StartedEvent:             &gen.HistoryEvent{EventId: int64Ptr(60)},
+				StartedEvent:             &types.HistoryEvent{EventID: int64Ptr(60)},
 				StartedTime:              currentTime,
 				ScheduleToCloseTimeout:   1,
 				ScheduleToStartTimeout:   2,
@@ -3452,10 +3452,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 				Version:                  7789,
 				ScheduleID:               5,
 				ScheduledEventBatchID:    3,
-				ScheduledEvent:           &gen.HistoryEvent{EventId: int64Ptr(50)},
+				ScheduledEvent:           &types.HistoryEvent{EventID: int64Ptr(50)},
 				ScheduledTime:            currentTime,
 				StartedID:                7,
-				StartedEvent:             &gen.HistoryEvent{EventId: int64Ptr(70)},
+				StartedEvent:             &types.HistoryEvent{EventID: int64Ptr(70)},
 				StartedTime:              currentTime,
 				ScheduleToCloseTimeout:   1,
 				ScheduleToStartTimeout:   2,
@@ -3493,7 +3493,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 			9: {
 				Version:         2334,
 				InitiatedID:     9,
-				InitiatedEvent:  &gen.HistoryEvent{EventId: int64Ptr(123)},
+				InitiatedEvent:  &types.HistoryEvent{EventID: int64Ptr(123)},
 				StartedID:       11,
 				StartedEvent:    nil,
 				CreateRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -3553,10 +3553,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 	s.Equal(1, stats0.BufferedEventsCount)
 	s.True(stats0.BufferedEventsSize > 0)
 	s.assertChecksumsEqual(testWorkflowChecksum, state0.Checksum)
-	testHistory := &gen.History{Events: make([]*gen.HistoryEvent, 0)}
+	testHistory := &types.History{Events: make([]*types.HistoryEvent, 0)}
 	testHistory.Events = append(testHistory.Events, eventsBatch1...)
-	history0 := &gen.History{Events: state0.BufferedEvents}
-	s.True(testHistory.Equals(history0))
+	history0 := &types.History{Events: state0.BufferedEvents}
+	s.Equal(testHistory, history0)
 	testHistory.Events = append(testHistory.Events, eventsBatch2...)
 
 	err2 = s.UpdateWorkflowExecutionForBufferEvents(ctx, bufferUpdateInfo, bufferedUpdatedStats, bufferUpdateInfo.NextEventID, eventsBatch2, false, versionHistories)
@@ -3570,8 +3570,8 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 	s.Equal(2, stats1.BufferedEventsCount)
 	s.True(stats1.BufferedEventsSize > 0)
 	s.assertChecksumsEqual(testWorkflowChecksum, state1.Checksum)
-	history1 := &gen.History{Events: state1.BufferedEvents}
-	s.True(testHistory.Equals(history1))
+	history1 := &types.History{Events: state1.BufferedEvents}
+	s.Equal(testHistory, history1)
 
 	s.Equal(2, len(state1.ActivityInfos))
 	ai, ok := state1.ActivityInfos[4]
@@ -3580,10 +3580,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 	s.Equal(int64(7789), ai.Version)
 	s.Equal(int64(4), ai.ScheduleID)
 	s.Equal(int64(3), ai.ScheduledEventBatchID)
-	s.Equal(int64(40), *ai.ScheduledEvent.EventId)
+	s.Equal(int64(40), *ai.ScheduledEvent.EventID)
 	s.EqualTimes(currentTime, ai.ScheduledTime)
 	s.Equal(int64(6), ai.StartedID)
-	s.Equal(int64(60), *ai.StartedEvent.EventId)
+	s.Equal(int64(60), *ai.StartedEvent.EventID)
 	s.EqualTimes(currentTime, ai.StartedTime)
 	s.Equal(int32(1), ai.ScheduleToCloseTimeout)
 	s.Equal(int32(2), ai.ScheduleToStartTimeout)
@@ -3598,10 +3598,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 	s.Equal(int64(7789), ai.Version)
 	s.Equal(int64(5), ai.ScheduleID)
 	s.Equal(int64(3), ai.ScheduledEventBatchID)
-	s.Equal(int64(50), *ai.ScheduledEvent.EventId)
+	s.Equal(int64(50), *ai.ScheduledEvent.EventID)
 	s.EqualTimes(currentTime, ai.ScheduledTime)
 	s.Equal(int64(7), ai.StartedID)
-	s.Equal(int64(70), *ai.StartedEvent.EventId)
+	s.Equal(int64(70), *ai.StartedEvent.EventID)
 	s.EqualTimes(currentTime, ai.StartedTime)
 	s.Equal(int32(1), ai.ScheduleToCloseTimeout)
 	s.Equal(int32(2), ai.ScheduleToStartTimeout)
@@ -3674,10 +3674,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 			Version:                  8789,
 			ScheduleID:               40,
 			ScheduledEventBatchID:    30,
-			ScheduledEvent:           &gen.HistoryEvent{EventId: int64Ptr(400)},
+			ScheduledEvent:           &types.HistoryEvent{EventID: int64Ptr(400)},
 			ScheduledTime:            currentTime,
 			StartedID:                60,
-			StartedEvent:             &gen.HistoryEvent{EventId: int64Ptr(600)},
+			StartedEvent:             &types.HistoryEvent{EventID: int64Ptr(600)},
 			StartedTime:              currentTime,
 			ScheduleToCloseTimeout:   10,
 			ScheduleToStartTimeout:   20,
@@ -3707,7 +3707,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 		{
 			Version:         3334,
 			InitiatedID:     10,
-			InitiatedEvent:  &gen.HistoryEvent{EventId: common.Int64Ptr(10)},
+			InitiatedEvent:  &types.HistoryEvent{EventID: common.Int64Ptr(10)},
 			StartedID:       15,
 			StartedEvent:    nil,
 			CreateRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -3770,10 +3770,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 	s.Equal(int64(8789), ai.Version)
 	s.Equal(int64(40), ai.ScheduleID)
 	s.Equal(int64(30), ai.ScheduledEventBatchID)
-	s.Equal(int64(400), *ai.ScheduledEvent.EventId)
+	s.Equal(int64(400), *ai.ScheduledEvent.EventID)
 	s.Equal(currentTime.Unix(), ai.ScheduledTime.Unix())
 	s.Equal(int64(60), ai.StartedID)
-	s.Equal(int64(600), *ai.StartedEvent.EventId)
+	s.Equal(int64(600), *ai.StartedEvent.EventID)
 	s.Equal(currentTime.Unix(), ai.StartedTime.Unix())
 	s.Equal(int32(10), ai.ScheduleToCloseTimeout)
 	s.Equal(int32(20), ai.ScheduleToStartTimeout)

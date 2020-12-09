@@ -204,7 +204,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyExpired() {
 	}
 
 	expectedResponse := h.RecordDecisionTaskStartedResponse{}
-	expectedResponse.WorkflowType = msBuilder.GetWorkflowType()
+	expectedResponse.WorkflowType = thrift.FromWorkflowType(msBuilder.GetWorkflowType())
 	executionInfo = msBuilder.GetExecutionInfo()
 	if executionInfo.LastProcessedEvent != common.EmptyEventID {
 		expectedResponse.PreviousStartedEventId = common.Int64Ptr(executionInfo.LastProcessedEvent)
@@ -277,7 +277,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	}
 
 	expectedResponse := h.RecordDecisionTaskStartedResponse{}
-	expectedResponse.WorkflowType = msBuilder.GetWorkflowType()
+	expectedResponse.WorkflowType = thrift.FromWorkflowType(msBuilder.GetWorkflowType())
 	executionInfo = msBuilder.GetExecutionInfo()
 	if executionInfo.LastProcessedEvent != common.EmptyEventID {
 		expectedResponse.PreviousStartedEventId = common.Int64Ptr(executionInfo.LastProcessedEvent)
@@ -525,7 +525,7 @@ func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
 	s.NotNil(response)
 	s.Equal("wType", *response.WorkflowType.Name)
 	s.True(response.PreviousStartedEventId == nil)
-	s.Equal(startedEventID.EventId, response.StartedEventId)
+	s.Equal(startedEventID.EventID, response.StartedEventId)
 }
 
 func (s *engine2Suite) TestRecordDecisionTaskRetryDifferentRequest() {
@@ -722,7 +722,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 
 	msBuilder := s.createExecutionStartedState(workflowExecution, tl, identity, true)
 	decisionCompletedEvent := test.AddDecisionTaskCompletedEvent(msBuilder, int64(2), int64(3), nil, identity)
-	scheduledEvent, _ := test.AddActivityTaskScheduledEvent(msBuilder, *decisionCompletedEvent.EventId, activityID,
+	scheduledEvent, _ := test.AddActivityTaskScheduledEvent(msBuilder, *decisionCompletedEvent.EventID, activityID,
 		activityType, tl, activityInput, 100, 10, 1, 5)
 
 	ms1 := execution.CreatePersistenceMutableState(msBuilder)
@@ -736,7 +736,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 
 	s.mockEventsCache.EXPECT().GetEvent(
 		gomock.Any(), gomock.Any(), domainID, workflowExecution.GetWorkflowID(), workflowExecution.GetRunID(),
-		decisionCompletedEvent.GetEventId(), scheduledEvent.GetEventId(), gomock.Any(),
+		decisionCompletedEvent.GetEventID(), scheduledEvent.GetEventID(), gomock.Any(),
 	).Return(scheduledEvent, nil)
 	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &h.RecordActivityTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
@@ -753,7 +753,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 	})
 	s.Nil(err)
 	s.NotNil(response)
-	s.Equal(scheduledEvent, response.ScheduledEvent)
+	s.Equal(scheduledEvent, thrift.ToHistoryEvent(response.ScheduledEvent))
 }
 
 func (s *engine2Suite) TestRequestCancelWorkflowExecutionSuccess() {
@@ -843,7 +843,7 @@ func (s *engine2Suite) createExecutionStartedState(we types.WorkflowExecution, t
 
 //nolint:unused
 func (s *engine2Suite) printHistory(builder execution.MutableState) string {
-	return builder.GetHistoryBuilder().GetHistory().String()
+	return thrift.FromHistory(builder.GetHistoryBuilder().GetHistory()).String()
 }
 
 func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {

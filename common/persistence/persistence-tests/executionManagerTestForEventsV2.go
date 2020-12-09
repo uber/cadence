@@ -31,7 +31,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	p "github.com/uber/cadence/common/persistence"
@@ -632,7 +631,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 		ScheduleID:     111,
 		StartedID:      112,
 		ActivityID:     uuid.New(),
-		ScheduledEvent: &gen.HistoryEvent{EventId: int64Ptr(1)},
+		ScheduledEvent: &types.HistoryEvent{EventID: int64Ptr(1)},
 	}}
 
 	insertRequestCancelInfos := []*p.RequestCancelInfo{{
@@ -646,7 +645,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 		InitiatedID:     131,
 		StartedID:       132,
 		CreateRequestID: uuid.New(),
-		InitiatedEvent:  &gen.HistoryEvent{EventId: int64Ptr(1)},
+		InitiatedEvent:  &types.HistoryEvent{EventID: int64Ptr(1)},
 	}}
 
 	insertSignalInfos := []*p.SignalInfo{{
@@ -950,7 +949,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 		ScheduleID:     111,
 		StartedID:      112,
 		ActivityID:     uuid.New(),
-		ScheduledEvent: &gen.HistoryEvent{EventId: int64Ptr(1)},
+		ScheduledEvent: &types.HistoryEvent{EventID: int64Ptr(1)},
 	}}
 
 	insertRequestCancelInfos := []*p.RequestCancelInfo{{
@@ -964,7 +963,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 		InitiatedID:     131,
 		StartedID:       132,
 		CreateRequestID: uuid.New(),
-		InitiatedEvent:  &gen.HistoryEvent{EventId: int64Ptr(1)},
+		InitiatedEvent:  &types.HistoryEvent{EventID: int64Ptr(1)},
 	}}
 
 	insertSignalInfos := []*p.SignalInfo{{
@@ -1201,7 +1200,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrNoReplicate() 
 		ScheduleID:     111,
 		StartedID:      112,
 		ActivityID:     uuid.New(),
-		ScheduledEvent: &gen.HistoryEvent{EventId: int64Ptr(1)},
+		ScheduledEvent: &types.HistoryEvent{EventID: int64Ptr(1)},
 	}}
 
 	insertRequestCancelInfos := []*p.RequestCancelInfo{{

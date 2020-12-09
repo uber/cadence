@@ -31,7 +31,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	c2 "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
@@ -118,7 +117,7 @@ func (s *HistoryExistsSuite) TestCheck() {
 		{
 			getExecResp: &persistence.GetWorkflowExecutionResponse{},
 			getHistoryResp: &persistence.ReadHistoryBranchResponse{
-				HistoryEvents: []*shared.HistoryEvent{
+				HistoryEvents: []*types.HistoryEvent{
 					{},
 				},
 			},

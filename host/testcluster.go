@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/uber-go/tally"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/client"
 	adminClient "github.com/uber/cadence/client/admin"
@@ -43,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
@@ -90,7 +90,7 @@ type (
 	// MessagingClientConfig is the config for messaging config
 	MessagingClientConfig struct {
 		UseMock     bool
-		KafkaConfig *messaging.KafkaConfig
+		KafkaConfig *config.KafkaConfig
 	}
 
 	// WorkerConfig is the config for enabling/disabling cadence worker
@@ -281,7 +281,7 @@ func getMessagingClient(config *MessagingClientConfig, logger log.Logger) messag
 		return mocks.NewMockMessagingClient(&mocks.KafkaProducer{}, nil)
 	}
 	checkApp := len(config.KafkaConfig.Applications) != 0
-	return messaging.NewKafkaClient(config.KafkaConfig, nil, zap.NewNop(), logger, tally.NoopScope, checkApp)
+	return kafka.NewKafkaClient(config.KafkaConfig, metrics.NewNoopMetricsClient(), logger, tally.NoopScope, checkApp)
 }
 
 // TearDownCluster tears down the test cluster

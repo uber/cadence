@@ -42,7 +42,7 @@ func AddWorkflowExecutionStartedEventWithParent(
 	taskStartToCloseTimeout int32,
 	parentInfo *history.ParentExecutionInfo,
 	identity string,
-) *workflow.HistoryEvent {
+) *types.HistoryEvent {
 
 	startRequest := &workflow.StartWorkflowExecutionRequest{
 		WorkflowId:                          common.StringPtr(*workflowExecution.WorkflowID),
@@ -76,7 +76,7 @@ func AddWorkflowExecutionStartedEvent(
 	executionStartToCloseTimeout int32,
 	taskStartToCloseTimeout int32,
 	identity string,
-) *workflow.HistoryEvent {
+) *types.HistoryEvent {
 	return AddWorkflowExecutionStartedEventWithParent(builder, workflowExecution, workflowType, taskList, input,
 		executionStartToCloseTimeout, taskStartToCloseTimeout, nil, identity)
 }
@@ -95,7 +95,7 @@ func AddDecisionTaskStartedEvent(
 	scheduleID int64,
 	taskList string,
 	identity string,
-) *workflow.HistoryEvent {
+) *types.HistoryEvent {
 	return AddDecisionTaskStartedEventWithRequestID(builder, scheduleID, constants.TestRunID, taskList, identity)
 }
 
@@ -106,7 +106,7 @@ func AddDecisionTaskStartedEventWithRequestID(
 	requestID string,
 	taskList string,
 	identity string,
-) *workflow.HistoryEvent {
+) *types.HistoryEvent {
 	event, _, _ := builder.AddDecisionTaskStartedEvent(scheduleID, requestID, &workflow.PollForDecisionTaskRequest{
 		TaskList: &workflow.TaskList{Name: common.StringPtr(taskList)},
 		Identity: common.StringPtr(identity),
@@ -122,7 +122,7 @@ func AddDecisionTaskCompletedEvent(
 	startedID int64,
 	context []byte,
 	identity string,
-) *workflow.HistoryEvent {
+) *types.HistoryEvent {
 	event, _ := builder.AddDecisionTaskCompletedEvent(scheduleID, startedID, &workflow.RespondDecisionTaskCompletedRequest{
 		ExecutionContext: context,
 		Identity:         common.StringPtr(identity),
@@ -145,7 +145,7 @@ func AddActivityTaskScheduledEvent(
 	scheduleToStartTimeout int32,
 	startToCloseTimeout int32,
 	heartbeatTimeout int32,
-) (*workflow.HistoryEvent,
+) (*types.HistoryEvent,
 	*persistence.ActivityInfo) {
 
 	event, ai, _, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &types.ScheduleActivityTaskDecisionAttributes{
@@ -176,7 +176,7 @@ func AddActivityTaskScheduledEventWithRetry(
 	startToCloseTimeout int32,
 	heartbeatTimeout int32,
 	retryPolicy *types.RetryPolicy,
-) (*workflow.HistoryEvent, *persistence.ActivityInfo) {
+) (*types.HistoryEvent, *persistence.ActivityInfo) {
 
 	event, ai, _, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID:                    common.StringPtr(activityID),
@@ -199,7 +199,7 @@ func AddActivityTaskStartedEvent(
 	builder execution.MutableState,
 	scheduleID int64,
 	identity string,
-) *workflow.HistoryEvent {
+) *types.HistoryEvent {
 	ai, _ := builder.GetActivityInfo(scheduleID)
 	event, _ := builder.AddActivityTaskStartedEvent(ai, scheduleID, constants.TestRunID, identity)
 	return event
@@ -212,7 +212,7 @@ func AddActivityTaskCompletedEvent(
 	startedID int64,
 	result []byte,
 	identity string,
-) *workflow.HistoryEvent {
+) *types.HistoryEvent {
 	event, _ := builder.AddActivityTaskCompletedEvent(scheduleID, startedID, &workflow.RespondActivityTaskCompletedRequest{
 		Result:   result,
 		Identity: common.StringPtr(identity),
@@ -229,7 +229,7 @@ func AddActivityTaskFailedEvent(
 	reason string,
 	details []byte,
 	identity string,
-) *workflow.HistoryEvent {
+) *types.HistoryEvent {
 	event, _ := builder.AddActivityTaskFailedEvent(scheduleID, startedID, &workflow.RespondActivityTaskFailedRequest{
 		Reason:   common.StringPtr(reason),
 		Details:  details,
@@ -245,7 +245,7 @@ func AddTimerStartedEvent(
 	decisionCompletedEventID int64,
 	timerID string,
 	timeOut int64,
-) (*workflow.HistoryEvent, *persistence.TimerInfo) {
+) (*types.HistoryEvent, *persistence.TimerInfo) {
 	event, ti, _ := builder.AddTimerStartedEvent(decisionCompletedEventID,
 		&types.StartTimerDecisionAttributes{
 			TimerID:                   common.StringPtr(timerID),
@@ -258,7 +258,7 @@ func AddTimerStartedEvent(
 func AddTimerFiredEvent(
 	mutableState execution.MutableState,
 	timerID string,
-) *workflow.HistoryEvent {
+) *types.HistoryEvent {
 	event, _ := mutableState.AddTimerFiredEvent(timerID)
 	return event
 }
@@ -271,7 +271,7 @@ func AddRequestCancelInitiatedEvent(
 	domain string,
 	workflowID string,
 	runID string,
-) (*workflow.HistoryEvent, *persistence.RequestCancelInfo) {
+) (*types.HistoryEvent, *persistence.RequestCancelInfo) {
 	event, rci, _ := builder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID,
 		cancelRequestID, &types.RequestCancelExternalWorkflowExecutionDecisionAttributes{
 			Domain:     common.StringPtr(domain),
@@ -289,7 +289,7 @@ func AddCancelRequestedEvent(
 	domain string,
 	workflowID string,
 	runID string,
-) *workflow.HistoryEvent {
+) *types.HistoryEvent {
 	event, _ := builder.AddExternalWorkflowExecutionCancelRequested(initiatedID, domain, workflowID, runID)
 	return event
 }
@@ -305,7 +305,7 @@ func AddRequestSignalInitiatedEvent(
 	signalName string,
 	input []byte,
 	control []byte,
-) (*workflow.HistoryEvent, *persistence.SignalInfo) {
+) (*types.HistoryEvent, *persistence.SignalInfo) {
 	event, si, _ := builder.AddSignalExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID, signalRequestID,
 		&types.SignalExternalWorkflowExecutionDecisionAttributes{
 			Domain: common.StringPtr(domain),
@@ -329,7 +329,7 @@ func AddSignaledEvent(
 	workflowID string,
 	runID string,
 	control []byte,
-) *workflow.HistoryEvent {
+) *types.HistoryEvent {
 	event, _ := builder.AddExternalWorkflowExecutionSignaled(initiatedID, domain, workflowID, runID, control)
 	return event
 }
@@ -347,7 +347,7 @@ func AddStartChildWorkflowExecutionInitiatedEvent(
 	executionStartToCloseTimeout int32,
 	taskStartToCloseTimeout int32,
 	retryPolicy *types.RetryPolicy,
-) (*workflow.HistoryEvent,
+) (*types.HistoryEvent,
 	*persistence.ChildExecutionInfo) {
 
 	event, cei, _ := builder.AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletedID, createRequestID,
@@ -373,16 +373,16 @@ func AddChildWorkflowExecutionStartedEvent(
 	workflowID string,
 	runID string,
 	workflowType string,
-) *workflow.HistoryEvent {
+) *types.HistoryEvent {
 	event, _ := builder.AddChildWorkflowExecutionStartedEvent(
 		common.StringPtr(domain),
 		&types.WorkflowExecution{
 			WorkflowID: common.StringPtr(workflowID),
 			RunID:      common.StringPtr(runID),
 		},
-		&workflow.WorkflowType{Name: common.StringPtr(workflowType)},
+		&types.WorkflowType{Name: common.StringPtr(workflowType)},
 		initiatedID,
-		&workflow.Header{},
+		&types.Header{},
 	)
 	return event
 }
@@ -392,8 +392,8 @@ func AddChildWorkflowExecutionCompletedEvent(
 	builder execution.MutableState,
 	initiatedID int64,
 	childExecution *types.WorkflowExecution,
-	attributes *workflow.WorkflowExecutionCompletedEventAttributes,
-) *workflow.HistoryEvent {
+	attributes *types.WorkflowExecutionCompletedEventAttributes,
+) *types.HistoryEvent {
 	event, _ := builder.AddChildWorkflowExecutionCompletedEvent(initiatedID, childExecution, attributes)
 	return event
 }
@@ -403,7 +403,7 @@ func AddCompleteWorkflowEvent(
 	builder execution.MutableState,
 	decisionCompletedEventID int64,
 	result []byte,
-) *workflow.HistoryEvent {
+) *types.HistoryEvent {
 	event, _ := builder.AddCompletedWorkflowEvent(decisionCompletedEventID, &types.CompleteWorkflowExecutionDecisionAttributes{
 		Result: result,
 	})
@@ -416,7 +416,7 @@ func AddFailWorkflowEvent(
 	decisionCompletedEventID int64,
 	reason string,
 	details []byte,
-) *workflow.HistoryEvent {
+) *types.HistoryEvent {
 	event, _ := builder.AddFailWorkflowEvent(decisionCompletedEventID, &types.FailWorkflowExecutionDecisionAttributes{
 		Reason:  &reason,
 		Details: details,

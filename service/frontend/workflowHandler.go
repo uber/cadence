@@ -35,7 +35,6 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/.gen/go/health"
-	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
@@ -3391,13 +3390,12 @@ func (wh *WorkflowHandler) getHistory(
 	branchToken []byte,
 ) (*types.History, []byte, error) {
 
-	var thriftHistoryEvents []*gen.HistoryEvent
 	var size int
 
 	isFirstPage := len(nextPageToken) == 0
 	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowID, wh.config.NumHistoryShards)
 	var err error
-	thriftHistoryEvents, size, nextPageToken, err = persistence.ReadFullPageV2Events(ctx, wh.GetHistoryManager(), &persistence.ReadHistoryBranchRequest{
+	historyEvents, size, nextPageToken, err := persistence.ReadFullPageV2Events(ctx, wh.GetHistoryManager(), &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
@@ -3409,7 +3407,6 @@ func (wh *WorkflowHandler) getHistory(
 	if err != nil {
 		return nil, nil, err
 	}
-	historyEvents := thrift.ToHistoryEventArray(thriftHistoryEvents)
 
 	scope.RecordTimer(metrics.HistorySize, time.Duration(size))
 

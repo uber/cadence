@@ -202,7 +202,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	}
 
 	expectedResponse := h.RecordDecisionTaskStartedResponse{}
-	expectedResponse.WorkflowType = msBuilder.GetWorkflowType()
+	expectedResponse.WorkflowType = thrift.FromWorkflowType(msBuilder.GetWorkflowType())
 	executionInfo = msBuilder.GetExecutionInfo()
 	if executionInfo.LastProcessedEvent != common.EmptyEventID {
 		expectedResponse.PreviousStartedEventId = common.Int64Ptr(executionInfo.LastProcessedEvent)

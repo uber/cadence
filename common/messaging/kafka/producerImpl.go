@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package messaging
+package kafka
 
 import (
 	"context"
@@ -30,10 +30,11 @@ import (
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/messaging"
 )
 
 type (
-	kafkaProducer struct {
+	producerImpl struct {
 		topic      string
 		producer   sarama.SyncProducer
 		msgEncoder codec.BinaryEncoder
@@ -41,11 +42,11 @@ type (
 	}
 )
 
-var _ Producer = (*kafkaProducer)(nil)
+var _ messaging.Producer = (*producerImpl)(nil)
 
 // NewKafkaProducer is used to create the Kafka based producer implementation
-func NewKafkaProducer(topic string, producer sarama.SyncProducer, logger log.Logger) Producer {
-	return &kafkaProducer{
+func NewKafkaProducer(topic string, producer sarama.SyncProducer, logger log.Logger) messaging.Producer {
+	return &producerImpl{
 		topic:      topic,
 		producer:   producer,
 		msgEncoder: codec.NewThriftRWEncoder(),
@@ -54,7 +55,8 @@ func NewKafkaProducer(topic string, producer sarama.SyncProducer, logger log.Log
 }
 
 // Publish is used to send messages to other clusters through Kafka topic
-func (p *kafkaProducer) Publish(_ context.Context, msg interface{}) error {
+// TODO implement context when https://github.com/Shopify/sarama/issues/1849 is supported
+func (p *producerImpl) Publish(_ context.Context, msg interface{}) error {
 	message, err := p.getProducerMessage(msg)
 	if err != nil {
 		return err
@@ -74,11 +76,11 @@ func (p *kafkaProducer) Publish(_ context.Context, msg interface{}) error {
 }
 
 // Close is used to close Kafka publisher
-func (p *kafkaProducer) Close() error {
+func (p *producerImpl) Close() error {
 	return p.convertErr(p.producer.Close())
 }
 
-func (p *kafkaProducer) serializeThrift(input codec.ThriftObject) ([]byte, error) {
+func (p *producerImpl) serializeThrift(input codec.ThriftObject) ([]byte, error) {
 	payload, err := p.msgEncoder.Encode(input)
 	if err != nil {
 		p.logger.Error("Failed to serialize thrift object", tag.Error(err))
@@ -89,7 +91,7 @@ func (p *kafkaProducer) serializeThrift(input codec.ThriftObject) ([]byte, error
 	return payload, nil
 }
 
-func (p *kafkaProducer) getProducerMessage(message interface{}) (*sarama.ProducerMessage, error) {
+func (p *producerImpl) getProducerMessage(message interface{}) (*sarama.ProducerMessage, error) {
 	switch message := message.(type) {
 	case *indexer.Message:
 		payload, err := p.serializeThrift(message)
@@ -102,15 +104,22 @@ func (p *kafkaProducer) getProducerMessage(message interface{}) (*sarama.Produce
 			Value: sarama.ByteEncoder(payload),
 		}
 		return msg, nil
+	case *sarama.ConsumerMessage:
+		msg := &sarama.ProducerMessage{
+			Topic: p.topic,
+			Key:   sarama.ByteEncoder(message.Key),
+			Value: sarama.ByteEncoder(message.Value),
+		}
+		return msg, nil
 	default:
 		return nil, errors.New("unknown producer message type")
 	}
 }
 
-func (p *kafkaProducer) convertErr(err error) error {
+func (p *producerImpl) convertErr(err error) error {
 	switch err {
 	case sarama.ErrMessageSizeTooLarge:
-		return ErrMessageSizeLimit
+		return messaging.ErrMessageSizeLimit
 	default:
 		return err
 	}

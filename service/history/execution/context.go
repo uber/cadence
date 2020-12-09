@@ -29,7 +29,6 @@ import (
 	"fmt"
 	"time"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/locks"
@@ -702,7 +701,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		}
 		newWorkflowSizeSize := newContext.GetHistorySize()
 		startEvents := newWorkflowEventsSeq[0]
-		firstEventID := startEvents.Events[0].GetEventId()
+		firstEventID := startEvents.Events[0].GetEventID()
 		var eventsSize int64
 		if firstEventID == common.FirstEventID {
 			eventsSize, err = c.PersistFirstWorkflowEvents(ctx, startEvents)
@@ -1143,7 +1142,7 @@ func (c *contextImpl) ReapplyEvents(
 	if domainEntry.IsDomainPendingActive() {
 		return nil
 	}
-	var reapplyEvents []*workflow.HistoryEvent
+	var reapplyEvents []*types.HistoryEvent
 	for _, events := range eventBatches {
 		if events.DomainID != domainID ||
 			events.WorkflowID != workflowID {
@@ -1154,7 +1153,7 @@ func (c *contextImpl) ReapplyEvents(
 
 		for _, event := range events.Events {
 			switch event.GetEventType() {
-			case workflow.EventTypeWorkflowExecutionSignaled:
+			case types.EventTypeWorkflowExecutionSignaled:
 				reapplyEvents = append(reapplyEvents, event)
 			}
 		}
@@ -1186,7 +1185,7 @@ func (c *contextImpl) ReapplyEvents(
 	// The active cluster of the domain is the same as current cluster.
 	// Use the history from the same cluster to reapply events
 	reapplyEventsDataBlob, err := serializer.SerializeBatchEvents(
-		thrift.ToHistoryEventArray(reapplyEvents),
+		reapplyEvents,
 		common.EncodingTypeThriftRW,
 	)
 	if err != nil {

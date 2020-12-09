@@ -56,7 +56,7 @@ type (
 			resetRequestID string,
 			currentWorkflow execution.Workflow,
 			resetReason string,
-			additionalReapplyEvents []*shared.HistoryEvent,
+			additionalReapplyEvents []*types.HistoryEvent,
 			skipSignalReapply bool,
 		) error
 	}
@@ -108,7 +108,7 @@ func (r *workflowResetterImpl) ResetWorkflow(
 	resetRequestID string,
 	currentWorkflow execution.Workflow,
 	resetReason string,
-	additionalReapplyEvents []*shared.HistoryEvent,
+	additionalReapplyEvents []*types.HistoryEvent,
 	skipSignalReapply bool,
 ) (retError error) {
 
@@ -173,7 +173,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 	resetRequestID string,
 	resetWorkflowVersion int64,
 	resetReason string,
-	additionalReapplyEvents []*shared.HistoryEvent,
+	additionalReapplyEvents []*types.HistoryEvent,
 	skipSignalReapply bool,
 ) (execution.Workflow, error) {
 
@@ -222,7 +222,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 
 	_, err = resetMutableState.AddDecisionTaskFailedEvent(
 		decision.ScheduleID,
-		decision.StartedID, shared.DecisionTaskFailedCauseResetWorkflow,
+		decision.StartedID, types.DecisionTaskFailedCauseResetWorkflow,
 		nil,
 		execution.IdentityHistoryService,
 		resetReason,
@@ -556,14 +556,14 @@ func (r *workflowResetterImpl) reapplyWorkflowEvents(
 	))
 
 	var nextRunID string
-	var lastEvents []*shared.HistoryEvent
+	var lastEvents []*types.HistoryEvent
 
 	for iter.HasNext() {
 		batch, err := iter.Next()
 		if err != nil {
 			return "", err
 		}
-		lastEvents = batch.(*shared.History).Events
+		lastEvents = batch.(*types.History).Events
 		if err := r.reapplyEvents(mutableState, lastEvents); err != nil {
 			return "", err
 		}
@@ -571,8 +571,8 @@ func (r *workflowResetterImpl) reapplyWorkflowEvents(
 
 	if len(lastEvents) > 0 {
 		lastEvent := lastEvents[len(lastEvents)-1]
-		if lastEvent.GetEventType() == shared.EventTypeWorkflowExecutionContinuedAsNew {
-			nextRunID = lastEvent.GetWorkflowExecutionContinuedAsNewEventAttributes().GetNewExecutionRunId()
+		if lastEvent.GetEventType() == types.EventTypeWorkflowExecutionContinuedAsNew {
+			nextRunID = lastEvent.GetWorkflowExecutionContinuedAsNewEventAttributes().GetNewExecutionRunID()
 		}
 	}
 	return nextRunID, nil
@@ -580,12 +580,12 @@ func (r *workflowResetterImpl) reapplyWorkflowEvents(
 
 func (r *workflowResetterImpl) reapplyEvents(
 	mutableState execution.MutableState,
-	events []*shared.HistoryEvent,
+	events []*types.HistoryEvent,
 ) error {
 
 	for _, event := range events {
 		switch event.GetEventType() {
-		case shared.EventTypeWorkflowExecutionSignaled:
+		case types.EventTypeWorkflowExecutionSignaled:
 			attr := event.GetWorkflowExecutionSignaledEventAttributes()
 			if _, err := mutableState.AddWorkflowExecutionSignaled(
 				attr.GetSignalName(),

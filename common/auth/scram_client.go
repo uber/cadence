@@ -18,34 +18,41 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package execution
+package auth
 
-import "github.com/uber/cadence/common/types"
+import (
+	"crypto/sha256"
+	"crypto/sha512"
+	"hash"
 
-// TerminateWorkflow is a helper function to terminate workflow
-func TerminateWorkflow(
-	mutableState MutableState,
-	eventBatchFirstEventID int64,
-	terminateReason string,
-	terminateDetails []byte,
-	terminateIdentity string,
-) error {
+	"github.com/xdg/scram"
+)
 
-	if decision, ok := mutableState.GetInFlightDecision(); ok {
-		if err := FailDecision(
-			mutableState,
-			decision,
-			types.DecisionTaskFailedCauseForceCloseDecision,
-		); err != nil {
-			return err
-		}
+// NOTE: the code is copied from https://github.com/Shopify/sarama/blob/master/examples/sasl_scram_client/scram_client.go
+
+var SHA256 scram.HashGeneratorFcn = func() hash.Hash { return sha256.New() }
+var SHA512 scram.HashGeneratorFcn = func() hash.Hash { return sha512.New() }
+
+type XDGSCRAMClient struct {
+	*scram.Client
+	*scram.ClientConversation
+	scram.HashGeneratorFcn
+}
+
+func (x *XDGSCRAMClient) Begin(userName, password, authzID string) (err error) {
+	x.Client, err = x.HashGeneratorFcn.NewClient(userName, password, authzID)
+	if err != nil {
+		return err
 	}
+	x.ClientConversation = x.Client.NewConversation()
+	return nil
+}
 
-	_, err := mutableState.AddWorkflowExecutionTerminatedEvent(
-		eventBatchFirstEventID,
-		terminateReason,
-		terminateDetails,
-		terminateIdentity,
-	)
-	return err
+func (x *XDGSCRAMClient) Step(challenge string) (response string, err error) {
+	response, err = x.ClientConversation.Step(challenge)
+	return
+}
+
+func (x *XDGSCRAMClient) Done() bool {
+	return x.ClientConversation.Done()
 }

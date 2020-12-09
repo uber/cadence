@@ -293,7 +293,7 @@ type (
 		ParentRunID                        string
 		InitiatedID                        int64
 		CompletionEventBatchID             int64
-		CompletionEvent                    *workflow.HistoryEvent
+		CompletionEvent                    *types.HistoryEvent
 		TaskList                           string
 		WorkflowTypeName                   string
 		WorkflowTimeout                    int32
@@ -657,7 +657,7 @@ type (
 		SignalRequestedIDs  map[string]struct{}
 		ExecutionInfo       *WorkflowExecutionInfo
 		ExecutionStats      *ExecutionStats
-		BufferedEvents      []*workflow.HistoryEvent
+		BufferedEvents      []*types.HistoryEvent
 		VersionHistories    *VersionHistories
 		ReplicationState    *ReplicationState // TODO: remove this after all 2DC workflows complete
 		Checksum            checksum.Checksum
@@ -668,10 +668,10 @@ type (
 		Version                  int64
 		ScheduleID               int64
 		ScheduledEventBatchID    int64
-		ScheduledEvent           *workflow.HistoryEvent
+		ScheduledEvent           *types.HistoryEvent
 		ScheduledTime            time.Time
 		StartedID                int64
-		StartedEvent             *workflow.HistoryEvent
+		StartedEvent             *types.HistoryEvent
 		StartedTime              time.Time
 		DomainID                 string
 		ActivityID               string
@@ -717,15 +717,15 @@ type (
 		Version               int64
 		InitiatedID           int64
 		InitiatedEventBatchID int64
-		InitiatedEvent        *workflow.HistoryEvent
+		InitiatedEvent        *types.HistoryEvent
 		StartedID             int64
 		StartedWorkflowID     string
 		StartedRunID          string
-		StartedEvent          *workflow.HistoryEvent
+		StartedEvent          *types.HistoryEvent
 		CreateRequestID       string
 		DomainName            string
 		WorkflowTypeName      string
-		ParentClosePolicy     workflow.ParentClosePolicy
+		ParentClosePolicy     types.ParentClosePolicy
 	}
 
 	// RequestCancelInfo has details for pending external workflow cancellations
@@ -911,7 +911,7 @@ type (
 		WorkflowID  string
 		RunID       string
 		BranchToken []byte
-		Events      []*workflow.HistoryEvent
+		Events      []*types.HistoryEvent
 	}
 
 	// WorkflowMutation is used as generic workflow execution state mutation
@@ -932,7 +932,7 @@ type (
 		DeleteSignalInfos         []int64
 		UpsertSignalRequestedIDs  []string
 		DeleteSignalRequestedIDs  []string
-		NewBufferedEvents         []*workflow.HistoryEvent
+		NewBufferedEvents         []*types.HistoryEvent
 		ClearBufferedEvents       bool
 
 		TransferTasks    []Task
@@ -1357,7 +1357,7 @@ type (
 		// The branch to be appended
 		BranchToken []byte
 		// The batch of events to be appended. The first eventID will become the nodeID of this batch
-		Events []*workflow.HistoryEvent
+		Events []*types.HistoryEvent
 		// requested TransactionID for this write operation. For the same eventID, the node with larger TransactionID always wins
 		TransactionID int64
 		// optional binary encoding type
@@ -1392,7 +1392,7 @@ type (
 	// ReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
 	ReadHistoryBranchResponse struct {
 		// History events
-		HistoryEvents []*workflow.HistoryEvent
+		HistoryEvents []*types.HistoryEvent
 		// Token to read next page if there are more events beyond page size.
 		// Use this to set NextPageToken on ReadHistoryBranchRequest to read the next page.
 		// Empty means we have reached the last page, not need to continue
@@ -1406,7 +1406,7 @@ type (
 	// ReadHistoryBranchByBatchResponse is the response to ReadHistoryBranchRequest
 	ReadHistoryBranchByBatchResponse struct {
 		// History events by batch
-		History []*workflow.History
+		History []*types.History
 		// Token to read next page if there are more events beyond page size.
 		// Use this to set NextPageToken on ReadHistoryBranchRequest to read the next page.
 		// Empty means we have reached the last page, not need to continue

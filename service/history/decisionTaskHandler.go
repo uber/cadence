@@ -253,7 +253,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 	switch err.(type) {
 	case nil:
 		if activityDispatchInfo != nil {
-			if _, err1 := handler.mutableState.AddActivityTaskStartedEvent(ai, event.GetEventId(), uuid.New(), handler.identity); err1 != nil {
+			if _, err1 := handler.mutableState.AddActivityTaskStartedEvent(ai, event.GetEventID(), uuid.New(), handler.identity); err1 != nil {
 				return nil, err1
 			}
 			token := &common.TaskToken{
@@ -318,7 +318,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelActivity(
 			_, err = handler.mutableState.AddActivityTaskCanceledEvent(
 				ai.ScheduleID,
 				ai.StartedID,
-				actCancelReqEvent.GetEventId(),
+				actCancelReqEvent.GetEventID(),
 				[]byte(activityCancellationMsgActivityNotStarted),
 				handler.identity,
 			)
@@ -957,14 +957,13 @@ func convertSearchAttributesToByteArray(fields map[string][]byte) []byte {
 
 func (handler *decisionTaskHandlerImpl) retryCronContinueAsNew(
 	ctx context.Context,
-	thriftAttr *workflow.WorkflowExecutionStartedEventAttributes,
+	attr *types.WorkflowExecutionStartedEventAttributes,
 	backoffInterval int32,
 	continueAsNewIter *workflow.ContinueAsNewInitiator,
 	failureReason *string,
 	failureDetails []byte,
 	lastCompletionResult []byte,
 ) error {
-	attr := thrift.ToWorkflowExecutionStartedEventAttributes(thriftAttr)
 	continueAsNewAttributes := &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
 		WorkflowType:                        attr.WorkflowType,
 		TaskList:                            attr.TaskList,

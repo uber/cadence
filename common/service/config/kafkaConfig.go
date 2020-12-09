@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package messaging
+package config
 
 import (
 	"fmt"
@@ -30,6 +30,7 @@ type (
 	// KafkaConfig describes the configuration needed to connect to all kafka clusters
 	KafkaConfig struct {
 		TLS      auth.TLS                 `yaml:"tls"`
+		SASL     auth.SASL                `yaml:"sasl"`
 		Clusters map[string]ClusterConfig `yaml:"clusters"`
 		Topics   map[string]TopicConfig   `yaml:"topics"`
 		// Applications describes the applications that will use the Kafka topics
@@ -48,9 +49,8 @@ type (
 
 	// TopicList describes the topic names for each cluster
 	TopicList struct {
-		Topic      string `yaml:"topic"`
-		RetryTopic string `yaml:"retry-topic"`
-		DLQTopic   string `yaml:"dlq-topic"`
+		Topic    string `yaml:"topic"`
+		DLQTopic string `yaml:"dlq-topic"`
 	}
 )
 
@@ -86,14 +86,14 @@ func (k *KafkaConfig) Validate(checkApp bool) {
 	}
 }
 
-func (k *KafkaConfig) getKafkaClusterForTopic(topic string) string {
+func (k *KafkaConfig) GetKafkaClusterForTopic(topic string) string {
 	return k.Topics[topic].Cluster
 }
 
-func (k *KafkaConfig) getBrokersForKafkaCluster(kafkaCluster string) []string {
+func (k *KafkaConfig) GetBrokersForKafkaCluster(kafkaCluster string) []string {
 	return k.Clusters[kafkaCluster].Brokers
 }
 
-func (k *KafkaConfig) getTopicsForApplication(app string) TopicList {
+func (k *KafkaConfig) GetTopicsForApplication(app string) TopicList {
 	return k.Applications[app]
 }
