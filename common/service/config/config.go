@@ -30,7 +30,6 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/auth"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
@@ -50,7 +49,7 @@ type (
 		// Services is a map of service name to service config items
 		Services map[string]Service `yaml:"services"`
 		// Kafka is the config for connecting to kafka
-		Kafka messaging.KafkaConfig `yaml:"kafka"`
+		Kafka KafkaConfig `yaml:"kafka"`
 		// Archival is the config for archival
 		Archival Archival `yaml:"archival"`
 		// PublicClient is config for connecting to cadence frontend

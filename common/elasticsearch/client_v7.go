@@ -89,6 +89,9 @@ func NewV7Client(
 	if connectConfig.DisableSniff {
 		clientOptFuncs = append(clientOptFuncs, elastic.SetSniff(false))
 	}
+	if connectConfig.DisableHealthCheck {
+		clientOptFuncs = append(clientOptFuncs, elastic.SetHealthcheck(false))
+	}
 	client, err := elastic.NewClient(clientOptFuncs...)
 	if err != nil {
 		return nil, err

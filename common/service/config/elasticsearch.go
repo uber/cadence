@@ -29,17 +29,19 @@ import (
 // ElasticSearchConfig for connecting to ElasticSearch
 type (
 	ElasticSearchConfig struct {
-		URL     url.URL           `yaml:url`     //nolint:govet
-		Indices map[string]string `yaml:indices` //nolint:govet
+		URL     url.URL           `yaml:"url"`     //nolint:govet
+		Indices map[string]string `yaml:"indices"` //nolint:govet
 		// supporting v6 and v7. Default to v6 if empty.
-		Version string `yaml:version` //nolint:govet
+		Version string `yaml:"version"` //nolint:govet
 		// optional username to communicate with ElasticSearch
-		Username string `yaml:username` //nolint:govet
+		Username string `yaml:"username"` //nolint:govet
 		// optional password to communicate with ElasticSearch
-		Password string `yaml:password` //nolint:govet
+		Password string `yaml:"password"` //nolint:govet
 		// optional to disable sniff, according to issues on Github,
 		// Sniff could cause issue like "no Elasticsearch node available"
-		DisableSniff bool `yaml:disableSniff`
+		DisableSniff bool `yaml:"disableSniff"`
+		// optional to disable health check
+		DisableHealthCheck bool `yaml:"disableHealthCheck"`
 	}
 )
 

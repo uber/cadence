@@ -93,7 +93,7 @@ func (p *indexProcessor) Start() error {
 	}
 
 	p.logger.Info("Index processor state changed", tag.LifeCycleStarting)
-	consumer, err := p.kafkaClient.NewConsumer(p.appName, p.consumerName, p.config.IndexerConcurrency())
+	consumer, err := p.kafkaClient.NewConsumer(p.appName, p.consumerName)
 	if err != nil {
 		p.logger.Info("Index processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
 		return err
