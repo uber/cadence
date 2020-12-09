@@ -698,7 +698,7 @@ func (s *engineSuite) TestQueryWorkflow_ConsistentQueryBufferFull() {
 	loadedMS, err := ctx.LoadWorkflowExecution(context.Background())
 	s.NoError(err)
 	qr := query.NewRegistry()
-	qr.BufferQuery(&workflow.WorkflowQuery{})
+	qr.BufferQuery(&types.WorkflowQuery{})
 	loadedMS.SetQueryRegistry(qr)
 	release(nil)
 
@@ -749,10 +749,10 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
 		qr := builder.GetQueryRegistry()
 		buffered := qr.GetBufferedIDs()
 		for _, id := range buffered {
-			resultType := workflow.QueryResultTypeAnswered
+			resultType := types.QueryResultTypeAnswered
 			completedTerminationState := &query.TerminationState{
 				TerminationType: query.TerminationTypeCompleted,
-				QueryResult: &workflow.WorkflowQueryResult{
+				QueryResult: &types.WorkflowQueryResult{
 					ResultType: &resultType,
 					Answer:     answer,
 				},
@@ -4422,20 +4422,20 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	loadedMS, err := ctx.LoadWorkflowExecution(context.Background())
 	s.NoError(err)
 	qr := query.NewRegistry()
-	id1, _ := qr.BufferQuery(&workflow.WorkflowQuery{})
-	id2, _ := qr.BufferQuery(&workflow.WorkflowQuery{})
-	id3, _ := qr.BufferQuery(&workflow.WorkflowQuery{})
+	id1, _ := qr.BufferQuery(&types.WorkflowQuery{})
+	id2, _ := qr.BufferQuery(&types.WorkflowQuery{})
+	id3, _ := qr.BufferQuery(&types.WorkflowQuery{})
 	loadedMS.SetQueryRegistry(qr)
 	release(nil)
-	result1 := &workflow.WorkflowQueryResult{
-		ResultType: common.QueryResultTypePtr(workflow.QueryResultTypeAnswered),
+	result1 := &types.WorkflowQueryResult{
+		ResultType: types.QueryResultTypeAnswered.Ptr(),
 		Answer:     []byte{1, 2, 3},
 	}
-	result2 := &workflow.WorkflowQueryResult{
-		ResultType:   common.QueryResultTypePtr(workflow.QueryResultTypeFailed),
+	result2 := &types.WorkflowQueryResult{
+		ResultType:   types.QueryResultTypeFailed.Ptr(),
 		ErrorMessage: common.StringPtr("error reason"),
 	}
-	queryResults := map[string]*workflow.WorkflowQueryResult{
+	queryResults := map[string]*types.WorkflowQueryResult{
 		id1: result1,
 		id2: result2,
 	}
@@ -4446,7 +4446,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 			Decisions:        decisions,
 			ExecutionContext: []byte("context"),
 			Identity:         &identity,
-			QueryResults:     queryResults,
+			QueryResults:     thrift.FromWorkflowQueryResultMap(queryResults),
 		},
 	})
 	s.Nil(err)
@@ -4459,11 +4459,11 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	s.Len(qr.GetCompletedIDs(), 2)
 	completed1, err := qr.GetTerminationState(id1)
 	s.NoError(err)
-	s.True(result1.Equals(completed1.QueryResult))
+	s.Equal(result1, completed1.QueryResult)
 	s.Equal(query.TerminationTypeCompleted, completed1.TerminationType)
 	completed2, err := qr.GetTerminationState(id2)
 	s.NoError(err)
-	s.True(result2.Equals(completed2.QueryResult))
+	s.Equal(result2, completed2.QueryResult)
 	s.Equal(query.TerminationTypeCompleted, completed2.TerminationType)
 	s.Len(qr.GetBufferedIDs(), 0)
 	s.Len(qr.GetFailedIDs(), 0)
@@ -4569,9 +4569,9 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	loadedMS, err := ctx.LoadWorkflowExecution(context.Background())
 	s.NoError(err)
 	qr := query.NewRegistry()
-	qr.BufferQuery(&workflow.WorkflowQuery{})
-	qr.BufferQuery(&workflow.WorkflowQuery{})
-	qr.BufferQuery(&workflow.WorkflowQuery{})
+	qr.BufferQuery(&types.WorkflowQuery{})
+	qr.BufferQuery(&types.WorkflowQuery{})
+	qr.BufferQuery(&types.WorkflowQuery{})
 	loadedMS.SetQueryRegistry(qr)
 	release(nil)
 	_, err = s.mockHistoryEngine.RespondDecisionTaskCompleted(s.constructCallContext("0.0.0"), &history.RespondDecisionTaskCompletedRequest{

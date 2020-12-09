@@ -1168,7 +1168,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 		scope.IncCounter(metrics.QueryBufferExceededCount)
 		return nil, ErrConsistentQueryBufferExceeded
 	}
-	queryID, termCh := queryReg.BufferQuery(req.GetQuery())
+	queryID, termCh := queryReg.BufferQuery(thrift.ToWorkflowQuery(req.GetQuery()))
 	defer queryReg.RemoveQuery(queryID)
 	release(nil)
 	select {
@@ -1182,13 +1182,13 @@ func (e *historyEngineImpl) QueryWorkflow(
 		case query.TerminationTypeCompleted:
 			result := state.QueryResult
 			switch result.GetResultType() {
-			case workflow.QueryResultTypeAnswered:
+			case types.QueryResultTypeAnswered:
 				return &h.QueryWorkflowResponse{
 					Response: &workflow.QueryWorkflowResponse{
 						QueryResult: result.GetAnswer(),
 					},
 				}, nil
-			case workflow.QueryResultTypeFailed:
+			case types.QueryResultTypeFailed:
 				return nil, &types.QueryFailedError{Message: result.GetErrorMessage()}
 			default:
 				scope.IncCounter(metrics.QueryRegistryInvalidStateCount)
