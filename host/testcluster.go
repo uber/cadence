@@ -90,7 +90,7 @@ type (
 	// MessagingClientConfig is the config for messaging config
 	MessagingClientConfig struct {
 		UseMock     bool
-		KafkaConfig *kafka.KafkaConfig
+		KafkaConfig *config.KafkaConfig
 	}
 
 	// WorkerConfig is the config for enabling/disabling cadence worker
