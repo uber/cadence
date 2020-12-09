@@ -928,10 +928,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 				lastWriteVersion = common.EmptyVersion
 				if replicationState != nil {
 					lastWriteVersion = replicationState.LastWriteVersion
-				} else if previous["workflow_last_write_version"] != nil {
-					lastWriteVersion = previous["workflow_last_write_version"].(int64)
 				}
-
 				return nil, &p.WorkflowExecutionAlreadyStartedError{
 					Msg:              msg,
 					StartRequestID:   executionInfo.CreateRequestID,
