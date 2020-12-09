@@ -23,6 +23,7 @@
 package shardscanner
 
 import (
+	"context"
 	"errors"
 
 	"go.uber.org/cadence/workflow"
@@ -43,6 +44,7 @@ var (
 
 // FixerManagerCB is a function which returns invariant manager for fixer.
 type FixerManagerCB func(
+	context.Context,
 	persistence.Retryer,
 	FixShardActivityParams,
 	ScannerConfig,
@@ -50,6 +52,7 @@ type FixerManagerCB func(
 
 // FixerIteratorCB is a function which returns ScanOutputIterator for fixer.
 type FixerIteratorCB func(
+	context.Context,
 	blobstore.Client,
 	store.Keys,
 	FixShardActivityParams,

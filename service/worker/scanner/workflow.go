@@ -52,27 +52,10 @@ const (
 	historyScannerWFTypeName     = "cadence-sys-history-scanner-workflow"
 	historyScannerTaskListName   = "cadence-sys-history-scanner-tasklist-0"
 	historyScavengerActivityName = "cadence-sys-history-scanner-scvg-activity"
-
-	concreteExecutionsScannerWFID         = "cadence-sys-executions-scanner"
-	concreteExecutionsScannerWFTypeName   = "cadence-sys-executions-scanner-workflow"
-	concreteExecutionsScannerTaskListName = "cadence-sys-executions-scanner-tasklist-0"
-
-	concreteExecutionsFixerWFID         = "cadence-sys-executions-fixer"
-	concreteExecutionsFixerWFTypeName   = "cadence-sys-executions-fixer-workflow"
-	concreteExecutionsFixerTaskListName = "cadence-sys-executions-fixer-tasklist-0"
-
-	currentExecutionsScannerWFID         = "cadence-sys-current-executions-scanner"
-	currentExecutionsScannerWFTypeName   = "cadence-sys-current-executions-scanner-workflow"
-	currentExecutionsScannerTaskListName = "cadence-sys-current-executions-scanner-tasklist-0"
-
-	currentExecutionsFixerWFID         = "cadence-sys-current-executions-fixer"
-	currentExecutionsFixerWFTypeName   = "cadence-sys-current-executions-fixer-workflow"
-	currentExecutionsFixerTaskListName = "cadence-sys-current-executions-fixer-tasklist-0"
 )
 
 var (
-	tlScavengerHBInterval         = 10 * time.Second
-	executionsScavengerHBInterval = 10 * time.Second
+	tlScavengerHBInterval = 10 * time.Second
 
 	activityRetryPolicy = cadence.RetryPolicy{
 		InitialInterval:    10 * time.Second,
@@ -100,34 +83,6 @@ var (
 		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
 		CronSchedule:                 "0 */12 * * *",
 	}
-	concreteExecutionsScannerWFStartOptions = cclient.StartWorkflowOptions{
-		ID:                           concreteExecutionsScannerWFID,
-		TaskList:                     concreteExecutionsScannerTaskListName,
-		ExecutionStartToCloseTimeout: infiniteDuration,
-		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
-		CronSchedule:                 "* * * * *",
-	}
-	currentExecutionsScannerWFStartOptions = cclient.StartWorkflowOptions{
-		ID:                           currentExecutionsScannerWFID,
-		TaskList:                     currentExecutionsScannerTaskListName,
-		ExecutionStartToCloseTimeout: infiniteDuration,
-		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
-		CronSchedule:                 "* * * * *",
-	}
-	concreteExecutionsFixerWFStartOptions = cclient.StartWorkflowOptions{
-		ID:                           concreteExecutionsFixerWFID,
-		TaskList:                     concreteExecutionsFixerTaskListName,
-		ExecutionStartToCloseTimeout: infiniteDuration,
-		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
-		CronSchedule:                 "* * * * *",
-	}
-	currentExecutionsFixerWFStartOptions = cclient.StartWorkflowOptions{
-		ID:                           currentExecutionsFixerWFID,
-		TaskList:                     currentExecutionsFixerTaskListName,
-		ExecutionStartToCloseTimeout: infiniteDuration,
-		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
-		CronSchedule:                 "* * * * *",
-	}
 )
 
 func init() {
@@ -137,16 +92,11 @@ func init() {
 	workflow.RegisterWithOptions(HistoryScannerWorkflow, workflow.RegisterOptions{Name: historyScannerWFTypeName})
 	activity.RegisterWithOptions(HistoryScavengerActivity, activity.RegisterOptions{Name: historyScavengerActivityName})
 
-	workflow.RegisterWithOptions(executions.ScannerWorkflow, workflow.RegisterOptions{Name: concreteExecutionsScannerWFTypeName})
-	activity.RegisterWithOptions(executions.ScannerEmitMetricsActivity, activity.RegisterOptions{Name: executions.ScannerEmitMetricsActivityName})
-	activity.RegisterWithOptions(executions.ScanShardActivity, activity.RegisterOptions{Name: executions.ScannerScanShardActivityName})
-	activity.RegisterWithOptions(executions.ScannerConfigActivity, activity.RegisterOptions{Name: executions.ScannerConfigActivityName})
-	workflow.RegisterWithOptions(executions.ScannerWorkflow, workflow.RegisterOptions{Name: currentExecutionsScannerWFTypeName})
+	workflow.RegisterWithOptions(executions.ConcreteScannerWorkflow, workflow.RegisterOptions{Name: executions.ConcreteExecutionsScannerWFTypeName})
+	workflow.RegisterWithOptions(executions.CurrentScannerWorkflow, workflow.RegisterOptions{Name: executions.CurrentExecutionsScannerWFTypeName})
+	workflow.RegisterWithOptions(executions.ConcreteFixerWorkflow, workflow.RegisterOptions{Name: executions.ConcreteExecutionsFixerWFTypeName})
+	workflow.RegisterWithOptions(executions.CurrentFixerWorkflow, workflow.RegisterOptions{Name: executions.CurrentExecutionsFixerWFTypeName})
 
-	workflow.RegisterWithOptions(executions.FixerWorkflow, workflow.RegisterOptions{Name: concreteExecutionsFixerWFTypeName})
-	workflow.RegisterWithOptions(executions.FixerWorkflow, workflow.RegisterOptions{Name: currentExecutionsFixerWFTypeName})
-	activity.RegisterWithOptions(executions.FixerCorruptedKeysActivity, activity.RegisterOptions{Name: executions.FixerCorruptedKeysActivityName})
-	activity.RegisterWithOptions(executions.FixShardActivity, activity.RegisterOptions{Name: executions.FixerFixShardActivityName})
 }
 
 // TaskListScannerWorkflow is the workflow that runs the task-list scanner background daemon

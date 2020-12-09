@@ -40,6 +40,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
@@ -82,15 +83,15 @@ func (s *activitiesSuite) TestScanShardActivity() {
 	testCases := []struct {
 		params      ScanShardActivityParams
 		wantErr     bool
-		managerHook func(pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) invariant.Manager
-		itHook      func(pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) pagination.Iterator
+		managerHook func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) invariant.Manager
+		itHook      func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) pagination.Iterator
 	}{
 		{
 			params: ScanShardActivityParams{
 				Shards:     []int{0},
 				ContextKey: TestContextKey,
 			},
-			managerHook: func(pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) invariant.Manager {
+			managerHook: func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) invariant.Manager {
 				manager := invariant.NewMockManager(s.controller)
 				manager.EXPECT().RunChecks(gomock.Any(), gomock.Any()).
 					AnyTimes().
@@ -99,7 +100,7 @@ func (s *activitiesSuite) TestScanShardActivity() {
 					)
 				return manager
 			},
-			itHook: func(pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) pagination.Iterator {
+			itHook: func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) pagination.Iterator {
 				it := pagination.NewMockIterator(s.controller)
 				calls := 0
 				it.EXPECT().HasNext().DoAndReturn(
@@ -162,6 +163,7 @@ func (s *activitiesSuite) TestFixShardActivity() {
 			name:    "run fixer",
 			wantErr: false,
 			params: FixShardActivityParams{
+				ContextKey: TestContextKey,
 				CorruptedKeysEntries: []CorruptedKeysEntry{
 					{ShardID: 1, CorruptedKeys: struct {
 						UUID      string
@@ -171,9 +173,8 @@ func (s *activitiesSuite) TestFixShardActivity() {
 					}{UUID: "test-uuid", MinPage: 0, MaxPage: 1, Extension: "test-ext"}},
 				},
 				ResolvedFixerWorkflowConfig: ResolvedFixerWorkflowConfig{},
-				ContextKey:                  TestContextKey,
 			},
-			managerHook: func(pr persistence.Retryer, p FixShardActivityParams, c ScannerConfig) invariant.Manager {
+			managerHook: func(ctx context.Context, pr persistence.Retryer, p FixShardActivityParams, c ScannerConfig) invariant.Manager {
 				manager := invariant.NewMockManager(s.controller)
 				manager.EXPECT().RunFixes(gomock.Any(), gomock.Any()).
 					AnyTimes().
@@ -182,7 +183,7 @@ func (s *activitiesSuite) TestFixShardActivity() {
 					)
 				return manager
 			},
-			itHook: func(client blobstore.Client, k store.Keys, params FixShardActivityParams, config ScannerConfig) store.ScanOutputIterator {
+			itHook: func(ctx context.Context, client blobstore.Client, k store.Keys, params FixShardActivityParams, config ScannerConfig) store.ScanOutputIterator {
 				it := store.NewMockScanOutputIterator(s.controller)
 				calls := 0
 				it.EXPECT().HasNext().DoAndReturn(
@@ -194,7 +195,13 @@ func (s *activitiesSuite) TestFixShardActivity() {
 						return true
 					},
 				).AnyTimes()
-				it.EXPECT().Next().Return(&store.ScanOutputEntity{}, nil).Times(2)
+				it.EXPECT().Next().Return(&store.ScanOutputEntity{
+					Execution: &entity.ConcreteExecution{
+						Execution: entity.Execution{
+							DomainID: "test_domain",
+						},
+					},
+				}, nil).AnyTimes()
 				return it
 			},
 		},
@@ -221,12 +228,29 @@ func (s *activitiesSuite) TestFixShardActivity() {
 			s.mockResource.BlobstoreClient.
 				Mock.On("Put", mock.Anything, mock.Anything).
 				Return(&blobstore.PutResponse{}, nil)
+			domainCache := cache.NewMockDomainCache(s.controller)
+			domainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
+				&persistence.DomainInfo{
+					Name: "test_domain",
+				},
+				nil,
+				false,
+				nil,
+				0,
+				nil,
+				nil),
+				nil).AnyTimes()
+			s.mockResource.DomainCache = domainCache
 
 			fc := FixerContext{
 				ContextKey: TestContextKey,
-				Config:     &ScannerConfig{},
-				Scope:      metrics.NoopScope(metrics.Worker),
-				Resource:   s.mockResource,
+				Config: &ScannerConfig{
+					DynamicParams: DynamicParams{
+						AllowDomain: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+					},
+				},
+				Scope:    metrics.NoopScope(metrics.Worker),
+				Resource: s.mockResource,
 			}
 			if tc.itHook != nil && tc.managerHook != nil {
 				fc.Hooks = &FixerHooks{
@@ -235,6 +259,7 @@ func (s *activitiesSuite) TestFixShardActivity() {
 				}
 			}
 			env := s.NewTestActivityEnvironment()
+
 			env.SetWorkerOptions(worker.Options{
 				BackgroundActivityContext: context.WithValue(context.Background(), TestContextKey, fc),
 			})
@@ -259,7 +284,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 	}{
 		{
 			dynamicParams: &DynamicParams{
-				Enabled:                 dynamicconfig.GetBoolPropertyFn(true),
+				ScannerEnabled:          dynamicconfig.GetBoolPropertyFn(true),
 				Concurrency:             dynamicconfig.GetIntPropertyFn(10),
 				PageSize:                dynamicconfig.GetIntPropertyFn(100),
 				ActivityBatchSize:       dynamicconfig.GetIntPropertyFn(10),
@@ -285,7 +310,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 		},
 		{
 			dynamicParams: &DynamicParams{
-				Enabled:                 dynamicconfig.GetBoolPropertyFn(true),
+				ScannerEnabled:          dynamicconfig.GetBoolPropertyFn(true),
 				Concurrency:             dynamicconfig.GetIntPropertyFn(10),
 				PageSize:                dynamicconfig.GetIntPropertyFn(100),
 				ActivityBatchSize:       dynamicconfig.GetIntPropertyFn(10),
@@ -307,7 +332,7 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 		},
 		{
 			dynamicParams: &DynamicParams{
-				Enabled:                 dynamicconfig.GetBoolPropertyFn(true),
+				ScannerEnabled:          dynamicconfig.GetBoolPropertyFn(true),
 				Concurrency:             dynamicconfig.GetIntPropertyFn(10),
 				ActivityBatchSize:       dynamicconfig.GetIntPropertyFn(100),
 				PageSize:                dynamicconfig.GetIntPropertyFn(100),

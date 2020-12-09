@@ -23,6 +23,7 @@
 package shardscanner
 
 import (
+	"context"
 	"errors"
 
 	"github.com/uber/cadence/common/pagination"
@@ -49,6 +50,7 @@ const (
 
 // ManagerCB is a function which returns invariant manager for scanner.
 type ManagerCB func(
+	context.Context,
 	persistence.Retryer,
 	ScanShardActivityParams,
 	ScannerConfig,
@@ -56,6 +58,7 @@ type ManagerCB func(
 
 // IteratorCB is a function which returns iterator for scanner.
 type IteratorCB func(
+	context.Context,
 	persistence.Retryer,
 	ScanShardActivityParams,
 	ScannerConfig,
