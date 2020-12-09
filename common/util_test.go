@@ -89,8 +89,8 @@ func TestConvertDynamicConfigMapPropertyToIntMap(t *testing.T) {
 
 func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) {
 	domainID := uuid.New()
-	request := &workflow.StartWorkflowExecutionRequest{
-		RetryPolicy: &workflow.RetryPolicy{
+	request := &types.StartWorkflowExecutionRequest{
+		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    Int32Ptr(60),
 			ExpirationIntervalInSeconds: Int32Ptr(60),
 		},
@@ -106,8 +106,8 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) 
 
 func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.T) {
 	domainID := uuid.New()
-	request := &workflow.StartWorkflowExecutionRequest{
-		RetryPolicy: &workflow.RetryPolicy{
+	request := &types.StartWorkflowExecutionRequest{
+		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    Int32Ptr(60),
 			ExpirationIntervalInSeconds: Int32Ptr(60),
 		},
