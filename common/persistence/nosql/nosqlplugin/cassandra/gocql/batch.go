@@ -43,8 +43,12 @@ const (
 )
 
 func (b *batch) WithContext(ctx context.Context) Batch {
+	b2 := b.Batch.WithContext(ctx)
+	if b2 == nil {
+		return nil
+	}
 	return &batch{
-		Batch: b.Batch.WithContext(ctx),
+		Batch: b2,
 	}
 }
 
