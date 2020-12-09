@@ -7,6 +7,3 @@ system.minRetentionDays:
 history.EnableConsistentQueryByDomain:
 - value: true
   constraints: {}
-history.enableForceScheduleNewDecision:
-- value: true
-  constraints: {}

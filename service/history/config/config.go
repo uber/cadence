@@ -442,8 +442,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		SearchAttributesTotalSizeLimit:    dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesTotalSizeLimit, 40*1024),
 		StickyTTL:                         dc.GetDurationPropertyFilteredByDomain(dynamicconfig.StickyTTL, time.Hour*24*365),
 		DecisionHeartbeatTimeout:          dc.GetDurationPropertyFilteredByDomain(dynamicconfig.DecisionHeartbeatTimeout, time.Minute*30),
-		DecisionRetryCriticalAttempts:     dc.GetIntProperty(dynamicconfig.DecisionRetryCriticalAttempts, 3), //10 30m
-		DecisionRetryMaxAttempts:          dc.GetIntProperty(dynamicconfig.DecisionRetryMaxAttempts, 5),      // 30 2h
+		DecisionRetryCriticalAttempts:     dc.GetIntProperty(dynamicconfig.DecisionRetryCriticalAttempts, 10), // about 30m
+		DecisionRetryMaxAttempts:          dc.GetIntProperty(dynamicconfig.DecisionRetryMaxAttempts, 30),      // about 2hrs
 		EnableForceScheduleNewDecision:    dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableForceScheduleNewDecision, false),
 
 		ReplicationTaskFetcherParallelism:                  dc.GetIntProperty(dynamicconfig.ReplicationTaskFetcherParallelism, 1),
