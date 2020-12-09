@@ -48,6 +48,7 @@ type (
 		Timeout     int
 		numReplicas int
 		TLS         *auth.TLS
+		CQLClient   gocql.Client
 	}
 )
 
@@ -96,7 +97,11 @@ func newCQLClient(cfg *CQLClientConfig) (*cqlClient, error) {
 	cqlClient := new(cqlClient)
 	cqlClient.cfg = cfg
 	cqlClient.nReplicas = cfg.numReplicas
-	cqlClient.session, err = gocql.NewClient().CreateSession(gocql.ClusterConfig{
+	client := cfg.CQLClient
+	if client == nil {
+		client = gocql.NewClient()
+	}
+	cqlClient.session, err = client.CreateSession(gocql.ClusterConfig{
 		Hosts:        cfg.Hosts,
 		Port:         cfg.Port,
 		User:         cfg.User,
