@@ -35,22 +35,23 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/service/config"
 )
 
 type (
 	// This is a default implementation of Client interface which makes use of uber-go/kafka-client as consumer
-	kafkaClient struct {
-		config        *KafkaConfig
+	clientImpl struct {
+		config        *config.KafkaConfig
 		metricsClient metrics.Client
 		logger        log.Logger
 	}
 )
 
-var _ messaging.Client = (*kafkaClient)(nil)
+var _ messaging.Client = (*clientImpl)(nil)
 
 // NewKafkaClient is used to create an instance of KafkaClient
 func NewKafkaClient(
-	kc *KafkaConfig,
+	kc *config.KafkaConfig,
 	metricsClient metrics.Client,
 	logger log.Logger,
 	_ tally.Scope,
@@ -75,7 +76,7 @@ func NewKafkaClient(
 		topicClusterAssignment[topic] = []string{cfg.Cluster}
 	}
 
-	return &kafkaClient{
+	return &clientImpl{
 		config:        kc,
 		metricsClient: metricsClient,
 		logger:        logger,
@@ -83,10 +84,10 @@ func NewKafkaClient(
 }
 
 // NewConsumer is used to create a Kafka consumer
-func (c *kafkaClient) NewConsumer(app, consumerName string) (messaging.Consumer, error) {
-	topics := c.config.getTopicsForApplication(app)
+func (c *clientImpl) NewConsumer(app, consumerName string) (messaging.Consumer, error) {
+	topics := c.config.GetTopicsForApplication(app)
 	saramaConfig := sarama.NewConfig()
-	// bellow config is copied from uber/kafka-client bo keep the same behavior
+	// bellow config is copied from uber/kafka-clientImpl bo keep the same behavior
 	saramaConfig.Version = sarama.V0_10_2_0
 	saramaConfig.Consumer.Fetch.Default = 30 * 1024 * 1024 // 30MB.
 	saramaConfig.Consumer.Return.Errors = true
@@ -108,14 +109,14 @@ func (c *kafkaClient) NewConsumer(app, consumerName string) (messaging.Consumer,
 }
 
 // NewProducer is used to create a Kafka producer
-func (c *kafkaClient) NewProducer(app string) (messaging.Producer, error) {
-	topics := c.config.getTopicsForApplication(app)
+func (c *clientImpl) NewProducer(app string) (messaging.Producer, error) {
+	topics := c.config.GetTopicsForApplication(app)
 	return c.newProducerByTopic(topics.Topic)
 }
 
-func (c *kafkaClient) newProducerByTopic(topic string) (messaging.Producer, error) {
-	kafkaClusterName := c.config.getKafkaClusterForTopic(topic)
-	brokers := c.config.getBrokersForKafkaCluster(kafkaClusterName)
+func (c *clientImpl) newProducerByTopic(topic string) (messaging.Producer, error) {
+	kafkaClusterName := c.config.GetKafkaClusterForTopic(topic)
+	brokers := c.config.GetBrokersForKafkaCluster(kafkaClusterName)
 
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
@@ -136,7 +137,7 @@ func (c *kafkaClient) newProducerByTopic(topic string) (messaging.Producer, erro
 	return NewKafkaProducer(topic, producer, c.logger), nil
 }
 
-func (c *kafkaClient) initAuth(saramaConfig *sarama.Config) error {
+func (c *clientImpl) initAuth(saramaConfig *sarama.Config) error {
 	tlsConfig, err := convertTLSConfig(c.config.TLS)
 	if err != nil {
 		panic(fmt.Sprintf("Error creating Kafka TLS config %v", err))

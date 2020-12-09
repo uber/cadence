@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package kafka
+package config
 
 import (
 	"fmt"
@@ -86,14 +86,14 @@ func (k *KafkaConfig) Validate(checkApp bool) {
 	}
 }
 
-func (k *KafkaConfig) getKafkaClusterForTopic(topic string) string {
+func (k *KafkaConfig) GetKafkaClusterForTopic(topic string) string {
 	return k.Topics[topic].Cluster
 }
 
-func (k *KafkaConfig) getBrokersForKafkaCluster(kafkaCluster string) []string {
+func (k *KafkaConfig) GetBrokersForKafkaCluster(kafkaCluster string) []string {
 	return k.Clusters[kafkaCluster].Brokers
 }
 
-func (k *KafkaConfig) getTopicsForApplication(app string) TopicList {
+func (k *KafkaConfig) GetTopicsForApplication(app string) TopicList {
 	return k.Applications[app]
 }

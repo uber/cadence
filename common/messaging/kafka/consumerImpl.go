@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/service/config"
 )
 
 const rcvBufferSize = 2 * 1024
@@ -38,7 +39,7 @@ const dqlPublishTimeout = time.Minute * 10
 
 type (
 	// a wrapper of sarama consumer group for our consumer interface
-	kafkaConsumer struct {
+	consumerImpl struct {
 		topic           string
 		consumerHandler *consumerHandlerImpl
 		consumerGroup   sarama.ConsumerGroup
@@ -57,7 +58,7 @@ type (
 		topic          string
 		currentSession sarama.ConsumerGroupSession
 		msgChan        chan<- messaging.Message
-		manager        *kafkaPartitionAckManager
+		manager        *partitionAckManager
 
 		metricsClient metrics.Client
 		logger        log.Logger
@@ -72,19 +73,19 @@ type (
 )
 
 var _ messaging.Message = (*messageImpl)(nil)
-var _ messaging.Consumer = (*kafkaConsumer)(nil)
+var _ messaging.Consumer = (*consumerImpl)(nil)
 
 func newKafkaConsumer(
 	dlqProducer messaging.Producer,
-	kafkaConfig *KafkaConfig,
+	kafkaConfig *config.KafkaConfig,
 	topic string,
 	consumerName string,
 	saramaConfig *sarama.Config,
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) (messaging.Consumer, error) {
-	clusterName := kafkaConfig.getKafkaClusterForTopic(topic)
-	brokers := kafkaConfig.getBrokersForKafkaCluster(clusterName)
+	clusterName := kafkaConfig.GetKafkaClusterForTopic(topic)
+	brokers := kafkaConfig.GetBrokersForKafkaCluster(clusterName)
 	consumerGroup, err := sarama.NewConsumerGroup(brokers, consumerName, saramaConfig)
 	if err != nil {
 		return nil, err
@@ -93,7 +94,7 @@ func newKafkaConsumer(
 	msgChan := make(chan messaging.Message, rcvBufferSize)
 	consumerHandler := newConsumerHandlerImpl(dlqProducer, topic, msgChan, metricsClient, logger)
 
-	return &kafkaConsumer{
+	return &consumerImpl{
 		topic: topic,
 
 		consumerHandler: consumerHandler,
@@ -104,7 +105,7 @@ func newKafkaConsumer(
 	}, nil
 }
 
-func (c *kafkaConsumer) Start() error {
+func (c *consumerImpl) Start() error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	c.cancelFunc = cancel
@@ -129,14 +130,14 @@ func (c *kafkaConsumer) Start() error {
 }
 
 // Stop stops the consumer
-func (c *kafkaConsumer) Stop() {
+func (c *consumerImpl) Stop() {
 	c.logger.Info("Stopping consumer")
 	c.cancelFunc()
 	c.consumerHandler.stop()
 }
 
 // Messages return the message channel for this consumer
-func (c *kafkaConsumer) Messages() <-chan messaging.Message {
+func (c *consumerImpl) Messages() <-chan messaging.Message {
 	return c.msgChan
 }
 

@@ -31,7 +31,7 @@ import (
 
 // Used to convert out of order acks into ackLevel movement,
 // assuming reading messages is in order and continuous(no skipping)
-type kafkaPartitionAckManager struct {
+type partitionAckManager struct {
 	sync.RWMutex
 	ackMgrs map[int32]messaging.AckManager //map from partition to its ackManager
 	scopes  map[int32]metrics.Scope        // map from partition to its Scope
@@ -40,8 +40,8 @@ type kafkaPartitionAckManager struct {
 	logger        log.Logger
 }
 
-func newPartitionAckManager(metricsClient metrics.Client, logger log.Logger) *kafkaPartitionAckManager {
-	return &kafkaPartitionAckManager{
+func newPartitionAckManager(metricsClient metrics.Client, logger log.Logger) *partitionAckManager {
+	return &partitionAckManager{
 		ackMgrs: make(map[int32]messaging.AckManager),
 		scopes:  make(map[int32]metrics.Scope),
 
@@ -51,7 +51,7 @@ func newPartitionAckManager(metricsClient metrics.Client, logger log.Logger) *ka
 }
 
 // AddMessage mark a messageID as read and waiting for completion
-func (pam *kafkaPartitionAckManager) AddMessage(partitionID int32, messageID int64) {
+func (pam *partitionAckManager) AddMessage(partitionID int32, messageID int64) {
 	var err error
 	pam.RLock()
 	if am, ok := pam.ackMgrs[partitionID]; ok {
@@ -80,7 +80,7 @@ func (pam *kafkaPartitionAckManager) AddMessage(partitionID int32, messageID int
 }
 
 // CompleteMessage complete the message from ack/nack kafka message
-func (pam *kafkaPartitionAckManager) CompleteMessage(partitionID int32, messageID int64, isAck bool) (ackLevel int64) {
+func (pam *partitionAckManager) CompleteMessage(partitionID int32, messageID int64, isAck bool) (ackLevel int64) {
 	pam.RLock()
 	defer pam.RUnlock()
 	if am, ok := pam.ackMgrs[partitionID]; ok {
