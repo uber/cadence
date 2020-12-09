@@ -27,9 +27,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/shared"
 	adminClient "github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -41,7 +38,6 @@ import (
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 var (
@@ -57,7 +53,7 @@ const (
 type (
 	// nDCHistoryReplicationFn provides the functionality to deliver replication raw history request to history
 	// the provided func should be thread safe
-	nDCHistoryReplicationFn func(ctx context.Context, request *history.ReplicateEventsV2Request) error
+	nDCHistoryReplicationFn func(ctx context.Context, request *types.ReplicateEventsV2Request) error
 
 	// HistoryResender is the interface for resending history events to remote
 	HistoryResender interface {
@@ -85,8 +81,8 @@ type (
 	}
 
 	historyBatch struct {
-		versionHistory *shared.VersionHistory
-		rawEventBatch  *shared.DataBlob
+		versionHistory *types.VersionHistory
+		rawEventBatch  *types.DataBlob
 	}
 )
 
@@ -236,15 +232,15 @@ func (n *HistoryResenderImpl) createReplicationRawRequest(
 	domainID string,
 	workflowID string,
 	runID string,
-	historyBlob *shared.DataBlob,
-	versionHistoryItems []*shared.VersionHistoryItem,
-) *history.ReplicateEventsV2Request {
+	historyBlob *types.DataBlob,
+	versionHistoryItems []*types.VersionHistoryItem,
+) *types.ReplicateEventsV2Request {
 
-	request := &history.ReplicateEventsV2Request{
+	request := &types.ReplicateEventsV2Request{
 		DomainUUID: common.StringPtr(domainID),
-		WorkflowExecution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 		Events:              historyBlob,
 		VersionHistoryItems: versionHistoryItems,
@@ -254,7 +250,7 @@ func (n *HistoryResenderImpl) createReplicationRawRequest(
 
 func (n *HistoryResenderImpl) sendReplicationRawRequest(
 	ctx context.Context,
-	request *history.ReplicateEventsV2Request,
+	request *types.ReplicateEventsV2Request,
 ) error {
 
 	ctx, cancel := context.WithTimeout(ctx, resendContextTimeout)
@@ -273,7 +269,7 @@ func (n *HistoryResenderImpl) getHistory(
 	endEventVersion *int64,
 	token []byte,
 	pageSize int32,
-) (*admin.GetWorkflowExecutionRawHistoryV2Response, error) {
+) (*types.GetWorkflowExecutionRawHistoryV2Response, error) {
 
 	logger := n.logger.WithTags(tag.WorkflowRunID(runID))
 
@@ -286,7 +282,7 @@ func (n *HistoryResenderImpl) getHistory(
 
 	ctx, cancel := context.WithTimeout(ctx, resendContextTimeout)
 	defer cancel()
-	clientResp, err := n.adminClient.GetWorkflowExecutionRawHistoryV2(ctx, &types.GetWorkflowExecutionRawHistoryV2Request{
+	response, err := n.adminClient.GetWorkflowExecutionRawHistoryV2(ctx, &types.GetWorkflowExecutionRawHistoryV2Request{
 		Domain: common.StringPtr(domainName),
 		Execution: &types.WorkflowExecution{
 			WorkflowID: common.StringPtr(workflowID),
@@ -299,7 +295,6 @@ func (n *HistoryResenderImpl) getHistory(
 		MaximumPageSize:   common.Int32Ptr(pageSize),
 		NextPageToken:     token,
 	})
-	response := thrift.FromGetWorkflowExecutionRawHistoryV2Response(clientResp)
 	if err != nil {
 		logger.Error("error getting history", tag.Error(err))
 		return nil, err
