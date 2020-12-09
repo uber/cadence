@@ -13,6 +13,9 @@ brew install go
 ``` 
 * Make sure set PATH to include bin path of GO so that other executables like thriftrw can be found.
 ```bash
+# check it first
+echo $GOPATH
+# append to PATH
 PATH=$PATH:$GOPATH/bin
 # to confirm, run
 echo $PATH
