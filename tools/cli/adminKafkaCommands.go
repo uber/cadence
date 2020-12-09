@@ -45,9 +45,9 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
@@ -451,7 +451,7 @@ func decodeVisibility(message []byte, val *indexer.Message) error {
 
 // ClustersConfig describes the kafka clusters
 type ClustersConfig struct {
-	Clusters map[string]messaging.ClusterConfig
+	Clusters map[string]config.ClusterConfig
 	TLS      auth.TLS
 }
 

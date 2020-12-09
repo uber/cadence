@@ -66,9 +66,9 @@ const (
 	adminServiceOperationMaxInterval        = 5 * time.Second
 	adminServiceOperationExpirationInterval = 15 * time.Second
 
-	retryKafkaOperationInitialInterval    = 50 * time.Millisecond
-	retryKafkaOperationMaxInterval        = 10 * time.Second
-	retryKafkaOperationExpirationInterval = 30 * time.Second
+	retryKafkaOperationInitialInterval = 50 * time.Millisecond
+	retryKafkaOperationMaxInterval     = 10 * time.Second
+	retryKafkaOperationMaxAttempts     = 10
 
 	retryTaskProcessingInitialInterval = 50 * time.Millisecond
 	retryTaskProcessingMaxInterval     = 100 * time.Millisecond
@@ -176,11 +176,11 @@ func CreateAdminServiceRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// CreateKafkaOperationRetryPolicy creates a retry policy for kafka operation
-func CreateKafkaOperationRetryPolicy() backoff.RetryPolicy {
+// CreateDlqPublishRetryPolicy creates a retry policy for kafka operation
+func CreateDlqPublishRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(retryKafkaOperationInitialInterval)
 	policy.SetMaximumInterval(retryKafkaOperationMaxInterval)
-	policy.SetExpirationInterval(retryKafkaOperationExpirationInterval)
+	policy.SetMaximumAttempts(retryKafkaOperationMaxAttempts)
 
 	return policy
 }

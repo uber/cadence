@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,36 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package mocks
-
-import (
-	"github.com/uber/cadence/common/messaging"
-)
+package auth
 
 type (
-	// MessagingClient is the mock implementation for Service interface
-	MessagingClient struct {
-		consumerMock  messaging.Consumer
-		publisherMock messaging.Producer
+	// SASL describe SASL configuration (for Kafka)
+	SASL struct {
+		Enabled   bool   `yaml:"enabled"` // false as default
+		User      string `yaml:"user"`
+		Password  string `yaml:"password"`
+		Algorithm string `yaml:"algorithm"` // plain, sha512 or sha256
 	}
 )
-
-var _ messaging.Client = (*MessagingClient)(nil)
-
-// NewMockMessagingClient generate a dummy implementation of messaging client
-func NewMockMessagingClient(publisher messaging.Producer, consumer messaging.Consumer) messaging.Client {
-	return &MessagingClient{
-		publisherMock: publisher,
-		consumerMock:  consumer,
-	}
-}
-
-// NewConsumer generates a dummy implementation of kafka consumer
-func (c *MessagingClient) NewConsumer(appName, consumerName string) (messaging.Consumer, error) {
-	return c.consumerMock, nil
-}
-
-// NewProducer generates a dummy implementation of kafka producer
-func (c *MessagingClient) NewProducer(appName string) (messaging.Producer, error) {
-	return c.publisherMock, nil
-}
