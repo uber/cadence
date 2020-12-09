@@ -36,7 +36,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/queue"
 	"github.com/uber/cadence/service/history/shard"
@@ -93,7 +92,7 @@ func newTransferQueueProcessor(
 				shard.GetDomainCache(),
 				shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
 				func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
-					return historyService.ReplicateEventsV2(ctx, thrift.FromReplicateEventsV2Request(request))
+					return historyService.ReplicateEventsV2(ctx, request)
 				},
 				shard.GetService().GetPayloadSerializer(),
 				config.StandbyTaskReReplicationContextTimeout,

@@ -26,8 +26,6 @@ import (
 	"context"
 	"time"
 
-	h "github.com/uber/cadence/.gen/go/history"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/persistence"
@@ -61,9 +59,9 @@ type (
 	MutableState interface {
 		AddActivityTaskCancelRequestedEvent(int64, string, string) (*types.HistoryEvent, *persistence.ActivityInfo, error)
 		AddActivityTaskCanceledEvent(int64, int64, int64, []uint8, string) (*types.HistoryEvent, error)
-		AddActivityTaskCompletedEvent(int64, int64, *workflow.RespondActivityTaskCompletedRequest) (*types.HistoryEvent, error)
-		AddActivityTaskFailedEvent(int64, int64, *workflow.RespondActivityTaskFailedRequest) (*types.HistoryEvent, error)
-		AddActivityTaskScheduledEvent(int64, *types.ScheduleActivityTaskDecisionAttributes) (*types.HistoryEvent, *persistence.ActivityInfo, *workflow.ActivityLocalDispatchInfo, error)
+		AddActivityTaskCompletedEvent(int64, int64, *types.RespondActivityTaskCompletedRequest) (*types.HistoryEvent, error)
+		AddActivityTaskFailedEvent(int64, int64, *types.RespondActivityTaskFailedRequest) (*types.HistoryEvent, error)
+		AddActivityTaskScheduledEvent(int64, *types.ScheduleActivityTaskDecisionAttributes) (*types.HistoryEvent, *persistence.ActivityInfo, *types.ActivityLocalDispatchInfo, error)
 		AddActivityTaskStartedEvent(*persistence.ActivityInfo, int64, string, string) (*types.HistoryEvent, error)
 		AddActivityTaskTimedOutEvent(int64, int64, types.TimeoutType, []uint8) (*types.HistoryEvent, error)
 		AddCancelTimerFailedEvent(int64, *types.CancelTimerDecisionAttributes, string) (*types.HistoryEvent, error)
@@ -75,13 +73,13 @@ type (
 		AddChildWorkflowExecutionTimedOutEvent(int64, *types.WorkflowExecution, *types.WorkflowExecutionTimedOutEventAttributes) (*types.HistoryEvent, error)
 		AddCompletedWorkflowEvent(int64, *types.CompleteWorkflowExecutionDecisionAttributes) (*types.HistoryEvent, error)
 		AddContinueAsNewEvent(context.Context, int64, int64, string, *types.ContinueAsNewWorkflowExecutionDecisionAttributes) (*types.HistoryEvent, MutableState, error)
-		AddDecisionTaskCompletedEvent(int64, int64, *workflow.RespondDecisionTaskCompletedRequest, int) (*types.HistoryEvent, error)
+		AddDecisionTaskCompletedEvent(int64, int64, *types.RespondDecisionTaskCompletedRequest, int) (*types.HistoryEvent, error)
 		AddDecisionTaskFailedEvent(scheduleEventID int64, startedEventID int64, cause types.DecisionTaskFailedCause, details []byte, identity, reason, binChecksum, baseRunID, newRunID string, forkEventVersion int64) (*types.HistoryEvent, error)
 		AddDecisionTaskScheduleToStartTimeoutEvent(int64) (*types.HistoryEvent, error)
 		AddFirstDecisionTaskScheduled(*types.HistoryEvent) error
 		AddDecisionTaskScheduledEvent(bypassTaskGeneration bool) (*DecisionInfo, error)
 		AddDecisionTaskScheduledEventAsHeartbeat(bypassTaskGeneration bool, originalScheduledTimestamp int64) (*DecisionInfo, error)
-		AddDecisionTaskStartedEvent(int64, string, *workflow.PollForDecisionTaskRequest) (*types.HistoryEvent, *DecisionInfo, error)
+		AddDecisionTaskStartedEvent(int64, string, *types.PollForDecisionTaskRequest) (*types.HistoryEvent, *DecisionInfo, error)
 		AddDecisionTaskTimedOutEvent(int64, int64) (*types.HistoryEvent, error)
 		AddExternalWorkflowExecutionCancelRequested(int64, string, string, string) (*types.HistoryEvent, error)
 		AddExternalWorkflowExecutionSignaled(int64, string, string, string, []uint8) (*types.HistoryEvent, error)
@@ -100,10 +98,10 @@ type (
 		AddTimerFiredEvent(string) (*types.HistoryEvent, error)
 		AddTimerStartedEvent(int64, *types.StartTimerDecisionAttributes) (*types.HistoryEvent, *persistence.TimerInfo, error)
 		AddUpsertWorkflowSearchAttributesEvent(int64, *types.UpsertWorkflowSearchAttributesDecisionAttributes) (*types.HistoryEvent, error)
-		AddWorkflowExecutionCancelRequestedEvent(string, *h.RequestCancelWorkflowExecutionRequest) (*types.HistoryEvent, error)
+		AddWorkflowExecutionCancelRequestedEvent(string, *types.HistoryRequestCancelWorkflowExecutionRequest) (*types.HistoryEvent, error)
 		AddWorkflowExecutionCanceledEvent(int64, *types.CancelWorkflowExecutionDecisionAttributes) (*types.HistoryEvent, error)
 		AddWorkflowExecutionSignaled(signalName string, input []byte, identity string) (*types.HistoryEvent, error)
-		AddWorkflowExecutionStartedEvent(types.WorkflowExecution, *h.StartWorkflowExecutionRequest) (*types.HistoryEvent, error)
+		AddWorkflowExecutionStartedEvent(types.WorkflowExecution, *types.HistoryStartWorkflowExecutionRequest) (*types.HistoryEvent, error)
 		AddWorkflowExecutionTerminatedEvent(firstEventID int64, reason string, details []byte, identity string) (*types.HistoryEvent, error)
 		ClearStickyness()
 		CheckResettable() error
@@ -165,7 +163,7 @@ type (
 		IsResourceDuplicated(resourceDedupKey definition.DeduplicationID) bool
 		UpdateDuplicatedResource(resourceDedupKey definition.DeduplicationID)
 		Load(*persistence.WorkflowMutableState)
-		ReplicateActivityInfo(*h.SyncActivityRequest, bool) error
+		ReplicateActivityInfo(*types.SyncActivityRequest, bool) error
 		ReplicateActivityTaskCancelRequestedEvent(*types.HistoryEvent) error
 		ReplicateActivityTaskCanceledEvent(*types.HistoryEvent) error
 		ReplicateActivityTaskCompletedEvent(*types.HistoryEvent) error
@@ -211,7 +209,7 @@ type (
 		SetHistoryTree(treeID string) error
 		SetVersionHistories(*persistence.VersionHistories) error
 		UpdateActivity(*persistence.ActivityInfo) error
-		UpdateActivityProgress(ai *persistence.ActivityInfo, request *workflow.RecordActivityTaskHeartbeatRequest)
+		UpdateActivityProgress(ai *persistence.ActivityInfo, request *types.RecordActivityTaskHeartbeatRequest)
 		UpdateDecision(*DecisionInfo)
 		UpdateUserTimer(*persistence.TimerInfo) error
 		UpdateCurrentVersion(version int64, forceUpdate bool) error

@@ -26,8 +26,6 @@ import (
 	ctx "context"
 	"time"
 
-	h "github.com/uber/cadence/.gen/go/history"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
@@ -35,7 +33,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -51,7 +48,7 @@ type (
 	ActivityReplicator interface {
 		SyncActivity(
 			ctx ctx.Context,
-			request *h.SyncActivityRequest,
+			request *types.SyncActivityRequest,
 		) error
 	}
 
@@ -80,7 +77,7 @@ func NewActivityReplicator(
 
 func (r *activityReplicatorImpl) SyncActivity(
 	ctx ctx.Context,
-	request *h.SyncActivityRequest,
+	request *types.SyncActivityRequest,
 ) (retError error) {
 
 	// sync activity info will only be sent from active side, when
@@ -88,10 +85,10 @@ func (r *activityReplicatorImpl) SyncActivity(
 	// 2. activity heart beat
 	// no sync activity task will be sent when active side fail / timeout activity,
 	// since standby side does not have activity retry timer
-	domainID := request.GetDomainId()
+	domainID := request.GetDomainID()
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: request.WorkflowId,
-		RunID:      request.RunId,
+		WorkflowID: request.WorkflowID,
+		RunID:      request.RunID,
 	}
 
 	context, release, err := r.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution)
@@ -116,7 +113,7 @@ func (r *activityReplicatorImpl) SyncActivity(
 	}
 
 	version := request.GetVersion()
-	scheduleID := request.GetScheduledId()
+	scheduleID := request.GetScheduledID()
 	shouldApply, err := r.shouldApplySyncActivity(
 		domainID,
 		workflowExecution.GetWorkflowID(),
@@ -219,7 +216,7 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 	scheduleID int64,
 	activityVersion int64,
 	mutableState execution.MutableState,
-	incomingRawVersionHistory *workflow.VersionHistory,
+	incomingRawVersionHistory *types.VersionHistory,
 ) (bool, error) {
 
 	if mutableState.GetVersionHistories() != nil {
@@ -237,7 +234,7 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 			return false, err
 		}
 
-		incomingVersionHistory := persistence.NewVersionHistoryFromInternalType(thrift.ToVersionHistory(incomingRawVersionHistory))
+		incomingVersionHistory := persistence.NewVersionHistoryFromInternalType(incomingRawVersionHistory)
 		lastIncomingItem, err := incomingVersionHistory.GetLastItem()
 		if err != nil {
 			return false, err

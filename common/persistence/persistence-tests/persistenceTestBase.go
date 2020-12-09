@@ -611,7 +611,7 @@ func (s *TestBase) ContinueAsNewExecution(
 	condition int64,
 	newExecution types.WorkflowExecution,
 	nextEventID, decisionScheduleID int64,
-	prevResetPoints *workflow.ResetPoints,
+	prevResetPoints *types.ResetPoints,
 ) error {
 
 	newdecisionTask := &p.DecisionTask{

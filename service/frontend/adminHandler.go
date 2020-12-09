@@ -45,7 +45,6 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 var _ AdminHandler = (*adminHandlerImpl)(nil)
@@ -489,7 +488,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 	rawBlobs := rawHistoryResponse.HistoryEventBlobs
 	blobs := []*types.DataBlob{}
 	for _, blob := range rawBlobs {
-		blobs = append(blobs, thrift.ToDataBlob(blob.ToThrift()))
+		blobs = append(blobs, blob.ToInternal())
 	}
 
 	result := &types.GetWorkflowExecutionRawHistoryV2Response{

@@ -28,7 +28,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -183,7 +182,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(
 		BranchToken:                        info.BranchToken,
 		CronSchedule:                       info.CronSchedule,
 		ExpirationSeconds:                  int32(info.ExpirationSeconds.Seconds()),
-		AutoResetPoints:                    thrift.FromResetPoints(autoResetPoints),
+		AutoResetPoints:                    autoResetPoints,
 		SearchAttributes:                   info.SearchAttributes,
 		Memo:                               info.Memo,
 	}
@@ -445,7 +444,7 @@ func (m *executionManagerImpl) SerializeExecutionInfo(
 		return nil, err
 	}
 
-	resetPoints, err := m.serializer.SerializeResetPoints(thrift.ToResetPoints(info.AutoResetPoints), encoding)
+	resetPoints, err := m.serializer.SerializeResetPoints(info.AutoResetPoints, encoding)
 	if err != nil {
 		return nil, err
 	}

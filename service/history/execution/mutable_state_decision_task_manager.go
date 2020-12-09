@@ -29,7 +29,6 @@ import (
 	"math"
 	"time"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log/tag"
@@ -71,12 +70,12 @@ type (
 		AddDecisionTaskStartedEvent(
 			scheduleEventID int64,
 			requestID string,
-			request *workflow.PollForDecisionTaskRequest,
+			request *types.PollForDecisionTaskRequest,
 		) (*types.HistoryEvent, *DecisionInfo, error)
 		AddDecisionTaskCompletedEvent(
 			scheduleEventID int64,
 			startedEventID int64,
-			request *workflow.RespondDecisionTaskCompletedRequest,
+			request *types.RespondDecisionTaskCompletedRequest,
 			maxResetPoints int,
 		) (*types.HistoryEvent, error)
 		AddDecisionTaskFailedEvent(
@@ -404,7 +403,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddFirstDecisionTaskScheduled(
 func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskStartedEvent(
 	scheduleEventID int64,
 	requestID string,
-	request *workflow.PollForDecisionTaskRequest,
+	request *types.PollForDecisionTaskRequest,
 ) (*types.HistoryEvent, *DecisionInfo, error) {
 	opTag := tag.WorkflowActionDecisionTaskStarted
 	decision, ok := m.GetDecisionInfo(scheduleEventID)
@@ -451,7 +450,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskStartedEvent(
 func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskCompletedEvent(
 	scheduleEventID int64,
 	startedEventID int64,
-	request *workflow.RespondDecisionTaskCompletedRequest,
+	request *types.RespondDecisionTaskCompletedRequest,
 	maxResetPoints int,
 ) (*types.HistoryEvent, error) {
 	opTag := tag.WorkflowActionDecisionTaskCompleted

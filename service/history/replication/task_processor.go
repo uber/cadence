@@ -32,7 +32,6 @@ import (
 
 	"go.uber.org/yarpc/yarpcerrors"
 
-	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
@@ -41,7 +40,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/execution"
@@ -363,9 +361,9 @@ func (p *taskProcessorImpl) handleSyncShardStatus(
 	p.metricsClient.Scope(metrics.HistorySyncShardStatusScope).IncCounter(metrics.SyncShardFromRemoteCounter)
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
-	return p.historyEngine.SyncShardStatus(ctx, &h.SyncShardStatusRequest{
+	return p.historyEngine.SyncShardStatus(ctx, &types.SyncShardStatusRequest{
 		SourceCluster: common.StringPtr(p.sourceCluster),
-		ShardId:       common.Int64Ptr(int64(p.shard.GetShardID())),
+		ShardID:       common.Int64Ptr(int64(p.shard.GetShardID())),
 		Timestamp:     status.Timestamp,
 	})
 }
@@ -502,7 +500,7 @@ func (p *taskProcessorImpl) generateDLQRequest(
 
 	case types.ReplicationTaskTypeHistoryV2:
 		taskAttributes := replicationTask.GetHistoryTaskV2Attributes()
-		eventsDataBlob := persistence.NewDataBlobFromThrift(thrift.FromDataBlob(taskAttributes.GetEvents()))
+		eventsDataBlob := persistence.NewDataBlobFromInternal(taskAttributes.GetEvents())
 		events, err := p.historySerializer.DeserializeBatchEvents(eventsDataBlob)
 		if err != nil {
 			return nil, err

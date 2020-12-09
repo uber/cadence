@@ -21,8 +21,6 @@
 package testing
 
 import (
-	"github.com/uber/cadence/.gen/go/history"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -40,14 +38,14 @@ func AddWorkflowExecutionStartedEventWithParent(
 	input []byte,
 	executionStartToCloseTimeout,
 	taskStartToCloseTimeout int32,
-	parentInfo *history.ParentExecutionInfo,
+	parentInfo *types.ParentExecutionInfo,
 	identity string,
 ) *types.HistoryEvent {
 
-	startRequest := &workflow.StartWorkflowExecutionRequest{
-		WorkflowId:                          common.StringPtr(*workflowExecution.WorkflowID),
-		WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-		TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+	startRequest := &types.StartWorkflowExecutionRequest{
+		WorkflowID:                          common.StringPtr(*workflowExecution.WorkflowID),
+		WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+		TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 		Input:                               input,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
@@ -56,7 +54,7 @@ func AddWorkflowExecutionStartedEventWithParent(
 
 	event, _ := builder.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
-		&history.StartWorkflowExecutionRequest{
+		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID:          common.StringPtr(constants.TestDomainID),
 			StartRequest:        startRequest,
 			ParentExecutionInfo: parentInfo,
@@ -107,8 +105,8 @@ func AddDecisionTaskStartedEventWithRequestID(
 	taskList string,
 	identity string,
 ) *types.HistoryEvent {
-	event, _, _ := builder.AddDecisionTaskStartedEvent(scheduleID, requestID, &workflow.PollForDecisionTaskRequest{
-		TaskList: &workflow.TaskList{Name: common.StringPtr(taskList)},
+	event, _, _ := builder.AddDecisionTaskStartedEvent(scheduleID, requestID, &types.PollForDecisionTaskRequest{
+		TaskList: &types.TaskList{Name: common.StringPtr(taskList)},
 		Identity: common.StringPtr(identity),
 	})
 
@@ -123,7 +121,7 @@ func AddDecisionTaskCompletedEvent(
 	context []byte,
 	identity string,
 ) *types.HistoryEvent {
-	event, _ := builder.AddDecisionTaskCompletedEvent(scheduleID, startedID, &workflow.RespondDecisionTaskCompletedRequest{
+	event, _ := builder.AddDecisionTaskCompletedEvent(scheduleID, startedID, &types.RespondDecisionTaskCompletedRequest{
 		ExecutionContext: context,
 		Identity:         common.StringPtr(identity),
 	}, config.DefaultHistoryMaxAutoResetPoints)
@@ -213,7 +211,7 @@ func AddActivityTaskCompletedEvent(
 	result []byte,
 	identity string,
 ) *types.HistoryEvent {
-	event, _ := builder.AddActivityTaskCompletedEvent(scheduleID, startedID, &workflow.RespondActivityTaskCompletedRequest{
+	event, _ := builder.AddActivityTaskCompletedEvent(scheduleID, startedID, &types.RespondActivityTaskCompletedRequest{
 		Result:   result,
 		Identity: common.StringPtr(identity),
 	})
@@ -230,7 +228,7 @@ func AddActivityTaskFailedEvent(
 	details []byte,
 	identity string,
 ) *types.HistoryEvent {
-	event, _ := builder.AddActivityTaskFailedEvent(scheduleID, startedID, &workflow.RespondActivityTaskFailedRequest{
+	event, _ := builder.AddActivityTaskFailedEvent(scheduleID, startedID, &types.RespondActivityTaskFailedRequest{
 		Reason:   common.StringPtr(reason),
 		Details:  details,
 		Identity: common.StringPtr(identity),

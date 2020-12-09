@@ -27,7 +27,6 @@ import (
 	ctx "context"
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -409,7 +408,7 @@ func (r *workflowResetterImpl) failInflightActivity(
 			if _, err := mutableState.AddActivityTaskFailedEvent(
 				ai.ScheduleID,
 				ai.StartedID,
-				&shared.RespondActivityTaskFailedRequest{
+				&types.RespondActivityTaskFailedRequest{
 					Reason:   common.StringPtr(terminateReason),
 					Details:  ai.Details,
 					Identity: common.StringPtr(ai.StartedIdentity),
