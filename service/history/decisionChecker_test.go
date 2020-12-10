@@ -681,7 +681,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 			InitialIntervalInSeconds:    common.Int32Ptr(1),
 			BackoffCoefficient:          common.Float64Ptr(1.1),
 			ExpirationIntervalInSeconds: common.Int32Ptr(maximumScheduleToStartTimeoutForRetryInSeconds + 1000), // larger than wfTimeout and maximumScheduleToStartTimeoutForRetryInSeconds
-			NonRetriableErrorReasons:    []string{"cadenceInternal:Timeout ScheduleToStart"},
+			NonRetriableErrorReasons:    []string{"cadenceInternal:Timeout SCHEDULE_TO_START"},
 		},
 	}
 
