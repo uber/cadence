@@ -218,6 +218,9 @@ func validateCQLClientConfig(config *CQLClientConfig, isDryRun bool) error {
 	if config.numReplicas == 0 {
 		config.numReplicas = defaultNumReplicas
 	}
+	if config.CQLClient == nil {
+		config.CQLClient = defaultGoCQLClient
+	}
 
 	return nil
 }

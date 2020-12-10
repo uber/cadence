@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
 
 const (
@@ -47,6 +48,7 @@ type ClientFactory interface {
 	ClientFrontendClient(c *cli.Context) clientFrontend.Interface
 	ServerFrontendClient(c *cli.Context) frontend.Client
 	ServerAdminClient(c *cli.Context) admin.Client
+	CQLClient() gocql.Client
 }
 
 type clientFactory struct {
@@ -83,6 +85,11 @@ func (b *clientFactory) ServerFrontendClient(c *cli.Context) frontend.Client {
 func (b *clientFactory) ServerAdminClient(c *cli.Context) admin.Client {
 	b.ensureDispatcher(c)
 	return admin.NewThriftClient(serverAdmin.New(b.dispatcher.ClientConfig(cadenceFrontendService)))
+}
+
+// CQLClient builds a gocql client for connecting to cassandra
+func (b *clientFactory) CQLClient() gocql.Client {
+	return gocql.NewClient()
 }
 
 func (b *clientFactory) ensureDispatcher(c *cli.Context) {

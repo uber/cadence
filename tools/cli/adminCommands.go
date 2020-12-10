@@ -306,7 +306,7 @@ func connectToCassandra(c *cli.Context) (gocql.Client, gocql.Session) {
 		}
 	}
 
-	client := gocql.NewClient()
+	client := cFactory.CQLClient()
 	session, err := client.CreateSession(clusterConfig)
 	if err != nil {
 		ErrorAndExit("connect to Cassandra failed", err)
