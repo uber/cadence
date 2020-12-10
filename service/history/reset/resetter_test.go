@@ -548,7 +548,7 @@ func (s *workflowResetterSuite) TestClosePendingDecisionTask() {
 	sourceMutableState.EXPECT().AddDecisionTaskFailedEvent(
 		decisionScheduleEventID,
 		decisionStartEventID,
-		shared.DecisionTaskFailedCauseResetWorkflow,
+		types.DecisionTaskFailedCauseResetWorkflow,
 		nil,
 		execution.IdentityHistoryService,
 		reason,
