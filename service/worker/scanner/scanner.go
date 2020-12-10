@@ -170,25 +170,16 @@ func (s *Scanner) startShardScanner(
 		backgroundActivityContext = context.WithValue(
 			backgroundActivityContext,
 			scannerContextKey,
-			shardscanner.Context{
-				Resource:   s.context.Resource,
-				Scope:      s.context.Resource.GetMetricsClient().Scope(metrics.ExecutionsScannerScope),
-				Config:     config,
-				ContextKey: scannerContextKey,
-				Hooks:      config.ScannerHooks(),
-			})
+			getShardScannerContext(s.context, config),
+		)
 	}
 
 	if config.DynamicParams.FixerEnabled() {
 		backgroundActivityContext = context.WithValue(
 			backgroundActivityContext,
 			fixerContextKey,
-			shardscanner.FixerContext{
-				Resource:   s.context.Resource,
-				Scope:      s.context.Resource.GetMetricsClient().Scope(metrics.ExecutionsFixerScope),
-				ContextKey: fixerContextKey,
-				Hooks:      config.FixerHooks(),
-			})
+			getShardFixerContext(s.context, config),
+		)
 
 		workerTaskListNames = append(workerTaskListNames, config.FixerTLName)
 	}
@@ -257,4 +248,24 @@ func (s *Scanner) startWorkflow(
 	}
 	s.context.GetLogger().Info("workflow successfully started", tag.WorkflowType(workflowType))
 	return nil
+}
+
+func getShardScannerContext(ctx scannerContext, config *shardscanner.ScannerConfig) shardscanner.Context {
+	return shardscanner.Context{
+		Resource:   ctx.Resource,
+		Scope:      ctx.Resource.GetMetricsClient().Scope(metrics.ExecutionsScannerScope),
+		Config:     config,
+		ContextKey: shardscanner.ScannerContextKey(config.ScannerWFTypeName),
+		Hooks:      config.ScannerHooks(),
+	}
+}
+
+func getShardFixerContext(ctx scannerContext, config *shardscanner.ScannerConfig) shardscanner.FixerContext {
+	return shardscanner.FixerContext{
+		Resource:   ctx.Resource,
+		Scope:      ctx.Resource.GetMetricsClient().Scope(metrics.ExecutionsFixerScope),
+		ContextKey: shardscanner.ScannerContextKey(config.FixerWFTypeName),
+		Hooks:      config.FixerHooks(),
+		Config:     config,
+	}
 }
