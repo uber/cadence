@@ -248,7 +248,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 }
 
 func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
-	id := "integration-reset-workflow-test"
+	id := "integration-reset-workflow-test-no-decision-completed"
 	wt := "integration-reset-workflow-test-type"
 	tl := "integration-reset-workflow-test-taskqueue"
 	identity := "worker1"

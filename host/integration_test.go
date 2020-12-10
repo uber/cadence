@@ -1298,7 +1298,7 @@ func (s *integrationSuite) TestCronWorkflowTimeout() {
 	s.Equal(types.EventTypeWorkflowExecutionContinuedAsNew, lastEvent.GetEventType())
 	attributes := lastEvent.WorkflowExecutionContinuedAsNewEventAttributes
 	s.Equal(types.ContinueAsNewInitiatorCronSchedule, attributes.GetInitiator())
-	s.Equal("cadenceInternal:Timeout START_TO_CLOSE", attributes.GetFailureReason())
+	s.Equal("cadenceInternal:Timeout StartToClose", attributes.GetFailureReason())
 	s.Equal(memo, attributes.Memo)
 	s.Equal(searchAttr, attributes.SearchAttributes)
 
