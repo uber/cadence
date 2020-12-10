@@ -26,11 +26,7 @@ package execution
 
 import (
 	context "context"
-	reflect "reflect"
-	time "time"
-
 	gomock "github.com/golang/mock/gomock"
-
 	history "github.com/uber/cadence/.gen/go/history"
 	shared "github.com/uber/cadence/.gen/go/shared"
 	cache "github.com/uber/cadence/common/cache"
@@ -38,6 +34,8 @@ import (
 	persistence "github.com/uber/cadence/common/persistence"
 	types "github.com/uber/cadence/common/types"
 	query "github.com/uber/cadence/service/history/query"
+	reflect "reflect"
+	time "time"
 )
 
 // MockMutableState is a mock of MutableState interface
@@ -353,10 +351,10 @@ func (mr *MockMutableStateMockRecorder) AddDecisionTaskScheduleToStartTimeoutEve
 }
 
 // AddDecisionTaskResetTimeoutEvent mocks base method
-func (m *MockMutableState) AddDecisionTaskResetTimeoutEvent(arg0 int64, arg1, arg2 string, arg3 int64, arg4 string) (*shared.HistoryEvent, error) {
+func (m *MockMutableState) AddDecisionTaskResetTimeoutEvent(arg0 int64, arg1, arg2 string, arg3 int64, arg4 string) (*types.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddDecisionTaskResetTimeoutEvent", arg0, arg1, arg2, arg3, arg4)
-	ret0, _ := ret[0].(*shared.HistoryEvent)
+	ret0, _ := ret[0].(*types.HistoryEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
