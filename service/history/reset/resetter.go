@@ -535,6 +535,12 @@ func (r *workflowResetterImpl) reapplyWorkflowEvents(
 	//  from visibility for better coverage of events eligible for re-application.
 	//  after the above change, this API do not have to return the continue as new run ID
 
+	if firstEventID == nextEventID {
+		// This means the workflow reset to a pending decision task
+		// and the decision task is the latest event in the workflow.
+		return "", nil
+	}
+
 	iter := collection.NewPagingIterator(r.getPaginationFn(
 		ctx,
 		firstEventID,
@@ -628,13 +634,14 @@ func (r *workflowResetterImpl) closePendingDecisionTask(
 	resetReason string,
 ) (execution.MutableState, error) {
 
+	if len(resetMutableState.GetPendingChildExecutionInfos()) > 0 {
+		return nil, &shared.BadRequestError{
+			Message: fmt.Sprintf("Can not reset workflow with pending child workflows"),
+		}
+	}
+
 	if decision, ok := resetMutableState.GetInFlightDecision(); ok {
 		// reset workflow has decision task start
-		if len(resetMutableState.GetPendingChildExecutionInfos()) > 0 {
-			return nil, &shared.BadRequestError{
-				Message: fmt.Sprintf("Can not only reset workflow with pending child workflows"),
-			}
-		}
 		_, err := resetMutableState.AddDecisionTaskFailedEvent(
 			decision.ScheduleID,
 			decision.StartedID,
@@ -653,11 +660,6 @@ func (r *workflowResetterImpl) closePendingDecisionTask(
 	} else if decision, ok := resetMutableState.GetPendingDecision(); ok {
 		if ok {
 			//reset workflow has decision task schedule
-			if len(resetMutableState.GetPendingChildExecutionInfos()) > 0 {
-				return nil, &shared.BadRequestError{
-					Message: fmt.Sprintf("Can not only reset workflow with pending child workflows"),
-				}
-			}
 			_, err := resetMutableState.AddDecisionTaskResetTimeoutEvent(
 				decision.ScheduleID,
 				baseRunID,

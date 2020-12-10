@@ -2482,7 +2482,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		}
 	}
 	if request.GetDecisionFinishEventId() <= common.FirstEventID ||
-		request.GetDecisionFinishEventId() >= baseMutableState.GetNextEventID() {
+		request.GetDecisionFinishEventId() > baseMutableState.GetNextEventID() {
 		return nil, &types.BadRequestError{
 			Message: "Decision finish ID must be > 1 && <= workflow next event ID.",
 		}

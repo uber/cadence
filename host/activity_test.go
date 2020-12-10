@@ -848,7 +848,7 @@ func (s *integrationSuite) TestActivityTimeouts() {
 				for i := 0; i < 6; i++ {
 					s.Logger.Info("Heartbeating for activity", tag.WorkflowActivityID(activityID), tag.Counter(i))
 					_, err := s.engine.RecordActivityTaskHeartbeat(createContext(), &workflow.RecordActivityTaskHeartbeatRequest{
-						TaskToken: taskToken, Details: []byte(string(i))})
+						TaskToken: taskToken})
 					s.Nil(err)
 					time.Sleep(1 * time.Second)
 				}
