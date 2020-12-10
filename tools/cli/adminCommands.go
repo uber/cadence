@@ -287,7 +287,7 @@ func connectToCassandra(c *cli.Context) (gocql.Client, gocql.Session) {
 	clusterConfig := gocql.ClusterConfig{
 		Hosts:             host,
 		Port:              c.Int(FlagDBPort),
-		Region:            c.String(FlagRegion),
+		Region:            c.String(FlagDBRegion),
 		User:              c.String(FlagUsername),
 		Password:          c.String(FlagPassword),
 		Keyspace:          getRequiredOption(c, FlagKeyspace),

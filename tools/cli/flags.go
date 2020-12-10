@@ -36,7 +36,7 @@ const (
 	FlagDBType                            = "db_type"
 	FlagDBAddress                         = "db_address"
 	FlagDBPort                            = "db_port"
-	FlagRegion                            = "region"
+	FlagDBRegion                          = "db_region"
 	FlagHistoryAddressWithAlias           = FlagHistoryAddress + ", had"
 	FlagDomainID                          = "domain_id"
 	FlagDomain                            = "domain"
