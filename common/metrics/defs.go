@@ -575,6 +575,8 @@ const (
 	MessagingClientPublishScope
 	// MessagingPublishBatchScope tracks Publish calls made by service to messaging layer
 	MessagingClientPublishBatchScope
+	// MessagingClientConsumerScope tracks the consumer activities
+	MessagingClientConsumerScope
 
 	// DomainCacheScope tracks domain cache callbacks
 	DomainCacheScope
@@ -1320,6 +1322,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 
 		MessagingClientPublishScope:      {operation: "MessagingClientPublish"},
 		MessagingClientPublishBatchScope: {operation: "MessagingClientPublishBatch"},
+		MessagingClientConsumerScope:     {operation: "MessagingClientConsumerScope"},
 
 		DomainCacheScope:                                      {operation: "DomainCache"},
 		HistoryRereplicationByTransferTaskScope:               {operation: "HistoryRereplicationByTransferTask"},
@@ -1645,6 +1648,12 @@ const (
 
 	PriorityTaskSubmitRequest
 	PriorityTaskSubmitLatency
+
+	KafkaConsumerMessageIn
+	KafkaConsumerMessageAck
+	KafkaConsumerMessageNack
+	KafkaConsumerMessageNackDlqErr
+	KafkaConsumerSessionStart
 
 	HistoryArchiverArchiveNonRetryableErrorCount
 	HistoryArchiverArchiveTransientErrorCount
@@ -2084,6 +2093,11 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ParallelTaskTaskProcessingLatency:                   {metricName: "paralleltask_task_processing_latency", metricType: Timer},
 		PriorityTaskSubmitRequest:                           {metricName: "prioritytask_submit_request", metricType: Counter},
 		PriorityTaskSubmitLatency:                           {metricName: "prioritytask_submit_latency", metricType: Timer},
+		KafkaConsumerMessageIn:                              {metricName: "kafka_consumer_message_in", metricType: Counter},
+		KafkaConsumerMessageAck:                             {metricName: "kafka_consumer_message_ack", metricType: Counter},
+		KafkaConsumerMessageNack:                            {metricName: "kafka_consumer_message_nack", metricType: Counter},
+		KafkaConsumerMessageNackDlqErr:                      {metricName: "kafka_consumer_message_nack_dlq_err", metricType: Counter},
+		KafkaConsumerSessionStart:                           {metricName: "kafka_consumer_session_start", metricType: Counter},
 
 		HistoryArchiverArchiveNonRetryableErrorCount:              {metricName: "history_archiver_archive_non_retryable_error", metricType: Counter},
 		HistoryArchiverArchiveTransientErrorCount:                 {metricName: "history_archiver_archive_transient_error", metricType: Counter},

@@ -99,6 +99,7 @@ const (
 	jsonTypeInput jsonType = iota
 	jsonTypeMemo
 	jsonTypeHeader
+	jsonTypeSignal
 )
 
 var (

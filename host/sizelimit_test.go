@@ -32,9 +32,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/types"
 )
 
 type sizeLimitIntegrationSuite struct {
@@ -70,16 +70,16 @@ func (s *sizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 	identity := "worker1"
 	activityName := "activity_type1"
 
-	workflowType := &workflow.WorkflowType{}
+	workflowType := &types.WorkflowType{}
 	workflowType.Name = common.StringPtr(wt)
 
-	taskList := &workflow.TaskList{}
+	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
 
-	request := &workflow.StartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
+	request := &types.StartWorkflowExecutionRequest{
+		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowId:                          common.StringPtr(id),
+		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -91,23 +91,23 @@ func (s *sizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunId))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
 
 	activityCount := int32(4)
 	activityCounter := int32(0)
-	dtHandler := func(execution *workflow.WorkflowExecution, wt *workflow.WorkflowType,
-		previousStartedEventID, startedEventID int64, history *workflow.History) ([]byte, []*workflow.Decision, error) {
+	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 		if activityCounter < activityCount {
 			activityCounter++
 			buf := new(bytes.Buffer)
 			s.Nil(binary.Write(buf, binary.LittleEndian, activityCounter))
 
-			return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
-				DecisionType: common.DecisionTypePtr(workflow.DecisionTypeScheduleActivityTask),
-				ScheduleActivityTaskDecisionAttributes: &workflow.ScheduleActivityTaskDecisionAttributes{
-					ActivityId:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType:                  &workflow.ActivityType{Name: common.StringPtr(activityName)},
-					TaskList:                      &workflow.TaskList{Name: &tl},
+			return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
+				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
+				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
+					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
@@ -117,15 +117,15 @@ func (s *sizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 			}}, nil
 		}
 
-		return []byte(strconv.Itoa(int(activityCounter))), []*workflow.Decision{{
-			DecisionType: common.DecisionTypePtr(workflow.DecisionTypeCompleteWorkflowExecution),
-			CompleteWorkflowExecutionDecisionAttributes: &workflow.CompleteWorkflowExecutionDecisionAttributes{
+		return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
+			DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
+			CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{
 				Result: []byte("Done."),
 			},
 		}}, nil
 	}
 
-	atHandler := func(execution *workflow.WorkflowExecution, activityType *workflow.ActivityType,
+	atHandler := func(execution *types.WorkflowExecution, activityType *types.ActivityType,
 		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
 
 		return []byte("Activity Result."), false, nil
@@ -158,32 +158,32 @@ func (s *sizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 	s.Nil(err)
 
 	// verify last event is terminated event
-	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &workflow.GetWorkflowExecutionHistoryRequest{
+	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(s.domainName),
-		Execution: &workflow.WorkflowExecution{
-			WorkflowId: common.StringPtr(id),
-			RunId:      common.StringPtr(we.GetRunId()),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(id),
+			RunID:      common.StringPtr(we.GetRunID()),
 		},
 	})
 	s.Nil(err)
 	history := historyResponse.History
 	lastEvent := history.Events[len(history.Events)-1]
-	s.Equal(workflow.EventTypeWorkflowExecutionFailed, lastEvent.GetEventType())
+	s.Equal(types.EventTypeWorkflowExecutionFailed, lastEvent.GetEventType())
 	failedEventAttributes := lastEvent.WorkflowExecutionFailedEventAttributes
 	s.Equal(common.FailureReasonSizeExceedsLimit, failedEventAttributes.GetReason())
 
 	// verify visibility is correctly processed from open to close
 	isCloseCorrect := false
 	for i := 0; i < 10; i++ {
-		resp, err1 := s.engine.ListClosedWorkflowExecutions(createContext(), &workflow.ListClosedWorkflowExecutionsRequest{
+		resp, err1 := s.engine.ListClosedWorkflowExecutions(createContext(), &types.ListClosedWorkflowExecutionsRequest{
 			Domain:          common.StringPtr(s.domainName),
 			MaximumPageSize: common.Int32Ptr(100),
-			StartTimeFilter: &workflow.StartTimeFilter{
+			StartTimeFilter: &types.StartTimeFilter{
 				EarliestTime: common.Int64Ptr(0),
 				LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 			},
-			ExecutionFilter: &workflow.WorkflowExecutionFilter{
-				WorkflowId: common.StringPtr(id),
+			ExecutionFilter: &types.WorkflowExecutionFilter{
+				WorkflowID: common.StringPtr(id),
 			},
 		})
 		s.Nil(err1)

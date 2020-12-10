@@ -189,6 +189,61 @@ func RunWorkflow(c *cli.Context) {
 func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 	serviceClient := cFactory.ClientFrontendClient(c)
 
+	startRequest := constructStartWorkflowRequest(c)
+	domain := startRequest.GetDomain()
+	wid := startRequest.GetWorkflowId()
+	workflowType := startRequest.WorkflowType.GetName()
+	taskList := startRequest.TaskList.GetName()
+	input := string(startRequest.Input)
+
+	startFn := func() {
+		tcCtx, cancel := newContext(c)
+		defer cancel()
+		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
+
+		if err != nil {
+			ErrorAndExit("Failed to create workflow.", err)
+		} else {
+			fmt.Printf("Started Workflow Id: %s, run Id: %s\n", wid, resp.GetRunId())
+		}
+	}
+
+	runFn := func() {
+		tcCtx, cancel := newContextForLongPoll(c)
+		defer cancel()
+		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
+
+		if err != nil {
+			ErrorAndExit("Failed to run workflow.", err)
+		}
+
+		// print execution summary
+		fmt.Println(colorMagenta("Running execution:"))
+		table := tablewriter.NewWriter(os.Stdout)
+		executionData := [][]string{
+			{"Workflow Id", wid},
+			{"Run Id", resp.GetRunId()},
+			{"Type", workflowType},
+			{"Domain", domain},
+			{"Task List", taskList},
+			{"Args", truncate(input)}, // in case of large input
+		}
+		table.SetBorder(false)
+		table.SetColumnSeparator(":")
+		table.AppendBulk(executionData) // Add Bulk Data
+		table.Render()
+
+		printWorkflowProgress(c, wid, resp.GetRunId())
+	}
+
+	if shouldPrintProgress {
+		runFn()
+	} else {
+		startFn()
+	}
+}
+
+func constructStartWorkflowRequest(c *cli.Context) *s.StartWorkflowExecutionRequest {
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	taskList := getRequiredOption(c, FlagTaskList)
 	workflowType := getRequiredOption(c, FlagWorkflowType)
@@ -259,51 +314,7 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 		startRequest.SearchAttributes = &s.SearchAttributes{IndexedFields: searchAttrFields}
 	}
 
-	startFn := func() {
-		tcCtx, cancel := newContext(c)
-		defer cancel()
-		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
-
-		if err != nil {
-			ErrorAndExit("Failed to create workflow.", err)
-		} else {
-			fmt.Printf("Started Workflow Id: %s, run Id: %s\n", wid, resp.GetRunId())
-		}
-	}
-
-	runFn := func() {
-		tcCtx, cancel := newContextForLongPoll(c)
-		defer cancel()
-		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
-
-		if err != nil {
-			ErrorAndExit("Failed to run workflow.", err)
-		}
-
-		// print execution summary
-		fmt.Println(colorMagenta("Running execution:"))
-		table := tablewriter.NewWriter(os.Stdout)
-		executionData := [][]string{
-			{"Workflow Id", wid},
-			{"Run Id", resp.GetRunId()},
-			{"Type", workflowType},
-			{"Domain", domain},
-			{"Task List", taskList},
-			{"Args", truncate(input)}, // in case of large input
-		}
-		table.SetBorder(false)
-		table.SetColumnSeparator(":")
-		table.AppendBulk(executionData) // Add Bulk Data
-		table.Render()
-
-		printWorkflowProgress(c, wid, resp.GetRunId())
-	}
-
-	if shouldPrintProgress {
-		runFn()
-	} else {
-		startFn()
-	}
+	return startRequest
 }
 
 func processSearchAttr(c *cli.Context) map[string][]byte {
@@ -503,6 +514,51 @@ func SignalWorkflow(c *cli.Context) {
 	} else {
 		fmt.Println("Signal workflow succeeded.")
 	}
+}
+
+// SignalWithStartWorkflowExecution starts a workflow execution if not already exists and signals it
+func SignalWithStartWorkflowExecution(c *cli.Context) {
+	serviceClient := cFactory.ClientFrontendClient(c)
+
+	signalWithStartRequest := constructSignalWithStartWorkflowRequest(c)
+
+	tcCtx, cancel := newContext(c)
+	defer cancel()
+
+	resp, err := serviceClient.SignalWithStartWorkflowExecution(tcCtx, signalWithStartRequest)
+	if err != nil {
+		ErrorAndExit("SignalWithStart workflow failed.", err)
+	} else {
+		fmt.Printf("SignalWithStart workflow succeeded. Workflow Id: %s, run Id: %s\n", signalWithStartRequest.GetWorkflowId(), resp.GetRunId())
+	}
+}
+
+func constructSignalWithStartWorkflowRequest(c *cli.Context) *s.SignalWithStartWorkflowExecutionRequest {
+	startRequest := constructStartWorkflowRequest(c)
+
+	return &s.SignalWithStartWorkflowExecutionRequest{
+		Domain:                              startRequest.Domain,
+		WorkflowId:                          startRequest.WorkflowId,
+		WorkflowType:                        startRequest.WorkflowType,
+		TaskList:                            startRequest.TaskList,
+		Input:                               startRequest.Input,
+		ExecutionStartToCloseTimeoutSeconds: startRequest.ExecutionStartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      startRequest.TaskStartToCloseTimeoutSeconds,
+		Identity:                            startRequest.Identity,
+		RequestId:                           startRequest.RequestId,
+		WorkflowIdReusePolicy:               startRequest.WorkflowIdReusePolicy,
+		RetryPolicy:                         startRequest.RetryPolicy,
+		CronSchedule:                        startRequest.CronSchedule,
+		Memo:                                startRequest.Memo,
+		SearchAttributes:                    startRequest.SearchAttributes,
+		Header:                              startRequest.Header,
+		SignalName:                          common.StringPtr(getRequiredOption(c, FlagName)),
+		SignalInput:                         []byte(processJSONInputSignal(c)),
+	}
+}
+
+func processJSONInputSignal(c *cli.Context) string {
+	return processJSONInputHelper(c, jsonTypeSignal)
 }
 
 // QueryWorkflow query workflow execution

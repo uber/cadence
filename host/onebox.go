@@ -27,10 +27,6 @@ import (
 	"sync"
 	"time"
 
-	adminClient "github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/common/authorization"
-	"github.com/uber/cadence/common/domain"
-
 	"github.com/pborman/uuid"
 	"github.com/uber-go/tally"
 
@@ -39,16 +35,18 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/tchannel"
 
-	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
-	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
-	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	"github.com/uber/cadence/client"
+	adminClient "github.com/uber/cadence/client/admin"
+	frontendClient "github.com/uber/cadence/client/frontend"
+	historyClient "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/cache"
 	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -73,10 +71,10 @@ import (
 type Cadence interface {
 	Start() error
 	Stop()
-	GetAdminClient() adminserviceclient.Interface
-	GetFrontendClient() workflowserviceclient.Interface
+	GetAdminClient() adminClient.Client
+	GetFrontendClient() frontendClient.Client
 	FrontendAddress() string
-	GetHistoryClient() historyserviceclient.Interface
+	GetHistoryClient() historyClient.Client
 	GetExecutionManagerFactory() persistence.ExecutionManagerFactory
 }
 
@@ -86,9 +84,9 @@ type (
 		matchingService common.Daemon
 		historyServices []common.Daemon
 
-		adminClient                   adminserviceclient.Interface
-		frontendClient                workflowserviceclient.Interface
-		historyClient                 historyserviceclient.Interface
+		adminClient                   adminClient.Client
+		frontendClient                frontendClient.Client
+		historyClient                 historyClient.Client
 		logger                        log.Logger
 		clusterMetadata               cluster.Metadata
 		persistenceConfig             config.Persistence
@@ -382,15 +380,15 @@ func (c *cadenceImpl) WorkerPProfPort() int {
 	}
 }
 
-func (c *cadenceImpl) GetAdminClient() adminserviceclient.Interface {
+func (c *cadenceImpl) GetAdminClient() adminClient.Client {
 	return c.adminClient
 }
 
-func (c *cadenceImpl) GetFrontendClient() workflowserviceclient.Interface {
+func (c *cadenceImpl) GetFrontendClient() frontendClient.Client {
 	return c.frontendClient
 }
 
-func (c *cadenceImpl) GetHistoryClient() historyserviceclient.Interface {
+func (c *cadenceImpl) GetHistoryClient() historyClient.Client {
 	return c.historyClient
 }
 

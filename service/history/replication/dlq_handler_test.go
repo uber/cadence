@@ -30,7 +30,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
@@ -38,7 +37,6 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -196,16 +194,14 @@ func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 	}).Return(resp, nil).Times(1)
 
 	s.mockClientBean.EXPECT().GetRemoteAdminClient(s.sourceCluster).Return(s.adminClient).AnyTimes()
-	replicationTask := &replicator.ReplicationTask{
-		TaskType:     replicator.ReplicationTaskTypeHistory.Ptr(),
-		SourceTaskId: common.Int64Ptr(lastMessageID),
+	replicationTask := &types.ReplicationTask{
+		TaskType:     types.ReplicationTaskTypeHistory.Ptr(),
+		SourceTaskID: common.Int64Ptr(lastMessageID),
 	}
 	s.adminClient.EXPECT().
 		GetDLQReplicationMessages(ctx, gomock.Any()).
 		Return(&types.GetDLQReplicationMessagesResponse{
-			ReplicationTasks: []*types.ReplicationTask{
-				thrift.ToReplicationTask(replicationTask),
-			},
+			ReplicationTasks: []*types.ReplicationTask{replicationTask},
 		}, nil)
 	s.taskExecutor.EXPECT().execute(replicationTask, true).Return(0, nil).Times(1)
 	s.executionManager.On("RangeDeleteReplicationTaskFromDLQ", mock.Anything,

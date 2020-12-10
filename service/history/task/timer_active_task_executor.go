@@ -237,7 +237,7 @@ Loop:
 		if _, err := mutableState.AddActivityTaskTimedOutEvent(
 			activityInfo.ScheduleID,
 			activityInfo.StartedID,
-			execution.TimerTypeToThrift(timerSequenceID.TimerType),
+			execution.TimerTypeToInternal(timerSequenceID.TimerType),
 			activityInfo.Details,
 		); err != nil {
 			return err
@@ -291,7 +291,7 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 	}
 
 	scheduleDecision := false
-	switch execution.TimerTypeFromThrift(workflow.TimeoutType(task.TimeoutType)) {
+	switch execution.TimerTypeFromInternal(types.TimeoutType(task.TimeoutType)) {
 	case execution.TimerTypeStartToClose:
 		t.emitTimeoutMetricScopeWithDomainTag(
 			mutableState.GetExecutionInfo().DomainID,
@@ -488,14 +488,14 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 
 	timeoutReason := execution.TimerTypeToReason(execution.TimerTypeStartToClose)
 	backoffInterval := mutableState.GetRetryBackoffDuration(timeoutReason)
-	continueAsNewInitiator := workflow.ContinueAsNewInitiatorRetryPolicy
+	continueAsNewInitiator := types.ContinueAsNewInitiatorRetryPolicy
 	if backoffInterval == backoff.NoBackoff {
 		// check if a cron backoff is needed
 		backoffInterval, err = mutableState.GetCronBackoffDuration(ctx)
 		if err != nil {
 			return err
 		}
-		continueAsNewInitiator = workflow.ContinueAsNewInitiatorCronSchedule
+		continueAsNewInitiator = types.ContinueAsNewInitiatorCronSchedule
 	}
 	if backoffInterval == backoff.NoBackoff {
 		if err := timeoutWorkflow(mutableState, eventBatchFirstEventID); err != nil {
@@ -514,7 +514,7 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 	}
 
 	startAttributes := startEvent.WorkflowExecutionStartedEventAttributes
-	continueAsNewAttributes := &workflow.ContinueAsNewWorkflowExecutionDecisionAttributes{
+	continueAsNewAttributes := &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
 		WorkflowType:                        startAttributes.WorkflowType,
 		TaskList:                            startAttributes.TaskList,
 		Input:                               startAttributes.Input,
@@ -546,9 +546,9 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 		t.shard.GetTimeSource().Now(),
 		execution.NewContext(
 			newExecutionInfo.DomainID,
-			workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(newExecutionInfo.WorkflowID),
-				RunId:      common.StringPtr(newExecutionInfo.RunID),
+			types.WorkflowExecution{
+				WorkflowID: common.StringPtr(newExecutionInfo.WorkflowID),
+				RunID:      common.StringPtr(newExecutionInfo.RunID),
 			},
 			t.shard,
 			t.shard.GetExecutionManager(),

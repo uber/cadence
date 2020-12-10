@@ -30,6 +30,7 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/events"
 )
 
@@ -66,11 +67,11 @@ type (
 		GetReplicationMessages(ctx context.Context, pollingCluster string, lastReadMessageID int64) (*r.ReplicationMessages, error)
 		GetDLQReplicationMessages(ctx context.Context, taskInfos []*r.ReplicationTaskInfo) ([]*r.ReplicationTask, error)
 		QueryWorkflow(ctx context.Context, request *h.QueryWorkflowRequest) (*h.QueryWorkflowResponse, error)
-		ReapplyEvents(ctx context.Context, domainUUID string, workflowID string, runID string, events []*workflow.HistoryEvent) error
+		ReapplyEvents(ctx context.Context, domainUUID string, workflowID string, runID string, events []*types.HistoryEvent) error
 		ReadDLQMessages(ctx context.Context, messagesRequest *r.ReadDLQMessagesRequest) (*r.ReadDLQMessagesResponse, error)
 		PurgeDLQMessages(ctx context.Context, messagesRequest *r.PurgeDLQMessagesRequest) error
 		MergeDLQMessages(ctx context.Context, messagesRequest *r.MergeDLQMessagesRequest) (*r.MergeDLQMessagesResponse, error)
-		RefreshWorkflowTasks(ctx context.Context, domainUUID string, execution workflow.WorkflowExecution) error
+		RefreshWorkflowTasks(ctx context.Context, domainUUID string, execution types.WorkflowExecution) error
 		ResetTransferQueue(ctx context.Context, clusterName string) error
 		ResetTimerQueue(ctx context.Context, clusterName string) error
 		DescribeTransferQueue(ctx context.Context, clusterName string) (*workflow.DescribeQueueResponse, error)

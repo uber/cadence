@@ -25,8 +25,6 @@ import (
 	"fmt"
 
 	"github.com/uber/cadence/common/types"
-
-	"github.com/uber/cadence/.gen/go/shared"
 )
 
 // ReadFullPageV2Events reads a full page of history events from HistoryManager. Due to storage format of V2 History
@@ -36,8 +34,8 @@ func ReadFullPageV2Events(
 	ctx context.Context,
 	historyV2Mgr HistoryManager,
 	req *ReadHistoryBranchRequest,
-) ([]*shared.HistoryEvent, int, []byte, error) {
-	historyEvents := []*shared.HistoryEvent{}
+) ([]*types.HistoryEvent, int, []byte, error) {
+	historyEvents := []*types.HistoryEvent{}
 	size := int(0)
 	for {
 		response, err := historyV2Mgr.ReadHistoryBranch(ctx, req)
@@ -60,8 +58,8 @@ func ReadFullPageV2EventsByBatch(
 	ctx context.Context,
 	historyV2Mgr HistoryManager,
 	req *ReadHistoryBranchRequest,
-) ([]*shared.History, int, []byte, error) {
-	historyBatches := []*shared.History{}
+) ([]*types.History, int, []byte, error) {
+	historyBatches := []*types.History{}
 	eventsRead := 0
 	size := 0
 	for {
@@ -102,10 +100,10 @@ func PaginateHistory(
 	tokenIn []byte,
 	pageSize int,
 	shardID *int,
-) ([]*shared.HistoryEvent, []*shared.History, []byte, int, error) {
+) ([]*types.HistoryEvent, []*types.History, []byte, int, error) {
 
-	historyEvents := []*shared.HistoryEvent{}
-	historyBatches := []*shared.History{}
+	historyEvents := []*types.HistoryEvent{}
+	historyBatches := []*types.History{}
 	var tokenOut []byte
 	var historySize int
 

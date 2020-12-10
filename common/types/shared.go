@@ -1995,11 +1995,67 @@ func (v *DecisionTaskStartedEventAttributes) GetRequestID() (o string) {
 	return
 }
 
+// DecisionTaskTimedOutCause is an internal type (TBD...)
+type DecisionTaskTimedOutCause int32
+
+// Ptr is a helper function for getting pointer value
+func (e DecisionTaskTimedOutCause) Ptr() *DecisionTaskTimedOutCause {
+	return &e
+}
+
+// String returns a readable string representation of DecisionTaskTimedOutCause.
+func (e DecisionTaskTimedOutCause) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "Timeout"
+	case 1:
+		return "Reset"
+	}
+	return fmt.Sprintf("DecisionTaskTimedOutCause(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *DecisionTaskTimedOutCause) UnmarshalText(value []byte) error {
+	switch s := strings.ToLower(string(value)); s {
+	case "timeout":
+		*e = DecisionTaskTimedOutCauseTimeout
+		return nil
+	case "reset":
+		*e = DecisionTaskTimedOutCauseReset
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "DecisionTaskTimedOutCause", err)
+		}
+		*e = DecisionTaskTimedOutCause(val)
+		return nil
+	}
+}
+
+// MarshalText encodes DecisionTaskFailedCause to text.
+func (e DecisionTaskTimedOutCause) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
+const (
+	// DecisionTaskTimedOutCauseTimeout is an option for DecisionTaskTimedOutCause
+	DecisionTaskTimedOutCauseTimeout DecisionTaskTimedOutCause = iota
+	// DecisionTaskTimedOutCauseReset is an option for DecisionTaskTimedOutCause
+	DecisionTaskTimedOutCauseReset
+)
+
 // DecisionTaskTimedOutEventAttributes is an internal type (TBD...)
 type DecisionTaskTimedOutEventAttributes struct {
-	ScheduledEventID *int64       `json:"scheduledEventId,omitempty"`
-	StartedEventID   *int64       `json:"startedEventId,omitempty"`
-	TimeoutType      *TimeoutType `json:"timeoutType,omitempty"`
+	ScheduledEventID *int64                     `json:"scheduledEventId,omitempty"`
+	StartedEventID   *int64                     `json:"startedEventId,omitempty"`
+	TimeoutType      *TimeoutType               `json:"timeoutType,omitempty"`
+	BaseRunID        *string                    `json:"baseRunId,omitempty"`
+	NewRunID         *string                    `json:"newRunId,omitempty"`
+	ForkEventVersion *int64                     `json:"forkEventVersion,omitempty"`
+	Reason           *string                    `json:"reason,omitempty"`
+	Cause            *DecisionTaskTimedOutCause `json:"cause,omitempty"`
 }
 
 // GetScheduledEventID is an internal getter (TBD...)
@@ -2022,6 +2078,46 @@ func (v *DecisionTaskTimedOutEventAttributes) GetStartedEventID() (o int64) {
 func (v *DecisionTaskTimedOutEventAttributes) GetTimeoutType() (o TimeoutType) {
 	if v != nil && v.TimeoutType != nil {
 		return *v.TimeoutType
+	}
+	return
+}
+
+// GetBaseRunID is an internal getter (TBD...)
+func (v *DecisionTaskTimedOutEventAttributes) GetBaseRunID() (o string) {
+	if v != nil && v.BaseRunID != nil {
+		return *v.BaseRunID
+	}
+	return
+}
+
+// GetNewRunID is an internal getter (TBD...)
+func (v *DecisionTaskTimedOutEventAttributes) GetNewRunID() (o string) {
+	if v != nil && v.NewRunID != nil {
+		return *v.NewRunID
+	}
+	return
+}
+
+// GetForkEventVersion is an internal getter (TBD...)
+func (v *DecisionTaskTimedOutEventAttributes) GetForkEventVersion() (o int64) {
+	if v != nil && v.ForkEventVersion != nil {
+		return *v.ForkEventVersion
+	}
+	return
+}
+
+// GetReason is an internal getter (TBD...)
+func (v *DecisionTaskTimedOutEventAttributes) GetReason() (o string) {
+	if v != nil && v.Reason != nil {
+		return *v.Reason
+	}
+	return
+}
+
+// GetCause is an internal getter (TBD...)
+func (v *DecisionTaskTimedOutEventAttributes) GetCause() (o DecisionTaskTimedOutCause) {
+	if v != nil && v.Cause != nil {
+		return *v.Cause
 	}
 	return
 }

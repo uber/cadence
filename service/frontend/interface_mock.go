@@ -33,7 +33,6 @@ import (
 	gomock "github.com/golang/mock/gomock"
 
 	health "github.com/uber/cadence/.gen/go/health"
-	shared "github.com/uber/cadence/.gen/go/shared"
 	types "github.com/uber/cadence/common/types"
 )
 
@@ -120,10 +119,10 @@ func (mr *MockHandlerMockRecorder) DescribeDomain(arg0, arg1 interface{}) *gomoc
 }
 
 // DescribeTaskList mocks base method
-func (m *MockHandler) DescribeTaskList(arg0 context.Context, arg1 *shared.DescribeTaskListRequest) (*shared.DescribeTaskListResponse, error) {
+func (m *MockHandler) DescribeTaskList(arg0 context.Context, arg1 *types.DescribeTaskListRequest) (*types.DescribeTaskListResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeTaskList", arg0, arg1)
-	ret0, _ := ret[0].(*shared.DescribeTaskListResponse)
+	ret0, _ := ret[0].(*types.DescribeTaskListResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -135,10 +134,10 @@ func (mr *MockHandlerMockRecorder) DescribeTaskList(arg0, arg1 interface{}) *gom
 }
 
 // DescribeWorkflowExecution mocks base method
-func (m *MockHandler) DescribeWorkflowExecution(arg0 context.Context, arg1 *shared.DescribeWorkflowExecutionRequest) (*shared.DescribeWorkflowExecutionResponse, error) {
+func (m *MockHandler) DescribeWorkflowExecution(arg0 context.Context, arg1 *types.DescribeWorkflowExecutionRequest) (*types.DescribeWorkflowExecutionResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeWorkflowExecution", arg0, arg1)
-	ret0, _ := ret[0].(*shared.DescribeWorkflowExecutionResponse)
+	ret0, _ := ret[0].(*types.DescribeWorkflowExecutionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -150,10 +149,10 @@ func (mr *MockHandlerMockRecorder) DescribeWorkflowExecution(arg0, arg1 interfac
 }
 
 // GetClusterInfo mocks base method
-func (m *MockHandler) GetClusterInfo(arg0 context.Context) (*shared.ClusterInfo, error) {
+func (m *MockHandler) GetClusterInfo(arg0 context.Context) (*types.ClusterInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetClusterInfo", arg0)
-	ret0, _ := ret[0].(*shared.ClusterInfo)
+	ret0, _ := ret[0].(*types.ClusterInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -165,10 +164,10 @@ func (mr *MockHandlerMockRecorder) GetClusterInfo(arg0 interface{}) *gomock.Call
 }
 
 // GetSearchAttributes mocks base method
-func (m *MockHandler) GetSearchAttributes(arg0 context.Context) (*shared.GetSearchAttributesResponse, error) {
+func (m *MockHandler) GetSearchAttributes(arg0 context.Context) (*types.GetSearchAttributesResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSearchAttributes", arg0)
-	ret0, _ := ret[0].(*shared.GetSearchAttributesResponse)
+	ret0, _ := ret[0].(*types.GetSearchAttributesResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -180,10 +179,10 @@ func (mr *MockHandlerMockRecorder) GetSearchAttributes(arg0 interface{}) *gomock
 }
 
 // GetWorkflowExecutionHistory mocks base method
-func (m *MockHandler) GetWorkflowExecutionHistory(arg0 context.Context, arg1 *shared.GetWorkflowExecutionHistoryRequest) (*shared.GetWorkflowExecutionHistoryResponse, error) {
+func (m *MockHandler) GetWorkflowExecutionHistory(arg0 context.Context, arg1 *types.GetWorkflowExecutionHistoryRequest) (*types.GetWorkflowExecutionHistoryResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetWorkflowExecutionHistory", arg0, arg1)
-	ret0, _ := ret[0].(*shared.GetWorkflowExecutionHistoryResponse)
+	ret0, _ := ret[0].(*types.GetWorkflowExecutionHistoryResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -195,10 +194,10 @@ func (mr *MockHandlerMockRecorder) GetWorkflowExecutionHistory(arg0, arg1 interf
 }
 
 // ListArchivedWorkflowExecutions mocks base method
-func (m *MockHandler) ListArchivedWorkflowExecutions(arg0 context.Context, arg1 *shared.ListArchivedWorkflowExecutionsRequest) (*shared.ListArchivedWorkflowExecutionsResponse, error) {
+func (m *MockHandler) ListArchivedWorkflowExecutions(arg0 context.Context, arg1 *types.ListArchivedWorkflowExecutionsRequest) (*types.ListArchivedWorkflowExecutionsResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListArchivedWorkflowExecutions", arg0, arg1)
-	ret0, _ := ret[0].(*shared.ListArchivedWorkflowExecutionsResponse)
+	ret0, _ := ret[0].(*types.ListArchivedWorkflowExecutionsResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -255,10 +254,10 @@ func (mr *MockHandlerMockRecorder) ListOpenWorkflowExecutions(arg0, arg1 interfa
 }
 
 // ListTaskListPartitions mocks base method
-func (m *MockHandler) ListTaskListPartitions(arg0 context.Context, arg1 *shared.ListTaskListPartitionsRequest) (*shared.ListTaskListPartitionsResponse, error) {
+func (m *MockHandler) ListTaskListPartitions(arg0 context.Context, arg1 *types.ListTaskListPartitionsRequest) (*types.ListTaskListPartitionsResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListTaskListPartitions", arg0, arg1)
-	ret0, _ := ret[0].(*shared.ListTaskListPartitionsResponse)
+	ret0, _ := ret[0].(*types.ListTaskListPartitionsResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -285,10 +284,10 @@ func (mr *MockHandlerMockRecorder) ListWorkflowExecutions(arg0, arg1 interface{}
 }
 
 // PollForActivityTask mocks base method
-func (m *MockHandler) PollForActivityTask(arg0 context.Context, arg1 *shared.PollForActivityTaskRequest) (*shared.PollForActivityTaskResponse, error) {
+func (m *MockHandler) PollForActivityTask(arg0 context.Context, arg1 *types.PollForActivityTaskRequest) (*types.PollForActivityTaskResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PollForActivityTask", arg0, arg1)
-	ret0, _ := ret[0].(*shared.PollForActivityTaskResponse)
+	ret0, _ := ret[0].(*types.PollForActivityTaskResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -300,10 +299,10 @@ func (mr *MockHandlerMockRecorder) PollForActivityTask(arg0, arg1 interface{}) *
 }
 
 // PollForDecisionTask mocks base method
-func (m *MockHandler) PollForDecisionTask(arg0 context.Context, arg1 *shared.PollForDecisionTaskRequest) (*shared.PollForDecisionTaskResponse, error) {
+func (m *MockHandler) PollForDecisionTask(arg0 context.Context, arg1 *types.PollForDecisionTaskRequest) (*types.PollForDecisionTaskResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PollForDecisionTask", arg0, arg1)
-	ret0, _ := ret[0].(*shared.PollForDecisionTaskResponse)
+	ret0, _ := ret[0].(*types.PollForDecisionTaskResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -315,10 +314,10 @@ func (mr *MockHandlerMockRecorder) PollForDecisionTask(arg0, arg1 interface{}) *
 }
 
 // QueryWorkflow mocks base method
-func (m *MockHandler) QueryWorkflow(arg0 context.Context, arg1 *shared.QueryWorkflowRequest) (*shared.QueryWorkflowResponse, error) {
+func (m *MockHandler) QueryWorkflow(arg0 context.Context, arg1 *types.QueryWorkflowRequest) (*types.QueryWorkflowResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "QueryWorkflow", arg0, arg1)
-	ret0, _ := ret[0].(*shared.QueryWorkflowResponse)
+	ret0, _ := ret[0].(*types.QueryWorkflowResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -330,10 +329,10 @@ func (mr *MockHandlerMockRecorder) QueryWorkflow(arg0, arg1 interface{}) *gomock
 }
 
 // RecordActivityTaskHeartbeat mocks base method
-func (m *MockHandler) RecordActivityTaskHeartbeat(arg0 context.Context, arg1 *shared.RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse, error) {
+func (m *MockHandler) RecordActivityTaskHeartbeat(arg0 context.Context, arg1 *types.RecordActivityTaskHeartbeatRequest) (*types.RecordActivityTaskHeartbeatResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RecordActivityTaskHeartbeat", arg0, arg1)
-	ret0, _ := ret[0].(*shared.RecordActivityTaskHeartbeatResponse)
+	ret0, _ := ret[0].(*types.RecordActivityTaskHeartbeatResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -345,10 +344,10 @@ func (mr *MockHandlerMockRecorder) RecordActivityTaskHeartbeat(arg0, arg1 interf
 }
 
 // RecordActivityTaskHeartbeatByID mocks base method
-func (m *MockHandler) RecordActivityTaskHeartbeatByID(arg0 context.Context, arg1 *shared.RecordActivityTaskHeartbeatByIDRequest) (*shared.RecordActivityTaskHeartbeatResponse, error) {
+func (m *MockHandler) RecordActivityTaskHeartbeatByID(arg0 context.Context, arg1 *types.RecordActivityTaskHeartbeatByIDRequest) (*types.RecordActivityTaskHeartbeatResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RecordActivityTaskHeartbeatByID", arg0, arg1)
-	ret0, _ := ret[0].(*shared.RecordActivityTaskHeartbeatResponse)
+	ret0, _ := ret[0].(*types.RecordActivityTaskHeartbeatResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -374,7 +373,7 @@ func (mr *MockHandlerMockRecorder) RegisterDomain(arg0, arg1 interface{}) *gomoc
 }
 
 // RequestCancelWorkflowExecution mocks base method
-func (m *MockHandler) RequestCancelWorkflowExecution(arg0 context.Context, arg1 *shared.RequestCancelWorkflowExecutionRequest) error {
+func (m *MockHandler) RequestCancelWorkflowExecution(arg0 context.Context, arg1 *types.RequestCancelWorkflowExecutionRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RequestCancelWorkflowExecution", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -388,10 +387,10 @@ func (mr *MockHandlerMockRecorder) RequestCancelWorkflowExecution(arg0, arg1 int
 }
 
 // ResetStickyTaskList mocks base method
-func (m *MockHandler) ResetStickyTaskList(arg0 context.Context, arg1 *shared.ResetStickyTaskListRequest) (*shared.ResetStickyTaskListResponse, error) {
+func (m *MockHandler) ResetStickyTaskList(arg0 context.Context, arg1 *types.ResetStickyTaskListRequest) (*types.ResetStickyTaskListResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResetStickyTaskList", arg0, arg1)
-	ret0, _ := ret[0].(*shared.ResetStickyTaskListResponse)
+	ret0, _ := ret[0].(*types.ResetStickyTaskListResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -403,10 +402,10 @@ func (mr *MockHandlerMockRecorder) ResetStickyTaskList(arg0, arg1 interface{}) *
 }
 
 // ResetWorkflowExecution mocks base method
-func (m *MockHandler) ResetWorkflowExecution(arg0 context.Context, arg1 *shared.ResetWorkflowExecutionRequest) (*shared.ResetWorkflowExecutionResponse, error) {
+func (m *MockHandler) ResetWorkflowExecution(arg0 context.Context, arg1 *types.ResetWorkflowExecutionRequest) (*types.ResetWorkflowExecutionResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResetWorkflowExecution", arg0, arg1)
-	ret0, _ := ret[0].(*shared.ResetWorkflowExecutionResponse)
+	ret0, _ := ret[0].(*types.ResetWorkflowExecutionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -418,7 +417,7 @@ func (mr *MockHandlerMockRecorder) ResetWorkflowExecution(arg0, arg1 interface{}
 }
 
 // RespondActivityTaskCanceled mocks base method
-func (m *MockHandler) RespondActivityTaskCanceled(arg0 context.Context, arg1 *shared.RespondActivityTaskCanceledRequest) error {
+func (m *MockHandler) RespondActivityTaskCanceled(arg0 context.Context, arg1 *types.RespondActivityTaskCanceledRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RespondActivityTaskCanceled", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -432,7 +431,7 @@ func (mr *MockHandlerMockRecorder) RespondActivityTaskCanceled(arg0, arg1 interf
 }
 
 // RespondActivityTaskCanceledByID mocks base method
-func (m *MockHandler) RespondActivityTaskCanceledByID(arg0 context.Context, arg1 *shared.RespondActivityTaskCanceledByIDRequest) error {
+func (m *MockHandler) RespondActivityTaskCanceledByID(arg0 context.Context, arg1 *types.RespondActivityTaskCanceledByIDRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RespondActivityTaskCanceledByID", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -446,7 +445,7 @@ func (mr *MockHandlerMockRecorder) RespondActivityTaskCanceledByID(arg0, arg1 in
 }
 
 // RespondActivityTaskCompleted mocks base method
-func (m *MockHandler) RespondActivityTaskCompleted(arg0 context.Context, arg1 *shared.RespondActivityTaskCompletedRequest) error {
+func (m *MockHandler) RespondActivityTaskCompleted(arg0 context.Context, arg1 *types.RespondActivityTaskCompletedRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RespondActivityTaskCompleted", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -460,7 +459,7 @@ func (mr *MockHandlerMockRecorder) RespondActivityTaskCompleted(arg0, arg1 inter
 }
 
 // RespondActivityTaskCompletedByID mocks base method
-func (m *MockHandler) RespondActivityTaskCompletedByID(arg0 context.Context, arg1 *shared.RespondActivityTaskCompletedByIDRequest) error {
+func (m *MockHandler) RespondActivityTaskCompletedByID(arg0 context.Context, arg1 *types.RespondActivityTaskCompletedByIDRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RespondActivityTaskCompletedByID", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -474,7 +473,7 @@ func (mr *MockHandlerMockRecorder) RespondActivityTaskCompletedByID(arg0, arg1 i
 }
 
 // RespondActivityTaskFailed mocks base method
-func (m *MockHandler) RespondActivityTaskFailed(arg0 context.Context, arg1 *shared.RespondActivityTaskFailedRequest) error {
+func (m *MockHandler) RespondActivityTaskFailed(arg0 context.Context, arg1 *types.RespondActivityTaskFailedRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RespondActivityTaskFailed", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -488,7 +487,7 @@ func (mr *MockHandlerMockRecorder) RespondActivityTaskFailed(arg0, arg1 interfac
 }
 
 // RespondActivityTaskFailedByID mocks base method
-func (m *MockHandler) RespondActivityTaskFailedByID(arg0 context.Context, arg1 *shared.RespondActivityTaskFailedByIDRequest) error {
+func (m *MockHandler) RespondActivityTaskFailedByID(arg0 context.Context, arg1 *types.RespondActivityTaskFailedByIDRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RespondActivityTaskFailedByID", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -502,10 +501,10 @@ func (mr *MockHandlerMockRecorder) RespondActivityTaskFailedByID(arg0, arg1 inte
 }
 
 // RespondDecisionTaskCompleted mocks base method
-func (m *MockHandler) RespondDecisionTaskCompleted(arg0 context.Context, arg1 *shared.RespondDecisionTaskCompletedRequest) (*shared.RespondDecisionTaskCompletedResponse, error) {
+func (m *MockHandler) RespondDecisionTaskCompleted(arg0 context.Context, arg1 *types.RespondDecisionTaskCompletedRequest) (*types.RespondDecisionTaskCompletedResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RespondDecisionTaskCompleted", arg0, arg1)
-	ret0, _ := ret[0].(*shared.RespondDecisionTaskCompletedResponse)
+	ret0, _ := ret[0].(*types.RespondDecisionTaskCompletedResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -517,7 +516,7 @@ func (mr *MockHandlerMockRecorder) RespondDecisionTaskCompleted(arg0, arg1 inter
 }
 
 // RespondDecisionTaskFailed mocks base method
-func (m *MockHandler) RespondDecisionTaskFailed(arg0 context.Context, arg1 *shared.RespondDecisionTaskFailedRequest) error {
+func (m *MockHandler) RespondDecisionTaskFailed(arg0 context.Context, arg1 *types.RespondDecisionTaskFailedRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RespondDecisionTaskFailed", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -531,7 +530,7 @@ func (mr *MockHandlerMockRecorder) RespondDecisionTaskFailed(arg0, arg1 interfac
 }
 
 // RespondQueryTaskCompleted mocks base method
-func (m *MockHandler) RespondQueryTaskCompleted(arg0 context.Context, arg1 *shared.RespondQueryTaskCompletedRequest) error {
+func (m *MockHandler) RespondQueryTaskCompleted(arg0 context.Context, arg1 *types.RespondQueryTaskCompletedRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RespondQueryTaskCompleted", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -560,10 +559,10 @@ func (mr *MockHandlerMockRecorder) ScanWorkflowExecutions(arg0, arg1 interface{}
 }
 
 // SignalWithStartWorkflowExecution mocks base method
-func (m *MockHandler) SignalWithStartWorkflowExecution(arg0 context.Context, arg1 *shared.SignalWithStartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error) {
+func (m *MockHandler) SignalWithStartWorkflowExecution(arg0 context.Context, arg1 *types.SignalWithStartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SignalWithStartWorkflowExecution", arg0, arg1)
-	ret0, _ := ret[0].(*shared.StartWorkflowExecutionResponse)
+	ret0, _ := ret[0].(*types.StartWorkflowExecutionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -575,7 +574,7 @@ func (mr *MockHandlerMockRecorder) SignalWithStartWorkflowExecution(arg0, arg1 i
 }
 
 // SignalWorkflowExecution mocks base method
-func (m *MockHandler) SignalWorkflowExecution(arg0 context.Context, arg1 *shared.SignalWorkflowExecutionRequest) error {
+func (m *MockHandler) SignalWorkflowExecution(arg0 context.Context, arg1 *types.SignalWorkflowExecutionRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SignalWorkflowExecution", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -589,10 +588,10 @@ func (mr *MockHandlerMockRecorder) SignalWorkflowExecution(arg0, arg1 interface{
 }
 
 // StartWorkflowExecution mocks base method
-func (m *MockHandler) StartWorkflowExecution(arg0 context.Context, arg1 *shared.StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error) {
+func (m *MockHandler) StartWorkflowExecution(arg0 context.Context, arg1 *types.StartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StartWorkflowExecution", arg0, arg1)
-	ret0, _ := ret[0].(*shared.StartWorkflowExecutionResponse)
+	ret0, _ := ret[0].(*types.StartWorkflowExecutionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -604,7 +603,7 @@ func (mr *MockHandlerMockRecorder) StartWorkflowExecution(arg0, arg1 interface{}
 }
 
 // TerminateWorkflowExecution mocks base method
-func (m *MockHandler) TerminateWorkflowExecution(arg0 context.Context, arg1 *shared.TerminateWorkflowExecutionRequest) error {
+func (m *MockHandler) TerminateWorkflowExecution(arg0 context.Context, arg1 *types.TerminateWorkflowExecutionRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "TerminateWorkflowExecution", arg0, arg1)
 	ret0, _ := ret[0].(error)

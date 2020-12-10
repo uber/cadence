@@ -29,7 +29,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
@@ -225,7 +224,7 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 	domainID := serialization.MustParseUUID(request.DomainID)
 	runID := serialization.MustParseUUID(*request.Execution.RunID)
 	wfID := *request.Execution.WorkflowID
-	execution, err := m.db.SelectFromExecutions(ctx, &sqlplugin.ExecutionsFilter{
+	executions, err := m.db.SelectFromExecutions(ctx, &sqlplugin.ExecutionsFilter{
 		ShardID: m.shardID, DomainID: domainID, WorkflowID: wfID, RunID: runID})
 
 	if err != nil {
@@ -243,103 +242,27 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 		}
 	}
 
-	info, err := m.parser.WorkflowExecutionInfoFromBlob(execution.Data, execution.DataEncoding)
-	if err != nil {
-		return nil, err
-	}
-
-	var state p.InternalWorkflowMutableState
-	state.ExecutionInfo = &p.InternalWorkflowExecutionInfo{
-		DomainID:                           execution.DomainID.String(),
-		WorkflowID:                         execution.WorkflowID,
-		RunID:                              execution.RunID.String(),
-		NextEventID:                        execution.NextEventID,
-		TaskList:                           info.GetTaskList(),
-		WorkflowTypeName:                   info.GetWorkflowTypeName(),
-		WorkflowTimeout:                    common.SecondsToDuration(int64(info.GetWorkflowTimeoutSeconds())),
-		DecisionStartToCloseTimeout:        common.SecondsToDuration(int64(info.GetDecisionTaskTimeoutSeconds())),
-		State:                              int(info.GetState()),
-		CloseStatus:                        int(info.GetCloseStatus()),
-		LastFirstEventID:                   info.GetLastFirstEventID(),
-		LastProcessedEvent:                 info.GetLastProcessedEvent(),
-		StartTimestamp:                     time.Unix(0, info.GetStartTimeNanos()),
-		LastUpdatedTimestamp:               time.Unix(0, info.GetLastUpdatedTimeNanos()),
-		CreateRequestID:                    info.GetCreateRequestID(),
-		DecisionVersion:                    info.GetDecisionVersion(),
-		DecisionScheduleID:                 info.GetDecisionScheduleID(),
-		DecisionStartedID:                  info.GetDecisionStartedID(),
-		DecisionRequestID:                  info.GetDecisionRequestID(),
-		DecisionTimeout:                    common.SecondsToDuration(int64(info.GetDecisionTimeout())),
-		DecisionAttempt:                    info.GetDecisionAttempt(),
-		DecisionStartedTimestamp:           time.Unix(0, info.GetDecisionStartedTimestampNanos()),
-		DecisionScheduledTimestamp:         time.Unix(0, info.GetDecisionScheduledTimestampNanos()),
-		DecisionOriginalScheduledTimestamp: time.Unix(0, info.GetDecisionOriginalScheduledTimestampNanos()),
-		StickyTaskList:                     info.GetStickyTaskList(),
-		StickyScheduleToStartTimeout:       common.SecondsToDuration(info.GetStickyScheduleToStartTimeout()),
-		ClientLibraryVersion:               info.GetClientLibraryVersion(),
-		ClientFeatureVersion:               info.GetClientFeatureVersion(),
-		ClientImpl:                         info.GetClientImpl(),
-		SignalCount:                        int32(info.GetSignalCount()),
-		HistorySize:                        info.GetHistorySize(),
-		CronSchedule:                       info.GetCronSchedule(),
-		CompletionEventBatchID:             common.EmptyEventID,
-		HasRetryPolicy:                     info.GetHasRetryPolicy(),
-		Attempt:                            int32(info.GetRetryAttempt()),
-		InitialInterval:                    common.SecondsToDuration(int64(info.GetRetryInitialIntervalSeconds())),
-		BackoffCoefficient:                 info.GetRetryBackoffCoefficient(),
-		MaximumInterval:                    common.SecondsToDuration(int64(info.GetRetryMaximumIntervalSeconds())),
-		MaximumAttempts:                    info.GetRetryMaximumAttempts(),
-		ExpirationSeconds:                  common.SecondsToDuration(int64(info.GetRetryExpirationSeconds())),
-		ExpirationTime:                     time.Unix(0, info.GetRetryExpirationTimeNanos()),
-		BranchToken:                        info.GetEventBranchToken(),
-		ExecutionContext:                   info.GetExecutionContext(),
-		NonRetriableErrors:                 info.GetRetryNonRetryableErrors(),
-		SearchAttributes:                   info.GetSearchAttributes(),
-		Memo:                               info.GetMemo(),
-	}
-
-	// TODO: remove this after all 2DC workflows complete
-	if info.LastWriteEventID != nil {
-		state.ReplicationState = &p.ReplicationState{}
-		state.ReplicationState.StartVersion = info.GetStartVersion()
-		state.ReplicationState.LastWriteVersion = execution.LastWriteVersion
-		state.ReplicationState.LastWriteEventID = info.GetLastWriteEventID()
-	}
-
-	if info.GetVersionHistories() != nil {
-		state.VersionHistories = p.NewDataBlob(
-			info.GetVersionHistories(),
-			common.EncodingType(info.GetVersionHistoriesEncoding()),
-		)
-	}
-
-	if info.ParentDomainID != nil {
-		state.ExecutionInfo.ParentDomainID = serialization.UUID(info.ParentDomainID).String()
-		state.ExecutionInfo.ParentWorkflowID = info.GetParentWorkflowID()
-		state.ExecutionInfo.ParentRunID = serialization.UUID(info.ParentRunID).String()
-		state.ExecutionInfo.InitiatedID = info.GetInitiatedID()
-		if state.ExecutionInfo.CompletionEvent != nil {
-			state.ExecutionInfo.CompletionEvent = nil
+	if len(executions) == 0 {
+		return nil, &types.EntityNotExistsError{
+			Message: fmt.Sprintf(
+				"Workflow execution not found.  WorkflowId: %v, RunId: %v",
+				request.Execution.GetWorkflowID(),
+				request.Execution.GetRunID(),
+			),
 		}
 	}
 
-	if info.GetCancelRequested() {
-		state.ExecutionInfo.CancelRequested = true
-		state.ExecutionInfo.CancelRequestID = info.GetCancelRequestID()
+	if len(executions) != 1 {
+		return nil, &types.InternalServiceError{
+			Message: fmt.Sprintf("GetWorkflowExecution return more than one results."),
+		}
 	}
 
-	if info.CompletionEventBatchID != nil {
-		state.ExecutionInfo.CompletionEventBatchID = info.GetCompletionEventBatchID()
-	}
-
-	if info.CompletionEvent != nil {
-		state.ExecutionInfo.CompletionEvent = p.NewDataBlob(info.CompletionEvent,
-			common.EncodingType(info.GetCompletionEventEncoding()))
-	}
-
-	if info.AutoResetPoints != nil {
-		state.ExecutionInfo.AutoResetPoints = p.NewDataBlob(info.AutoResetPoints,
-			common.EncodingType(info.GetAutoResetPointsEncoding()))
+	state, err := m.populateWorkflowMutableState(executions[0])
+	if err != nil {
+		return nil, &types.InternalServiceError{
+			Message: fmt.Sprintf("GetWorkflowExecution: failed. Error: %v", err),
+		}
 	}
 
 	{
@@ -459,7 +382,7 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 		}
 	}
 
-	return &p.InternalGetWorkflowExecutionResponse{State: &state}, nil
+	return &p.InternalGetWorkflowExecutionResponse{State: state}, nil
 }
 
 func (m *sqlExecutionManager) UpdateWorkflowExecution(
@@ -874,10 +797,63 @@ func (m *sqlExecutionManager) IsWorkflowExecutionExists(
 }
 
 func (m *sqlExecutionManager) ListConcreteExecutions(
-	_ context.Context,
-	_ *p.ListConcreteExecutionsRequest,
+	ctx context.Context,
+	request *p.ListConcreteExecutionsRequest,
 ) (*p.InternalListConcreteExecutionsResponse, error) {
-	return nil, &types.InternalServiceError{Message: "Not yet implemented"}
+
+	filter := &sqlplugin.ExecutionsFilter{}
+	if len(request.PageToken) > 0 {
+		err := gobDeserialize(request.PageToken, &filter)
+		if err != nil {
+			return nil, &types.InternalServiceError{
+				Message: fmt.Sprintf("ListConcreteExecutions failed. Error: %v", err),
+			}
+		}
+	} else {
+		filter = &sqlplugin.ExecutionsFilter{
+			ShardID:    m.shardID,
+			WorkflowID: "",
+			RunID:      serialization.MustParseUUID(minUUID),
+		}
+	}
+	filter.Size = request.PageSize
+
+	executions, err := m.db.SelectFromExecutions(ctx, filter)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return &p.InternalListConcreteExecutionsResponse{}, nil
+		}
+		return nil, &types.InternalServiceError{
+			Message: fmt.Sprintf("ListConcreteExecutions failed. Error: %v", err),
+		}
+	}
+
+	if len(executions) == 0 {
+		return &p.InternalListConcreteExecutionsResponse{}, nil
+	}
+	lastExecution := executions[len(executions)-1]
+	nextFilter := &sqlplugin.ExecutionsFilter{
+		ShardID:    m.shardID,
+		WorkflowID: lastExecution.WorkflowID,
+		RunID:      lastExecution.RunID,
+	}
+	token, err := gobSerialize(nextFilter)
+	if err != nil {
+		return nil, &types.InternalServiceError{
+			Message: fmt.Sprintf("ListConcreteExecutions failed. Error: %v", err),
+		}
+	}
+	concreteExecutions, err := m.populateInternalListConcreteExecutions(executions)
+	if err != nil {
+		return nil, &types.InternalServiceError{
+			Message: fmt.Sprintf("ListConcreteExecutions failed. Error: %v", err),
+		}
+	}
+
+	return &p.InternalListConcreteExecutionsResponse{
+		Executions:    concreteExecutions,
+		NextPageToken: token,
+	}, nil
 }
 
 func (m *sqlExecutionManager) GetTransferTasks(
@@ -902,13 +878,13 @@ func (m *sqlExecutionManager) GetTransferTasks(
 		}
 		resp.Tasks[i] = &p.TransferTaskInfo{
 			TaskID:                  row.TaskID,
-			DomainID:                serialization.UUID(info.DomainID).String(),
+			DomainID:                info.DomainID.String(),
 			WorkflowID:              info.GetWorkflowID(),
-			RunID:                   serialization.UUID(info.RunID).String(),
-			VisibilityTimestamp:     time.Unix(0, info.GetVisibilityTimestampNanos()),
-			TargetDomainID:          serialization.UUID(info.TargetDomainID).String(),
+			RunID:                   info.RunID.String(),
+			VisibilityTimestamp:     info.GetVisibilityTimestamp(),
+			TargetDomainID:          info.TargetDomainID.String(),
 			TargetWorkflowID:        info.GetTargetWorkflowID(),
-			TargetRunID:             serialization.UUID(info.TargetRunID).String(),
+			TargetRunID:             info.TargetRunID.String(),
 			TargetChildWorkflowOnly: info.GetTargetChildWorkflowOnly(),
 			TaskList:                info.GetTaskList(),
 			TaskType:                int(info.GetTaskType()),
@@ -1012,9 +988,9 @@ func (m *sqlExecutionManager) populateGetReplicationTasksResponse(
 
 		tasks[i] = &p.InternalReplicationTaskInfo{
 			TaskID:            row.TaskID,
-			DomainID:          serialization.UUID(info.DomainID).String(),
+			DomainID:          info.DomainID.String(),
 			WorkflowID:        info.GetWorkflowID(),
-			RunID:             serialization.UUID(info.RunID).String(),
+			RunID:             info.RunID.String(),
 			TaskType:          int(info.GetTaskType()),
 			FirstEventID:      info.GetFirstEventID(),
 			NextEventID:       info.GetNextEventID(),
@@ -1022,7 +998,7 @@ func (m *sqlExecutionManager) populateGetReplicationTasksResponse(
 			ScheduledID:       info.GetScheduledID(),
 			BranchToken:       info.GetBranchToken(),
 			NewRunBranchToken: info.GetNewRunBranchToken(),
-			CreationTime:      time.Unix(0, info.GetCreationTime()),
+			CreationTime:      info.GetCreationTimestamp(),
 		}
 	}
 	var nextPageToken []byte
@@ -1248,9 +1224,9 @@ func (m *sqlExecutionManager) GetTimerIndexTasks(
 		resp.Timers[i] = &p.TimerTaskInfo{
 			VisibilityTimestamp: row.VisibilityTimestamp,
 			TaskID:              row.TaskID,
-			DomainID:            serialization.UUID(info.DomainID).String(),
+			DomainID:            info.DomainID.String(),
 			WorkflowID:          info.GetWorkflowID(),
-			RunID:               serialization.UUID(info.RunID).String(),
+			RunID:               info.RunID.String(),
 			TaskType:            int(info.GetTaskType()),
 			TimeoutType:         int(info.GetTimeoutType()),
 			EventID:             info.GetEventID(),
@@ -1318,7 +1294,7 @@ func (m *sqlExecutionManager) PutReplicationTaskToDLQ(
 	request *p.InternalPutReplicationTaskToDLQRequest,
 ) error {
 	replicationTask := request.TaskInfo
-	blob, err := m.parser.ReplicationTaskInfoToBlob(&sqlblobs.ReplicationTaskInfo{
+	blob, err := m.parser.ReplicationTaskInfoToBlob(&serialization.ReplicationTaskInfo{
 		DomainID:          serialization.MustParseUUID(replicationTask.DomainID),
 		WorkflowID:        &replicationTask.WorkflowID,
 		RunID:             serialization.MustParseUUID(replicationTask.RunID),
@@ -1353,4 +1329,137 @@ func (m *sqlExecutionManager) PutReplicationTaskToDLQ(
 	}
 
 	return nil
+}
+
+func (m *sqlExecutionManager) populateWorkflowMutableState(
+	execution sqlplugin.ExecutionsRow,
+) (*p.InternalWorkflowMutableState, error) {
+
+	info, err := m.parser.WorkflowExecutionInfoFromBlob(execution.Data, execution.DataEncoding)
+	if err != nil {
+		return nil, err
+	}
+
+	state := &p.InternalWorkflowMutableState{}
+	state.ExecutionInfo = &p.InternalWorkflowExecutionInfo{
+		DomainID:                           execution.DomainID.String(),
+		WorkflowID:                         execution.WorkflowID,
+		RunID:                              execution.RunID.String(),
+		NextEventID:                        execution.NextEventID,
+		TaskList:                           info.GetTaskList(),
+		WorkflowTypeName:                   info.GetWorkflowTypeName(),
+		WorkflowTimeout:                    info.GetWorkflowTimeout(),
+		DecisionStartToCloseTimeout:        info.GetDecisionTaskTimeout(),
+		State:                              int(info.GetState()),
+		CloseStatus:                        int(info.GetCloseStatus()),
+		LastFirstEventID:                   info.GetLastFirstEventID(),
+		LastProcessedEvent:                 info.GetLastProcessedEvent(),
+		StartTimestamp:                     info.GetStartTimestamp(),
+		LastUpdatedTimestamp:               info.GetLastUpdatedTimestamp(),
+		CreateRequestID:                    info.GetCreateRequestID(),
+		DecisionVersion:                    info.GetDecisionVersion(),
+		DecisionScheduleID:                 info.GetDecisionScheduleID(),
+		DecisionStartedID:                  info.GetDecisionStartedID(),
+		DecisionRequestID:                  info.GetDecisionRequestID(),
+		DecisionTimeout:                    info.GetDecisionTimeout(),
+		DecisionAttempt:                    info.GetDecisionAttempt(),
+		DecisionStartedTimestamp:           info.GetDecisionStartedTimestamp(),
+		DecisionScheduledTimestamp:         info.GetDecisionScheduledTimestamp(),
+		DecisionOriginalScheduledTimestamp: info.GetDecisionOriginalScheduledTimestamp(),
+		StickyTaskList:                     info.GetStickyTaskList(),
+		StickyScheduleToStartTimeout:       info.GetStickyScheduleToStartTimeout(),
+		ClientLibraryVersion:               info.GetClientLibraryVersion(),
+		ClientFeatureVersion:               info.GetClientFeatureVersion(),
+		ClientImpl:                         info.GetClientImpl(),
+		SignalCount:                        int32(info.GetSignalCount()),
+		HistorySize:                        info.GetHistorySize(),
+		CronSchedule:                       info.GetCronSchedule(),
+		CompletionEventBatchID:             common.EmptyEventID,
+		HasRetryPolicy:                     info.GetHasRetryPolicy(),
+		Attempt:                            int32(info.GetRetryAttempt()),
+		InitialInterval:                    info.GetRetryInitialInterval(),
+		BackoffCoefficient:                 info.GetRetryBackoffCoefficient(),
+		MaximumInterval:                    info.GetRetryMaximumInterval(),
+		MaximumAttempts:                    info.GetRetryMaximumAttempts(),
+		ExpirationSeconds:                  info.GetRetryExpiration(),
+		ExpirationTime:                     info.GetRetryExpirationTimestamp(),
+		BranchToken:                        info.GetEventBranchToken(),
+		ExecutionContext:                   info.GetExecutionContext(),
+		NonRetriableErrors:                 info.GetRetryNonRetryableErrors(),
+		SearchAttributes:                   info.GetSearchAttributes(),
+		Memo:                               info.GetMemo(),
+	}
+
+	// TODO: remove this after all 2DC workflows complete
+	if info.LastWriteEventID != nil {
+		state.ReplicationState = &p.ReplicationState{}
+		state.ReplicationState.StartVersion = info.GetStartVersion()
+		state.ReplicationState.LastWriteVersion = execution.LastWriteVersion
+		state.ReplicationState.LastWriteEventID = info.GetLastWriteEventID()
+	}
+
+	if info.GetVersionHistories() != nil {
+		state.VersionHistories = p.NewDataBlob(
+			info.GetVersionHistories(),
+			common.EncodingType(info.GetVersionHistoriesEncoding()),
+		)
+	}
+
+	if info.ParentDomainID != nil {
+		state.ExecutionInfo.ParentDomainID = info.ParentDomainID.String()
+		state.ExecutionInfo.ParentWorkflowID = info.GetParentWorkflowID()
+		state.ExecutionInfo.ParentRunID = info.ParentRunID.String()
+		state.ExecutionInfo.InitiatedID = info.GetInitiatedID()
+		if state.ExecutionInfo.CompletionEvent != nil {
+			state.ExecutionInfo.CompletionEvent = nil
+		}
+	}
+
+	if info.GetCancelRequested() {
+		state.ExecutionInfo.CancelRequested = true
+		state.ExecutionInfo.CancelRequestID = info.GetCancelRequestID()
+	}
+
+	if info.CompletionEventBatchID != nil {
+		state.ExecutionInfo.CompletionEventBatchID = info.GetCompletionEventBatchID()
+	}
+
+	if info.CompletionEvent != nil {
+		state.ExecutionInfo.CompletionEvent = p.NewDataBlob(info.CompletionEvent,
+			common.EncodingType(info.GetCompletionEventEncoding()))
+	}
+
+	if info.AutoResetPoints != nil {
+		state.ExecutionInfo.AutoResetPoints = p.NewDataBlob(info.AutoResetPoints,
+			common.EncodingType(info.GetAutoResetPointsEncoding()))
+	}
+	return state, nil
+}
+
+func (m *sqlExecutionManager) populateInternalListConcreteExecutions(
+	executions []sqlplugin.ExecutionsRow,
+) ([]*p.InternalListConcreteExecutionsEntity, error) {
+
+	concreteExecutions := make([]*p.InternalListConcreteExecutionsEntity, 0, len(executions))
+	for _, execution := range executions {
+		mutableState, err := m.populateWorkflowMutableState(execution)
+		if err != nil {
+			return nil, err
+		}
+
+		var versionHistories *p.DataBlob
+		if len(execution.VersionHistories) != 0 {
+			versionHistories = p.NewDataBlob(
+				versionHistories.Data,
+				versionHistories.Encoding,
+			)
+		}
+
+		concreteExecution := &p.InternalListConcreteExecutionsEntity{
+			ExecutionInfo:    mutableState.ExecutionInfo,
+			VersionHistories: versionHistories,
+		}
+		concreteExecutions = append(concreteExecutions, concreteExecution)
+	}
+	return concreteExecutions, nil
 }

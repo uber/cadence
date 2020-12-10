@@ -7,8 +7,24 @@ Join our Slack channel(invite link in the [home page](https://github.com/uber/ca
 
 ## Development Environment
 
-* Golang. Install on OS X with `brew install go`. 
->Note: If running into any compiling issue, make sure you upgrade to the latest stable version of Golang. 
+* Golang. Install on OS X with.
+```
+brew install go
+``` 
+* Make sure set PATH to include bin path of GO so that other executables like thriftrw can be found.
+```bash
+# check it first
+echo $GOPATH
+# append to PATH
+PATH=$PATH:$GOPATH/bin
+# to confirm, run
+echo $PATH
+``` 
+
+* Download golang dependencies. 
+```bash
+go mod download
+```
 
 After check out and go to the Cadence repo, compile the `cadence` service and helper tools without running test:
 
@@ -16,9 +32,13 @@ After check out and go to the Cadence repo, compile the `cadence` service and he
 make bins
 ``` 
 
+>Note: If running into any compiling issue, 
+>1. Make sure you upgrade to the latest stable version of Golang.
+> 2. Check if this document is outdated by comparing with the building steps in [Dockerfile](https://github.com/uber/cadence/blob/master/Dockerfile)
 * Database. The default setup of Cadence depends on Cassandra. Before running the Cadence or tests you must have `cassandra` dependency(or equivalent database in the below notes)
 
 >Note: This section assumes you are working with Cassandra. Please refer to [persistence documentation](https://github.com/uber/cadence/blob/master/docs/persistence.md) if you want to test with others like MySQL/Postgres.
+> Also, you don't need those local stores if you want to connect to your existing staging/QA environment. 
 
 ```bash
 # install cassandra
