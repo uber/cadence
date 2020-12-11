@@ -1688,6 +1688,9 @@ const (
 	CadenceShardSuccessGauge
 	CadenceShardFailureGauge
 
+	ParentClosePolicyProcessorSuccess
+	ParentClosePolicyProcessorFailures
+
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
@@ -1983,8 +1986,6 @@ const (
 	HistoryScavengerSuccessCount
 	HistoryScavengerErrorCount
 	HistoryScavengerSkipCount
-	ParentClosePolicyProcessorSuccess
-	ParentClosePolicyProcessorFailures
 	DomainReplicationEnqueueDLQCount
 	ScannerExecutionsGauge
 	ScannerCorruptedGauge
@@ -2161,8 +2162,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceErrRemoteSyncMatchFailedPerTaskListCounter: {
 			metricName: "cadence_errors_remote_syncmatch_failed_per_tl", metricRollupName: "cadence_errors_remote_syncmatch_failed", metricType: Counter,
 		},
-		CadenceShardSuccessGauge: {metricName: "cadence_shard_success", metricType: Gauge},
-		CadenceShardFailureGauge: {metricName: "cadence_shard_failure", metricType: Gauge},
+		CadenceShardSuccessGauge:           {metricName: "cadence_shard_success", metricType: Gauge},
+		CadenceShardFailureGauge:           {metricName: "cadence_shard_failure", metricType: Gauge},
+		ParentClosePolicyProcessorSuccess:  {metricName: "parent_close_policy_processor_requests", metricType: Counter},
+		ParentClosePolicyProcessorFailures: {metricName: "parent_close_policy_processor_errors", metricType: Counter},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
@@ -2445,8 +2448,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryScavengerSuccessCount:                  {metricName: "scavenger_success", metricType: Counter},
 		HistoryScavengerErrorCount:                    {metricName: "scavenger_errors", metricType: Counter},
 		HistoryScavengerSkipCount:                     {metricName: "scavenger_skips", metricType: Counter},
-		ParentClosePolicyProcessorSuccess:             {metricName: "parent_close_policy_processor_requests", metricType: Counter},
-		ParentClosePolicyProcessorFailures:            {metricName: "parent_close_policy_processor_errors", metricType: Counter},
 		DomainReplicationEnqueueDLQCount:              {metricName: "domain_replication_dlq_enqueue_requests", metricType: Counter},
 		ScannerExecutionsGauge:                        {metricName: "scanner_executions", metricType: Gauge},
 		ScannerCorruptedGauge:                         {metricName: "scanner_corrupted", metricType: Gauge},

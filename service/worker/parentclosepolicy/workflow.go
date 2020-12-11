@@ -137,7 +137,8 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 		}
 
 		if err != nil {
-			if _, ok := err.(*shared.EntityNotExistsError); ok {
+			switch err.(type) {
+			case *shared.EntityNotExistsError, *shared.CancellationAlreadyRequestedError:
 				err = nil
 			}
 		}
