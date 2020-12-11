@@ -3355,7 +3355,7 @@ func (wh *WorkflowHandler) getRawHistory(
 		})
 	}
 
-	if len(nextPageToken) == 0 && transientDecision != nil {
+	if len(resp.NextPageToken) == 0 && transientDecision != nil {
 		if err := wh.validateTransientDecisionEvents(nextEventID, transientDecision); err != nil {
 			scope.IncCounter(metrics.CadenceErrIncompleteHistoryCounter)
 			wh.GetLogger().Error("getHistory error",
