@@ -330,6 +330,9 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskResetTimeoutEvent(
 	if err := m.ReplicateDecisionTaskTimedOutEvent(types.TimeoutTypeScheduleToStart); err != nil {
 		return nil, err
 	}
+
+	// always clear decision attempt for reset
+	m.msb.executionInfo.DecisionAttempt = 0
 	return event, nil
 }
 
