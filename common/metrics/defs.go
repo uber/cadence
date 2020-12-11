@@ -1708,6 +1708,9 @@ const (
 	DomainReplicationQueueSizeGauge
 	DomainReplicationQueueSizeErrorCount
 
+	ParentClosePolicyProcessorSuccess
+	ParentClosePolicyProcessorFailures
+
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
@@ -2004,8 +2007,6 @@ const (
 	HistoryScavengerSuccessCount
 	HistoryScavengerErrorCount
 	HistoryScavengerSkipCount
-	ParentClosePolicyProcessorSuccess
-	ParentClosePolicyProcessorFailures
 	DomainReplicationEnqueueDLQCount
 	ScannerExecutionsGauge
 	ScannerCorruptedGauge
@@ -2187,6 +2188,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceShardFailureGauge:             {metricName: "cadence_shard_failure", metricType: Gauge},
 		DomainReplicationQueueSizeGauge:      {metricName: "domain_replication_queue_size", metricType: Gauge},
 		DomainReplicationQueueSizeErrorCount: {metricName: "domain_replication_queue_failed", metricType: Counter},
+		ParentClosePolicyProcessorSuccess:    {metricName: "parent_close_policy_processor_requests", metricType: Counter},
+		ParentClosePolicyProcessorFailures:   {metricName: "parent_close_policy_processor_errors", metricType: Counter},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
@@ -2470,8 +2473,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryScavengerSuccessCount:                  {metricName: "scavenger_success", metricType: Counter},
 		HistoryScavengerErrorCount:                    {metricName: "scavenger_errors", metricType: Counter},
 		HistoryScavengerSkipCount:                     {metricName: "scavenger_skips", metricType: Counter},
-		ParentClosePolicyProcessorSuccess:             {metricName: "parent_close_policy_processor_requests", metricType: Counter},
-		ParentClosePolicyProcessorFailures:            {metricName: "parent_close_policy_processor_errors", metricType: Counter},
 		DomainReplicationEnqueueDLQCount:              {metricName: "domain_replication_dlq_enqueue_requests", metricType: Counter},
 		ScannerExecutionsGauge:                        {metricName: "scanner_executions", metricType: Gauge},
 		ScannerCorruptedGauge:                         {metricName: "scanner_corrupted", metricType: Gauge},
