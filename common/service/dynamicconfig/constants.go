@@ -329,6 +329,15 @@ var keys = map[Key]string{
 	CurrentExecutionFixerDomainAllow:                         "worker.currentExecutionFixerDomainAllow",
 	ConcreteExecutionFixerEnabled:                            "worker.concreteExecutionFixerEnabled",
 	CurrentExecutionFixerEnabled:                             "worker.currentExecutionFixerEnabled",
+	TimersScannerEnabled:                                     "worker.timersScannerEnabled",
+	TimersFixerEnabled:                                       "worker.timersFixerEnabled",
+	TimersScannerConcurrency:                                 "worker.timersScannerConcurrency",
+	TimersScannerPersistencePageSize:                         "worker.timersScannerPersistencePageSize",
+	TimersScannerBlobstoreFlushThreshold:                     "worker.timersScannerConcurrency",
+	TimersScannerActivityBatchSize:                           "worker.timersScannerBlobstoreFlushThreshold",
+	TimersScannerPeriodStart:                                 "worker.timersScannerPeriodStart",
+	TimersScannerPeriodEnd:                                   "worker.timersScannerPeriodEnd",
+	TimersFixerDomainAllow:                                   "worker.timersFixerDomainAllow",
 }
 
 const (
@@ -842,6 +851,24 @@ const (
 	ConcreteExecutionFixerDomainAllow
 	// CurrentExecutionFixerDomainAllow indicates which domains are allowed to be fixed by current fixer workflow
 	CurrentExecutionFixerDomainAllow
+	// TimersScannerEnabled indicates if timers scanner should be started as part of worker.Scanner
+	TimersScannerEnabled
+	// TimersFixerEnabled indicates if timers fixer should be started as part of worker.Scanner
+	TimersFixerEnabled
+	// TimersScannerConcurrency indicates the concurrency of timers scanner
+	TimersScannerConcurrency
+	// TimersScannerPersistencePageSize indicates the page size of timers persistence fetches in timers scanner.
+	TimersScannerPersistencePageSize
+	// TimersScannerBlobstoreFlushThreshold
+	TimersScannerBlobstoreFlushThreshold
+	// TimersScannerActivityBatchSize
+	TimersScannerActivityBatchSize
+	// TimersScannerPeriodStart indicates interval start for fetching scheduled timers
+	TimersScannerPeriodStart
+	// TimersScannerPeriodEnd indicates interval end for fetching scheduled timers
+	TimersScannerPeriodEnd
+	// TimersFixerDomainAllow indicates if domain is allowed to fix timers
+	TimersFixerDomainAllow
 	// ConcreteExecutionFixerEnabled indicates if concrete execution fixer workflow is enabled
 	ConcreteExecutionFixerEnabled
 	// CurrentExecutionFixerEnabled indicates if current execution fixer workflow is enabled
