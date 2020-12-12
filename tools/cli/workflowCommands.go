@@ -1877,7 +1877,7 @@ func getResetEventIDByType(
 	fmt.Println("resetType:", resetType)
 	switch resetType {
 	case resetTypeLastDecisionCompleted:
-		resetBaseRunID, decisionFinishID, err = getLastDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskCompleted)
+		decisionFinishID, err = getLastDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskCompleted)
 		if err != nil {
 			return
 		}
@@ -1888,7 +1888,7 @@ func getResetEventIDByType(
 			return
 		}
 	case resetTypeFirstDecisionCompleted:
-		resetBaseRunID, decisionFinishID, err = getFirstDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskCompleted)
+		decisionFinishID, err = getFirstDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskCompleted)
 		if err != nil {
 			return
 		}
@@ -1905,14 +1905,14 @@ func getResetEventIDByType(
 			return
 		}
 	case resetTypeFirstDecisionScheduled:
-		resetBaseRunID, decisionFinishID, err = getFirstDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskScheduled)
+		decisionFinishID, err = getFirstDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskScheduled)
 		if err != nil {
 			return
 		}
 		// decisionFinishID is exclusive in reset API
 		decisionFinishID++
 	case resetTypeLastDecisionScheduled:
-		resetBaseRunID, decisionFinishID, err = getLastDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskScheduled)
+		decisionFinishID, err = getLastDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskScheduled)
 		if err != nil {
 			return
 		}
@@ -1931,9 +1931,8 @@ func getFirstDecisionTaskByType(
 	runID string,
 	frontendClient frontend.Client,
 	decisionType types.EventType,
-) (resetBaseRunID string, decisionFinishID int64, err error) {
+) (decisionFinishID int64, err error) {
 
-	resetBaseRunID = runID
 	req := &types.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domain),
 		Execution: &types.WorkflowExecution{
@@ -1947,12 +1946,12 @@ func getFirstDecisionTaskByType(
 	for {
 		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
 		if err != nil {
-			return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
+			return 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 		}
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == decisionType {
 				decisionFinishID = e.GetEventID()
-				return resetBaseRunID, decisionFinishID, nil
+				return decisionFinishID, nil
 			}
 			decisionFinishID = e.GetEventID()
 		}
@@ -1963,7 +1962,7 @@ func getFirstDecisionTaskByType(
 		}
 	}
 	if decisionFinishID == 0 {
-		return "", 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
+		return 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
 	}
 	return
 }
@@ -2015,9 +2014,8 @@ func getLastDecisionTaskByType(
 	runID string,
 	frontendClient frontend.Client,
 	decisionType types.EventType,
-) (resetBaseRunID string, decisionFinishID int64, err error) {
+) (decisionFinishID int64, err error) {
 
-	resetBaseRunID = runID
 	req := &types.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domain),
 		Execution: &types.WorkflowExecution{
@@ -2031,7 +2029,7 @@ func getLastDecisionTaskByType(
 	for {
 		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
 		if err != nil {
-			return "", 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
+			return 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 		}
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == decisionType {
@@ -2046,7 +2044,7 @@ func getLastDecisionTaskByType(
 		}
 	}
 	if decisionFinishID == 0 {
-		return "", 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
+		return 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
 	}
 	return
 }
