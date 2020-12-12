@@ -61,7 +61,7 @@ func ScannerConfigActivity(
 
 	result := ResolvedScannerWorkflowConfig{
 		GenericScannerConfig: GenericScannerConfig{
-			Enabled:                 dc.Enabled(),
+			Enabled:                 dc.ScannerEnabled(),
 			Concurrency:             dc.Concurrency(),
 			PageSize:                dc.PageSize(),
 			BlobstoreFlushThreshold: dc.BlobstoreFlushThreshold(),
@@ -156,10 +156,10 @@ func scanShard(
 
 	scanner := NewScanner(
 		shardID,
-		ctx.Hooks.Iterator(pr, params, *ctx.Config),
+		ctx.Hooks.Iterator(activityCtx, pr, params, *ctx.Config),
 		resources.GetBlobstoreClient(),
 		params.BlobstoreFlushThreshold,
-		ctx.Hooks.Manager(pr, params, *ctx.Config),
+		ctx.Hooks.Manager(activityCtx, pr, params, *ctx.Config),
 		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
 	)
 	report := scanner.Scan(activityCtx)
@@ -299,14 +299,17 @@ func fixShard(
 	pr := persistence.NewPersistenceRetryer(execManager, resources.GetHistoryManager(), c.CreatePersistenceRetryPolicy())
 
 	fixer := NewFixer(
+		activityCtx,
 		shardID,
-		ctx.Hooks.InvariantManager(pr, params, *ctx.Config),
-		ctx.Hooks.Iterator(resources.GetBlobstoreClient(), corruptedKeys, params, *ctx.Config),
+		ctx.Hooks.InvariantManager(activityCtx, pr, params, *ctx.Config),
+		ctx.Hooks.Iterator(activityCtx, resources.GetBlobstoreClient(), corruptedKeys, params, *ctx.Config),
 		resources.GetBlobstoreClient(),
 		params.ResolvedFixerWorkflowConfig.BlobstoreFlushThreshold,
 		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
+		resources.GetDomainCache(),
+		ctx.Config.DynamicParams.AllowDomain,
 	)
-	report := fixer.Fix(activityCtx)
+	report := fixer.Fix()
 	if report.Result.ControlFlowFailure != nil {
 		scope.IncCounter(metrics.CadenceFailures)
 	}
@@ -318,9 +321,10 @@ func ScannerEmitMetricsActivity(
 	activityCtx context.Context,
 	params ScannerEmitMetricsActivityParams,
 ) error {
-	scope := activityCtx.Value(params.ContextKey).(Context).Scope.Tagged(
+	contextKey := params.ContextKey
+	scope := activityCtx.Value(contextKey).(Context).Scope.Tagged(
 		metrics.ActivityTypeTag(ActivityScannerEmitMetrics),
-		metrics.WorkflowTypeTag(params.ContextKey.String()),
+		metrics.WorkflowTypeTag(contextKey.String()),
 		metrics.DomainTag(c.SystemLocalDomainName),
 	)
 	scope.UpdateGauge(metrics.CadenceShardSuccessGauge, float64(params.ShardSuccessCount))

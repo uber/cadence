@@ -26,7 +26,6 @@ import (
 	"context"
 
 	"github.com/uber/cadence/.gen/go/history"
-	r "github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
@@ -42,7 +41,7 @@ import (
 type (
 	// TaskExecutor is the executor for replication task
 	TaskExecutor interface {
-		execute(replicationTask *r.ReplicationTask, forceApply bool) (int, error)
+		execute(replicationTask *types.ReplicationTask, forceApply bool) (int, error)
 	}
 
 	taskExecutorImpl struct {
@@ -81,20 +80,20 @@ func NewTaskExecutor(
 }
 
 func (e *taskExecutorImpl) execute(
-	replicationTask *r.ReplicationTask,
+	replicationTask *types.ReplicationTask,
 	forceApply bool,
 ) (int, error) {
 
 	var err error
 	var scope int
 	switch replicationTask.GetTaskType() {
-	case r.ReplicationTaskTypeSyncActivity:
+	case types.ReplicationTaskTypeSyncActivity:
 		scope = metrics.SyncActivityTaskScope
 		err = e.handleActivityTask(replicationTask, forceApply)
-	case r.ReplicationTaskTypeHistoryV2:
+	case types.ReplicationTaskTypeHistoryV2:
 		scope = metrics.HistoryReplicationV2TaskScope
 		err = e.handleHistoryReplicationTaskV2(replicationTask, forceApply)
-	case r.ReplicationTaskTypeFailoverMarker:
+	case types.ReplicationTaskTypeFailoverMarker:
 		scope = metrics.FailoverMarkerScope
 		err = e.handleFailoverReplicationTask(replicationTask)
 	default:
@@ -107,12 +106,12 @@ func (e *taskExecutorImpl) execute(
 }
 
 func (e *taskExecutorImpl) handleActivityTask(
-	task *r.ReplicationTask,
+	task *types.ReplicationTask,
 	forceApply bool,
 ) error {
 
 	attr := task.SyncActivityTaskAttributes
-	doContinue, err := e.filterTask(attr.GetDomainId(), forceApply)
+	doContinue, err := e.filterTask(attr.GetDomainID(), forceApply)
 	if err != nil || !doContinue {
 		return err
 	}
@@ -120,20 +119,20 @@ func (e *taskExecutorImpl) handleActivityTask(
 	replicationStopWatch := e.metricsClient.StartTimer(metrics.SyncActivityTaskScope, metrics.CadenceLatency)
 	defer replicationStopWatch.Stop()
 	request := &history.SyncActivityRequest{
-		DomainId:           attr.DomainId,
-		WorkflowId:         attr.WorkflowId,
-		RunId:              attr.RunId,
+		DomainId:           attr.DomainID,
+		WorkflowId:         attr.WorkflowID,
+		RunId:              attr.RunID,
 		Version:            attr.Version,
-		ScheduledId:        attr.ScheduledId,
+		ScheduledId:        attr.ScheduledID,
 		ScheduledTime:      attr.ScheduledTime,
-		StartedId:          attr.StartedId,
+		StartedId:          attr.StartedID,
 		StartedTime:        attr.StartedTime,
 		LastHeartbeatTime:  attr.LastHeartbeatTime,
 		Details:            attr.Details,
 		Attempt:            attr.Attempt,
 		LastFailureReason:  attr.LastFailureReason,
 		LastWorkerIdentity: attr.LastWorkerIdentity,
-		VersionHistory:     attr.GetVersionHistory(),
+		VersionHistory:     thrift.FromVersionHistory(attr.GetVersionHistory()),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
@@ -181,12 +180,12 @@ func (e *taskExecutorImpl) handleActivityTask(
 }
 
 func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
-	task *r.ReplicationTask,
+	task *types.ReplicationTask,
 	forceApply bool,
 ) error {
 
 	attr := task.HistoryTaskV2Attributes
-	doContinue, err := e.filterTask(attr.GetDomainId(), forceApply)
+	doContinue, err := e.filterTask(attr.GetDomainID(), forceApply)
 	if err != nil || !doContinue {
 		return err
 	}
@@ -194,15 +193,15 @@ func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
 	replicationStopWatch := e.metricsClient.StartTimer(metrics.HistoryReplicationV2TaskScope, metrics.CadenceLatency)
 	defer replicationStopWatch.Stop()
 	request := &history.ReplicateEventsV2Request{
-		DomainUUID: attr.DomainId,
+		DomainUUID: attr.DomainID,
 		WorkflowExecution: &shared.WorkflowExecution{
-			WorkflowId: attr.WorkflowId,
-			RunId:      attr.RunId,
+			WorkflowId: attr.WorkflowID,
+			RunId:      attr.RunID,
 		},
-		VersionHistoryItems: attr.VersionHistoryItems,
-		Events:              attr.Events,
+		VersionHistoryItems: thrift.FromVersionHistoryItemArray(attr.VersionHistoryItems),
+		Events:              thrift.FromDataBlob(attr.Events),
 		// new run events does not need version history since there is no prior events
-		NewRunEvents: attr.NewRunEvents,
+		NewRunEvents: thrift.FromDataBlob(attr.NewRunEvents),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
@@ -252,11 +251,11 @@ func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
 }
 
 func (e *taskExecutorImpl) handleFailoverReplicationTask(
-	task *r.ReplicationTask,
+	task *types.ReplicationTask,
 ) error {
 	failoverAttributes := task.GetFailoverMarkerAttributes()
 	failoverAttributes.CreationTime = task.CreationTime
-	return e.shard.AddingPendingFailoverMarker(thrift.ToFailoverMarkerAttributes(failoverAttributes))
+	return e.shard.AddingPendingFailoverMarker(failoverAttributes)
 }
 
 func (e *taskExecutorImpl) filterTask(

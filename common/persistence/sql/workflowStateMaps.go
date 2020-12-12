@@ -25,9 +25,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
 
-	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/serialization"
@@ -53,38 +51,38 @@ func updateActivityInfos(
 			scheduledEvent, scheduledEncoding := persistence.FromDataBlob(activityInfo.ScheduledEvent)
 			startEvent, startEncoding := persistence.FromDataBlob(activityInfo.StartedEvent)
 
-			info := &sqlblobs.ActivityInfo{
-				Version:                       &activityInfo.Version,
-				ScheduledEventBatchID:         &activityInfo.ScheduledEventBatchID,
-				ScheduledEvent:                scheduledEvent,
-				ScheduledEventEncoding:        common.StringPtr(scheduledEncoding),
-				ScheduledTimeNanos:            common.Int64Ptr(activityInfo.ScheduledTime.UnixNano()),
-				StartedID:                     &activityInfo.StartedID,
-				StartedEvent:                  startEvent,
-				StartedEventEncoding:          common.StringPtr(startEncoding),
-				StartedTimeNanos:              common.Int64Ptr(activityInfo.StartedTime.UnixNano()),
-				ActivityID:                    &activityInfo.ActivityID,
-				RequestID:                     &activityInfo.RequestID,
-				ScheduleToStartTimeoutSeconds: common.Int32Ptr(int32(activityInfo.ScheduleToStartTimeout.Seconds())),
-				ScheduleToCloseTimeoutSeconds: common.Int32Ptr(int32(activityInfo.ScheduleToCloseTimeout.Seconds())),
-				StartToCloseTimeoutSeconds:    common.Int32Ptr(int32(activityInfo.StartToCloseTimeout.Seconds())),
-				HeartbeatTimeoutSeconds:       common.Int32Ptr(int32(activityInfo.HeartbeatTimeout.Seconds())),
-				CancelRequested:               &activityInfo.CancelRequested,
-				CancelRequestID:               &activityInfo.CancelRequestID,
-				TimerTaskStatus:               &activityInfo.TimerTaskStatus,
-				Attempt:                       &activityInfo.Attempt,
-				TaskList:                      &activityInfo.TaskList,
-				StartedIdentity:               &activityInfo.StartedIdentity,
-				HasRetryPolicy:                &activityInfo.HasRetryPolicy,
-				RetryInitialIntervalSeconds:   common.Int32Ptr(int32(activityInfo.InitialInterval.Seconds())),
-				RetryBackoffCoefficient:       &activityInfo.BackoffCoefficient,
-				RetryMaximumIntervalSeconds:   common.Int32Ptr(int32(activityInfo.MaximumInterval.Seconds())),
-				RetryExpirationTimeNanos:      common.Int64Ptr(activityInfo.ExpirationTime.UnixNano()),
-				RetryMaximumAttempts:          &activityInfo.MaximumAttempts,
-				RetryNonRetryableErrors:       activityInfo.NonRetriableErrors,
-				RetryLastFailureReason:        &activityInfo.LastFailureReason,
-				RetryLastWorkerIdentity:       &activityInfo.LastWorkerIdentity,
-				RetryLastFailureDetails:       activityInfo.LastFailureDetails,
+			info := &serialization.ActivityInfo{
+				Version:                  &activityInfo.Version,
+				ScheduledEventBatchID:    &activityInfo.ScheduledEventBatchID,
+				ScheduledEvent:           scheduledEvent,
+				ScheduledEventEncoding:   common.StringPtr(scheduledEncoding),
+				ScheduledTimestamp:       &activityInfo.ScheduledTime,
+				StartedID:                &activityInfo.StartedID,
+				StartedEvent:             startEvent,
+				StartedEventEncoding:     common.StringPtr(startEncoding),
+				StartedTimestamp:         &activityInfo.StartedTime,
+				ActivityID:               &activityInfo.ActivityID,
+				RequestID:                &activityInfo.RequestID,
+				ScheduleToStartTimeout:   &activityInfo.ScheduleToStartTimeout,
+				ScheduleToCloseTimeout:   &activityInfo.ScheduleToCloseTimeout,
+				StartToCloseTimeout:      &activityInfo.StartToCloseTimeout,
+				HeartbeatTimeout:         &activityInfo.HeartbeatTimeout,
+				CancelRequested:          &activityInfo.CancelRequested,
+				CancelRequestID:          &activityInfo.CancelRequestID,
+				TimerTaskStatus:          &activityInfo.TimerTaskStatus,
+				Attempt:                  &activityInfo.Attempt,
+				TaskList:                 &activityInfo.TaskList,
+				StartedIdentity:          &activityInfo.StartedIdentity,
+				HasRetryPolicy:           &activityInfo.HasRetryPolicy,
+				RetryInitialInterval:     &activityInfo.InitialInterval,
+				RetryBackoffCoefficient:  &activityInfo.BackoffCoefficient,
+				RetryMaximumInterval:     &activityInfo.MaximumInterval,
+				RetryExpirationTimestamp: &activityInfo.ExpirationTime,
+				RetryMaximumAttempts:     &activityInfo.MaximumAttempts,
+				RetryNonRetryableErrors:  activityInfo.NonRetriableErrors,
+				RetryLastFailureReason:   &activityInfo.LastFailureReason,
+				RetryLastWorkerIdentity:  &activityInfo.LastWorkerIdentity,
+				RetryLastFailureDetails:  activityInfo.LastFailureDetails,
 			}
 			blob, err := parser.ActivityInfoToBlob(info)
 			if err != nil {
@@ -163,15 +161,15 @@ func getActivityInfoMap(
 			Version:                  decoded.GetVersion(),
 			ScheduledEventBatchID:    decoded.GetScheduledEventBatchID(),
 			ScheduledEvent:           persistence.NewDataBlob(decoded.ScheduledEvent, common.EncodingType(decoded.GetScheduledEventEncoding())),
-			ScheduledTime:            time.Unix(0, decoded.GetScheduledTimeNanos()),
+			ScheduledTime:            decoded.GetScheduledTimestamp(),
 			StartedID:                decoded.GetStartedID(),
-			StartedTime:              time.Unix(0, decoded.GetStartedTimeNanos()),
+			StartedTime:              decoded.GetStartedTimestamp(),
 			ActivityID:               decoded.GetActivityID(),
 			RequestID:                decoded.GetRequestID(),
-			ScheduleToStartTimeout:   common.SecondsToDuration(int64(decoded.GetScheduleToStartTimeoutSeconds())),
-			ScheduleToCloseTimeout:   common.SecondsToDuration(int64(decoded.GetScheduleToCloseTimeoutSeconds())),
-			StartToCloseTimeout:      common.SecondsToDuration(int64(decoded.GetStartToCloseTimeoutSeconds())),
-			HeartbeatTimeout:         common.SecondsToDuration(int64(decoded.GetHeartbeatTimeoutSeconds())),
+			ScheduleToStartTimeout:   decoded.GetScheduleToStartTimeout(),
+			ScheduleToCloseTimeout:   decoded.GetScheduleToCloseTimeout(),
+			StartToCloseTimeout:      decoded.GetStartToCloseTimeout(),
+			HeartbeatTimeout:         decoded.GetHeartbeatTimeout(),
 			CancelRequested:          decoded.GetCancelRequested(),
 			CancelRequestID:          decoded.GetCancelRequestID(),
 			TimerTaskStatus:          decoded.GetTimerTaskStatus(),
@@ -179,10 +177,10 @@ func getActivityInfoMap(
 			StartedIdentity:          decoded.GetStartedIdentity(),
 			TaskList:                 decoded.GetTaskList(),
 			HasRetryPolicy:           decoded.GetHasRetryPolicy(),
-			InitialInterval:          common.SecondsToDuration(int64(decoded.GetRetryInitialIntervalSeconds())),
+			InitialInterval:          decoded.GetRetryInitialInterval(),
 			BackoffCoefficient:       decoded.GetRetryBackoffCoefficient(),
-			MaximumInterval:          common.SecondsToDuration(int64(decoded.GetRetryMaximumIntervalSeconds())),
-			ExpirationTime:           time.Unix(0, decoded.GetRetryExpirationTimeNanos()),
+			MaximumInterval:          decoded.GetRetryMaximumInterval(),
+			ExpirationTime:           decoded.GetRetryExpirationTimestamp(),
 			MaximumAttempts:          decoded.GetRetryMaximumAttempts(),
 			NonRetriableErrors:       decoded.GetRetryNonRetryableErrors(),
 			LastFailureReason:        decoded.GetRetryLastFailureReason(),
@@ -235,10 +233,10 @@ func updateTimerInfos(
 	if len(timerInfos) > 0 {
 		rows := make([]sqlplugin.TimerInfoMapsRow, len(timerInfos))
 		for i, timerInfo := range timerInfos {
-			blob, err := parser.TimerInfoToBlob(&sqlblobs.TimerInfo{
+			blob, err := parser.TimerInfoToBlob(&serialization.TimerInfo{
 				Version:         &timerInfo.Version,
 				StartedID:       &timerInfo.StartedID,
-				ExpiryTimeNanos: common.Int64Ptr(timerInfo.ExpiryTime.UnixNano()),
+				ExpiryTimestamp: &timerInfo.ExpiryTime,
 				// TaskID is a misleading variable, it actually serves
 				// the purpose of indicating whether a timer task is
 				// generated for this timer info
@@ -312,7 +310,7 @@ func getTimerInfoMap(
 			TimerID:    row.TimerID,
 			Version:    info.GetVersion(),
 			StartedID:  info.GetStartedID(),
-			ExpiryTime: time.Unix(0, info.GetExpiryTimeNanos()),
+			ExpiryTime: info.GetExpiryTimestamp(),
 			// TaskID is a misleading variable, it actually serves
 			// the purpose of indicating whether a timer task is
 			// generated for this timer info
@@ -363,7 +361,7 @@ func updateChildExecutionInfos(
 			initiateEvent, initiateEncoding := persistence.FromDataBlob(childExecutionInfo.InitiatedEvent)
 			startEvent, startEncoding := persistence.FromDataBlob(childExecutionInfo.StartedEvent)
 
-			info := &sqlblobs.ChildExecutionInfo{
+			info := &serialization.ChildExecutionInfo{
 				Version:                &childExecutionInfo.Version,
 				InitiatedEventBatchID:  &childExecutionInfo.InitiatedEventBatchID,
 				InitiatedEvent:         initiateEvent,
@@ -505,7 +503,7 @@ func updateRequestCancelInfos(
 	if len(requestCancelInfos) > 0 {
 		rows := make([]sqlplugin.RequestCancelInfoMapsRow, len(requestCancelInfos))
 		for i, requestCancelInfo := range requestCancelInfos {
-			blob, err := parser.RequestCancelInfoToBlob(&sqlblobs.RequestCancelInfo{
+			blob, err := parser.RequestCancelInfoToBlob(&serialization.RequestCancelInfo{
 				Version:               &requestCancelInfo.Version,
 				InitiatedEventBatchID: &requestCancelInfo.InitiatedEventBatchID,
 				CancelRequestID:       &requestCancelInfo.CancelRequestID,
@@ -624,7 +622,7 @@ func updateSignalInfos(
 	if len(signalInfos) > 0 {
 		rows := make([]sqlplugin.SignalInfoMapsRow, len(signalInfos))
 		for i, signalInfo := range signalInfos {
-			blob, err := parser.SignalInfoToBlob(&sqlblobs.SignalInfo{
+			blob, err := parser.SignalInfoToBlob(&serialization.SignalInfo{
 				Version:               &signalInfo.Version,
 				InitiatedEventBatchID: &signalInfo.InitiatedEventBatchID,
 				RequestID:             &signalInfo.SignalRequestID,

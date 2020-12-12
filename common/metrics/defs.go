@@ -575,6 +575,8 @@ const (
 	MessagingClientPublishScope
 	// MessagingPublishBatchScope tracks Publish calls made by service to messaging layer
 	MessagingClientPublishBatchScope
+	// MessagingClientConsumerScope tracks the consumer activities
+	MessagingClientConsumerScope
 
 	// DomainCacheScope tracks domain cache callbacks
 	DomainCacheScope
@@ -1320,6 +1322,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 
 		MessagingClientPublishScope:      {operation: "MessagingClientPublish"},
 		MessagingClientPublishBatchScope: {operation: "MessagingClientPublishBatch"},
+		MessagingClientConsumerScope:     {operation: "MessagingClientConsumerScope"},
 
 		DomainCacheScope:                                      {operation: "DomainCache"},
 		HistoryRereplicationByTransferTaskScope:               {operation: "HistoryRereplicationByTransferTask"},
@@ -1646,6 +1649,12 @@ const (
 	PriorityTaskSubmitRequest
 	PriorityTaskSubmitLatency
 
+	KafkaConsumerMessageIn
+	KafkaConsumerMessageAck
+	KafkaConsumerMessageNack
+	KafkaConsumerMessageNackDlqErr
+	KafkaConsumerSessionStart
+
 	HistoryArchiverArchiveNonRetryableErrorCount
 	HistoryArchiverArchiveTransientErrorCount
 	HistoryArchiverArchiveSuccessCount
@@ -1698,6 +1707,9 @@ const (
 
 	DomainReplicationQueueSizeGauge
 	DomainReplicationQueueSizeErrorCount
+
+	ParentClosePolicyProcessorSuccess
+	ParentClosePolicyProcessorFailures
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -1765,6 +1777,7 @@ const (
 	EmptyCompletionDecisionsCounter
 	MultipleCompletionDecisionsCounter
 	FailedDecisionsCounter
+	DecisionAttemptTimer
 	StaleMutableStateCounter
 	AutoResetPointsLimitExceededCounter
 	AutoResetPointCorruptionCounter
@@ -1995,8 +2008,6 @@ const (
 	HistoryScavengerSuccessCount
 	HistoryScavengerErrorCount
 	HistoryScavengerSkipCount
-	ParentClosePolicyProcessorSuccess
-	ParentClosePolicyProcessorFailures
 	DomainReplicationEnqueueDLQCount
 	ScannerExecutionsGauge
 	ScannerCorruptedGauge
@@ -2084,6 +2095,11 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ParallelTaskTaskProcessingLatency:                   {metricName: "paralleltask_task_processing_latency", metricType: Timer},
 		PriorityTaskSubmitRequest:                           {metricName: "prioritytask_submit_request", metricType: Counter},
 		PriorityTaskSubmitLatency:                           {metricName: "prioritytask_submit_latency", metricType: Timer},
+		KafkaConsumerMessageIn:                              {metricName: "kafka_consumer_message_in", metricType: Counter},
+		KafkaConsumerMessageAck:                             {metricName: "kafka_consumer_message_ack", metricType: Counter},
+		KafkaConsumerMessageNack:                            {metricName: "kafka_consumer_message_nack", metricType: Counter},
+		KafkaConsumerMessageNackDlqErr:                      {metricName: "kafka_consumer_message_nack_dlq_err", metricType: Counter},
+		KafkaConsumerSessionStart:                           {metricName: "kafka_consumer_session_start", metricType: Counter},
 
 		HistoryArchiverArchiveNonRetryableErrorCount:              {metricName: "history_archiver_archive_non_retryable_error", metricType: Counter},
 		HistoryArchiverArchiveTransientErrorCount:                 {metricName: "history_archiver_archive_transient_error", metricType: Counter},
@@ -2173,6 +2189,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceShardFailureGauge:             {metricName: "cadence_shard_failure", metricType: Gauge},
 		DomainReplicationQueueSizeGauge:      {metricName: "domain_replication_queue_size", metricType: Gauge},
 		DomainReplicationQueueSizeErrorCount: {metricName: "domain_replication_queue_failed", metricType: Counter},
+		ParentClosePolicyProcessorSuccess:    {metricName: "parent_close_policy_processor_requests", metricType: Counter},
+		ParentClosePolicyProcessorFailures:   {metricName: "parent_close_policy_processor_errors", metricType: Counter},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
@@ -2234,6 +2252,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		EmptyCompletionDecisionsCounter:                   {metricName: "empty_completion_decisions", metricType: Counter},
 		MultipleCompletionDecisionsCounter:                {metricName: "multiple_completion_decisions", metricType: Counter},
 		FailedDecisionsCounter:                            {metricName: "failed_decisions", metricType: Counter},
+		DecisionAttemptTimer:                              {metricName: "decision_attempt", metricType: Timer},
 		StaleMutableStateCounter:                          {metricName: "stale_mutable_state", metricType: Counter},
 		AutoResetPointsLimitExceededCounter:               {metricName: "auto_reset_points_exceed_limit", metricType: Counter},
 		AutoResetPointCorruptionCounter:                   {metricName: "auto_reset_point_corruption", metricType: Counter},
@@ -2456,8 +2475,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryScavengerSuccessCount:                  {metricName: "scavenger_success", metricType: Counter},
 		HistoryScavengerErrorCount:                    {metricName: "scavenger_errors", metricType: Counter},
 		HistoryScavengerSkipCount:                     {metricName: "scavenger_skips", metricType: Counter},
-		ParentClosePolicyProcessorSuccess:             {metricName: "parent_close_policy_processor_requests", metricType: Counter},
-		ParentClosePolicyProcessorFailures:            {metricName: "parent_close_policy_processor_errors", metricType: Counter},
 		DomainReplicationEnqueueDLQCount:              {metricName: "domain_replication_dlq_enqueue_requests", metricType: Counter},
 		ScannerExecutionsGauge:                        {metricName: "scanner_executions", metricType: Gauge},
 		ScannerCorruptedGauge:                         {metricName: "scanner_corrupted", metricType: Gauge},

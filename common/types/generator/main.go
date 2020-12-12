@@ -75,10 +75,47 @@ func capitalizeID(name string) string {
 	return name
 }
 
+var capitalizedEnums = map[string]struct{}{
+	"DomainStatus":            {},
+	"TimeoutType":             {},
+	"ParentClosePolicy":       {},
+	"DecisionTaskFailedCause": {},
+	"CancelExternalWorkflowExecutionFailedCause": {},
+	"SignalExternalWorkflowExecutionFailedCause": {},
+	"ChildWorkflowExecutionFailedCause":          {},
+	"WorkflowExecutionCloseStatus":               {},
+	"QueryTaskCompletedType":                     {},
+	"QueryResultType":                            {},
+	"PendingActivityState":                       {},
+	"PendingDecisionState":                       {},
+	"HistoryEventFilterType":                     {},
+	"TaskListKind":                               {},
+	"ArchivalStatus":                             {},
+	"IndexedValueType":                           {},
+	"QueryRejectCondition":                       {},
+	"QueryConsistencyLevel":                      {},
+	"TaskSource":                                 {},
+}
+
+func enumString(value, enum string) string {
+	trimmed := strings.TrimPrefix(value, enum)
+	if _, ok := capitalizedEnums[enum]; ok {
+		capitalized := ""
+		for i, c := range trimmed {
+			if i > 0 && unicode.IsUpper(c) {
+				capitalized = capitalized + "_"
+			}
+			capitalized = capitalized + string(unicode.ToUpper(c))
+		}
+		return capitalized
+	}
+	return trimmed
+}
+
 var funcMap = template.FuncMap{
 	"internal":   internalName,
-	"enumString": strings.TrimPrefix,
-	"lower":      strings.ToLower,
+	"enumString": enumString,
+	"upper":      strings.ToUpper,
 }
 
 var typesHeader = template.Must(template.New("struct type").Funcs(funcMap).Parse(licence + `package types
@@ -132,8 +169,8 @@ func (e {{internal .Name}}) String() string {
 
 // UnmarshalText parses enum value from string representation
 func (e *{{internal .Name}}) UnmarshalText(value []byte) error {
-	switch s := strings.ToLower(string(value)); s { {{range $i, $v := .EnumValues}}
-	case "{{lower (enumString . $.Name)}}":
+	switch s := strings.ToUpper(string(value)); s { {{range $i, $v := .EnumValues}}
+	case "{{upper (enumString . $.Name)}}":
 		*e = {{internal .}}
 		return nil{{end}}
 	default:
@@ -252,6 +289,32 @@ func To{{internal .Name}}(t {{if .IsPointer}}*{{end}}{{.ThriftPackage}}.{{.Name}
 		case {{$.ThriftPackage}}.{{.}}: {{if $.IsPointer}}v := types.{{internal .}}; return &v{{else}}return types.{{internal .}}{{end}}{{end}}
 	}
 	panic("unexpected enum value")
+}
+`))
+
+var sharedMapperAdditions = template.Must(template.New("shared mapper additions").Parse(`
+// FromHistoryArray converts internal History array to thrift
+func FromHistoryArray(t []*types.History) []*shared.History {
+	if t == nil {
+		return nil
+	}
+	v := make([]*shared.History, len(t))
+	for i := range t {
+		v[i] = FromHistory(t[i])
+	}
+	return v
+}
+
+// ToHistoryArray converts thrift History array to internal
+func ToHistoryArray(t []*shared.History) []*types.History {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.History, len(t))
+	for i := range t {
+		v[i] = ToHistory(t[i])
+	}
+	return v
 }
 `))
 
@@ -467,9 +530,10 @@ func main() {
 
 	packages := []Package{
 		{
-			ThriftPackage: "github.com/uber/cadence/.gen/go/shared",
-			TypesFile:     "common/types/shared.go",
-			MapperFile:    "common/types/mapper/thrift/shared.go",
+			ThriftPackage:   "github.com/uber/cadence/.gen/go/shared",
+			TypesFile:       "common/types/shared.go",
+			MapperFile:      "common/types/mapper/thrift/shared.go",
+			MapperAdditions: sharedMapperAdditions,
 		},
 		{
 			ThriftPackage: "github.com/uber/cadence/.gen/go/replicator",

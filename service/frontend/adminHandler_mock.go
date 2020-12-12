@@ -33,9 +33,6 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	admin "github.com/uber/cadence/.gen/go/admin"
-	replicator "github.com/uber/cadence/.gen/go/replicator"
-	shared "github.com/uber/cadence/.gen/go/shared"
 	types "github.com/uber/cadence/common/types"
 )
 
@@ -63,7 +60,7 @@ func (m *MockAdminHandler) EXPECT() *MockAdminHandlerMockRecorder {
 }
 
 // AddSearchAttribute mocks base method
-func (m *MockAdminHandler) AddSearchAttribute(arg0 context.Context, arg1 *admin.AddSearchAttributeRequest) error {
+func (m *MockAdminHandler) AddSearchAttribute(arg0 context.Context, arg1 *types.AddSearchAttributeRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddSearchAttribute", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -77,7 +74,7 @@ func (mr *MockAdminHandlerMockRecorder) AddSearchAttribute(arg0, arg1 interface{
 }
 
 // CloseShard mocks base method
-func (m *MockAdminHandler) CloseShard(arg0 context.Context, arg1 *shared.CloseShardRequest) error {
+func (m *MockAdminHandler) CloseShard(arg0 context.Context, arg1 *types.CloseShardRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CloseShard", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -91,10 +88,10 @@ func (mr *MockAdminHandlerMockRecorder) CloseShard(arg0, arg1 interface{}) *gomo
 }
 
 // DescribeCluster mocks base method
-func (m *MockAdminHandler) DescribeCluster(arg0 context.Context) (*admin.DescribeClusterResponse, error) {
+func (m *MockAdminHandler) DescribeCluster(arg0 context.Context) (*types.DescribeClusterResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeCluster", arg0)
-	ret0, _ := ret[0].(*admin.DescribeClusterResponse)
+	ret0, _ := ret[0].(*types.DescribeClusterResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -106,10 +103,10 @@ func (mr *MockAdminHandlerMockRecorder) DescribeCluster(arg0 interface{}) *gomoc
 }
 
 // DescribeHistoryHost mocks base method
-func (m *MockAdminHandler) DescribeHistoryHost(arg0 context.Context, arg1 *shared.DescribeHistoryHostRequest) (*shared.DescribeHistoryHostResponse, error) {
+func (m *MockAdminHandler) DescribeHistoryHost(arg0 context.Context, arg1 *types.DescribeHistoryHostRequest) (*types.DescribeHistoryHostResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeHistoryHost", arg0, arg1)
-	ret0, _ := ret[0].(*shared.DescribeHistoryHostResponse)
+	ret0, _ := ret[0].(*types.DescribeHistoryHostResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -121,10 +118,10 @@ func (mr *MockAdminHandlerMockRecorder) DescribeHistoryHost(arg0, arg1 interface
 }
 
 // DescribeQueue mocks base method
-func (m *MockAdminHandler) DescribeQueue(arg0 context.Context, arg1 *shared.DescribeQueueRequest) (*shared.DescribeQueueResponse, error) {
+func (m *MockAdminHandler) DescribeQueue(arg0 context.Context, arg1 *types.DescribeQueueRequest) (*types.DescribeQueueResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeQueue", arg0, arg1)
-	ret0, _ := ret[0].(*shared.DescribeQueueResponse)
+	ret0, _ := ret[0].(*types.DescribeQueueResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -136,10 +133,10 @@ func (mr *MockAdminHandlerMockRecorder) DescribeQueue(arg0, arg1 interface{}) *g
 }
 
 // DescribeWorkflowExecution mocks base method
-func (m *MockAdminHandler) DescribeWorkflowExecution(arg0 context.Context, arg1 *admin.DescribeWorkflowExecutionRequest) (*admin.DescribeWorkflowExecutionResponse, error) {
+func (m *MockAdminHandler) DescribeWorkflowExecution(arg0 context.Context, arg1 *types.AdminDescribeWorkflowExecutionRequest) (*types.AdminDescribeWorkflowExecutionResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeWorkflowExecution", arg0, arg1)
-	ret0, _ := ret[0].(*admin.DescribeWorkflowExecutionResponse)
+	ret0, _ := ret[0].(*types.AdminDescribeWorkflowExecutionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -151,10 +148,10 @@ func (mr *MockAdminHandlerMockRecorder) DescribeWorkflowExecution(arg0, arg1 int
 }
 
 // GetDLQReplicationMessages mocks base method
-func (m *MockAdminHandler) GetDLQReplicationMessages(arg0 context.Context, arg1 *replicator.GetDLQReplicationMessagesRequest) (*replicator.GetDLQReplicationMessagesResponse, error) {
+func (m *MockAdminHandler) GetDLQReplicationMessages(arg0 context.Context, arg1 *types.GetDLQReplicationMessagesRequest) (*types.GetDLQReplicationMessagesResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetDLQReplicationMessages", arg0, arg1)
-	ret0, _ := ret[0].(*replicator.GetDLQReplicationMessagesResponse)
+	ret0, _ := ret[0].(*types.GetDLQReplicationMessagesResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -181,10 +178,10 @@ func (mr *MockAdminHandlerMockRecorder) GetDomainReplicationMessages(arg0, arg1 
 }
 
 // GetReplicationMessages mocks base method
-func (m *MockAdminHandler) GetReplicationMessages(arg0 context.Context, arg1 *replicator.GetReplicationMessagesRequest) (*replicator.GetReplicationMessagesResponse, error) {
+func (m *MockAdminHandler) GetReplicationMessages(arg0 context.Context, arg1 *types.GetReplicationMessagesRequest) (*types.GetReplicationMessagesResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetReplicationMessages", arg0, arg1)
-	ret0, _ := ret[0].(*replicator.GetReplicationMessagesResponse)
+	ret0, _ := ret[0].(*types.GetReplicationMessagesResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -196,10 +193,10 @@ func (mr *MockAdminHandlerMockRecorder) GetReplicationMessages(arg0, arg1 interf
 }
 
 // GetWorkflowExecutionRawHistoryV2 mocks base method
-func (m *MockAdminHandler) GetWorkflowExecutionRawHistoryV2(arg0 context.Context, arg1 *admin.GetWorkflowExecutionRawHistoryV2Request) (*admin.GetWorkflowExecutionRawHistoryV2Response, error) {
+func (m *MockAdminHandler) GetWorkflowExecutionRawHistoryV2(arg0 context.Context, arg1 *types.GetWorkflowExecutionRawHistoryV2Request) (*types.GetWorkflowExecutionRawHistoryV2Response, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetWorkflowExecutionRawHistoryV2", arg0, arg1)
-	ret0, _ := ret[0].(*admin.GetWorkflowExecutionRawHistoryV2Response)
+	ret0, _ := ret[0].(*types.GetWorkflowExecutionRawHistoryV2Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -255,7 +252,7 @@ func (mr *MockAdminHandlerMockRecorder) ReadDLQMessages(arg0, arg1 interface{}) 
 }
 
 // ReapplyEvents mocks base method
-func (m *MockAdminHandler) ReapplyEvents(arg0 context.Context, arg1 *shared.ReapplyEventsRequest) error {
+func (m *MockAdminHandler) ReapplyEvents(arg0 context.Context, arg1 *types.ReapplyEventsRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReapplyEvents", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -269,7 +266,7 @@ func (mr *MockAdminHandlerMockRecorder) ReapplyEvents(arg0, arg1 interface{}) *g
 }
 
 // RefreshWorkflowTasks mocks base method
-func (m *MockAdminHandler) RefreshWorkflowTasks(arg0 context.Context, arg1 *shared.RefreshWorkflowTasksRequest) error {
+func (m *MockAdminHandler) RefreshWorkflowTasks(arg0 context.Context, arg1 *types.RefreshWorkflowTasksRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RefreshWorkflowTasks", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -283,7 +280,7 @@ func (mr *MockAdminHandlerMockRecorder) RefreshWorkflowTasks(arg0, arg1 interfac
 }
 
 // RemoveTask mocks base method
-func (m *MockAdminHandler) RemoveTask(arg0 context.Context, arg1 *shared.RemoveTaskRequest) error {
+func (m *MockAdminHandler) RemoveTask(arg0 context.Context, arg1 *types.RemoveTaskRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RemoveTask", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -297,7 +294,7 @@ func (mr *MockAdminHandlerMockRecorder) RemoveTask(arg0, arg1 interface{}) *gomo
 }
 
 // ResendReplicationTasks mocks base method
-func (m *MockAdminHandler) ResendReplicationTasks(arg0 context.Context, arg1 *admin.ResendReplicationTasksRequest) error {
+func (m *MockAdminHandler) ResendReplicationTasks(arg0 context.Context, arg1 *types.ResendReplicationTasksRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResendReplicationTasks", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -311,7 +308,7 @@ func (mr *MockAdminHandlerMockRecorder) ResendReplicationTasks(arg0, arg1 interf
 }
 
 // ResetQueue mocks base method
-func (m *MockAdminHandler) ResetQueue(arg0 context.Context, arg1 *shared.ResetQueueRequest) error {
+func (m *MockAdminHandler) ResetQueue(arg0 context.Context, arg1 *types.ResetQueueRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResetQueue", arg0, arg1)
 	ret0, _ := ret[0].(error)

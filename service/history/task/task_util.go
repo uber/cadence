@@ -26,7 +26,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -316,7 +315,7 @@ func timeoutWorkflow(
 		if err := execution.FailDecision(
 			mutableState,
 			decision,
-			workflow.DecisionTaskFailedCauseForceCloseDecision,
+			types.DecisionTaskFailedCauseForceCloseDecision,
 		); err != nil {
 			return err
 		}
@@ -333,14 +332,14 @@ func retryWorkflow(
 	mutableState execution.MutableState,
 	eventBatchFirstEventID int64,
 	parentDomainName string,
-	continueAsNewAttributes *workflow.ContinueAsNewWorkflowExecutionDecisionAttributes,
+	continueAsNewAttributes *types.ContinueAsNewWorkflowExecutionDecisionAttributes,
 ) (execution.MutableState, error) {
 
 	if decision, ok := mutableState.GetInFlightDecision(); ok {
 		if err := execution.FailDecision(
 			mutableState,
 			decision,
-			workflow.DecisionTaskFailedCauseForceCloseDecision,
+			types.DecisionTaskFailedCauseForceCloseDecision,
 		); err != nil {
 			return nil, err
 		}
@@ -361,11 +360,11 @@ func retryWorkflow(
 
 func getWorkflowExecution(
 	taskInfo Info,
-) workflow.WorkflowExecution {
+) types.WorkflowExecution {
 
-	return workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(taskInfo.GetWorkflowID()),
-		RunId:      common.StringPtr(taskInfo.GetRunID()),
+	return types.WorkflowExecution{
+		WorkflowID: common.StringPtr(taskInfo.GetWorkflowID()),
+		RunID:      common.StringPtr(taskInfo.GetRunID()),
 	}
 }
 

@@ -26,7 +26,6 @@ import (
 	"context"
 
 	"github.com/uber/cadence/.gen/go/health"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -37,40 +36,40 @@ type (
 		CountWorkflowExecutions(context.Context, *types.CountWorkflowExecutionsRequest) (*types.CountWorkflowExecutionsResponse, error)
 		DeprecateDomain(context.Context, *types.DeprecateDomainRequest) error
 		DescribeDomain(context.Context, *types.DescribeDomainRequest) (*types.DescribeDomainResponse, error)
-		DescribeTaskList(context.Context, *shared.DescribeTaskListRequest) (*shared.DescribeTaskListResponse, error)
-		DescribeWorkflowExecution(context.Context, *shared.DescribeWorkflowExecutionRequest) (*shared.DescribeWorkflowExecutionResponse, error)
-		GetClusterInfo(context.Context) (*shared.ClusterInfo, error)
-		GetSearchAttributes(context.Context) (*shared.GetSearchAttributesResponse, error)
-		GetWorkflowExecutionHistory(context.Context, *shared.GetWorkflowExecutionHistoryRequest) (*shared.GetWorkflowExecutionHistoryResponse, error)
-		ListArchivedWorkflowExecutions(context.Context, *shared.ListArchivedWorkflowExecutionsRequest) (*shared.ListArchivedWorkflowExecutionsResponse, error)
+		DescribeTaskList(context.Context, *types.DescribeTaskListRequest) (*types.DescribeTaskListResponse, error)
+		DescribeWorkflowExecution(context.Context, *types.DescribeWorkflowExecutionRequest) (*types.DescribeWorkflowExecutionResponse, error)
+		GetClusterInfo(context.Context) (*types.ClusterInfo, error)
+		GetSearchAttributes(context.Context) (*types.GetSearchAttributesResponse, error)
+		GetWorkflowExecutionHistory(context.Context, *types.GetWorkflowExecutionHistoryRequest) (*types.GetWorkflowExecutionHistoryResponse, error)
+		ListArchivedWorkflowExecutions(context.Context, *types.ListArchivedWorkflowExecutionsRequest) (*types.ListArchivedWorkflowExecutionsResponse, error)
 		ListClosedWorkflowExecutions(context.Context, *types.ListClosedWorkflowExecutionsRequest) (*types.ListClosedWorkflowExecutionsResponse, error)
 		ListDomains(context.Context, *types.ListDomainsRequest) (*types.ListDomainsResponse, error)
 		ListOpenWorkflowExecutions(context.Context, *types.ListOpenWorkflowExecutionsRequest) (*types.ListOpenWorkflowExecutionsResponse, error)
-		ListTaskListPartitions(context.Context, *shared.ListTaskListPartitionsRequest) (*shared.ListTaskListPartitionsResponse, error)
+		ListTaskListPartitions(context.Context, *types.ListTaskListPartitionsRequest) (*types.ListTaskListPartitionsResponse, error)
 		ListWorkflowExecutions(context.Context, *types.ListWorkflowExecutionsRequest) (*types.ListWorkflowExecutionsResponse, error)
-		PollForActivityTask(context.Context, *shared.PollForActivityTaskRequest) (*shared.PollForActivityTaskResponse, error)
-		PollForDecisionTask(context.Context, *shared.PollForDecisionTaskRequest) (*shared.PollForDecisionTaskResponse, error)
-		QueryWorkflow(context.Context, *shared.QueryWorkflowRequest) (*shared.QueryWorkflowResponse, error)
-		RecordActivityTaskHeartbeat(context.Context, *shared.RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse, error)
-		RecordActivityTaskHeartbeatByID(context.Context, *shared.RecordActivityTaskHeartbeatByIDRequest) (*shared.RecordActivityTaskHeartbeatResponse, error)
+		PollForActivityTask(context.Context, *types.PollForActivityTaskRequest) (*types.PollForActivityTaskResponse, error)
+		PollForDecisionTask(context.Context, *types.PollForDecisionTaskRequest) (*types.PollForDecisionTaskResponse, error)
+		QueryWorkflow(context.Context, *types.QueryWorkflowRequest) (*types.QueryWorkflowResponse, error)
+		RecordActivityTaskHeartbeat(context.Context, *types.RecordActivityTaskHeartbeatRequest) (*types.RecordActivityTaskHeartbeatResponse, error)
+		RecordActivityTaskHeartbeatByID(context.Context, *types.RecordActivityTaskHeartbeatByIDRequest) (*types.RecordActivityTaskHeartbeatResponse, error)
 		RegisterDomain(context.Context, *types.RegisterDomainRequest) error
-		RequestCancelWorkflowExecution(context.Context, *shared.RequestCancelWorkflowExecutionRequest) error
-		ResetStickyTaskList(context.Context, *shared.ResetStickyTaskListRequest) (*shared.ResetStickyTaskListResponse, error)
-		ResetWorkflowExecution(context.Context, *shared.ResetWorkflowExecutionRequest) (*shared.ResetWorkflowExecutionResponse, error)
-		RespondActivityTaskCanceled(context.Context, *shared.RespondActivityTaskCanceledRequest) error
-		RespondActivityTaskCanceledByID(context.Context, *shared.RespondActivityTaskCanceledByIDRequest) error
-		RespondActivityTaskCompleted(context.Context, *shared.RespondActivityTaskCompletedRequest) error
-		RespondActivityTaskCompletedByID(context.Context, *shared.RespondActivityTaskCompletedByIDRequest) error
-		RespondActivityTaskFailed(context.Context, *shared.RespondActivityTaskFailedRequest) error
-		RespondActivityTaskFailedByID(context.Context, *shared.RespondActivityTaskFailedByIDRequest) error
-		RespondDecisionTaskCompleted(context.Context, *shared.RespondDecisionTaskCompletedRequest) (*shared.RespondDecisionTaskCompletedResponse, error)
-		RespondDecisionTaskFailed(context.Context, *shared.RespondDecisionTaskFailedRequest) error
-		RespondQueryTaskCompleted(context.Context, *shared.RespondQueryTaskCompletedRequest) error
+		RequestCancelWorkflowExecution(context.Context, *types.RequestCancelWorkflowExecutionRequest) error
+		ResetStickyTaskList(context.Context, *types.ResetStickyTaskListRequest) (*types.ResetStickyTaskListResponse, error)
+		ResetWorkflowExecution(context.Context, *types.ResetWorkflowExecutionRequest) (*types.ResetWorkflowExecutionResponse, error)
+		RespondActivityTaskCanceled(context.Context, *types.RespondActivityTaskCanceledRequest) error
+		RespondActivityTaskCanceledByID(context.Context, *types.RespondActivityTaskCanceledByIDRequest) error
+		RespondActivityTaskCompleted(context.Context, *types.RespondActivityTaskCompletedRequest) error
+		RespondActivityTaskCompletedByID(context.Context, *types.RespondActivityTaskCompletedByIDRequest) error
+		RespondActivityTaskFailed(context.Context, *types.RespondActivityTaskFailedRequest) error
+		RespondActivityTaskFailedByID(context.Context, *types.RespondActivityTaskFailedByIDRequest) error
+		RespondDecisionTaskCompleted(context.Context, *types.RespondDecisionTaskCompletedRequest) (*types.RespondDecisionTaskCompletedResponse, error)
+		RespondDecisionTaskFailed(context.Context, *types.RespondDecisionTaskFailedRequest) error
+		RespondQueryTaskCompleted(context.Context, *types.RespondQueryTaskCompletedRequest) error
 		ScanWorkflowExecutions(context.Context, *types.ListWorkflowExecutionsRequest) (*types.ListWorkflowExecutionsResponse, error)
-		SignalWithStartWorkflowExecution(context.Context, *shared.SignalWithStartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error)
-		SignalWorkflowExecution(context.Context, *shared.SignalWorkflowExecutionRequest) error
-		StartWorkflowExecution(context.Context, *shared.StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error)
-		TerminateWorkflowExecution(context.Context, *shared.TerminateWorkflowExecutionRequest) error
+		SignalWithStartWorkflowExecution(context.Context, *types.SignalWithStartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error)
+		SignalWorkflowExecution(context.Context, *types.SignalWorkflowExecutionRequest) error
+		StartWorkflowExecution(context.Context, *types.StartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error)
+		TerminateWorkflowExecution(context.Context, *types.TerminateWorkflowExecutionRequest) error
 		UpdateDomain(context.Context, *types.UpdateDomainRequest) (*types.UpdateDomainResponse, error)
 	}
 )

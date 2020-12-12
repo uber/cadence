@@ -29,7 +29,6 @@ import (
 	"fmt"
 	"time"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/locks"
@@ -57,7 +56,7 @@ type (
 	Context interface {
 		GetDomainName() string
 		GetDomainID() string
-		GetExecution() *workflow.WorkflowExecution
+		GetExecution() *types.WorkflowExecution
 
 		GetWorkflowExecution() MutableState
 		SetWorkflowExecution(mutableState MutableState)
@@ -140,7 +139,7 @@ type (
 type (
 	contextImpl struct {
 		domainID          string
-		workflowExecution workflow.WorkflowExecution
+		workflowExecution types.WorkflowExecution
 		shard             shard.Context
 		executionManager  persistence.ExecutionManager
 		logger            log.Logger
@@ -162,7 +161,7 @@ var (
 // NewContext creates a new workflow execution context
 func NewContext(
 	domainID string,
-	execution workflow.WorkflowExecution,
+	execution types.WorkflowExecution,
 	shard shard.Context,
 	executionManager persistence.ExecutionManager,
 	logger log.Logger,
@@ -201,7 +200,7 @@ func (c *contextImpl) GetDomainID() string {
 	return c.domainID
 }
 
-func (c *contextImpl) GetExecution() *workflow.WorkflowExecution {
+func (c *contextImpl) GetExecution() *types.WorkflowExecution {
 	return &c.workflowExecution
 }
 
@@ -702,7 +701,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		}
 		newWorkflowSizeSize := newContext.GetHistorySize()
 		startEvents := newWorkflowEventsSeq[0]
-		firstEventID := startEvents.Events[0].GetEventId()
+		firstEventID := startEvents.Events[0].GetEventID()
 		var eventsSize int64
 		if firstEventID == common.FirstEventID {
 			eventsSize, err = c.PersistFirstWorkflowEvents(ctx, startEvents)
@@ -902,9 +901,9 @@ func (c *contextImpl) PersistFirstWorkflowEvents(
 	domainID := workflowEvents.DomainID
 	workflowID := workflowEvents.WorkflowID
 	runID := workflowEvents.RunID
-	execution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowEvents.WorkflowID),
-		RunId:      common.StringPtr(workflowEvents.RunID),
+	execution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(workflowEvents.WorkflowID),
+		RunID:      common.StringPtr(workflowEvents.RunID),
 	}
 	branchToken := workflowEvents.BranchToken
 	events := workflowEvents.Events
@@ -934,9 +933,9 @@ func (c *contextImpl) PersistNonFirstWorkflowEvents(
 	}
 
 	domainID := workflowEvents.DomainID
-	execution := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr(workflowEvents.WorkflowID),
-		RunId:      common.StringPtr(workflowEvents.RunID),
+	execution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr(workflowEvents.WorkflowID),
+		RunID:      common.StringPtr(workflowEvents.RunID),
 	}
 	branchToken := workflowEvents.BranchToken
 	events := workflowEvents.Events
@@ -958,7 +957,7 @@ func (c *contextImpl) PersistNonFirstWorkflowEvents(
 func (c *contextImpl) appendHistoryV2EventsWithRetry(
 	ctx context.Context,
 	domainID string,
-	execution workflow.WorkflowExecution,
+	execution types.WorkflowExecution,
 	request *persistence.AppendHistoryNodesRequest,
 ) (int64, error) {
 
@@ -1004,8 +1003,8 @@ func (c *contextImpl) createWorkflowExecutionWithRetry(
 	default:
 		c.logger.Error(
 			"Persistent store operation failure",
-			tag.WorkflowID(c.workflowExecution.GetWorkflowId()),
-			tag.WorkflowRunID(c.workflowExecution.GetRunId()),
+			tag.WorkflowID(c.workflowExecution.GetWorkflowID()),
+			tag.WorkflowRunID(c.workflowExecution.GetRunID()),
 			tag.WorkflowDomainID(c.domainID),
 			tag.StoreOperationCreateWorkflowExecution,
 			tag.Error(err),
@@ -1041,8 +1040,8 @@ func (c *contextImpl) getWorkflowExecutionWithRetry(
 	default:
 		c.logger.Error(
 			"Persistent fetch operation failure",
-			tag.WorkflowID(c.workflowExecution.GetWorkflowId()),
-			tag.WorkflowRunID(c.workflowExecution.GetRunId()),
+			tag.WorkflowID(c.workflowExecution.GetWorkflowID()),
+			tag.WorkflowRunID(c.workflowExecution.GetRunID()),
 			tag.WorkflowDomainID(c.domainID),
 			tag.StoreOperationGetWorkflowExecution,
 			tag.Error(err),
@@ -1076,8 +1075,8 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 	default:
 		c.logger.Error(
 			"Persistent store operation failure",
-			tag.WorkflowID(c.workflowExecution.GetWorkflowId()),
-			tag.WorkflowRunID(c.workflowExecution.GetRunId()),
+			tag.WorkflowID(c.workflowExecution.GetWorkflowID()),
+			tag.WorkflowRunID(c.workflowExecution.GetRunID()),
 			tag.WorkflowDomainID(c.domainID),
 			tag.StoreOperationUpdateWorkflowExecution,
 			tag.Error(err),
@@ -1143,7 +1142,7 @@ func (c *contextImpl) ReapplyEvents(
 	if domainEntry.IsDomainPendingActive() {
 		return nil
 	}
-	var reapplyEvents []*workflow.HistoryEvent
+	var reapplyEvents []*types.HistoryEvent
 	for _, events := range eventBatches {
 		if events.DomainID != domainID ||
 			events.WorkflowID != workflowID {
@@ -1154,7 +1153,7 @@ func (c *contextImpl) ReapplyEvents(
 
 		for _, event := range events.Events {
 			switch event.GetEventType() {
-			case workflow.EventTypeWorkflowExecutionSignaled:
+			case types.EventTypeWorkflowExecutionSignaled:
 				reapplyEvents = append(reapplyEvents, event)
 			}
 		}
@@ -1186,7 +1185,7 @@ func (c *contextImpl) ReapplyEvents(
 	// The active cluster of the domain is the same as current cluster.
 	// Use the history from the same cluster to reapply events
 	reapplyEventsDataBlob, err := serializer.SerializeBatchEvents(
-		thrift.ToHistoryEventArray(reapplyEvents),
+		reapplyEvents,
 		common.EncodingTypeThriftRW,
 	)
 	if err != nil {

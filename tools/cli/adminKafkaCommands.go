@@ -44,10 +44,10 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
@@ -451,7 +451,7 @@ func decodeVisibility(message []byte, val *indexer.Message) error {
 
 // ClustersConfig describes the kafka clusters
 type ClustersConfig struct {
-	Clusters map[string]messaging.ClusterConfig
+	Clusters map[string]config.ClusterConfig
 	TLS      auth.TLS
 }
 
@@ -475,9 +475,9 @@ func doRereplicate(
 	fmt.Printf("Start rereplicate for wid: %v, rid:%v \n", wid, rid)
 	resp, err := exeMgr.GetWorkflowExecution(ctx, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
-		Execution: shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(wid),
-			RunId:      common.StringPtr(rid),
+		Execution: types.WorkflowExecution{
+			WorkflowID: common.StringPtr(wid),
+			RunID:      common.StringPtr(rid),
 		},
 	})
 	if err != nil {

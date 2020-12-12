@@ -20,7 +20,7 @@
 
 package execution
 
-import workflow "github.com/uber/cadence/.gen/go/shared"
+import "github.com/uber/cadence/common/types"
 
 // TerminateWorkflow is a helper function to terminate workflow
 func TerminateWorkflow(
@@ -35,7 +35,7 @@ func TerminateWorkflow(
 		if err := FailDecision(
 			mutableState,
 			decision,
-			workflow.DecisionTaskFailedCauseForceCloseDecision,
+			types.DecisionTaskFailedCauseForceCloseDecision,
 		); err != nil {
 			return err
 		}

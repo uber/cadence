@@ -32,7 +32,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	replicator "github.com/uber/cadence/.gen/go/replicator"
+	types "github.com/uber/cadence/common/types"
 )
 
 // MockTaskAckManager is a mock of TaskAckManager interface
@@ -59,10 +59,10 @@ func (m *MockTaskAckManager) EXPECT() *MockTaskAckManagerMockRecorder {
 }
 
 // GetTask mocks base method
-func (m *MockTaskAckManager) GetTask(ctx context.Context, taskInfo *replicator.ReplicationTaskInfo) (*replicator.ReplicationTask, error) {
+func (m *MockTaskAckManager) GetTask(ctx context.Context, taskInfo *types.ReplicationTaskInfo) (*types.ReplicationTask, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetTask", ctx, taskInfo)
-	ret0, _ := ret[0].(*replicator.ReplicationTask)
+	ret0, _ := ret[0].(*types.ReplicationTask)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -74,10 +74,10 @@ func (mr *MockTaskAckManagerMockRecorder) GetTask(ctx, taskInfo interface{}) *go
 }
 
 // GetTasks mocks base method
-func (m *MockTaskAckManager) GetTasks(ctx context.Context, pollingCluster string, lastReadTaskID int64) (*replicator.ReplicationMessages, error) {
+func (m *MockTaskAckManager) GetTasks(ctx context.Context, pollingCluster string, lastReadTaskID int64) (*types.ReplicationMessages, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetTasks", ctx, pollingCluster, lastReadTaskID)
-	ret0, _ := ret[0].(*replicator.ReplicationMessages)
+	ret0, _ := ret[0].(*types.ReplicationMessages)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

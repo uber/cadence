@@ -28,12 +28,11 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/execution"
@@ -120,11 +119,11 @@ func (s *DecisionHandlerSuite) TestHandleBufferedQueries_QueryTooLarge() {
 	s.assertQueryCounts(s.queryRegistry, 0, 5, 0, 5)
 }
 
-func (s *DecisionHandlerSuite) constructQueryResults(ids []string, resultSize int) map[string]*shared.WorkflowQueryResult {
-	results := make(map[string]*shared.WorkflowQueryResult)
+func (s *DecisionHandlerSuite) constructQueryResults(ids []string, resultSize int) map[string]*types.WorkflowQueryResult {
+	results := make(map[string]*types.WorkflowQueryResult)
 	for _, id := range ids {
-		results[id] = &shared.WorkflowQueryResult{
-			ResultType: common.QueryResultTypePtr(shared.QueryResultTypeAnswered),
+		results[id] = &types.WorkflowQueryResult{
+			ResultType: types.QueryResultTypeAnswered.Ptr(),
 			Answer:     make([]byte, resultSize, resultSize),
 		}
 	}
@@ -134,7 +133,7 @@ func (s *DecisionHandlerSuite) constructQueryResults(ids []string, resultSize in
 func (s *DecisionHandlerSuite) constructQueryRegistry(numQueries int) query.Registry {
 	queryRegistry := query.NewRegistry()
 	for i := 0; i < numQueries; i++ {
-		queryRegistry.BufferQuery(&shared.WorkflowQuery{})
+		queryRegistry.BufferQuery(&types.WorkflowQuery{})
 	}
 	return queryRegistry
 }

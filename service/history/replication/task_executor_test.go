@@ -32,7 +32,6 @@ import (
 
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/history/historyservicetest"
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
@@ -180,12 +179,12 @@ func (s *taskExecutorSuite) TestProcessTaskOnce_SyncActivityReplicationTask() {
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
-	task := &replicator.ReplicationTask{
-		TaskType: replicator.ReplicationTaskTypeSyncActivity.Ptr(),
-		SyncActivityTaskAttributes: &replicator.SyncActivityTaskAttributes{
-			DomainId:   common.StringPtr(domainID),
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+	task := &types.ReplicationTask{
+		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
+		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
+			DomainID:   common.StringPtr(domainID),
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	}
 	request := &history.SyncActivityRequest{
@@ -203,12 +202,12 @@ func (s *taskExecutorSuite) TestProcess_HistoryV2ReplicationTask() {
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
-	task := &replicator.ReplicationTask{
-		TaskType: replicator.ReplicationTaskTypeHistoryV2.Ptr(),
-		HistoryTaskV2Attributes: &replicator.HistoryTaskV2Attributes{
-			DomainId:   common.StringPtr(domainID),
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+	task := &types.ReplicationTask{
+		TaskType: types.ReplicationTaskTypeHistoryV2.Ptr(),
+		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
+			DomainID:   common.StringPtr(domainID),
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	}
 	request := &history.ReplicateEventsV2Request{
