@@ -900,6 +900,10 @@ func getDBFlags() []cli.Flag {
 			Usage: "persistence port",
 		},
 		cli.StringFlag{
+			Name:  FlagDBRegion,
+			Usage: "persistence region",
+		},
+		cli.StringFlag{
 			Name:  FlagUsername,
 			Usage: "persistence username",
 		},

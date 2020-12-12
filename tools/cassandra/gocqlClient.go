@@ -18,54 +18,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package gocql
+package cassandra
 
 import (
-	"context"
-	"fmt"
-
-	"github.com/gocql/gocql"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
 
-var _ Batch = (*batch)(nil)
+var defaultGoCQLClient = gocql.NewClient()
 
-type (
-	batch struct {
-		*gocql.Batch
-	}
-)
-
-// Definition of all BatchTypes
-const (
-	LoggedBatch BatchType = iota
-	UnloggedBatch
-	CounterBatch
-)
-
-func (b *batch) WithContext(ctx context.Context) Batch {
-	b2 := b.Batch.WithContext(ctx)
-	if b2 == nil {
-		return nil
-	}
-	return &batch{
-		Batch: b2,
-	}
-}
-
-func (b *batch) WithTimestamp(timestamp int64) Batch {
-	b.Batch.WithTimestamp(timestamp)
-	return b
-}
-
-func mustConvertBatchType(batchType BatchType) gocql.BatchType {
-	switch batchType {
-	case LoggedBatch:
-		return gocql.LoggedBatch
-	case UnloggedBatch:
-		return gocql.UnloggedBatch
-	case CounterBatch:
-		return gocql.CounterBatch
-	default:
-		panic(fmt.Sprintf("Unknown gocql BatchType: %v", batchType))
-	}
+// SetGoCQLClient is used to overwrite the defaultGoCQLClient global
+func SetGoCQLClient(client gocql.Client) {
+	defaultGoCQLClient = client
 }

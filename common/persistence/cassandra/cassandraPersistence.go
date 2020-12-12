@@ -23,21 +23,21 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
-
-	"github.com/gocql/gocql"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 )
 
 type (
 	cassandraStore struct {
-		session *gocql.Session
+		client  gocql.Client
+		session gocql.Session
 		logger  log.Logger
 	}
 
@@ -58,8 +58,6 @@ var _ p.ExecutionStore = (*cassandraPersistence)(nil)
 // R represents row type in executions table, valid values are:
 // R = {Shard = 1, Execution = 2, Transfer = 3, Timer = 4, Replication = 5}
 const (
-	cassandraProtoVersion = 4
-	defaultSessionTimeout = 10 * time.Second
 	// Special Domains related constants
 	emptyDomainID = "10000000-0000-f000-f000-000000000000"
 	// Special Run IDs
@@ -735,10 +733,18 @@ func (d *cassandraStore) Close() {
 // NewWorkflowExecutionPersistence is used to create an instance of workflowExecutionManager implementation
 func NewWorkflowExecutionPersistence(
 	shardID int,
-	session *gocql.Session,
+	client gocql.Client,
+	session gocql.Session,
 	logger log.Logger,
 ) (p.ExecutionStore, error) {
-	return &cassandraPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: shardID}, nil
+	return &cassandraPersistence{
+		cassandraStore: cassandraStore{
+			client:  client,
+			session: session,
+			logger:  logger,
+		},
+		shardID: shardID,
+	}, nil
 }
 
 func (d *cassandraPersistence) GetShardID() int {
@@ -820,7 +826,7 @@ func (d *cassandraPersistence) CreateWorkflowExecution(
 	}()
 
 	if err != nil {
-		return nil, convertCommonErrors(nil, "CreateWorkflowExecution", err)
+		return nil, convertCommonErrors(d.client, "CreateWorkflowExecution", err)
 	}
 
 	if !applied {
@@ -934,14 +940,14 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		if cassandra.IsNotFoundError(err) {
+		if d.client.IsNotFoundError(err) {
 			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
 					*execution.WorkflowID, *execution.RunID),
 			}
 		}
 
-		return nil, convertCommonErrors(nil, "GetWorkflowExecution", err)
+		return nil, convertCommonErrors(d.client, "GetWorkflowExecution", err)
 	}
 
 	state := &p.InternalWorkflowMutableState{}
@@ -993,9 +999,9 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 	state.SignalInfos = signalInfos
 
 	signalRequestedIDs := make(map[string]struct{})
-	sList := result["signal_requested"].([]gocql.UUID)
+	sList := mustConvertToSlice(result["signal_requested"])
 	for _, v := range sList {
-		signalRequestedIDs[v.String()] = struct{}{}
+		signalRequestedIDs[v.(gocql.UUID).String()] = struct{}{}
 	}
 	state.SignalRequestedIDs = signalRequestedIDs
 
@@ -1139,7 +1145,7 @@ func (d *cassandraPersistence) UpdateWorkflowExecution(
 	}()
 
 	if err != nil {
-		return convertCommonErrors(nil, "UpdateWorkflowExecution", err)
+		return convertCommonErrors(d.client, "UpdateWorkflowExecution", err)
 	}
 
 	if !applied {
@@ -1252,7 +1258,7 @@ func (d *cassandraPersistence) ResetWorkflowExecution(
 	}()
 
 	if err != nil {
-		return convertCommonErrors(nil, "ResetWorkflowExecution", err)
+		return convertCommonErrors(d.client, "ResetWorkflowExecution", err)
 	}
 
 	if !applied {
@@ -1398,7 +1404,7 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 	}()
 
 	if err != nil {
-		return convertCommonErrors(nil, "ConflictResolveWorkflowExecution", err)
+		return convertCommonErrors(d.client, "ConflictResolveWorkflowExecution", err)
 	}
 
 	if !applied {
@@ -1407,7 +1413,14 @@ func (d *cassandraPersistence) ConflictResolveWorkflowExecution(
 	return nil
 }
 
-func (d *cassandraPersistence) getExecutionConditionalUpdateFailure(previous map[string]interface{}, iter *gocql.Iter, requestRunID string, requestCondition int64, requestRangeID int64, requestConditionalRunID string) error {
+func (d *cassandraPersistence) getExecutionConditionalUpdateFailure(
+	previous map[string]interface{},
+	iter gocql.Iter,
+	requestRunID string,
+	requestCondition int64,
+	requestRangeID int64,
+	requestConditionalRunID string,
+) error {
 	// There can be three reasons why the query does not get applied: the RangeID has changed, or the next_event_id or current_run_id check failed.
 	// Check the row info returned by Cassandra to figure out which one it is.
 	rangeIDUnmatch := false
@@ -1533,7 +1546,7 @@ func (d *cassandraPersistence) DeleteWorkflowExecution(
 
 	err := query.Exec()
 	if err != nil {
-		return convertCommonErrors(nil, "DeleteWorkflowExecution", err)
+		return convertCommonErrors(d.client, "DeleteWorkflowExecution", err)
 	}
 
 	return nil
@@ -1556,7 +1569,7 @@ func (d *cassandraPersistence) DeleteCurrentWorkflowExecution(
 
 	err := query.Exec()
 	if err != nil {
-		return convertCommonErrors(nil, "DeleteWorkflowCurrentRow", err)
+		return convertCommonErrors(d.client, "DeleteWorkflowCurrentRow", err)
 	}
 
 	return nil
@@ -1579,14 +1592,14 @@ func (d *cassandraPersistence) GetCurrentExecution(
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		if cassandra.IsNotFoundError(err) {
+		if d.client.IsNotFoundError(err) {
 			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v",
 					request.WorkflowID),
 			}
 		}
 
-		return nil, convertCommonErrors(nil, "GetCurrentExecution", err)
+		return nil, convertCommonErrors(d.client, "GetCurrentExecution", err)
 	}
 
 	currentRunID := result["current_run_id"].(gocql.UUID).String()
@@ -1642,7 +1655,7 @@ func (d *cassandraPersistence) ListCurrentExecutions(
 	copy(response.PageToken, nextPageToken)
 
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "ListCurrentExecutions", err)
+		return nil, convertCommonErrors(d.client, "ListCurrentExecutions", err)
 	}
 	return response, nil
 }
@@ -1663,11 +1676,11 @@ func (d *cassandraPersistence) IsWorkflowExecutionExists(
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		if cassandra.IsNotFoundError(err) {
+		if d.client.IsNotFoundError(err) {
 			return &p.IsWorkflowExecutionExistsResponse{Exists: false}, nil
 		}
 
-		return nil, convertCommonErrors(nil, "IsWorkflowExecutionExists", err)
+		return nil, convertCommonErrors(d.client, "IsWorkflowExecutionExists", err)
 	}
 	return &p.IsWorkflowExecutionExistsResponse{Exists: true}, nil
 }
@@ -1708,7 +1721,7 @@ func (d *cassandraPersistence) ListConcreteExecutions(
 	copy(response.NextPageToken, nextPageToken)
 
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "ListConcreteExecutions", err)
+		return nil, convertCommonErrors(d.client, "ListConcreteExecutions", err)
 	}
 
 	return response, nil
@@ -1752,7 +1765,7 @@ func (d *cassandraPersistence) GetTransferTasks(
 	copy(response.NextPageToken, nextPageToken)
 
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "GetTransferTasks", err)
+		return nil, convertCommonErrors(d.client, "GetTransferTasks", err)
 	}
 
 	return response, nil
@@ -1779,7 +1792,7 @@ func (d *cassandraPersistence) GetReplicationTasks(
 }
 
 func (d *cassandraPersistence) populateGetReplicationTasksResponse(
-	query *gocql.Query,
+	query gocql.Query,
 ) (*p.InternalGetReplicationTasksResponse, error) {
 	iter := query.Iter()
 	if iter == nil {
@@ -1802,7 +1815,7 @@ func (d *cassandraPersistence) populateGetReplicationTasksResponse(
 	copy(response.NextPageToken, nextPageToken)
 
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "GetReplicationTasks", err)
+		return nil, convertCommonErrors(d.client, "GetReplicationTasks", err)
 	}
 
 	return response, nil
@@ -1824,7 +1837,7 @@ func (d *cassandraPersistence) CompleteTransferTask(
 
 	err := query.Exec()
 	if err != nil {
-		return convertCommonErrors(nil, "CompleteTransferTask", err)
+		return convertCommonErrors(d.client, "CompleteTransferTask", err)
 	}
 
 	return nil
@@ -1847,7 +1860,7 @@ func (d *cassandraPersistence) RangeCompleteTransferTask(
 
 	err := query.Exec()
 	if err != nil {
-		return convertCommonErrors(nil, "RangeCompleteTransferTask", err)
+		return convertCommonErrors(d.client, "RangeCompleteTransferTask", err)
 	}
 
 	return nil
@@ -1869,7 +1882,7 @@ func (d *cassandraPersistence) CompleteReplicationTask(
 
 	err := query.Exec()
 	if err != nil {
-		return convertCommonErrors(nil, "CompleteReplicationTask", err)
+		return convertCommonErrors(d.client, "CompleteReplicationTask", err)
 	}
 
 	return nil
@@ -1892,7 +1905,7 @@ func (d *cassandraPersistence) RangeCompleteReplicationTask(
 
 	err := query.Exec()
 	if err != nil {
-		return convertCommonErrors(nil, "RangeCompleteReplicationTask", err)
+		return convertCommonErrors(d.client, "RangeCompleteReplicationTask", err)
 	}
 
 	return nil
@@ -1915,7 +1928,7 @@ func (d *cassandraPersistence) CompleteTimerTask(
 
 	err := query.Exec()
 	if err != nil {
-		return convertCommonErrors(nil, "CompleteTimerTask", err)
+		return convertCommonErrors(d.client, "CompleteTimerTask", err)
 	}
 
 	return nil
@@ -1939,7 +1952,7 @@ func (d *cassandraPersistence) RangeCompleteTimerTask(
 
 	err := query.Exec()
 	if err != nil {
-		return convertCommonErrors(nil, "RangeCompleteTimerTask", err)
+		return convertCommonErrors(d.client, "RangeCompleteTimerTask", err)
 	}
 
 	return nil
@@ -1983,7 +1996,7 @@ func (d *cassandraPersistence) GetTimerIndexTasks(
 	copy(response.NextPageToken, nextPageToken)
 
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "GetTimerTasks", err)
+		return nil, convertCommonErrors(d.client, "GetTimerTasks", err)
 	}
 
 	return response, nil
@@ -2022,7 +2035,7 @@ func (d *cassandraPersistence) PutReplicationTaskToDLQ(
 
 	err := query.Exec()
 	if err != nil {
-		return convertCommonErrors(nil, "PutReplicationTaskToDLQ", err)
+		return convertCommonErrors(d.client, "PutReplicationTaskToDLQ", err)
 	}
 
 	return nil
@@ -2063,7 +2076,7 @@ func (d *cassandraPersistence) GetReplicationDLQSize(
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		return nil, convertCommonErrors(nil, "GetReplicationDLQSize", err)
+		return nil, convertCommonErrors(d.client, "GetReplicationDLQSize", err)
 	}
 
 	queueSize := result["count"].(int64)
@@ -2089,7 +2102,7 @@ func (d *cassandraPersistence) DeleteReplicationTaskFromDLQ(
 
 	err := query.Exec()
 	if err != nil {
-		return convertCommonErrors(nil, "DeleteReplicationTaskFromDLQ", err)
+		return convertCommonErrors(d.client, "DeleteReplicationTaskFromDLQ", err)
 	}
 
 	return nil
@@ -2113,7 +2126,7 @@ func (d *cassandraPersistence) RangeDeleteReplicationTaskFromDLQ(
 
 	err := query.Exec()
 	if err != nil {
-		return convertCommonErrors(nil, "RangeDeleteReplicationTaskFromDLQ", err)
+		return convertCommonErrors(d.client, "RangeDeleteReplicationTaskFromDLQ", err)
 	}
 
 	return nil
@@ -2160,7 +2173,7 @@ func (d *cassandraPersistence) CreateFailoverMarkerTasks(
 		}
 	}()
 	if err != nil {
-		return convertCommonErrors(nil, "CreateFailoverMarkerTasks", err)
+		return convertCommonErrors(d.client, "CreateFailoverMarkerTasks", err)
 	}
 
 	if !applied {
@@ -2233,4 +2246,18 @@ func createReplicationState(
 	}
 
 	return info
+}
+
+func mustConvertToSlice(value interface{}) []interface{} {
+	v := reflect.ValueOf(value)
+	switch v.Kind() {
+	case reflect.Slice, reflect.Array:
+		result := make([]interface{}, v.Len())
+		for i := 0; i < v.Len(); i++ {
+			result[i] = v.Index(i).Interface()
+		}
+		return result
+	default:
+		panic(fmt.Sprintf("Unable to convert %v to slice", value))
+	}
 }

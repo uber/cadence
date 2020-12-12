@@ -18,13 +18,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -self_package github.com/uber/cadence/gocql
+
 package gocql
 
 import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/auth"
 )
 
 // Note: this file defines the minimal interface that is needed by Cadence's cassandra
@@ -37,15 +39,14 @@ type (
 	Client interface {
 		CreateSession(ClusterConfig) (Session, error)
 
-		IsTimeoutError(error) bool
-		IsNotFoundError(error) bool
-		IsThrottlingError(error) bool
+		ErrorChecker
 	}
 
 	// Session is the interface for interacting with the database.
 	Session interface {
 		Query(string, ...interface{}) Query
 		NewBatch(BatchType) Batch
+		ExecuteBatch(Batch) error
 		MapExecuteBatchCAS(Batch, map[string]interface{}) (bool, Iter, error)
 		Close()
 	}
@@ -54,19 +55,23 @@ type (
 	Query interface {
 		Exec() error
 		Scan(...interface{}) error
+		ScanCAS(...interface{}) (bool, error)
 		MapScan(map[string]interface{}) error
 		MapScanCAS(map[string]interface{}) (bool, error)
 		Iter() Iter
 		PageSize(int) Query
 		PageState([]byte) Query
 		WithContext(context.Context) Query
+		WithTimestamp(int64) Query
 		Consistency(Consistency) Query
+		Bind(...interface{}) Query
 	}
 
 	// Batch is the interface for batch operation.
 	Batch interface {
 		Query(string, ...interface{})
 		WithContext(context.Context) Batch
+		WithTimestamp(int64) Batch
 	}
 
 	// Iter is the interface for executing and iterating over all resulting rows.
@@ -82,6 +87,13 @@ type (
 		String() string
 	}
 
+	// ErrorChecker checks for common gocql errors
+	ErrorChecker interface {
+		IsTimeoutError(error) bool
+		IsNotFoundError(error) bool
+		IsThrottlingError(error) bool
+	}
+
 	// BatchType is the type of the Batch operation
 	BatchType byte
 
@@ -93,9 +105,15 @@ type (
 
 	// ClusterConfig is the config for cassandra connection
 	ClusterConfig struct {
-		// TODO: explicitly define all the fields here to remove the dependency on common/service/config package
-		config.Cassandra
-
+		Hosts             string
+		Port              int
+		User              string
+		Password          string
+		Keyspace          string
+		Region            string
+		Datacenter        string
+		MaxConns          int
+		TLS               *auth.TLS
 		ProtoVersion      int
 		Consistency       Consistency
 		SerialConsistency SerialConsistency
