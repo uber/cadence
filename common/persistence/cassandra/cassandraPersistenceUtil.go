@@ -25,18 +25,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gocql/gocql"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 )
 
 func applyWorkflowMutationBatch(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	shardID int,
 	workflowMutation *p.InternalWorkflowMutation,
 ) error {
@@ -151,7 +148,7 @@ func applyWorkflowMutationBatch(
 }
 
 func applyWorkflowSnapshotBatchAsReset(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	shardID int,
 	workflowSnapshot *p.InternalWorkflowSnapshot,
 ) error {
@@ -258,7 +255,7 @@ func applyWorkflowSnapshotBatchAsReset(
 }
 
 func applyWorkflowSnapshotBatchAsNew(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	shardID int,
 	workflowSnapshot *p.InternalWorkflowSnapshot,
 ) error {
@@ -361,7 +358,7 @@ func applyWorkflowSnapshotBatchAsNew(
 }
 
 func createExecution(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	shardID int,
 	executionInfo *p.InternalWorkflowExecutionInfo,
 	versionHistories *p.DataBlob,
@@ -480,7 +477,7 @@ func createExecution(
 }
 
 func updateExecution(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	shardID int,
 	executionInfo *p.InternalWorkflowExecutionInfo,
 	versionHistories *p.DataBlob,
@@ -601,7 +598,7 @@ func updateExecution(
 }
 
 func applyTasks(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	shardID int,
 	domainID string,
 	workflowID string,
@@ -644,7 +641,7 @@ func applyTasks(
 }
 
 func createTransferTasks(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	transferTasks []p.Task,
 	shardID int,
 	domainID string,
@@ -738,7 +735,7 @@ func createTransferTasks(
 }
 
 func createReplicationTasks(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	replicationTasks []p.Task,
 	shardID int,
 	domainID string,
@@ -804,7 +801,7 @@ func createReplicationTasks(
 }
 
 func createTimerTasks(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	timerTasks []p.Task,
 	shardID int,
 	domainID string,
@@ -879,7 +876,7 @@ func createTimerTasks(
 }
 
 func createOrUpdateCurrentExecution(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	createMode p.CreateWorkflowMode,
 	shardID int,
 	domainID string,
@@ -960,7 +957,7 @@ func createOrUpdateCurrentExecution(
 }
 
 func updateActivityInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	activityInfos []*p.InternalActivityInfo,
 	deleteInfos []int64,
 	shardID int,
@@ -1035,7 +1032,7 @@ func updateActivityInfos(
 }
 
 func deleteBufferedEvents(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	shardID int,
 	domainID string,
 	workflowID string,
@@ -1054,7 +1051,7 @@ func deleteBufferedEvents(
 }
 
 func resetActivityInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	activityInfos []*p.InternalActivityInfo,
 	shardID int,
 	domainID string,
@@ -1080,7 +1077,7 @@ func resetActivityInfos(
 }
 
 func updateTimerInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	timerInfos []*p.TimerInfo,
 	deleteInfos []string,
 	shardID int,
@@ -1120,7 +1117,7 @@ func updateTimerInfos(
 }
 
 func resetTimerInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	timerInfos []*p.TimerInfo,
 	shardID int,
 	domainID string,
@@ -1140,7 +1137,7 @@ func resetTimerInfos(
 }
 
 func updateChildExecutionInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	childExecutionInfos []*p.InternalChildExecutionInfo,
 	deleteInfos []int64,
 	shardID int,
@@ -1201,7 +1198,7 @@ func updateChildExecutionInfos(
 }
 
 func resetChildExecutionInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	childExecutionInfos []*p.InternalChildExecutionInfo,
 	shardID int,
 	domainID string,
@@ -1226,7 +1223,7 @@ func resetChildExecutionInfos(
 }
 
 func updateRequestCancelInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	requestCancelInfos []*p.RequestCancelInfo,
 	deleteInfos []int64,
 	shardID int,
@@ -1266,7 +1263,7 @@ func updateRequestCancelInfos(
 }
 
 func resetRequestCancelInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	requestCancelInfos []*p.RequestCancelInfo,
 	shardID int,
 	domainID string,
@@ -1286,7 +1283,7 @@ func resetRequestCancelInfos(
 }
 
 func updateSignalInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	signalInfos []*p.SignalInfo,
 	deleteInfos []int64,
 	shardID int,
@@ -1329,7 +1326,7 @@ func updateSignalInfos(
 }
 
 func resetSignalInfos(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	signalInfos []*p.SignalInfo,
 	shardID int,
 	domainID string,
@@ -1349,7 +1346,7 @@ func resetSignalInfos(
 }
 
 func updateSignalsRequested(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	signalReqIDs []string,
 	deleteSignalReqIDs []string,
 	shardID int,
@@ -1384,7 +1381,7 @@ func updateSignalsRequested(
 }
 
 func resetSignalRequested(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	signalRequested []string,
 	shardID int,
 	domainID string,
@@ -1404,7 +1401,7 @@ func resetSignalRequested(
 }
 
 func updateBufferedEvents(
-	batch *gocql.Batch,
+	batch gocql.Batch,
 	newBufferedEvents *p.DataBlob,
 	clearBufferedEvents bool,
 	shardID int,
@@ -2206,23 +2203,21 @@ func createChecksum(result map[string]interface{}) checksum.Checksum {
 }
 
 func convertCommonErrors(
-	db nosqlplugin.DB,
+	errChecker gocql.ErrorChecker,
 	operation string,
 	err error,
 ) error {
-	// TODO: remove all checks related db and cassandra.IsXXXError(err) after nosql refactoring is done
-
-	if db != nil && db.IsNotFoundError(err) || db == nil && cassandra.IsNotFoundError(err) {
+	if errChecker.IsNotFoundError(err) {
 		return &types.EntityNotExistsError{
 			Message: fmt.Sprintf("%v failed. Error: %v ", operation, err),
 		}
 	}
 
-	if db != nil && db.IsTimeoutError(err) || db == nil && cassandra.IsTimeoutError(err) {
+	if errChecker.IsTimeoutError(err) {
 		return &p.TimeoutError{Msg: fmt.Sprintf("%v timed out. Error: %v", operation, err)}
 	}
 
-	if db != nil && db.IsThrottlingError(err) || db == nil && cassandra.IsThrottlingError(err) {
+	if errChecker.IsThrottlingError(err) {
 		return &types.ServiceBusyError{
 			Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
 		}

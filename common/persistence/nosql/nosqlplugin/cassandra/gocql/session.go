@@ -34,22 +34,40 @@ func (s *session) Query(
 	stmt string,
 	values ...interface{},
 ) Query {
+	q := s.Session.Query(stmt, values...)
+	if q == nil {
+		return nil
+	}
 	return &query{
-		Query: s.Session.Query(stmt, values...),
+		Query: q,
 	}
 }
 
 func (s *session) NewBatch(
 	batchType BatchType,
 ) Batch {
-	return &batch{
-		Batch: s.Session.NewBatch(mustConvertBatchType(batchType)),
+	b := s.Session.NewBatch(mustConvertBatchType(batchType))
+	if b == nil {
+		return nil
 	}
+	return &batch{
+		Batch: b,
+	}
+}
+
+func (s *session) ExecuteBatch(
+	b Batch,
+) error {
+	return s.Session.ExecuteBatch(b.(*batch).Batch)
 }
 
 func (s *session) MapExecuteBatchCAS(
 	b Batch,
 	previous map[string]interface{},
 ) (bool, Iter, error) {
-	return s.Session.MapExecuteBatchCAS(b.(*batch).Batch, previous)
+	applied, iter, err := s.Session.MapExecuteBatchCAS(b.(*batch).Batch, previous)
+	if iter == nil {
+		return applied, nil, err
+	}
+	return applied, iter, err
 }

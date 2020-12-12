@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -32,11 +33,10 @@ type (
 	// DB defines the API for regular NoSQL operations of a Cadence server
 	DB interface {
 		PluginName() string
-		IsNotFoundError(err error) bool
-		IsTimeoutError(err error) bool
-		IsThrottlingError(err error) bool
-		IsConditionFailedError(err error) bool
 		Close()
+
+		IsConditionFailedError(err error) bool
+		gocql.ErrorChecker
 
 		tableCRUD
 	}

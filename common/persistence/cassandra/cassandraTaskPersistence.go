@@ -27,11 +27,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gocql/gocql"
-
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 )
@@ -165,17 +164,23 @@ const (
 var _ p.TaskStore = (*cassandraTaskPersistence)(nil)
 
 // newTaskPersistence is used to create an instance of TaskManager implementation
-func newTaskPersistence(cfg config.Cassandra, logger log.Logger) (p.TaskStore, error) {
-	cluster := cassandra.NewCassandraCluster(cfg)
-	cluster.ProtoVersion = cassandraProtoVersion
-	cluster.Consistency = gocql.LocalQuorum
-	cluster.SerialConsistency = gocql.LocalSerial
-	cluster.Timeout = defaultSessionTimeout
-	session, err := cluster.CreateSession()
+func newTaskPersistence(
+	cfg config.Cassandra,
+	logger log.Logger,
+) (p.TaskStore, error) {
+	session, err := cassandra.CreateSession(cfg)
 	if err != nil {
 		return nil, err
 	}
-	return &cassandraTaskPersistence{cassandraStore: cassandraStore{session: session, logger: logger}, shardID: -1}, nil
+
+	return &cassandraTaskPersistence{
+		cassandraStore: cassandraStore{
+			client:  cfg.CQLClient,
+			session: session,
+			logger:  logger,
+		},
+		shardID: -1,
+	}, nil
 }
 
 // From TaskManager interface
@@ -200,7 +205,7 @@ func (d *cassandraTaskPersistence) LeaseTaskList(
 	var tlDB map[string]interface{}
 	err := query.Scan(&rangeID, &tlDB)
 	if err != nil {
-		if cassandra.IsNotFoundError(err) { // First time task list is used
+		if d.client.IsNotFoundError(err) { // First time task list is used
 			query = d.session.Query(templateInsertTaskListQuery,
 				request.DomainID,
 				request.TaskList,
@@ -216,7 +221,7 @@ func (d *cassandraTaskPersistence) LeaseTaskList(
 				now,
 			).WithContext(ctx)
 		} else {
-			return nil, convertCommonErrors(nil, "LeaseTaskList", err)
+			return nil, convertCommonErrors(d.client, "LeaseTaskList", err)
 		}
 	} else {
 		// if request.RangeID is > 0, we are trying to renew an already existing
@@ -249,7 +254,7 @@ func (d *cassandraTaskPersistence) LeaseTaskList(
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return nil, convertCommonErrors(nil, "LeaseTaskList", err)
+		return nil, convertCommonErrors(d.client, "LeaseTaskList", err)
 	}
 	if !applied {
 		previousRangeID := previous["range_id"]
@@ -329,7 +334,7 @@ func (d *cassandraTaskPersistence) UpdateTaskList(
 	}
 
 	if err != nil {
-		return nil, convertCommonErrors(nil, "UpdateTaskList", err)
+		return nil, convertCommonErrors(d.client, "UpdateTaskList", err)
 	}
 
 	if !applied {
@@ -371,7 +376,7 @@ func (d *cassandraTaskPersistence) DeleteTaskList(
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return convertCommonErrors(nil, "DeleteTaskList", err)
+		return convertCommonErrors(d.client, "DeleteTaskList", err)
 	}
 	if !applied {
 		return &p.ConditionFailedError{
@@ -448,7 +453,7 @@ func (d *cassandraTaskPersistence) CreateTasks(
 	previous := make(map[string]interface{})
 	applied, _, err := d.session.MapExecuteBatchCAS(batch, previous)
 	if err != nil {
-		return nil, convertCommonErrors(nil, "CreateTasks", err)
+		return nil, convertCommonErrors(d.client, "CreateTasks", err)
 	}
 	if !applied {
 		rangeID := previous["range_id"]
@@ -510,7 +515,7 @@ PopulateTasks:
 	}
 
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "GetTasks", err)
+		return nil, convertCommonErrors(d.client, "GetTasks", err)
 	}
 
 	return response, nil
@@ -532,7 +537,7 @@ func (d *cassandraTaskPersistence) CompleteTask(
 
 	err := query.Exec()
 	if err != nil {
-		return convertCommonErrors(nil, "CompleteTask", err)
+		return convertCommonErrors(d.client, "CompleteTask", err)
 	}
 
 	return nil
@@ -554,7 +559,7 @@ func (d *cassandraTaskPersistence) CompleteTasksLessThan(
 	).WithContext(ctx)
 	err := query.Exec()
 	if err != nil {
-		return 0, convertCommonErrors(nil, "CompleteTasksLessThan", err)
+		return 0, convertCommonErrors(d.client, "CompleteTasksLessThan", err)
 	}
 	return p.UnknownNumRowsAffected, nil
 }

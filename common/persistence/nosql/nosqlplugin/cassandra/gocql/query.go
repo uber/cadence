@@ -35,7 +35,11 @@ type (
 )
 
 func (q *query) Iter() Iter {
-	return q.Query.Iter()
+	iter := q.Query.Iter()
+	if iter == nil {
+		return nil
+	}
+	return iter
 }
 
 func (q *query) PageSize(n int) Query {
@@ -53,8 +57,22 @@ func (q *query) Consistency(c Consistency) Query {
 	return q
 }
 
+func (q *query) WithTimestamp(timestamp int64) Query {
+	q.Query.WithTimestamp(timestamp)
+	return q
+}
+
 func (q *query) WithContext(ctx context.Context) Query {
-	return &query{
-		Query: q.Query.WithContext(ctx),
+	q2 := q.Query.WithContext(ctx)
+	if q2 == nil {
+		return nil
 	}
+	return &query{
+		Query: q2,
+	}
+}
+
+func (q *query) Bind(v ...interface{}) Query {
+	q.Query.Bind(v...)
+	return q
 }

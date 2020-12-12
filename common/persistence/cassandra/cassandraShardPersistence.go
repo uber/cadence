@@ -26,12 +26,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gocql/gocql"
-
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 )
@@ -108,20 +107,22 @@ type (
 var _ p.ShardStore = (*cassandraShardPersistence)(nil)
 
 // newShardPersistence is used to create an instance of ShardManager implementation
-func newShardPersistence(cfg config.Cassandra, clusterName string, logger log.Logger) (p.ShardStore, error) {
-	cluster := cassandra.NewCassandraCluster(cfg)
-	cluster.ProtoVersion = cassandraProtoVersion
-	cluster.Consistency = gocql.LocalQuorum
-	cluster.SerialConsistency = gocql.LocalSerial
-	cluster.Timeout = defaultSessionTimeout
-
-	session, err := cluster.CreateSession()
+func newShardPersistence(
+	cfg config.Cassandra,
+	clusterName string,
+	logger log.Logger,
+) (p.ShardStore, error) {
+	session, err := cassandra.CreateSession(cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	return &cassandraShardPersistence{
-		cassandraStore:     cassandraStore{session: session, logger: logger},
+		cassandraStore: cassandraStore{
+			client:  cfg.CQLClient,
+			session: session,
+			logger:  logger,
+		},
 		shardID:            -1,
 		currentClusterName: clusterName,
 	}, nil
@@ -129,9 +130,18 @@ func newShardPersistence(cfg config.Cassandra, clusterName string, logger log.Lo
 
 // NewShardPersistenceFromSession is used to create an instance of ShardManager implementation
 // It is being used by some admin toolings
-func NewShardPersistenceFromSession(session *gocql.Session, clusterName string, logger log.Logger) p.ShardStore {
+func NewShardPersistenceFromSession(
+	client gocql.Client,
+	session gocql.Session,
+	clusterName string,
+	logger log.Logger,
+) p.ShardStore {
 	return &cassandraShardPersistence{
-		cassandraStore:     cassandraStore{session: session, logger: logger},
+		cassandraStore: cassandraStore{
+			client:  client,
+			session: session,
+			logger:  logger,
+		},
 		shardID:            -1,
 		currentClusterName: clusterName,
 	}
@@ -179,7 +189,7 @@ func (d *cassandraShardPersistence) CreateShard(
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return convertCommonErrors(nil, "CreateShard", err)
+		return convertCommonErrors(d.client, "CreateShard", err)
 	}
 
 	if !applied {
@@ -210,13 +220,13 @@ func (d *cassandraShardPersistence) GetShard(
 
 	result := make(map[string]interface{})
 	if err := query.MapScan(result); err != nil {
-		if cassandra.IsNotFoundError(err) {
+		if d.client.IsNotFoundError(err) {
 			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Shard not found.  ShardId: %v", shardID),
 			}
 		}
 
-		return nil, convertCommonErrors(nil, "GetShard", err)
+		return nil, convertCommonErrors(d.client, "GetShard", err)
 	}
 
 	rangeID := result["range_id"].(int64)
@@ -274,7 +284,7 @@ func (d *cassandraShardPersistence) updateRangeID(
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return convertCommonErrors(nil, "UpdateRangeID", err)
+		return convertCommonErrors(d.client, "UpdateRangeID", err)
 	}
 
 	if !applied {
@@ -337,7 +347,7 @@ func (d *cassandraShardPersistence) UpdateShard(
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return convertCommonErrors(nil, "UpdateShard", err)
+		return convertCommonErrors(d.client, "UpdateShard", err)
 	}
 
 	if !applied {
