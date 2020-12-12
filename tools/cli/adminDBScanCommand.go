@@ -125,12 +125,13 @@ func checkExecution(
 	invariants []executions.InvariantFactory,
 	fetcher executions.ExecutionFetcher,
 ) (interface{}, invariant.ManagerCheckResult) {
-	session := connectToCassandra(c)
+	client, session := connectToCassandra(c)
 	defer session.Close()
 	logger := loggerimpl.NewNopLogger()
 
 	execStore, err := cassandra.NewWorkflowExecutionPersistence(
 		common.WorkflowIDToHistoryShard(req.WorkflowID, numberOfShards),
+		client,
 		session,
 		logger,
 	)
@@ -140,7 +141,7 @@ func checkExecution(
 	}
 
 	historyV2Mgr := persistence.NewHistoryV2ManagerImpl(
-		cassandra.NewHistoryV2PersistenceFromSession(session, logger),
+		cassandra.NewHistoryV2PersistenceFromSession(client, session, logger),
 		logger,
 		dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
 	)
@@ -270,9 +271,10 @@ func initializeCassandraExecutionClient(
 	logger log.Logger,
 ) persistence.ExecutionStore {
 
-	session := connectToCassandra(c)
+	client, session := connectToCassandra(c)
 	execStore, err := cassandra.NewWorkflowExecutionPersistence(
 		shardID,
+		client,
 		session,
 		logger,
 	)

@@ -25,13 +25,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gocql/gocql"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 )
@@ -45,11 +44,12 @@ type (
 
 // NewHistoryV2PersistenceFromSession returns new HistoryStore
 func NewHistoryV2PersistenceFromSession(
-	session *gocql.Session,
+	client gocql.Client,
+	session gocql.Session,
 	logger log.Logger,
 ) p.HistoryStore {
 	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
-	db := cassandra.NewCassandraDBFromSession(session, logger)
+	db := cassandra.NewCassandraDBFromSession(client, session, logger)
 
 	return &nosqlHistoryManager{db: db, logger: logger}
 }

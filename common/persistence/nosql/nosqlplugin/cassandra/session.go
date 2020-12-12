@@ -23,8 +23,7 @@ package cassandra
 import (
 	"time"
 
-	"github.com/gocql/gocql"
-
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/service/config"
 )
 
@@ -35,11 +34,20 @@ const (
 
 // CreateSession creates a new session
 // TODO this will be converted to private later, after all cassandra code moved to plugin pkg
-func CreateSession(cfg config.Cassandra) (*gocql.Session, error) {
-	cluster := NewCassandraCluster(cfg)
-	cluster.ProtoVersion = cassandraProtoVersion
-	cluster.Consistency = gocql.LocalQuorum
-	cluster.SerialConsistency = gocql.LocalSerial
-	cluster.Timeout = defaultSessionTimeout
-	return cluster.CreateSession()
+func CreateSession(cfg config.Cassandra) (gocql.Session, error) {
+	return cfg.CQLClient.CreateSession(gocql.ClusterConfig{
+		Hosts:             cfg.Hosts,
+		Port:              cfg.Port,
+		User:              cfg.User,
+		Password:          cfg.Password,
+		Keyspace:          cfg.Keyspace,
+		Region:            cfg.Region,
+		Datacenter:        cfg.Datacenter,
+		MaxConns:          cfg.MaxConns,
+		TLS:               cfg.TLS,
+		ProtoVersion:      cassandraProtoVersion,
+		Consistency:       gocql.LocalQuorum,
+		SerialConsistency: gocql.LocalSerial,
+		Timeout:           defaultSessionTimeout,
+	})
 }

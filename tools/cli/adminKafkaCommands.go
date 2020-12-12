@@ -33,7 +33,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gocql/gocql"
 	"github.com/urfave/cli"
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
@@ -47,6 +46,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
@@ -464,11 +464,12 @@ func doRereplicate(
 	endEventID int64,
 	endEventVersion int64,
 	sourceCluster string,
-	session *gocql.Session,
+	cqlClient gocql.Client,
+	session gocql.Session,
 	adminClient admin.Client,
 ) {
 
-	exeM, _ := cassandra.NewWorkflowExecutionPersistence(shardID, session, loggerimpl.NewNopLogger())
+	exeM, _ := cassandra.NewWorkflowExecutionPersistence(shardID, cqlClient, session, loggerimpl.NewNopLogger())
 	exeMgr := persistence.NewExecutionManagerImpl(exeM, loggerimpl.NewNopLogger())
 
 	fmt.Printf("Start rereplicate for wid: %v, rid:%v \n", wid, rid)
@@ -518,7 +519,7 @@ func AdminRereplicate(c *cli.Context) {
 		ErrorAndExit("End event version is not defined", nil)
 	}
 
-	session := connectToCassandra(c)
+	client, session := connectToCassandra(c)
 	adminClient := cFactory.ServerAdminClient(c)
 	endEventID := c.Int64(FlagMaxEventID)
 	endVersion := c.Int64(FlagEndEventVersion)
@@ -542,6 +543,7 @@ func AdminRereplicate(c *cli.Context) {
 		endEventID,
 		endVersion,
 		sourceCluster,
+		client,
 		session,
 		adminClient,
 	)

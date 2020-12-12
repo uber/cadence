@@ -25,13 +25,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gocql/gocql"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
@@ -194,21 +193,19 @@ func newVisibilityPersistence(
 	cfg config.Cassandra,
 	logger log.Logger,
 ) (p.VisibilityStore, error) {
-	cluster := cassandra.NewCassandraCluster(cfg)
-	cluster.ProtoVersion = cassandraProtoVersion
-	cluster.Consistency = gocql.LocalQuorum
-	cluster.SerialConsistency = gocql.LocalSerial
-	cluster.Timeout = defaultSessionTimeout
-
-	session, err := cluster.CreateSession()
+	session, err := cassandra.CreateSession(cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	return &cassandraVisibilityPersistence{
 		sortByCloseTime: listClosedOrderingByCloseTime,
-		cassandraStore:  cassandraStore{session: session, logger: logger},
-		lowConslevel:    gocql.One,
+		cassandraStore: cassandraStore{
+			client:  cfg.CQLClient,
+			session: session,
+			logger:  logger,
+		},
+		lowConslevel: gocql.One,
 	}, nil
 }
 
@@ -224,7 +221,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
 	ttl := int64(request.WorkflowTimeout.Seconds()) + openExecutionTTLBuffer
-	var query *gocql.Query
+	var query gocql.Query
 	if ttl > maxCassandraTTL {
 		query = v.session.Query(templateCreateWorkflowExecutionStarted,
 			request.DomainUUID,
@@ -256,7 +253,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionStarted(
 	query = query.WithTimestamp(p.UnixNanoToDBTimestamp(request.StartTimestamp.UnixNano()))
 	err := query.Exec()
 	if err != nil {
-		return convertCommonErrors(nil, "RecordWorkflowExecutionStarted", err)
+		return convertCommonErrors(v.client, "RecordWorkflowExecutionStarted", err)
 	}
 
 	return nil
@@ -364,7 +361,7 @@ func (v *cassandraVisibilityPersistence) RecordWorkflowExecutionClosed(
 	batch = batch.WithTimestamp(p.UnixNanoToDBTimestamp(queryTimeStamp.UnixNano()))
 	err := v.session.ExecuteBatch(batch)
 	if err != nil {
-		return convertCommonErrors(nil, "RecordWorkflowExecutionClosed", err)
+		return convertCommonErrors(v.client, "RecordWorkflowExecutionClosed", err)
 	}
 	return nil
 }
@@ -409,7 +406,7 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutions(
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "ListOpenWorkflowExecutions", err)
+		return nil, convertCommonErrors(v.client, "ListOpenWorkflowExecutions", err)
 	}
 
 	return response, nil
@@ -448,7 +445,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutions(
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutions", err)
+		return nil, convertCommonErrors(v.client, "ListClosedWorkflowExecutions", err)
 	}
 
 	return response, nil
@@ -485,7 +482,7 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByType(
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "ListOpenWorkflowExecutionsByType", err)
+		return nil, convertCommonErrors(v.client, "ListOpenWorkflowExecutionsByType", err)
 	}
 
 	return response, nil
@@ -525,7 +522,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByType(
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByType", err)
+		return nil, convertCommonErrors(v.client, "ListClosedWorkflowExecutionsByType", err)
 	}
 
 	return response, nil
@@ -562,7 +559,7 @@ func (v *cassandraVisibilityPersistence) ListOpenWorkflowExecutionsByWorkflowID(
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "ListOpenWorkflowExecutionsByWorkflowID", err)
+		return nil, convertCommonErrors(v.client, "ListOpenWorkflowExecutionsByWorkflowID", err)
 	}
 
 	return response, nil
@@ -602,7 +599,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByWorkflowI
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByWorkflowID", err)
+		return nil, convertCommonErrors(v.client, "ListClosedWorkflowExecutionsByWorkflowID", err)
 	}
 
 	return response, nil
@@ -642,7 +639,7 @@ func (v *cassandraVisibilityPersistence) ListClosedWorkflowExecutionsByStatus(
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByStatus", err)
+		return nil, convertCommonErrors(v.client, "ListClosedWorkflowExecutionsByStatus", err)
 	}
 
 	return response, nil
@@ -676,7 +673,7 @@ func (v *cassandraVisibilityPersistence) GetClosedWorkflowExecution(
 	}
 
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "GetClosedWorkflowExecution", err)
+		return nil, convertCommonErrors(v.client, "GetClosedWorkflowExecution", err)
 	}
 
 	return &p.InternalGetClosedWorkflowExecutionResponse{
@@ -742,7 +739,7 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsOrderByClos
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutions", err)
+		return nil, convertCommonErrors(v.client, "ListClosedWorkflowExecutions", err)
 	}
 
 	return response, nil
@@ -779,7 +776,7 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByTypeOrder
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByType", err)
+		return nil, convertCommonErrors(v.client, "ListClosedWorkflowExecutionsByType", err)
 	}
 
 	return response, nil
@@ -816,7 +813,7 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByWorkflowI
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByWorkflowID", err)
+		return nil, convertCommonErrors(v.client, "ListClosedWorkflowExecutionsByWorkflowID", err)
 	}
 
 	return response, nil
@@ -853,15 +850,17 @@ func (v *cassandraVisibilityPersistence) listClosedWorkflowExecutionsByStatusOrd
 	response.NextPageToken = make([]byte, len(nextPageToken))
 	copy(response.NextPageToken, nextPageToken)
 	if err := iter.Close(); err != nil {
-		return nil, convertCommonErrors(nil, "ListClosedWorkflowExecutionsByStatus", err)
+		return nil, convertCommonErrors(v.client, "ListClosedWorkflowExecutionsByStatus", err)
 	}
 
 	return response, nil
 }
 
-func readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*p.InternalVisibilityWorkflowExecutionInfo, bool) {
+func readOpenWorkflowExecutionRecord(
+	iter gocql.Iter,
+) (*p.InternalVisibilityWorkflowExecutionInfo, bool) {
 	var workflowID string
-	var runID gocql.UUID
+	var runID string
 	var typeName string
 	var startTime time.Time
 	var executionTime time.Time
@@ -871,7 +870,7 @@ func readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*p.InternalVisibilityWor
 	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &typeName, &memo, &encoding, &taskList) {
 		record := &p.InternalVisibilityWorkflowExecutionInfo{
 			WorkflowID:    workflowID,
-			RunID:         runID.String(),
+			RunID:         runID,
 			TypeName:      typeName,
 			StartTime:     startTime,
 			ExecutionTime: executionTime,
@@ -883,9 +882,11 @@ func readOpenWorkflowExecutionRecord(iter *gocql.Iter) (*p.InternalVisibilityWor
 	return nil, false
 }
 
-func readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*p.InternalVisibilityWorkflowExecutionInfo, bool) {
+func readClosedWorkflowExecutionRecord(
+	iter gocql.Iter,
+) (*p.InternalVisibilityWorkflowExecutionInfo, bool) {
 	var workflowID string
-	var runID gocql.UUID
+	var runID string
 	var typeName string
 	var startTime time.Time
 	var executionTime time.Time
@@ -898,7 +899,7 @@ func readClosedWorkflowExecutionRecord(iter *gocql.Iter) (*p.InternalVisibilityW
 	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &closeTime, &typeName, &status, &historyLength, &memo, &encoding, &taskList) {
 		record := &p.InternalVisibilityWorkflowExecutionInfo{
 			WorkflowID:    workflowID,
-			RunID:         runID.String(),
+			RunID:         runID,
 			TypeName:      typeName,
 			StartTime:     startTime,
 			ExecutionTime: executionTime,

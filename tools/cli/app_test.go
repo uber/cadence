@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -47,12 +48,14 @@ type cliAppSuite struct {
 	clientFrontendClient *clientFrontendTest.MockClient
 	serverFrontendClient *frontend.MockClient
 	serverAdminClient    *admin.MockClient
+	cqlClient            *gocql.MockClient
 }
 
 type clientFactoryMock struct {
 	clientFrontendClient clientFrontend.Interface
 	serverFrontendClient frontend.Client
 	serverAdminClient    admin.Client
+	cqlClient            gocql.Client
 }
 
 func (m *clientFactoryMock) ClientFrontendClient(c *cli.Context) clientFrontend.Interface {
@@ -65,6 +68,10 @@ func (m *clientFactoryMock) ServerFrontendClient(c *cli.Context) frontend.Client
 
 func (m *clientFactoryMock) ServerAdminClient(c *cli.Context) admin.Client {
 	return m.serverAdminClient
+}
+
+func (m *clientFactoryMock) CQLClient() gocql.Client {
+	return m.cqlClient
 }
 
 // this is the mock for yarpcCallOptions, make sure length are the same
@@ -93,10 +100,12 @@ func (s *cliAppSuite) SetupTest() {
 	s.clientFrontendClient = clientFrontendTest.NewMockClient(s.mockCtrl)
 	s.serverFrontendClient = frontend.NewMockClient(s.mockCtrl)
 	s.serverAdminClient = admin.NewMockClient(s.mockCtrl)
+	s.cqlClient = gocql.NewMockClient(s.mockCtrl)
 	SetFactory(&clientFactoryMock{
 		clientFrontendClient: s.clientFrontendClient,
 		serverFrontendClient: s.serverFrontendClient,
 		serverAdminClient:    s.serverAdminClient,
+		cqlClient:            s.cqlClient,
 	})
 }
 

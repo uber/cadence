@@ -44,7 +44,10 @@ const (
 
 //Insert message into queue, return error if failed or already exists
 // Must return conditionFailed error if row already exists
-func (db *cdb) InsertIntoQueue(ctx context.Context, row *nosqlplugin.QueueMessageRow) error {
+func (db *cdb) InsertIntoQueue(
+	ctx context.Context,
+	row *nosqlplugin.QueueMessageRow,
+) error {
 	query := db.session.Query(templateEnqueueMessageQuery, row.QueueType, row.ID, row.Payload).WithContext(ctx)
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
@@ -59,7 +62,10 @@ func (db *cdb) InsertIntoQueue(ctx context.Context, row *nosqlplugin.QueueMessag
 }
 
 // Get the ID of last message inserted into the queue
-func (db *cdb) SelectLastEnqueuedMessageID(ctx context.Context, queueType persistence.QueueType) (int64, error) {
+func (db *cdb) SelectLastEnqueuedMessageID(
+	ctx context.Context,
+	queueType persistence.QueueType,
+) (int64, error) {
 	query := db.session.Query(templateGetLastMessageIDQuery, queueType).WithContext(ctx)
 	result := make(map[string]interface{})
 	err := query.MapScan(result)
