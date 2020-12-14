@@ -2474,7 +2474,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		return nil, err
 	}
 	if ok := baseMutableState.HasProcessedOrPendingDecision(); !ok {
-		return nil, &workflow.BadRequestError{
+		return nil, &types.BadRequestError{
 			Message: "Cannot reset workflow without a decision task schedule.",
 		}
 	}

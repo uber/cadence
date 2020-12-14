@@ -634,7 +634,7 @@ func (r *workflowResetterImpl) closePendingDecisionTask(
 ) (execution.MutableState, error) {
 
 	if len(resetMutableState.GetPendingChildExecutionInfos()) > 0 {
-		return nil, &shared.BadRequestError{
+		return nil, &types.BadRequestError{
 			Message: fmt.Sprintf("Can not reset workflow with pending child workflows"),
 		}
 	}
