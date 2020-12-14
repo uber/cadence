@@ -25,14 +25,13 @@ package frontend
 import (
 	"context"
 
-	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/common/types"
 )
 
 type (
 	// Handler is interface wrapping frontend handler
 	Handler interface {
-		Health(context.Context) (*health.HealthStatus, error)
+		Health(context.Context) (*types.HealthStatus, error)
 		CountWorkflowExecutions(context.Context, *types.CountWorkflowExecutionsRequest) (*types.CountWorkflowExecutionsResponse, error)
 		DeprecateDomain(context.Context, *types.DeprecateDomainRequest) error
 		DescribeDomain(context.Context, *types.DescribeDomainRequest) (*types.DescribeDomainResponse, error)

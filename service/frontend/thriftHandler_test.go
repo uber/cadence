@@ -45,7 +45,7 @@ func TestThriftHandler(t *testing.T) {
 	expectedErr := &shared.InternalServiceError{Message: "test"}
 
 	t.Run("Health", func(t *testing.T) {
-		h.EXPECT().Health(ctx).Return(&health.HealthStatus{}, internalErr).Times(1)
+		h.EXPECT().Health(ctx).Return(&types.HealthStatus{}, internalErr).Times(1)
 		resp, err := th.Health(ctx)
 		assert.Equal(t, health.HealthStatus{}, *resp)
 		assert.Equal(t, expectedErr, err)

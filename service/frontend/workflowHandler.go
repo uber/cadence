@@ -34,7 +34,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/yarpcerrors"
 
-	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
@@ -230,7 +229,7 @@ func (wh *WorkflowHandler) isShuttingDown() bool {
 }
 
 // Health is for health check
-func (wh *WorkflowHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
+func (wh *WorkflowHandler) Health(ctx context.Context) (*types.HealthStatus, error) {
 	status := HealthStatus(atomic.LoadInt32(&wh.healthStatus))
 	msg := status.String()
 
@@ -238,7 +237,7 @@ func (wh *WorkflowHandler) Health(ctx context.Context) (*health.HealthStatus, er
 		wh.GetLogger().Warn(fmt.Sprintf("Service status is: %v", msg))
 	}
 
-	return &health.HealthStatus{
+	return &types.HealthStatus{
 		Ok:  status == HealthStatusOK,
 		Msg: &msg,
 	}, nil

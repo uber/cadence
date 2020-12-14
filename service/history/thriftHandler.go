@@ -52,7 +52,7 @@ func (t ThriftHandler) register(dispatcher *yarpc.Dispatcher) {
 // Health forwards request to the underlying handler
 func (t ThriftHandler) Health(ctx context.Context) (*health.HealthStatus, error) {
 	response, err := t.h.Health(ctx)
-	return response, thrift.FromError(err)
+	return thrift.FromHealthStatus(response), thrift.FromError(err)
 }
 
 // CloseShard forwards request to the underlying handler

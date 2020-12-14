@@ -30,7 +30,6 @@ import (
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
 
-	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
@@ -54,7 +53,7 @@ import (
 type (
 	// Handler interface for history service
 	Handler interface {
-		Health(context.Context) (*health.HealthStatus, error)
+		Health(context.Context) (*types.HealthStatus, error)
 		CloseShard(context.Context, *types.CloseShardRequest) error
 		DescribeHistoryHost(context.Context, *types.DescribeHistoryHostRequest) (*types.DescribeHistoryHostResponse, error)
 		DescribeMutableState(context.Context, *types.DescribeMutableStateRequest) (*types.DescribeMutableStateResponse, error)
@@ -252,10 +251,10 @@ func (h *handlerImpl) CreateEngine(
 }
 
 // Health is for health check
-func (h *handlerImpl) Health(ctx context.Context) (*health.HealthStatus, error) {
+func (h *handlerImpl) Health(ctx context.Context) (*types.HealthStatus, error) {
 	h.startWG.Wait()
 	h.GetLogger().Debug("History health check endpoint reached.")
-	hs := &health.HealthStatus{Ok: true, Msg: common.StringPtr("OK")}
+	hs := &types.HealthStatus{Ok: true, Msg: common.StringPtr("OK")}
 	return hs, nil
 }
 

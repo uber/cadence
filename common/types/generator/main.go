@@ -559,6 +559,11 @@ func main() {
 			MapperFile:      "common/types/mapper/thrift/matching.go",
 			DuplicatePrefix: "Matching",
 		},
+		{
+			ThriftPackage: "github.com/uber/cadence/.gen/go/health",
+			TypesFile:     "common/types/health.go",
+			MapperFile:    "common/types/mapper/thrift/health.go",
+		},
 	}
 
 	for _, p := range packages {
