@@ -30,6 +30,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/auth"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
@@ -185,7 +186,7 @@ type (
 		User string `yaml:"user"`
 		// Password is the cassandra password used for authentication by gocql client
 		Password string `yaml:"password"`
-		// keyspace is the cassandra keyspace
+		// Keyspace is the cassandra keyspace
 		Keyspace string `yaml:"keyspace" validate:"nonzero"`
 		// Region is the region filter arg for cassandra
 		Region string `yaml:"region"`
@@ -195,7 +196,8 @@ type (
 		MaxConns int `yaml:"maxConns"`
 		// TLS configuration
 		TLS *auth.TLS `yaml:"tls"`
-		// TODO: add a field for custom gocql client
+		// CQLClient specifies a custom CQL client implementation, can not be specified through yaml
+		CQLClient gocql.Client `yaml:"-" json:"-"`
 	}
 
 	// SQL is the configuration for connecting to a SQL backed datastore

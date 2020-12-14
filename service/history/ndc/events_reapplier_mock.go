@@ -32,8 +32,8 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	execution "github.com/uber/cadence/service/history/execution"
 	types "github.com/uber/cadence/common/types"
+	execution "github.com/uber/cadence/service/history/execution"
 )
 
 // MockEventsReapplier is a mock of EventsReapplier interface

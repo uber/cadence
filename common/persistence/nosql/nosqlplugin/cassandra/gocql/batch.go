@@ -43,9 +43,18 @@ const (
 )
 
 func (b *batch) WithContext(ctx context.Context) Batch {
-	return &batch{
-		Batch: b.Batch.WithContext(ctx),
+	b2 := b.Batch.WithContext(ctx)
+	if b2 == nil {
+		return nil
 	}
+	return &batch{
+		Batch: b2,
+	}
+}
+
+func (b *batch) WithTimestamp(timestamp int64) Batch {
+	b.Batch.WithTimestamp(timestamp)
+	return b
 }
 
 func mustConvertBatchType(batchType BatchType) gocql.BatchType {

@@ -114,12 +114,13 @@ func fixExecution(
 	invariants []executions.InvariantFactory,
 	execution *store.ScanOutputEntity,
 ) invariant.ManagerFixResult {
-	session := connectToCassandra(c)
+	client, session := connectToCassandra(c)
 	defer session.Close()
 	logger := loggerimpl.NewNopLogger()
 
 	execStore, err := cassandra.NewWorkflowExecutionPersistence(
 		execution.Execution.(entity.Entity).GetShardID(),
+		client,
 		session,
 		logger,
 	)
@@ -129,7 +130,7 @@ func fixExecution(
 	}
 
 	historyV2Mgr := persistence.NewHistoryV2ManagerImpl(
-		cassandra.NewHistoryV2PersistenceFromSession(session, logger),
+		cassandra.NewHistoryV2PersistenceFromSession(client, session, logger),
 		logger,
 		dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
 	)

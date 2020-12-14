@@ -224,13 +224,13 @@ func (cl *cassandraLoader) Load() []*persistence.TimerTaskInfo {
 		ErrorAndExit("wrong date format for "+FlagEndDate, err)
 	}
 
-	session := connectToCassandra(cl.ctx)
+	client, session := connectToCassandra(cl.ctx)
 	defer session.Close()
 
 	limiter := quotas.NewSimpleRateLimiter(rps)
 	logger := loggerimpl.NewNopLogger()
 
-	execStore, err := cassandra.NewWorkflowExecutionPersistence(shardID, session, logger)
+	execStore, err := cassandra.NewWorkflowExecutionPersistence(shardID, client, session, logger)
 	if err != nil {
 		ErrorAndExit("cannot get execution store", err)
 	}

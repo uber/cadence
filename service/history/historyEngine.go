@@ -1398,10 +1398,12 @@ func (e *historyEngineImpl) DescribeMutableState(
 
 	response = &types.DescribeMutableStateResponse{}
 
-	if msb := cacheCtx.GetWorkflowExecution(); cacheHit && msb != nil {
-		response.MutableStateInCache, err = e.toMutableStateJSON(msb)
-		if err != nil {
-			return nil, err
+	if cacheHit {
+		if msb := cacheCtx.GetWorkflowExecution(); msb != nil {
+			response.MutableStateInCache, err = e.toMutableStateJSON(msb)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

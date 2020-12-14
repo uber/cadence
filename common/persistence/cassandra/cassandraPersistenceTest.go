@@ -25,11 +25,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gocql/gocql"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/environment"
@@ -44,7 +43,7 @@ type TestCluster struct {
 	keyspace  string
 	schemaDir string
 	cluster   *gocql.ClusterConfig
-	session   *gocql.Session
+	session   gocql.Session
 	cfg       config.Cassandra
 }
 
@@ -63,12 +62,13 @@ func NewTestCluster(keyspace, username, password, host string, port int, schemaD
 	}
 	result.schemaDir = schemaDir
 	result.cfg = config.Cassandra{
-		User:     username,
-		Password: password,
-		Hosts:    host,
-		Port:     port,
-		MaxConns: 2,
-		Keyspace: keyspace,
+		User:      username,
+		Password:  password,
+		Hosts:     host,
+		Port:      port,
+		MaxConns:  2,
+		Keyspace:  keyspace,
+		CQLClient: gocql.NewClient(),
 	}
 	return &result
 }
@@ -118,17 +118,18 @@ func (s *TestCluster) TearDownTestDatabase() {
 
 // CreateSession from PersistenceTestCluster interface
 func (s *TestCluster) CreateSession() {
-	s.cluster = cassandra.NewCassandraCluster(config.Cassandra{
-		Hosts:    s.cfg.Hosts,
-		Port:     s.cfg.Port,
-		User:     s.cfg.User,
-		Password: s.cfg.Password,
-	})
-	s.cluster.Consistency = gocql.Consistency(1)
-	s.cluster.Keyspace = "system"
-	s.cluster.Timeout = 40 * time.Second
+	s.cluster = &gocql.ClusterConfig{
+		Hosts:       s.cfg.Hosts,
+		Port:        s.cfg.Port,
+		User:        s.cfg.User,
+		Password:    s.cfg.Password,
+		Keyspace:    "system",
+		Consistency: gocql.One,
+		Timeout:     40 * time.Second,
+	}
+
 	var err error
-	s.session, err = s.cluster.CreateSession()
+	s.session, err = s.cfg.CQLClient.CreateSession(*s.cluster)
 	if err != nil {
 		log.Fatal(`CreateSession`, err)
 	}

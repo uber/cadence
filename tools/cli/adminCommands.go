@@ -29,7 +29,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gocql/gocql"
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -39,15 +38,19 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 	cassp "github.com/uber/cadence/common/persistence/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
-	"github.com/uber/cadence/tools/cassandra"
 )
 
-const maxEventID = 9999
+const (
+	maxEventID = 9999
+
+	cassandraProtoVersion = 4
+)
 
 // AdminShowWorkflow shows history
 func AdminShowWorkflow(c *cli.Context) {
@@ -58,11 +61,11 @@ func AdminShowWorkflow(c *cli.Context) {
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	session := connectToCassandra(c)
+	client, session := connectToCassandra(c)
 	serializer := persistence.NewPayloadSerializer()
 	var history []*persistence.DataBlob
 	if len(tid) != 0 {
-		histV2 := cassp.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
+		histV2 := cassp.NewHistoryV2PersistenceFromSession(client, session, loggerimpl.NewNopLogger())
 		resp, err := histV2.ReadHistoryBranch(ctx, &persistence.InternalReadHistoryBranchRequest{
 			TreeID:    tid,
 			BranchID:  bid,
@@ -196,7 +199,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	session := connectToCassandra(c)
+	client, session := connectToCassandra(c)
 	shardID := resp.GetShardID()
 	shardIDInt, err := strconv.Atoi(shardID)
 	if err != nil {
@@ -221,7 +224,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		}
 		fmt.Println("deleting history events for ...")
 		prettyPrintJSONObject(branchInfo)
-		histV2 := cassp.NewHistoryV2PersistenceFromSession(session, loggerimpl.NewNopLogger())
+		histV2 := cassp.NewHistoryV2PersistenceFromSession(client, session, loggerimpl.NewNopLogger())
 		err = histV2.DeleteHistoryBranch(ctx, &persistence.InternalDeleteHistoryBranchRequest{
 			BranchInfo: *thrift.ToHistoryBranch(&branchInfo),
 			ShardID:    shardIDInt,
@@ -235,7 +238,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		}
 	}
 
-	exeStore, _ := cassp.NewWorkflowExecutionPersistence(shardIDInt, session, loggerimpl.NewNopLogger())
+	exeStore, _ := cassp.NewWorkflowExecutionPersistence(shardIDInt, client, session, loggerimpl.NewNopLogger())
 	req := &persistence.DeleteWorkflowExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: wid,
@@ -269,27 +272,33 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	fmt.Println("delete current row successfully")
 }
 
-func readOneRow(query *gocql.Query) (map[string]interface{}, error) {
+func readOneRow(query gocql.Query) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	err := query.MapScan(result)
 	return result, err
 }
 
-func connectToCassandra(c *cli.Context) *gocql.Session {
+func connectToCassandra(c *cli.Context) (gocql.Client, gocql.Session) {
 	host := getRequiredOption(c, FlagDBAddress)
 	if !c.IsSet(FlagDBPort) {
 		ErrorAndExit("cassandra port is required", nil)
 	}
 
-	cassandraConfig := &config.Cassandra{
-		Hosts:    host,
-		Port:     c.Int(FlagDBPort),
-		User:     c.String(FlagUsername),
-		Password: c.String(FlagPassword),
-		Keyspace: getRequiredOption(c, FlagKeyspace),
+	clusterConfig := gocql.ClusterConfig{
+		Hosts:             host,
+		Port:              c.Int(FlagDBPort),
+		Region:            c.String(FlagDBRegion),
+		User:              c.String(FlagUsername),
+		Password:          c.String(FlagPassword),
+		Keyspace:          getRequiredOption(c, FlagKeyspace),
+		ProtoVersion:      cassandraProtoVersion,
+		SerialConsistency: gocql.LocalSerial,
+		MaxConns:          20,
+		Consistency:       gocql.LocalQuorum,
+		Timeout:           10 * time.Second,
 	}
 	if c.Bool(FlagEnableTLS) {
-		cassandraConfig.TLS = &auth.TLS{
+		clusterConfig.TLS = &auth.TLS{
 			Enabled:                true,
 			CertFile:               c.String(FlagTLSCertPath),
 			KeyFile:                c.String(FlagTLSKeyPath),
@@ -298,20 +307,12 @@ func connectToCassandra(c *cli.Context) *gocql.Session {
 		}
 	}
 
-	clusterCfg, err := cassandra.NewCassandraCluster(cassandraConfig, 10)
+	client := cFactory.CQLClient()
+	session, err := client.CreateSession(clusterConfig)
 	if err != nil {
 		ErrorAndExit("connect to Cassandra failed", err)
 	}
-	clusterCfg.SerialConsistency = gocql.LocalSerial
-	clusterCfg.NumConns = 20
-	clusterCfg.PoolConfig.HostSelectionPolicy = nil
-	clusterCfg.Consistency = gocql.LocalQuorum
-
-	session, err := clusterCfg.CreateSession()
-	if err != nil {
-		ErrorAndExit("connect to Cassandra failed", err)
-	}
-	return session
+	return client, session
 }
 
 func connectToSQL(c *cli.Context) sqlplugin.DB {
@@ -360,7 +361,7 @@ func AdminGetDomainIDOrName(c *cli.Context) {
 		ErrorAndExit("Need either domainName or domainID", nil)
 	}
 
-	session := connectToCassandra(c)
+	_, session := connectToCassandra(c)
 
 	if len(domainID) > 0 {
 		tmpl := "select domain from domains where id = ? "
@@ -444,8 +445,8 @@ func AdminDescribeShard(c *cli.Context) {
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	session := connectToCassandra(c)
-	shardStore := cassp.NewShardPersistenceFromSession(session, "current-cluster", loggerimpl.NewNopLogger())
+	client, session := connectToCassandra(c)
+	shardStore := cassp.NewShardPersistenceFromSession(client, session, "current-cluster", loggerimpl.NewNopLogger())
 	shardManager := persistence.NewShardManager(shardStore)
 
 	getShardReq := &persistence.GetShardRequest{ShardID: sid}
@@ -464,8 +465,8 @@ func AdminSetShardRangeID(c *cli.Context) {
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	session := connectToCassandra(c)
-	shardStore := cassp.NewShardPersistenceFromSession(session, "current-cluster", loggerimpl.NewNopLogger())
+	client, session := connectToCassandra(c)
+	shardStore := cassp.NewShardPersistenceFromSession(client, session, "current-cluster", loggerimpl.NewNopLogger())
 	shardManager := persistence.NewShardManager(shardStore)
 
 	getShardResp, err := shardManager.GetShard(ctx, &persistence.GetShardRequest{ShardID: sid})
