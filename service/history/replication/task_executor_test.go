@@ -30,9 +30,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/history/historyservicetest"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
@@ -57,7 +54,6 @@ type (
 		mockShard          *shard.TestContext
 		mockEngine         *engine.MockEngine
 		config             *config.Config
-		historyClient      *historyservicetest.MockClient
 		mockDomainCache    *cache.MockDomainCache
 		mockClientBean     *client.MockBean
 		adminClient        *admin.MockClient
@@ -106,7 +102,6 @@ func (s *taskExecutorSuite) SetupTest() {
 
 	s.mockEngine = engine.NewMockEngine(s.controller)
 
-	s.historyClient = historyservicetest.NewMockClient(s.controller)
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.clusterMetadata.EXPECT().GetCurrentClusterName().Return("active").AnyTimes()
 
@@ -187,10 +182,10 @@ func (s *taskExecutorSuite) TestProcessTaskOnce_SyncActivityReplicationTask() {
 			RunID:      common.StringPtr(runID),
 		},
 	}
-	request := &history.SyncActivityRequest{
-		DomainId:   common.StringPtr(domainID),
-		WorkflowId: common.StringPtr(workflowID),
-		RunId:      common.StringPtr(runID),
+	request := &types.SyncActivityRequest{
+		DomainID:   common.StringPtr(domainID),
+		WorkflowID: common.StringPtr(workflowID),
+		RunID:      common.StringPtr(runID),
 	}
 
 	s.mockEngine.EXPECT().SyncActivity(gomock.Any(), request).Return(nil).Times(2)
@@ -210,11 +205,11 @@ func (s *taskExecutorSuite) TestProcess_HistoryV2ReplicationTask() {
 			RunID:      common.StringPtr(runID),
 		},
 	}
-	request := &history.ReplicateEventsV2Request{
+	request := &types.ReplicateEventsV2Request{
 		DomainUUID: common.StringPtr(domainID),
-		WorkflowExecution: &shared.WorkflowExecution{
-			WorkflowId: common.StringPtr(workflowID),
-			RunId:      common.StringPtr(runID),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 	}
 

@@ -26,7 +26,6 @@ import (
 
 	"github.com/pborman/uuid"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
@@ -34,7 +33,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 )
@@ -70,7 +68,7 @@ type (
 	}
 
 	decisionResult struct {
-		activityDispatchInfo *workflow.ActivityLocalDispatchInfo
+		activityDispatchInfo *types.ActivityLocalDispatchInfo
 	}
 )
 
@@ -443,7 +441,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionCompleteWorkflow(
 		ctx,
 		startAttributes,
 		int32(cronBackoff.Seconds()),
-		workflow.ContinueAsNewInitiatorCronSchedule.Ptr(),
+		types.ContinueAsNewInitiatorCronSchedule.Ptr(),
 		nil,
 		nil,
 		attr.Result,
@@ -499,7 +497,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionFailWorkflow(
 
 	// below will check whether to do continue as new based on backoff & backoff or cron
 	backoffInterval := handler.mutableState.GetRetryBackoffDuration(attr.GetReason())
-	continueAsNewInitiator := workflow.ContinueAsNewInitiatorRetryPolicy
+	continueAsNewInitiator := types.ContinueAsNewInitiatorRetryPolicy
 	// first check the backoff retry
 	if backoffInterval == backoff.NoBackoff {
 		// if no backoff retry, set the backoffInterval using cron schedule
@@ -508,7 +506,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionFailWorkflow(
 			handler.stopProcessing = true
 			return err
 		}
-		continueAsNewInitiator = workflow.ContinueAsNewInitiatorCronSchedule
+		continueAsNewInitiator = types.ContinueAsNewInitiatorCronSchedule
 	}
 	// second check the backoff / cron schedule
 	if backoffInterval == backoff.NoBackoff {
@@ -959,7 +957,7 @@ func (handler *decisionTaskHandlerImpl) retryCronContinueAsNew(
 	ctx context.Context,
 	attr *types.WorkflowExecutionStartedEventAttributes,
 	backoffInterval int32,
-	continueAsNewIter *workflow.ContinueAsNewInitiator,
+	continueAsNewIter *types.ContinueAsNewInitiator,
 	failureReason *string,
 	failureDetails []byte,
 	lastCompletionResult []byte,
@@ -973,7 +971,7 @@ func (handler *decisionTaskHandlerImpl) retryCronContinueAsNew(
 		TaskStartToCloseTimeoutSeconds:      attr.TaskStartToCloseTimeoutSeconds,
 		CronSchedule:                        attr.CronSchedule,
 		BackoffStartIntervalInSeconds:       common.Int32Ptr(backoffInterval),
-		Initiator:                           thrift.ToContinueAsNewInitiator(continueAsNewIter),
+		Initiator:                           continueAsNewIter,
 		FailureReason:                       failureReason,
 		FailureDetails:                      failureDetails,
 		LastCompletionResult:                lastCompletionResult,

@@ -31,8 +31,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/history/historyservicetest"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
@@ -58,7 +56,6 @@ type (
 		mockShard        *shard.TestContext
 		mockEngine       *engine.MockEngine
 		config           *config.Config
-		historyClient    *historyservicetest.MockClient
 		taskFetcher      *MockTaskFetcher
 		mockDomainCache  *cache.MockDomainCache
 		mockClientBean   *client.MockBean
@@ -109,7 +106,6 @@ func (s *taskProcessorSuite) SetupTest() {
 	s.mockEngine = engine.NewMockEngine(s.controller)
 	s.config = config.NewForTest()
 	s.config.ReplicationTaskProcessorNoTaskRetryWait = dynamicconfig.GetDurationPropertyFnFilteredByTShardID(1 * time.Millisecond)
-	s.historyClient = historyservicetest.NewMockClient(s.controller)
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.requestChan = make(chan *request, 10)
 
@@ -158,9 +154,9 @@ func (s *taskProcessorSuite) TestSendFetchMessageRequest() {
 
 func (s *taskProcessorSuite) TestHandleSyncShardStatus() {
 	now := time.Now()
-	s.mockEngine.EXPECT().SyncShardStatus(gomock.Any(), &history.SyncShardStatusRequest{
+	s.mockEngine.EXPECT().SyncShardStatus(gomock.Any(), &types.SyncShardStatusRequest{
 		SourceCluster: common.StringPtr("standby"),
-		ShardId:       common.Int64Ptr(0),
+		ShardID:       common.Int64Ptr(0),
 		Timestamp:     common.Int64Ptr(now.UnixNano()),
 	}).Return(nil).Times(1)
 

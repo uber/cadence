@@ -39,7 +39,6 @@ import (
 
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/auth"
@@ -53,15 +52,15 @@ import (
 )
 
 type (
-	filterFn              func(*replicator.ReplicationTask) bool
+	filterFn              func(*types.ReplicationTask) bool
 	filterFnForVisibility func(*indexer.Message) bool
 
 	kafkaMessageType int
 
 	historyV2Task struct {
-		Task         *replicator.ReplicationTask
-		Events       []*shared.HistoryEvent
-		NewRunEvents []*shared.HistoryEvent
+		Task         *types.ReplicationTask
+		Events       []*types.HistoryEvent
+		NewRunEvents []*types.HistoryEvent
 	}
 )
 
@@ -85,7 +84,7 @@ var (
 
 type writerChannel struct {
 	Type                   kafkaMessageType
-	ReplicationTaskChannel chan *replicator.ReplicationTask
+	ReplicationTaskChannel chan *types.ReplicationTask
 	VisibilityMsgChannel   chan *indexer.Message
 }
 
@@ -95,7 +94,7 @@ func newWriterChannel(messageType kafkaMessageType) *writerChannel {
 	}
 	switch messageType {
 	case kafkaMessageTypeReplicationTask:
-		ch.ReplicationTaskChannel = make(chan *replicator.ReplicationTask, chanBufferSize)
+		ch.ReplicationTaskChannel = make(chan *types.ReplicationTask, chanBufferSize)
 	case kafkaMessageTypeVisibilityMsg:
 		ch.VisibilityMsgChannel = make(chan *indexer.Message, chanBufferSize)
 	}
@@ -139,16 +138,16 @@ func AdminKafkaParse(c *cli.Context) {
 }
 
 func buildFilterFn(workflowID, runID string) filterFn {
-	return func(task *replicator.ReplicationTask) bool {
+	return func(task *types.ReplicationTask) bool {
 		if len(workflowID) != 0 || len(runID) != 0 {
 			if task.GetHistoryTaskV2Attributes() == nil {
 				return false
 			}
 		}
-		if len(workflowID) != 0 && *task.GetHistoryTaskV2Attributes().WorkflowId != workflowID {
+		if len(workflowID) != 0 && *task.GetHistoryTaskV2Attributes().WorkflowID != workflowID {
 			return false
 		}
-		if len(runID) != 0 && *task.GetHistoryTaskV2Attributes().RunId != runID {
+		if len(runID) != 0 && *task.GetHistoryTaskV2Attributes().RunID != runID {
 			return false
 		}
 		return true
@@ -275,9 +274,9 @@ Loop:
 				} else {
 					outStr = fmt.Sprintf(
 						"%v, %v, %v",
-						*task.GetHistoryTaskV2Attributes().DomainId,
-						*task.GetHistoryTaskV2Attributes().WorkflowId,
-						*task.GetHistoryTaskV2Attributes().RunId,
+						*task.GetHistoryTaskV2Attributes().DomainID,
+						*task.GetHistoryTaskV2Attributes().WorkflowID,
+						*task.GetHistoryTaskV2Attributes().RunID,
 					)
 				}
 				_, err = outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
@@ -393,8 +392,8 @@ func getMessages(data []byte, skipErrors bool) ([][]byte, int32) {
 	return rawMessages, skipped
 }
 
-func deserializeMessages(messages [][]byte, skipErrors bool) ([]*replicator.ReplicationTask, int32) {
-	var replicationTasks []*replicator.ReplicationTask
+func deserializeMessages(messages [][]byte, skipErrors bool) ([]*types.ReplicationTask, int32) {
+	var replicationTasks []*types.ReplicationTask
 	var skipped int32
 	for _, m := range messages {
 		var task replicator.ReplicationTask
@@ -407,7 +406,7 @@ func deserializeMessages(messages [][]byte, skipErrors bool) ([]*replicator.Repl
 				continue
 			}
 		}
-		replicationTasks = append(replicationTasks, &task)
+		replicationTasks = append(replicationTasks, thrift.ToReplicationTask(&task))
 	}
 	return replicationTasks, skipped
 }
@@ -550,23 +549,23 @@ func AdminRereplicate(c *cli.Context) {
 }
 
 func decodeReplicationTask(
-	task *replicator.ReplicationTask,
+	task *types.ReplicationTask,
 	serializer persistence.PayloadSerializer,
 ) ([]byte, error) {
 
 	switch task.GetTaskType() {
-	case replicator.ReplicationTaskTypeHistoryV2:
+	case types.ReplicationTaskTypeHistoryV2:
 		historyV2 := task.GetHistoryTaskV2Attributes()
 		events, err := serializer.DeserializeBatchEvents(
-			persistence.NewDataBlobFromThrift(historyV2.Events),
+			persistence.NewDataBlobFromInternal(historyV2.Events),
 		)
 		if err != nil {
 			return nil, err
 		}
 		var newRunEvents []*types.HistoryEvent
-		if historyV2.IsSetNewRunEvents() {
+		if historyV2.NewRunEvents != nil {
 			newRunEvents, err = serializer.DeserializeBatchEvents(
-				persistence.NewDataBlobFromThrift(historyV2.NewRunEvents),
+				persistence.NewDataBlobFromInternal(historyV2.NewRunEvents),
 			)
 			if err != nil {
 				return nil, err
@@ -576,8 +575,8 @@ func decodeReplicationTask(
 		historyV2.NewRunEvents = nil
 		historyV2Attributes := &historyV2Task{
 			Task:         task,
-			Events:       thrift.FromHistoryEventArray(events),
-			NewRunEvents: thrift.FromHistoryEventArray(newRunEvents),
+			Events:       events,
+			NewRunEvents: newRunEvents,
 		}
 		return json.Marshal(historyV2Attributes)
 	default:

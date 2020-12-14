@@ -31,7 +31,6 @@ import (
 
 	"github.com/uber-go/tally"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/checksum"
@@ -249,15 +248,15 @@ OtherEventsLoop:
 
 	// +1 is because DecisionTypeCancelTimer will be mapped
 	// to either types.EventTypeTimerCanceled, or types.EventTypeCancelTimerFailed.
-	s.Equal(len(workflow.DecisionType_Values())+1, len(decisionEvents),
+	s.Equal(len(types.DecisionTypeValues())+1, len(decisionEvents),
 		"This assertaion will be broken a new decision is added and no corresponding logic added to shouldBufferEvent()")
 }
 
 func (s *mutableStateSuite) TestReorderEvents() {
 	domainID := testDomainID
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(testRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(testRunID),
 	}
 	tl := "testTaskList"
 	activityID := "activity_id"
@@ -265,8 +264,8 @@ func (s *mutableStateSuite) TestReorderEvents() {
 
 	info := &persistence.WorkflowExecutionInfo{
 		DomainID:                    domainID,
-		WorkflowID:                  we.GetWorkflowId(),
-		RunID:                       we.GetRunId(),
+		WorkflowID:                  we.GetWorkflowID(),
+		RunID:                       we.GetRunID(),
 		TaskList:                    tl,
 		WorkflowTypeName:            "wType",
 		WorkflowTimeout:             200,
@@ -704,17 +703,17 @@ func (s *mutableStateSuite) newDomainCacheEntry() *cache.DomainCacheEntry {
 
 func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMutableState {
 	domainID := testDomainID
-	we := workflow.WorkflowExecution{
-		WorkflowId: common.StringPtr("wId"),
-		RunId:      common.StringPtr(testRunID),
+	we := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("wId"),
+		RunID:      common.StringPtr(testRunID),
 	}
 	tl := "testTaskList"
 	failoverVersion := int64(300)
 
 	info := &persistence.WorkflowExecutionInfo{
 		DomainID:                    domainID,
-		WorkflowID:                  we.GetWorkflowId(),
-		RunID:                       we.GetRunId(),
+		WorkflowID:                  we.GetWorkflowID(),
+		RunID:                       we.GetRunID(),
 		TaskList:                    tl,
 		WorkflowTypeName:            "wType",
 		WorkflowTimeout:             200,

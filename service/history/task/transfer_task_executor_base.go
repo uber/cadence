@@ -24,7 +24,6 @@ import (
 	"context"
 	"time"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -32,7 +31,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -110,7 +108,7 @@ func (t *transferTaskExecutorBase) pushActivity(
 func (t *transferTaskExecutorBase) pushDecision(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
-	tasklist *workflow.TaskList,
+	tasklist *types.TaskList,
 	decisionScheduleToStartTimeout int32,
 ) error {
 
@@ -127,7 +125,7 @@ func (t *transferTaskExecutorBase) pushDecision(
 			WorkflowID: common.StringPtr(task.WorkflowID),
 			RunID:      common.StringPtr(task.RunID),
 		},
-		TaskList:                      thrift.ToTaskList(tasklist),
+		TaskList:                      tasklist,
 		ScheduleID:                    common.Int64Ptr(task.ScheduleID),
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(decisionScheduleToStartTimeout),
 	})
@@ -144,7 +142,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 	workflowTimeout int32,
 	taskID int64,
 	taskList string,
-	visibilityMemo *workflow.Memo,
+	visibilityMemo *types.Memo,
 	searchAttributes map[string][]byte,
 ) error {
 
@@ -175,7 +173,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		ExecutionTimestamp: executionTimeUnixNano,
 		WorkflowTimeout:    int64(workflowTimeout),
 		TaskID:             taskID,
-		Memo:               thrift.ToMemo(visibilityMemo),
+		Memo:               visibilityMemo,
 		TaskList:           taskList,
 		SearchAttributes:   searchAttributes,
 	}
@@ -194,7 +192,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 	workflowTimeout int32,
 	taskID int64,
 	taskList string,
-	visibilityMemo *workflow.Memo,
+	visibilityMemo *types.Memo,
 	searchAttributes map[string][]byte,
 ) error {
 
@@ -220,7 +218,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 		ExecutionTimestamp: executionTimeUnixNano,
 		WorkflowTimeout:    int64(workflowTimeout),
 		TaskID:             taskID,
-		Memo:               thrift.ToMemo(visibilityMemo),
+		Memo:               visibilityMemo,
 		TaskList:           taskList,
 		SearchAttributes:   searchAttributes,
 	}
@@ -237,10 +235,10 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 	startTimeUnixNano int64,
 	executionTimeUnixNano int64,
 	endTimeUnixNano int64,
-	closeStatus workflow.WorkflowExecutionCloseStatus,
+	closeStatus types.WorkflowExecutionCloseStatus,
 	historyLength int64,
 	taskID int64,
-	visibilityMemo *workflow.Memo,
+	visibilityMemo *types.Memo,
 	taskList string,
 	searchAttributes map[string][]byte,
 ) error {
@@ -283,11 +281,11 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 			StartTimestamp:     startTimeUnixNano,
 			ExecutionTimestamp: executionTimeUnixNano,
 			CloseTimestamp:     endTimeUnixNano,
-			Status:             *thrift.ToWorkflowExecutionCloseStatus(&closeStatus),
+			Status:             closeStatus,
 			HistoryLength:      historyLength,
 			RetentionSeconds:   retentionSeconds,
 			TaskID:             taskID,
-			Memo:               thrift.ToMemo(visibilityMemo),
+			Memo:               visibilityMemo,
 			TaskList:           taskList,
 			SearchAttributes:   searchAttributes,
 		}); err != nil {
@@ -308,9 +306,9 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 				StartTimestamp:     startTimeUnixNano,
 				ExecutionTimestamp: executionTimeUnixNano,
 				CloseTimestamp:     endTimeUnixNano,
-				CloseStatus:        *thrift.ToWorkflowExecutionCloseStatus(&closeStatus),
+				CloseStatus:        closeStatus,
 				HistoryLength:      historyLength,
-				Memo:               thrift.ToMemo(visibilityMemo),
+				Memo:               visibilityMemo,
 				SearchAttributes:   searchAttributes,
 				VisibilityURI:      domainEntry.GetConfig().VisibilityArchivalURI,
 				URI:                domainEntry.GetConfig().HistoryArchivalURI,
@@ -346,12 +344,12 @@ func getWorkflowExecutionTimestamp(
 
 func getWorkflowMemo(
 	memo map[string][]byte,
-) *workflow.Memo {
+) *types.Memo {
 
 	if memo == nil {
 		return nil
 	}
-	return &workflow.Memo{Fields: memo}
+	return &types.Memo{Fields: memo}
 }
 
 func copySearchAttributes(

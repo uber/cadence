@@ -30,7 +30,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/definition"
@@ -292,7 +291,7 @@ func (s *workflowResetterSuite) TestFailInflightActivity() {
 	mutableState.EXPECT().AddActivityTaskFailedEvent(
 		activity1.ScheduleID,
 		activity1.StartedID,
-		&shared.RespondActivityTaskFailedRequest{
+		&types.RespondActivityTaskFailedRequest{
 			Reason:   common.StringPtr(terminateReason),
 			Details:  activity1.Details,
 			Identity: common.StringPtr(activity1.StartedIdentity),

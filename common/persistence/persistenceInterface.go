@@ -911,17 +911,17 @@ func (d *DataBlob) GetEncoding() common.EncodingType {
 	}
 }
 
-// ToThrift convert data blob to thrift representation
-func (d *DataBlob) ToThrift() *workflow.DataBlob {
+// ToInternal convert data blob to internal representation
+func (d *DataBlob) ToInternal() *types.DataBlob {
 	switch d.Encoding {
 	case common.EncodingTypeJSON:
-		return &workflow.DataBlob{
-			EncodingType: workflow.EncodingTypeJSON.Ptr(),
+		return &types.DataBlob{
+			EncodingType: types.EncodingTypeJSON.Ptr(),
 			Data:         d.Data,
 		}
 	case common.EncodingTypeThriftRW:
-		return &workflow.DataBlob{
-			EncodingType: workflow.EncodingTypeThriftRW.Ptr(),
+		return &types.DataBlob{
+			EncodingType: types.EncodingTypeThriftRW.Ptr(),
 			Data:         d.Data,
 		}
 	default:
@@ -929,20 +929,20 @@ func (d *DataBlob) ToThrift() *workflow.DataBlob {
 	}
 }
 
-// NewDataBlobFromThrift convert data blob from thrift representation
-func NewDataBlobFromThrift(blob *workflow.DataBlob) *DataBlob {
+// NewDataBlobFromInternal convert data blob from internal representation
+func NewDataBlobFromInternal(blob *types.DataBlob) *DataBlob {
 	switch blob.GetEncodingType() {
-	case workflow.EncodingTypeJSON:
+	case types.EncodingTypeJSON:
 		return &DataBlob{
 			Encoding: common.EncodingTypeJSON,
 			Data:     blob.Data,
 		}
-	case workflow.EncodingTypeThriftRW:
+	case types.EncodingTypeThriftRW:
 		return &DataBlob{
 			Encoding: common.EncodingTypeThriftRW,
 			Data:     blob.Data,
 		}
 	default:
-		panic(fmt.Sprintf("NewDataBlobFromThrift seeing unsupported enconding type: %v", blob.GetEncodingType()))
+		panic(fmt.Sprintf("NewDataBlobFromInternal seeing unsupported enconding type: %v", blob.GetEncodingType()))
 	}
 }

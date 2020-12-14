@@ -37,7 +37,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -1205,7 +1204,7 @@ func (c *contextImpl) ReapplyEvents(
 		&types.ReapplyEventsRequest{
 			DomainName:        common.StringPtr(domainEntry.GetInfo().Name),
 			WorkflowExecution: execution,
-			Events:            thrift.ToDataBlob(reapplyEventsDataBlob.ToThrift()),
+			Events:            reapplyEventsDataBlob.ToInternal(),
 		},
 	)
 }

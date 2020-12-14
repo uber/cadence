@@ -34,8 +34,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	h "github.com/uber/cadence/.gen/go/history"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -189,35 +187,35 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyExpired() {
 		MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{},
 	}, nil).Once()
 
-	request := h.RecordDecisionTaskStartedRequest{
+	request := types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
-		WorkflowExecution: thrift.FromWorkflowExecution(&we),
-		ScheduleId:        common.Int64Ptr(2),
-		TaskId:            common.Int64Ptr(100),
-		RequestId:         common.StringPtr("reqId"),
-		PollRequest: &workflow.PollForDecisionTaskRequest{
-			TaskList: &workflow.TaskList{
+		WorkflowExecution: &we,
+		ScheduleID:        common.Int64Ptr(2),
+		TaskID:            common.Int64Ptr(100),
+		RequestID:         common.StringPtr("reqId"),
+		PollRequest: &types.PollForDecisionTaskRequest{
+			TaskList: &types.TaskList{
 				Name: common.StringPtr(stickyTl),
 			},
 			Identity: common.StringPtr(identity),
 		},
 	}
 
-	expectedResponse := h.RecordDecisionTaskStartedResponse{}
-	expectedResponse.WorkflowType = thrift.FromWorkflowType(msBuilder.GetWorkflowType())
+	expectedResponse := types.RecordDecisionTaskStartedResponse{}
+	expectedResponse.WorkflowType = msBuilder.GetWorkflowType()
 	executionInfo = msBuilder.GetExecutionInfo()
 	if executionInfo.LastProcessedEvent != common.EmptyEventID {
-		expectedResponse.PreviousStartedEventId = common.Int64Ptr(executionInfo.LastProcessedEvent)
+		expectedResponse.PreviousStartedEventID = common.Int64Ptr(executionInfo.LastProcessedEvent)
 	}
-	expectedResponse.ScheduledEventId = common.Int64Ptr(di.ScheduleID)
-	expectedResponse.StartedEventId = common.Int64Ptr(di.ScheduleID + 1)
+	expectedResponse.ScheduledEventID = common.Int64Ptr(di.ScheduleID)
+	expectedResponse.StartedEventID = common.Int64Ptr(di.ScheduleID + 1)
 	expectedResponse.StickyExecutionEnabled = common.BoolPtr(false)
-	expectedResponse.NextEventId = common.Int64Ptr(msBuilder.GetNextEventID() + 1)
+	expectedResponse.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID() + 1)
 	expectedResponse.Attempt = common.Int64Ptr(di.Attempt)
-	expectedResponse.WorkflowExecutionTaskList = common.TaskListPtr(workflow.TaskList{
+	expectedResponse.WorkflowExecutionTaskList = &types.TaskList{
 		Name: &executionInfo.TaskList,
-		Kind: common.TaskListKindPtr(workflow.TaskListKindNormal),
-	})
+		Kind: types.TaskListKindNormal.Ptr(),
+	}
 	expectedResponse.BranchToken, _ = msBuilder.GetCurrentBranchToken()
 
 	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &request)
@@ -225,7 +223,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyExpired() {
 	s.NotNil(response)
 	expectedResponse.StartedTimestamp = response.StartedTimestamp
 	expectedResponse.ScheduledTimestamp = common.Int64Ptr(0)
-	expectedResponse.Queries = make(map[string]*workflow.WorkflowQuery)
+	expectedResponse.Queries = make(map[string]*types.WorkflowQuery)
 	s.Equal(&expectedResponse, response)
 }
 
@@ -262,35 +260,35 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 		MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{},
 	}, nil).Once()
 
-	request := h.RecordDecisionTaskStartedRequest{
+	request := types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
-		WorkflowExecution: thrift.FromWorkflowExecution(&we),
-		ScheduleId:        common.Int64Ptr(2),
-		TaskId:            common.Int64Ptr(100),
-		RequestId:         common.StringPtr("reqId"),
-		PollRequest: &workflow.PollForDecisionTaskRequest{
-			TaskList: &workflow.TaskList{
+		WorkflowExecution: &we,
+		ScheduleID:        common.Int64Ptr(2),
+		TaskID:            common.Int64Ptr(100),
+		RequestID:         common.StringPtr("reqId"),
+		PollRequest: &types.PollForDecisionTaskRequest{
+			TaskList: &types.TaskList{
 				Name: common.StringPtr(stickyTl),
 			},
 			Identity: common.StringPtr(identity),
 		},
 	}
 
-	expectedResponse := h.RecordDecisionTaskStartedResponse{}
-	expectedResponse.WorkflowType = thrift.FromWorkflowType(msBuilder.GetWorkflowType())
+	expectedResponse := types.RecordDecisionTaskStartedResponse{}
+	expectedResponse.WorkflowType = msBuilder.GetWorkflowType()
 	executionInfo = msBuilder.GetExecutionInfo()
 	if executionInfo.LastProcessedEvent != common.EmptyEventID {
-		expectedResponse.PreviousStartedEventId = common.Int64Ptr(executionInfo.LastProcessedEvent)
+		expectedResponse.PreviousStartedEventID = common.Int64Ptr(executionInfo.LastProcessedEvent)
 	}
-	expectedResponse.ScheduledEventId = common.Int64Ptr(di.ScheduleID)
-	expectedResponse.StartedEventId = common.Int64Ptr(di.ScheduleID + 1)
+	expectedResponse.ScheduledEventID = common.Int64Ptr(di.ScheduleID)
+	expectedResponse.StartedEventID = common.Int64Ptr(di.ScheduleID + 1)
 	expectedResponse.StickyExecutionEnabled = common.BoolPtr(true)
-	expectedResponse.NextEventId = common.Int64Ptr(msBuilder.GetNextEventID() + 1)
+	expectedResponse.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID() + 1)
 	expectedResponse.Attempt = common.Int64Ptr(di.Attempt)
-	expectedResponse.WorkflowExecutionTaskList = common.TaskListPtr(workflow.TaskList{
+	expectedResponse.WorkflowExecutionTaskList = &types.TaskList{
 		Name: &executionInfo.TaskList,
-		Kind: common.TaskListKindPtr(workflow.TaskListKindNormal),
-	})
+		Kind: types.TaskListKindNormal.Ptr(),
+	}
 	currentBranchTokken, err := msBuilder.GetCurrentBranchToken()
 	s.NoError(err)
 	expectedResponse.BranchToken = currentBranchTokken
@@ -300,7 +298,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	s.NotNil(response)
 	expectedResponse.StartedTimestamp = response.StartedTimestamp
 	expectedResponse.ScheduledTimestamp = common.Int64Ptr(0)
-	expectedResponse.Queries = make(map[string]*workflow.WorkflowQuery)
+	expectedResponse.Queries = make(map[string]*types.WorkflowQuery)
 	s.Equal(&expectedResponse, response)
 }
 
@@ -316,14 +314,14 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfNoExecution() {
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{}).Once()
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
-		WorkflowExecution: thrift.FromWorkflowExecution(workflowExecution),
-		ScheduleId:        common.Int64Ptr(2),
-		TaskId:            common.Int64Ptr(100),
-		RequestId:         common.StringPtr("reqId"),
-		PollRequest: &workflow.PollForDecisionTaskRequest{
-			TaskList: &workflow.TaskList{
+		WorkflowExecution: workflowExecution,
+		ScheduleID:        common.Int64Ptr(2),
+		TaskID:            common.Int64Ptr(100),
+		RequestID:         common.StringPtr("reqId"),
+		PollRequest: &types.PollForDecisionTaskRequest{
+			TaskList: &types.TaskList{
 				Name: common.StringPtr(tl),
 			},
 			Identity: common.StringPtr(identity),
@@ -346,14 +344,14 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfGetExecutionFailed() {
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(nil, errors.New("FAILED")).Once()
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
-		WorkflowExecution: thrift.FromWorkflowExecution(workflowExecution),
-		ScheduleId:        common.Int64Ptr(2),
-		TaskId:            common.Int64Ptr(100),
-		RequestId:         common.StringPtr("reqId"),
-		PollRequest: &workflow.PollForDecisionTaskRequest{
-			TaskList: &workflow.TaskList{
+		WorkflowExecution: workflowExecution,
+		ScheduleID:        common.Int64Ptr(2),
+		TaskID:            common.Int64Ptr(100),
+		RequestID:         common.StringPtr("reqId"),
+		PollRequest: &types.PollForDecisionTaskRequest{
+			TaskList: &types.TaskList{
 				Name: common.StringPtr(tl),
 			},
 			Identity: common.StringPtr(identity),
@@ -379,14 +377,14 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyStarted() {
 	gwmsResponse := &p.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
-		WorkflowExecution: thrift.FromWorkflowExecution(&workflowExecution),
-		ScheduleId:        common.Int64Ptr(2),
-		TaskId:            common.Int64Ptr(100),
-		RequestId:         common.StringPtr("reqId"),
-		PollRequest: &workflow.PollForDecisionTaskRequest{
-			TaskList: &workflow.TaskList{
+		WorkflowExecution: &workflowExecution,
+		ScheduleID:        common.Int64Ptr(2),
+		TaskID:            common.Int64Ptr(100),
+		RequestID:         common.StringPtr("reqId"),
+		PollRequest: &types.PollForDecisionTaskRequest{
+			TaskList: &types.TaskList{
 				Name: common.StringPtr(tl),
 			},
 			Identity: common.StringPtr(identity),
@@ -416,14 +414,14 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyCompleted() {
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
-		WorkflowExecution: thrift.FromWorkflowExecution(&workflowExecution),
-		ScheduleId:        common.Int64Ptr(2),
-		TaskId:            common.Int64Ptr(100),
-		RequestId:         common.StringPtr("reqId"),
-		PollRequest: &workflow.PollForDecisionTaskRequest{
-			TaskList: &workflow.TaskList{
+		WorkflowExecution: &workflowExecution,
+		ScheduleID:        common.Int64Ptr(2),
+		TaskID:            common.Int64Ptr(100),
+		RequestID:         common.StringPtr("reqId"),
+		PollRequest: &types.PollForDecisionTaskRequest{
+			TaskList: &types.TaskList{
 				Name: common.StringPtr(tl),
 			},
 			Identity: common.StringPtr(identity),
@@ -463,14 +461,14 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedConflictOnUpdate() {
 		MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{},
 	}, nil).Once()
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
-		WorkflowExecution: thrift.FromWorkflowExecution(&workflowExecution),
-		ScheduleId:        common.Int64Ptr(2),
-		TaskId:            common.Int64Ptr(100),
-		RequestId:         common.StringPtr("reqId"),
-		PollRequest: &workflow.PollForDecisionTaskRequest{
-			TaskList: &workflow.TaskList{
+		WorkflowExecution: &workflowExecution,
+		ScheduleID:        common.Int64Ptr(2),
+		TaskID:            common.Int64Ptr(100),
+		RequestID:         common.StringPtr("reqId"),
+		PollRequest: &types.PollForDecisionTaskRequest{
+			TaskList: &types.TaskList{
 				Name: common.StringPtr(tl),
 			},
 			Identity: common.StringPtr(identity),
@@ -479,8 +477,8 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedConflictOnUpdate() {
 	s.Nil(err)
 	s.NotNil(response)
 	s.Equal("wType", *response.WorkflowType.Name)
-	s.True(response.PreviousStartedEventId == nil)
-	s.Equal(int64(3), *response.StartedEventId)
+	s.True(response.PreviousStartedEventID == nil)
+	s.Equal(int64(3), *response.StartedEventID)
 }
 
 func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
@@ -507,14 +505,14 @@ func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
 	gwmsResponse2 := &p.GetWorkflowExecutionResponse{State: ms2}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse2, nil).Once()
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
-		WorkflowExecution: thrift.FromWorkflowExecution(&workflowExecution),
-		ScheduleId:        common.Int64Ptr(2),
-		TaskId:            common.Int64Ptr(100),
-		RequestId:         common.StringPtr(requestID),
-		PollRequest: &workflow.PollForDecisionTaskRequest{
-			TaskList: &workflow.TaskList{
+		WorkflowExecution: &workflowExecution,
+		ScheduleID:        common.Int64Ptr(2),
+		TaskID:            common.Int64Ptr(100),
+		RequestID:         common.StringPtr(requestID),
+		PollRequest: &types.PollForDecisionTaskRequest{
+			TaskList: &types.TaskList{
 				Name: common.StringPtr(tl),
 			},
 			Identity: common.StringPtr(identity),
@@ -524,8 +522,8 @@ func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
 	s.Nil(err)
 	s.NotNil(response)
 	s.Equal("wType", *response.WorkflowType.Name)
-	s.True(response.PreviousStartedEventId == nil)
-	s.Equal(startedEventID.EventID, response.StartedEventId)
+	s.True(response.PreviousStartedEventID == nil)
+	s.Equal(startedEventID.EventID, response.StartedEventID)
 }
 
 func (s *engine2Suite) TestRecordDecisionTaskRetryDifferentRequest() {
@@ -552,14 +550,14 @@ func (s *engine2Suite) TestRecordDecisionTaskRetryDifferentRequest() {
 	gwmsResponse2 := &p.GetWorkflowExecutionResponse{State: ms2}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse2, nil).Once()
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
-		WorkflowExecution: thrift.FromWorkflowExecution(&workflowExecution),
-		ScheduleId:        common.Int64Ptr(2),
-		TaskId:            common.Int64Ptr(100),
-		RequestId:         common.StringPtr(requestID),
-		PollRequest: &workflow.PollForDecisionTaskRequest{
-			TaskList: &workflow.TaskList{
+		WorkflowExecution: &workflowExecution,
+		ScheduleID:        common.Int64Ptr(2),
+		TaskID:            common.Int64Ptr(100),
+		RequestID:         common.StringPtr(requestID),
+		PollRequest: &types.PollForDecisionTaskRequest{
+			TaskList: &types.TaskList{
 				Name: common.StringPtr(tl),
 			},
 			Identity: common.StringPtr(identity),
@@ -595,14 +593,14 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedMaxAttemptsExceeded() {
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(nil,
 		&p.ConditionFailedError{}).Times(conditionalRetryCount)
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
-		WorkflowExecution: thrift.FromWorkflowExecution(&workflowExecution),
-		ScheduleId:        common.Int64Ptr(2),
-		TaskId:            common.Int64Ptr(100),
-		RequestId:         common.StringPtr("reqId"),
-		PollRequest: &workflow.PollForDecisionTaskRequest{
-			TaskList: &workflow.TaskList{
+		WorkflowExecution: &workflowExecution,
+		ScheduleID:        common.Int64Ptr(2),
+		TaskID:            common.Int64Ptr(100),
+		RequestID:         common.StringPtr("reqId"),
+		PollRequest: &types.PollForDecisionTaskRequest{
+			TaskList: &types.TaskList{
 				Name: common.StringPtr(tl),
 			},
 			Identity: common.StringPtr(identity),
@@ -646,14 +644,14 @@ func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 	loadedMS.SetQueryRegistry(qr)
 	release(nil)
 
-	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &h.RecordDecisionTaskStartedRequest{
+	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
-		WorkflowExecution: thrift.FromWorkflowExecution(&workflowExecution),
-		ScheduleId:        common.Int64Ptr(2),
-		TaskId:            common.Int64Ptr(100),
-		RequestId:         common.StringPtr("reqId"),
-		PollRequest: &workflow.PollForDecisionTaskRequest{
-			TaskList: &workflow.TaskList{
+		WorkflowExecution: &workflowExecution,
+		ScheduleID:        common.Int64Ptr(2),
+		TaskID:            common.Int64Ptr(100),
+		RequestID:         common.StringPtr("reqId"),
+		PollRequest: &types.PollForDecisionTaskRequest{
+			TaskList: &types.TaskList{
 				Name: common.StringPtr(tl),
 			},
 			Identity: common.StringPtr(identity),
@@ -663,9 +661,9 @@ func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 	s.Nil(err)
 	s.NotNil(response)
 	s.Equal("wType", *response.WorkflowType.Name)
-	s.True(response.PreviousStartedEventId == nil)
-	s.Equal(int64(3), *response.StartedEventId)
-	expectedQueryMap := map[string]*workflow.WorkflowQuery{
+	s.True(response.PreviousStartedEventID == nil)
+	s.Equal(int64(3), *response.StartedEventID)
+	expectedQueryMap := map[string]*types.WorkflowQuery{
 		id1: {},
 		id2: {},
 		id3: {},
@@ -685,14 +683,14 @@ func (s *engine2Suite) TestRecordActivityTaskStartedIfNoExecution() {
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{}).Once()
 
-	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &h.RecordActivityTaskStartedRequest{
+	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &types.RecordActivityTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
-		WorkflowExecution: thrift.FromWorkflowExecution(workflowExecution),
-		ScheduleId:        common.Int64Ptr(5),
-		TaskId:            common.Int64Ptr(100),
-		RequestId:         common.StringPtr("reqId"),
-		PollRequest: &workflow.PollForActivityTaskRequest{
-			TaskList: &workflow.TaskList{
+		WorkflowExecution: workflowExecution,
+		ScheduleID:        common.Int64Ptr(5),
+		TaskID:            common.Int64Ptr(100),
+		RequestID:         common.StringPtr("reqId"),
+		PollRequest: &types.PollForActivityTaskRequest{
+			TaskList: &types.TaskList{
 				Name: common.StringPtr(tl),
 			},
 			Identity: common.StringPtr(identity),
@@ -738,14 +736,14 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 		gomock.Any(), gomock.Any(), domainID, workflowExecution.GetWorkflowID(), workflowExecution.GetRunID(),
 		decisionCompletedEvent.GetEventID(), scheduledEvent.GetEventID(), gomock.Any(),
 	).Return(scheduledEvent, nil)
-	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &h.RecordActivityTaskStartedRequest{
+	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &types.RecordActivityTaskStartedRequest{
 		DomainUUID:        common.StringPtr(domainID),
-		WorkflowExecution: thrift.FromWorkflowExecution(&workflowExecution),
-		ScheduleId:        common.Int64Ptr(5),
-		TaskId:            common.Int64Ptr(100),
-		RequestId:         common.StringPtr("reqId"),
-		PollRequest: &workflow.PollForActivityTaskRequest{
-			TaskList: &workflow.TaskList{
+		WorkflowExecution: &workflowExecution,
+		ScheduleID:        common.Int64Ptr(5),
+		TaskID:            common.Int64Ptr(100),
+		RequestID:         common.StringPtr("reqId"),
+		PollRequest: &types.PollForActivityTaskRequest{
+			TaskList: &types.TaskList{
 				Name: common.StringPtr(tl),
 			},
 			Identity: common.StringPtr(identity),
@@ -753,7 +751,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 	})
 	s.Nil(err)
 	s.NotNil(response)
-	s.Equal(scheduledEvent, thrift.ToHistoryEvent(response.ScheduledEvent))
+	s.Equal(scheduledEvent, response.ScheduledEvent)
 }
 
 func (s *engine2Suite) TestRequestCancelWorkflowExecutionSuccess() {
@@ -776,12 +774,12 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionSuccess() {
 		MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{},
 	}, nil).Once()
 
-	err := s.historyEngine.RequestCancelWorkflowExecution(context.Background(), &h.RequestCancelWorkflowExecutionRequest{
+	err := s.historyEngine.RequestCancelWorkflowExecution(context.Background(), &types.HistoryRequestCancelWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
-		CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
-			WorkflowExecution: &workflow.WorkflowExecution{
-				WorkflowId: workflowExecution.WorkflowID,
-				RunId:      workflowExecution.RunID,
+		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: workflowExecution.WorkflowID,
+				RunID:      workflowExecution.RunID,
 			},
 			Identity: common.StringPtr("identity"),
 		},
@@ -809,12 +807,12 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionFail() {
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse1, nil).Once()
 
-	err := s.historyEngine.RequestCancelWorkflowExecution(context.Background(), &h.RequestCancelWorkflowExecutionRequest{
+	err := s.historyEngine.RequestCancelWorkflowExecution(context.Background(), &types.HistoryRequestCancelWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
-		CancelRequest: &workflow.RequestCancelWorkflowExecutionRequest{
-			WorkflowExecution: &workflow.WorkflowExecution{
-				WorkflowId: workflowExecution.WorkflowID,
-				RunId:      workflowExecution.RunID,
+		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: workflowExecution.WorkflowID,
+				RunID:      workflowExecution.RunID,
 			},
 			Identity: common.StringPtr("identity"),
 		},
@@ -872,9 +870,9 @@ func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
 	di := test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
 
-	decisions := []*workflow.Decision{{
-		DecisionType: common.DecisionTypePtr(workflow.DecisionTypeRecordMarker),
-		RecordMarkerDecisionAttributes: &workflow.RecordMarkerDecisionAttributes{
+	decisions := []*types.Decision{{
+		DecisionType: types.DecisionTypeRecordMarker.Ptr(),
+		RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
 			MarkerName: common.StringPtr(markerName),
 			Details:    markerDetails,
 		},
@@ -889,9 +887,9 @@ func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
 		MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{},
 	}, nil).Once()
 
-	_, err := s.historyEngine.RespondDecisionTaskCompleted(context.Background(), &h.RespondDecisionTaskCompletedRequest{
+	_, err := s.historyEngine.RespondDecisionTaskCompleted(context.Background(), &types.HistoryRespondDecisionTaskCompletedRequest{
 		DomainUUID: common.StringPtr(domainID),
-		CompleteRequest: &workflow.RespondDecisionTaskCompletedRequest{
+		CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: nil,
@@ -917,21 +915,21 @@ func (s *engine2Suite) TestStartWorkflowExecution_BrandNew() {
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
 
 	requestID := uuid.New()
-	resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &h.StartWorkflowExecutionRequest{
+	resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
-		StartRequest: &workflow.StartWorkflowExecutionRequest{
+		StartRequest: &types.StartWorkflowExecutionRequest{
 			Domain:                              common.StringPtr(domainID),
-			WorkflowId:                          common.StringPtr(workflowID),
-			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowID:                          common.StringPtr(workflowID),
+			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            common.StringPtr(identity),
-			RequestId:                           common.StringPtr(requestID),
+			RequestID:                           common.StringPtr(requestID),
 		},
 	})
 	s.Nil(err)
-	s.NotNil(resp.RunId)
+	s.NotNil(resp.RunID)
 }
 
 func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_Dedup() {
@@ -954,21 +952,21 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_Dedup() {
 		LastWriteVersion: lastWriteVersion,
 	}).Once()
 
-	resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &h.StartWorkflowExecutionRequest{
+	resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
-		StartRequest: &workflow.StartWorkflowExecutionRequest{
+		StartRequest: &types.StartWorkflowExecutionRequest{
 			Domain:                              common.StringPtr(domainID),
-			WorkflowId:                          common.StringPtr(workflowID),
-			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowID:                          common.StringPtr(workflowID),
+			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            common.StringPtr(identity),
-			RequestId:                           common.StringPtr(requestID),
+			RequestID:                           common.StringPtr(requestID),
 		},
 	})
 	s.Nil(err)
-	s.Equal(runID, resp.GetRunId())
+	s.Equal(runID, resp.GetRunID())
 }
 
 func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_NonDeDup() {
@@ -990,17 +988,17 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_NonDeDup() {
 		LastWriteVersion: lastWriteVersion,
 	}).Once()
 
-	resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &h.StartWorkflowExecutionRequest{
+	resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
-		StartRequest: &workflow.StartWorkflowExecutionRequest{
+		StartRequest: &types.StartWorkflowExecutionRequest{
 			Domain:                              common.StringPtr(domainID),
-			WorkflowId:                          common.StringPtr(workflowID),
-			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowID:                          common.StringPtr(workflowID),
+			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            common.StringPtr(identity),
-			RequestId:                           common.StringPtr("newRequestID"),
+			RequestID:                           common.StringPtr("newRequestID"),
 		},
 	})
 	if _, ok := err.(*types.WorkflowExecutionAlreadyStartedError); !ok {
@@ -1018,10 +1016,10 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 	identity := "testIdentity"
 	lastWriteVersion := common.EmptyVersion
 
-	options := []workflow.WorkflowIdReusePolicy{
-		workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly,
-		workflow.WorkflowIdReusePolicyAllowDuplicate,
-		workflow.WorkflowIdReusePolicyRejectDuplicate,
+	options := []types.WorkflowIDReusePolicy{
+		types.WorkflowIDReusePolicyAllowDuplicateFailedOnly,
+		types.WorkflowIDReusePolicyAllowDuplicate,
+		types.WorkflowIDReusePolicyRejectDuplicate,
 	}
 
 	expecedErrs := []bool{true, false, true}
@@ -1055,18 +1053,18 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 			).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
 		}
 
-		resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &h.StartWorkflowExecutionRequest{
+		resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: common.StringPtr(domainID),
-			StartRequest: &workflow.StartWorkflowExecutionRequest{
+			StartRequest: &types.StartWorkflowExecutionRequest{
 				Domain:                              common.StringPtr(domainID),
-				WorkflowId:                          common.StringPtr(workflowID),
-				WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+				WorkflowID:                          common.StringPtr(workflowID),
+				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+				TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 				Identity:                            common.StringPtr(identity),
-				RequestId:                           common.StringPtr("newRequestID"),
-				WorkflowIdReusePolicy:               &option,
+				RequestID:                           common.StringPtr("newRequestID"),
+				WorkflowIDReusePolicy:               &option,
 			},
 		})
 
@@ -1090,10 +1088,10 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 	identity := "testIdentity"
 	lastWriteVersion := common.EmptyVersion
 
-	options := []workflow.WorkflowIdReusePolicy{
-		workflow.WorkflowIdReusePolicyAllowDuplicateFailedOnly,
-		workflow.WorkflowIdReusePolicyAllowDuplicate,
-		workflow.WorkflowIdReusePolicyRejectDuplicate,
+	options := []types.WorkflowIDReusePolicy{
+		types.WorkflowIDReusePolicyAllowDuplicateFailedOnly,
+		types.WorkflowIDReusePolicyAllowDuplicate,
+		types.WorkflowIDReusePolicyRejectDuplicate,
 	}
 
 	expecedErrs := []bool{false, false, true}
@@ -1138,18 +1136,18 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 				).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
 			}
 
-			resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &h.StartWorkflowExecutionRequest{
+			resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
 				DomainUUID: common.StringPtr(domainID),
-				StartRequest: &workflow.StartWorkflowExecutionRequest{
+				StartRequest: &types.StartWorkflowExecutionRequest{
 					Domain:                              common.StringPtr(domainID),
-					WorkflowId:                          common.StringPtr(workflowID),
-					WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-					TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+					WorkflowID:                          common.StringPtr(workflowID),
+					WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+					TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 					Identity:                            common.StringPtr(identity),
-					RequestId:                           common.StringPtr("newRequestID"),
-					WorkflowIdReusePolicy:               &option,
+					RequestID:                           common.StringPtr("newRequestID"),
+					WorkflowIDReusePolicy:               &option,
 				},
 			})
 
@@ -1167,7 +1165,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 }
 
 func (s *engine2Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
-	sRequest := &h.SignalWithStartWorkflowExecutionRequest{}
+	sRequest := &types.HistorySignalWithStartWorkflowExecutionRequest{}
 	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
@@ -1177,11 +1175,11 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 	identity := "testIdentity"
 	signalName := "my signal name"
 	input := []byte("test input")
-	sRequest = &h.SignalWithStartWorkflowExecutionRequest{
+	sRequest = &types.HistorySignalWithStartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
-		SignalWithStartRequest: &workflow.SignalWithStartWorkflowExecutionRequest{
+		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:     common.StringPtr(domainID),
-			WorkflowId: common.StringPtr(workflowID),
+			WorkflowID: common.StringPtr(workflowID),
 			Identity:   common.StringPtr(identity),
 			SignalName: common.StringPtr(signalName),
 			Input:      input,
@@ -1207,11 +1205,11 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 
 	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.Nil(err)
-	s.Equal(runID, resp.GetRunId())
+	s.Equal(runID, resp.GetRunID())
 }
 
 func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
-	sRequest := &h.SignalWithStartWorkflowExecutionRequest{}
+	sRequest := &types.HistorySignalWithStartWorkflowExecutionRequest{}
 	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
@@ -1224,19 +1222,19 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 	input := []byte("test input")
 	requestID := uuid.New()
 
-	sRequest = &h.SignalWithStartWorkflowExecutionRequest{
+	sRequest = &types.HistorySignalWithStartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
-		SignalWithStartRequest: &workflow.SignalWithStartWorkflowExecutionRequest{
+		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              common.StringPtr(domainID),
-			WorkflowId:                          common.StringPtr(workflowID),
-			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowID:                          common.StringPtr(workflowID),
+			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            common.StringPtr(identity),
 			SignalName:                          common.StringPtr(signalName),
 			Input:                               input,
-			RequestId:                           common.StringPtr(requestID),
+			RequestID:                           common.StringPtr(requestID),
 		},
 	}
 
@@ -1248,11 +1246,11 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 
 	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.Nil(err)
-	s.NotNil(resp.GetRunId())
+	s.NotNil(resp.GetRunID())
 }
 
 func (s *engine2Suite) TestSignalWithStartWorkflowExecution_CreateTimeout() {
-	sRequest := &h.SignalWithStartWorkflowExecutionRequest{}
+	sRequest := &types.HistorySignalWithStartWorkflowExecutionRequest{}
 	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
@@ -1265,19 +1263,19 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_CreateTimeout() {
 	input := []byte("test input")
 	requestID := uuid.New()
 
-	sRequest = &h.SignalWithStartWorkflowExecutionRequest{
+	sRequest = &types.HistorySignalWithStartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
-		SignalWithStartRequest: &workflow.SignalWithStartWorkflowExecutionRequest{
+		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              common.StringPtr(domainID),
-			WorkflowId:                          common.StringPtr(workflowID),
-			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowID:                          common.StringPtr(workflowID),
+			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            common.StringPtr(identity),
 			SignalName:                          common.StringPtr(signalName),
 			Input:                               input,
-			RequestId:                           common.StringPtr(requestID),
+			RequestID:                           common.StringPtr(requestID),
 		},
 	}
 
@@ -1289,11 +1287,11 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_CreateTimeout() {
 
 	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.True(p.IsTimeoutError(err))
-	s.NotNil(resp.GetRunId())
+	s.NotNil(resp.GetRunID())
 }
 
 func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning() {
-	sRequest := &h.SignalWithStartWorkflowExecutionRequest{}
+	sRequest := &types.HistorySignalWithStartWorkflowExecutionRequest{}
 	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
@@ -1306,21 +1304,21 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 	signalName := "my signal name"
 	input := []byte("test input")
 	requestID := uuid.New()
-	policy := workflow.WorkflowIdReusePolicyAllowDuplicate
-	sRequest = &h.SignalWithStartWorkflowExecutionRequest{
+	policy := types.WorkflowIDReusePolicyAllowDuplicate
+	sRequest = &types.HistorySignalWithStartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
-		SignalWithStartRequest: &workflow.SignalWithStartWorkflowExecutionRequest{
+		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              common.StringPtr(domainID),
-			WorkflowId:                          common.StringPtr(workflowID),
-			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowID:                          common.StringPtr(workflowID),
+			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            common.StringPtr(identity),
 			SignalName:                          common.StringPtr(signalName),
 			Input:                               input,
-			RequestId:                           common.StringPtr(requestID),
-			WorkflowIdReusePolicy:               &policy,
+			RequestID:                           common.StringPtr(requestID),
+			WorkflowIDReusePolicy:               &policy,
 		},
 	}
 
@@ -1342,8 +1340,8 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 
 	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.Nil(err)
-	s.NotNil(resp.GetRunId())
-	s.NotEqual(runID, resp.GetRunId())
+	s.NotNil(resp.GetRunID())
+	s.NotEqual(runID, resp.GetRunID())
 }
 
 func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_DuplicateRequests() {
@@ -1356,21 +1354,21 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_DuplicateReque
 	signalName := "my signal name"
 	input := []byte("test input")
 	requestID := "testRequestID"
-	policy := workflow.WorkflowIdReusePolicyAllowDuplicate
-	sRequest := &h.SignalWithStartWorkflowExecutionRequest{
+	policy := types.WorkflowIDReusePolicyAllowDuplicate
+	sRequest := &types.HistorySignalWithStartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
-		SignalWithStartRequest: &workflow.SignalWithStartWorkflowExecutionRequest{
+		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              common.StringPtr(domainID),
-			WorkflowId:                          common.StringPtr(workflowID),
-			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowID:                          common.StringPtr(workflowID),
+			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            common.StringPtr(identity),
 			SignalName:                          common.StringPtr(signalName),
 			Input:                               input,
-			RequestId:                           common.StringPtr(requestID),
-			WorkflowIdReusePolicy:               &policy,
+			RequestID:                           common.StringPtr(requestID),
+			WorkflowIDReusePolicy:               &policy,
 		},
 	}
 
@@ -1400,8 +1398,8 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_DuplicateReque
 
 	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.Nil(err)
-	s.NotNil(resp.GetRunId())
-	s.Equal(runID, resp.GetRunId())
+	s.NotNil(resp.GetRunID())
+	s.Equal(runID, resp.GetRunID())
 }
 
 func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_WorkflowAlreadyStarted() {
@@ -1414,21 +1412,21 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_WorkflowAlread
 	signalName := "my signal name"
 	input := []byte("test input")
 	requestID := "testRequestID"
-	policy := workflow.WorkflowIdReusePolicyAllowDuplicate
-	sRequest := &h.SignalWithStartWorkflowExecutionRequest{
+	policy := types.WorkflowIDReusePolicyAllowDuplicate
+	sRequest := &types.HistorySignalWithStartWorkflowExecutionRequest{
 		DomainUUID: common.StringPtr(domainID),
-		SignalWithStartRequest: &workflow.SignalWithStartWorkflowExecutionRequest{
+		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              common.StringPtr(domainID),
-			WorkflowId:                          common.StringPtr(workflowID),
-			WorkflowType:                        &workflow.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &workflow.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowID:                          common.StringPtr(workflowID),
+			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            common.StringPtr(identity),
 			SignalName:                          common.StringPtr(signalName),
 			Input:                               input,
-			RequestId:                           common.StringPtr(requestID),
-			WorkflowIdReusePolicy:               &policy,
+			RequestID:                           common.StringPtr(requestID),
+			WorkflowIDReusePolicy:               &policy,
 		},
 	}
 

@@ -24,7 +24,6 @@ package execution
 import (
 	"encoding/json"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -246,8 +245,8 @@ func ScheduleDecision(
 func FindAutoResetPoint(
 	timeSource clock.TimeSource,
 	badBinaries *types.BadBinaries,
-	autoResetPoints *workflow.ResetPoints,
-) (string, *workflow.ResetPointInfo) {
+	autoResetPoints *types.ResetPoints,
+) (string, *types.ResetPointInfo) {
 	if badBinaries == nil || badBinaries.Binaries == nil || autoResetPoints == nil || autoResetPoints.Points == nil {
 		return "", nil
 	}
