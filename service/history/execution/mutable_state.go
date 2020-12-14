@@ -76,6 +76,7 @@ type (
 		AddDecisionTaskCompletedEvent(int64, int64, *types.RespondDecisionTaskCompletedRequest, int) (*types.HistoryEvent, error)
 		AddDecisionTaskFailedEvent(scheduleEventID int64, startedEventID int64, cause types.DecisionTaskFailedCause, details []byte, identity, reason, binChecksum, baseRunID, newRunID string, forkEventVersion int64) (*types.HistoryEvent, error)
 		AddDecisionTaskScheduleToStartTimeoutEvent(int64) (*types.HistoryEvent, error)
+		AddDecisionTaskResetTimeoutEvent(int64, string, string, int64, string) (*types.HistoryEvent, error)
 		AddFirstDecisionTaskScheduled(*types.HistoryEvent) error
 		AddDecisionTaskScheduledEvent(bypassTaskGeneration bool) (*DecisionInfo, error)
 		AddDecisionTaskScheduledEventAsHeartbeat(bypassTaskGeneration bool, originalScheduledTimestamp int64) (*DecisionInfo, error)

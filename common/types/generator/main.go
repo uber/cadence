@@ -76,10 +76,11 @@ func capitalizeID(name string) string {
 }
 
 var capitalizedEnums = map[string]struct{}{
-	"DomainStatus":            {},
-	"TimeoutType":             {},
-	"ParentClosePolicy":       {},
-	"DecisionTaskFailedCause": {},
+	"DomainStatus":                               {},
+	"TimeoutType":                                {},
+	"ParentClosePolicy":                          {},
+	"DecisionTaskFailedCause":                    {},
+	"DecisionTaskTimedOutCause":                  {},
 	"CancelExternalWorkflowExecutionFailedCause": {},
 	"SignalExternalWorkflowExecutionFailedCause": {},
 	"ChildWorkflowExecutionFailedCause":          {},

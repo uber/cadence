@@ -246,3 +246,170 @@ func (s *integrationSuite) TestResetWorkflow() {
 	})
 	s.NoError(err)
 }
+
+func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
+	id := "integration-reset-workflow-test-no-decision-completed"
+	wt := "integration-reset-workflow-test-type--no-decision-completed"
+	tl := "integration-reset-workflow-test-taskqueue-no-decision-completed"
+	identity := "worker1"
+
+	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+
+	tasklist := &types.TaskList{Name: common.StringPtr(tl)}
+
+	// Start workflow execution
+	request := &types.StartWorkflowExecutionRequest{
+		RequestID:                           common.StringPtr(uuid.New()),
+		Domain:                              common.StringPtr(s.domainName),
+		WorkflowID:                          common.StringPtr(id),
+		WorkflowType:                        workflowType,
+		TaskList:                            tasklist,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+		Identity:                            common.StringPtr(identity),
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.NoError(err0)
+
+	// Find reset point (last completed decision task)
+	events := s.getHistory(s.domainName, &types.WorkflowExecution{
+		WorkflowID: common.StringPtr(id),
+		RunID:      common.StringPtr(we.GetRunID()),
+	})
+	var lastDecisionScheduled *types.HistoryEvent
+	for _, event := range events {
+		if event.GetEventType() == types.EventTypeDecisionTaskScheduled {
+			lastDecisionScheduled = event
+		}
+	}
+
+	// FIRST reset: Reset workflow execution, current is open
+	_, err := s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
+		Domain: common.StringPtr(s.domainName),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(id),
+			RunID:      we.RunID,
+		},
+		Reason:                common.StringPtr("reset execution from test"),
+		DecisionFinishEventID: common.Int64Ptr(lastDecisionScheduled.GetEventID() + 1),
+		RequestID:             common.StringPtr(uuid.New()),
+	})
+	s.NoError(err)
+
+	// get the history of the first run again
+	events = s.getHistory(s.domainName, &types.WorkflowExecution{
+		WorkflowID: common.StringPtr(id),
+		RunID:      common.StringPtr(we.GetRunID()),
+	})
+	var lastEvent *types.HistoryEvent
+	for _, event := range events {
+		lastEvent = event
+	}
+	// assert the first run is closed, terminated by the previous reset
+	s.Equal(types.EventTypeWorkflowExecutionTerminated, lastEvent.GetEventType())
+
+	// SECOND reset: reset the first run again, to exercise the code path of resetting closed workflow
+	resp, err := s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
+		Domain: common.StringPtr(s.domainName),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(id),
+			RunID:      common.StringPtr(we.GetRunID()),
+		},
+		Reason:                common.StringPtr("reset execution from test"),
+		DecisionFinishEventID: common.Int64Ptr(lastDecisionScheduled.GetEventID() + 1),
+		RequestID:             common.StringPtr(uuid.New()),
+	})
+	s.NoError(err)
+
+	newRunID := resp.GetRunID()
+	workflowComplete := false
+	activityData := int32(1)
+	isFirstTaskProcessed := false
+
+	wtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
+		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
+
+		if !isFirstTaskProcessed {
+			// Schedule 3 activities on first workflow task
+			isFirstTaskProcessed = true
+			buf := new(bytes.Buffer)
+			s.Nil(binary.Write(buf, binary.LittleEndian, activityData))
+
+			var scheduleActivityCommands []*types.Decision
+			scheduleActivityCommands = append(scheduleActivityCommands, &types.Decision{
+				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
+				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
+					ActivityID:                    common.StringPtr("1"),
+					ActivityType:                  &types.ActivityType{Name: common.StringPtr("ResetActivity")},
+					TaskList:                      tasklist,
+					Input:                         buf.Bytes(),
+					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
+					ScheduleToStartTimeoutSeconds: common.Int32Ptr(100),
+					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
+					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+				},
+			})
+
+			return nil, scheduleActivityCommands, nil
+		}
+		// Complete workflow after reset
+		workflowComplete = true
+		return nil, []*types.Decision{{
+			DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
+			CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{
+				Result: []byte("Done."),
+			},
+		}}, nil
+
+	}
+
+	// activity handler
+	atHandler := func(execution *types.WorkflowExecution, activityType *types.ActivityType,
+		activityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
+		return []byte("Activity Result."), false, nil
+	}
+
+	poller := &TaskPoller{
+		Engine:          s.engine,
+		Domain:          s.domainName,
+		TaskList:        tasklist,
+		Identity:        identity,
+		DecisionHandler: wtHandler,
+		ActivityHandler: atHandler,
+		Logger:          s.Logger,
+		T:               s.T(),
+	}
+
+	// Process first workflow decision task to schedule activities
+	_, err = poller.PollAndProcessDecisionTask(false, false)
+	s.Logger.Info("PollAndProcessWorkflowTask", tag.Error(err))
+	s.NoError(err)
+
+	events = s.getHistory(s.domainName, &types.WorkflowExecution{
+		WorkflowID: common.StringPtr(id),
+		RunID:      common.StringPtr(newRunID),
+	})
+
+	// Process one activity task which also creates second workflow task
+	err = poller.PollAndProcessActivityTask(false)
+	s.Logger.Info("Poll and process first activity", tag.Error(err))
+	s.NoError(err)
+
+	_, err = poller.PollAndProcessDecisionTask(false, false)
+	s.Logger.Info("Poll and process final decision task", tag.Error(err))
+	s.NoError(err)
+	s.True(workflowComplete)
+
+	// get the history of the newRunID
+	events = s.getHistory(s.domainName, &types.WorkflowExecution{
+		WorkflowID: common.StringPtr(id),
+		RunID:      common.StringPtr(newRunID),
+	})
+	for _, event := range events {
+		lastEvent = event
+	}
+	// assert the new run is closed, completed by decision task
+	s.Equal(types.EventTypeWorkflowExecutionCompleted, lastEvent.GetEventType())
+}

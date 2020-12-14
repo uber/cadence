@@ -123,10 +123,27 @@ func (b *HistoryBuilder) AddDecisionTaskCompletedEvent(scheduleEventID, StartedE
 }
 
 // AddDecisionTaskTimedOutEvent adds DecisionTaskTimedOut event to history
-func (b *HistoryBuilder) AddDecisionTaskTimedOutEvent(scheduleEventID int64,
-	StartedEventID int64, timeoutType types.TimeoutType) *types.HistoryEvent {
-	event := b.newDecisionTaskTimedOutEvent(scheduleEventID, StartedEventID, timeoutType)
+func (b *HistoryBuilder) AddDecisionTaskTimedOutEvent(
+	scheduleEventID int64,
+	startedEventID int64,
+	timeoutType types.TimeoutType,
+	baseRunID string,
+	newRunID string,
+	forkEventVersion int64,
+	reason string,
+	cause types.DecisionTaskTimedOutCause,
+) *types.HistoryEvent {
 
+	event := b.newDecisionTaskTimedOutEvent(
+		scheduleEventID,
+		startedEventID,
+		timeoutType,
+		baseRunID,
+		newRunID,
+		forkEventVersion,
+		reason,
+		cause,
+	)
 	return b.addEventToHistory(event)
 }
 
@@ -610,12 +627,26 @@ func (b *HistoryBuilder) newDecisionTaskCompletedEvent(scheduleEventID, StartedE
 	return historyEvent
 }
 
-func (b *HistoryBuilder) newDecisionTaskTimedOutEvent(scheduleEventID int64, StartedEventID int64, timeoutType types.TimeoutType) *types.HistoryEvent {
+func (b *HistoryBuilder) newDecisionTaskTimedOutEvent(
+	scheduleEventID int64,
+	startedEventID int64,
+	timeoutType types.TimeoutType,
+	baseRunID string,
+	newRunID string,
+	forkEventVersion int64,
+	reason string,
+	cause types.DecisionTaskTimedOutCause,
+) *types.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(types.EventTypeDecisionTaskTimedOut)
 	attributes := &types.DecisionTaskTimedOutEventAttributes{}
 	attributes.ScheduledEventID = common.Int64Ptr(scheduleEventID)
-	attributes.StartedEventID = common.Int64Ptr(StartedEventID)
-	attributes.TimeoutType = &timeoutType
+	attributes.StartedEventID = common.Int64Ptr(startedEventID)
+	attributes.TimeoutType = timeoutType.Ptr()
+	attributes.BaseRunID = common.StringPtr(baseRunID)
+	attributes.NewRunID = common.StringPtr(newRunID)
+	attributes.ForkEventVersion = common.Int64Ptr(forkEventVersion)
+	attributes.Reason = common.StringPtr(reason)
+	attributes.Cause = cause.Ptr()
 	historyEvent.DecisionTaskTimedOutEventAttributes = attributes
 
 	return historyEvent

@@ -859,6 +859,71 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowCancellationFailed() {
 	s.Equal(int64(7), s.getNextEventID())
 }
 
+func (s *historyBuilderSuite) TestHistoryBuilder_DecisionTaskTimedOut() {
+	workflowType := "some random workflow type"
+	tasklist := "some random tasklist"
+	identity := "some random identity"
+	input := []byte("some random workflow input")
+	execTimeout := int32(60)
+	taskTimeout := int32(10)
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: common.StringPtr("some random workflow ID"),
+		RunID:      common.StringPtr(uuid.New()),
+	}
+
+	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(
+		workflowExecution, workflowType, tasklist, input, execTimeout, taskTimeout, identity,
+	)
+	s.validateWorkflowExecutionStartedEvent(
+		workflowStartedEvent, workflowType, tasklist, input, execTimeout, taskTimeout, identity,
+	)
+	s.Equal(int64(2), s.getNextEventID())
+
+	decisionInfo := s.addDecisionTaskScheduledEvent()
+	s.validateDecisionTaskScheduledEvent(decisionInfo, 2, tasklist, taskTimeout)
+	s.Equal(int64(3), s.getNextEventID())
+	decisionInfo, decisionRunning := s.msBuilder.GetDecisionInfo(2)
+	s.True(decisionRunning)
+	s.NotNil(decisionInfo)
+	s.Equal(int64(2), decisionInfo.ScheduleID)
+	s.Equal(common.EmptyEventID, decisionInfo.StartedID)
+	s.Equal(common.EmptyEventID, s.getPreviousDecisionStartedEventID())
+
+	decisionStartedEvent := s.addDecisionTaskStartedEvent(2, tasklist, identity)
+	s.validateDecisionTaskStartedEvent(decisionStartedEvent, 3, 2, identity)
+	s.Equal(int64(4), s.getNextEventID())
+	decisionInfo, decisionRunning = s.msBuilder.GetDecisionInfo(2)
+	s.True(decisionRunning)
+	s.NotNil(decisionInfo)
+	s.Equal(int64(2), decisionInfo.ScheduleID)
+	s.Equal(int64(3), decisionInfo.StartedID)
+	s.Equal(common.EmptyEventID, s.getPreviousDecisionStartedEventID())
+
+	baseRunID := uuid.New()
+	newRunID := uuid.New()
+	forkVersion := int64(10)
+	decisionTimedOutEvent := s.addDecisionTaskResetTimedOutEvent(2, baseRunID, newRunID, forkVersion)
+	s.NotNil(decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes())
+	s.Equal(int64(2), decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes().GetScheduledEventID())
+	s.Equal(baseRunID, decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes().GetBaseRunID())
+	s.Equal(newRunID, decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes().GetNewRunID())
+	s.Equal(forkVersion, decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes().GetForkEventVersion())
+	s.Equal(int64(5), s.getNextEventID())
+
+	decisionInfo = s.addDecisionTaskScheduledEvent()
+	s.validateDecisionTaskScheduledEvent(decisionInfo, 5, tasklist, taskTimeout)
+	s.Equal(int64(6), s.getNextEventID())
+
+	decisionTimedOutEvent = s.addDecisionTaskResetTimedOutEvent(5, baseRunID, newRunID, forkVersion)
+	s.NotNil(decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes())
+	s.Equal(int64(5), decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes().GetScheduledEventID())
+	s.Equal(baseRunID, decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes().GetBaseRunID())
+	s.Equal(newRunID, decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes().GetNewRunID())
+	s.Equal(forkVersion, decisionTimedOutEvent.GetDecisionTaskTimedOutEventAttributes().GetForkEventVersion())
+	s.Equal(int64(7), s.getNextEventID())
+
+}
+
 func (s *historyBuilderSuite) getNextEventID() int64 {
 	return s.msBuilder.GetExecutionInfo().NextEventID
 }
@@ -899,8 +964,12 @@ func (s *historyBuilderSuite) addDecisionTaskScheduledEvent() *DecisionInfo {
 	return di
 }
 
-func (s *historyBuilderSuite) addDecisionTaskStartedEvent(scheduleID int64,
-	taskList, identity string) *types.HistoryEvent {
+func (s *historyBuilderSuite) addDecisionTaskStartedEvent(
+	scheduleID int64,
+	taskList string,
+	identity string,
+) *types.HistoryEvent {
+
 	event, _, err := s.msBuilder.AddDecisionTaskStartedEvent(scheduleID, uuid.New(), &types.PollForDecisionTaskRequest{
 		TaskList: &types.TaskList{Name: common.StringPtr(taskList)},
 		Identity: common.StringPtr(identity),
@@ -910,12 +979,35 @@ func (s *historyBuilderSuite) addDecisionTaskStartedEvent(scheduleID int64,
 	return event
 }
 
-func (s *historyBuilderSuite) addDecisionTaskCompletedEvent(scheduleID, startedID int64, context []byte,
-	identity string) *types.HistoryEvent {
+func (s *historyBuilderSuite) addDecisionTaskCompletedEvent(
+	scheduleID int64,
+	startedID int64,
+	context []byte,
+	identity string,
+) *types.HistoryEvent {
+
 	event, err := s.msBuilder.AddDecisionTaskCompletedEvent(scheduleID, startedID, &types.RespondDecisionTaskCompletedRequest{
 		ExecutionContext: context,
 		Identity:         common.StringPtr(identity),
 	}, config.DefaultHistoryMaxAutoResetPoints)
+	s.Nil(err)
+
+	return event
+}
+
+func (s *historyBuilderSuite) addDecisionTaskResetTimedOutEvent(
+	scheduleID int64,
+	baseRunID string,
+	newRunID string,
+	newRunVersion int64,
+) *types.HistoryEvent {
+	event, err := s.msBuilder.AddDecisionTaskResetTimeoutEvent(
+		scheduleID,
+		baseRunID,
+		newRunID,
+		newRunVersion,
+		"",
+	)
 	s.Nil(err)
 
 	return event

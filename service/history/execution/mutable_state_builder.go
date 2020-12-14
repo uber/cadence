@@ -2044,6 +2044,26 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduleToStartTimeoutEvent(
 	return e.decisionTaskManager.AddDecisionTaskScheduleToStartTimeoutEvent(scheduleEventID)
 }
 
+func (e *mutableStateBuilder) AddDecisionTaskResetTimeoutEvent(
+	scheduleEventID int64,
+	baseRunID string,
+	newRunID string,
+	forkEventVersion int64,
+	reason string,
+) (*types.HistoryEvent, error) {
+	opTag := tag.WorkflowActionDecisionTaskTimedOut
+	if err := e.checkMutability(opTag); err != nil {
+		return nil, err
+	}
+	return e.decisionTaskManager.AddDecisionTaskResetTimeoutEvent(
+		scheduleEventID,
+		baseRunID,
+		newRunID,
+		forkEventVersion,
+		reason,
+	)
+}
+
 func (e *mutableStateBuilder) AddDecisionTaskFailedEvent(
 	scheduleEventID int64,
 	startedEventID int64,

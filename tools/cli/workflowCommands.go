@@ -1877,7 +1877,7 @@ func getResetEventIDByType(
 	fmt.Println("resetType:", resetType)
 	switch resetType {
 	case resetTypeLastDecisionCompleted:
-		decisionFinishID, err = getLastDecisionCompletedID(ctx, domain, wid, rid, frontendClient)
+		decisionFinishID, err = getLastDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskCompleted)
 		if err != nil {
 			return
 		}
@@ -1888,7 +1888,7 @@ func getResetEventIDByType(
 			return
 		}
 	case resetTypeFirstDecisionCompleted:
-		decisionFinishID, err = getFirstDecisionCompletedID(ctx, domain, wid, rid, frontendClient)
+		decisionFinishID, err = getFirstDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskCompleted)
 		if err != nil {
 			return
 		}
@@ -1904,60 +1904,40 @@ func getResetEventIDByType(
 		if err != nil {
 			return
 		}
+	case resetTypeFirstDecisionScheduled:
+		decisionFinishID, err = getFirstDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskScheduled)
+		if err != nil {
+			return
+		}
+		// decisionFinishID is exclusive in reset API
+		decisionFinishID++
+	case resetTypeLastDecisionScheduled:
+		decisionFinishID, err = getLastDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskScheduled)
+		if err != nil {
+			return
+		}
+		// decisionFinishID is exclusive in reset API
+		decisionFinishID++
 	default:
 		panic("not supported resetType")
 	}
 	return
 }
 
-func getEarliestDecisionID(
+func getFirstDecisionTaskByType(
 	ctx context.Context,
-	domain string, wid string,
-	rid string, earliestTime int64,
+	domain string,
+	workflowID string,
+	runID string,
 	frontendClient frontend.Client,
+	decisionType types.EventType,
 ) (decisionFinishID int64, err error) {
+
 	req := &types.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domain),
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-			RunID:      common.StringPtr(rid),
-		},
-		MaximumPageSize: common.Int32Ptr(1000),
-		NextPageToken:   nil,
-	}
-
-OuterLoop:
-	for {
-		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
-		if err != nil {
-			return 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
-		}
-		for _, e := range resp.GetHistory().GetEvents() {
-			if e.GetEventType() == types.EventTypeDecisionTaskCompleted {
-				if e.GetTimestamp() >= earliestTime {
-					decisionFinishID = e.GetEventID()
-					break OuterLoop
-				}
-			}
-		}
-		if len(resp.NextPageToken) != 0 {
-			req.NextPageToken = resp.NextPageToken
-		} else {
-			break
-		}
-	}
-	if decisionFinishID == 0 {
-		return 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
-	}
-	return
-}
-
-func getLastDecisionCompletedID(ctx context.Context, domain, wid, rid string, frontendClient frontend.Client) (decisionFinishID int64, err error) {
-	req := &types.GetWorkflowExecutionHistoryRequest{
-		Domain: common.StringPtr(domain),
-		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-			RunID:      common.StringPtr(rid),
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 		MaximumPageSize: common.Int32Ptr(1000),
 		NextPageToken:   nil,
@@ -1969,9 +1949,11 @@ func getLastDecisionCompletedID(ctx context.Context, domain, wid, rid string, fr
 			return 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 		}
 		for _, e := range resp.GetHistory().GetEvents() {
-			if e.GetEventType() == types.EventTypeDecisionTaskCompleted {
+			if e.GetEventType() == decisionType {
 				decisionFinishID = e.GetEventID()
+				return decisionFinishID, nil
 			}
+			decisionFinishID = e.GetEventID()
 		}
 		if len(resp.NextPageToken) != 0 {
 			req.NextPageToken = resp.NextPageToken
@@ -2025,12 +2007,20 @@ func getBadDecisionCompletedID(ctx context.Context, domain, wid, rid, binChecksu
 	return
 }
 
-func getFirstDecisionCompletedID(ctx context.Context, domain, wid, rid string, frontendClient frontend.Client) (decisionFinishID int64, err error) {
+func getLastDecisionTaskByType(
+	ctx context.Context,
+	domain string,
+	workflowID string,
+	runID string,
+	frontendClient frontend.Client,
+	decisionType types.EventType,
+) (decisionFinishID int64, err error) {
+
 	req := &types.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domain),
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-			RunID:      common.StringPtr(rid),
+			WorkflowID: common.StringPtr(workflowID),
+			RunID:      common.StringPtr(runID),
 		},
 		MaximumPageSize: common.Int32Ptr(1000),
 		NextPageToken:   nil,
@@ -2042,10 +2032,10 @@ func getFirstDecisionCompletedID(ctx context.Context, domain, wid, rid string, f
 			return 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 		}
 		for _, e := range resp.GetHistory().GetEvents() {
-			if e.GetEventType() == types.EventTypeDecisionTaskCompleted {
+			if e.GetEventType() == decisionType {
 				decisionFinishID = e.GetEventID()
-				return decisionFinishID, nil
 			}
+			decisionFinishID = e.GetEventID()
 		}
 		if len(resp.NextPageToken) != 0 {
 			req.NextPageToken = resp.NextPageToken
@@ -2185,4 +2175,46 @@ func ObserveHistoryWithID(c *cli.Context) {
 	}
 
 	printWorkflowProgress(c, wid, rid)
+}
+
+func getEarliestDecisionID(
+	ctx context.Context,
+	domain string, wid string,
+	rid string, earliestTime int64,
+	frontendClient frontend.Client,
+) (decisionFinishID int64, err error) {
+	req := &types.GetWorkflowExecutionHistoryRequest{
+		Domain: common.StringPtr(domain),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: common.StringPtr(wid),
+			RunID:      common.StringPtr(rid),
+		},
+		MaximumPageSize: common.Int32Ptr(1000),
+		NextPageToken:   nil,
+	}
+
+OuterLoop:
+	for {
+		resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
+		if err != nil {
+			return 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
+		}
+		for _, e := range resp.GetHistory().GetEvents() {
+			if e.GetEventType() == types.EventTypeDecisionTaskCompleted {
+				if e.GetTimestamp() >= earliestTime {
+					decisionFinishID = e.GetEventID()
+					break OuterLoop
+				}
+			}
+		}
+		if len(resp.NextPageToken) != 0 {
+			req.NextPageToken = resp.NextPageToken
+		} else {
+			break
+		}
+	}
+	if decisionFinishID == 0 {
+		return 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
+	}
+	return
 }

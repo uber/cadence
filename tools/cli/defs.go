@@ -80,6 +80,8 @@ const resetTypeLastDecisionCompleted = "LastDecisionCompleted"
 const resetTypeLastContinuedAsNew = "LastContinuedAsNew"
 const resetTypeBadBinary = "BadBinary"
 const resetTypeDecisionCompletedTime = "DecisionCompletedTime"
+const resetTypeFirstDecisionScheduled = "FirstDecisionScheduled"
+const resetTypeLastDecisionScheduled = "LastDecisionScheduled"
 
 var resetTypesMap = map[string]string{
 	resetTypeFirstDecisionCompleted: "",
@@ -87,6 +89,8 @@ var resetTypesMap = map[string]string{
 	resetTypeLastContinuedAsNew:     "",
 	resetTypeBadBinary:              FlagResetBadBinaryChecksum,
 	resetTypeDecisionCompletedTime:  FlagEarliestTime,
+	resetTypeFirstDecisionScheduled: "",
+	resetTypeLastDecisionScheduled:  "",
 }
 
 type jsonType int

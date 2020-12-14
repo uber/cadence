@@ -529,6 +529,64 @@ func (s *workflowResetterSuite) TestReapplyWorkflowEvents() {
 	s.Equal(newRunID, nextRunID)
 }
 
+func (s *workflowResetterSuite) TestClosePendingDecisionTask() {
+	sourceMutableState := execution.NewMockMutableState(s.controller)
+	baseRunID := uuid.New()
+	newRunID := uuid.New()
+	baseForkEventVerison := int64(10)
+	reason := "test"
+	decisionScheduleEventID := int64(2)
+	decisionStartEventID := decisionScheduleEventID + 1
+
+	// The workflow has decision schedule and decision start
+	sourceMutableState.EXPECT().GetInFlightDecision().Return(&execution.DecisionInfo{
+		ScheduleID: decisionScheduleEventID,
+		StartedID:  decisionStartEventID,
+	}, true).Times(1)
+	sourceMutableState.EXPECT().GetPendingChildExecutionInfos().Return(make(map[int64]*persistence.ChildExecutionInfo)).Times(1)
+	sourceMutableState.EXPECT().AddDecisionTaskFailedEvent(
+		decisionScheduleEventID,
+		decisionStartEventID,
+		types.DecisionTaskFailedCauseResetWorkflow,
+		nil,
+		execution.IdentityHistoryService,
+		reason,
+		"",
+		baseRunID,
+		newRunID,
+		baseForkEventVerison,
+	).Return(nil, nil).Times(1)
+
+	_, err := s.workflowResetter.closePendingDecisionTask(
+		sourceMutableState,
+		baseRunID,
+		newRunID,
+		baseForkEventVerison,
+		reason,
+	)
+	s.NoError(err)
+
+	// The workflow has only decision schedule
+	sourceMutableState.EXPECT().GetInFlightDecision().Return(nil, false).Times(1)
+	sourceMutableState.EXPECT().GetPendingDecision().Return(&execution.DecisionInfo{ScheduleID: decisionScheduleEventID}, true).Times(1)
+	sourceMutableState.EXPECT().GetPendingChildExecutionInfos().Return(make(map[int64]*persistence.ChildExecutionInfo)).Times(1)
+	sourceMutableState.EXPECT().AddDecisionTaskResetTimeoutEvent(
+		decisionScheduleEventID,
+		baseRunID,
+		newRunID,
+		baseForkEventVerison,
+		reason,
+	).Return(nil, nil).Times(1)
+	_, err = s.workflowResetter.closePendingDecisionTask(
+		sourceMutableState,
+		baseRunID,
+		newRunID,
+		baseForkEventVerison,
+		reason,
+	)
+	s.NoError(err)
+}
+
 func (s *workflowResetterSuite) TestReapplyEvents() {
 
 	event1 := &types.HistoryEvent{

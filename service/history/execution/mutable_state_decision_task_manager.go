@@ -92,6 +92,13 @@ type (
 			forkEventVersion int64,
 		) (*types.HistoryEvent, error)
 		AddDecisionTaskTimedOutEvent(scheduleEventID int64, startedEventID int64) (*types.HistoryEvent, error)
+		AddDecisionTaskResetTimeoutEvent(
+			scheduleEventID int64,
+			baseRunID string,
+			newRunID string,
+			forkEventVersion int64,
+			reason string,
+		) (*types.HistoryEvent, error)
 
 		FailDecision(incrementAttempt bool)
 		DeleteDecision()
@@ -272,12 +279,60 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduleToStartTime
 
 	// Clear stickiness whenever decision fails
 	m.msb.ClearStickyness()
-
-	event := m.msb.hBuilder.AddDecisionTaskTimedOutEvent(scheduleEventID, 0, types.TimeoutTypeScheduleToStart)
+	event := m.msb.hBuilder.AddDecisionTaskTimedOutEvent(
+		scheduleEventID,
+		0,
+		types.TimeoutTypeScheduleToStart,
+		"",
+		"",
+		common.EmptyVersion,
+		"",
+		types.DecisionTaskTimedOutCauseTimeout,
+	)
 
 	if err := m.ReplicateDecisionTaskTimedOutEvent(types.TimeoutTypeScheduleToStart); err != nil {
 		return nil, err
 	}
+	return event, nil
+}
+
+func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskResetTimeoutEvent(
+	scheduleEventID int64,
+	baseRunID string,
+	newRunID string,
+	forkEventVersion int64,
+	reason string,
+) (*types.HistoryEvent, error) {
+	opTag := tag.WorkflowActionDecisionTaskTimedOut
+	if m.msb.executionInfo.DecisionScheduleID != scheduleEventID {
+		m.msb.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
+			tag.WorkflowEventID(m.msb.GetNextEventID()),
+			tag.ErrorTypeInvalidHistoryAction,
+			tag.WorkflowScheduleID(scheduleEventID),
+		)
+		return nil, m.msb.createInternalServerError(opTag)
+	}
+
+	// Clear stickiness whenever decision fails
+	m.msb.ClearStickyness()
+
+	event := m.msb.hBuilder.AddDecisionTaskTimedOutEvent(
+		scheduleEventID,
+		0,
+		types.TimeoutTypeScheduleToStart,
+		baseRunID,
+		newRunID,
+		forkEventVersion,
+		reason,
+		types.DecisionTaskTimedOutCauseReset,
+	)
+
+	if err := m.ReplicateDecisionTaskTimedOutEvent(types.TimeoutTypeScheduleToStart); err != nil {
+		return nil, err
+	}
+
+	// always clear decision attempt for reset
+	m.msb.executionInfo.DecisionAttempt = 0
 	return event, nil
 }
 
@@ -557,7 +612,16 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskTimedOutEvent(
 	var event *types.HistoryEvent
 	// Avoid creating new history events when decisions are continuously timing out
 	if dt.Attempt == 0 {
-		event = m.msb.hBuilder.AddDecisionTaskTimedOutEvent(scheduleEventID, startedEventID, types.TimeoutTypeStartToClose)
+		event = m.msb.hBuilder.AddDecisionTaskTimedOutEvent(
+			scheduleEventID,
+			startedEventID,
+			types.TimeoutTypeStartToClose,
+			"",
+			"",
+			common.EmptyVersion,
+			"",
+			types.DecisionTaskTimedOutCauseTimeout,
+		)
 	}
 
 	if err := m.ReplicateDecisionTaskTimedOutEvent(types.TimeoutTypeStartToClose); err != nil {

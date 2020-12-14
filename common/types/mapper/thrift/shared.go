@@ -1306,6 +1306,38 @@ func ToDecisionTaskStartedEventAttributes(t *shared.DecisionTaskStartedEventAttr
 	}
 }
 
+// FromDecisionTaskTimedOutCause converts internal DecisionTaskTimedOutCause type to thrift
+func FromDecisionTaskTimedOutCause(t *types.DecisionTaskTimedOutCause) *shared.DecisionTaskTimedOutCause {
+	if t == nil {
+		return nil
+	}
+	switch *t {
+	case types.DecisionTaskTimedOutCauseTimeout:
+		v := shared.DecisionTaskTimedOutCauseTimeout
+		return &v
+	case types.DecisionTaskTimedOutCauseReset:
+		v := shared.DecisionTaskTimedOutCauseReset
+		return &v
+	}
+	panic("unexpected enum value")
+}
+
+// ToDecisionTaskTimedOutCause converts thrift DecisionTaskTimedOutCause type to internal
+func ToDecisionTaskTimedOutCause(t *shared.DecisionTaskTimedOutCause) *types.DecisionTaskTimedOutCause {
+	if t == nil {
+		return nil
+	}
+	switch *t {
+	case shared.DecisionTaskTimedOutCauseTimeout:
+		v := types.DecisionTaskTimedOutCauseTimeout
+		return &v
+	case shared.DecisionTaskTimedOutCauseReset:
+		v := types.DecisionTaskTimedOutCauseReset
+		return &v
+	}
+	panic("unexpected enum value")
+}
+
 // FromDecisionTaskTimedOutEventAttributes converts internal DecisionTaskTimedOutEventAttributes type to thrift
 func FromDecisionTaskTimedOutEventAttributes(t *types.DecisionTaskTimedOutEventAttributes) *shared.DecisionTaskTimedOutEventAttributes {
 	if t == nil {

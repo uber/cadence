@@ -40,11 +40,16 @@ import (
 )
 
 const (
-	CurrentExecutionsScannerWFID         = "cadence-sys-current-executions-scanner"
-	CurrentExecutionsScannerWFTypeName   = "cadence-sys-current-executions-scanner-workflow"
+	// CurrentExecutionsScannerWFID is the current execution scanner workflow ID
+	CurrentExecutionsScannerWFID = "cadence-sys-current-executions-scanner"
+	// CurrentExecutionsScannerWFTypeName is the current execution scanner workflow type
+	CurrentExecutionsScannerWFTypeName = "cadence-sys-current-executions-scanner-workflow"
+	// CurrentExecutionsScannerTaskListName is the current execution scanner workflow tasklist
 	CurrentExecutionsScannerTaskListName = "cadence-sys-current-executions-scanner-tasklist-0"
 
-	CurrentExecutionsFixerWFTypeName   = "cadence-sys-current-executions-fixer-workflow"
+	// CurrentExecutionsFixerWFTypeName is the current execution fixer workflow ID
+	CurrentExecutionsFixerWFTypeName = "cadence-sys-current-executions-fixer-workflow"
+	// CurrentExecutionsFixerTaskListName is the current execution fixer workflow tasklist
 	CurrentExecutionsFixerTaskListName = "cadence-sys-current-executions-fixer-tasklist-0"
 )
 
@@ -72,6 +77,7 @@ func CurrentExecutionsHooks() *shardscanner.ScannerHooks {
 	return wf
 }
 
+// CurrentExecutionManager is the current execution scanner manager
 func CurrentExecutionManager(
 	ctx context.Context,
 	pr persistence.Retryer,
@@ -149,6 +155,7 @@ func CurrentExecutionScannerConfig(dc *dynamicconfig.Collection) *shardscanner.S
 	}
 }
 
+// CurrentExecutionIterator is the iterator of current executions
 func CurrentExecutionIterator(
 	ctx context.Context,
 	pr persistence.Retryer,
@@ -158,6 +165,7 @@ func CurrentExecutionIterator(
 	return CurrentExecutionType.ToIterator()(ctx, pr, params.PageSize)
 }
 
+// CurrentExecutionFixerIterator is the iterator of fixer execution
 func CurrentExecutionFixerIterator(
 	ctx context.Context,
 	client blobstore.Client,

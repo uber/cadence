@@ -23,6 +23,7 @@ package history
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -1907,7 +1908,7 @@ func (h *handlerImpl) convertError(err error) error {
 	switch err.(type) {
 	case *persistence.ShardOwnershipLostError:
 		shardID := err.(*persistence.ShardOwnershipLostError).ShardID
-		info, err := h.GetHistoryServiceResolver().Lookup(string(shardID))
+		info, err := h.GetHistoryServiceResolver().Lookup(strconv.Itoa(shardID))
 		if err == nil {
 			return shard.CreateShardOwnershipLostError(h.GetHostInfo().GetAddress(), info.GetAddress())
 		}

@@ -334,5 +334,5 @@ internal-types: gen-internal-types fmt copyright
 start-mysql: bins
 	./cadence-server --zone mysql start
 
-start-mysql: bins
+start-postgres: bins
 	./cadence-server --zone postgres start

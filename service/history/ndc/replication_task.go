@@ -49,6 +49,7 @@ type (
 		getLogger() log.Logger
 		getVersionHistory() *persistence.VersionHistory
 		isWorkflowReset() bool
+		getWorkflowResetMetadata() (string, string, int64)
 
 		splitTask(taskStartTime time.Time) (replicationTask, replicationTask, error)
 	}
@@ -209,19 +210,33 @@ func (t *replicationTaskImpl) getVersionHistory() *persistence.VersionHistory {
 }
 
 func (t *replicationTaskImpl) isWorkflowReset() bool {
+
+	baseRunID, newRunID, baseEventVersion := t.getWorkflowResetMetadata()
+	return len(baseRunID) > 0 && baseEventVersion != 0 && len(newRunID) > 0
+}
+
+func (t *replicationTaskImpl) getWorkflowResetMetadata() (string, string, int64) {
+
+	var baseRunID string
+	var newRunID string
+	var baseEventVersion = common.EmptyVersion
 	switch t.getFirstEvent().GetEventType() {
 	case types.EventTypeDecisionTaskFailed:
 		decisionTaskFailedEvent := t.getFirstEvent()
-		attr := decisionTaskFailedEvent.DecisionTaskFailedEventAttributes
-		baseRunID := attr.GetBaseRunID()
-		baseEventVersion := attr.GetForkEventVersion()
-		newRunID := attr.GetNewRunID()
+		attr := decisionTaskFailedEvent.GetDecisionTaskFailedEventAttributes()
+		baseRunID = attr.GetBaseRunID()
+		baseEventVersion = attr.GetForkEventVersion()
+		newRunID = attr.GetNewRunID()
 
-		return len(baseRunID) > 0 && baseEventVersion != 0 && len(newRunID) > 0
+	case types.EventTypeDecisionTaskTimedOut:
+		decisionTaskTimedOutEvent := t.getFirstEvent()
+		attr := decisionTaskTimedOutEvent.GetDecisionTaskTimedOutEventAttributes()
 
-	default:
-		return false
+		baseRunID = attr.GetBaseRunID()
+		baseEventVersion = attr.GetForkEventVersion()
+		newRunID = attr.GetNewRunID()
 	}
+	return baseRunID, newRunID, baseEventVersion
 }
 
 func (t *replicationTaskImpl) splitTask(

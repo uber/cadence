@@ -86,14 +86,17 @@ func (k *KafkaConfig) Validate(checkApp bool) {
 	}
 }
 
+// GetKafkaClusterForTopic gets cluster from topic
 func (k *KafkaConfig) GetKafkaClusterForTopic(topic string) string {
 	return k.Topics[topic].Cluster
 }
 
+// GetBrokersForKafkaCluster gets broker from cluster
 func (k *KafkaConfig) GetBrokersForKafkaCluster(kafkaCluster string) []string {
 	return k.Clusters[kafkaCluster].Brokers
 }
 
+// GetTopicsForApplication gets topic from application
 func (k *KafkaConfig) GetTopicsForApplication(app string) TopicList {
 	return k.Applications[app]
 }

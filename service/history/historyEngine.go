@@ -2473,8 +2473,13 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	if err != nil {
 		return nil, err
 	}
+	if ok := baseMutableState.HasProcessedOrPendingDecision(); !ok {
+		return nil, &types.BadRequestError{
+			Message: "Cannot reset workflow without a decision task schedule.",
+		}
+	}
 	if request.GetDecisionFinishEventID() <= common.FirstEventID ||
-		request.GetDecisionFinishEventID() >= baseMutableState.GetNextEventID() {
+		request.GetDecisionFinishEventID() > baseMutableState.GetNextEventID() {
 		return nil, &types.BadRequestError{
 			Message: "Decision finish ID must be > 1 && <= workflow next event ID.",
 		}
