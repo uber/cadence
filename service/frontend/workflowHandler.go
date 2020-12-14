@@ -1748,7 +1748,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errWorkflowIDTooLong, scope)
 	}
 
-	if err := common.ValidateRetryPolicy(thrift.FromRetryPolicy(startRequest.RetryPolicy)); err != nil {
+	if err := common.ValidateRetryPolicy(startRequest.RetryPolicy); err != nil {
 		return nil, wh.error(err, scope)
 	}
 
@@ -1823,10 +1823,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 
 	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
 	resp, err = wh.GetHistoryClient().
-		StartWorkflowExecution(
-			ctx, thrift.ToHistoryStartWorkflowExecutionRequest(
-				common.CreateHistoryStartWorkflowRequest(
-					domainID, thrift.FromStartWorkflowExecutionRequest(startRequest), time.Now())))
+		StartWorkflowExecution(ctx, common.CreateHistoryStartWorkflowRequest(domainID, startRequest, time.Now()))
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -1907,13 +1904,12 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		expectedNextEventID int64,
 		currentBranchToken []byte,
 	) ([]byte, string, int64, int64, bool, error) {
-		clientResp, err := wh.GetHistoryClient().PollMutableState(ctx, &types.PollMutableStateRequest{
+		response, err := wh.GetHistoryClient().PollMutableState(ctx, &types.PollMutableStateRequest{
 			DomainUUID:          common.StringPtr(domainUUID),
 			Execution:           execution,
 			ExpectedNextEventID: common.Int64Ptr(expectedNextEventID),
 			CurrentBranchToken:  currentBranchToken,
 		})
-		response := thrift.FromPollMutableStateResponse(clientResp)
 
 		if err != nil {
 			return nil, "", 0, 0, false, err
@@ -1921,9 +1917,9 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		isWorkflowRunning := response.GetWorkflowCloseState() == persistence.WorkflowCloseStatusNone
 
 		return response.CurrentBranchToken,
-			response.Execution.GetRunId(),
-			response.GetLastFirstEventId(),
-			response.GetNextEventId(),
+			response.Execution.GetRunID(),
+			response.GetLastFirstEventID(),
+			response.GetNextEventID(),
 			isWorkflowRunning,
 			nil
 	}
@@ -2263,7 +2259,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 			scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
-	if err := common.ValidateRetryPolicy(thrift.FromRetryPolicy(signalWithStartRequest.RetryPolicy)); err != nil {
+	if err := common.ValidateRetryPolicy(signalWithStartRequest.RetryPolicy); err != nil {
 		return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 	}
 
@@ -3354,7 +3350,7 @@ func (wh *WorkflowHandler) getRawHistory(
 		})
 	}
 
-	if len(nextPageToken) == 0 && transientDecision != nil {
+	if len(resp.NextPageToken) == 0 && transientDecision != nil {
 		if err := wh.validateTransientDecisionEvents(nextEventID, transientDecision); err != nil {
 			scope.IncCounter(metrics.CadenceErrIncompleteHistoryCounter)
 			wh.GetLogger().Error("getHistory error",

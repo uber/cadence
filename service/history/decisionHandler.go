@@ -27,8 +27,6 @@ import (
 
 	"go.uber.org/yarpc"
 
-	h "github.com/uber/cadence/.gen/go/history"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
@@ -38,7 +36,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/query"
@@ -49,13 +46,13 @@ import (
 type (
 	// decision business logic handler
 	decisionHandler interface {
-		handleDecisionTaskScheduled(ctx.Context, *h.ScheduleDecisionTaskRequest) error
+		handleDecisionTaskScheduled(ctx.Context, *types.ScheduleDecisionTaskRequest) error
 		handleDecisionTaskStarted(ctx.Context,
-			*h.RecordDecisionTaskStartedRequest) (*h.RecordDecisionTaskStartedResponse, error)
+			*types.RecordDecisionTaskStartedRequest) (*types.RecordDecisionTaskStartedResponse, error)
 		handleDecisionTaskFailed(ctx.Context,
-			*h.RespondDecisionTaskFailedRequest) error
+			*types.HistoryRespondDecisionTaskFailedRequest) error
 		handleDecisionTaskCompleted(ctx.Context,
-			*h.RespondDecisionTaskCompletedRequest) (*h.RespondDecisionTaskCompletedResponse, error)
+			*types.HistoryRespondDecisionTaskCompletedRequest) (*types.HistoryRespondDecisionTaskCompletedResponse, error)
 		// TODO also include the handle of decision timeout here
 	}
 
@@ -104,7 +101,7 @@ func newDecisionHandler(historyEngine *historyEngineImpl) *decisionHandlerImpl {
 
 func (handler *decisionHandlerImpl) handleDecisionTaskScheduled(
 	ctx ctx.Context,
-	req *h.ScheduleDecisionTaskRequest,
+	req *types.ScheduleDecisionTaskRequest,
 ) error {
 
 	domainEntry, err := handler.historyEngine.getActiveDomainEntry(req.DomainUUID)
@@ -114,8 +111,8 @@ func (handler *decisionHandlerImpl) handleDecisionTaskScheduled(
 	domainID := domainEntry.GetInfo().ID
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: req.WorkflowExecution.WorkflowId,
-		RunID:      req.WorkflowExecution.RunId,
+		WorkflowID: req.WorkflowExecution.WorkflowID,
+		RunID:      req.WorkflowExecution.RunID,
 	}
 
 	return handler.historyEngine.updateWorkflowExecutionWithAction(ctx, domainID, workflowExecution,
@@ -146,8 +143,8 @@ func (handler *decisionHandlerImpl) handleDecisionTaskScheduled(
 
 func (handler *decisionHandlerImpl) handleDecisionTaskStarted(
 	ctx ctx.Context,
-	req *h.RecordDecisionTaskStartedRequest,
-) (*h.RecordDecisionTaskStartedResponse, error) {
+	req *types.RecordDecisionTaskStartedRequest,
+) (*types.RecordDecisionTaskStartedResponse, error) {
 
 	domainEntry, err := handler.historyEngine.getActiveDomainEntry(req.DomainUUID)
 	if err != nil {
@@ -156,14 +153,14 @@ func (handler *decisionHandlerImpl) handleDecisionTaskStarted(
 	domainID := domainEntry.GetInfo().ID
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: req.WorkflowExecution.WorkflowId,
-		RunID:      req.WorkflowExecution.RunId,
+		WorkflowID: req.WorkflowExecution.WorkflowID,
+		RunID:      req.WorkflowExecution.RunID,
 	}
 
-	scheduleID := req.GetScheduleId()
-	requestID := req.GetRequestId()
+	scheduleID := req.GetScheduleID()
+	requestID := req.GetRequestID()
 
-	var resp *h.RecordDecisionTaskStartedResponse
+	var resp *types.RecordDecisionTaskStartedResponse
 	err = handler.historyEngine.updateWorkflowExecutionWithAction(ctx, domainID, workflowExecution,
 		func(context execution.Context, mutableState execution.MutableState) (*updateWorkflowAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
@@ -228,7 +225,7 @@ func (handler *decisionHandlerImpl) handleDecisionTaskStarted(
 
 func (handler *decisionHandlerImpl) handleDecisionTaskFailed(
 	ctx ctx.Context,
-	req *h.RespondDecisionTaskFailedRequest,
+	req *types.HistoryRespondDecisionTaskFailedRequest,
 ) (retError error) {
 
 	domainEntry, err := handler.historyEngine.getActiveDomainEntry(req.DomainUUID)
@@ -260,7 +257,7 @@ func (handler *decisionHandlerImpl) handleDecisionTaskFailed(
 				return &types.EntityNotExistsError{Message: "Decision task not found."}
 			}
 
-			_, err := mutableState.AddDecisionTaskFailedEvent(decision.ScheduleID, decision.StartedID, *thrift.ToDecisionTaskFailedCause(request.Cause), request.Details,
+			_, err := mutableState.AddDecisionTaskFailedEvent(decision.ScheduleID, decision.StartedID, request.GetCause(), request.Details,
 				request.GetIdentity(), "", request.GetBinaryChecksum(), "", "", 0)
 			return err
 		})
@@ -268,8 +265,8 @@ func (handler *decisionHandlerImpl) handleDecisionTaskFailed(
 
 func (handler *decisionHandlerImpl) handleDecisionTaskCompleted(
 	ctx ctx.Context,
-	req *h.RespondDecisionTaskCompletedRequest,
-) (resp *h.RespondDecisionTaskCompletedResponse, retError error) {
+	req *types.HistoryRespondDecisionTaskCompletedRequest,
+) (resp *types.HistoryRespondDecisionTaskCompletedResponse, retError error) {
 
 	domainEntry, err := handler.historyEngine.getActiveDomainEntry(req.DomainUUID)
 	if err != nil {
@@ -368,7 +365,7 @@ Update_History_Loop:
 
 		var (
 			failDecision                bool
-			failCause                   workflow.DecisionTaskFailedCause
+			failCause                   types.DecisionTaskFailedCause
 			failMessage                 string
 			activityNotStartedCancelled bool
 			continueAsNewBuilder        execution.MutableState
@@ -393,7 +390,7 @@ Update_History_Loop:
 		binChecksum := request.GetBinaryChecksum()
 		if _, ok := domainEntry.GetConfig().BadBinaries.Binaries[binChecksum]; ok {
 			failDecision = true
-			failCause = workflow.DecisionTaskFailedCauseBadBinary
+			failCause = types.DecisionTaskFailedCauseBadBinary
 			failMessage = fmt.Sprintf("binary %v is already marked as bad deployment", binChecksum)
 		} else {
 
@@ -429,7 +426,7 @@ Update_History_Loop:
 			if decisionResults, err = decisionTaskHandler.handleDecisions(
 				ctx,
 				request.ExecutionContext,
-				thrift.ToDecisionArray(request.Decisions),
+				request.Decisions,
 			); err != nil {
 				return nil, err
 			}
@@ -438,7 +435,7 @@ Update_History_Loop:
 			// further refactor should also clean up the vars used below
 			failDecision = decisionTaskHandler.failDecision
 			if failDecision {
-				failCause = *thrift.FromDecisionTaskFailedCause(decisionTaskHandler.failDecisionCause)
+				failCause = *decisionTaskHandler.failDecisionCause
 				failMessage = *decisionTaskHandler.failMessage
 			}
 
@@ -489,8 +486,8 @@ Update_History_Loop:
 			if request.GetReturnNewDecisionTask() {
 				// start the new decision task if request asked to do so
 				// TODO: replace the poll request
-				_, _, err := msBuilder.AddDecisionTaskStartedEvent(newDecision.ScheduleID, "request-from-RespondDecisionTaskCompleted", &workflow.PollForDecisionTaskRequest{
-					TaskList: &workflow.TaskList{Name: common.StringPtr(newDecision.TaskList)},
+				_, _, err := msBuilder.AddDecisionTaskStartedEvent(newDecision.ScheduleID, "request-from-RespondDecisionTaskCompleted", &types.PollForDecisionTaskRequest{
+					TaskList: &types.TaskList{Name: common.StringPtr(newDecision.TaskList)},
 					Identity: request.Identity,
 				})
 				if err != nil {
@@ -564,7 +561,7 @@ Update_History_Loop:
 			msBuilder,
 			clientImpl,
 			clientFeatureVersion,
-			thrift.ToWorkflowQueryResultMap(req.GetCompleteRequest().GetQueryResults()),
+			req.GetCompleteRequest().GetQueryResults(),
 			createNewDecisionTask,
 			domainEntry,
 			decisionHeartbeating)
@@ -576,11 +573,11 @@ Update_History_Loop:
 			}
 		}
 
-		resp = &h.RespondDecisionTaskCompletedResponse{}
-		activitiesToDispatchLocally := make(map[string]*workflow.ActivityLocalDispatchInfo)
+		resp = &types.HistoryRespondDecisionTaskCompletedResponse{}
+		activitiesToDispatchLocally := make(map[string]*types.ActivityLocalDispatchInfo)
 		for _, dr := range decisionResults {
 			if dr.activityDispatchInfo != nil {
-				activitiesToDispatchLocally[*dr.activityDispatchInfo.ActivityId] = dr.activityDispatchInfo
+				activitiesToDispatchLocally[*dr.activityDispatchInfo.ActivityID] = dr.activityDispatchInfo
 			}
 		}
 		resp.ActivitiesToDispatchLocally = activitiesToDispatchLocally
@@ -606,26 +603,26 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 	msBuilder execution.MutableState,
 	decision *execution.DecisionInfo,
 	identity string,
-) (*h.RecordDecisionTaskStartedResponse, error) {
+) (*types.RecordDecisionTaskStartedResponse, error) {
 
-	response := &h.RecordDecisionTaskStartedResponse{}
-	response.WorkflowType = thrift.FromWorkflowType(msBuilder.GetWorkflowType())
+	response := &types.RecordDecisionTaskStartedResponse{}
+	response.WorkflowType = msBuilder.GetWorkflowType()
 	executionInfo := msBuilder.GetExecutionInfo()
 	if executionInfo.LastProcessedEvent != common.EmptyEventID {
-		response.PreviousStartedEventId = common.Int64Ptr(executionInfo.LastProcessedEvent)
+		response.PreviousStartedEventID = common.Int64Ptr(executionInfo.LastProcessedEvent)
 	}
 
 	// Starting decision could result in different scheduleID if decision was transient and new new events came in
 	// before it was started.
-	response.ScheduledEventId = common.Int64Ptr(decision.ScheduleID)
-	response.StartedEventId = common.Int64Ptr(decision.StartedID)
+	response.ScheduledEventID = common.Int64Ptr(decision.ScheduleID)
+	response.StartedEventID = common.Int64Ptr(decision.StartedID)
 	response.StickyExecutionEnabled = common.BoolPtr(msBuilder.IsStickyTaskListEnabled())
-	response.NextEventId = common.Int64Ptr(msBuilder.GetNextEventID())
+	response.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID())
 	response.Attempt = common.Int64Ptr(decision.Attempt)
-	response.WorkflowExecutionTaskList = common.TaskListPtr(workflow.TaskList{
+	response.WorkflowExecutionTaskList = &types.TaskList{
 		Name: &executionInfo.TaskList,
-		Kind: common.TaskListKindPtr(workflow.TaskListKindNormal),
-	})
+		Kind: types.TaskListKindNormal.Ptr(),
+	}
 	response.ScheduledTimestamp = common.Int64Ptr(decision.ScheduledTimestamp)
 	response.StartedTimestamp = common.Int64Ptr(decision.StartedTimestamp)
 
@@ -633,9 +630,9 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 		// This decision is retried from mutable state
 		// Also return schedule and started which are not written to history yet
 		scheduledEvent, startedEvent := msBuilder.CreateTransientDecisionEvents(decision, identity)
-		response.DecisionInfo = &workflow.TransientDecisionInfo{}
-		response.DecisionInfo.ScheduledEvent = thrift.FromHistoryEvent(scheduledEvent)
-		response.DecisionInfo.StartedEvent = thrift.FromHistoryEvent(startedEvent)
+		response.DecisionInfo = &types.TransientDecisionInfo{}
+		response.DecisionInfo.ScheduledEvent = scheduledEvent
+		response.DecisionInfo.StartedEvent = startedEvent
 	}
 	currentBranchToken, err := msBuilder.GetCurrentBranchToken()
 	if err != nil {
@@ -653,7 +650,7 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 		}
 		queries[id] = input
 	}
-	response.Queries = thrift.FromWorkflowQueryMap(queries)
+	response.Queries = queries
 	return response, nil
 }
 

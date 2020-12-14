@@ -25,15 +25,12 @@ package replication
 import (
 	"context"
 
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -118,21 +115,21 @@ func (e *taskExecutorImpl) handleActivityTask(
 
 	replicationStopWatch := e.metricsClient.StartTimer(metrics.SyncActivityTaskScope, metrics.CadenceLatency)
 	defer replicationStopWatch.Stop()
-	request := &history.SyncActivityRequest{
-		DomainId:           attr.DomainID,
-		WorkflowId:         attr.WorkflowID,
-		RunId:              attr.RunID,
+	request := &types.SyncActivityRequest{
+		DomainID:           attr.DomainID,
+		WorkflowID:         attr.WorkflowID,
+		RunID:              attr.RunID,
 		Version:            attr.Version,
-		ScheduledId:        attr.ScheduledID,
+		ScheduledID:        attr.ScheduledID,
 		ScheduledTime:      attr.ScheduledTime,
-		StartedId:          attr.StartedID,
+		StartedID:          attr.StartedID,
 		StartedTime:        attr.StartedTime,
 		LastHeartbeatTime:  attr.LastHeartbeatTime,
 		Details:            attr.Details,
 		Attempt:            attr.Attempt,
 		LastFailureReason:  attr.LastFailureReason,
 		LastWorkerIdentity: attr.LastWorkerIdentity,
-		VersionHistory:     thrift.FromVersionHistory(attr.GetVersionHistory()),
+		VersionHistory:     attr.GetVersionHistory(),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
@@ -192,16 +189,16 @@ func (e *taskExecutorImpl) handleHistoryReplicationTaskV2(
 
 	replicationStopWatch := e.metricsClient.StartTimer(metrics.HistoryReplicationV2TaskScope, metrics.CadenceLatency)
 	defer replicationStopWatch.Stop()
-	request := &history.ReplicateEventsV2Request{
+	request := &types.ReplicateEventsV2Request{
 		DomainUUID: attr.DomainID,
-		WorkflowExecution: &shared.WorkflowExecution{
-			WorkflowId: attr.WorkflowID,
-			RunId:      attr.RunID,
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: attr.WorkflowID,
+			RunID:      attr.RunID,
 		},
-		VersionHistoryItems: thrift.FromVersionHistoryItemArray(attr.VersionHistoryItems),
-		Events:              thrift.FromDataBlob(attr.Events),
+		VersionHistoryItems: attr.VersionHistoryItems,
+		Events:              attr.Events,
 		// new run events does not need version history since there is no prior events
-		NewRunEvents: thrift.FromDataBlob(attr.NewRunEvents),
+		NewRunEvents: attr.NewRunEvents,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()

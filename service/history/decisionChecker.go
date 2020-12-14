@@ -35,7 +35,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 )
@@ -218,7 +217,7 @@ func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 		return &types.BadRequestError{Message: "ActivityType is not set on decision."}
 	}
 
-	if err := common.ValidateRetryPolicy(thrift.FromRetryPolicy(attributes.RetryPolicy)); err != nil {
+	if err := common.ValidateRetryPolicy(attributes.RetryPolicy); err != nil {
 		return err
 	}
 
@@ -604,7 +603,7 @@ func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
 		return &types.BadRequestError{Message: "WorkflowType exceeds length limit."}
 	}
 
-	if err := common.ValidateRetryPolicy(thrift.FromRetryPolicy(attributes.RetryPolicy)); err != nil {
+	if err := common.ValidateRetryPolicy(attributes.RetryPolicy); err != nil {
 		return err
 	}
 

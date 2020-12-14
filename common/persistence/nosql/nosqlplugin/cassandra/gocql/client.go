@@ -22,10 +22,10 @@ package gocql
 
 import (
 	"context"
+	"crypto/tls"
+	"strings"
 
 	"github.com/gocql/gocql"
-
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 )
 
 var _ Client = client{}
@@ -46,10 +46,7 @@ func NewClient() Client {
 func (c client) CreateSession(
 	config ClusterConfig,
 ) (Session, error) {
-	// TODO:
-	//   1. move NewCassandraCluster function into this package
-	//   2. remove the dependency on common/service/config package
-	cluster := cassandra.NewCassandraCluster(config.Cassandra)
+	cluster := newCassandraCluster(config)
 	cluster.ProtoVersion = config.ProtoVersion
 	cluster.Consistency = mustConvertConsistency(config.Consistency)
 	cluster.SerialConsistency = mustConvertSerialConsistency(config.SerialConsistency)
@@ -87,4 +84,70 @@ func (c client) IsThrottlingError(err error) bool {
 		return req.Code() == 0x1001
 	}
 	return false
+}
+
+func newCassandraCluster(cfg ClusterConfig) *gocql.ClusterConfig {
+	hosts := parseHosts(cfg.Hosts)
+	cluster := gocql.NewCluster(hosts...)
+	cluster.ProtoVersion = 4
+	if cfg.Port > 0 {
+		cluster.Port = cfg.Port
+	}
+	if cfg.User != "" && cfg.Password != "" {
+		cluster.Authenticator = gocql.PasswordAuthenticator{
+			Username: cfg.User,
+			Password: cfg.Password,
+		}
+	}
+	if cfg.Keyspace != "" {
+		cluster.Keyspace = cfg.Keyspace
+	}
+	if cfg.Datacenter != "" {
+		cluster.HostFilter = gocql.DataCentreHostFilter(cfg.Datacenter)
+	}
+	if cfg.Region != "" {
+		cluster.HostFilter = regionHostFilter(cfg.Region)
+	}
+
+	if cfg.TLS != nil && cfg.TLS.Enabled {
+		cluster.SslOpts = &gocql.SslOptions{
+			CertPath:               cfg.TLS.CertFile,
+			KeyPath:                cfg.TLS.KeyFile,
+			CaPath:                 cfg.TLS.CaFile,
+			EnableHostVerification: cfg.TLS.EnableHostVerification,
+
+			Config: &tls.Config{
+				ServerName: cfg.TLS.ServerName,
+			},
+		}
+	}
+	if cfg.MaxConns > 0 {
+		cluster.NumConns = cfg.MaxConns
+	}
+
+	cluster.PoolConfig.HostSelectionPolicy = gocql.TokenAwareHostPolicy(gocql.RoundRobinHostPolicy())
+
+	return cluster
+}
+
+// regionHostFilter returns a gocql host filter for the given region name
+func regionHostFilter(region string) gocql.HostFilter {
+	return gocql.HostFilterFunc(func(host *gocql.HostInfo) bool {
+		applicationRegion := region
+		if len(host.DataCenter()) < 3 {
+			return false
+		}
+		return host.DataCenter()[:3] == applicationRegion
+	})
+}
+
+// parseHosts returns parses a list of hosts separated by comma
+func parseHosts(input string) []string {
+	var hosts = make([]string, 0)
+	for _, h := range strings.Split(input, ",") {
+		if host := strings.TrimSpace(h); len(host) > 0 {
+			hosts = append(hosts, host)
+		}
+	}
+	return hosts
 }

@@ -24,10 +24,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/uber/cadence/common/auth"
-
 	"github.com/urfave/cli"
 
+	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/schema/cassandra"
 	"github.com/uber/cadence/tools/common/schema"
@@ -74,13 +73,14 @@ func checkCompatibleVersion(
 ) error {
 
 	client, err := newCQLClient(&CQLClientConfig{
-		Hosts:    cfg.Hosts,
-		Port:     cfg.Port,
-		User:     cfg.User,
-		Password: cfg.Password,
-		Keyspace: cfg.Keyspace,
-		Timeout:  defaultTimeout,
-		TLS:      cfg.TLS,
+		Hosts:     cfg.Hosts,
+		Port:      cfg.Port,
+		User:      cfg.User,
+		Password:  cfg.Password,
+		Keyspace:  cfg.Keyspace,
+		Timeout:   defaultTimeout,
+		TLS:       cfg.TLS,
+		CQLClient: cfg.CQLClient,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create CQL Client: %v", err.Error())
@@ -217,6 +217,9 @@ func validateCQLClientConfig(config *CQLClientConfig, isDryRun bool) error {
 	}
 	if config.numReplicas == 0 {
 		config.numReplicas = defaultNumReplicas
+	}
+	if config.CQLClient == nil {
+		config.CQLClient = defaultGoCQLClient
 	}
 
 	return nil

@@ -24,12 +24,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 
-	"github.com/gocql/gocql"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/uber/cadence/common/auth"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/tools/cassandra"
 	"github.com/uber/cadence/tools/common/schema"
 )
@@ -37,7 +36,7 @@ import (
 const cassandraPersistenceName = "cassandra"
 
 // CreateCassandraKeyspace creates the keyspace using this session for given replica count
-func CreateCassandraKeyspace(s *gocql.Session, keyspace string, replicas int, overwrite bool) (err error) {
+func CreateCassandraKeyspace(s gocql.Session, keyspace string, replicas int, overwrite bool) (err error) {
 	// if overwrite flag is set, drop the keyspace and create a new one
 	if overwrite {
 		err = DropCassandraKeyspace(s, keyspace)
@@ -58,7 +57,7 @@ func CreateCassandraKeyspace(s *gocql.Session, keyspace string, replicas int, ov
 }
 
 // DropCassandraKeyspace drops the given keyspace, if it exists
-func DropCassandraKeyspace(s *gocql.Session, keyspace string) (err error) {
+func DropCassandraKeyspace(s gocql.Session, keyspace string) (err error) {
 	err = s.Query(fmt.Sprintf("DROP KEYSPACE IF EXISTS %s", keyspace)).Exec()
 	if err != nil {
 		log.Error(`drop keyspace error`, err)
@@ -72,7 +71,7 @@ func DropCassandraKeyspace(s *gocql.Session, keyspace string) (err error) {
 func loadCassandraSchema(
 	dir string,
 	fileNames []string,
-	hosts []string,
+	hosts string,
 	port int,
 	keyspace string,
 	override bool,
@@ -103,7 +102,7 @@ func loadCassandraSchema(
 
 	config := &cassandra.SetupSchemaConfig{
 		CQLClientConfig: cassandra.CQLClientConfig{
-			Hosts:    strings.Join(hosts, ","),
+			Hosts:    hosts,
 			Port:     port,
 			Keyspace: keyspace,
 			TLS:      tls,

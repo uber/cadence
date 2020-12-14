@@ -30,7 +30,6 @@ import (
 
 	"github.com/pborman/uuid"
 
-	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/client"
@@ -46,7 +45,6 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 var _ AdminHandler = (*adminHandlerImpl)(nil)
@@ -490,7 +488,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 	rawBlobs := rawHistoryResponse.HistoryEventBlobs
 	blobs := []*types.DataBlob{}
 	for _, blob := range rawBlobs {
-		blobs = append(blobs, thrift.ToDataBlob(blob.ToThrift()))
+		blobs = append(blobs, blob.ToInternal())
 	}
 
 	result := &types.GetWorkflowExecutionRawHistoryV2Response{
@@ -931,8 +929,8 @@ func (adh *adminHandlerImpl) ResendReplicationTasks(
 	resender := ndc.NewHistoryResender(
 		adh.GetDomainCache(),
 		adh.GetRemoteAdminClient(request.GetRemoteCluster()),
-		func(ctx context.Context, request *h.ReplicateEventsV2Request) error {
-			return adh.GetHistoryClient().ReplicateEventsV2(ctx, thrift.ToReplicateEventsV2Request(request))
+		func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
+			return adh.GetHistoryClient().ReplicateEventsV2(ctx, request)
 		},
 		adh.eventSerializder,
 		nil,

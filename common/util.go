@@ -34,7 +34,6 @@ import (
 	"github.com/dgryski/go-farm"
 	"go.uber.org/yarpc/yarpcerrors"
 
-	h "github.com/uber/cadence/.gen/go/history"
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
@@ -397,7 +396,7 @@ func SortInt64Slice(slice []int64) {
 }
 
 // ValidateRetryPolicy validates a retry policy
-func ValidateRetryPolicy(policy *workflow.RetryPolicy) error {
+func ValidateRetryPolicy(policy *types.RetryPolicy) error {
 	if policy == nil {
 		// nil policy is valid which means no retry
 		return nil
@@ -429,10 +428,10 @@ func ValidateRetryPolicy(policy *workflow.RetryPolicy) error {
 // CreateHistoryStartWorkflowRequest create a start workflow request for history
 func CreateHistoryStartWorkflowRequest(
 	domainID string,
-	startRequest *workflow.StartWorkflowExecutionRequest,
+	startRequest *types.StartWorkflowExecutionRequest,
 	now time.Time,
-) *h.StartWorkflowExecutionRequest {
-	histRequest := &h.StartWorkflowExecutionRequest{
+) *types.HistoryStartWorkflowExecutionRequest {
+	histRequest := &types.HistoryStartWorkflowExecutionRequest{
 		DomainUUID:   StringPtr(domainID),
 		StartRequest: startRequest,
 	}

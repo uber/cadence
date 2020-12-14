@@ -29,10 +29,10 @@ import (
 	"math"
 	"time"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -71,12 +71,12 @@ type (
 		AddDecisionTaskStartedEvent(
 			scheduleEventID int64,
 			requestID string,
-			request *workflow.PollForDecisionTaskRequest,
+			request *types.PollForDecisionTaskRequest,
 		) (*types.HistoryEvent, *DecisionInfo, error)
 		AddDecisionTaskCompletedEvent(
 			scheduleEventID int64,
 			startedEventID int64,
-			request *workflow.RespondDecisionTaskCompletedRequest,
+			request *types.RespondDecisionTaskCompletedRequest,
 			maxResetPoints int,
 		) (*types.HistoryEvent, error)
 		AddDecisionTaskFailedEvent(
@@ -404,7 +404,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddFirstDecisionTaskScheduled(
 func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskStartedEvent(
 	scheduleEventID int64,
 	requestID string,
-	request *workflow.PollForDecisionTaskRequest,
+	request *types.PollForDecisionTaskRequest,
 ) (*types.HistoryEvent, *DecisionInfo, error) {
 	opTag := tag.WorkflowActionDecisionTaskStarted
 	decision, ok := m.GetDecisionInfo(scheduleEventID)
@@ -451,7 +451,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskStartedEvent(
 func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskCompletedEvent(
 	scheduleEventID int64,
 	startedEventID int64,
-	request *workflow.RespondDecisionTaskCompletedRequest,
+	request *types.RespondDecisionTaskCompletedRequest,
 	maxResetPoints int,
 ) (*types.HistoryEvent, error) {
 	opTag := tag.WorkflowActionDecisionTaskCompleted
@@ -585,6 +585,17 @@ func (m *mutableStateDecisionTaskManagerImpl) FailDecision(
 	if incrementAttempt {
 		failDecisionInfo.Attempt = m.msb.executionInfo.DecisionAttempt + 1
 		failDecisionInfo.ScheduledTimestamp = m.msb.timeSource.Now().UnixNano()
+
+		if failDecisionInfo.Attempt >= int64(m.msb.shard.GetConfig().DecisionRetryCriticalAttempts()) {
+			domainName := m.msb.GetDomainEntry().GetInfo().Name
+			domainTag := metrics.DomainTag(domainName)
+			m.msb.metricsClient.Scope(metrics.WorkflowContextScope, domainTag).RecordTimer(metrics.DecisionAttemptTimer, time.Duration(failDecisionInfo.Attempt))
+			m.msb.logger.Warn("Critical error processing decision task, retrying.",
+				tag.WorkflowDomainName(m.msb.GetDomainEntry().GetInfo().Name),
+				tag.WorkflowID(m.msb.GetExecutionInfo().WorkflowID),
+				tag.WorkflowRunID(m.msb.GetExecutionInfo().RunID),
+			)
+		}
 	}
 	m.UpdateDecision(failDecisionInfo)
 }

@@ -41,7 +41,11 @@ type (
 )
 
 // newMetadataPersistenceV2 is used to create an instance of HistoryManager implementation
-func newMetadataPersistenceV2(cfg config.Cassandra, currentClusterName string, logger log.Logger) (p.MetadataStore, error) {
+func newMetadataPersistenceV2(
+	cfg config.Cassandra,
+	currentClusterName string,
+	logger log.Logger,
+) (p.MetadataStore, error) {
 	// TODO hardcoding to Cassandra for now, will switch to dynamically loading later
 	db, err := cassandra.NewCassandraDB(cfg, logger)
 	if err != nil {

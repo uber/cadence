@@ -2014,9 +2014,9 @@ func getBadDecisionCompletedID(ctx context.Context, domain, wid, rid, binChecksu
 		Binaries: map[string]*types.BadBinaryInfo{
 			binChecksum: {},
 		},
-	}, thrift.FromResetPoints(resp.WorkflowExecutionInfo.AutoResetPoints))
+	}, resp.WorkflowExecutionInfo.AutoResetPoints)
 	if p != nil {
-		decisionFinishID = p.GetFirstDecisionCompletedId()
+		decisionFinishID = p.GetFirstDecisionCompletedID()
 	}
 
 	if decisionFinishID == 0 {
