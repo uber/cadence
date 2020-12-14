@@ -25,15 +25,12 @@ import (
 
 	"github.com/pborman/uuid"
 
-	h "github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -97,7 +94,7 @@ func newReplicationTask(
 	historySerializer persistence.PayloadSerializer,
 	taskStartTime time.Time,
 	logger log.Logger,
-	request *h.ReplicateEventsV2Request,
+	request *types.ReplicateEventsV2Request,
 ) (replicationTask, error) {
 
 	events, newEvents, err := validateReplicateEventsRequest(
@@ -109,8 +106,8 @@ func newReplicationTask(
 	}
 
 	domainID := request.GetDomainUUID()
-	execution := thrift.ToWorkflowExecution(request.WorkflowExecution)
-	versionHistory := &shared.VersionHistory{
+	execution := request.WorkflowExecution
+	versionHistory := &types.VersionHistory{
 		BranchToken: nil,
 		Items:       request.VersionHistoryItems,
 	}
@@ -152,7 +149,7 @@ func newReplicationTask(
 		eventTime:      time.Unix(0, eventTime),
 		events:         events,
 		newEvents:      newEvents,
-		versionHistory: persistence.NewVersionHistoryFromInternalType(thrift.ToVersionHistory(versionHistory)),
+		versionHistory: persistence.NewVersionHistoryFromInternalType(versionHistory),
 
 		startTime: taskStartTime,
 		logger:    logger,
@@ -294,7 +291,7 @@ func (t *replicationTaskImpl) splitTask(
 
 func validateReplicateEventsRequest(
 	historySerializer persistence.PayloadSerializer,
-	request *h.ReplicateEventsV2Request,
+	request *types.ReplicateEventsV2Request,
 ) ([]*types.HistoryEvent, []*types.HistoryEvent, error) {
 
 	// TODO add validation on version history
@@ -305,7 +302,7 @@ func validateReplicateEventsRequest(
 	if request.WorkflowExecution == nil {
 		return nil, nil, ErrInvalidExecution
 	}
-	if valid := validateUUID(request.WorkflowExecution.GetRunId()); !valid {
+	if valid := validateUUID(request.WorkflowExecution.GetRunID()); !valid {
 		return nil, nil, ErrInvalidRunID
 	}
 
@@ -367,7 +364,7 @@ func validateEvents(events []*types.HistoryEvent) (int64, error) {
 
 func deserializeBlob(
 	historySerializer persistence.PayloadSerializer,
-	blob *shared.DataBlob,
+	blob *types.DataBlob,
 ) ([]*types.HistoryEvent, error) {
 
 	if blob == nil {

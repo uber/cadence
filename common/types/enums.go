@@ -67,3 +67,22 @@ func EventTypeValues() []EventType {
 		EventTypeUpsertWorkflowSearchAttributes,
 	}
 }
+
+// DecisionType_Values returns all recognized values of DecisionType.
+func DecisionTypeValues() []DecisionType {
+	return []DecisionType{
+		DecisionTypeScheduleActivityTask,
+		DecisionTypeRequestCancelActivityTask,
+		DecisionTypeStartTimer,
+		DecisionTypeCompleteWorkflowExecution,
+		DecisionTypeFailWorkflowExecution,
+		DecisionTypeCancelTimer,
+		DecisionTypeCancelWorkflowExecution,
+		DecisionTypeRequestCancelExternalWorkflowExecution,
+		DecisionTypeRecordMarker,
+		DecisionTypeContinueAsNewWorkflowExecution,
+		DecisionTypeStartChildWorkflowExecution,
+		DecisionTypeSignalExternalWorkflowExecution,
+		DecisionTypeUpsertWorkflowSearchAttributes,
+	}
+}

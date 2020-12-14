@@ -37,7 +37,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	gen "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/cluster"
@@ -1110,12 +1109,12 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	testResetPoints := gen.ResetPoints{
-		Points: []*gen.ResetPointInfo{
+	testResetPoints := types.ResetPoints{
+		Points: []*types.ResetPointInfo{
 			{
 				BinaryChecksum:           common.StringPtr("test-binary-checksum"),
-				RunId:                    common.StringPtr("test-runID"),
-				FirstDecisionCompletedId: common.Int64Ptr(123),
+				RunID:                    common.StringPtr("test-runID"),
+				FirstDecisionCompletedID: common.Int64Ptr(123),
 				CreatedTimeNano:          common.Int64Ptr(456),
 				Resettable:               common.BoolPtr(true),
 				ExpiringTimeNano:         common.Int64Ptr(789),
@@ -1234,7 +1233,7 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 	s.EqualTimes(createReq.NewWorkflowSnapshot.ExecutionInfo.ExpirationTime, info.ExpirationTime)
 	s.Equal(createReq.NewWorkflowSnapshot.ExecutionInfo.CronSchedule, info.CronSchedule)
 	s.Equal(createReq.NewWorkflowSnapshot.ExecutionInfo.NonRetriableErrors, info.NonRetriableErrors)
-	s.Equal(testResetPoints.String(), info.AutoResetPoints.String())
+	s.Equal(testResetPoints, *info.AutoResetPoints)
 	s.Equal(createReq.NewWorkflowSnapshot.ExecutionStats.HistorySize, state.ExecutionStats.HistorySize)
 	val, ok := info.SearchAttributes[testSearchAttrKey]
 	s.True(ok)
@@ -1292,7 +1291,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflow() {
 	s.Empty(info0.ClientFeatureVersion)
 	s.Empty(info0.ClientImpl)
 	s.Equal(int32(0), info0.SignalCount)
-	s.True(info0.AutoResetPoints.Equals(&gen.ResetPoints{}))
+	s.Equal(info0.AutoResetPoints, &types.ResetPoints{})
 	s.True(len(info0.SearchAttributes) == 0)
 	s.True(len(info0.Memo) == 0)
 	s.assertChecksumsEqual(testWorkflowChecksum, state0.Checksum)
@@ -3039,12 +3038,12 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 		RunID:      common.StringPtr("64c7e15a-3fd7-4182-9c6f-6f25a4fa2614"),
 	}
 
-	testResetPoints := gen.ResetPoints{
-		Points: []*gen.ResetPointInfo{
+	testResetPoints := types.ResetPoints{
+		Points: []*types.ResetPointInfo{
 			{
 				BinaryChecksum:           common.StringPtr("test-binary-checksum"),
-				RunId:                    common.StringPtr("test-runID"),
-				FirstDecisionCompletedId: common.Int64Ptr(123),
+				RunID:                    common.StringPtr("test-runID"),
+				FirstDecisionCompletedID: common.Int64Ptr(123),
 				CreatedTimeNano:          common.Int64Ptr(456),
 				Resettable:               common.BoolPtr(true),
 				ExpiringTimeNano:         common.Int64Ptr(789),
@@ -3062,7 +3061,7 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 	s.Equal(p.WorkflowCloseStatusContinuedAsNew, prevExecutionInfo.CloseStatus)
 	s.Equal(int64(5), prevExecutionInfo.NextEventID)
 	s.Equal(int64(2), prevExecutionInfo.LastProcessedEvent)
-	s.True(prevExecutionInfo.AutoResetPoints.Equals(&gen.ResetPoints{}))
+	s.Equal(prevExecutionInfo.AutoResetPoints, &types.ResetPoints{})
 
 	newExecutionState, err4 := s.GetWorkflowExecutionInfo(ctx, domainID, newWorkflowExecution)
 	s.NoError(err4)
@@ -3072,7 +3071,7 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 	s.Equal(int64(3), newExecutionInfo.NextEventID)
 	s.Equal(common.EmptyEventID, newExecutionInfo.LastProcessedEvent)
 	s.Equal(int64(2), newExecutionInfo.DecisionScheduleID)
-	s.Equal(testResetPoints.String(), newExecutionInfo.AutoResetPoints.String())
+	s.Equal(testResetPoints, *newExecutionInfo.AutoResetPoints)
 
 	newRunID, err5 := s.GetCurrentWorkflowRunID(ctx, domainID, workflowExecution.GetWorkflowID())
 	s.NoError(err5)
@@ -4083,7 +4082,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		DecisionStartedID:           222,
 		DecisionRequestID:           uuid.New(),
 		DecisionTimeout:             0,
-		AutoResetPoints:             &gen.ResetPoints{},
+		AutoResetPoints:             &types.ResetPoints{},
 	}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{resetExecutionInfo.DecisionScheduleID, common.EmptyVersion},
@@ -4246,7 +4245,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		DecisionStartedID:           222,
 		DecisionRequestID:           uuid.New(),
 		DecisionTimeout:             0,
-		AutoResetPoints:             &gen.ResetPoints{},
+		AutoResetPoints:             &types.ResetPoints{},
 	}
 	newWorkflowExecutionInfo := copyWorkflowExecutionInfo(resetExecutionInfo)
 	newWorkflowExecutionStats := &p.ExecutionStats{}
@@ -4396,7 +4395,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		DecisionStartedID:           222,
 		DecisionRequestID:           uuid.New(),
 		DecisionTimeout:             0,
-		AutoResetPoints:             &gen.ResetPoints{},
+		AutoResetPoints:             &types.ResetPoints{},
 	}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{resetExecutionInfo.DecisionScheduleID, common.EmptyVersion},
@@ -4507,7 +4506,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		DecisionStartedID:           222,
 		DecisionRequestID:           uuid.New(),
 		DecisionTimeout:             0,
-		AutoResetPoints:             &gen.ResetPoints{},
+		AutoResetPoints:             &types.ResetPoints{},
 	}
 	newWorkflowExecutionInfo := copyWorkflowExecutionInfo(resetExecutionInfo)
 	newWorkflowExecutionStats := &p.ExecutionStats{}
@@ -4663,7 +4662,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		DecisionStartedID:           222,
 		DecisionRequestID:           uuid.New(),
 		DecisionTimeout:             0,
-		AutoResetPoints:             &gen.ResetPoints{},
+		AutoResetPoints:             &types.ResetPoints{},
 	}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{resetExecutionInfo.DecisionScheduleID, common.EmptyVersion},
@@ -4797,7 +4796,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 		DecisionStartedID:           222,
 		DecisionRequestID:           uuid.New(),
 		DecisionTimeout:             0,
-		AutoResetPoints:             &gen.ResetPoints{},
+		AutoResetPoints:             &types.ResetPoints{},
 	}
 	newWorkflowExecutionInfo := copyWorkflowExecutionInfo(resetExecutionInfo)
 	newWorkflowExecutionStats := &p.ExecutionStats{}

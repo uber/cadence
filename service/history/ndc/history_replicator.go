@@ -26,7 +26,6 @@ import (
 
 	"github.com/pborman/uuid"
 
-	h "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -49,7 +48,7 @@ type (
 	HistoryReplicator interface {
 		ApplyEvents(
 			ctx ctx.Context,
-			request *h.ReplicateEventsV2Request,
+			request *types.ReplicateEventsV2Request,
 		) error
 	}
 
@@ -183,7 +182,7 @@ func NewHistoryReplicator(
 
 func (r *historyReplicatorImpl) ApplyEvents(
 	ctx ctx.Context,
-	request *h.ReplicateEventsV2Request,
+	request *types.ReplicateEventsV2Request,
 ) (retError error) {
 
 	startTime := time.Now()

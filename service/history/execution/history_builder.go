@@ -21,13 +21,10 @@
 package execution
 
 import (
-	h "github.com/uber/cadence/.gen/go/history"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -78,7 +75,7 @@ func (b *HistoryBuilder) HasTransientEvents() bool {
 // AddWorkflowExecutionStartedEvent adds WorkflowExecutionStarted event to history
 // originalRunID is the runID when the WorkflowExecutionStarted event is written
 // firstRunID is the very first runID along the chain of ContinueAsNew and Reset
-func (b *HistoryBuilder) AddWorkflowExecutionStartedEvent(request *h.StartWorkflowExecutionRequest,
+func (b *HistoryBuilder) AddWorkflowExecutionStartedEvent(request *types.HistoryStartWorkflowExecutionRequest,
 	previousExecution *persistence.WorkflowExecutionInfo, firstRunID, originalRunID string) *types.HistoryEvent {
 	event := b.newWorkflowExecutionStartedEvent(request, previousExecution, firstRunID, originalRunID)
 
@@ -119,7 +116,7 @@ func (b *HistoryBuilder) AddTransientDecisionTaskStartedEvent(scheduleEventID in
 
 // AddDecisionTaskCompletedEvent adds DecisionTaskCompleted event to history
 func (b *HistoryBuilder) AddDecisionTaskCompletedEvent(scheduleEventID, StartedEventID int64,
-	request *workflow.RespondDecisionTaskCompletedRequest) *types.HistoryEvent {
+	request *types.RespondDecisionTaskCompletedRequest) *types.HistoryEvent {
 	event := b.newDecisionTaskCompletedEvent(scheduleEventID, StartedEventID, request)
 
 	return b.addEventToHistory(event)
@@ -164,7 +161,7 @@ func (b *HistoryBuilder) AddActivityTaskStartedEvent(
 
 // AddActivityTaskCompletedEvent adds ActivityTaskCompleted event to history
 func (b *HistoryBuilder) AddActivityTaskCompletedEvent(scheduleEventID, StartedEventID int64,
-	request *workflow.RespondActivityTaskCompletedRequest) *types.HistoryEvent {
+	request *types.RespondActivityTaskCompletedRequest) *types.HistoryEvent {
 	event := b.newActivityTaskCompletedEvent(scheduleEventID, StartedEventID, request)
 
 	return b.addEventToHistory(event)
@@ -172,7 +169,7 @@ func (b *HistoryBuilder) AddActivityTaskCompletedEvent(scheduleEventID, StartedE
 
 // AddActivityTaskFailedEvent adds ActivityTaskFailed event to history
 func (b *HistoryBuilder) AddActivityTaskFailedEvent(scheduleEventID, StartedEventID int64,
-	request *workflow.RespondActivityTaskFailedRequest) *types.HistoryEvent {
+	request *types.RespondActivityTaskFailedRequest) *types.HistoryEvent {
 	event := b.newActivityTaskFailedEvent(scheduleEventID, StartedEventID, request)
 
 	return b.addEventToHistory(event)
@@ -345,7 +342,7 @@ func (b *HistoryBuilder) AddCancelTimerFailedEvent(TimerID string, DecisionTaskC
 
 // AddWorkflowExecutionCancelRequestedEvent adds WorkflowExecutionCancelRequested event to history
 func (b *HistoryBuilder) AddWorkflowExecutionCancelRequestedEvent(cause string,
-	request *h.RequestCancelWorkflowExecutionRequest) *types.HistoryEvent {
+	request *types.HistoryRequestCancelWorkflowExecutionRequest) *types.HistoryEvent {
 	event := b.newWorkflowExecutionCancelRequestedEvent(cause, request)
 
 	return b.addEventToHistory(event)
@@ -527,9 +524,9 @@ func (b *HistoryBuilder) addTransientEvent(event *types.HistoryEvent) *types.His
 }
 
 func (b *HistoryBuilder) newWorkflowExecutionStartedEvent(
-	startRequest *h.StartWorkflowExecutionRequest, previousExecution *persistence.WorkflowExecutionInfo, firstRunID, originalRunID string) *types.HistoryEvent {
+	startRequest *types.HistoryStartWorkflowExecutionRequest, previousExecution *persistence.WorkflowExecutionInfo, firstRunID, originalRunID string) *types.HistoryEvent {
 	var prevRunID *string
-	var resetPoints *workflow.ResetPoints
+	var resetPoints *types.ResetPoints
 	if previousExecution != nil {
 		prevRunID = common.StringPtr(previousExecution.RunID)
 		resetPoints = previousExecution.AutoResetPoints
@@ -537,34 +534,34 @@ func (b *HistoryBuilder) newWorkflowExecutionStartedEvent(
 	request := startRequest.StartRequest
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(types.EventTypeWorkflowExecutionStarted)
 	attributes := &types.WorkflowExecutionStartedEventAttributes{}
-	attributes.WorkflowType = thrift.ToWorkflowType(request.WorkflowType)
-	attributes.TaskList = thrift.ToTaskList(request.TaskList)
-	attributes.Header = thrift.ToHeader(request.Header)
+	attributes.WorkflowType = request.WorkflowType
+	attributes.TaskList = request.TaskList
+	attributes.Header = request.Header
 	attributes.Input = request.Input
 	attributes.ExecutionStartToCloseTimeoutSeconds = common.Int32Ptr(*request.ExecutionStartToCloseTimeoutSeconds)
 	attributes.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(*request.TaskStartToCloseTimeoutSeconds)
 	attributes.ContinuedExecutionRunID = prevRunID
-	attributes.PrevAutoResetPoints = thrift.ToResetPoints(resetPoints)
+	attributes.PrevAutoResetPoints = resetPoints
 	attributes.Identity = common.StringPtr(common.StringDefault(request.Identity))
-	attributes.RetryPolicy = thrift.ToRetryPolicy(request.RetryPolicy)
+	attributes.RetryPolicy = request.RetryPolicy
 	attributes.Attempt = common.Int32Ptr(startRequest.GetAttempt())
 	attributes.ExpirationTimestamp = startRequest.ExpirationTimestamp
 	attributes.CronSchedule = request.CronSchedule
 	attributes.LastCompletionResult = startRequest.LastCompletionResult
 	attributes.ContinuedFailureReason = startRequest.ContinuedFailureReason
 	attributes.ContinuedFailureDetails = startRequest.ContinuedFailureDetails
-	attributes.Initiator = thrift.ToContinueAsNewInitiator(startRequest.ContinueAsNewInitiator)
+	attributes.Initiator = startRequest.ContinueAsNewInitiator
 	attributes.FirstDecisionTaskBackoffSeconds = startRequest.FirstDecisionTaskBackoffSeconds
 	attributes.FirstExecutionRunID = common.StringPtr(firstRunID)
 	attributes.OriginalExecutionRunID = common.StringPtr(originalRunID)
-	attributes.Memo = thrift.ToMemo(request.Memo)
-	attributes.SearchAttributes = thrift.ToSearchAttributes(request.SearchAttributes)
+	attributes.Memo = request.Memo
+	attributes.SearchAttributes = request.SearchAttributes
 
 	parentInfo := startRequest.ParentExecutionInfo
 	if parentInfo != nil {
 		attributes.ParentWorkflowDomain = parentInfo.Domain
-		attributes.ParentWorkflowExecution = thrift.ToWorkflowExecution(parentInfo.Execution)
-		attributes.ParentInitiatedEventID = parentInfo.InitiatedId
+		attributes.ParentWorkflowExecution = parentInfo.Execution
+		attributes.ParentInitiatedEventID = parentInfo.InitiatedID
 	}
 	historyEvent.WorkflowExecutionStartedEventAttributes = attributes
 
@@ -600,7 +597,7 @@ func (b *HistoryBuilder) newTransientDecisionTaskStartedEvent(ScheduledEventID i
 }
 
 func (b *HistoryBuilder) newDecisionTaskCompletedEvent(scheduleEventID, StartedEventID int64,
-	request *workflow.RespondDecisionTaskCompletedRequest) *types.HistoryEvent {
+	request *types.RespondDecisionTaskCompletedRequest) *types.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(types.EventTypeDecisionTaskCompleted)
 	attributes := &types.DecisionTaskCompletedEventAttributes{}
 	attributes.ExecutionContext = request.ExecutionContext
@@ -672,7 +669,7 @@ func (b *HistoryBuilder) newActivityTaskStartedEvent(
 }
 
 func (b *HistoryBuilder) newActivityTaskCompletedEvent(scheduleEventID, StartedEventID int64,
-	request *workflow.RespondActivityTaskCompletedRequest) *types.HistoryEvent {
+	request *types.RespondActivityTaskCompletedRequest) *types.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(types.EventTypeActivityTaskCompleted)
 	attributes := &types.ActivityTaskCompletedEventAttributes{}
 	attributes.Result = request.Result
@@ -706,7 +703,7 @@ func (b *HistoryBuilder) newActivityTaskTimedOutEvent(
 }
 
 func (b *HistoryBuilder) newActivityTaskFailedEvent(scheduleEventID, StartedEventID int64,
-	request *workflow.RespondActivityTaskFailedRequest) *types.HistoryEvent {
+	request *types.RespondActivityTaskFailedRequest) *types.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(types.EventTypeActivityTaskFailed)
 	attributes := &types.ActivityTaskFailedEventAttributes{}
 	attributes.Reason = common.StringPtr(common.StringDefault(request.Reason))
@@ -789,16 +786,16 @@ func (b *HistoryBuilder) newMarkerRecordedEventAttributes(DecisionTaskCompletedE
 }
 
 func (b *HistoryBuilder) newWorkflowExecutionCancelRequestedEvent(cause string,
-	request *h.RequestCancelWorkflowExecutionRequest) *types.HistoryEvent {
+	request *types.HistoryRequestCancelWorkflowExecutionRequest) *types.HistoryEvent {
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeWorkflowExecutionCancelRequested)
 	attributes := &types.WorkflowExecutionCancelRequestedEventAttributes{}
 	attributes.Cause = common.StringPtr(cause)
 	attributes.Identity = common.StringPtr(common.StringDefault(request.CancelRequest.Identity))
-	if request.ExternalInitiatedEventId != nil {
-		attributes.ExternalInitiatedEventID = common.Int64Ptr(*request.ExternalInitiatedEventId)
+	if request.ExternalInitiatedEventID != nil {
+		attributes.ExternalInitiatedEventID = common.Int64Ptr(*request.ExternalInitiatedEventID)
 	}
 	if request.ExternalWorkflowExecution != nil {
-		attributes.ExternalWorkflowExecution = thrift.ToWorkflowExecution(request.ExternalWorkflowExecution)
+		attributes.ExternalWorkflowExecution = request.ExternalWorkflowExecution
 	}
 	event.WorkflowExecutionCancelRequestedEventAttributes = attributes
 

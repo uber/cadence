@@ -31,7 +31,6 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	shared "github.com/uber/cadence/.gen/go/shared"
 	types "github.com/uber/cadence/common/types"
 )
 
@@ -132,7 +131,7 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) ReplicateDecisionTask
 }
 
 // ReplicateDecisionTaskTimedOutEvent mocks base method
-func (m *MockmutableStateDecisionTaskManager) ReplicateDecisionTaskTimedOutEvent(timeoutType shared.TimeoutType) error {
+func (m *MockmutableStateDecisionTaskManager) ReplicateDecisionTaskTimedOutEvent(timeoutType types.TimeoutType) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReplicateDecisionTaskTimedOutEvent", timeoutType)
 	ret0, _ := ret[0].(error)
@@ -205,7 +204,7 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) AddFirstDecisionTaskS
 }
 
 // AddDecisionTaskStartedEvent mocks base method
-func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskStartedEvent(scheduleEventID int64, requestID string, request *shared.PollForDecisionTaskRequest) (*types.HistoryEvent, *DecisionInfo, error) {
+func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskStartedEvent(scheduleEventID int64, requestID string, request *types.PollForDecisionTaskRequest) (*types.HistoryEvent, *DecisionInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddDecisionTaskStartedEvent", scheduleEventID, requestID, request)
 	ret0, _ := ret[0].(*types.HistoryEvent)
@@ -221,7 +220,7 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) AddDecisionTaskStarte
 }
 
 // AddDecisionTaskCompletedEvent mocks base method
-func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID int64, request *shared.RespondDecisionTaskCompletedRequest, maxResetPoints int) (*types.HistoryEvent, error) {
+func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID int64, request *types.RespondDecisionTaskCompletedRequest, maxResetPoints int) (*types.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddDecisionTaskCompletedEvent", scheduleEventID, startedEventID, request, maxResetPoints)
 	ret0, _ := ret[0].(*types.HistoryEvent)
@@ -236,7 +235,7 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) AddDecisionTaskComple
 }
 
 // AddDecisionTaskFailedEvent mocks base method
-func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskFailedEvent(scheduleEventID, startedEventID int64, cause shared.DecisionTaskFailedCause, details []byte, identity, reason, binChecksum, baseRunID, newRunID string, forkEventVersion int64) (*types.HistoryEvent, error) {
+func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskFailedEvent(scheduleEventID, startedEventID int64, cause types.DecisionTaskFailedCause, details []byte, identity, reason, binChecksum, baseRunID, newRunID string, forkEventVersion int64) (*types.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddDecisionTaskFailedEvent", scheduleEventID, startedEventID, cause, details, identity, reason, binChecksum, baseRunID, newRunID, forkEventVersion)
 	ret0, _ := ret[0].(*types.HistoryEvent)

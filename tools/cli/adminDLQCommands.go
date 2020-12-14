@@ -32,7 +32,6 @@ import (
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -89,7 +88,7 @@ func AdminGetDLQMessages(c *cli.Context) {
 		}
 
 		task := item.(*types.ReplicationTask)
-		taskStr, err := decodeReplicationTask(thrift.FromReplicationTask(task), serializer)
+		taskStr, err := decodeReplicationTask(task, serializer)
 		if err != nil {
 			ErrorAndExit(fmt.Sprintf("fail to encode dlq message. Last read message id: %v", lastReadMessageID), err)
 		}

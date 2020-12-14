@@ -23,9 +23,9 @@ package history
 import (
 	"context"
 
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/task"
 )
 
@@ -42,11 +42,11 @@ type (
 			ctx context.Context,
 			pollingCluster string,
 			lastReadTaskID int64,
-		) (*replicator.ReplicationMessages, error)
+		) (*types.ReplicationMessages, error)
 		getTask(
 			ctx context.Context,
-			taskInfo *replicator.ReplicationTaskInfo,
-		) (*replicator.ReplicationTask, error)
+			taskInfo *types.ReplicationTaskInfo,
+		) (*types.ReplicationTask, error)
 	}
 
 	queueAckMgr interface {

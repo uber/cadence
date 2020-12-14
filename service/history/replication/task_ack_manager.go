@@ -31,7 +31,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/collection"
@@ -42,7 +41,6 @@ import (
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	exec "github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
@@ -297,7 +295,7 @@ func (t *taskAckManagerImpl) getEventsBlob(
 	branchToken []byte,
 	firstEventID int64,
 	nextEventID int64,
-) (*shared.DataBlob, error) {
+) (*types.DataBlob, error) {
 
 	var eventBatchBlobs []*persistence.DataBlob
 	var pageToken []byte
@@ -331,7 +329,7 @@ func (t *taskAckManagerImpl) getEventsBlob(
 		}
 	}
 
-	return eventBatchBlobs[0].ToThrift(), nil
+	return eventBatchBlobs[0].ToInternal(), nil
 }
 
 func (t *taskAckManagerImpl) isNewRunNDCEnabled(
@@ -498,13 +496,13 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 			heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
 
 			//Version history uses when replicate the sync activity task
-			var versionHistory *shared.VersionHistory
+			var versionHistory *types.VersionHistory
 			if versionHistories != nil {
 				rawVersionHistory, err := versionHistories.GetCurrentVersionHistory()
 				if err != nil {
 					return nil, err
 				}
-				versionHistory = thrift.FromVersionHistory(rawVersionHistory.ToInternalType())
+				versionHistory = rawVersionHistory.ToInternalType()
 			}
 
 			return &types.ReplicationTask{
@@ -524,7 +522,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 					LastFailureReason:  common.StringPtr(activityInfo.LastFailureReason),
 					LastWorkerIdentity: common.StringPtr(activityInfo.LastWorkerIdentity),
 					LastFailureDetails: activityInfo.LastFailureDetails,
-					VersionHistory:     thrift.ToVersionHistory(versionHistory),
+					VersionHistory:     versionHistory,
 				},
 				CreationTime: common.Int64Ptr(taskInfo.CreationTime),
 			}, nil
@@ -576,7 +574,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 				return nil, err
 			}
 
-			var newRunEventsBlob *shared.DataBlob
+			var newRunEventsBlob *types.DataBlob
 			if len(task.NewRunBranchToken) != 0 {
 				// only get the first batch
 				newRunEventsBlob, err = t.getEventsBlob(
@@ -597,9 +595,9 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 					DomainID:            common.StringPtr(task.DomainID),
 					WorkflowID:          common.StringPtr(task.WorkflowID),
 					RunID:               common.StringPtr(task.RunID),
-					VersionHistoryItems: thrift.ToVersionHistoryItemArray(versionHistoryItems),
-					Events:              thrift.ToDataBlob(eventsBlob),
-					NewRunEvents:        thrift.ToDataBlob(newRunEventsBlob),
+					VersionHistoryItems: versionHistoryItems,
+					Events:              eventsBlob,
+					NewRunEvents:        newRunEventsBlob,
 				},
 				CreationTime: common.Int64Ptr(task.CreationTime),
 			}
@@ -612,7 +610,7 @@ func getVersionHistoryItems(
 	versionHistories *persistence.VersionHistories,
 	eventID int64,
 	version int64,
-) ([]*shared.VersionHistoryItem, []byte, error) {
+) ([]*types.VersionHistoryItem, []byte, error) {
 
 	if versionHistories == nil {
 		return nil, nil, &types.InternalServiceError{
@@ -634,5 +632,5 @@ func getVersionHistoryItems(
 	if err != nil {
 		return nil, nil, err
 	}
-	return thrift.FromVersionHistoryItemArray(versionHistory.ToInternalType().Items), versionHistory.GetBranchToken(), nil
+	return versionHistory.ToInternalType().Items, versionHistory.GetBranchToken(), nil
 }

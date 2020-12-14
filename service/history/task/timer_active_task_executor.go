@@ -24,7 +24,6 @@ import (
 	"context"
 	"fmt"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
@@ -189,7 +188,7 @@ func (t *timerActiveTaskExecutor) executeActivityTimeoutTask(
 	// one heartbeat task was persisted multiple times with different taskIDs due to the retry logic
 	// for updating workflow execution. In that case, only one new heartbeat timeout task should be
 	// created.
-	isHeartBeatTask := task.TimeoutType == int(workflow.TimeoutTypeHeartbeat)
+	isHeartBeatTask := task.TimeoutType == int(types.TimeoutTypeHeartbeat)
 	activityInfo, ok := mutableState.GetActivityInfo(task.EventID)
 	if isHeartBeatTask && ok && activityInfo.LastHeartbeatTimeoutVisibilityInSeconds <= task.VisibilityTimestamp.Unix() {
 		activityInfo.TimerTaskStatus = activityInfo.TimerTaskStatus &^ execution.TimerTaskStatusCreatedHeartbeat

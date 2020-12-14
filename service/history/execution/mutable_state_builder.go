@@ -30,8 +30,6 @@ import (
 
 	"github.com/pborman/uuid"
 
-	h "github.com/uber/cadence/.gen/go/history"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
@@ -45,7 +43,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/query"
@@ -1240,7 +1237,7 @@ func (e *mutableStateBuilder) HasParentExecution() bool {
 
 func (e *mutableStateBuilder) UpdateActivityProgress(
 	ai *persistence.ActivityInfo,
-	request *workflow.RecordActivityTaskHeartbeatRequest,
+	request *types.RecordActivityTaskHeartbeatRequest,
 ) {
 	ai.Version = e.GetCurrentVersion()
 	ai.Details = request.Details
@@ -1251,13 +1248,13 @@ func (e *mutableStateBuilder) UpdateActivityProgress(
 
 // ReplicateActivityInfo replicate the necessary activity information
 func (e *mutableStateBuilder) ReplicateActivityInfo(
-	request *h.SyncActivityRequest,
+	request *types.SyncActivityRequest,
 	resetActivityTimerTaskStatus bool,
 ) error {
-	ai, ok := e.pendingActivityInfoIDs[request.GetScheduledId()]
+	ai, ok := e.pendingActivityInfoIDs[request.GetScheduledID()]
 	if !ok {
 		e.logError(
-			fmt.Sprintf("unable to find activity event ID: %v in mutable state", request.GetScheduledId()),
+			fmt.Sprintf("unable to find activity event ID: %v in mutable state", request.GetScheduledID()),
 			tag.ErrorTypeInvalidMutableStateAction,
 		)
 		return ErrMissingActivityInfo
@@ -1265,7 +1262,7 @@ func (e *mutableStateBuilder) ReplicateActivityInfo(
 
 	ai.Version = request.GetVersion()
 	ai.ScheduledTime = time.Unix(0, request.GetScheduledTime())
-	ai.StartedID = request.GetStartedId()
+	ai.StartedID = request.GetStartedID()
 	ai.LastHeartBeatUpdatedTime = time.Unix(0, request.GetLastHeartbeatTime())
 	if ai.StartedID == common.EmptyEventID {
 		ai.StartedTime = time.Time{}
@@ -1596,7 +1593,7 @@ func (e *mutableStateBuilder) DeleteSignalRequested(
 }
 
 func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
-	parentExecutionInfo *h.ParentExecutionInfo,
+	parentExecutionInfo *types.ParentExecutionInfo,
 	execution types.WorkflowExecution,
 	previousExecutionState MutableState,
 	attributes *types.ContinueAsNewWorkflowExecutionDecisionAttributes,
@@ -1608,14 +1605,14 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 	if attributes.TaskList != nil {
 		taskList = attributes.TaskList.GetName()
 	}
-	tl := &workflow.TaskList{}
+	tl := &types.TaskList{}
 	tl.Name = common.StringPtr(taskList)
 
 	workflowType := previousExecutionInfo.WorkflowTypeName
 	if attributes.WorkflowType != nil {
 		workflowType = attributes.WorkflowType.GetName()
 	}
-	wType := &workflow.WorkflowType{}
+	wType := &types.WorkflowType{}
 	wType.Name = common.StringPtr(workflowType)
 
 	decisionTimeout := previousExecutionInfo.DecisionStartToCloseTimeout
@@ -1623,30 +1620,30 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		decisionTimeout = attributes.GetTaskStartToCloseTimeoutSeconds()
 	}
 
-	createRequest := &workflow.StartWorkflowExecutionRequest{
-		RequestId:                           common.StringPtr(uuid.New()),
+	createRequest := &types.StartWorkflowExecutionRequest{
+		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(e.domainEntry.GetInfo().Name),
-		WorkflowId:                          execution.WorkflowID,
+		WorkflowID:                          execution.WorkflowID,
 		TaskList:                            tl,
 		WorkflowType:                        wType,
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeout),
 		ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
 		Input:                               attributes.Input,
-		Header:                              thrift.FromHeader(attributes.Header),
-		RetryPolicy:                         thrift.FromRetryPolicy(attributes.RetryPolicy),
+		Header:                              attributes.Header,
+		RetryPolicy:                         attributes.RetryPolicy,
 		CronSchedule:                        attributes.CronSchedule,
-		Memo:                                thrift.FromMemo(attributes.Memo),
-		SearchAttributes:                    thrift.FromSearchAttributes(attributes.SearchAttributes),
+		Memo:                                attributes.Memo,
+		SearchAttributes:                    attributes.SearchAttributes,
 	}
 
-	req := &h.StartWorkflowExecutionRequest{
+	req := &types.HistoryStartWorkflowExecutionRequest{
 		DomainUUID:                      common.StringPtr(e.domainEntry.GetInfo().ID),
 		StartRequest:                    createRequest,
 		ParentExecutionInfo:             parentExecutionInfo,
 		LastCompletionResult:            attributes.LastCompletionResult,
 		ContinuedFailureReason:          attributes.FailureReason,
 		ContinuedFailureDetails:         attributes.FailureDetails,
-		ContinueAsNewInitiator:          thrift.FromContinueAsNewInitiator(attributes.Initiator),
+		ContinueAsNewInitiator:          attributes.Initiator,
 		FirstDecisionTaskBackoffSeconds: attributes.BackoffStartIntervalInSeconds,
 	}
 	if attributes.GetInitiator() == types.ContinueAsNewInitiatorRetryPolicy {
@@ -1676,7 +1673,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 	if err := e.ReplicateWorkflowExecutionStartedEvent(
 		parentDomainID,
 		execution,
-		createRequest.GetRequestId(),
+		createRequest.GetRequestID(),
 		event,
 	); err != nil {
 		return nil, err
@@ -1711,7 +1708,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 
 func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(
 	execution types.WorkflowExecution,
-	startRequest *h.StartWorkflowExecutionRequest,
+	startRequest *types.HistoryStartWorkflowExecutionRequest,
 ) (*types.HistoryEvent, error) {
 
 	opTag := tag.WorkflowActionWorkflowStarted
@@ -1737,7 +1734,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(
 	if err := e.ReplicateWorkflowExecutionStartedEvent(
 		parentDomainID,
 		execution,
-		request.GetRequestId(),
+		request.GetRequestID(),
 		event); err != nil {
 		return nil, err
 	}
@@ -1819,7 +1816,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 	}
 
 	e.executionInfo.AutoResetPoints = rolloverAutoResetPointsWithExpiringTime(
-		thrift.FromResetPoints(event.GetPrevAutoResetPoints()),
+		event.GetPrevAutoResetPoints(),
 		event.GetContinuedExecutionRunID(),
 		startEvent.GetTimestamp(),
 		e.domainEntry.GetRetentionDays(e.executionInfo.WorkflowID),
@@ -1887,7 +1884,7 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(
 func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(
 	scheduleEventID int64,
 	requestID string,
-	request *workflow.PollForDecisionTaskRequest,
+	request *types.PollForDecisionTaskRequest,
 ) (*types.HistoryEvent, *DecisionInfo, error) {
 	opTag := tag.WorkflowActionDecisionTaskStarted
 	if err := e.checkMutability(opTag); err != nil {
@@ -1925,14 +1922,14 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 		return nil
 	}
 	exeInfo := e.executionInfo
-	var currResetPoints []*workflow.ResetPointInfo
+	var currResetPoints []*types.ResetPointInfo
 	if exeInfo.AutoResetPoints != nil && exeInfo.AutoResetPoints.Points != nil {
 		currResetPoints = e.executionInfo.AutoResetPoints.Points
 	} else {
-		currResetPoints = make([]*workflow.ResetPointInfo, 0, 1)
+		currResetPoints = make([]*types.ResetPointInfo, 0, 1)
 	}
 
-	// List of all recent binary checksums associated with the workflow.
+	// List of all recent binary checksums associated with the types.
 	var recentBinaryChecksums []string
 
 	for _, rp := range currResetPoints {
@@ -1956,15 +1953,15 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 	if err != nil {
 		resettable = false
 	}
-	info := &workflow.ResetPointInfo{
+	info := &types.ResetPointInfo{
 		BinaryChecksum:           common.StringPtr(binChecksum),
-		RunId:                    common.StringPtr(exeInfo.RunID),
-		FirstDecisionCompletedId: common.Int64Ptr(event.GetEventID()),
+		RunID:                    common.StringPtr(exeInfo.RunID),
+		FirstDecisionCompletedID: common.Int64Ptr(event.GetEventID()),
 		CreatedTimeNano:          common.Int64Ptr(e.timeSource.Now().UnixNano()),
 		Resettable:               common.BoolPtr(resettable),
 	}
 	currResetPoints = append(currResetPoints, info)
-	exeInfo.AutoResetPoints = &workflow.ResetPoints{
+	exeInfo.AutoResetPoints = &types.ResetPoints{
 		Points: currResetPoints,
 	}
 	bytes, err := json.Marshal(recentBinaryChecksums)
@@ -1985,7 +1982,7 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 func (e *mutableStateBuilder) CheckResettable() error {
 	if len(e.GetPendingChildExecutionInfos()) > 0 {
 		return &types.BadRequestError{
-			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending child workflow."),
+			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending child types."),
 		}
 	}
 	if len(e.GetPendingRequestCancelExternalInfos()) > 0 {
@@ -2004,7 +2001,7 @@ func (e *mutableStateBuilder) CheckResettable() error {
 func (e *mutableStateBuilder) AddDecisionTaskCompletedEvent(
 	scheduleEventID int64,
 	startedEventID int64,
-	request *workflow.RespondDecisionTaskCompletedRequest,
+	request *types.RespondDecisionTaskCompletedRequest,
 	maxResetPoints int,
 ) (*types.HistoryEvent, error) {
 	opTag := tag.WorkflowActionDecisionTaskCompleted
@@ -2084,7 +2081,7 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskFailedEvent() error {
 func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	decisionCompletedEventID int64,
 	attributes *types.ScheduleActivityTaskDecisionAttributes,
-) (*types.HistoryEvent, *persistence.ActivityInfo, *workflow.ActivityLocalDispatchInfo, error) {
+) (*types.HistoryEvent, *persistence.ActivityInfo, *types.ActivityLocalDispatchInfo, error) {
 
 	opTag := tag.WorkflowActionActivityTaskScheduled
 	if err := e.checkMutability(opTag); err != nil {
@@ -2113,7 +2110,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	ai, err := e.ReplicateActivityTaskScheduledEvent(decisionCompletedEventID, event)
 	if e.config.EnableActivityLocalDispatchByDomain(e.domainEntry.GetInfo().Name) &&
 		common.BoolDefault(attributes.RequestLocalDispatch) {
-		return event, ai, &workflow.ActivityLocalDispatchInfo{ActivityId: common.StringPtr(ai.ActivityID)}, nil
+		return event, ai, &types.ActivityLocalDispatchInfo{ActivityID: common.StringPtr(ai.ActivityID)}, nil
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateActivityTransferTasks(
@@ -2265,7 +2262,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskStartedEvent(
 func (e *mutableStateBuilder) AddActivityTaskCompletedEvent(
 	scheduleEventID int64,
 	startedEventID int64,
-	request *workflow.RespondActivityTaskCompletedRequest,
+	request *types.RespondActivityTaskCompletedRequest,
 ) (*types.HistoryEvent, error) {
 
 	opTag := tag.WorkflowActionActivityTaskCompleted
@@ -2309,7 +2306,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskCompletedEvent(
 func (e *mutableStateBuilder) AddActivityTaskFailedEvent(
 	scheduleEventID int64,
 	startedEventID int64,
-	request *workflow.RespondActivityTaskFailedRequest,
+	request *types.RespondActivityTaskFailedRequest,
 ) (*types.HistoryEvent, error) {
 
 	opTag := tag.WorkflowActionActivityTaskFailed
@@ -2643,7 +2640,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionTimedoutEvent(
 
 func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(
 	cause string,
-	request *h.RequestCancelWorkflowExecutionRequest,
+	request *types.HistoryRequestCancelWorkflowExecutionRequest,
 ) (*types.HistoryEvent, error) {
 
 	opTag := tag.WorkflowActionWorkflowCancelRequested
@@ -2668,7 +2665,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(
 	}
 
 	// Set the CancelRequestID on the active cluster.  This information is not part of the history event.
-	e.executionInfo.CancelRequestID = request.CancelRequest.GetRequestId()
+	e.executionInfo.CancelRequestID = request.CancelRequest.GetRequestID()
 	return event, nil
 }
 
@@ -3278,16 +3275,16 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	}
 
 	// Extract ParentExecutionInfo from current run so it can be passed down to the next
-	var parentInfo *h.ParentExecutionInfo
+	var parentInfo *types.ParentExecutionInfo
 	if e.HasParentExecution() {
-		parentInfo = &h.ParentExecutionInfo{
+		parentInfo = &types.ParentExecutionInfo{
 			DomainUUID: common.StringPtr(e.executionInfo.ParentDomainID),
 			Domain:     common.StringPtr(parentDomainName),
-			Execution: &workflow.WorkflowExecution{
-				WorkflowId: common.StringPtr(e.executionInfo.ParentWorkflowID),
-				RunId:      common.StringPtr(e.executionInfo.ParentRunID),
+			Execution: &types.WorkflowExecution{
+				WorkflowID: common.StringPtr(e.executionInfo.ParentWorkflowID),
+				RunID:      common.StringPtr(e.executionInfo.ParentRunID),
 			},
-			InitiatedId: common.Int64Ptr(e.executionInfo.InitiatedID),
+			InitiatedID: common.Int64Ptr(e.executionInfo.InitiatedID),
 		}
 	}
 
@@ -3332,24 +3329,24 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 }
 
 func rolloverAutoResetPointsWithExpiringTime(
-	resetPoints *workflow.ResetPoints,
+	resetPoints *types.ResetPoints,
 	prevRunID string,
 	nowNano int64,
 	domainRetentionDays int32,
-) *workflow.ResetPoints {
+) *types.ResetPoints {
 
 	if resetPoints == nil || resetPoints.Points == nil {
 		return resetPoints
 	}
-	newPoints := make([]*workflow.ResetPointInfo, 0, len(resetPoints.Points))
+	newPoints := make([]*types.ResetPointInfo, 0, len(resetPoints.Points))
 	expiringTimeNano := nowNano + int64(time.Duration(domainRetentionDays)*time.Hour*24)
 	for _, rp := range resetPoints.Points {
-		if rp.GetRunId() == prevRunID {
+		if rp.GetRunID() == prevRunID {
 			rp.ExpiringTimeNano = common.Int64Ptr(expiringTimeNano)
 		}
 		newPoints = append(newPoints, rp)
 	}
-	return &workflow.ResetPoints{
+	return &types.ResetPoints{
 		Points: newPoints,
 	}
 }
@@ -4526,8 +4523,8 @@ func (e *mutableStateBuilder) closeTransactionHandleWorkflowReset(
 			tag.WorkflowDomainName(domainEntry.GetInfo().Name),
 			tag.WorkflowID(executionInfo.WorkflowID),
 			tag.WorkflowRunID(executionInfo.RunID),
-			tag.WorkflowResetBaseRunID(pt.GetRunId()),
-			tag.WorkflowEventID(pt.GetFirstDecisionCompletedId()),
+			tag.WorkflowResetBaseRunID(pt.GetRunID()),
+			tag.WorkflowEventID(pt.GetFirstDecisionCompletedID()),
 			tag.WorkflowBinaryChecksum(pt.GetBinaryChecksum()),
 		)
 	}
