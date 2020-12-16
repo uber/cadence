@@ -2104,6 +2104,9 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	)
 
 	ai, err := e.ReplicateActivityTaskScheduledEvent(decisionCompletedEventID, event)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	if e.config.EnableActivityLocalDispatchByDomain(e.domainEntry.GetInfo().Name) &&
 		common.BoolDefault(attributes.RequestLocalDispatch) {
 		return event, ai, &workflow.ActivityLocalDispatchInfo{ActivityId: common.StringPtr(ai.ActivityID)}, nil
