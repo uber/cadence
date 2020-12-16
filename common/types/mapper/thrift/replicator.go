@@ -495,6 +495,7 @@ func FromReplicationTask(t *types.ReplicationTask) *replicator.ReplicationTask {
 		SyncActivityTaskAttributes:    FromSyncActivityTaskAttributes(t.SyncActivityTaskAttributes),
 		HistoryTaskV2Attributes:       FromHistoryTaskV2Attributes(t.HistoryTaskV2Attributes),
 		FailoverMarkerAttributes:      FromFailoverMarkerAttributes(t.FailoverMarkerAttributes),
+		CreationTime:                  t.CreationTime,
 	}
 }
 
@@ -511,6 +512,7 @@ func ToReplicationTask(t *replicator.ReplicationTask) *types.ReplicationTask {
 		SyncActivityTaskAttributes:    ToSyncActivityTaskAttributes(t.SyncActivityTaskAttributes),
 		HistoryTaskV2Attributes:       ToHistoryTaskV2Attributes(t.HistoryTaskV2Attributes),
 		FailoverMarkerAttributes:      ToFailoverMarkerAttributes(t.FailoverMarkerAttributes),
+		CreationTime:                  t.CreationTime,
 	}
 }
 

@@ -591,6 +591,7 @@ type ReplicationTask struct {
 	SyncActivityTaskAttributes    *SyncActivityTaskAttributes
 	HistoryTaskV2Attributes       *HistoryTaskV2Attributes
 	FailoverMarkerAttributes      *FailoverMarkerAttributes
+	CreationTime                  *int64
 }
 
 // GetTaskType is an internal getter (TBD...)
@@ -645,6 +646,14 @@ func (v *ReplicationTask) GetHistoryTaskV2Attributes() (o *HistoryTaskV2Attribut
 func (v *ReplicationTask) GetFailoverMarkerAttributes() (o *FailoverMarkerAttributes) {
 	if v != nil && v.FailoverMarkerAttributes != nil {
 		return v.FailoverMarkerAttributes
+	}
+	return
+}
+
+// GetCreationTime is an internal getter (TBD...)
+func (v *ReplicationTask) GetCreationTime() (o int64) {
+	if v != nil && v.CreationTime != nil {
+		return *v.CreationTime
 	}
 	return
 }
