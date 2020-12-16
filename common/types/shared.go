@@ -35,13 +35,49 @@ func (v *AccessDeniedError) GetMessage() (o string) {
 
 // ActivityLocalDispatchInfo is an internal type (TBD...)
 type ActivityLocalDispatchInfo struct {
-	ActivityID *string
+	ActivityID                      *string
+	ScheduledTimestamp              *int64
+	StartedTimestamp                *int64
+	ScheduledTimestampOfThisAttempt *int64
+	TaskToken                       []byte
 }
 
 // GetActivityID is an internal getter (TBD...)
 func (v *ActivityLocalDispatchInfo) GetActivityID() (o string) {
 	if v != nil && v.ActivityID != nil {
 		return *v.ActivityID
+	}
+	return
+}
+
+// GetScheduledTimestamp is an internal getter (TBD...)
+func (v *ActivityLocalDispatchInfo) GetScheduledTimestamp() (o int64) {
+	if v != nil && v.ScheduledTimestamp != nil {
+		return *v.ScheduledTimestamp
+	}
+	return
+}
+
+// GetStartedTimestamp is an internal getter (TBD...)
+func (v *ActivityLocalDispatchInfo) GetStartedTimestamp() (o int64) {
+	if v != nil && v.StartedTimestamp != nil {
+		return *v.StartedTimestamp
+	}
+	return
+}
+
+// GetScheduledTimestampOfThisAttempt is an internal getter (TBD...)
+func (v *ActivityLocalDispatchInfo) GetScheduledTimestampOfThisAttempt() (o int64) {
+	if v != nil && v.ScheduledTimestampOfThisAttempt != nil {
+		return *v.ScheduledTimestampOfThisAttempt
+	}
+	return
+}
+
+// GetTaskToken is an internal getter (TBD...)
+func (v *ActivityLocalDispatchInfo) GetTaskToken() (o []byte) {
+	if v != nil && v.TaskToken != nil {
+		return v.TaskToken
 	}
 	return
 }
@@ -2048,6 +2084,7 @@ type DescribeWorkflowExecutionResponse struct {
 	WorkflowExecutionInfo  *WorkflowExecutionInfo
 	PendingActivities      []*PendingActivityInfo
 	PendingChildren        []*PendingChildExecutionInfo
+	PendingDecision        *PendingDecisionInfo
 }
 
 // GetExecutionConfiguration is an internal getter (TBD...)
@@ -2078,6 +2115,14 @@ func (v *DescribeWorkflowExecutionResponse) GetPendingActivities() (o []*Pending
 func (v *DescribeWorkflowExecutionResponse) GetPendingChildren() (o []*PendingChildExecutionInfo) {
 	if v != nil && v.PendingChildren != nil {
 		return v.PendingChildren
+	}
+	return
+}
+
+// GetPendingDecision is an internal getter (TBD...)
+func (v *DescribeWorkflowExecutionResponse) GetPendingDecision() (o *PendingDecisionInfo) {
+	if v != nil && v.PendingDecision != nil {
+		return v.PendingDecision
 	}
 	return
 }
@@ -3905,6 +3950,70 @@ func (v *PendingChildExecutionInfo) GetParentClosePolicy() (o ParentClosePolicy)
 	return
 }
 
+// PendingDecisionInfo is an internal type (TBD...)
+type PendingDecisionInfo struct {
+	State                      *PendingDecisionState
+	ScheduledTimestamp         *int64
+	StartedTimestamp           *int64
+	Attempt                    *int64
+	OriginalScheduledTimestamp *int64
+}
+
+// GetState is an internal getter (TBD...)
+func (v *PendingDecisionInfo) GetState() (o PendingDecisionState) {
+	if v != nil && v.State != nil {
+		return *v.State
+	}
+	return
+}
+
+// GetScheduledTimestamp is an internal getter (TBD...)
+func (v *PendingDecisionInfo) GetScheduledTimestamp() (o int64) {
+	if v != nil && v.ScheduledTimestamp != nil {
+		return *v.ScheduledTimestamp
+	}
+	return
+}
+
+// GetStartedTimestamp is an internal getter (TBD...)
+func (v *PendingDecisionInfo) GetStartedTimestamp() (o int64) {
+	if v != nil && v.StartedTimestamp != nil {
+		return *v.StartedTimestamp
+	}
+	return
+}
+
+// GetAttempt is an internal getter (TBD...)
+func (v *PendingDecisionInfo) GetAttempt() (o int64) {
+	if v != nil && v.Attempt != nil {
+		return *v.Attempt
+	}
+	return
+}
+
+// GetOriginalScheduledTimestamp is an internal getter (TBD...)
+func (v *PendingDecisionInfo) GetOriginalScheduledTimestamp() (o int64) {
+	if v != nil && v.OriginalScheduledTimestamp != nil {
+		return *v.OriginalScheduledTimestamp
+	}
+	return
+}
+
+// PendingDecisionState is an internal type (TBD...)
+type PendingDecisionState int32
+
+// Ptr is a helper function for getting pointer value
+func (e PendingDecisionState) Ptr() *PendingDecisionState {
+	return &e
+}
+
+const (
+	// PendingDecisionStateScheduled is an option for PendingDecisionState
+	PendingDecisionStateScheduled PendingDecisionState = iota
+	// PendingDecisionStateStarted is an option for PendingDecisionState
+	PendingDecisionStateStarted
+)
+
 // PollForActivityTaskRequest is an internal type (TBD...)
 type PollForActivityTaskRequest struct {
 	Domain           *string
@@ -5195,6 +5304,7 @@ type ResetWorkflowExecutionRequest struct {
 	Reason                *string
 	DecisionFinishEventID *int64
 	RequestID             *string
+	SkipSignalReapply     *bool
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -5233,6 +5343,14 @@ func (v *ResetWorkflowExecutionRequest) GetDecisionFinishEventID() (o int64) {
 func (v *ResetWorkflowExecutionRequest) GetRequestID() (o string) {
 	if v != nil && v.RequestID != nil {
 		return *v.RequestID
+	}
+	return
+}
+
+// GetSkipSignalReapply is an internal getter (TBD...)
+func (v *ResetWorkflowExecutionRequest) GetSkipSignalReapply() (o bool) {
+	if v != nil && v.SkipSignalReapply != nil {
+		return *v.SkipSignalReapply
 	}
 	return
 }
