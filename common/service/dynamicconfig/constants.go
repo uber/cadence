@@ -289,6 +289,7 @@ var keys = map[Key]string{
 
 	WorkerPersistenceMaxQPS:                                  "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                            "worker.persistenceGlobalMaxQPS",
+	WorkerReplicationTaskMaxRetryDuration:                    "worker.replicationTaskMaxRetryDuration",
 	WorkerIndexerConcurrency:                                 "worker.indexerConcurrency",
 	WorkerESProcessorNumOfWorkers:                            "worker.ESProcessorNumOfWorkers",
 	WorkerESProcessorBulkActions:                             "worker.ESProcessorBulkActions",
@@ -758,6 +759,8 @@ const (
 	WorkerPersistenceMaxQPS
 	// WorkerPersistenceGlobalMaxQPS is the max qps worker cluster can query DB
 	WorkerPersistenceGlobalMaxQPS
+	// WorkerReplicationTaskMaxRetryDuration is the max retry duration for any task
+	WorkerReplicationTaskMaxRetryDuration
 	// WorkerIndexerConcurrency is the max concurrent messages to be processed at any given time
 	WorkerIndexerConcurrency
 	// WorkerESProcessorNumOfWorkers is num of workers for esProcessor
