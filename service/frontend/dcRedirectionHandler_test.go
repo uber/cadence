@@ -792,6 +792,26 @@ func (s *dcRedirectionHandlerSuite) TestStartWorkflowExecution() {
 	s.Nil(err)
 }
 
+func (s *dcRedirectionHandlerSuite) TestStartWorkflowExecution_RemoteError() {
+	apiName := "StartWorkflowExecution"
+
+	s.mockDCRedirectionPolicy.On("WithDomainNameRedirect",
+		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
+
+	req := &shared.StartWorkflowExecutionRequest{
+		Domain: common.StringPtr(s.domainName),
+	}
+	resp, err := s.handler.StartWorkflowExecution(context.Background(), req)
+	s.Nil(err)
+	// the resp is initialized to nil, since inner function is not called
+	s.Nil(resp)
+
+	callFn := s.mockDCRedirectionPolicy.Calls[0].Arguments[2].(func(string) error)
+	s.mockRemoteFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), thrift.ToStartWorkflowExecutionRequest(req)).Return(nil, &types.BadRequestError{}).Times(1)
+	err = callFn(s.alternativeClusterName)
+	s.NotNil(err)
+}
+
 func (s *dcRedirectionHandlerSuite) TestTerminateWorkflowExecution() {
 	apiName := "TerminateWorkflowExecution"
 
