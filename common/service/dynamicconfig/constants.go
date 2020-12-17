@@ -297,16 +297,6 @@ var keys = map[Key]string{
 
 	WorkerPersistenceMaxQPS:                                  "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                            "worker.persistenceGlobalMaxQPS",
-	WorkerReplicatorMetaTaskConcurrency:                      "worker.replicatorMetaTaskConcurrency",
-	WorkerReplicatorTaskConcurrency:                          "worker.replicatorTaskConcurrency",
-	WorkerReplicatorMessageConcurrency:                       "worker.replicatorMessageConcurrency",
-	WorkerReplicatorActivityBufferRetryCount:                 "worker.replicatorActivityBufferRetryCount",
-	WorkerReplicatorHistoryBufferRetryCount:                  "worker.replicatorHistoryBufferRetryCount",
-	WorkerReplicationTaskMaxRetryCount:                       "worker.replicationTaskMaxRetryCount",
-	WorkerReplicationTaskMaxRetryDuration:                    "worker.replicationTaskMaxRetryDuration",
-	WorkerReplicationTaskContextDuration:                     "worker.replicationTaskContextDuration",
-	WorkerReReplicationContextTimeout:                        "worker.workerReReplicationContextTimeout",
-	WorkerEnableReplication:                                  "worker.enableReplication",
 	WorkerIndexerConcurrency:                                 "worker.indexerConcurrency",
 	WorkerESProcessorNumOfWorkers:                            "worker.ESProcessorNumOfWorkers",
 	WorkerESProcessorBulkActions:                             "worker.ESProcessorBulkActions",
@@ -797,26 +787,8 @@ const (
 	WorkerPersistenceMaxQPS
 	// WorkerPersistenceGlobalMaxQPS is the max qps worker cluster can query DB
 	WorkerPersistenceGlobalMaxQPS
-	// WorkerReplicatorMetaTaskConcurrency is the number of coroutine handling metadata related tasks
-	WorkerReplicatorMetaTaskConcurrency
-	// WorkerReplicatorTaskConcurrency is the number of coroutine handling non metadata related tasks
-	WorkerReplicatorTaskConcurrency
-	// WorkerReplicatorMessageConcurrency is the max concurrent tasks provided by messaging client
-	WorkerReplicatorMessageConcurrency
-	// WorkerReplicatorActivityBufferRetryCount is the retry attempt when encounter retry error on activity
-	WorkerReplicatorActivityBufferRetryCount
-	// WorkerReplicatorHistoryBufferRetryCount is the retry attempt when encounter retry error on history
-	WorkerReplicatorHistoryBufferRetryCount
-	// WorkerReplicationTaskMaxRetryCount is the max retry count for any task
-	WorkerReplicationTaskMaxRetryCount
 	// WorkerReplicationTaskMaxRetryDuration is the max retry duration for any task
 	WorkerReplicationTaskMaxRetryDuration
-	// WorkerReplicationTaskContextDuration is the context timeout for apply replication tasks
-	WorkerReplicationTaskContextDuration
-	// WorkerReReplicationContextTimeout is the context timeout for end to end  re-replication process
-	WorkerReReplicationContextTimeout
-	// WorkerEnableReplication is the feature flag for kafka replication
-	WorkerEnableReplication
 	// WorkerIndexerConcurrency is the max concurrent messages to be processed at any given time
 	WorkerIndexerConcurrency
 	// WorkerESProcessorNumOfWorkers is num of workers for esProcessor
