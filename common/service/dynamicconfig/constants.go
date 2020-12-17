@@ -52,7 +52,6 @@ var keys = map[Key]string{
 
 	// system settings
 	EnableGlobalDomain:                  "system.enableGlobalDomain",
-	EnableNewKafkaClient:                "system.enableNewKafkaClient",
 	EnableVisibilitySampling:            "system.enableVisibilitySampling",
 	EnableReadFromClosedExecutionV2:     "system.enableReadFromClosedExecutionV2",
 	AdvancedVisibilityWritingMode:       "system.advancedVisibilityWritingMode",
@@ -73,7 +72,6 @@ var keys = map[Key]string{
 	EnableFailoverManager:               "system.enableFailoverManager",
 	EnableStickyQuery:                   "system.enableStickyQuery",
 	EnablePriorityTaskProcessor:         "system.enablePriorityTaskProcessor",
-	EnableAuthorization:                 "system.enableAuthorization",
 
 	// size limit
 	BlobSizeLimitError:      "limit.blobSize.error",
@@ -113,8 +111,6 @@ var keys = map[Key]string{
 	SearchAttributesSizeOfValueLimit:            "frontend.searchAttributesSizeOfValueLimit",
 	SearchAttributesTotalSizeLimit:              "frontend.searchAttributesTotalSizeLimit",
 	VisibilityArchivalQueryMaxPageSize:          "frontend.visibilityArchivalQueryMaxPageSize",
-	VisibilityArchivalQueryMaxRangeInDays:       "frontend.visibilityArchivalQueryMaxRangeInDays",
-	VisibilityArchivalQueryMaxQPS:               "frontend.visibilityArchivalQueryMaxQPS",
 	DomainFailoverRefreshInterval:               "frontend.domainFailoverRefreshInterval",
 	DomainFailoverRefreshTimerJitterCoefficient: "frontend.domainFailoverRefreshTimerJitterCoefficient",
 	FrontendErrorInjectionRate:                  "frontend.errorInjectionRate",
@@ -197,7 +193,6 @@ var keys = map[Key]string{
 	TimerTaskMaxRetryCount:                                "history.timerTaskMaxRetryCount",
 	TimerProcessorGetFailureRetryCount:                    "history.timerProcessorGetFailureRetryCount",
 	TimerProcessorCompleteTimerFailureRetryCount:          "history.timerProcessorCompleteTimerFailureRetryCount",
-	TimerProcessorUpdateShardTaskCount:                    "history.timerProcessorUpdateShardTaskCount",
 	TimerProcessorUpdateAckInterval:                       "history.timerProcessorUpdateAckInterval",
 	TimerProcessorUpdateAckIntervalJitterCoefficient:      "history.timerProcessorUpdateAckIntervalJitterCoefficient",
 	TimerProcessorCompleteTimerInterval:                   "history.timerProcessorCompleteTimerInterval",
@@ -219,7 +214,6 @@ var keys = map[Key]string{
 	TransferTaskWorkerCount:                               "history.transferTaskWorkerCount",
 	TransferTaskMaxRetryCount:                             "history.transferTaskMaxRetryCount",
 	TransferProcessorCompleteTransferFailureRetryCount:    "history.transferProcessorCompleteTransferFailureRetryCount",
-	TransferProcessorUpdateShardTaskCount:                 "history.transferProcessorUpdateShardTaskCount",
 	TransferProcessorMaxPollInterval:                      "history.transferProcessorMaxPollInterval",
 	TransferProcessorMaxPollIntervalJitterCoefficient:     "history.transferProcessorMaxPollIntervalJitterCoefficient",
 	TransferProcessorSplitQueueInterval:                   "history.transferProcessorSplitQueueInterval",
@@ -236,7 +230,6 @@ var keys = map[Key]string{
 	ReplicatorReadTaskMaxRetryCount:                       "history.replicatorReadTaskMaxRetryCount",
 	ReplicatorTaskMaxRetryCount:                           "history.replicatorTaskMaxRetryCount",
 	ReplicatorProcessorMaxPollRPS:                         "history.replicatorProcessorMaxPollRPS",
-	ReplicatorProcessorUpdateShardTaskCount:               "history.replicatorProcessorUpdateShardTaskCount",
 	ReplicatorProcessorMaxPollInterval:                    "history.replicatorProcessorMaxPollInterval",
 	ReplicatorProcessorMaxPollIntervalJitterCoefficient:   "history.replicatorProcessorMaxPollIntervalJitterCoefficient",
 	ReplicatorProcessorUpdateAckInterval:                  "history.replicatorProcessorUpdateAckInterval",
@@ -249,7 +242,6 @@ var keys = map[Key]string{
 	MaximumSignalsPerExecution:                            "history.maximumSignalsPerExecution",
 	ShardUpdateMinInterval:                                "history.shardUpdateMinInterval",
 	ShardSyncMinInterval:                                  "history.shardSyncMinInterval",
-	ShardSyncTimerJitterCoefficient:                       "history.shardSyncMinInterval",
 	DefaultEventEncoding:                                  "history.defaultEventEncoding",
 	EnableAdminProtection:                                 "history.enableAdminProtection",
 	AdminOperationToken:                                   "history.adminOperationToken",
@@ -302,13 +294,8 @@ var keys = map[Key]string{
 	WorkerESProcessorBulkActions:                             "worker.ESProcessorBulkActions",
 	WorkerESProcessorBulkSize:                                "worker.ESProcessorBulkSize",
 	WorkerESProcessorFlushInterval:                           "worker.ESProcessorFlushInterval",
-	EnableArchivalCompression:                                "worker.EnableArchivalCompression",
-	WorkerHistoryPageSize:                                    "worker.WorkerHistoryPageSize",
-	WorkerTargetArchivalBlobSize:                             "worker.WorkerTargetArchivalBlobSize",
 	WorkerArchiverConcurrency:                                "worker.ArchiverConcurrency",
 	WorkerArchivalsPerIteration:                              "worker.ArchivalsPerIteration",
-	WorkerDeterministicConstructionCheckProbability:          "worker.DeterministicConstructionCheckProbability",
-	WorkerBlobIntegrityCheckProbability:                      "worker.BlobIntegrityCheckProbability",
 	WorkerTimeLimitPerArchivalIteration:                      "worker.TimeLimitPerArchivalIteration",
 	WorkerThrottledLogRPS:                                    "worker.throttledLogRPS",
 	ScannerPersistenceMaxQPS:                                 "worker.scannerPersistenceMaxQPS",
@@ -354,8 +341,6 @@ const (
 
 	// EnableGlobalDomain is key for enable global domain
 	EnableGlobalDomain
-	// EnableNewKafkaClient is key for using New Kafka client
-	EnableNewKafkaClient
 	// EnableVisibilitySampling is key for enable visibility sampling
 	EnableVisibilitySampling
 	// EnableReadFromClosedExecutionV2 is key for enable read from cadence_visibility.closed_executions_v2
@@ -393,8 +378,6 @@ const (
 	DisallowQuery
 	// EnablePriorityTaskProcessor is the key for enabling priority task processor
 	EnablePriorityTaskProcessor
-	// EnableAuthorization is the key to enable authorization for a domain
-	EnableAuthorization
 
 	// BlobSizeLimitError is the per event blob size limit
 	BlobSizeLimitError
@@ -470,10 +453,6 @@ const (
 	SearchAttributesTotalSizeLimit
 	// VisibilityArchivalQueryMaxPageSize is the maximum page size for a visibility archival query
 	VisibilityArchivalQueryMaxPageSize
-	// VisibilityArchivalQueryMaxRangeInDays is the maximum number of days for a visibility archival query
-	VisibilityArchivalQueryMaxRangeInDays
-	// VisibilityArchivalQueryMaxQPS is the timeout for a visibility archival query
-	VisibilityArchivalQueryMaxQPS
 
 	// DomainFailoverRefreshInterval is the domain failover refresh timer
 	DomainFailoverRefreshInterval
@@ -638,8 +617,6 @@ const (
 	TimerProcessorGetFailureRetryCount
 	// TimerProcessorCompleteTimerFailureRetryCount is retry count for timer processor complete timer operation
 	TimerProcessorCompleteTimerFailureRetryCount
-	// TimerProcessorUpdateShardTaskCount is update shard count for timer processor
-	TimerProcessorUpdateShardTaskCount
 	// TimerProcessorUpdateAckInterval is update interval for timer processor
 	TimerProcessorUpdateAckInterval
 	// TimerProcessorUpdateAckIntervalJitterCoefficient is the update interval jitter coefficient
@@ -682,8 +659,6 @@ const (
 	TransferTaskMaxRetryCount
 	// TransferProcessorCompleteTransferFailureRetryCount is times of retry for failure
 	TransferProcessorCompleteTransferFailureRetryCount
-	// TransferProcessorUpdateShardTaskCount is update shard count for transferQueueProcessor
-	TransferProcessorUpdateShardTaskCount
 	// TransferProcessorMaxPollInterval max poll interval for transferQueueProcessor
 	TransferProcessorMaxPollInterval
 	// TransferProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
@@ -716,8 +691,6 @@ const (
 	ReplicatorTaskMaxRetryCount
 	// ReplicatorProcessorMaxPollRPS is max poll rate per second for ReplicatorProcessor
 	ReplicatorProcessorMaxPollRPS
-	// ReplicatorProcessorUpdateShardTaskCount is update shard count for ReplicatorProcessor
-	ReplicatorProcessorUpdateShardTaskCount
 	// ReplicatorProcessorMaxPollInterval is max poll interval for ReplicatorProcessor
 	ReplicatorProcessorMaxPollInterval
 	// ReplicatorProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
@@ -742,8 +715,6 @@ const (
 	ShardUpdateMinInterval
 	// ShardSyncMinInterval is the minimal time interval which the shard info should be sync to remote
 	ShardSyncMinInterval
-	// ShardSyncTimerJitterCoefficient is the sync shard jitter coefficient
-	ShardSyncTimerJitterCoefficient
 	// DefaultEventEncoding is the encoding type for history events
 	DefaultEventEncoding
 	// NumArchiveSystemWorkflows is key for number of archive system workflows running in total
@@ -787,8 +758,6 @@ const (
 	WorkerPersistenceMaxQPS
 	// WorkerPersistenceGlobalMaxQPS is the max qps worker cluster can query DB
 	WorkerPersistenceGlobalMaxQPS
-	// WorkerReplicationTaskMaxRetryDuration is the max retry duration for any task
-	WorkerReplicationTaskMaxRetryDuration
 	// WorkerIndexerConcurrency is the max concurrent messages to be processed at any given time
 	WorkerIndexerConcurrency
 	// WorkerESProcessorNumOfWorkers is num of workers for esProcessor
@@ -799,20 +768,10 @@ const (
 	WorkerESProcessorBulkSize
 	// WorkerESProcessorFlushInterval is flush interval for esProcessor
 	WorkerESProcessorFlushInterval
-	// EnableArchivalCompression indicates whether blobs are compressed before they are archived
-	EnableArchivalCompression
-	// WorkerHistoryPageSize indicates the page size of history fetched from persistence for archival
-	WorkerHistoryPageSize
-	// WorkerTargetArchivalBlobSize indicates the target blob size in bytes for archival, actual blob size may vary
-	WorkerTargetArchivalBlobSize
 	// WorkerArchiverConcurrency controls the number of coroutines handling archival work per archival workflow
 	WorkerArchiverConcurrency
 	// WorkerArchivalsPerIteration controls the number of archivals handled in each iteration of archival workflow
 	WorkerArchivalsPerIteration
-	// WorkerDeterministicConstructionCheckProbability controls the probability of running a deterministic construction check for any given archival
-	WorkerDeterministicConstructionCheckProbability
-	// WorkerBlobIntegrityCheckProbability controls the probability of running an integrity check for any given archival
-	WorkerBlobIntegrityCheckProbability
 	// WorkerTimeLimitPerArchivalIteration controls the time limit of each iteration of archival workflow
 	WorkerTimeLimitPerArchivalIteration
 	// WorkerThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
