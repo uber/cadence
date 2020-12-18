@@ -50,6 +50,16 @@ var keys = map[Key]string{
 	testGetBoolPropertyFilteredByDomainIDKey:         "testGetBoolPropertyFilteredByDomainIDKey",
 	testGetBoolPropertyFilteredByTaskListInfoKey:     "testGetBoolPropertyFilteredByTaskListInfoKey",
 
+	// used by internal repos, need to moved out of this repo
+	// TODO https://github.com/uber/cadence/issues/3861
+	EnableAuthorization:                             "system.enableAuthorization",
+	VisibilityArchivalQueryMaxRangeInDays:           "frontend.visibilityArchivalQueryMaxRangeInDays",
+	VisibilityArchivalQueryMaxQPS:                   "frontend.visibilityArchivalQueryMaxQPS",
+	EnableArchivalCompression:                       "worker.EnableArchivalCompression",
+	WorkerTargetArchivalBlobSize:                    "worker.WorkerTargetArchivalBlobSize",
+	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
+	WorkerBlobIntegrityCheckProbability:             "worker.BlobIntegrityCheckProbability",
+
 	// system settings
 	EnableGlobalDomain:                  "system.enableGlobalDomain",
 	EnableVisibilitySampling:            "system.enableVisibilitySampling",
@@ -339,6 +349,16 @@ const (
 	testGetDurationPropertyFilteredByTaskListInfoKey
 	testGetBoolPropertyFilteredByDomainIDKey
 	testGetBoolPropertyFilteredByTaskListInfoKey
+
+	// used by internal repos, need to moved out of this repo
+	// TODO https://github.com/uber/cadence/issues/3861
+	EnableAuthorization
+	VisibilityArchivalQueryMaxRangeInDays
+	VisibilityArchivalQueryMaxQPS
+	EnableArchivalCompression
+	WorkerTargetArchivalBlobSize
+	WorkerDeterministicConstructionCheckProbability
+	WorkerBlobIntegrityCheckProbability
 
 	// EnableGlobalDomain is key for enable global domain
 	EnableGlobalDomain
