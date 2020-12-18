@@ -56,7 +56,6 @@ var keys = map[Key]string{
 	VisibilityArchivalQueryMaxRangeInDays:           "frontend.visibilityArchivalQueryMaxRangeInDays",
 	VisibilityArchivalQueryMaxQPS:                   "frontend.visibilityArchivalQueryMaxQPS",
 	EnableArchivalCompression:                       "worker.EnableArchivalCompression",
-	WorkerTargetArchivalBlobSize:                    "worker.WorkerTargetArchivalBlobSize",
 	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
 	WorkerBlobIntegrityCheckProbability:             "worker.BlobIntegrityCheckProbability",
 
@@ -356,7 +355,6 @@ const (
 	VisibilityArchivalQueryMaxRangeInDays
 	VisibilityArchivalQueryMaxQPS
 	EnableArchivalCompression
-	WorkerTargetArchivalBlobSize
 	WorkerDeterministicConstructionCheckProbability
 	WorkerBlobIntegrityCheckProbability
 
