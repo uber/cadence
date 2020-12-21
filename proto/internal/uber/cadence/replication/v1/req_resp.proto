@@ -1,0 +1,85 @@
+// Copyright (c) 2020 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package uber.cadence.replication.v1;
+
+option go_package = "replicationpb";
+option java_multiple_files = true;
+option java_outer_classname = "ReplicationProto";
+option java_package = "com.uber.cadence.replication.v1";
+
+import "uber/cadence/replication/v1/messages.proto";
+
+message GetReplicationMessagesRequest {
+  repeated ReplicationToken tokens = 1;
+  string cluster_name = 2;
+}
+
+message GetReplicationMessagesResponse {
+  map<int32, ReplicationMessages> shard_messages = 1;
+}
+
+message GetDLQReplicationMessagesRequest {
+  repeated ReplicationTaskInfo task_infos = 1;
+}
+
+message GetDLQReplicationMessagesResponse {
+  repeated ReplicationTask replication_tasks = 1;
+}
+
+message ReadDLQMessagesRequest {
+  DLQType type = 1;
+  int32 shard_id = 2;
+  string source_cluster = 3;
+  int64 inclusive_end_message_id = 4;
+  int32 page_size = 5;
+  bytes next_page_token = 6;
+}
+
+message ReadDLQMessagesResponse {
+  DLQType type = 1;
+  repeated ReplicationTask replication_tasks = 2;
+  bytes next_page_token = 3;
+}
+
+message PurgeDLQMessagesRequest {
+  DLQType type = 1;
+  int32 shard_id = 2;
+  string source_cluster = 3;
+  int64 inclusive_end_message_id = 4;
+}
+
+message PurgeDLQMessagesResponse {
+}
+
+message MergeDLQMessagesRequest {
+  DLQType type = 1;
+  int32 shard_id = 2;
+  string source_cluster = 3;
+  int64 inclusive_end_message_id = 4;
+  int32 page_size = 5;
+  bytes next_page_token = 6;
+}
+
+message MergeDLQMessagesResponse {
+  bytes next_page_token = 1;
+}

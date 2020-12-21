@@ -1,0 +1,78 @@
+// Copyright (c) 2020 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package uber.cadence.api.v1;
+
+option go_package = "apiv1";
+option java_multiple_files = true;
+option java_outer_classname = "ApiProto";
+option java_package = "com.uber.cadence.api.v1";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "dependencies/gogoproto.proto";
+
+message DomainInfo {
+  string name = 1;
+  DomainStatus domain_status = 2;
+  string description = 3;
+  string owner_email = 4;
+  map<string, string> data = 5;
+  string uuid = 6;
+}
+
+message DomainConfiguration {
+  google.protobuf.Duration workflow_execution_retention_period = 1 [(gogoproto.stdduration) = true];
+  bool emit_metric = 2;
+  BadBinaries bad_binaries = 3;
+  ArchivalStatus history_archival_status = 4;
+  string history_archival_uri = 5;
+  ArchivalStatus visibility_archival_status = 6;
+  string visibility_archival_uri = 7;
+}
+
+message DomainReplicationConfiguration {
+  string cluster_name = 1;
+}
+
+message BadBinaries {
+  map<string, BadBinaryInfo> binaries = 1;
+}
+
+message BadBinaryInfo {
+  string reason = 1;
+  string operator = 2;
+  google.protobuf.Timestamp created_time = 3 [(gogoproto.stdtime) = true];
+}
+
+enum DomainStatus {
+  DOMAIN_STATUS_INVALID = 0;
+  DOMAIN_STATUS_REGISTERED = 1;
+  DOMAIN_STATUS_DEPRECATED = 2;
+  DOMAIN_STATUS_DELETED = 3;
+}
+
+enum ArchivalStatus {
+  ARCHIVAL_STATUS_INVALID = 0;
+  ARCHIVAL_STATUS_DISABLED = 1;
+  ARCHIVAL_STATUS_ENABLED = 2;
+}
