@@ -23,9 +23,6 @@ syntax = "proto3";
 package uber.cadence.replication.v1;
 
 option go_package = "replicationpb";
-option java_multiple_files = true;
-option java_outer_classname = "ReplicationProto";
-option java_package = "com.uber.cadence.replication.v1";
 
 import "google/protobuf/timestamp.proto";
 import "dependencies/gogoproto.proto";

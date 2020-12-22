@@ -23,9 +23,6 @@ syntax = "proto3";
 package uber.cadence.indexer.v1;
 
 option go_package = "indexerv1";
-option java_multiple_files = true;
-option java_outer_classname = "IndexerProto";
-option java_package = "com.uber.cadence.indexer.v1";
 
 message Message {
   MessageType message_type = 1;
