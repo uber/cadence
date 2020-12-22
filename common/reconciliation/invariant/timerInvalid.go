@@ -118,13 +118,13 @@ func (h *TimerInvalid) Fix(
 		return *fixResult
 	}
 
-	timer, ok := e.(*entity.Timer)
+	timer, _ := e.(*entity.Timer)
 
-	if !ok {
+	if timer.TaskType != persistence.TaskTypeUserTimer {
 		return FixResult{
 			FixResultType: FixResultTypeSkipped,
 			InvariantName: h.Name(),
-			Info:          "entity is not a timer",
+			Info:          "timer is not a TaskTypeUserTimer",
 		}
 	}
 

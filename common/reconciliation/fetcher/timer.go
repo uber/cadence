@@ -39,10 +39,10 @@ func TimerIterator(
 	maxTimestamp time.Time,
 	pageSize int,
 ) pagination.Iterator {
-	return pagination.NewIterator(ctx, nil, getTimers(retryer, minTimestamp, maxTimestamp, pageSize))
+	return pagination.NewIterator(ctx, nil, getUserTimers(retryer, minTimestamp, maxTimestamp, pageSize))
 }
 
-func getTimers(
+func getUserTimers(
 	pr persistence.Retryer,
 	minTimestamp time.Time,
 	maxTimestamp time.Time,
@@ -62,8 +62,14 @@ func getTimers(
 		if err != nil {
 			return pagination.Page{}, err
 		}
-		timers := make([]pagination.Entity, len(resp.Timers), len(resp.Timers))
-		for i, t := range resp.Timers {
+
+		var timers []pagination.Entity
+
+		for _, t := range resp.Timers {
+			if t.GetTaskType() != persistence.TaskTypeUserTimer {
+				continue
+			}
+
 			timer := &entity.Timer{
 				ShardID:             pr.GetShardID(),
 				DomainID:            t.DomainID,
@@ -76,7 +82,7 @@ func getTimers(
 			if err := timer.Validate(); err != nil {
 				return pagination.Page{}, err
 			}
-			timers[i] = timer
+			timers = append(timers, timer)
 		}
 		var nextToken interface{} = resp.NextPageToken
 		if len(resp.NextPageToken) == 0 {
