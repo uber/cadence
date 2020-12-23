@@ -1,4 +1,5 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -172,7 +173,13 @@ writerLoop:
 				}
 
 				r, err := w.tlMgr.db.CreateTasks(tasks)
-				if err != nil {
+				switch err.(type) {
+				case nil:
+					// Do nothing
+				case *persistence.ConditionFailedError:
+					// Stop and reload task list manager
+					w.tlMgr.Stop()
+				default:
 					w.logger.Error("Persistent store operation failure",
 						tag.StoreOperationCreateTasks,
 						tag.Error(err),
