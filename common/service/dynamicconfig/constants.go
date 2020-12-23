@@ -349,13 +349,20 @@ const (
 	testGetBoolPropertyFilteredByDomainIDKey
 	testGetBoolPropertyFilteredByTaskListInfoKey
 
-	// used by internal repos, need to moved out of this repo
-	// TODO https://github.com/uber/cadence/issues/3861
+	// TODO: following configs are used by internal repo, need to moved out of this repo
+	// https://github.com/uber/cadence/issues/3861
+
+	// EnableAuthorization is the key to enable authorization for a domain
 	EnableAuthorization
+	// VisibilityArchivalQueryMaxRangeInDays is the maximum number of days for a visibility archival query
 	VisibilityArchivalQueryMaxRangeInDays
+	// VisibilityArchivalQueryMaxQPS is the timeout for a visibility archival query
 	VisibilityArchivalQueryMaxQPS
+	// EnableArchivalCompression indicates whether blobs are compressed before they are archived
 	EnableArchivalCompression
+	// WorkerDeterministicConstructionCheckProbability controls the probability of running a deterministic construction check for any given archival
 	WorkerDeterministicConstructionCheckProbability
+	// WorkerBlobIntegrityCheckProbability controls the probability of running an integrity check for any given archival
 	WorkerBlobIntegrityCheckProbability
 
 	// EnableGlobalDomain is key for enable global domain
