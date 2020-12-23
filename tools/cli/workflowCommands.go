@@ -1450,7 +1450,7 @@ func getWorkflowStatus(statusStr string) s.WorkflowExecutionCloseStatus {
 		return status
 	}
 	ErrorAndExit(optionErr, errors.New("option status is not one of allowed values "+
-		"[completed, failed, canceled, terminated, continueasnew, timedout]"))
+		"[completed, failed, canceled, terminated, continued_as_new, timed_out]"))
 	return 0
 }
 
