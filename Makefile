@@ -127,23 +127,23 @@ copyright: cmd/tools/copyright/licensegen.go
 
 cadence-cassandra-tool: $(TOOLS_SRC)
 	@echo "compiling cadence-cassandra-tool with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -o cadence-cassandra-tool cmd/tools/cassandra/main.go
+	go build -ldflags '-w' -o cadence-cassandra-tool cmd/tools/cassandra/main.go
 
 cadence-sql-tool: $(TOOLS_SRC)
 	@echo "compiling cadence-sql-tool with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -o cadence-sql-tool cmd/tools/sql/main.go
+	go build -ldflags '-w' o cadence-sql-tool cmd/tools/sql/main.go
 
 cadence: $(TOOLS_SRC)
 	@echo "compiling cadence with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -o cadence cmd/tools/cli/main.go
+	go build -ldflags '-w' -o cadence cmd/tools/cli/main.go
 
 cadence-server: $(ALL_SRC)
 	@echo "compiling cadence-server with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -ldflags '$(GO_BUILD_LDFLAGS)' -o cadence-server cmd/server/main.go
+	go build -ldflags '-w $(GO_BUILD_LDFLAGS)' -o cadence-server cmd/server/main.go
 
 cadence-canary: $(ALL_SRC)
 	@echo "compiling cadence-canary with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -o cadence-canary cmd/canary/main.go
+	go build -ldflags '-w' -o cadence-canary cmd/canary/main.go
 
 go-generate-format: go-generate fmt
 
