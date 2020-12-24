@@ -131,7 +131,7 @@ cadence-cassandra-tool: $(TOOLS_SRC)
 
 cadence-sql-tool: $(TOOLS_SRC)
 	@echo "compiling cadence-sql-tool with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -ldflags '-w' o cadence-sql-tool cmd/tools/sql/main.go
+	go build -ldflags '-w' -o cadence-sql-tool cmd/tools/sql/main.go
 
 cadence: $(TOOLS_SRC)
 	@echo "compiling cadence with OS: $(GOOS), ARCH: $(GOARCH)"
