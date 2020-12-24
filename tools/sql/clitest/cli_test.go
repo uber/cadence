@@ -26,8 +26,9 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
-	"github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres"
 )
+
+// TODO: Setup postgres test in build-kite
 
 func TestMySQLConnTestSuite(t *testing.T) {
 	suite.Run(t, NewSQLConnTestSuite(mysql.PluginName))
@@ -47,24 +48,4 @@ func TestMySQLUpdateSchemaTestSuite(t *testing.T) {
 
 func TestMySQLVersionTestSuite(t *testing.T) {
 	suite.Run(t, NewVersionTestSuite(mysql.PluginName))
-}
-
-func TestPostGreSQLConnTestSuite(t *testing.T) {
-	suite.Run(t, NewSQLConnTestSuite(postgres.PluginName))
-}
-
-func TestPostGreSQLHandlerTestSuite(t *testing.T) {
-	suite.Run(t, NewHandlerTestSuite(postgres.PluginName))
-}
-
-func TestPostGreSQLSetupSchemaTestSuite(t *testing.T) {
-	suite.Run(t, NewSetupSchemaTestSuite(postgres.PluginName))
-}
-
-func TestPostGreSQLUpdateSchemaTestSuite(t *testing.T) {
-	suite.Run(t, NewUpdateSchemaTestSuite(postgres.PluginName))
-}
-
-func TestPostGreSQLVersionTestSuite(t *testing.T) {
-	suite.Run(t, NewVersionTestSuite(postgres.PluginName))
 }
