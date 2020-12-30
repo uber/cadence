@@ -3248,7 +3248,7 @@ func (e *historyEngineImpl) ReadDLQMessages(
 	request *types.ReadDLQMessagesRequest,
 ) (*types.ReadDLQMessagesResponse, error) {
 
-	tasks, token, err := e.replicationDLQHandler.ReadMessages(
+	tasks, taskInfo, token, err := e.replicationDLQHandler.ReadMessages(
 		ctx,
 		request.GetSourceCluster(),
 		request.GetInclusiveEndMessageID(),
@@ -3259,9 +3259,10 @@ func (e *historyEngineImpl) ReadDLQMessages(
 		return nil, err
 	}
 	return &types.ReadDLQMessagesResponse{
-		Type:             request.GetType().Ptr(),
-		ReplicationTasks: tasks,
-		NextPageToken:    token,
+		Type:                 request.GetType().Ptr(),
+		ReplicationTasks:     tasks,
+		ReplicationTasksInfo: taskInfo,
+		NextPageToken:        token,
 	}, nil
 }
 
