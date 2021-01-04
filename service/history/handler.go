@@ -49,7 +49,7 @@ import (
 	"github.com/uber/cadence/service/history/task"
 )
 
-//go:generate mockgen -copyright_file=../../LICENSE -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package history github.com/uber/cadence/service/history Handler
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package history github.com/uber/cadence/service/history Handler
 
 type (
 	// Handler interface for history service
