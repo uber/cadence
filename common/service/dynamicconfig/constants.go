@@ -233,6 +233,7 @@ var keys = map[Key]string{
 	TransferProcessorMaxRedispatchQueueSize:               "history.transferProcessorMaxRedispatchQueueSize",
 	TransferProcessorEnablePriorityTaskProcessor:          "history.transferProcessorEnablePriorityTaskProcessor",
 	TransferProcessorEnableMultiCurosrProcessor:           "history.transferProcessorEnableMultiCursorProcessor",
+	TransferProcessorEnableValidator:                      "history.transferProcessorEnableValidator",
 	TransferProcessorVisibilityArchivalTimeLimit:          "history.transferProcessorVisibilityArchivalTimeLimit",
 	ReplicatorTaskBatchSize:                               "history.replicatorTaskBatchSize",
 	ReplicatorTaskWorkerCount:                             "history.replicatorTaskWorkerCount",
@@ -698,6 +699,8 @@ const (
 	TransferProcessorEnablePriorityTaskProcessor
 	// TransferProcessorEnableMultiCurosrProcessor indicates whether multi-cursor queue processor should be used for transferQueueProcessor
 	TransferProcessorEnableMultiCurosrProcessor
+	// TransferProcessorEnableValidator indicates whether validator should be enabled for transferQueueProcessor
+	TransferProcessorEnableValidator
 	// TransferProcessorVisibilityArchivalTimeLimit is the upper time limit for archiving visibility records
 	TransferProcessorVisibilityArchivalTimeLimit
 	// ReplicatorTaskBatchSize is batch size for ReplicatorProcessor

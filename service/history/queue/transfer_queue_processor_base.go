@@ -70,6 +70,9 @@ type (
 		lastSplitTime           time.Time
 		lastMaxReadLevel        int64
 		estimatedTasksPerMinute int64
+
+		// for validating if the queue failed to load any tasks
+		validator *transferQueueValidator
 	}
 )
 
@@ -105,7 +108,7 @@ func newTransferQueueProcessorBase(
 		queueType = task.QueueTypeStandbyTransfer
 	}
 
-	return &transferQueueProcessorBase{
+	transferQueueProcessorBase := &transferQueueProcessorBase{
 		processorBase: processorBase,
 
 		taskInitializer: func(taskInfo task.Info) task.Task {
@@ -131,6 +134,17 @@ func newTransferQueueProcessorBase(
 		lastSplitTime:    time.Time{},
 		lastMaxReadLevel: 0,
 	}
+
+	if options.EnableValidator() {
+		transferQueueProcessorBase.validator = newTransferQueueValidator(
+			transferQueueProcessorBase,
+			shard.GetTimeSource(),
+			logger,
+			metricsClient.Scope(options.MetricScope),
+		)
+	}
+
+	return transferQueueProcessorBase
 }
 
 func (t *transferQueueProcessorBase) Start() {
@@ -169,10 +183,18 @@ func (t *transferQueueProcessorBase) Stop() {
 	t.redispatcher.Stop()
 }
 
-func (t *transferQueueProcessorBase) notifyNewTask() {
+func (t *transferQueueProcessorBase) notifyNewTask(
+	executionInfo *persistence.WorkflowExecutionInfo,
+	transferTasks []persistence.Task,
+) {
 	select {
 	case t.notifyCh <- struct{}{}:
 	default:
+	}
+
+	if executionInfo != nil && t.validator != nil {
+		// executionInfo will be nil when notifyNewTask is called to trigger a scan, for example during domain failover or sync shard.
+		t.validator.recordTasks(executionInfo, transferTasks)
 	}
 }
 
@@ -350,8 +372,11 @@ func (t *transferQueueProcessorBase) processQueueCollections(levels map[int]stru
 			newReadLevel = newTransferTaskKey(transferTaskInfos[len(transferTaskInfos)-1].GetTaskID())
 		}
 		queueCollection.AddTasks(tasks, newReadLevel)
-		newActiveQueue := queueCollection.ActiveQueue()
+		if t.validator != nil {
+			t.validator.loadedTasks(level, readLevel, newReadLevel, tasks)
+		}
 
+		newActiveQueue := queueCollection.ActiveQueue()
 		if more || (newActiveQueue != nil && newActiveQueue != activeQueue) {
 			// more tasks for the current active queue or the active queue has changed
 			if level != defaultProcessingQueueLevel && taskChFull {
@@ -473,6 +498,7 @@ func newTransferQueueProcessorOptions(
 		SplitQueueIntervalJitterCoefficient:  config.TransferProcessorSplitQueueIntervalJitterCoefficient,
 		PollBackoffInterval:                  config.QueueProcessorPollBackoffInterval,
 		PollBackoffIntervalJitterCoefficient: config.QueueProcessorPollBackoffIntervalJitterCoefficient,
+		EnableValidator:                      config.TransferProcessorEnableValidator,
 	}
 
 	if isFailover {
