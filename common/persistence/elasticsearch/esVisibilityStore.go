@@ -575,7 +575,7 @@ func getCustomizedDSLFromSQL(sql string, domainID string) (*fastjson.Value, erro
 		addQueryForExecutionTime(dsl)
 	}
 	addDomainToQuery(dsl, domainID)
-	if err := processAllValuesForKey(dsl, combinedKeyFilter, combinedProcessFunc); err != nil {
+	if err := processAllValuesForKey(dsl, isCombinedKey, combinedProcessFunc); err != nil {
 		return nil, err
 	}
 	return dsl, nil
@@ -782,7 +782,9 @@ func checkPageSize(request *p.ListWorkflowExecutionsByQueryRequest) {
 	}
 }
 
-func processAllValuesForKey(dsl *fastjson.Value, keyFilter func(k string) bool,
+func processAllValuesForKey(
+	dsl *fastjson.Value,
+	keyFilter func(k string) bool,
 	processFunc func(obj *fastjson.Object, key string, v *fastjson.Value) error,
 ) error {
 	switch dsl.Type() {
@@ -817,23 +819,23 @@ func processAllValuesForKey(dsl *fastjson.Value, keyFilter func(k string) bool,
 	return nil
 }
 
-func combinedKeyFilter(key string) bool {
-	return timeKeyFilter(key) || closeStatusKeyFilter(key)
+func isCombinedKey(key string) bool {
+	return isTimeKey(key) || isCloseStatusKey(key)
 }
 
 func combinedProcessFunc(obj *fastjson.Object, key string, value *fastjson.Value) error {
-	if timeKeyFilter(key) {
+	if isTimeKey(key) {
 		return timeProcessFunc(obj, key, value)
 	}
 
-	if closeStatusKeyFilter(key) {
+	if isCloseStatusKey(key) {
 		return closeStatusProcessFunc(obj, key, value)
 	}
 
 	return fmt.Errorf("unknown es dsl key %v for processing value", key)
 }
 
-func timeKeyFilter(key string) bool {
+func isTimeKey(key string) bool {
 	return timeKeys[key]
 }
 
@@ -859,7 +861,7 @@ func timeProcessFunc(obj *fastjson.Object, key string, value *fastjson.Value) er
 	})
 }
 
-func closeStatusKeyFilter(key string) bool {
+func isCloseStatusKey(key string) bool {
 	return key == es.CloseStatus
 }
 
