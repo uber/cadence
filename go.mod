@@ -14,6 +14,7 @@ require (
 	github.com/cch123/elasticsql v0.0.0-20190321073543-a1a440758eb9
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2
+	github.com/dmarkham/enumer v1.5.1
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/emirpasic/gods v0.0.0-20190624094223-e689965507ab
 	github.com/fatih/color v0.0.0-20181010231311-3f9d52f7176a
