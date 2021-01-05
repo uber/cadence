@@ -110,12 +110,28 @@ func (s *server) startService() common.Daemon {
 	params.Logger = loggerimpl.NewLogger(s.cfg.Log.NewZapLogger())
 	params.PersistenceConfig = s.cfg.Persistence
 
+	clusterMetadata := s.cfg.ClusterMetadata
+
 	params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger.WithTags(tag.Service(params.Name)), s.doneC)
 	if err != nil {
 		log.Printf("error creating file based dynamic config client, use no-op config client instead. error: %v", err)
 		params.DynamicConfig = dynamicconfig.NewNopClient()
+	} else {
+		if enabledCachedClient, err := params.DynamicConfig.GetBoolValue(
+			dynamicconfig.EnableCachedDynamicConfigClient,
+			map[dynamicconfig.Filter]interface{}{
+				dynamicconfig.ClusterName: clusterMetadata.CurrentClusterName,
+			},
+			false,
+		); err == nil && enabledCachedClient {
+			log.Printf("creating cached dynamic config client")
+			params.DynamicConfig = dynamicconfig.NewCachedClient(
+				params.DynamicConfig,
+				dynamicconfig.DefaultRefreshInterval,
+				s.doneC,
+			)
+		}
 	}
-	clusterMetadata := s.cfg.ClusterMetadata
 	dc := dynamicconfig.NewCollection(
 		params.DynamicConfig,
 		params.Logger,

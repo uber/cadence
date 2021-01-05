@@ -216,12 +216,15 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	taskListName := request.TaskList.GetName()
 	taskListKind := request.TaskList.Kind
 
-	e.logger.Debug(
-		fmt.Sprintf("Received AddDecisionTask for taskList=%v, WorkflowID=%v, RunID=%v, ScheduleToStartTimeout=%v",
-			request.TaskList.GetName(),
-			request.Execution.GetWorkflowID(),
-			request.Execution.GetRunID(),
-			request.GetScheduleToStartTimeoutSeconds()))
+	e.emitInfoOrDebugLog(
+		domainID,
+		"Received AddDecisionTask",
+		tag.WorkflowDomainID(domainID),
+		tag.WorkflowID(request.Execution.GetWorkflowID()),
+		tag.WorkflowRunID(request.Execution.GetRunID()),
+		tag.WorkflowTaskListName(taskListName),
+		tag.WorkflowScheduleID(request.GetScheduleID()),
+	)
 
 	taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
 	if err != nil {
@@ -259,11 +262,15 @@ func (e *matchingEngineImpl) AddActivityTask(
 	taskListName := request.TaskList.GetName()
 	taskListKind := request.TaskList.Kind
 
-	e.logger.Debug(
-		fmt.Sprintf("Received AddActivityTask for taskList=%v WorkflowID=%v, RunID=%v",
-			taskListName,
-			request.Execution.WorkflowID,
-			request.Execution.RunID))
+	e.emitInfoOrDebugLog(
+		domainID,
+		"Received AddActivityTask",
+		tag.WorkflowDomainID(domainID),
+		tag.WorkflowID(request.Execution.GetWorkflowID()),
+		tag.WorkflowRunID(request.Execution.GetRunID()),
+		tag.WorkflowTaskListName(taskListName),
+		tag.WorkflowScheduleID(request.GetScheduleID()),
+	)
 
 	taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity)
 	if err != nil {
@@ -367,8 +374,15 @@ pollLoop:
 		if err != nil {
 			switch err.(type) {
 			case *types.EntityNotExistsError, *types.EventAlreadyStartedError:
-				e.logger.Debug(fmt.Sprintf("Duplicated decision task taskList=%v, taskID=%v",
-					taskListName, task.event.TaskID))
+				e.emitInfoOrDebugLog(
+					task.event.DomainID,
+					"Duplicated decision task",
+					tag.WorkflowDomainID(domainID),
+					tag.WorkflowID(task.event.WorkflowID),
+					tag.WorkflowRunID(task.event.RunID),
+					tag.WorkflowTaskListName(taskListName),
+					tag.WorkflowScheduleID(task.event.ScheduleID),
+				)
 				task.finish(nil)
 			default:
 				task.finish(err)
@@ -434,8 +448,15 @@ pollLoop:
 		if err != nil {
 			switch err.(type) {
 			case *types.EntityNotExistsError, *types.EventAlreadyStartedError:
-				e.logger.Debug(fmt.Sprintf("Duplicated activity task taskList=%v, taskID=%v",
-					taskListName, task.event.TaskID))
+				e.emitInfoOrDebugLog(
+					task.event.DomainID,
+					"Duplicated activity task",
+					tag.WorkflowDomainID(domainID),
+					tag.WorkflowID(task.event.WorkflowID),
+					tag.WorkflowRunID(task.event.RunID),
+					tag.WorkflowTaskListName(taskListName),
+					tag.WorkflowScheduleID(task.event.ScheduleID),
+				)
 				task.finish(nil)
 			default:
 				task.finish(err)
@@ -699,14 +720,14 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 		}
 		token, _ = e.tokenSerializer.SerializeQueryTaskToken(taskToken)
 	} else {
-		taskoken := &common.TaskToken{
+		taskToken := &common.TaskToken{
 			DomainID:        task.event.DomainID,
 			WorkflowID:      task.event.WorkflowID,
 			RunID:           task.event.RunID,
 			ScheduleID:      historyResponse.GetScheduledEventID(),
 			ScheduleAttempt: historyResponse.GetAttempt(),
 		}
-		token, _ = e.tokenSerializer.Serialize(taskoken)
+		token, _ = e.tokenSerializer.Serialize(taskToken)
 		if task.responseC == nil {
 			scope.RecordTimer(metrics.AsyncMatchLatencyPerTaskList, time.Since(task.event.CreatedTime))
 		}
@@ -844,6 +865,18 @@ func (e *matchingEngineImpl) emitForwardedFromStats(
 		scope.IncCounter(metrics.LocalToRemoteMatchPerTaskListCounter)
 	default:
 		scope.IncCounter(metrics.LocalToLocalMatchPerTaskListCounter)
+	}
+}
+
+func (e *matchingEngineImpl) emitInfoOrDebugLog(
+	domainID string,
+	msg string,
+	tags ...tag.Tag,
+) {
+	if e.config.EnableTaskInfoLogByDomainID(domainID) {
+		e.logger.Info(msg, tags...)
+	} else {
+		e.logger.Debug(msg, tags...)
 	}
 }
 

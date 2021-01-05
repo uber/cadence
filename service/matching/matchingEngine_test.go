@@ -114,6 +114,7 @@ func (s *matchingEngineSuite) SetupTest() {
 		&types.TaskList{common.StringPtr(matchingTestTaskList), &tlKindNormal},
 		metrics.NewClient(tally.NoopScope, metrics.Matching),
 		metrics.MatchingTaskListMgrScope,
+		loggerimpl.NewDevelopmentForTest(s.Suite),
 	)
 
 	s.matchingEngine = s.newMatchingEngine(defaultTestConfig(), s.taskManager)
