@@ -40,6 +40,8 @@ type Retryer interface {
 	DeleteWorkflowExecution(context.Context, *DeleteWorkflowExecutionRequest) error
 	DeleteCurrentWorkflowExecution(context.Context, *DeleteCurrentWorkflowExecutionRequest) error
 	GetShardID() int
+	GetTimerIndexTasks(context.Context, *GetTimerIndexTasksRequest) (*GetTimerIndexTasksResponse, error)
+	CompleteTimerTask(ctx context.Context, request *CompleteTimerTaskRequest) error
 }
 
 type (
@@ -198,4 +200,36 @@ func (pr *persistenceRetryer) DeleteCurrentWorkflowExecution(
 // GetShardID return shard id
 func (pr *persistenceRetryer) GetShardID() int {
 	return pr.execManager.GetShardID()
+}
+
+// GetTimerIndexTasks retries GetTimerIndexTasks
+func (pr *persistenceRetryer) GetTimerIndexTasks(
+	ctx context.Context,
+	req *GetTimerIndexTasksRequest,
+) (*GetTimerIndexTasksResponse, error) {
+	var resp *GetTimerIndexTasksResponse
+	op := func() error {
+		var err error
+		resp, err = pr.execManager.GetTimerIndexTasks(ctx, req)
+		return err
+	}
+	err := backoff.Retry(op, pr.policy, common.IsPersistenceTransientError)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+// CompleteTimerTask is a retryable version of CompleteTimerTask method
+func (pr *persistenceRetryer) CompleteTimerTask(
+	ctx context.Context,
+	request *CompleteTimerTaskRequest,
+) error {
+	op := func() error {
+		return pr.execManager.CompleteTimerTask(ctx, request)
+	}
+
+	return backoff.Retry(op, pr.policy, common.IsPersistenceTransientError)
 }

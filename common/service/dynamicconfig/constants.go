@@ -329,6 +329,15 @@ var keys = map[Key]string{
 	CurrentExecutionFixerDomainAllow:                         "worker.currentExecutionFixerDomainAllow",
 	ConcreteExecutionFixerEnabled:                            "worker.concreteExecutionFixerEnabled",
 	CurrentExecutionFixerEnabled:                             "worker.currentExecutionFixerEnabled",
+	TimersScannerEnabled:                                     "worker.timersScannerEnabled",
+	TimersFixerEnabled:                                       "worker.timersFixerEnabled",
+	TimersScannerConcurrency:                                 "worker.timersScannerConcurrency",
+	TimersScannerPersistencePageSize:                         "worker.timersScannerPersistencePageSize",
+	TimersScannerBlobstoreFlushThreshold:                     "worker.timersScannerConcurrency",
+	TimersScannerActivityBatchSize:                           "worker.timersScannerBlobstoreFlushThreshold",
+	TimersScannerPeriodStart:                                 "worker.timersScannerPeriodStart",
+	TimersScannerPeriodEnd:                                   "worker.timersScannerPeriodEnd",
+	TimersFixerDomainAllow:                                   "worker.timersFixerDomainAllow",
 }
 
 const (
@@ -349,13 +358,20 @@ const (
 	testGetBoolPropertyFilteredByDomainIDKey
 	testGetBoolPropertyFilteredByTaskListInfoKey
 
-	// used by internal repos, need to moved out of this repo
-	// TODO https://github.com/uber/cadence/issues/3861
+	// TODO: following configs are used by internal repo, need to moved out of this repo
+	// https://github.com/uber/cadence/issues/3861
+
+	// EnableAuthorization is the key to enable authorization for a domain
 	EnableAuthorization
+	// VisibilityArchivalQueryMaxRangeInDays is the maximum number of days for a visibility archival query
 	VisibilityArchivalQueryMaxRangeInDays
+	// VisibilityArchivalQueryMaxQPS is the timeout for a visibility archival query
 	VisibilityArchivalQueryMaxQPS
+	// EnableArchivalCompression indicates whether blobs are compressed before they are archived
 	EnableArchivalCompression
+	// WorkerDeterministicConstructionCheckProbability controls the probability of running a deterministic construction check for any given archival
 	WorkerDeterministicConstructionCheckProbability
+	// WorkerBlobIntegrityCheckProbability controls the probability of running an integrity check for any given archival
 	WorkerBlobIntegrityCheckProbability
 
 	// EnableGlobalDomain is key for enable global domain
@@ -835,6 +851,24 @@ const (
 	ConcreteExecutionFixerDomainAllow
 	// CurrentExecutionFixerDomainAllow indicates which domains are allowed to be fixed by current fixer workflow
 	CurrentExecutionFixerDomainAllow
+	// TimersScannerEnabled indicates if timers scanner should be started as part of worker.Scanner
+	TimersScannerEnabled
+	// TimersFixerEnabled indicates if timers fixer should be started as part of worker.Scanner
+	TimersFixerEnabled
+	// TimersScannerConcurrency indicates the concurrency of timers scanner
+	TimersScannerConcurrency
+	// TimersScannerPersistencePageSize indicates the page size of timers persistence fetches in timers scanner.
+	TimersScannerPersistencePageSize
+	// TimersScannerBlobstoreFlushThreshold
+	TimersScannerBlobstoreFlushThreshold
+	// TimersScannerActivityBatchSize
+	TimersScannerActivityBatchSize
+	// TimersScannerPeriodStart indicates interval start for fetching scheduled timers
+	TimersScannerPeriodStart
+	// TimersScannerPeriodEnd indicates interval end for fetching scheduled timers
+	TimersScannerPeriodEnd
+	// TimersFixerDomainAllow indicates if domain is allowed to fix timers
+	TimersFixerDomainAllow
 	// ConcreteExecutionFixerEnabled indicates if concrete execution fixer workflow is enabled
 	ConcreteExecutionFixerEnabled
 	// CurrentExecutionFixerEnabled indicates if current execution fixer workflow is enabled

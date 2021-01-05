@@ -566,7 +566,7 @@ func getFlagsForListAll() []cli.Flag {
 		},
 		cli.StringFlag{
 			Name:  FlagWorkflowStatusWithAlias,
-			Usage: "Closed workflow status [completed, failed, canceled, terminated, continuedasnew, timedout]",
+			Usage: "Closed workflow status [completed, failed, canceled, terminated, continued_as_new, timed_out]",
 		},
 		cli.StringFlag{
 			Name: FlagListQueryWithAlias,
