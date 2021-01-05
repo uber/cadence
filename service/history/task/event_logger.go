@@ -85,7 +85,10 @@ func (e *eventLoggerImpl) DumpEvents(
 	eventIdx := e.nextEventIdx
 	for i := 0; i != len(e.events); i++ {
 		// dump all events in reverse order
-		eventIdx = (eventIdx - 1) % len(e.events)
+		eventIdx--
+		if eventIdx < 0 {
+			eventIdx = len(e.events) - 1
+		}
 
 		event := e.events[eventIdx]
 		if event == nil {
