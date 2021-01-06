@@ -24,13 +24,16 @@ import (
 	"context"
 	"sync"
 
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
 
 type handlerContext struct {
 	context.Context
-	scope metrics.Scope
+	scope  metrics.Scope
+	logger log.Logger
 }
 
 var stickyTaskListMetricTag = metrics.TaskListTag("__sticky__")
@@ -41,10 +44,12 @@ func newHandlerContext(
 	taskList *types.TaskList,
 	metricsClient metrics.Client,
 	metricsScope int,
+	logger log.Logger,
 ) *handlerContext {
 	return &handlerContext{
 		Context: ctx,
 		scope:   newPerTaskListScope(domain, taskList.GetName(), taskList.GetKind(), metricsClient, metricsScope),
+		logger:  logger.WithTags(tag.WorkflowDomainName(domain), tag.WorkflowTaskListName(taskList.GetName())),
 	}
 }
 
@@ -87,6 +92,7 @@ func (reqCtx *handlerContext) handleErr(err error) error {
 	switch err.(type) {
 	case *types.InternalServiceError:
 		scope.IncCounter(metrics.CadenceFailuresPerTaskList)
+		reqCtx.logger.Error("Internal service error", tag.Error(err))
 		return err
 	case *types.BadRequestError:
 		scope.IncCounter(metrics.CadenceErrBadRequestPerTaskListCounter)
@@ -117,6 +123,7 @@ func (reqCtx *handlerContext) handleErr(err error) error {
 		return err
 	default:
 		scope.IncCounter(metrics.CadenceFailuresPerTaskList)
+		reqCtx.logger.Error("Uncategorized error", tag.Error(err))
 		return &types.InternalServiceError{Message: err.Error()}
 	}
 }

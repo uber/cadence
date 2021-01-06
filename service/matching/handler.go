@@ -126,6 +126,7 @@ func (h *handlerImpl) newHandlerContext(
 		taskList,
 		h.metricsClient,
 		scope,
+		h.GetLogger(),
 	)
 }
 
@@ -376,6 +377,7 @@ func (h *handlerImpl) ListTaskListPartitions(
 		request.GetTaskList(),
 		h.metricsClient,
 		metrics.MatchingListTaskListPartitionsScope,
+		h.GetLogger(),
 	)
 
 	sw := hCtx.startProfiling(&h.startWG)
