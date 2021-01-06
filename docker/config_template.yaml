@@ -194,31 +194,31 @@ services:
         {{- end }}
 
 clusterMetadata:
-    enableGlobalDomain: false
+    enableGlobalDomain: {{ default .Env.ENABLE_GLOBAL_DOMAIN false }}
     failoverVersionIncrement: 10
-    masterClusterName: "active"
-    currentClusterName: "active"
+    masterClusterName: "master"
+    currentClusterName: "master"
     clusterInformation:
-        active:
+        master:
             enabled: true
             initialFailoverVersion: 0
             rpcName: "cadence-frontend"
             rpcAddress: "127.0.0.1:7933"
 
 dcRedirectionPolicy:
-    policy: "noop"
+    policy: {{ default .Env.DC_REDIRECT_POLICY "selected-apis-forwarding" }}
     toDC: ""
 
 archival:
   history:
-    status: "enabled"
+    status: {{ default .Env.HISTORY_ARCHIVAL "disabled" }}
     enableRead: true
     provider:
       filestore:
         fileMode: "0666"
         dirMode: "0766"
   visibility:
-    status: "enabled"
+    status: {{ default .Env.VISIBILITY_ARCHIVAL "disabled" }}
     enableRead: true
     provider:
       filestore:
@@ -228,10 +228,10 @@ archival:
 domainDefaults:
   archival:
     history:
-      status: "enabled"
+      status: {{ default .Env.HISTORY_ARCHIVAL "disabled" }}
       URI: "file:///tmp/cadence_archival/development"
     visibility:
-      status: "enabled"
+      status: {{ default .Env.VISIBILITY_ARCHIVAL "disabled" }}
       URI: "file:///tmp/cadence_vis_archival/development"
 
 kafka:
@@ -260,4 +260,4 @@ dynamicConfigClient:
 
 blobstore:
   filestore:
-    outputDirectory: "/tmp/blobstore"
+    outputDirectory: {{ default .Env.FILE_BLOB_STORE_OUTPUT_DIRECTYORY "/tmp/blobstore" }}
