@@ -50,8 +50,13 @@ message DomainConfiguration {
   string visibility_archival_uri = 7;
 }
 
-message DomainReplicationConfiguration {
+message ClusterReplicationConfiguration {
   string cluster_name = 1;
+}
+
+message DomainReplicationConfiguration {
+  string active_cluster_name = 1;
+  repeated ClusterReplicationConfiguration clusters = 2;
 }
 
 message BadBinaries {
