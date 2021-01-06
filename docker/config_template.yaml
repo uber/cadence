@@ -194,7 +194,7 @@ services:
         {{- end }}
 
 clusterMetadata:
-    enableGlobalDomain: {{ default .Env.ENABLE_GLOBAL_DOMAIN false }}
+    enableGlobalDomain: {{ default .Env.ENABLE_GLOBAL_DOMAIN "false" }}
     failoverVersionIncrement: 10
     masterClusterName: "master"
     currentClusterName: "master"
