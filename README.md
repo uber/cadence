@@ -29,6 +29,7 @@ For [manual setup or upgrading](docs/persistence.md) server schema --
 
 TIPS: Run `make tools` to build all tools mentioned above. 
 > NOTE: See [CONTRIBUTING](docs/setup/CONTRIBUTING.md) for prerequisite of make command. 
+
 ### Use Cadence Web
 
 Try out [Cadence Web UI](https://github.com/uber/cadence-web) to view your workflows on Cadence.
