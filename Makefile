@@ -142,7 +142,7 @@ proto-compile:
 	$(foreach PROTO_DIR, $(PROTO_DIRS), \
 		protoc \
 			-I=$(PROTO_ROOT)/public -I=$(PROTO_ROOT)/internal \
-			--gogoslick_out=plugins=grpc,paths=source_relative:$(PROTO_OUT) \
+			--gogoslick_out=Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,plugins=grpc,paths=source_relative:$(PROTO_OUT) \
 			$(PROTO_DIR)*.proto \
 		$(NEWLINE))
 

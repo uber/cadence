@@ -39,9 +39,9 @@ import (
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	github_com_gogo_protobuf_types "github.com/gogo/protobuf/types"
+	types "github.com/gogo/protobuf/types"
 	_ "github.com/golang/protobuf/ptypes/duration"
 	_ "github.com/golang/protobuf/ptypes/timestamp"
-	wrappers "github.com/golang/protobuf/ptypes/wrappers"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -156,7 +156,7 @@ func (m *TaskList) GetKind() TaskListKind {
 }
 
 type TaskListMetadata struct {
-	MaxTasksPerSecond *wrappers.DoubleValue `protobuf:"bytes,1,opt,name=max_tasks_per_second,json=maxTasksPerSecond,proto3" json:"max_tasks_per_second,omitempty"`
+	MaxTasksPerSecond *types.DoubleValue `protobuf:"bytes,1,opt,name=max_tasks_per_second,json=maxTasksPerSecond,proto3" json:"max_tasks_per_second,omitempty"`
 }
 
 func (m *TaskListMetadata) Reset()      { *m = TaskListMetadata{} }
@@ -191,7 +191,7 @@ func (m *TaskListMetadata) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_TaskListMetadata proto.InternalMessageInfo
 
-func (m *TaskListMetadata) GetMaxTasksPerSecond() *wrappers.DoubleValue {
+func (m *TaskListMetadata) GetMaxTasksPerSecond() *types.DoubleValue {
 	if m != nil {
 		return m.MaxTasksPerSecond
 	}
@@ -1315,7 +1315,7 @@ func (this *TaskListMetadata) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&TaskListMetadata{`,
-		`MaxTasksPerSecond:` + strings.Replace(fmt.Sprintf("%v", this.MaxTasksPerSecond), "DoubleValue", "wrappers.DoubleValue", 1) + `,`,
+		`MaxTasksPerSecond:` + strings.Replace(fmt.Sprintf("%v", this.MaxTasksPerSecond), "DoubleValue", "types.DoubleValue", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -1550,7 +1550,7 @@ func (m *TaskListMetadata) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.MaxTasksPerSecond == nil {
-				m.MaxTasksPerSecond = &wrappers.DoubleValue{}
+				m.MaxTasksPerSecond = &types.DoubleValue{}
 			}
 			if err := m.MaxTasksPerSecond.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
