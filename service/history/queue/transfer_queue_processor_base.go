@@ -139,6 +139,7 @@ func newTransferQueueProcessorBase(
 		transferQueueProcessorBase.validator = newTransferQueueValidator(
 			transferQueueProcessorBase,
 			shard.GetTimeSource(),
+			options.ValidationInterval,
 			logger,
 			metricsClient.Scope(options.MetricScope),
 		)
@@ -194,7 +195,7 @@ func (t *transferQueueProcessorBase) notifyNewTask(
 
 	if executionInfo != nil && t.validator != nil {
 		// executionInfo will be nil when notifyNewTask is called to trigger a scan, for example during domain failover or sync shard.
-		t.validator.recordTasks(executionInfo, transferTasks)
+		t.validator.addTasks(executionInfo, transferTasks)
 	}
 }
 
@@ -373,7 +374,7 @@ func (t *transferQueueProcessorBase) processQueueCollections(levels map[int]stru
 		}
 		queueCollection.AddTasks(tasks, newReadLevel)
 		if t.validator != nil {
-			t.validator.loadedTasks(level, readLevel, newReadLevel, tasks)
+			t.validator.ackTasks(level, readLevel, newReadLevel, tasks)
 		}
 
 		newActiveQueue := queueCollection.ActiveQueue()
@@ -499,6 +500,7 @@ func newTransferQueueProcessorOptions(
 		PollBackoffInterval:                  config.QueueProcessorPollBackoffInterval,
 		PollBackoffIntervalJitterCoefficient: config.QueueProcessorPollBackoffIntervalJitterCoefficient,
 		EnableValidator:                      config.TransferProcessorEnableValidator,
+		ValidationInterval:                   config.TransferProcessorValidationInterval,
 	}
 
 	if isFailover {

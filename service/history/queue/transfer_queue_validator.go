@@ -1,6 +1,4 @@
-// The MIT License (MIT)
-
-// Copyright (c) 2017-2020 Uber Technologies Inc.
+// Copyright (c) 2017-2021 Uber Technologies Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -33,11 +31,11 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/task"
 )
 
 const (
-	defaultValidateDuration    = 30 * time.Second
 	defaultMaxPendingTasksSize = 5000
 )
 
@@ -55,15 +53,17 @@ type (
 		logger       log.Logger
 		metricsScope metrics.Scope
 
-		pendingTaskInfos map[int64]pendingTaskInfo
-		nextReadLevel    map[int]task.Key
-		lastValidateTime time.Time
+		pendingTaskInfos   map[int64]pendingTaskInfo
+		maxReadLevels      map[int]task.Key
+		lastValidateTime   time.Time
+		validationInterval dynamicconfig.DurationPropertyFn
 	}
 )
 
 func newTransferQueueValidator(
 	processor *transferQueueProcessorBase,
 	timeSource clock.TimeSource,
+	validationInterval dynamicconfig.DurationPropertyFn,
 	logger log.Logger,
 	metricsScope metrics.Scope,
 ) *transferQueueValidator {
@@ -73,22 +73,26 @@ func newTransferQueueValidator(
 		logger:       logger,
 		metricsScope: metricsScope,
 
-		pendingTaskInfos: make(map[int64]pendingTaskInfo),
-		nextReadLevel:    make(map[int]task.Key),
-		lastValidateTime: timeSource.Now(),
+		pendingTaskInfos:   make(map[int64]pendingTaskInfo),
+		maxReadLevels:      make(map[int]task.Key),
+		lastValidateTime:   timeSource.Now(),
+		validationInterval: validationInterval,
 	}
 }
 
-func (v *transferQueueValidator) recordTasks(
+func (v *transferQueueValidator) addTasks(
 	executionInfo *persistence.WorkflowExecutionInfo,
 	tasks []persistence.Task,
 ) {
 	v.Lock()
 	defer v.Unlock()
 
-	if len(v.pendingTaskInfos) > defaultMaxPendingTasksSize {
+	numTaskToAdd := len(tasks)
+	if numTaskToAdd+len(v.pendingTaskInfos) > defaultMaxPendingTasksSize {
+		numTaskToAdd = defaultMaxPendingTasksSize - len(v.pendingTaskInfos)
 		var taskDump strings.Builder
-		for _, task := range tasks {
+		droppedTasks := tasks[numTaskToAdd:]
+		for _, task := range droppedTasks {
 			taskDump.WriteString(fmt.Sprintf("%+v\n", task))
 		}
 		v.logger.Warn(
@@ -99,11 +103,10 @@ func (v *transferQueueValidator) recordTasks(
 			tag.Key("dropped-transfer-tasks"),
 			tag.Value(taskDump.String()),
 		)
-		v.metricsScope.AddCounter(metrics.QueueValidatorDropTaskCounter, int64(len(tasks)))
-		return
+		v.metricsScope.AddCounter(metrics.QueueValidatorDropTaskCounter, int64(len(droppedTasks)))
 	}
 
-	for _, task := range tasks {
+	for _, task := range tasks[:numTaskToAdd] {
 		v.pendingTaskInfos[task.GetTaskID()] = pendingTaskInfo{
 			executionInfo: executionInfo,
 			task:          task,
@@ -111,10 +114,10 @@ func (v *transferQueueValidator) recordTasks(
 	}
 }
 
-func (v *transferQueueValidator) loadedTasks(
+func (v *transferQueueValidator) ackTasks(
 	queueLevel int,
 	readLevel task.Key,
-	nextReadLevel task.Key,
+	maxReadLevel task.Key,
 	loadedTasks map[task.Key]task.Task,
 ) {
 	v.Lock()
@@ -128,15 +131,15 @@ func (v *transferQueueValidator) loadedTasks(
 	}
 
 	if queueLevel == defaultProcessingQueueLevel {
-		if expectedReadLevel, ok := v.nextReadLevel[queueLevel]; ok && expectedReadLevel.Less(readLevel) {
+		if expectedReadLevel, ok := v.maxReadLevels[queueLevel]; ok && expectedReadLevel.Less(readLevel) {
 			// TODO: implement an event logger for queue processor and dump all events when this validation fails.
 			v.logger.Error("Transfer queue processor load request is not continuous")
 			v.metricsScope.IncCounter(metrics.QueueValidatorInvalidLoadCounter)
 		}
 	}
-	v.nextReadLevel[queueLevel] = nextReadLevel
+	v.maxReadLevels[queueLevel] = maxReadLevel
 
-	if v.timeSource.Now().After(v.lastValidateTime.Add(defaultValidateDuration)) {
+	if v.timeSource.Now().After(v.lastValidateTime.Add(v.validationInterval())) {
 		v.validatePendingTasks()
 		v.lastValidateTime = v.timeSource.Now()
 	}
@@ -155,6 +158,13 @@ func (v *transferQueueValidator) validatePendingTasks() {
 
 	// all pending tasks with taskID <= minReadLevel will never be loaded,
 	// log those tasks, emit metrics, and delete them from pending tasks
+	//
+	// NOTE: this may contain false positives as when the persistence operation for
+	// updating workflow execution times out, task notification will still be sent,
+	// but those tasks may not be persisted.
+	//
+	// As a result, when lost task metric is emitted, first check if there's corresponding
+	// persistence operation errors.
 	minReadTaskID := minReadLevel.(transferTaskKey).taskID
 	for taskID, taskInfo := range v.pendingTaskInfos {
 		if taskID <= minReadTaskID {

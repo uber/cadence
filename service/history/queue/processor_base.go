@@ -71,6 +71,7 @@ type (
 		EnablePersistQueueStates             dynamicconfig.BoolPropertyFn
 		EnableLoadQueueStates                dynamicconfig.BoolPropertyFn
 		EnableValidator                      dynamicconfig.BoolPropertyFn
+		ValidationInterval                   dynamicconfig.DurationPropertyFn
 		MetricScope                          int
 	}
 
