@@ -251,6 +251,11 @@ func WorkflowTaskListType(taskListType int) Tag {
 	return newInt("wf-task-list-type", taskListType)
 }
 
+// WorkflowTaskListKind returns tag for WorkflowTaskListKind
+func WorkflowTaskListKind(taskListKind int32) Tag {
+	return newInt32("wf-task-list-kind", taskListKind)
+}
+
 // WorkflowTaskListName returns tag for WorkflowTaskListName
 func WorkflowTaskListName(taskListName string) Tag {
 	return newStringTag("wf-task-list-name", taskListName)

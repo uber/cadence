@@ -228,14 +228,19 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	domainID := request.GetDomainUUID()
 	taskListName := request.TaskList.GetName()
 	taskListKind := request.TaskList.Kind
+	taskListType := persistence.TaskListTypeDecision
+
 	e.logger.Debug("Received AddDecisionTask",
 		tag.WorkflowTaskListName(request.TaskList.GetName()),
 		tag.WorkflowID(request.Execution.GetWorkflowID()),
 		tag.WorkflowRunID(request.Execution.GetRunID()),
 		tag.WorkflowDomainID(domainID),
+		tag.WorkflowTaskListType(taskListType),
+		tag.WorkflowScheduleID(request.GetScheduleID()),
+		tag.WorkflowTaskListKind(int32(request.GetTaskList().GetKind())),
 	)
 
-	taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeDecision)
+	taskList, err := newTaskListID(domainID, taskListName, taskListType)
 	if err != nil {
 		return false, err
 	}
@@ -267,29 +272,31 @@ func (e *matchingEngineImpl) AddActivityTask(
 	request *types.AddActivityTaskRequest,
 ) (bool, error) {
 	domainID := request.GetDomainUUID()
-	sourceDomainID := request.GetSourceDomainUUID()
 	taskListName := request.TaskList.GetName()
-	taskListKind := request.TaskList.Kind
+	taskListType := persistence.TaskListTypeActivity
 
 	e.logger.Debug("Received AddActivityTask",
 		tag.WorkflowTaskListName(taskListName),
 		tag.WorkflowID(request.Execution.GetWorkflowID()),
 		tag.WorkflowRunID(request.Execution.GetRunID()),
 		tag.WorkflowDomainID(domainID),
+		tag.WorkflowTaskListType(taskListType),
+		tag.WorkflowScheduleID(request.GetScheduleID()),
+		tag.WorkflowTaskListKind(int32(request.GetTaskList().GetKind())),
 	)
 
-	taskList, err := newTaskListID(domainID, taskListName, persistence.TaskListTypeActivity)
+	taskList, err := newTaskListID(domainID, taskListName, taskListType)
 	if err != nil {
 		return false, err
 	}
 
-	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
+	tlMgr, err := e.getTaskListManager(taskList, request.TaskList.Kind)
 	if err != nil {
 		return false, err
 	}
 
 	taskInfo := &persistence.TaskInfo{
-		DomainID:               sourceDomainID,
+		DomainID:               request.GetSourceDomainUUID(),
 		RunID:                  request.Execution.GetRunID(),
 		WorkflowID:             request.Execution.GetWorkflowID(),
 		ScheduleID:             request.GetScheduleID(),
