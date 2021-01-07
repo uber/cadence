@@ -419,7 +419,7 @@ message RespondDecisionTaskFailedResponse {
 
 message RecordActivityTaskHeartbeatRequest {
   string domain_id = 1;
-  RecordActivityTaskHeartbeatRequest request = 2;
+  api.v1.RecordActivityTaskHeartbeatRequest request = 2;
 }
 
 message RecordActivityTaskHeartbeatResponse {
