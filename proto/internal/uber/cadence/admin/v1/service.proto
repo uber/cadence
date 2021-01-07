@@ -258,7 +258,7 @@ message MergeDLQMessagesResponse {
 }
 
 message RefreshWorkflowTasksRequest {
-  string domain_id = 1;
+  string domain = 1;
   api.v1.WorkflowExecution execution = 2;
 }
 
