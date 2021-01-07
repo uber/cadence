@@ -117,7 +117,7 @@ message UpdateDomainResponse {
   DomainConfiguration configuration = 2;
   DomainReplicationConfiguration replication_configuration = 3;
   int64 failover_version = 4;
-  bool is_global_namespace = 5;
+  bool is_global_domain = 5;
 }
 
 message DeprecateDomainRequest {
