@@ -157,7 +157,7 @@ message DescribeQueueRequest {
 }
 
 message DescribeQueueResponse {
-  repeated string processing_queue_state = 1;
+  repeated string processing_queue_states = 1;
 }
 
 message GetWorkflowExecutionRawHistoryV2Request {
