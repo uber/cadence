@@ -22,7 +22,7 @@ syntax = "proto3";
 
 package uber.cadence.replication.v1;
 
-option go_package = "replicationpb";
+option go_package = "replicationv1";
 
 import "uber/cadence/replication/v1/messages.proto";
 
