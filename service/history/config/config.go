@@ -262,6 +262,8 @@ type Config struct {
 	// Allows worker to dispatch activity tasks through local tunnel after decisions are made. This is an performance optimization to skip activity scheduling efforts.
 	EnableActivityLocalDispatchByDomain dynamicconfig.BoolPropertyFnWithDomainFilter
 
+	ActivityMaxScheduleToStartTimeoutForRetry dynamicconfig.DurationPropertyFnWithDomainFilter
+
 	// Debugging configurations
 	EnableDebugMode             bool // note that this value is initialized once on service start
 	EnableTaskInfoLogByDomainID dynamicconfig.BoolPropertyFnWithDomainIDFilter
@@ -480,6 +482,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		EnableGracefulFailover:                     dc.GetBoolProperty(dynamicconfig.EnableGracefulFailover, false),
 
 		EnableActivityLocalDispatchByDomain: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableActivityLocalDispatchByDomain, false),
+
+		ActivityMaxScheduleToStartTimeoutForRetry: dc.GetDurationPropertyFilteredByDomain(dynamicconfig.ActivityMaxScheduleToStartTimeoutForRetry, 30*time.Minute),
 
 		EnableDebugMode:             dc.GetBoolProperty(dynamicconfig.EnableDebugMode, false)(),
 		EnableTaskInfoLogByDomainID: dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.HistoryEnableTaskInfoLogByDomainID, false),

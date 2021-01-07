@@ -298,6 +298,7 @@ var keys = map[Key]string{
 	EnableActivityLocalDispatchByDomain:                   "history.enableActivityLocalDispatchByDomain",
 	HistoryErrorInjectionRate:                             "history.errorInjectionRate",
 	HistoryEnableTaskInfoLogByDomainID:                    "history.enableTaskInfoLogByDomainID",
+	ActivityMaxScheduleToStartTimeoutForRetry:             "history.activityMaxScheduleToStartTimeoutForRetry",
 
 	WorkerPersistenceMaxQPS:                                  "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                            "worker.persistenceGlobalMaxQPS",
@@ -796,6 +797,9 @@ const (
 
 	// HistoryEnableTaskInfoLogByDomainID enables info level logs for decision/activity task based on the request domainID
 	HistoryEnableTaskInfoLogByDomainID
+
+	// ActivityMaxScheduleToStartTimeoutForRetry is the maximum value allowed when overwritting the schedule to start timeout for activities with retry policy
+	ActivityMaxScheduleToStartTimeoutForRetry
 
 	// key for worker
 
