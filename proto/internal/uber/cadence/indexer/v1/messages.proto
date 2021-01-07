@@ -26,7 +26,7 @@ option go_package = "indexerv1";
 
 message Message {
   MessageType message_type = 1;
-  string namespace_id = 2;
+  string domain_id = 2;
   string workflow_id = 3;
   string run_id = 4;
   int64 version = 5;

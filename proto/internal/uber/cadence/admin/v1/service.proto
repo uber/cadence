@@ -119,7 +119,7 @@ message DomainCacheInfo {
 message DescribeHistoryHostResponse {
   int32 number_of_shards = 1;
   repeated int32 shard_ids = 2;
-  DomainCacheInfo namespace_cache = 3;
+  DomainCacheInfo domain_cache = 3;
   string shard_controller_status = 4;
   string address = 5;
 }

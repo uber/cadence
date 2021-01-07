@@ -48,7 +48,7 @@ message ReplicationTask {
   int64 source_task_id = 2;
   google.protobuf.Timestamp creation_time = 3 [(gogoproto.stdtime) = true];
   oneof attributes {
-    DomainTaskAttributes namespace_task_attributes = 4;
+    DomainTaskAttributes domain_task_attributes = 4;
     SyncShardStatusTaskAttributes sync_shard_status_task_attributes = 5;
     SyncActivityTaskAttributes sync_activity_task_attributes = 6;
     HistoryTaskV2Attributes history_task_v2_attributes = 7;
