@@ -288,6 +288,7 @@ var keys = map[Key]string{
 	NotifyFailoverMarkerTimerJitterCoefficient:            "history.NotifyFailoverMarkerTimerJitterCoefficient",
 	EnableDropStuckTaskByDomainID:                         "history.DropStuckTaskByDomain",
 	EnableActivityLocalDispatchByDomain:                   "history.enableActivityLocalDispatchByDomain",
+	ActivityMaxScheduleToStartTimeoutForRetry:             "history.activityMaxScheduleToStartTimeoutForRetry",
 
 	WorkerPersistenceMaxQPS:                                  "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                            "worker.persistenceGlobalMaxQPS",
@@ -771,6 +772,9 @@ const (
 
 	// EnableDropStuckTaskByDomainID is whether stuck timer/transfer task should be dropped for a domain
 	EnableDropStuckTaskByDomainID
+
+	// ActivityMaxScheduleToStartTimeoutForRetry is the maximum value allowed when overwritting the schedule to start timeout for activities with retry policy
+	ActivityMaxScheduleToStartTimeoutForRetry
 
 	// key for worker
 
