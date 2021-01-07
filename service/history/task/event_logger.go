@@ -77,7 +77,7 @@ func (e *eventLoggerImpl) AddEvent(
 		details:   details,
 	}
 
-	e.nextEventIdx = (e.nextEventIdx + 1) % len(e.events)
+	e.nextEventIdx = (e.nextEventIdx + 1) % e.maxSize
 }
 
 func (e *eventLoggerImpl) FlushEvents(
