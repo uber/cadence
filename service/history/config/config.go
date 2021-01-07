@@ -251,10 +251,10 @@ type Config struct {
 	MutableStateChecksumVerifyProbability dynamicconfig.IntPropertyFnWithDomainFilter
 	MutableStateChecksumInvalidateBefore  dynamicconfig.FloatPropertyFn
 
-	//Cross DC Replication configuration
+	// Cross DC Replication configuration
 	ReplicationEventsFromCurrentCluster dynamicconfig.BoolPropertyFnWithDomainFilter
 
-	//Failover marker heartbeat
+	// Failover marker heartbeat
 	NotifyFailoverMarkerInterval               dynamicconfig.DurationPropertyFn
 	NotifyFailoverMarkerTimerJitterCoefficient dynamicconfig.FloatPropertyFn
 	EnableGracefulFailover                     dynamicconfig.BoolPropertyFn
@@ -263,6 +263,10 @@ type Config struct {
 	EnableActivityLocalDispatchByDomain dynamicconfig.BoolPropertyFnWithDomainFilter
 
 	ActivityMaxScheduleToStartTimeoutForRetry dynamicconfig.DurationPropertyFnWithDomainFilter
+
+	// Debugging configurations
+	EnableDebugMode             bool // note that this value is initialized once on service start
+	EnableTaskInfoLogByDomainID dynamicconfig.BoolPropertyFnWithDomainIDFilter
 }
 
 const (
@@ -480,6 +484,9 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		EnableActivityLocalDispatchByDomain: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableActivityLocalDispatchByDomain, false),
 
 		ActivityMaxScheduleToStartTimeoutForRetry: dc.GetDurationPropertyFilteredByDomain(dynamicconfig.ActivityMaxScheduleToStartTimeoutForRetry, 30*time.Minute),
+
+		EnableDebugMode:             dc.GetBoolProperty(dynamicconfig.EnableDebugMode, false)(),
+		EnableTaskInfoLogByDomainID: dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.HistoryEnableTaskInfoLogByDomainID, false),
 	}
 
 	return cfg

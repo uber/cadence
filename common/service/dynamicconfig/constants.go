@@ -81,6 +81,7 @@ var keys = map[Key]string{
 	EnableFailoverManager:               "system.enableFailoverManager",
 	EnableStickyQuery:                   "system.enableStickyQuery",
 	EnablePriorityTaskProcessor:         "system.enablePriorityTaskProcessor",
+	EnableDebugMode:                     "system.enableDebugMode",
 
 	// size limit
 	BlobSizeLimitError:      "limit.blobSize.error",
@@ -147,6 +148,7 @@ var keys = map[Key]string{
 	MatchingForwarderMaxChildrenPerNode:     "matching.forwarderMaxChildrenPerNode",
 	MatchingShutdownDrainDuration:           "matching.shutdownDrainDuration",
 	MatchingErrorInjectionRate:              "matching.errorInjectionRate",
+	MatchingEnableTaskInfoLogByDomainID:     "matching.enableTaskInfoLogByDomainID",
 
 	// history settings
 	HistoryRPS:                                            "history.rps",
@@ -295,6 +297,7 @@ var keys = map[Key]string{
 	EnableDropStuckTaskByDomainID:                         "history.DropStuckTaskByDomain",
 	EnableActivityLocalDispatchByDomain:                   "history.enableActivityLocalDispatchByDomain",
 	HistoryErrorInjectionRate:                             "history.errorInjectionRate",
+	HistoryEnableTaskInfoLogByDomainID:                    "history.enableTaskInfoLogByDomainID",
 	ActivityMaxScheduleToStartTimeoutForRetry:             "history.activityMaxScheduleToStartTimeoutForRetry",
 
 	WorkerPersistenceMaxQPS:                                  "worker.persistenceMaxQPS",
@@ -414,6 +417,8 @@ const (
 	DisallowQuery
 	// EnablePriorityTaskProcessor is the key for enabling priority task processor
 	EnablePriorityTaskProcessor
+	// EnableDebugMode is the key for enabling debugging components, logs and metrics
+	EnableDebugMode
 
 	// BlobSizeLimitError is the per event blob size limit
 	BlobSizeLimitError
@@ -544,6 +549,8 @@ const (
 	MatchingShutdownDrainDuration
 	// MatchingErrorInjectionRate is the rate for injecting random error in matching client
 	MatchingErrorInjectionRate
+	// MatchingEnableTaskInfoLogByDomainID enables info level logs for decision/activity task based on the request domainID
+	MatchingEnableTaskInfoLogByDomainID
 
 	// key for history
 
@@ -787,6 +794,9 @@ const (
 
 	// HistoryErrorInjectionRate is the rate for injecting random error in history client
 	HistoryErrorInjectionRate
+
+	// HistoryEnableTaskInfoLogByDomainID enables info level logs for decision/activity task based on the request domainID
+	HistoryEnableTaskInfoLogByDomainID
 
 	// ActivityMaxScheduleToStartTimeoutForRetry is the maximum value allowed when overwritting the schedule to start timeout for activities with retry policy
 	ActivityMaxScheduleToStartTimeoutForRetry

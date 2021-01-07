@@ -230,7 +230,9 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	taskListKind := request.TaskList.Kind
 	taskListType := persistence.TaskListTypeDecision
 
-	e.logger.Debug("Received AddDecisionTask",
+	e.emitInfoOrDebugLog(
+		domainID,
+		"Received AddDecisionTask",
 		tag.WorkflowTaskListName(request.TaskList.GetName()),
 		tag.WorkflowID(request.Execution.GetWorkflowID()),
 		tag.WorkflowRunID(request.Execution.GetRunID()),
@@ -275,7 +277,9 @@ func (e *matchingEngineImpl) AddActivityTask(
 	taskListName := request.TaskList.GetName()
 	taskListType := persistence.TaskListTypeActivity
 
-	e.logger.Debug("Received AddActivityTask",
+	e.emitInfoOrDebugLog(
+		domainID,
+		"Received AddActivityTask",
 		tag.WorkflowTaskListName(taskListName),
 		tag.WorkflowID(request.Execution.GetWorkflowID()),
 		tag.WorkflowRunID(request.Execution.GetRunID()),
@@ -390,10 +394,15 @@ pollLoop:
 		if err != nil {
 			switch err.(type) {
 			case *types.EntityNotExistsError, *types.EventAlreadyStartedError:
-				e.logger.Debug(
+				e.emitInfoOrDebugLog(
+					task.event.DomainID,
 					"Duplicated decision task",
-					tag.TaskID(task.event.TaskID),
+					tag.WorkflowDomainID(domainID),
+					tag.WorkflowID(task.event.WorkflowID),
+					tag.WorkflowRunID(task.event.RunID),
 					tag.WorkflowTaskListName(taskListName),
+					tag.WorkflowScheduleID(task.event.ScheduleID),
+					tag.TaskID(task.event.TaskID),
 				)
 				task.finish(nil)
 			default:
@@ -464,10 +473,15 @@ pollLoop:
 		if err != nil {
 			switch err.(type) {
 			case *types.EntityNotExistsError, *types.EventAlreadyStartedError:
-				e.logger.Debug(
+				e.emitInfoOrDebugLog(
+					task.event.DomainID,
 					"Duplicated activity task",
-					tag.TaskID(task.event.TaskID),
+					tag.WorkflowDomainID(domainID),
+					tag.WorkflowID(task.event.WorkflowID),
+					tag.WorkflowRunID(task.event.RunID),
 					tag.WorkflowTaskListName(taskListName),
+					tag.WorkflowScheduleID(task.event.ScheduleID),
+					tag.TaskID(task.event.TaskID),
 				)
 				task.finish(nil)
 			default:
@@ -727,14 +741,14 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 		}
 		token, _ = e.tokenSerializer.SerializeQueryTaskToken(taskToken)
 	} else {
-		taskoken := &common.TaskToken{
+		taskToken := &common.TaskToken{
 			DomainID:        task.event.DomainID,
 			WorkflowID:      task.event.WorkflowID,
 			RunID:           task.event.RunID,
 			ScheduleID:      historyResponse.GetScheduledEventID(),
 			ScheduleAttempt: historyResponse.GetAttempt(),
 		}
-		token, _ = e.tokenSerializer.Serialize(taskoken)
+		token, _ = e.tokenSerializer.Serialize(taskToken)
 		if task.responseC == nil {
 			scope.RecordTimer(metrics.AsyncMatchLatencyPerTaskList, time.Since(task.event.CreatedTime))
 		}
@@ -872,6 +886,18 @@ func (e *matchingEngineImpl) emitForwardedFromStats(
 		scope.IncCounter(metrics.LocalToRemoteMatchPerTaskListCounter)
 	default:
 		scope.IncCounter(metrics.LocalToLocalMatchPerTaskListCounter)
+	}
+}
+
+func (e *matchingEngineImpl) emitInfoOrDebugLog(
+	domainID string,
+	msg string,
+	tags ...tag.Tag,
+) {
+	if e.config.EnableDebugMode && e.config.EnableTaskInfoLogByDomainID(domainID) {
+		e.logger.Info(msg, tags...)
+	} else {
+		e.logger.Debug(msg, tags...)
 	}
 }
 
