@@ -101,9 +101,9 @@ message ResetPoints {
 message ResetPointInfo {
   string binary_checksum = 1;
   string run_id = 2;
-  int64 first_decision_task_completed_id = 3;
-  google.protobuf.Timestamp created = 4 [(gogoproto.stdtime) = true];
-  google.protobuf.Timestamp expiring = 5 [(gogoproto.stdtime) = true];
+  int64 first_decision_completed_id = 3;
+  google.protobuf.Timestamp created_time = 4 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp expiring_time = 5 [(gogoproto.stdtime) = true];
   bool resettable = 6;
 }
 
