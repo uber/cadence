@@ -104,7 +104,7 @@ message RetryPolicy {
   int32 maximum_attempts = 4;
 
   // Non-Retryable errors. Will stop retrying if error type matches this list.
-  repeated string non_retryable_error_types = 5;
+  repeated string non_retryable_error_reasons = 5;
 
   // Expiration time for the whole retry process.
   google.protobuf.Duration expiration_interval = 6 [(gogoproto.stdduration) = true];
