@@ -1758,6 +1758,7 @@ const (
 	ProcessingQueueThrottledCounter
 
 	ActivityE2ELatency
+	ActivityLostCounter
 	ActiveClusterGauge
 	AckLevelUpdateCounter
 	AckLevelUpdateFailedCounter
@@ -2234,6 +2235,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ProcessingQueueRandomSplitCounter:                 {metricName: "processing_queue_random_split_counter", metricType: Counter},
 		ProcessingQueueThrottledCounter:                   {metricName: "processing_queue_throttled_counter", metricType: Counter},
 		ActivityE2ELatency:                                {metricName: "activity_end_to_end_latency", metricType: Timer},
+		ActivityLostCounter:                               {metricName: "activity_lost", metricType: Counter},
 		AckLevelUpdateCounter:                             {metricName: "ack_level_update", metricType: Counter},
 		AckLevelUpdateFailedCounter:                       {metricName: "ack_level_update_failed", metricType: Counter},
 		DecisionTypeScheduleActivityCounter:               {metricName: "schedule_activity_decision", metricType: Counter},

@@ -295,6 +295,7 @@ var keys = map[Key]string{
 	EnableDropStuckTaskByDomainID:                         "history.DropStuckTaskByDomain",
 	EnableActivityLocalDispatchByDomain:                   "history.enableActivityLocalDispatchByDomain",
 	HistoryErrorInjectionRate:                             "history.errorInjectionRate",
+	ActivityMaxScheduleToStartTimeoutForRetry:             "history.activityMaxScheduleToStartTimeoutForRetry",
 
 	WorkerPersistenceMaxQPS:                                  "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                            "worker.persistenceGlobalMaxQPS",
@@ -786,6 +787,9 @@ const (
 
 	// HistoryErrorInjectionRate is the rate for injecting random error in history client
 	HistoryErrorInjectionRate
+
+	// ActivityMaxScheduleToStartTimeoutForRetry is the maximum value allowed when overwritting the schedule to start timeout for activities with retry policy
+	ActivityMaxScheduleToStartTimeoutForRetry
 
 	// key for worker
 

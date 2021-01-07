@@ -41,6 +41,7 @@ import (
 
 type (
 	decisionAttrValidator struct {
+		config                    *config.Config
 		domainCache               cache.DomainCache
 		maxIDLengthLimit          int
 		searchAttributesValidator *validator.SearchAttributesValidator
@@ -64,16 +65,13 @@ type (
 	}
 )
 
-const (
-	maximumScheduleToStartTimeoutForRetryInSeconds = 1800 // 30 minutes
-)
-
 func newDecisionAttrValidator(
 	domainCache cache.DomainCache,
 	config *config.Config,
 	logger log.Logger,
 ) *decisionAttrValidator {
 	return &decisionAttrValidator{
+		config:           config,
 		domainCache:      domainCache,
 		maxIDLengthLimit: config.MaxIDLengthLimit(),
 		searchAttributesValidator: validator.NewSearchAttributesValidator(
@@ -303,6 +301,8 @@ func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 			// to a maximum value, so that when the activity task got lost, timeout can happen sooner and schedule
 			// the activity again.
 
+			domainName, _ := v.domainCache.GetDomainName(domainID) // if this call returns an error, we will just used the default value for max timeout
+			maximumScheduleToStartTimeoutForRetryInSeconds := int32(v.config.ActivityMaxScheduleToStartTimeoutForRetry(domainName).Seconds())
 			scheduleToStartExpiration := common.MinInt32(expiration, maximumScheduleToStartTimeoutForRetryInSeconds)
 			if attributes.GetScheduleToStartTimeoutSeconds() < scheduleToStartExpiration {
 				attributes.ScheduleToStartTimeoutSeconds = common.Int32Ptr(scheduleToStartExpiration)
