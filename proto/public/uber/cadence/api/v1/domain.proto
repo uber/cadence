@@ -33,7 +33,7 @@ import "dependencies/gogoproto.proto";
 
 message DomainInfo {
   string name = 1;
-  DomainStatus domain_status = 2;
+  DomainStatus status = 2;
   string description = 3;
   string owner_email = 4;
   map<string, string> data = 5;
