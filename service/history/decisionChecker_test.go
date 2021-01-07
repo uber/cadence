@@ -22,6 +22,7 @@ package history
 
 import (
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -51,6 +52,8 @@ type (
 
 		testDomainID       string
 		testTargetDomainID string
+
+		testActivityMaxScheduleToStartTimeoutForRetryInSeconds int32
 	}
 )
 
@@ -62,6 +65,7 @@ func TestDecisionAttrValidatorSuite(t *testing.T) {
 func (s *decisionAttrValidatorSuite) SetupSuite() {
 	s.testDomainID = "test domain ID"
 	s.testTargetDomainID = "test target domain ID"
+	s.testActivityMaxScheduleToStartTimeoutForRetryInSeconds = 1800
 }
 
 func (s *decisionAttrValidatorSuite) TearDownSuite() {
@@ -78,6 +82,9 @@ func (s *decisionAttrValidatorSuite) SetupTest() {
 		SearchAttributesNumberOfKeysLimit: dynamicconfig.GetIntPropertyFilteredByDomain(100),
 		SearchAttributesSizeOfValueLimit:  dynamicconfig.GetIntPropertyFilteredByDomain(2 * 1024),
 		SearchAttributesTotalSizeLimit:    dynamicconfig.GetIntPropertyFilteredByDomain(40 * 1024),
+		ActivityMaxScheduleToStartTimeoutForRetry: dynamicconfig.GetDurationPropertyFnFilteredByDomain(
+			time.Duration(s.testActivityMaxScheduleToStartTimeoutForRetryInSeconds) * time.Second,
+		),
 	}
 	s.validator = newDecisionAttrValidator(
 		s.mockDomainCache,
@@ -600,6 +607,8 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_NoRe
 }
 
 func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_WithRetryPolicy_ScheduleToStartRetryable() {
+	s.mockDomainCache.EXPECT().GetDomainName(s.testDomainID).Return("some random domain name", nil).Times(1)
+
 	wfTimeout := int32(3000)
 	attributes := &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID: common.StringPtr("some random activityID"),
@@ -618,7 +627,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(1),
 			BackoffCoefficient:          common.Float64Ptr(1.1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(maximumScheduleToStartTimeoutForRetryInSeconds + 1000), // larger than maximumScheduleToStartTimeoutForRetryInSeconds
+			ExpirationIntervalInSeconds: common.Int32Ptr(s.testActivityMaxScheduleToStartTimeoutForRetryInSeconds + 1000), // larger than maximumScheduleToStartTimeoutForRetryInSeconds
 			NonRetriableErrorReasons:    []string{"non-retryable error"},
 		},
 	}
@@ -630,7 +639,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 		TaskList:                      attributes.TaskList,
 		Input:                         attributes.Input,
 		ScheduleToCloseTimeoutSeconds: attributes.RetryPolicy.ExpirationIntervalInSeconds,
-		ScheduleToStartTimeoutSeconds: common.Int32Ptr(maximumScheduleToStartTimeoutForRetryInSeconds),
+		ScheduleToStartTimeoutSeconds: common.Int32Ptr(s.testActivityMaxScheduleToStartTimeoutForRetryInSeconds),
 		StartToCloseTimeoutSeconds:    attributes.StartToCloseTimeoutSeconds,
 		HeartbeatTimeoutSeconds:       attributes.HeartbeatTimeoutSeconds,
 		RetryPolicy:                   attributes.RetryPolicy,
@@ -680,7 +689,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(1),
 			BackoffCoefficient:          common.Float64Ptr(1.1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(maximumScheduleToStartTimeoutForRetryInSeconds + 1000), // larger than wfTimeout and maximumScheduleToStartTimeoutForRetryInSeconds
+			ExpirationIntervalInSeconds: common.Int32Ptr(s.testActivityMaxScheduleToStartTimeoutForRetryInSeconds + 1000), // larger than wfTimeout and maximumScheduleToStartTimeoutForRetryInSeconds
 			NonRetriableErrorReasons:    []string{"cadenceInternal:Timeout SCHEDULE_TO_START"},
 		},
 	}
