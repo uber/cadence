@@ -162,8 +162,8 @@ message PollForDecisionTaskResponse {
   bytes next_page_token = 9;
   WorkflowQuery query = 10;
   TaskList workflow_execution_task_list = 11;
-  google.protobuf.Timestamp scheduled = 12 [(gogoproto.stdtime) = true];
-  google.protobuf.Timestamp started = 13 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp scheduled_time = 12 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp started_time = 13 [(gogoproto.stdtime) = true];
   map<string, WorkflowQuery> queries = 14;
 }
 
