@@ -242,7 +242,7 @@ message GetWorkflowExecutionHistoryRequest {
   WorkflowExecution execution = 2;
   int32 page_size = 3;
   bytes next_page_token = 4;
-  bool wait_new_event = 5;
+  bool wait_for_new_event = 5;
   EventFilterType history_event_filter_type = 6;
   bool skip_archival = 7;
 }
