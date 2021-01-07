@@ -57,15 +57,24 @@ Connected to Test Cluster at 127.0.0.1:9042.
 Use HELP for help.
 cqlsh>
 ```
+>If you are running Cadence on top of [Mysql](MYSQL_SETUP.md) or [Postgres](POSTGRES_SETUP.md), you can follow the instructions to run the SQL DB and then run:
+
 Now you can setup the database schema
 ```bash
 make install-schema
+
+# If you use SQL DB, then run:
+make install-schema-mysql OR make install-schema-postgres
 ```
 
 Then you will be able to run a basic local Cadence server for development:
 ```bash
 ./cadence-server start
+
+# If you use SQL DB, then run:
+./cadence-server --zone <mysql/postgres> start
 ```
+
 You can run some workflow [samples](https://github.com/uber-common/cadence-samples) to test the development server.
  
 > This basic local server doesn't have some features like advanced visibility, archival, which require more dependency than Cassandra/Database and setup. 
