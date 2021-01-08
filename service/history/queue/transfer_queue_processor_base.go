@@ -135,7 +135,7 @@ func newTransferQueueProcessorBase(
 		lastMaxReadLevel: 0,
 	}
 
-	if options.EnableValidator() {
+	if shard.GetConfig().EnableDebugMode && options.EnableValidator() {
 		transferQueueProcessorBase.validator = newTransferQueueValidator(
 			transferQueueProcessorBase,
 			shard.GetTimeSource(),
