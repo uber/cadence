@@ -82,7 +82,7 @@ message PendingDecisionInfo {
   PendingDecisionState state = 1;
   google.protobuf.Timestamp scheduled_time = 2 [(gogoproto.stdtime) = true];
   google.protobuf.Timestamp started_time = 3 [(gogoproto.stdtime) = true];
-  int64 attempt = 4;
+  int32 attempt = 4;
   google.protobuf.Timestamp original_scheduled_time = 5 [(gogoproto.stdtime) = true];
 }
 
