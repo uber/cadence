@@ -133,7 +133,7 @@ message CloseShardResponse {
 
 message RemoveTaskRequest {
   int32 shard_id = 1;
-  int32 type = 2;
+  TaskType task_type = 2;
   int64 task_id = 3;
   google.protobuf.Timestamp visibility_time = 4 [(gogoproto.stdtime) = true];
 }
@@ -144,7 +144,7 @@ message RemoveTaskResponse {
 message ResetQueueRequest {
   int32 shard_id = 1;
   string cluster_name = 2;
-  int32 type = 3;
+  TaskType task_type = 3;
 }
 
 message ResetQueueResponse {
@@ -153,7 +153,7 @@ message ResetQueueResponse {
 message DescribeQueueRequest {
   int32 shard_id = 1;
   string cluster_name = 2;
-  int32 type = 3;
+  TaskType task_type = 3;
 }
 
 message DescribeQueueResponse {
@@ -276,4 +276,11 @@ message ResendReplicationTasksRequest {
 }
 
 message ResendReplicationTasksResponse {
+}
+
+enum TaskType {
+  TASK_TYPE_INVALID = 0;
+  TASK_TYPE_TRANSFER = 1;
+  TASK_TYPE_TIMER = 2;
+  TASK_TYPE_REPLICATION = 3;
 }
