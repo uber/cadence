@@ -234,9 +234,6 @@ message StartWorkflowExecutionResponse {
   api.v1.StartWorkflowExecutionResponse response = 1;
 }
 
-message SignalWorkflowExecutionResponse {
-}
-
 message SignalWorkflowExecutionRequest {
   api.v1.SignalWorkflowExecutionRequest request = 1;
   string domain_id = 2;
@@ -244,13 +241,16 @@ message SignalWorkflowExecutionRequest {
   bool child_workflow_only = 4;
 }
 
-message SignalWithStartWorkflowExecutionResponse {
-  api.v1.SignalWithStartWorkflowExecutionResponse response = 1;
+message SignalWorkflowExecutionResponse {
 }
 
 message SignalWithStartWorkflowExecutionRequest {
   api.v1.SignalWithStartWorkflowExecutionRequest request = 1;
   string domain_id = 2;
+}
+
+message SignalWithStartWorkflowExecutionResponse {
+  api.v1.SignalWithStartWorkflowExecutionResponse response = 1;
 }
 
 message ResetWorkflowExecutionRequest {
