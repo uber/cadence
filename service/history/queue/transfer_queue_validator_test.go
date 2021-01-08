@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -34,6 +35,8 @@ import (
 	"github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
 )
 
@@ -42,6 +45,8 @@ type (
 		suite.Suite
 		*require.Assertions
 
+		controller      *gomock.Controller
+		mockShard       *shard.TestContext
 		mockLogger      *log.MockLogger
 		mockMetricScope *mocks.Scope
 
@@ -63,6 +68,15 @@ func TestTransferQueueValidatorSuite(t *testing.T) {
 func (s *transferQueueValidatorSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
+	s.controller = gomock.NewController(s.T())
+	s.mockShard = shard.NewTestContext(
+		s.controller,
+		&persistence.ShardInfo{
+			RangeID:          1,
+			TransferAckLevel: 0,
+		},
+		config.NewForTest(),
+	)
 	s.mockLogger = &log.MockLogger{}
 	s.mockMetricScope = &mocks.Scope{}
 
@@ -93,6 +107,7 @@ func (s *transferQueueValidatorSuite) SetupTest() {
 }
 
 func (s *transferQueueValidatorSuite) TearDownTest() {
+	s.controller.Finish()
 	s.mockLogger.AssertExpectations(s.T())
 	s.mockMetricScope.AssertExpectations(s.T())
 }
@@ -157,7 +172,7 @@ func (s *transferQueueValidatorSuite) TestAckTasks_NoTaskLost() {
 	loadedTasks := make(map[task.Key]task.Task, len(pendingTasks))
 	for _, pendingTask := range pendingTasks[:len(pendingTasks)-1] {
 		loadedTasks[newTransferTaskKey(pendingTask.GetTaskID())] = task.NewTransferTask(
-			nil,
+			s.mockShard,
 			&persistence.TransferTaskInfo{
 				TaskID: pendingTask.GetTaskID(),
 			},
@@ -190,7 +205,7 @@ func (s *transferQueueValidatorSuite) TestAckTasks_TaskLost() {
 	loadedTasks := make(map[task.Key]task.Task, len(pendingTasks))
 	for _, pendingTask := range pendingTasks[1:] {
 		loadedTasks[newTransferTaskKey(pendingTask.GetTaskID())] = task.NewTransferTask(
-			nil,
+			s.mockShard,
 			&persistence.TransferTaskInfo{
 				TaskID: pendingTask.GetTaskID(),
 			},
