@@ -392,7 +392,7 @@ message RecordActivityTaskStartedResponse {
   google.protobuf.Timestamp scheduled_time_of_this_attempt = 4 [(gogoproto.stdtime) = true];
   api.v1.Payload heartbeat_details = 5;
   api.v1.WorkflowType workflow_type = 6;
-  string domain_name = 7;
+  string workflow_domain = 7;
 }
 
 message RespondDecisionTaskCompletedRequest {
