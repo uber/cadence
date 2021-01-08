@@ -118,7 +118,7 @@ message ReplicationTaskInfo {
   string run_id = 3;
   int32 task_type = 4;
   int64 task_id = 5;
-  int64 task_version = 6;
+  int64 version = 6;
   int64 first_event_id = 7;
   int64 next_event_id = 8;
   int64 scheduled_id = 9;
