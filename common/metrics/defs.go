@@ -1757,6 +1757,11 @@ const (
 	ProcessingQueueRandomSplitCounter
 	ProcessingQueueThrottledCounter
 
+	QueueValidatorLostTaskCounter
+	QueueValidatorDropTaskCounter
+	QueueValidatorInvalidLoadCounter
+	QueueValidatorValidationCounter
+
 	ActivityE2ELatency
 	ActivityLostCounter
 	ActiveClusterGauge
@@ -2234,6 +2239,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ProcessingQueueSelectedDomainSplitCounter:         {metricName: "processing_queue_selected_domain_split_counter", metricType: Counter},
 		ProcessingQueueRandomSplitCounter:                 {metricName: "processing_queue_random_split_counter", metricType: Counter},
 		ProcessingQueueThrottledCounter:                   {metricName: "processing_queue_throttled_counter", metricType: Counter},
+		QueueValidatorLostTaskCounter:                     {metricName: "queue_validator_lost_task_counter", metricType: Counter},
+		QueueValidatorDropTaskCounter:                     {metricName: "queue_validator_drop_task_counter", metricType: Counter},
+		QueueValidatorInvalidLoadCounter:                  {metricName: "queue_validator_invalid_load_counter", metricType: Counter},
+		QueueValidatorValidationCounter:                   {metricName: "queue_validator_validation_counter", metricType: Counter},
 		ActivityE2ELatency:                                {metricName: "activity_end_to_end_latency", metricType: Timer},
 		ActivityLostCounter:                               {metricName: "activity_lost", metricType: Counter},
 		AckLevelUpdateCounter:                             {metricName: "ack_level_update", metricType: Counter},
