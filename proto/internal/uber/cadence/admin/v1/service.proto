@@ -246,7 +246,6 @@ message PurgeDLQMessagesRequest {
 }
 
 message PurgeDLQMessagesResponse {
-  replication.v1.PurgeDLQMessagesResponse response = 1;
 }
 
 message MergeDLQMessagesRequest {

@@ -235,7 +235,6 @@ message StartWorkflowExecutionResponse {
 }
 
 message SignalWorkflowExecutionResponse {
-  api.v1.SignalWorkflowExecutionResponse response = 1;
 }
 
 message SignalWorkflowExecutionRequest {
@@ -269,7 +268,6 @@ message TerminateWorkflowExecutionRequest {
 }
 
 message TerminateWorkflowExecutionResponse {
-  api.v1.TerminateWorkflowExecutionResponse response = 1;
 }
 
 message DescribeWorkflowExecutionRequest {
@@ -296,7 +294,6 @@ message ResetStickyTaskListRequest {
 }
 
 message ResetStickyTaskListResponse {
-  api.v1.ResetStickyTaskListResponse response = 1;
 }
 
 message GetMutableStateRequest {
@@ -414,7 +411,6 @@ message RespondDecisionTaskFailedRequest {
 }
 
 message RespondDecisionTaskFailedResponse {
-  api.v1.RespondDecisionTaskFailedResponse response = 1;
 }
 
 message RecordActivityTaskHeartbeatRequest {
@@ -432,7 +428,6 @@ message RespondActivityTaskCompletedRequest {
 }
 
 message RespondActivityTaskCompletedResponse {
-  api.v1.RespondActivityTaskCompletedResponse response = 1;
 }
 
 message RespondActivityTaskFailedRequest {
@@ -441,7 +436,6 @@ message RespondActivityTaskFailedRequest {
 }
 
 message RespondActivityTaskFailedResponse {
-  api.v1.RespondActivityTaskFailedResponse response = 1;
 }
 
 message RespondActivityTaskCanceledRequest {
@@ -450,7 +444,6 @@ message RespondActivityTaskCanceledRequest {
 }
 
 message RespondActivityTaskCanceledResponse {
-  api.v1.RespondActivityTaskCanceledResponse response = 1;
 }
 
 message RemoveSignalMutableStateRequest {
@@ -562,7 +555,6 @@ message CloseShardRequest {
 }
 
 message CloseShardResponse {
-  admin.v1.CloseShardResponse response = 1;
 }
 
 message RemoveTaskRequest {
@@ -570,7 +562,6 @@ message RemoveTaskRequest {
 }
 
 message RemoveTaskResponse {
-  admin.v1.RemoveTaskResponse response = 1;
 }
 
 message ResetQueueRequest {
@@ -578,7 +569,6 @@ message ResetQueueRequest {
 }
 
 message ResetQueueResponse {
-  admin.v1.ResetQueueResponse response = 1;
 }
 
 message DescribeQueueRequest {
@@ -634,7 +624,6 @@ message PurgeDLQMessagesRequest {
 }
 
 message PurgeDLQMessagesResponse {
-  replication.v1.PurgeDLQMessagesResponse response = 1;
 }
 
 message MergeDLQMessagesRequest {

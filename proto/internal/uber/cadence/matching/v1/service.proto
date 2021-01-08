@@ -165,7 +165,6 @@ message RespondQueryTaskCompletedRequest {
 }
 
 message RespondQueryTaskCompletedResponse {
-  api.v1.RespondQueryTaskCompletedResponse response = 1;
 }
 
 message CancelOutstandingPollRequest {
