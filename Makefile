@@ -139,7 +139,7 @@ cadence: $(TOOLS_SRC)
 
 cadence-server: $(ALL_SRC)
 	@echo "compiling cadence-server with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -ldflags ' $(GO_BUILD_LDFLAGS)' -o cadence-server cmd/server/main.go
+	go build -ldflags '$(GO_BUILD_LDFLAGS)' -o cadence-server cmd/server/main.go
 
 cadence-canary: $(ALL_SRC)
 	@echo "compiling cadence-canary with OS: $(GOOS), ARCH: $(GOARCH)"
