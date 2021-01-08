@@ -173,7 +173,7 @@ message RespondDecisionTaskCompletedRequest {
   bytes execution_context = 3;
   string identity = 4;
   StickyExecutionAttributes sticky_attributes = 5;
-  bool return_new_workflow_task = 6;
+  bool return_new_decision_task = 6;
   bool force_create_new_decision_task = 7;
   string binary_checksum = 8;
   map<string, WorkflowQueryResult> query_results = 9;
