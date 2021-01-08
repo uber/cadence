@@ -518,9 +518,6 @@ func updateExecution(
 	executionInfo.LastUpdatedTimestamp = time.Unix(0, p.DBTimestampToUnixNano(cqlNowTimestampMillis))
 
 	completionData, completionEncoding := p.FromDataBlob(executionInfo.CompletionEvent)
-	if versionHistories == nil {
-		return &workflow.InternalServiceError{Message: "encounter empty version histories in updateExecution"}
-	}
 	// TODO also need to set the start / current / last write version
 	versionHistoriesData, versionHistoriesEncoding := p.FromDataBlob(versionHistories)
 	batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQuery,
