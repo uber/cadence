@@ -32,4 +32,6 @@ import (
 	_ "golang.org/x/tools/cmd/goimports"
 	// mockgen for generating mocks
 	_ "github.com/golang/mock/mockgen"
+	// enumer for generating utility methods for const enums
+	_ "github.com/dmarkham/enumer"
 )

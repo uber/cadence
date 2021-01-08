@@ -14,6 +14,7 @@ require (
 	github.com/cch123/elasticsql v0.0.0-20190321073543-a1a440758eb9
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2
+	github.com/dmarkham/enumer v1.5.1
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/emirpasic/gods v0.0.0-20190624094223-e689965507ab
 	github.com/fatih/color v0.0.0-20181010231311-3f9d52f7176a
@@ -66,7 +67,7 @@ require (
 	golang.org/x/net v0.0.0-20200822124328-c89045814202
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
-	golang.org/x/tools v0.0.0-20200917221617-d56e4e40bc9d
+	golang.org/x/tools v0.0.0-20200917161530-60aba8ac75fb
 	gonum.org/v1/gonum v0.7.0
 	google.golang.org/api v0.14.0
 	google.golang.org/appengine v1.6.1 // indirect

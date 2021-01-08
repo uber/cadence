@@ -1763,6 +1763,7 @@ const (
 	QueueValidatorValidationCounter
 
 	ActivityE2ELatency
+	ActivityLostCounter
 	ActiveClusterGauge
 	AckLevelUpdateCounter
 	AckLevelUpdateFailedCounter
@@ -2243,6 +2244,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		QueueValidatorInvalidLoadCounter:                  {metricName: "queue_validator_invalid_load_counter", metricType: Counter},
 		QueueValidatorValidationCounter:                   {metricName: "queue_validator_validation_counter", metricType: Counter},
 		ActivityE2ELatency:                                {metricName: "activity_end_to_end_latency", metricType: Timer},
+		ActivityLostCounter:                               {metricName: "activity_lost", metricType: Counter},
 		AckLevelUpdateCounter:                             {metricName: "ack_level_update", metricType: Counter},
 		AckLevelUpdateFailedCounter:                       {metricName: "ack_level_update_failed", metricType: Counter},
 		DecisionTypeScheduleActivityCounter:               {metricName: "schedule_activity_decision", metricType: Counter},

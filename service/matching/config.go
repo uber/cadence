@@ -60,6 +60,10 @@ type (
 		MaxTaskBatchSize                dynamicconfig.IntPropertyFnWithTaskListInfoFilters
 
 		ThrottledLogRPS dynamicconfig.IntPropertyFn
+
+		// debugging configuration
+		EnableDebugMode             bool // note that this value is initialized once on service start
+		EnableTaskInfoLogByDomainID dynamicconfig.BoolPropertyFnWithDomainIDFilter
 	}
 
 	forwarderConfig struct {
@@ -114,6 +118,8 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		ForwarderMaxRatePerSecond:       dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingForwarderMaxRatePerSecond, 10),
 		ForwarderMaxChildrenPerNode:     dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingForwarderMaxChildrenPerNode, 20),
 		ShutdownDrainDuration:           dc.GetDurationProperty(dynamicconfig.MatchingShutdownDrainDuration, 0),
+		EnableDebugMode:                 dc.GetBoolProperty(dynamicconfig.EnableDebugMode, false)(),
+		EnableTaskInfoLogByDomainID:     dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.MatchingEnableTaskInfoLogByDomainID, false),
 	}
 }
 
