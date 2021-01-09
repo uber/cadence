@@ -259,6 +259,14 @@ func (c *coordinatorImpl) handleFailoverMarkers(
 		record.shards[shardID] = struct{}{}
 	}
 
+	domainEntry, err := c.domainCache.GetDomainByID(domainID)
+	if err != nil {
+		c.logger.Error("Coordinator failed to get domain after receiving all failover markers",
+			tag.WorkflowDomainID(domainID))
+		c.metrics.IncCounter(metrics.FailoverMarkerScope, metrics.GracefulFailoverFailure)
+		return
+	}
+	domainName := domainEntry.GetInfo().Name
 	if len(record.shards) == c.config.NumberOfShards {
 		if err := domain.CleanPendingActiveState(
 			c.metadataMgr,
@@ -273,15 +281,6 @@ func (c *coordinatorImpl) handleFailoverMarkers(
 		}
 		delete(c.recorder, domainID)
 		now := c.timeSource.Now()
-		domainEntry, err := c.domainCache.GetDomainByID(domainID)
-		if err != nil {
-			c.logger.Error("Coordinator failed to get domain after receiving all failover markers",
-				tag.WorkflowDomainID(domainID))
-			c.metrics.IncCounter(metrics.FailoverMarkerScope, metrics.GracefulFailoverFailure)
-			return
-		}
-
-		domainName := domainEntry.GetInfo().Name
 		c.metrics.Scope(
 			metrics.FailoverMarkerScope,
 			metrics.DomainTag(domainName),
@@ -292,6 +291,14 @@ func (c *coordinatorImpl) handleFailoverMarkers(
 		c.logger.Info("Updated domain from pending-active to active",
 			tag.WorkflowDomainName(domainName),
 			tag.FailoverVersion(*marker.FailoverVersion),
+		)
+	} else {
+		c.metrics.Scope(
+			metrics.FailoverMarkerScope,
+			metrics.DomainTag(domainName),
+		).RecordTimer(
+			metrics.FailoverMarkerCount,
+			time.Duration(len(record.shards)),
 		)
 	}
 }
