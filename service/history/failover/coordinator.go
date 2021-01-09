@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
@@ -73,6 +74,7 @@ type (
 		historyClient history.Client
 		config        *config.Config
 		timeSource    clock.TimeSource
+		domainCache   cache.DomainCache
 		metrics       metrics.Client
 		logger        log.Logger
 	}
@@ -99,6 +101,7 @@ func NewCoordinator(
 	metadataMgr persistence.MetadataManager,
 	historyClient history.Client,
 	timeSource clock.TimeSource,
+	domainCache cache.DomainCache,
 	config *config.Config,
 	metrics metrics.Client,
 	logger log.Logger,
@@ -118,6 +121,7 @@ func NewCoordinator(
 		metadataMgr:      metadataMgr,
 		historyClient:    historyClient,
 		timeSource:       timeSource,
+		domainCache:      domainCache,
 		config:           config,
 		metrics:          metrics,
 		logger:           logger.WithTags(tag.ComponentFailoverCoordinator),
@@ -269,14 +273,24 @@ func (c *coordinatorImpl) handleFailoverMarkers(
 		}
 		delete(c.recorder, domainID)
 		now := c.timeSource.Now()
+		domainEntry, err := c.domainCache.GetDomainByID(domainID)
+		if err != nil {
+			c.logger.Error("Coordinator failed to get domain after receiving all failover markers",
+				tag.WorkflowDomainID(domainID))
+			c.metrics.IncCounter(metrics.FailoverMarkerScope, metrics.GracefulFailoverFailure)
+			return
+		}
+
+		domainName := domainEntry.GetInfo().Name
 		c.metrics.Scope(
 			metrics.FailoverMarkerScope,
+			metrics.DomainTag(domainName),
 		).RecordTimer(
 			metrics.GracefulFailoverLatency,
 			now.Sub(time.Unix(0, marker.GetCreationTime())),
 		)
 		c.logger.Info("Updated domain from pending-active to active",
-			tag.WorkflowDomainID(domainID),
+			tag.WorkflowDomainName(domainName),
 			tag.FailoverVersion(*marker.FailoverVersion),
 		)
 	}
