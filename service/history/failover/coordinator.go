@@ -44,8 +44,8 @@ import (
 )
 
 const (
-	notificationChanBufferSize       = 800
-	receiveChanBufferSize            = 400
+	notificationChanBufferSize       = 1000
+	receiveChanBufferSize            = 1000
 	cleanupMarkerInterval            = 30 * time.Minute
 	invalidMarkerDuration            = 1 * time.Hour
 	updateDomainRetryInitialInterval = 50 * time.Millisecond
@@ -259,14 +259,13 @@ func (c *coordinatorImpl) handleFailoverMarkers(
 		record.shards[shardID] = struct{}{}
 	}
 
-	domainEntry, err := c.domainCache.GetDomainByID(domainID)
+	domainName, err := c.domainCache.GetDomainName(domainID)
 	if err != nil {
 		c.logger.Error("Coordinator failed to get domain after receiving all failover markers",
 			tag.WorkflowDomainID(domainID))
 		c.metrics.IncCounter(metrics.FailoverMarkerScope, metrics.GracefulFailoverFailure)
 		return
 	}
-	domainName := domainEntry.GetInfo().Name
 	if len(record.shards) == c.config.NumberOfShards {
 		if err := domain.CleanPendingActiveState(
 			c.metadataMgr,
