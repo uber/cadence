@@ -79,6 +79,7 @@ func (s *coordinatorSuite) SetupTest() {
 		s.mockMetadataManager,
 		s.historyClient,
 		s.mockResource.GetTimeSource(),
+		s.mockResource.GetDomainCache(),
 		s.config,
 		s.mockResource.GetMetricsClient(),
 		s.mockResource.GetLogger(),

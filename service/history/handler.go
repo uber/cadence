@@ -198,6 +198,7 @@ func (h *handlerImpl) Start() {
 		h.GetMetadataManager(),
 		h.GetHistoryClient(),
 		h.GetTimeSource(),
+		h.GetDomainCache(),
 		h.config,
 		h.GetMetricsClient(),
 		h.GetLogger(),
