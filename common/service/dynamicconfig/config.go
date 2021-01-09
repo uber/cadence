@@ -74,7 +74,7 @@ func (c *Collection) logError(
 		// log only every 'x' errors to reduce mem allocs and to avoid log noise
 		filteredKey := getFilteredKey(key, filters)
 		if _, ok := err.(*types.EntityNotExistsError); ok {
-			c.logger.Info("dynamic config not set, use default value", tag.Key(filteredKey))
+			c.logger.Debug("dynamic config not set, use default value", tag.Key(filteredKey))
 		} else {
 			c.logger.Warn("Failed to fetch key from dynamic config", tag.Key(filteredKey), tag.Error(err))
 		}

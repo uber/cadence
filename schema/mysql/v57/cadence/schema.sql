@@ -204,8 +204,8 @@ CREATE TABLE buffered_replication_task_maps (
   history_encoding VARCHAR(16) NOT NULL,
   new_run_history MEDIUMBLOB,
   new_run_history_encoding VARCHAR(16) NOT NULL DEFAULT 'json',
-  event_store_version          INT NOT NULL, -- indiciates which version of event store to query
-  new_run_event_store_version  INT NOT NULL, -- indiciates which version of event store to query for new run(continueAsNew)
+  event_store_version          INT NOT NULL, -- indicates which version of event store to query
+  new_run_event_store_version  INT NOT NULL, -- indicates which version of event store to query for new run(continueAsNew)
   PRIMARY KEY (shard_id, domain_id, workflow_id, run_id, first_event_id)
 );
 

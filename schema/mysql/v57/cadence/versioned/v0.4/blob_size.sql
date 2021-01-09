@@ -12,7 +12,7 @@ ALTER TABLE timer_info_maps MODIFY COLUMN data MEDIUMBLOB;
 ALTER TABLE child_execution_info_maps MODIFY COLUMN data MEDIUMBLOB;
 ALTER TABLE request_cancel_info_maps MODIFY COLUMN data MEDIUMBLOB;
 ALTER TABLE signal_info_maps MODIFY COLUMN data MEDIUMBLOB;
-ALTER TABLE buffered_replication_task_maps MODIFY COLUMN data MEDIUMBLOB;
+ALTER TABLE buffered_replication_task_maps MODIFY COLUMN new_run_history MEDIUMBLOB;
 ALTER TABLE history_tree MODIFY COLUMN data MEDIUMBLOB;
 ALTER TABLE queue MODIFY COLUMN message_payload MEDIUMBLOB;
 ALTER TABLE queue_metadata MODIFY COLUMN data MEDIUMBLOB;

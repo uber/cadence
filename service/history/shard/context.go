@@ -582,7 +582,10 @@ func (s *contextImpl) CreateWorkflowExecution(
 	ctx context.Context,
 	request *persistence.CreateWorkflowExecutionRequest,
 ) (*persistence.CreateWorkflowExecutionResponse, error) {
-	ctx, cancel := s.ensureMinContextTimeout(ctx)
+	ctx, cancel, err := s.ensureMinContextTimeout(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if cancel != nil {
 		defer cancel()
 	}
@@ -681,7 +684,10 @@ func (s *contextImpl) UpdateWorkflowExecution(
 	ctx context.Context,
 	request *persistence.UpdateWorkflowExecutionRequest,
 ) (*persistence.UpdateWorkflowExecutionResponse, error) {
-	ctx, cancel := s.ensureMinContextTimeout(ctx)
+	ctx, cancel, err := s.ensureMinContextTimeout(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if cancel != nil {
 		defer cancel()
 	}
@@ -786,7 +792,10 @@ func (s *contextImpl) ConflictResolveWorkflowExecution(
 	ctx context.Context,
 	request *persistence.ConflictResolveWorkflowExecutionRequest,
 ) error {
-	ctx, cancel := s.ensureMinContextTimeout(ctx)
+	ctx, cancel, err := s.ensureMinContextTimeout(ctx)
+	if err != nil {
+		return err
+	}
 	if cancel != nil {
 		defer cancel()
 	}
@@ -900,13 +909,18 @@ Conflict_Resolve_Loop:
 
 func (s *contextImpl) ensureMinContextTimeout(
 	parent context.Context,
-) (context.Context, context.CancelFunc) {
-	deadline, ok := parent.Deadline()
-	if !ok || deadline.Sub(s.GetTimeSource().Now()) >= minContextTimeout {
-		return parent, nil
+) (context.Context, context.CancelFunc, error) {
+	if err := parent.Err(); err != nil {
+		return nil, nil, err
 	}
 
-	return context.WithTimeout(context.Background(), minContextTimeout)
+	deadline, ok := parent.Deadline()
+	if !ok || deadline.Sub(s.GetTimeSource().Now()) >= minContextTimeout {
+		return parent, nil, nil
+	}
+
+	childCtx, cancel := context.WithTimeout(context.Background(), minContextTimeout)
+	return childCtx, cancel, nil
 }
 
 func (s *contextImpl) AppendHistoryV2Events(
