@@ -266,6 +266,7 @@ func (c *coordinatorImpl) handleFailoverMarkers(
 		c.metrics.IncCounter(metrics.FailoverMarkerScope, metrics.GracefulFailoverFailure)
 		return
 	}
+
 	if len(record.shards) == c.config.NumberOfShards {
 		if err := domain.CleanPendingActiveState(
 			c.metadataMgr,
