@@ -36,7 +36,6 @@ import (
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
