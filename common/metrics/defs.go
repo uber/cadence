@@ -1919,6 +1919,7 @@ const (
 	MutableStateChecksumInvalidated
 	GracefulFailoverLatency
 	GracefulFailoverFailure
+	FailoverMarkerCount
 	FailoverMarkerReplicationLatency
 	FailoverMarkerInsertFailure
 	FailoverMarkerNotificationFailure
@@ -2399,6 +2400,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		MutableStateChecksumInvalidated:                   {metricName: "mutable_state_checksum_invalidated", metricType: Counter},
 		GracefulFailoverLatency:                           {metricName: "graceful_failover_latency", metricType: Timer},
 		GracefulFailoverFailure:                           {metricName: "graceful_failover_failures", metricType: Counter},
+		FailoverMarkerCount:                               {metricName: "failover_marker_count", metricType: Counter},
 		FailoverMarkerReplicationLatency:                  {metricName: "failover_marker_replication_latency", metricType: Timer},
 		FailoverMarkerInsertFailure:                       {metricName: "failover_marker_insert_failures", metricType: Counter},
 		FailoverMarkerNotificationFailure:                 {metricName: "failover_marker_notification_failures", metricType: Counter},
