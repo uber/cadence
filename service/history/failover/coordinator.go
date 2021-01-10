@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
@@ -45,8 +46,8 @@ import (
 )
 
 const (
-	notificationChanBufferSize       = 800
-	receiveChanBufferSize            = 400
+	notificationChanBufferSize       = 1000
+	receiveChanBufferSize            = 1000
 	cleanupMarkerInterval            = 30 * time.Minute
 	invalidMarkerDuration            = 1 * time.Hour
 	updateDomainRetryInitialInterval = 50 * time.Millisecond
@@ -75,6 +76,7 @@ type (
 		historyClient history.Client
 		config        *config.Config
 		timeSource    clock.TimeSource
+		domainCache   cache.DomainCache
 		metrics       metrics.Client
 		logger        log.Logger
 	}
@@ -101,6 +103,7 @@ func NewCoordinator(
 	metadataMgr persistence.MetadataManager,
 	historyClient history.Client,
 	timeSource clock.TimeSource,
+	domainCache cache.DomainCache,
 	config *config.Config,
 	metrics metrics.Client,
 	logger log.Logger,
@@ -120,6 +123,7 @@ func NewCoordinator(
 		metadataMgr:      metadataMgr,
 		historyClient:    historyClient,
 		timeSource:       timeSource,
+		domainCache:      domainCache,
 		config:           config,
 		metrics:          metrics,
 		logger:           logger.WithTags(tag.ComponentFailoverCoordinator),
@@ -257,6 +261,14 @@ func (c *coordinatorImpl) handleFailoverMarkers(
 		record.shards[shardID] = struct{}{}
 	}
 
+	domainName, err := c.domainCache.GetDomainName(domainID)
+	if err != nil {
+		c.logger.Error("Coordinator failed to get domain after receiving all failover markers",
+			tag.WorkflowDomainID(domainID))
+		c.metrics.IncCounter(metrics.FailoverMarkerScope, metrics.GracefulFailoverFailure)
+		return
+	}
+
 	if len(record.shards) == c.config.NumberOfShards {
 		if err := domain.CleanPendingActiveState(
 			c.metadataMgr,
@@ -273,13 +285,22 @@ func (c *coordinatorImpl) handleFailoverMarkers(
 		now := c.timeSource.Now()
 		c.metrics.Scope(
 			metrics.FailoverMarkerScope,
+			metrics.DomainTag(domainName),
 		).RecordTimer(
 			metrics.GracefulFailoverLatency,
 			now.Sub(time.Unix(0, marker.GetCreationTime())),
 		)
 		c.logger.Info("Updated domain from pending-active to active",
-			tag.WorkflowDomainID(domainID),
+			tag.WorkflowDomainName(domainName),
 			tag.FailoverVersion(*marker.FailoverVersion),
+		)
+	} else {
+		c.metrics.Scope(
+			metrics.FailoverMarkerScope,
+			metrics.DomainTag(domainName),
+		).RecordTimer(
+			metrics.FailoverMarkerCount,
+			time.Duration(len(record.shards)),
 		)
 	}
 }
