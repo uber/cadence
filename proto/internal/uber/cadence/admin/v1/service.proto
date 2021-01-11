@@ -28,10 +28,10 @@ import "google/protobuf/timestamp.proto";
 import "dependencies/gogoproto.proto";
 import "uber/cadence/api/v1/common.proto";
 import "uber/cadence/api/v1/visibility.proto";
-import "uber/cadence/replication/v1/messages.proto";
 import "uber/cadence/shared/v1/cluster.proto";
 import "uber/cadence/shared/v1/history.proto";
 import "uber/cadence/shared/v1/queue.proto";
+import "uber/cadence/shared/v1/replication.proto";
 
 // AdminAPI provides advanced APIs for debugging and analysis with admin privilege.
 service AdminAPI {
@@ -173,20 +173,20 @@ message GetWorkflowExecutionRawHistoryV2Response {
 }
 
 message GetReplicationMessagesRequest {
-  repeated replication.v1.ReplicationToken tokens = 1;
+  repeated shared.v1.ReplicationToken tokens = 1;
   string cluster_name = 2;
 }
 
 message GetReplicationMessagesResponse {
-  map<int32, replication.v1.ReplicationMessages> shard_messages = 1;
+  map<int32, shared.v1.ReplicationMessages> shard_messages = 1;
 }
 
 message GetDLQReplicationMessagesRequest {
-  repeated replication.v1.ReplicationTaskInfo task_infos = 1;
+  repeated shared.v1.ReplicationTaskInfo task_infos = 1;
 }
 
 message GetDLQReplicationMessagesResponse {
-  repeated replication.v1.ReplicationTask replication_tasks = 1;
+  repeated shared.v1.ReplicationTask replication_tasks = 1;
 }
 
 message GetDomainReplicationMessagesRequest {
@@ -200,7 +200,7 @@ message GetDomainReplicationMessagesRequest {
 }
 
 message GetDomainReplicationMessagesResponse {
-  replication.v1.ReplicationMessages messages = 1;
+  shared.v1.ReplicationMessages messages = 1;
 }
 
 // ReapplyEventsRequest is the request for reapply events API.
@@ -230,7 +230,7 @@ message DescribeClusterResponse {
 }
 
 message ReadDLQMessagesRequest {
-  replication.v1.DLQType type = 1;
+  shared.v1.DLQType type = 1;
   int32 shard_id = 2;
   string source_cluster = 3;
   int64 inclusive_end_message_id = 4;
@@ -239,13 +239,13 @@ message ReadDLQMessagesRequest {
 }
 
 message ReadDLQMessagesResponse {
-  replication.v1.DLQType type = 1;
-  repeated replication.v1.ReplicationTask replication_tasks = 2;
+  shared.v1.DLQType type = 1;
+  repeated shared.v1.ReplicationTask replication_tasks = 2;
   bytes next_page_token = 3;
 }
 
 message PurgeDLQMessagesRequest {
-  replication.v1.DLQType type = 1;
+  shared.v1.DLQType type = 1;
   int32 shard_id = 2;
   string source_cluster = 3;
   int64 inclusive_end_message_id = 4;
@@ -255,7 +255,7 @@ message PurgeDLQMessagesResponse {
 }
 
 message MergeDLQMessagesRequest {
-  replication.v1.DLQType type = 1;
+  shared.v1.DLQType type = 1;
   int32 shard_id = 2;
   string source_cluster = 3;
   int64 inclusive_end_message_id = 4;

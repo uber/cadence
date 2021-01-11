@@ -34,10 +34,10 @@ import "uber/cadence/api/v1/tasklist.proto";
 import "uber/cadence/api/v1/workflow.proto";
 import "uber/cadence/api/v1/service_workflow.proto";
 import "uber/cadence/api/v1/service_worker.proto";
-import "uber/cadence/replication/v1/messages.proto";
 import "uber/cadence/shared/v1/cluster.proto";
 import "uber/cadence/shared/v1/history.proto";
 import "uber/cadence/shared/v1/queue.proto";
+import "uber/cadence/shared/v1/replication.proto";
 import "uber/cadence/shared/v1/workflow.proto";
 
 
@@ -598,20 +598,20 @@ message DescribeQueueResponse {
 }
 
 message GetReplicationMessagesRequest {
-  repeated replication.v1.ReplicationToken tokens = 1;
+  repeated shared.v1.ReplicationToken tokens = 1;
   string cluster_name = 2;
 }
 
 message GetReplicationMessagesResponse {
-  map<int32, replication.v1.ReplicationMessages> shard_messages = 1;
+  map<int32, shared.v1.ReplicationMessages> shard_messages = 1;
 }
 
 message GetDLQReplicationMessagesRequest {
-  repeated replication.v1.ReplicationTaskInfo task_infos = 1;
+  repeated shared.v1.ReplicationTaskInfo task_infos = 1;
 }
 
 message GetDLQReplicationMessagesResponse {
-  repeated replication.v1.ReplicationTask replication_tasks = 1;
+  repeated shared.v1.ReplicationTask replication_tasks = 1;
 }
 
 message ReapplyEventsRequest {
@@ -632,7 +632,7 @@ message RefreshWorkflowTasksResponse {
 }
 
 message ReadDLQMessagesRequest {
-  replication.v1.DLQType type = 1;
+  shared.v1.DLQType type = 1;
   int32 shard_id = 2;
   string source_cluster = 3;
   int64 inclusive_end_message_id = 4;
@@ -641,13 +641,13 @@ message ReadDLQMessagesRequest {
 }
 
 message ReadDLQMessagesResponse {
-  replication.v1.DLQType type = 1;
-  repeated replication.v1.ReplicationTask replication_tasks = 2;
+  shared.v1.DLQType type = 1;
+  repeated shared.v1.ReplicationTask replication_tasks = 2;
   bytes next_page_token = 3;
 }
 
 message PurgeDLQMessagesRequest {
-  replication.v1.DLQType type = 1;
+  shared.v1.DLQType type = 1;
   int32 shard_id = 2;
   string source_cluster = 3;
   int64 inclusive_end_message_id = 4;
@@ -657,7 +657,7 @@ message PurgeDLQMessagesResponse {
 }
 
 message MergeDLQMessagesRequest {
-  replication.v1.DLQType type = 1;
+  shared.v1.DLQType type = 1;
   int32 shard_id = 2;
   string source_cluster = 3;
   int64 inclusive_end_message_id = 4;
@@ -670,7 +670,7 @@ message MergeDLQMessagesResponse {
 }
 
 message NotifyFailoverMarkersRequest {
-  repeated replication.v1.FailoverMarkerToken failover_marker_tokens = 1;
+  repeated shared.v1.FailoverMarkerToken failover_marker_tokens = 1;
 }
 
 message NotifyFailoverMarkersResponse {

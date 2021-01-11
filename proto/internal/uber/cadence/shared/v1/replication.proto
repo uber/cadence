@@ -20,9 +20,9 @@
 
 syntax = "proto3";
 
-package uber.cadence.replication.v1;
+package uber.cadence.shared.v1;
 
-option go_package = "replicationv1";
+option go_package = "sharedv1";
 
 import "google/protobuf/timestamp.proto";
 import "dependencies/gogoproto.proto";
