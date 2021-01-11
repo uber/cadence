@@ -159,7 +159,7 @@ func AdminMergeDLQMessages(c *cli.Context) {
 				fmt.Printf("Failed to merge DLQ message in shard %v with error: %v.\n", shardID, err)
 			}
 
-			if len(response.NextPageToken) == 0 {
+			if response == nil || len(response.NextPageToken) == 0 {
 				break
 			}
 
