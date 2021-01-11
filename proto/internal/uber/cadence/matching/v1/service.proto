@@ -136,7 +136,7 @@ message PollForActivityTaskResponse {
 
 message AddDecisionTaskRequest {
   string domain_id = 1;
-  api.v1.WorkflowExecution execution = 2;
+  api.v1.WorkflowExecution workflow_execution = 2;
   api.v1.TaskList task_list = 3;
   int64 schedule_id = 4;
   google.protobuf.Duration schedule_to_start_timeout = 5 [(gogoproto.stdduration) = true];
@@ -149,7 +149,7 @@ message AddDecisionTaskResponse {
 
 message AddActivityTaskRequest {
   string domain_id = 1;
-  api.v1.WorkflowExecution execution = 2;
+  api.v1.WorkflowExecution workflow_execution = 2;
   string source_domain_id = 3;
   api.v1.TaskList task_list = 4;
   int64 schedule_id = 5;

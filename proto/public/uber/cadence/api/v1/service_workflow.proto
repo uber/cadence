@@ -189,7 +189,7 @@ message DescribeWorkflowExecutionResponse {
 
 message QueryWorkflowRequest {
   string domain = 1;
-  WorkflowExecution execution = 2;
+  WorkflowExecution workflow_execution = 2;
   WorkflowQuery query = 3;
   QueryRejectCondition query_reject_condition = 4;
   QueryConsistencyLevel query_consistency_level = 5;
@@ -224,7 +224,7 @@ message ListTaskListPartitionsResponse {
 
 message ResetStickyTaskListRequest {
   string domain = 1;
-  WorkflowExecution execution = 2;
+  WorkflowExecution workflow_execution = 2;
 }
 
 message ResetStickyTaskListResponse {
@@ -239,7 +239,7 @@ message GetClusterInfoResponse {
 
 message GetWorkflowExecutionHistoryRequest {
   string domain = 1;
-  WorkflowExecution execution = 2;
+  WorkflowExecution workflow_execution = 2;
   int32 page_size = 3;
   bytes next_page_token = 4;
   bool wait_for_new_event = 5;

@@ -34,7 +34,7 @@ import "uber/cadence/api/v1/common.proto";
 import "uber/cadence/api/v1/tasklist.proto";
 
 message WorkflowExecutionInfo {
-  WorkflowExecution execution = 1;
+  WorkflowExecution workflow_execution = 1;
   WorkflowType type = 2;
   google.protobuf.Timestamp start_time = 3 [(gogoproto.stdtime) = true];
   google.protobuf.Timestamp close_time = 4 [(gogoproto.stdtime) = true];

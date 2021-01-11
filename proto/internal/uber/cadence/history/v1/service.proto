@@ -303,13 +303,13 @@ message ResetStickyTaskListResponse {
 
 message GetMutableStateRequest {
   string domain_id = 1;
-  api.v1.WorkflowExecution execution = 2;
+  api.v1.WorkflowExecution workflow_execution = 2;
   int64 expected_next_event_id = 3;
   bytes current_branch_token = 4;
 }
 
 message GetMutableStateResponse {
-  api.v1.WorkflowExecution execution = 1;
+  api.v1.WorkflowExecution workflow_execution = 1;
   api.v1.WorkflowType workflow_type = 2;
   int64 next_event_id = 3;
   int64 previous_started_event_id = 4;
@@ -330,13 +330,13 @@ message GetMutableStateResponse {
 
 message PollMutableStateRequest {
   string domain_id = 1;
-  api.v1.WorkflowExecution execution = 2;
+  api.v1.WorkflowExecution workflow_execution = 2;
   int64 expected_next_event_id = 3;
   bytes current_branch_token = 4;
 }
 
 message PollMutableStateResponse {
-  api.v1.WorkflowExecution execution = 1;
+  api.v1.WorkflowExecution workflow_execution = 1;
   api.v1.WorkflowType workflow_type = 2;
   int64 next_event_id = 3;
   int64 previous_started_event_id = 4;
@@ -539,7 +539,7 @@ message SyncActivityResponse {
 
 message DescribeMutableStateRequest {
   string domain_id = 1;
-  api.v1.WorkflowExecution execution = 2;
+  api.v1.WorkflowExecution workflow_execution = 2;
 }
 
 message DescribeMutableStateResponse {
@@ -627,7 +627,7 @@ message ReapplyEventsResponse {
 message RefreshWorkflowTasksRequest {
   string domain = 1;
   string domain_id = 2;
-  api.v1.WorkflowExecution execution = 3;
+  api.v1.WorkflowExecution workflow_execution = 3;
 }
 
 message RefreshWorkflowTasksResponse {

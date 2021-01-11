@@ -95,7 +95,7 @@ service AdminAPI {
 
 message DescribeWorkflowExecutionRequest {
   string domain = 1;
-  api.v1.WorkflowExecution execution = 2;
+  api.v1.WorkflowExecution workflow_execution = 2;
 }
 
 message DescribeWorkflowExecutionResponse {
@@ -157,7 +157,7 @@ message DescribeQueueResponse {
 
 message GetWorkflowExecutionRawHistoryV2Request {
   string domain = 1;
-  api.v1.WorkflowExecution execution = 2;
+  api.v1.WorkflowExecution workflow_execution = 2;
   int64 start_event_id = 3;
   int64 start_event_version = 4;
   int64 end_event_id = 5;
@@ -269,7 +269,7 @@ message MergeDLQMessagesResponse {
 
 message RefreshWorkflowTasksRequest {
   string domain = 1;
-  api.v1.WorkflowExecution execution = 2;
+  api.v1.WorkflowExecution workflow_execution = 2;
 }
 
 message RefreshWorkflowTasksResponse {

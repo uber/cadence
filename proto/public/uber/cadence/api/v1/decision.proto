@@ -160,7 +160,7 @@ message StartChildWorkflowExecutionDecisionAttributes {
 
 message SignalExternalWorkflowExecutionDecisionAttributes {
   string domain = 1;
-  WorkflowExecution execution = 2;
+  WorkflowExecution workflow_execution = 2;
   string signal_name = 3;
   Payload input = 4;
   bytes control = 5;
