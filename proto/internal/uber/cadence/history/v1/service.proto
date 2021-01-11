@@ -401,8 +401,8 @@ message RecordActivityTaskStartedResponse {
 }
 
 message RespondDecisionTaskCompletedRequest {
-  string domain_id = 1;
-  api.v1.RespondDecisionTaskCompletedRequest request = 2;
+  api.v1.RespondDecisionTaskCompletedRequest request = 1;
+  string domain_id = 2;
 }
 
 message RespondDecisionTaskCompletedResponse {
@@ -411,16 +411,16 @@ message RespondDecisionTaskCompletedResponse {
 }
 
 message RespondDecisionTaskFailedRequest {
-  string domain_id = 1;
-  api.v1.RespondDecisionTaskFailedRequest request = 2;
+  api.v1.RespondDecisionTaskFailedRequest request = 1;
+  string domain_id = 2;
 }
 
 message RespondDecisionTaskFailedResponse {
 }
 
 message RecordActivityTaskHeartbeatRequest {
-  string domain_id = 1;
-  api.v1.RecordActivityTaskHeartbeatRequest request = 2;
+  api.v1.RecordActivityTaskHeartbeatRequest request = 1;
+  string domain_id = 2;
 }
 
 message RecordActivityTaskHeartbeatResponse {
@@ -428,24 +428,24 @@ message RecordActivityTaskHeartbeatResponse {
 }
 
 message RespondActivityTaskCompletedRequest {
-  string domain_id = 1;
-  api.v1.RespondActivityTaskCompletedRequest request = 2;
+  api.v1.RespondActivityTaskCompletedRequest request = 1;
+  string domain_id = 2;
 }
 
 message RespondActivityTaskCompletedResponse {
 }
 
 message RespondActivityTaskFailedRequest {
-  string domain_id = 1;
-  api.v1.RespondActivityTaskFailedRequest request = 2;
+  api.v1.RespondActivityTaskFailedRequest request = 1;
+  string domain_id = 2;
 }
 
 message RespondActivityTaskFailedResponse {
 }
 
 message RespondActivityTaskCanceledRequest {
-  string domain_id = 1;
-  api.v1.RespondActivityTaskCanceledRequest request = 2;
+  api.v1.RespondActivityTaskCanceledRequest request = 1;
+  string domain_id = 2;
 }
 
 message RespondActivityTaskCanceledResponse {
