@@ -615,17 +615,19 @@ message GetDLQReplicationMessagesResponse {
 }
 
 message ReapplyEventsRequest {
-  string domain_id = 1;
-  api.v1.WorkflowExecution workflow_execution = 2;
-  api.v1.DataBlob events = 3;
+  string domain = 1;
+  string domain_id = 2;
+  api.v1.WorkflowExecution workflow_execution = 3;
+  api.v1.DataBlob events = 4;
 }
 
 message ReapplyEventsResponse {
 }
 
 message RefreshWorkflowTasksRequest {
-  string domain_id = 1;
-  api.v1.WorkflowExecution execution = 2;
+  string domain = 1;
+  string domain_id = 2;
+  api.v1.WorkflowExecution execution = 3;
 }
 
 message RefreshWorkflowTasksResponse {
