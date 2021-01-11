@@ -158,15 +158,10 @@ message DescribeQueueResponse {
 message GetWorkflowExecutionRawHistoryV2Request {
   string domain = 1;
   api.v1.WorkflowExecution workflow_execution = 2;
-  Event start_event = 3;
-  Event end_event = 4;
+  shared.v1.VersionHistoryItem start_event = 3;
+  shared.v1.VersionHistoryItem end_event = 4;
   int32 page_size = 5;
   bytes next_page_token = 6;
-}
-
-message Event {
-  int64 event_id = 1;
-  int64 event_version = 2;
 }
 
 message GetWorkflowExecutionRawHistoryV2Response {
