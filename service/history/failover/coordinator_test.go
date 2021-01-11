@@ -74,11 +74,13 @@ func (s *coordinatorSuite) SetupTest() {
 	s.config.NumberOfShards = 2
 	s.config.NotifyFailoverMarkerInterval = dynamicconfig.GetDurationPropertyFn(10 * time.Millisecond)
 	s.config.NotifyFailoverMarkerTimerJitterCoefficient = dynamicconfig.GetFloatPropertyFn(0.01)
+	s.mockResource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test", nil).AnyTimes()
 
 	s.coordinator = NewCoordinator(
 		s.mockMetadataManager,
 		s.historyClient,
 		s.mockResource.GetTimeSource(),
+		s.mockResource.GetDomainCache(),
 		s.config,
 		s.mockResource.GetMetricsClient(),
 		s.mockResource.GetLogger(),

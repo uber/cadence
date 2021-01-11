@@ -175,19 +175,26 @@ func convertTLSConfig(tlsConfig auth.TLS) (*tls.Config, error) {
 		return nil, nil
 	}
 
-	cert, err := tls.LoadX509KeyPair(tlsConfig.CertFile, tlsConfig.KeyFile)
-	if err != nil {
-		return nil, err
-	}
-	caCertPool := x509.NewCertPool()
-	pemData, err := ioutil.ReadFile(tlsConfig.CaFile)
-	if err != nil {
-		return nil, err
-	}
-	caCertPool.AppendCertsFromPEM(pemData)
+	if tlsConfig.CertFile != "" && tlsConfig.CaFile != "" && tlsConfig.KeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(tlsConfig.CertFile, tlsConfig.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		caCertPool := x509.NewCertPool()
+		pemData, err := ioutil.ReadFile(tlsConfig.CaFile)
+		if err != nil {
+			return nil, err
+		}
+		caCertPool.AppendCertsFromPEM(pemData)
 
-	return &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      caCertPool,
-	}, nil
+		return &tls.Config{
+			Certificates:       []tls.Certificate{cert},
+			RootCAs:            caCertPool,
+			InsecureSkipVerify: !tlsConfig.EnableHostVerification,
+		}, nil
+	} else {
+		return &tls.Config{
+			InsecureSkipVerify: !tlsConfig.EnableHostVerification,
+		}, nil
+	}
 }
