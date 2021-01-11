@@ -203,6 +203,10 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID,
 		logger.Info("Task list manager state changed", tag.LifeCycleStartFailed, tag.Error(err))
 		return nil, err
 	}
+	e.metricsClient.Scope(metrics.MatchingTaskListMgrScope).UpdateGauge(
+		metrics.TaskListManagersGauge,
+		float64(len(e.taskLists)),
+	)
 	logger.Info("Task list manager state changed", tag.LifeCycleStarted)
 	return mgr, nil
 }
@@ -218,6 +222,10 @@ func (e *matchingEngineImpl) removeTaskListManager(id *taskListID) {
 	e.taskListsLock.Lock()
 	defer e.taskListsLock.Unlock()
 	delete(e.taskLists, *id)
+	e.metricsClient.Scope(metrics.MatchingTaskListMgrScope).UpdateGauge(
+		metrics.TaskListManagersGauge,
+		float64(len(e.taskLists)),
+	)
 }
 
 // AddDecisionTask either delivers task directly to waiting poller or save it into task list persistence.
