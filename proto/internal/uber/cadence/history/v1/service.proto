@@ -27,7 +27,6 @@ option go_package = "historyv1";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "dependencies/gogoproto.proto";
-import "uber/cadence/admin/v1/service.proto";
 import "uber/cadence/api/v1/common.proto";
 import "uber/cadence/api/v1/history.proto";
 import "uber/cadence/api/v1/query.proto";
@@ -36,8 +35,9 @@ import "uber/cadence/api/v1/workflow.proto";
 import "uber/cadence/api/v1/service_workflow.proto";
 import "uber/cadence/api/v1/service_worker.proto";
 import "uber/cadence/replication/v1/messages.proto";
-import "uber/cadence/replication/v1/req_resp.proto";
+import "uber/cadence/shared/v1/cluster.proto";
 import "uber/cadence/shared/v1/history.proto";
+import "uber/cadence/shared/v1/queue.proto";
 import "uber/cadence/shared/v1/workflow.proto";
 
 
@@ -231,7 +231,7 @@ message StartWorkflowExecutionRequest {
 }
 
 message StartWorkflowExecutionResponse {
-  api.v1.StartWorkflowExecutionResponse response = 1;
+  string run_id = 1;
 }
 
 message SignalWorkflowExecutionRequest {
@@ -250,7 +250,7 @@ message SignalWithStartWorkflowExecutionRequest {
 }
 
 message SignalWithStartWorkflowExecutionResponse {
-  api.v1.SignalWithStartWorkflowExecutionResponse response = 1;
+  string run_id = 1;
 }
 
 message ResetWorkflowExecutionRequest {
@@ -259,7 +259,7 @@ message ResetWorkflowExecutionRequest {
 }
 
 message ResetWorkflowExecutionResponse {
-  api.v1.ResetWorkflowExecutionResponse response = 1;
+  string run_id = 1;
 }
 
 message TerminateWorkflowExecutionRequest {
@@ -276,7 +276,11 @@ message DescribeWorkflowExecutionRequest {
 }
 
 message DescribeWorkflowExecutionResponse {
-  api.v1.DescribeWorkflowExecutionResponse response = 1;
+  api.v1.WorkflowExecutionConfiguration execution_configuration = 1;
+  api.v1.WorkflowExecutionInfo workflow_execution_info = 2;
+  repeated api.v1.PendingActivityInfo pending_activities = 3;
+  repeated api.v1.PendingChildExecutionInfo pending_children = 4;
+  api.v1.PendingDecisionInfo pending_decision = 5;
 }
 
 message QueryWorkflowRequest {
@@ -285,7 +289,8 @@ message QueryWorkflowRequest {
 }
 
 message QueryWorkflowResponse {
-  api.v1.QueryWorkflowResponse response = 1;
+  api.v1.Payload query_result = 1;
+  api.v1.QueryRejected query_rejected = 2;
 }
 
 message ResetStickyTaskListRequest {
@@ -419,7 +424,7 @@ message RecordActivityTaskHeartbeatRequest {
 }
 
 message RecordActivityTaskHeartbeatResponse {
-  api.v1.RecordActivityTaskHeartbeatResponse response = 1;
+  bool cancel_requested = 1;
 }
 
 message RespondActivityTaskCompletedRequest {
@@ -543,95 +548,125 @@ message DescribeMutableStateResponse {
 }
 
 message DescribeHistoryHostRequest {
-  admin.v1.DescribeHistoryHostRequest request = 1;
+  string host_address = 1;
+  int32 shard_id = 2;
+  api.v1.WorkflowExecution workflow_execution = 3;
 }
 
 message DescribeHistoryHostResponse {
-  admin.v1.DescribeHistoryHostResponse response = 1;
+  int32 number_of_shards = 1;
+  repeated int32 shard_ids = 2;
+  shared.v1.DomainCacheInfo domain_cache = 3;
+  string shard_controller_status = 4;
+  string address = 5;
 }
 
 message CloseShardRequest {
-  admin.v1.CloseShardRequest request = 1;
+  int32 shard_id = 1;
 }
 
 message CloseShardResponse {
 }
 
 message RemoveTaskRequest {
-  admin.v1.RemoveTaskRequest request = 1;
+  int32 shard_id = 1;
+  shared.v1.TaskType task_type = 2;
+  int64 task_id = 3;
+  google.protobuf.Timestamp visibility_time = 4 [(gogoproto.stdtime) = true];
 }
 
 message RemoveTaskResponse {
 }
 
 message ResetQueueRequest {
-  admin.v1.ResetQueueRequest request = 1;
+  int32 shard_id = 1;
+  string cluster_name = 2;
+  shared.v1.TaskType task_type = 3;
 }
 
 message ResetQueueResponse {
 }
 
 message DescribeQueueRequest {
-  admin.v1.DescribeQueueRequest request = 1;
+  int32 shard_id = 1;
+  string cluster_name = 2;
+  shared.v1.TaskType task_type = 3;
 }
 
 message DescribeQueueResponse {
-  admin.v1.DescribeQueueResponse response = 1;
+  repeated string processing_queue_states = 1;
 }
 
 message GetReplicationMessagesRequest {
-  replication.v1.GetReplicationMessagesRequest request = 1;
+  repeated replication.v1.ReplicationToken tokens = 1;
+  string cluster_name = 2;
 }
 
 message GetReplicationMessagesResponse {
-  replication.v1.GetReplicationMessagesResponse response = 1;
+  map<int32, replication.v1.ReplicationMessages> shard_messages = 1;
 }
 
 message GetDLQReplicationMessagesRequest {
-  replication.v1.GetDLQReplicationMessagesRequest request = 1;
+  repeated replication.v1.ReplicationTaskInfo task_infos = 1;
 }
 
 message GetDLQReplicationMessagesResponse {
-  replication.v1.GetDLQReplicationMessagesResponse response = 1;
+  repeated replication.v1.ReplicationTask replication_tasks = 1;
 }
 
 message ReapplyEventsRequest {
-  admin.v1.ReapplyEventsRequest request = 1;
-  string domain_id = 2;
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  api.v1.DataBlob events = 3;
 }
 
 message ReapplyEventsResponse {
 }
 
 message RefreshWorkflowTasksRequest {
-  admin.v1.RefreshWorkflowTasksRequest request = 1;
-  string domain_id = 2;
+  string domain_id = 1;
+  api.v1.WorkflowExecution execution = 2;
 }
 
 message RefreshWorkflowTasksResponse {
 }
 
 message ReadDLQMessagesRequest {
-  replication.v1.ReadDLQMessagesRequest request = 1;
+  replication.v1.DLQType type = 1;
+  int32 shard_id = 2;
+  string source_cluster = 3;
+  int64 inclusive_end_message_id = 4;
+  int32 page_size = 5;
+  bytes next_page_token = 6;
 }
 
 message ReadDLQMessagesResponse {
-  replication.v1.ReadDLQMessagesResponse response = 1;
+  replication.v1.DLQType type = 1;
+  repeated replication.v1.ReplicationTask replication_tasks = 2;
+  bytes next_page_token = 3;
 }
 
 message PurgeDLQMessagesRequest {
-  replication.v1.PurgeDLQMessagesRequest request = 1;
+  replication.v1.DLQType type = 1;
+  int32 shard_id = 2;
+  string source_cluster = 3;
+  int64 inclusive_end_message_id = 4;
 }
 
 message PurgeDLQMessagesResponse {
 }
 
 message MergeDLQMessagesRequest {
-  replication.v1.MergeDLQMessagesRequest request = 1;
+  replication.v1.DLQType type = 1;
+  int32 shard_id = 2;
+  string source_cluster = 3;
+  int64 inclusive_end_message_id = 4;
+  int32 page_size = 5;
+  bytes next_page_token = 6;
 }
 
 message MergeDLQMessagesResponse {
-  replication.v1.MergeDLQMessagesResponse response = 1;
+  bytes next_page_token = 1;
 }
 
 message NotifyFailoverMarkersRequest {

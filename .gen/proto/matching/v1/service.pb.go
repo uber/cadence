@@ -367,7 +367,22 @@ func (m *PollForActivityTaskRequest) GetForwardedFrom() string {
 }
 
 type PollForActivityTaskResponse struct {
-	Response *v1.PollForActivityTaskResponse `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
+	TaskToken                       []byte                `protobuf:"bytes,1,opt,name=task_token,json=taskToken,proto3" json:"task_token,omitempty"`
+	WorkflowExecution               *v1.WorkflowExecution `protobuf:"bytes,2,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
+	ActivityId                      string                `protobuf:"bytes,3,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
+	ActivityType                    *v1.ActivityType      `protobuf:"bytes,4,opt,name=activity_type,json=activityType,proto3" json:"activity_type,omitempty"`
+	Input                           *v1.Payload           `protobuf:"bytes,5,opt,name=input,proto3" json:"input,omitempty"`
+	ScheduledTimestamp              *time.Time            `protobuf:"bytes,6,opt,name=scheduled_timestamp,json=scheduledTimestamp,proto3,stdtime" json:"scheduled_timestamp,omitempty"`
+	StartedTimestamp                *time.Time            `protobuf:"bytes,7,opt,name=started_timestamp,json=startedTimestamp,proto3,stdtime" json:"started_timestamp,omitempty"`
+	ScheduleToCloseTimeout          *time.Duration        `protobuf:"bytes,8,opt,name=schedule_to_close_timeout,json=scheduleToCloseTimeout,proto3,stdduration" json:"schedule_to_close_timeout,omitempty"`
+	StartToCloseTimeout             *time.Duration        `protobuf:"bytes,9,opt,name=start_to_close_timeout,json=startToCloseTimeout,proto3,stdduration" json:"start_to_close_timeout,omitempty"`
+	HeartbeatTimeout                *time.Duration        `protobuf:"bytes,10,opt,name=heartbeat_timeout,json=heartbeatTimeout,proto3,stdduration" json:"heartbeat_timeout,omitempty"`
+	Attempt                         int32                 `protobuf:"varint,11,opt,name=attempt,proto3" json:"attempt,omitempty"`
+	ScheduledTimestampOfThisAttempt *time.Time            `protobuf:"bytes,12,opt,name=scheduled_timestamp_of_this_attempt,json=scheduledTimestampOfThisAttempt,proto3,stdtime" json:"scheduled_timestamp_of_this_attempt,omitempty"`
+	HeartbeatDetails                *v1.Payload           `protobuf:"bytes,13,opt,name=heartbeat_details,json=heartbeatDetails,proto3" json:"heartbeat_details,omitempty"`
+	WorkflowType                    *v1.WorkflowType      `protobuf:"bytes,14,opt,name=workflow_type,json=workflowType,proto3" json:"workflow_type,omitempty"`
+	WorkflowDomain                  string                `protobuf:"bytes,15,opt,name=workflow_domain,json=workflowDomain,proto3" json:"workflow_domain,omitempty"`
+	Header                          *v1.Header            `protobuf:"bytes,16,opt,name=header,proto3" json:"header,omitempty"`
 }
 
 func (m *PollForActivityTaskResponse) Reset()      { *m = PollForActivityTaskResponse{} }
@@ -402,9 +417,114 @@ func (m *PollForActivityTaskResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_PollForActivityTaskResponse proto.InternalMessageInfo
 
-func (m *PollForActivityTaskResponse) GetResponse() *v1.PollForActivityTaskResponse {
+func (m *PollForActivityTaskResponse) GetTaskToken() []byte {
 	if m != nil {
-		return m.Response
+		return m.TaskToken
+	}
+	return nil
+}
+
+func (m *PollForActivityTaskResponse) GetWorkflowExecution() *v1.WorkflowExecution {
+	if m != nil {
+		return m.WorkflowExecution
+	}
+	return nil
+}
+
+func (m *PollForActivityTaskResponse) GetActivityId() string {
+	if m != nil {
+		return m.ActivityId
+	}
+	return ""
+}
+
+func (m *PollForActivityTaskResponse) GetActivityType() *v1.ActivityType {
+	if m != nil {
+		return m.ActivityType
+	}
+	return nil
+}
+
+func (m *PollForActivityTaskResponse) GetInput() *v1.Payload {
+	if m != nil {
+		return m.Input
+	}
+	return nil
+}
+
+func (m *PollForActivityTaskResponse) GetScheduledTimestamp() *time.Time {
+	if m != nil {
+		return m.ScheduledTimestamp
+	}
+	return nil
+}
+
+func (m *PollForActivityTaskResponse) GetStartedTimestamp() *time.Time {
+	if m != nil {
+		return m.StartedTimestamp
+	}
+	return nil
+}
+
+func (m *PollForActivityTaskResponse) GetScheduleToCloseTimeout() *time.Duration {
+	if m != nil {
+		return m.ScheduleToCloseTimeout
+	}
+	return nil
+}
+
+func (m *PollForActivityTaskResponse) GetStartToCloseTimeout() *time.Duration {
+	if m != nil {
+		return m.StartToCloseTimeout
+	}
+	return nil
+}
+
+func (m *PollForActivityTaskResponse) GetHeartbeatTimeout() *time.Duration {
+	if m != nil {
+		return m.HeartbeatTimeout
+	}
+	return nil
+}
+
+func (m *PollForActivityTaskResponse) GetAttempt() int32 {
+	if m != nil {
+		return m.Attempt
+	}
+	return 0
+}
+
+func (m *PollForActivityTaskResponse) GetScheduledTimestampOfThisAttempt() *time.Time {
+	if m != nil {
+		return m.ScheduledTimestampOfThisAttempt
+	}
+	return nil
+}
+
+func (m *PollForActivityTaskResponse) GetHeartbeatDetails() *v1.Payload {
+	if m != nil {
+		return m.HeartbeatDetails
+	}
+	return nil
+}
+
+func (m *PollForActivityTaskResponse) GetWorkflowType() *v1.WorkflowType {
+	if m != nil {
+		return m.WorkflowType
+	}
+	return nil
+}
+
+func (m *PollForActivityTaskResponse) GetWorkflowDomain() string {
+	if m != nil {
+		return m.WorkflowDomain
+	}
+	return ""
+}
+
+func (m *PollForActivityTaskResponse) GetHeader() *v1.Header {
+	if m != nil {
+		return m.Header
 	}
 	return nil
 }
@@ -737,7 +857,8 @@ func (m *QueryWorkflowRequest) GetForwardedFrom() string {
 }
 
 type QueryWorkflowResponse struct {
-	Response *v1.QueryWorkflowResponse `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
+	QueryResult   *v1.Payload       `protobuf:"bytes,1,opt,name=query_result,json=queryResult,proto3" json:"query_result,omitempty"`
+	QueryRejected *v1.QueryRejected `protobuf:"bytes,2,opt,name=query_rejected,json=queryRejected,proto3" json:"query_rejected,omitempty"`
 }
 
 func (m *QueryWorkflowResponse) Reset()      { *m = QueryWorkflowResponse{} }
@@ -772,9 +893,16 @@ func (m *QueryWorkflowResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_QueryWorkflowResponse proto.InternalMessageInfo
 
-func (m *QueryWorkflowResponse) GetResponse() *v1.QueryWorkflowResponse {
+func (m *QueryWorkflowResponse) GetQueryResult() *v1.Payload {
 	if m != nil {
-		return m.Response
+		return m.QueryResult
+	}
+	return nil
+}
+
+func (m *QueryWorkflowResponse) GetQueryRejected() *v1.QueryRejected {
+	if m != nil {
+		return m.QueryRejected
 	}
 	return nil
 }
@@ -1035,7 +1163,8 @@ func (m *DescribeTaskListRequest) GetDomainId() string {
 }
 
 type DescribeTaskListResponse struct {
-	Response *v1.DescribeTaskListResponse `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
+	Pollers        []*v1.PollerInfo   `protobuf:"bytes,1,rep,name=pollers,proto3" json:"pollers,omitempty"`
+	TaskListStatus *v1.TaskListStatus `protobuf:"bytes,2,opt,name=task_list_status,json=taskListStatus,proto3" json:"task_list_status,omitempty"`
 }
 
 func (m *DescribeTaskListResponse) Reset()      { *m = DescribeTaskListResponse{} }
@@ -1070,9 +1199,16 @@ func (m *DescribeTaskListResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_DescribeTaskListResponse proto.InternalMessageInfo
 
-func (m *DescribeTaskListResponse) GetResponse() *v1.DescribeTaskListResponse {
+func (m *DescribeTaskListResponse) GetPollers() []*v1.PollerInfo {
 	if m != nil {
-		return m.Response
+		return m.Pollers
+	}
+	return nil
+}
+
+func (m *DescribeTaskListResponse) GetTaskListStatus() *v1.TaskListStatus {
+	if m != nil {
+		return m.TaskListStatus
 	}
 	return nil
 }
@@ -1129,7 +1265,8 @@ func (m *ListTaskListPartitionsRequest) GetTaskList() *v1.TaskList {
 }
 
 type ListTaskListPartitionsResponse struct {
-	Response *v1.ListTaskListPartitionsResponse `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
+	ActivityTaskListPartitions []*v1.TaskListPartitionMetadata `protobuf:"bytes,1,rep,name=activity_task_list_partitions,json=activityTaskListPartitions,proto3" json:"activity_task_list_partitions,omitempty"`
+	DecisionTaskListPartitions []*v1.TaskListPartitionMetadata `protobuf:"bytes,2,rep,name=decision_task_list_partitions,json=decisionTaskListPartitions,proto3" json:"decision_task_list_partitions,omitempty"`
 }
 
 func (m *ListTaskListPartitionsResponse) Reset()      { *m = ListTaskListPartitionsResponse{} }
@@ -1164,9 +1301,16 @@ func (m *ListTaskListPartitionsResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ListTaskListPartitionsResponse proto.InternalMessageInfo
 
-func (m *ListTaskListPartitionsResponse) GetResponse() *v1.ListTaskListPartitionsResponse {
+func (m *ListTaskListPartitionsResponse) GetActivityTaskListPartitions() []*v1.TaskListPartitionMetadata {
 	if m != nil {
-		return m.Response
+		return m.ActivityTaskListPartitions
+	}
+	return nil
+}
+
+func (m *ListTaskListPartitionsResponse) GetDecisionTaskListPartitions() []*v1.TaskListPartitionMetadata {
+	if m != nil {
+		return m.DecisionTaskListPartitions
 	}
 	return nil
 }
@@ -1198,102 +1342,123 @@ func init() {
 }
 
 var fileDescriptor_826e827d3aabf7fc = []byte{
-	// 1519 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x56, 0x4f, 0x8f, 0xd3, 0xd6,
-	0x16, 0x1f, 0xcf, 0xff, 0x9c, 0xcc, 0x84, 0xe1, 0xf2, 0x18, 0x3c, 0x81, 0xf1, 0x84, 0xbc, 0x07,
-	0xca, 0x43, 0xe0, 0x30, 0xe1, 0xf1, 0x3a, 0x9d, 0x6e, 0xca, 0xfc, 0xa3, 0x91, 0xa8, 0x00, 0x93,
-	0xb6, 0x12, 0xaa, 0xb0, 0x1c, 0xfb, 0x4e, 0xc6, 0x4a, 0xe2, 0x1b, 0xec, 0x9b, 0x0c, 0xd9, 0x54,
-	0x55, 0x57, 0x95, 0xba, 0x61, 0x51, 0xa9, 0xfd, 0x00, 0x5d, 0xf4, 0x6b, 0x74, 0xc7, 0x92, 0x25,
-	0x52, 0x55, 0xb5, 0x04, 0x55, 0xea, 0x12, 0xa9, 0x5f, 0xa0, 0xba, 0xd7, 0xd7, 0x49, 0x9c, 0xd8,
-	0x21, 0x19, 0x10, 0x3b, 0xfb, 0x9e, 0xdf, 0xf9, 0x7f, 0xce, 0xef, 0x5e, 0xb8, 0xdc, 0x2c, 0x63,
-	0x37, 0x6f, 0x1a, 0x16, 0x76, 0x4c, 0x9c, 0xaf, 0x1b, 0xd4, 0x3c, 0xb2, 0x9d, 0x4a, 0xbe, 0xb5,
-	0x99, 0xf7, 0xb0, 0xdb, 0xb2, 0x4d, 0xac, 0x36, 0x5c, 0x42, 0x09, 0x92, 0x19, 0x4e, 0x15, 0x38,
-	0x35, 0xc0, 0xa9, 0xad, 0xcd, 0xb4, 0x52, 0x21, 0xa4, 0x52, 0xc3, 0x79, 0x8e, 0x2b, 0x37, 0x0f,
-	0xf3, 0x56, 0xd3, 0x35, 0xa8, 0x4d, 0x1c, 0x5f, 0x33, 0xbd, 0x31, 0x28, 0xa7, 0x76, 0x1d, 0x7b,
-	0xd4, 0xa8, 0x37, 0x04, 0xe0, 0x82, 0x85, 0x1b, 0xd8, 0x61, 0x86, 0x6d, 0xec, 0xe5, 0x2b, 0xa4,
-	0x42, 0xf8, 0xb9, 0x90, 0x66, 0x42, 0x01, 0x1a, 0x0d, 0x9b, 0xc5, 0x66, 0x92, 0x7a, 0xbd, 0xe7,
-	0x20, 0x0a, 0xf1, 0xb8, 0x89, 0xdd, 0xb6, 0x00, 0x64, 0xa3, 0x00, 0xd4, 0xf0, 0xaa, 0x35, 0xdb,
-	0xa3, 0x02, 0x93, 0x8b, 0xc2, 0x88, 0x12, 0xe8, 0xc7, 0xc4, 0xad, 0x62, 0x57, 0x20, 0xaf, 0xbc,
-	0x09, 0x79, 0x58, 0x23, 0xc7, 0x02, 0xfb, 0x9f, 0x10, 0xd6, 0x3b, 0x32, 0x5c, 0x6c, 0x31, 0xf8,
-	0x91, 0xed, 0x51, 0xd2, 0x8d, 0xef, 0x52, 0x0c, 0x2a, 0x1c, 0x62, 0xf6, 0x99, 0x04, 0xe9, 0x7b,
-	0xa4, 0x56, 0x3b, 0x20, 0xee, 0x1e, 0x36, 0x6d, 0xcf, 0x26, 0x4e, 0xc9, 0xf0, 0xaa, 0x1a, 0x7e,
-	0xdc, 0xc4, 0x1e, 0x45, 0x45, 0x58, 0x70, 0xfd, 0x4f, 0x59, 0xca, 0x48, 0xb9, 0x64, 0x21, 0xaf,
-	0x86, 0x7a, 0x66, 0x34, 0x6c, 0xb5, 0xb5, 0xa9, 0xc6, 0x5b, 0xd0, 0x02, 0x7d, 0x74, 0x1e, 0x12,
-	0x16, 0xa9, 0x1b, 0xb6, 0xa3, 0xdb, 0x96, 0x3c, 0x9d, 0x91, 0x72, 0x09, 0x6d, 0xd1, 0x3f, 0x28,
-	0x5a, 0x4c, 0xd8, 0x20, 0xb5, 0x1a, 0x76, 0x99, 0x70, 0xc6, 0x17, 0xfa, 0x07, 0x45, 0x0b, 0x5d,
-	0x82, 0xd4, 0x21, 0x71, 0x8f, 0x0d, 0xd7, 0xc2, 0x96, 0x7e, 0xe8, 0x92, 0xba, 0x3c, 0xcb, 0x11,
-	0xcb, 0xdd, 0xd3, 0x03, 0x97, 0xd4, 0xb3, 0x7f, 0x2f, 0xc2, 0xf9, 0xc8, 0x40, 0xbc, 0x06, 0x71,
-	0x3c, 0x8c, 0xd6, 0x01, 0x58, 0xf2, 0x3a, 0x25, 0x55, 0xec, 0xf0, 0x74, 0x96, 0xb4, 0x04, 0x3b,
-	0x29, 0xb1, 0x03, 0xf4, 0x19, 0xa0, 0xa0, 0xd0, 0x3a, 0x7e, 0x82, 0xcd, 0x26, 0x1b, 0x37, 0x1e,
-	0x68, 0xb2, 0x70, 0x39, 0x32, 0xeb, 0x2f, 0x04, 0x7c, 0x3f, 0x40, 0x6b, 0xa7, 0x8f, 0x07, 0x8f,
-	0xd0, 0x01, 0x2c, 0x77, 0xcd, 0xd2, 0x76, 0x03, 0xf3, 0xec, 0x92, 0x85, 0x8b, 0x23, 0x2d, 0x96,
-	0xda, 0x0d, 0xac, 0x2d, 0x1d, 0xf7, 0xfd, 0xa1, 0x0f, 0x61, 0xad, 0xe1, 0xe2, 0x96, 0x4d, 0x9a,
-	0x9e, 0xee, 0x51, 0xc3, 0xa5, 0xd8, 0xd2, 0x71, 0x0b, 0x3b, 0x94, 0x55, 0x8c, 0xd5, 0x63, 0x46,
-	0x5b, 0x0d, 0x00, 0x0f, 0x7c, 0xf9, 0x3e, 0x13, 0x17, 0x2d, 0x94, 0x83, 0x95, 0x21, 0x8d, 0x39,
-	0xae, 0x91, 0xf2, 0xc2, 0x48, 0x19, 0x16, 0x0c, 0x4a, 0x71, 0xbd, 0x41, 0xe5, 0xf9, 0x8c, 0x94,
-	0x9b, 0xd3, 0x82, 0x5f, 0x94, 0x85, 0x65, 0x07, 0x3f, 0xa1, 0x3d, 0x03, 0x0b, 0xdc, 0x40, 0x92,
-	0x1d, 0x06, 0xda, 0x57, 0x01, 0x95, 0x0d, 0xb3, 0x5a, 0x23, 0x15, 0xdd, 0x24, 0x4d, 0x87, 0xea,
-	0x47, 0xb6, 0x43, 0xe5, 0x45, 0x0e, 0x5c, 0x11, 0x92, 0x5d, 0x26, 0xf8, 0xc4, 0x76, 0x28, 0xda,
-	0x02, 0xd9, 0xa3, 0xb6, 0x59, 0x6d, 0xf7, 0xaa, 0xad, 0x63, 0xc7, 0x28, 0xd7, 0xb0, 0x25, 0x27,
-	0x32, 0x52, 0x6e, 0x51, 0x5b, 0xf5, 0xe5, 0xdd, 0x5a, 0xee, 0xfb, 0x52, 0xb4, 0x05, 0x73, 0x7c,
-	0x13, 0x65, 0xe0, 0xa5, 0xcc, 0x8e, 0x2c, 0xe5, 0x7d, 0x86, 0xd4, 0x7c, 0x05, 0xa4, 0xc1, 0xb2,
-	0x25, 0x46, 0x43, 0xb7, 0x9d, 0x43, 0x22, 0x27, 0xb9, 0x85, 0x6b, 0x61, 0x0b, 0xfe, 0xb2, 0x30,
-	0x23, 0x25, 0xd7, 0x70, 0x3c, 0x1b, 0x3b, 0x34, 0x18, 0xa8, 0xa2, 0x73, 0x48, 0xb4, 0x25, 0xab,
-	0xef, 0x0f, 0x3d, 0x82, 0x0b, 0xc3, 0x73, 0xa3, 0xf3, 0x49, 0x63, 0x7b, 0x26, 0x2f, 0x71, 0x17,
-	0xeb, 0x91, 0x41, 0xb2, 0xf9, 0xbc, 0x63, 0x7b, 0x54, 0x5b, 0x1b, 0x1a, 0x9c, 0x40, 0x84, 0x54,
-	0x38, 0xe3, 0x17, 0x9d, 0x6d, 0x37, 0xd6, 0x5b, 0xd8, 0x65, 0xae, 0xe5, 0x65, 0xde, 0x9f, 0xd3,
-	0x5c, 0xf4, 0x80, 0x49, 0x3e, 0xf7, 0x05, 0xe8, 0x22, 0x2c, 0x95, 0x5d, 0xc3, 0x31, 0x8f, 0xc4,
-	0xa0, 0xa7, 0xf8, 0xa0, 0x27, 0xfd, 0x33, 0x7f, 0xd4, 0x6f, 0x43, 0xca, 0x33, 0x8f, 0xb0, 0xd5,
-	0xac, 0x61, 0x4b, 0x67, 0xcc, 0x29, 0x9f, 0xe2, 0x41, 0xa6, 0x55, 0x9f, 0x56, 0xd5, 0x80, 0x56,
-	0xd5, 0x52, 0x40, 0xab, 0x3b, 0xb3, 0x4f, 0x7f, 0xdf, 0x90, 0xb4, 0xe5, 0xae, 0x1e, 0x93, 0xa0,
-	0x5d, 0x58, 0x0a, 0x26, 0x8b, 0x9b, 0x59, 0x19, 0xd3, 0x4c, 0x52, 0x68, 0x71, 0x23, 0x5f, 0xc2,
-	0x02, 0xeb, 0x8e, 0x8d, 0x3d, 0xf9, 0x74, 0x66, 0x26, 0x97, 0x2c, 0xec, 0xa8, 0x71, 0xf7, 0x82,
-	0x3a, 0x62, 0xbf, 0xd5, 0xfb, 0xbe, 0x91, 0x7d, 0x87, 0xba, 0x6d, 0x2d, 0x30, 0x99, 0x7e, 0x04,
-	0x4b, 0xfd, 0x02, 0xb4, 0x02, 0x33, 0x55, 0xdc, 0xe6, 0xeb, 0x9f, 0xd0, 0xd8, 0x27, 0x1b, 0xa7,
-	0x96, 0x51, 0x6b, 0x62, 0xb1, 0xeb, 0x63, 0x8d, 0x13, 0x57, 0xd8, 0x9e, 0xde, 0x92, 0xfa, 0x09,
-	0xf4, 0x96, 0x49, 0xed, 0x96, 0x4d, 0xdb, 0x27, 0x27, 0xd0, 0x08, 0x0b, 0xef, 0x91, 0x40, 0xab,
-	0x5d, 0xfe, 0x0c, 0xc7, 0x21, 0xf8, 0xf3, 0x0e, 0x2c, 0xba, 0xe2, 0x5b, 0xe4, 0x72, 0x7d, 0xfc,
-	0x5c, 0x7c, 0x3d, 0xad, 0x6b, 0x21, 0xfb, 0xc3, 0x0c, 0xac, 0xde, 0xb2, 0xac, 0xa8, 0x4b, 0x27,
-	0x94, 0xa8, 0x34, 0x90, 0xe8, 0x1e, 0x24, 0x4e, 0xca, 0xce, 0x3d, 0x45, 0xb4, 0x0d, 0x89, 0xde,
-	0x86, 0xce, 0x8c, 0xb3, 0xa1, 0x8b, 0x34, 0x58, 0xc8, 0x0d, 0x48, 0x06, 0x5b, 0xd0, 0xe3, 0x5e,
-	0x08, 0x8e, 0x8a, 0x16, 0x7a, 0x08, 0x6b, 0x5d, 0x00, 0x25, 0x3e, 0x5b, 0xf3, 0xfd, 0x20, 0x4d,
-	0xca, 0x89, 0x37, 0x59, 0x58, 0x1b, 0x5a, 0x91, 0x3d, 0xf1, 0xc0, 0xd9, 0x99, 0xfd, 0x91, 0x6d,
-	0xc8, 0x6a, 0x60, 0xa1, 0x44, 0x38, 0x9b, 0x97, 0x7c, 0x75, 0xb4, 0x0d, 0xf3, 0x1e, 0x69, 0xba,
-	0x26, 0xe6, 0x04, 0x9d, 0x1a, 0x9c, 0xd6, 0x3e, 0xea, 0x32, 0xbc, 0xea, 0x03, 0x8e, 0xd4, 0x84,
-	0x46, 0xc4, 0x18, 0x2c, 0x44, 0x8d, 0xc1, 0x1a, 0x9c, 0x1b, 0x6a, 0x8c, 0x68, 0xda, 0x2f, 0x7e,
-	0xd3, 0xa2, 0x06, 0xfd, 0x3d, 0x34, 0x8d, 0xdd, 0x63, 0x3c, 0x13, 0xbd, 0xe7, 0xc9, 0x1f, 0xf5,
-	0x94, 0x7f, 0xbe, 0x17, 0xf8, 0x0b, 0xb5, 0x77, 0xf6, 0xad, 0xda, 0x3b, 0x37, 0x59, 0x7b, 0xe7,
-	0xdf, 0x55, 0x7b, 0x17, 0xde, 0x41, 0x7b, 0x17, 0xe3, 0xdb, 0x1b, 0xb5, 0x9d, 0xd9, 0x5f, 0x25,
-	0xf8, 0x17, 0x27, 0xb8, 0xa0, 0x0d, 0x41, 0x73, 0x77, 0x07, 0x59, 0xec, 0xbf, 0x91, 0xd5, 0x8c,
-	0xd2, 0x1d, 0x93, 0xbf, 0xde, 0x66, 0x21, 0xc7, 0xa4, 0x37, 0x1d, 0xce, 0x0e, 0x04, 0x28, 0x88,
-	0xed, 0x60, 0x88, 0xd8, 0xae, 0x8c, 0x93, 0xde, 0x10, 0xa5, 0xfd, 0x29, 0x41, 0xc6, 0x3f, 0xb6,
-	0x38, 0x94, 0x85, 0xba, 0x4b, 0xea, 0x8d, 0x1a, 0xa6, 0xd8, 0x0a, 0x4a, 0x79, 0x77, 0xb0, 0x94,
-	0x37, 0x23, 0x7d, 0xbd, 0xc9, 0xce, 0x7b, 0x28, 0xeb, 0x39, 0x58, 0xe0, 0xba, 0x82, 0xe3, 0x12,
-	0xda, 0x3c, 0xfb, 0x2d, 0x5a, 0xd9, 0x7f, 0xc3, 0xc5, 0x11, 0xe1, 0x89, 0x62, 0xfc, 0x26, 0xc1,
-	0x85, 0x5d, 0xc3, 0x31, 0x71, 0xed, 0x6e, 0x93, 0x7a, 0xd4, 0x70, 0x2c, 0xdb, 0xa9, 0xb0, 0xab,
-	0x61, 0x2c, 0xc2, 0x08, 0x5d, 0x67, 0xd3, 0x03, 0xd7, 0xd9, 0x6d, 0x48, 0x75, 0x93, 0xea, 0xbd,
-	0xa9, 0x53, 0x31, 0x6f, 0xea, 0x20, 0x33, 0xff, 0x4d, 0x4d, 0xfb, 0xfe, 0xde, 0x86, 0x26, 0xb2,
-	0x1b, 0xb0, 0x1e, 0x93, 0x9e, 0x28, 0xc0, 0x57, 0x70, 0x6e, 0x0f, 0x7b, 0xa6, 0x6b, 0x97, 0x71,
-	0x57, 0x5d, 0xa4, 0x7e, 0x30, 0x38, 0x03, 0x57, 0x23, 0xbd, 0xc6, 0xa8, 0x8f, 0xd7, 0xfa, 0x2c,
-	0x06, 0x79, 0xd8, 0x80, 0x98, 0xf8, 0xe2, 0xd0, 0xc4, 0x5f, 0x1b, 0x33, 0x82, 0xa1, 0xa1, 0xf7,
-	0x60, 0x9d, 0xd7, 0x53, 0x20, 0xee, 0x19, 0x2e, 0xb5, 0x19, 0xd1, 0x79, 0x41, 0xb2, 0xab, 0x30,
-	0xef, 0xc7, 0x24, 0x9a, 0x2c, 0xfe, 0xc2, 0xc5, 0x9f, 0x9e, 0xac, 0xf8, 0x8f, 0x41, 0x89, 0x73,
-	0x2a, 0x32, 0xbc, 0x3b, 0x94, 0xe1, 0x8d, 0x48, 0xe3, 0xa3, 0xcd, 0xf4, 0xf2, 0x2c, 0xfc, 0x94,
-	0x80, 0xe4, 0xa7, 0xe2, 0x25, 0x7a, 0xeb, 0x5e, 0x11, 0x7d, 0x23, 0xc1, 0x99, 0x88, 0xd7, 0x28,
-	0xfa, 0xdf, 0x84, 0x8f, 0x57, 0x5e, 0xa4, 0xf4, 0xcd, 0x13, 0x3d, 0x79, 0xfb, 0x83, 0xe8, 0x27,
-	0xf4, 0x31, 0x82, 0x88, 0xb8, 0xc2, 0xc7, 0x08, 0x22, 0xf2, 0x5d, 0xd8, 0x82, 0x53, 0x03, 0xef,
-	0x05, 0x74, 0x3d, 0xde, 0x52, 0xf4, 0x9b, 0x2f, 0xbd, 0x39, 0x81, 0x46, 0xc8, 0x6f, 0x28, 0xef,
-	0xd1, 0x7e, 0xa3, 0x72, 0xde, 0x9c, 0x40, 0x43, 0xf8, 0x6d, 0xc0, 0x72, 0xe8, 0x26, 0x40, 0x6a,
-	0xbc, 0x8d, 0xa8, 0x1b, 0x31, 0x9d, 0x1f, 0x1b, 0x2f, 0x3c, 0x7e, 0x2f, 0xc1, 0x5a, 0x2c, 0xe3,
-	0xa2, 0xed, 0x78, 0x73, 0x6f, 0xba, 0x45, 0xd2, 0x1f, 0x9d, 0x48, 0x57, 0x84, 0xf5, 0xad, 0x04,
-	0x67, 0x23, 0x39, 0x10, 0xfd, 0x3f, 0xde, 0xec, 0xa8, 0x3b, 0x21, 0xfd, 0xc1, 0xc4, 0x7a, 0x22,
-	0x94, 0x36, 0xac, 0x0c, 0x72, 0x15, 0x1a, 0xd1, 0xda, 0x18, 0x66, 0x4d, 0x17, 0x26, 0x51, 0x11,
-	0xae, 0xbf, 0x93, 0x60, 0x35, 0x9a, 0x45, 0xd0, 0x88, 0x74, 0x46, 0x72, 0x66, 0x7a, 0x6b, 0x72,
-	0x45, 0x3f, 0x9a, 0x9d, 0x8f, 0x9f, 0xbf, 0x54, 0xa6, 0x5e, 0xbc, 0x54, 0xa6, 0x5e, 0xbf, 0x54,
-	0xa4, 0xaf, 0x3b, 0x8a, 0xf4, 0x73, 0x47, 0x91, 0x9e, 0x75, 0x14, 0xe9, 0x79, 0x47, 0x91, 0xfe,
-	0xe8, 0x28, 0xd2, 0x5f, 0x1d, 0x65, 0xea, 0x75, 0x47, 0x91, 0x9e, 0xbe, 0x52, 0xa6, 0x9e, 0xbf,
-	0x52, 0xa6, 0x5e, 0xbc, 0x52, 0xa6, 0x1e, 0x42, 0xe0, 0xa1, 0xb5, 0x59, 0x9e, 0xe7, 0x6f, 0xd6,
-	0x1b, 0xff, 0x04, 0x00, 0x00, 0xff, 0xff, 0xa3, 0xa1, 0x2a, 0x2b, 0xc5, 0x15, 0x00, 0x00,
+	// 1852 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x58, 0xcd, 0x8f, 0x1b, 0x49,
+	0x15, 0x9f, 0x9e, 0x2f, 0x8f, 0x9f, 0x3d, 0xce, 0x4c, 0x85, 0x9d, 0xf4, 0x38, 0x19, 0xcf, 0xc4,
+	0x61, 0x97, 0x01, 0x2d, 0x36, 0xe3, 0x65, 0x21, 0x1b, 0x0e, 0x90, 0xcc, 0x24, 0xbb, 0x96, 0x36,
+	0x4a, 0xd2, 0x31, 0x20, 0xad, 0xd0, 0xb6, 0x6a, 0xba, 0x6b, 0xc6, 0x8d, 0xdb, 0x5d, 0x4e, 0x57,
+	0xd9, 0xb3, 0xbe, 0x20, 0xc4, 0x01, 0x21, 0x71, 0xd9, 0x03, 0x12, 0xdc, 0xd9, 0x03, 0xff, 0x06,
+	0xb7, 0xbd, 0x20, 0xe5, 0xb8, 0x12, 0x42, 0x90, 0x89, 0x90, 0x38, 0xae, 0xc4, 0x3f, 0x80, 0xea,
+	0xa3, 0xdb, 0x6e, 0xbb, 0xed, 0xb1, 0x27, 0x51, 0xb8, 0xb9, 0xab, 0xde, 0xfb, 0xbd, 0x7a, 0x5f,
+	0xbf, 0x7a, 0x65, 0x78, 0xa7, 0x7b, 0x4c, 0xc2, 0xaa, 0x83, 0x5d, 0x12, 0x38, 0xa4, 0xda, 0xc6,
+	0xdc, 0x69, 0x7a, 0xc1, 0x69, 0xb5, 0x77, 0x50, 0x65, 0x24, 0xec, 0x79, 0x0e, 0xa9, 0x74, 0x42,
+	0xca, 0x29, 0x32, 0x85, 0x5c, 0x45, 0xcb, 0x55, 0x22, 0xb9, 0x4a, 0xef, 0xa0, 0x58, 0x3a, 0xa5,
+	0xf4, 0xd4, 0x27, 0x55, 0x29, 0x77, 0xdc, 0x3d, 0xa9, 0xba, 0xdd, 0x10, 0x73, 0x8f, 0x06, 0x4a,
+	0xb3, 0xb8, 0x3b, 0xba, 0xcf, 0xbd, 0x36, 0x61, 0x1c, 0xb7, 0x3b, 0x5a, 0xe0, 0x86, 0x4b, 0x3a,
+	0x24, 0x10, 0xc0, 0x1e, 0x61, 0xd5, 0x53, 0x7a, 0x4a, 0xe5, 0xba, 0xde, 0xdd, 0x4b, 0x1c, 0x10,
+	0x77, 0x3c, 0x71, 0x36, 0x87, 0xb6, 0xdb, 0x03, 0x03, 0x69, 0x12, 0xcf, 0xba, 0x24, 0xec, 0x6b,
+	0x81, 0x72, 0x9a, 0x00, 0xc7, 0xac, 0xe5, 0x7b, 0x8c, 0x6b, 0x99, 0xfd, 0x34, 0x19, 0x1d, 0x02,
+	0xfb, 0x8c, 0x86, 0x2d, 0x12, 0x6a, 0xc9, 0xef, 0x5c, 0x24, 0x79, 0xe2, 0xd3, 0x33, 0x2d, 0xfb,
+	0xcd, 0x84, 0x2c, 0x6b, 0xe2, 0x90, 0xb8, 0x42, 0xbc, 0xe9, 0x31, 0x4e, 0xe3, 0xf3, 0xbd, 0x3d,
+	0x41, 0x2a, 0x79, 0xc4, 0xf2, 0x97, 0x06, 0x14, 0x1f, 0x53, 0xdf, 0x7f, 0x40, 0xc3, 0x23, 0xe2,
+	0x78, 0xcc, 0xa3, 0x41, 0x03, 0xb3, 0x96, 0x45, 0x9e, 0x75, 0x09, 0xe3, 0xa8, 0x0e, 0x99, 0x50,
+	0xfd, 0x34, 0x8d, 0x3d, 0x63, 0x3f, 0x57, 0xab, 0x56, 0x12, 0x39, 0xc3, 0x1d, 0xaf, 0xd2, 0x3b,
+	0xa8, 0x4c, 0x46, 0xb0, 0x22, 0x7d, 0x74, 0x1d, 0xb2, 0x2e, 0x6d, 0x63, 0x2f, 0xb0, 0x3d, 0xd7,
+	0x5c, 0xdc, 0x33, 0xf6, 0xb3, 0xd6, 0x9a, 0x5a, 0xa8, 0xbb, 0x62, 0xb3, 0x43, 0x7d, 0x9f, 0x84,
+	0x62, 0x73, 0x49, 0x6d, 0xaa, 0x85, 0xba, 0x8b, 0xde, 0x86, 0xc2, 0x09, 0x0d, 0xcf, 0x70, 0xe8,
+	0x12, 0xd7, 0x3e, 0x09, 0x69, 0xdb, 0x5c, 0x96, 0x12, 0xeb, 0xf1, 0xea, 0x83, 0x90, 0xb6, 0xcb,
+	0xff, 0x5d, 0x83, 0xeb, 0xa9, 0x07, 0x61, 0x1d, 0x1a, 0x30, 0x82, 0x76, 0x00, 0x84, 0xf3, 0x36,
+	0xa7, 0x2d, 0x12, 0x48, 0x77, 0xf2, 0x56, 0x56, 0xac, 0x34, 0xc4, 0x02, 0xfa, 0x29, 0xa0, 0x28,
+	0xd0, 0x36, 0xf9, 0x8c, 0x38, 0x5d, 0x51, 0x6e, 0xf2, 0xa0, 0xb9, 0xda, 0x3b, 0xa9, 0x5e, 0xff,
+	0x5c, 0x8b, 0xdf, 0x8f, 0xa4, 0xad, 0xcd, 0xb3, 0xd1, 0x25, 0xf4, 0x00, 0xd6, 0x63, 0x58, 0xde,
+	0xef, 0x10, 0xe9, 0x5d, 0xae, 0x76, 0x73, 0x2a, 0x62, 0xa3, 0xdf, 0x21, 0x56, 0xfe, 0x6c, 0xe8,
+	0x0b, 0x7d, 0x00, 0xdb, 0x9d, 0x90, 0xf4, 0x3c, 0xda, 0x65, 0x36, 0xe3, 0x38, 0xe4, 0xc4, 0xb5,
+	0x49, 0x8f, 0x04, 0x5c, 0x44, 0x4c, 0xc4, 0x63, 0xc9, 0xda, 0x8a, 0x04, 0x9e, 0xaa, 0xfd, 0xfb,
+	0x62, 0xbb, 0xee, 0xa2, 0x7d, 0xd8, 0x18, 0xd3, 0x58, 0x91, 0x1a, 0x05, 0x96, 0x94, 0x34, 0x21,
+	0x83, 0x39, 0x27, 0xed, 0x0e, 0x37, 0x57, 0xf7, 0x8c, 0xfd, 0x15, 0x2b, 0xfa, 0x44, 0x65, 0x58,
+	0x0f, 0xc8, 0x67, 0x7c, 0x00, 0x90, 0x91, 0x00, 0x39, 0xb1, 0x18, 0x69, 0xbf, 0x0b, 0xe8, 0x18,
+	0x3b, 0x2d, 0x9f, 0x9e, 0xda, 0x0e, 0xed, 0x06, 0xdc, 0x6e, 0x7a, 0x01, 0x37, 0xd7, 0xa4, 0xe0,
+	0x86, 0xde, 0x39, 0x14, 0x1b, 0x1f, 0x79, 0x01, 0x47, 0xb7, 0xc1, 0x64, 0xdc, 0x73, 0x5a, 0xfd,
+	0x41, 0xb4, 0x6d, 0x12, 0xe0, 0x63, 0x9f, 0xb8, 0x66, 0x76, 0xcf, 0xd8, 0x5f, 0xb3, 0xb6, 0xd4,
+	0x7e, 0x1c, 0xcb, 0xfb, 0x6a, 0x17, 0xdd, 0x86, 0x15, 0xd9, 0x89, 0x26, 0xc8, 0x50, 0x96, 0xa7,
+	0x86, 0xf2, 0x89, 0x90, 0xb4, 0x94, 0x02, 0xb2, 0x60, 0xdd, 0xd5, 0xa5, 0x61, 0x7b, 0xc1, 0x09,
+	0x35, 0x73, 0x12, 0xe1, 0xbb, 0x49, 0x04, 0xd5, 0x2c, 0x02, 0xa4, 0x11, 0xe2, 0x80, 0x79, 0x24,
+	0xe0, 0x51, 0x41, 0xd5, 0x83, 0x13, 0x6a, 0xe5, 0xdd, 0xa1, 0x2f, 0xf4, 0x29, 0xdc, 0x18, 0xaf,
+	0x1b, 0x5b, 0x56, 0x9a, 0xe8, 0x33, 0x33, 0x2f, 0x4d, 0xec, 0xa4, 0x1e, 0x52, 0xd4, 0xe7, 0xc7,
+	0x1e, 0xe3, 0xd6, 0xf6, 0x58, 0xe1, 0x44, 0x5b, 0xa8, 0x02, 0x57, 0x55, 0xd0, 0x45, 0x77, 0x13,
+	0xbb, 0x47, 0x42, 0x61, 0xda, 0x5c, 0x97, 0xf9, 0xd9, 0x94, 0x5b, 0x4f, 0xc5, 0xce, 0xcf, 0xd4,
+	0x06, 0xba, 0x09, 0xf9, 0xe3, 0x10, 0x07, 0x4e, 0x53, 0x17, 0x7a, 0x41, 0x16, 0x7a, 0x4e, 0xad,
+	0xa9, 0x52, 0xff, 0x10, 0x0a, 0xcc, 0x69, 0x12, 0xb7, 0xeb, 0x13, 0xd7, 0x16, 0xcc, 0x69, 0x5e,
+	0x91, 0x87, 0x2c, 0x56, 0x14, 0xad, 0x56, 0x22, 0x5a, 0xad, 0x34, 0x22, 0x5a, 0xbd, 0xb7, 0xfc,
+	0xf9, 0x3f, 0x77, 0x0d, 0x6b, 0x3d, 0xd6, 0x13, 0x3b, 0xe8, 0x10, 0xf2, 0x51, 0x65, 0x49, 0x98,
+	0x8d, 0x19, 0x61, 0x72, 0x5a, 0x4b, 0x82, 0xfc, 0x02, 0x32, 0x22, 0x3b, 0x1e, 0x61, 0xe6, 0xe6,
+	0xde, 0xd2, 0x7e, 0xae, 0x76, 0xaf, 0x32, 0xe9, 0x5e, 0xa8, 0x4c, 0xe9, 0xef, 0xca, 0x13, 0x05,
+	0x72, 0x3f, 0xe0, 0x61, 0xdf, 0x8a, 0x20, 0x8b, 0x9f, 0x42, 0x7e, 0x78, 0x03, 0x6d, 0xc0, 0x52,
+	0x8b, 0xf4, 0x65, 0xfb, 0x67, 0x2d, 0xf1, 0x53, 0x94, 0x53, 0x0f, 0xfb, 0x5d, 0xa2, 0x7b, 0x7d,
+	0xa6, 0x72, 0x92, 0x0a, 0x77, 0x16, 0x6f, 0x1b, 0xc3, 0x04, 0x7a, 0xd7, 0xe1, 0x5e, 0xcf, 0xe3,
+	0xfd, 0xcb, 0x13, 0x68, 0x0a, 0xc2, 0x1b, 0x24, 0xd0, 0xbf, 0x0d, 0x08, 0x34, 0x79, 0x90, 0xff,
+	0x2b, 0x81, 0xee, 0x42, 0x0e, 0xeb, 0xd3, 0x0c, 0x7c, 0x83, 0x68, 0xa9, 0xee, 0x0a, 0x86, 0x8d,
+	0x05, 0x24, 0xc3, 0x2e, 0x4f, 0x61, 0xd8, 0xd8, 0x31, 0xc9, 0xb0, 0x78, 0xe8, 0x0b, 0xd5, 0x60,
+	0xc5, 0x0b, 0x3a, 0x5d, 0x2e, 0xb9, 0x31, 0x57, 0xbb, 0x91, 0x9e, 0x28, 0xdc, 0xf7, 0x29, 0x76,
+	0x2d, 0x25, 0x8a, 0x9e, 0xc0, 0xd5, 0x64, 0x27, 0xc9, 0x2a, 0x97, 0xe4, 0x39, 0x4b, 0x1f, 0xa0,
+	0x44, 0x3b, 0xc9, 0x1d, 0xf4, 0x10, 0x36, 0x87, 0x7b, 0x4a, 0x01, 0x66, 0x66, 0x04, 0xdc, 0x18,
+	0x6a, 0x2c, 0x05, 0xf7, 0x09, 0x6c, 0x47, 0x46, 0x6c, 0x4e, 0x6d, 0xc7, 0xa7, 0x8c, 0x48, 0x60,
+	0xda, 0x55, 0xdc, 0x9c, 0xab, 0x6d, 0x8f, 0xc1, 0x1e, 0xe9, 0x69, 0xeb, 0xde, 0xf2, 0x9f, 0x04,
+	0xea, 0x56, 0x84, 0xd0, 0xa0, 0x87, 0x42, 0xbf, 0xa1, 0xd4, 0x51, 0x03, 0xb6, 0xa4, 0xbd, 0x71,
+	0xe0, 0xec, 0x6c, 0xc0, 0x57, 0xa5, 0xfa, 0x08, 0xea, 0xc7, 0xb0, 0xd9, 0x24, 0x38, 0xe4, 0xc7,
+	0x04, 0xf3, 0x18, 0x10, 0x66, 0x03, 0xdc, 0x88, 0x35, 0x23, 0xb4, 0xa1, 0x2b, 0x2d, 0x97, 0xbc,
+	0xd2, 0x02, 0xb8, 0x95, 0x92, 0x3b, 0x9b, 0x9e, 0xd8, 0xbc, 0xe9, 0x31, 0x3b, 0xd2, 0xca, 0xcf,
+	0x18, 0xfa, 0xdd, 0xf1, 0x5c, 0x3e, 0x3a, 0x69, 0x34, 0x3d, 0x76, 0x57, 0xdb, 0xab, 0x0f, 0xfb,
+	0xe5, 0x12, 0x8e, 0x3d, 0x9f, 0x49, 0x1a, 0xbf, 0xa8, 0xd6, 0x06, 0x4e, 0x1d, 0x29, 0xad, 0xf1,
+	0xa1, 0xa2, 0x70, 0xb9, 0xa1, 0xe2, 0x5b, 0x70, 0x25, 0xc6, 0x51, 0x54, 0x22, 0x6f, 0x82, 0xac,
+	0x55, 0x88, 0x96, 0x8f, 0xe4, 0x2a, 0x7a, 0x0f, 0x56, 0x9b, 0x04, 0xbb, 0x24, 0xd4, 0x14, 0x7f,
+	0x3d, 0xd5, 0xd2, 0x47, 0x52, 0xc4, 0xd2, 0xa2, 0xe5, 0x3f, 0x2e, 0xc1, 0xd6, 0x5d, 0xd7, 0x4d,
+	0x9b, 0x2b, 0x13, 0x5c, 0x66, 0x8c, 0x70, 0xd9, 0x11, 0x64, 0x2f, 0xcb, 0x1f, 0x03, 0x45, 0x74,
+	0x07, 0xb2, 0x83, 0x4b, 0x78, 0x69, 0x96, 0x4b, 0x78, 0x8d, 0x47, 0x77, 0xee, 0x2e, 0xe4, 0xe2,
+	0xa6, 0x89, 0xc7, 0x2b, 0x88, 0x96, 0xea, 0xee, 0x68, 0x57, 0xe9, 0x2e, 0xd0, 0xb5, 0xba, 0x32,
+	0x77, 0x57, 0xc9, 0x81, 0x2d, 0xaa, 0xd8, 0x3b, 0xb0, 0xca, 0x68, 0x37, 0x74, 0x88, 0xa4, 0x91,
+	0xc2, 0xe8, 0x85, 0x34, 0x34, 0x9d, 0x60, 0xd6, 0x7a, 0x2a, 0x25, 0x2d, 0xad, 0x91, 0xc2, 0xf4,
+	0x99, 0x34, 0xa6, 0xdf, 0x86, 0x6b, 0x63, 0x89, 0x51, 0x24, 0x5f, 0xfe, 0xab, 0x4a, 0x5a, 0xda,
+	0x5d, 0xf6, 0x06, 0x92, 0x26, 0x46, 0x55, 0xe9, 0x89, 0x3d, 0xb0, 0xa4, 0x18, 0xbf, 0xa0, 0xd6,
+	0x8f, 0x22, 0x7b, 0x89, 0xf4, 0x2e, 0xbf, 0x52, 0x7a, 0x57, 0xe6, 0x4b, 0xef, 0xea, 0xeb, 0x4a,
+	0x6f, 0xe6, 0x35, 0xa4, 0x77, 0x6d, 0x72, 0x7a, 0xd3, 0xee, 0xf0, 0xf2, 0xdf, 0x0d, 0xf8, 0x86,
+	0x9c, 0x61, 0xa2, 0x34, 0x44, 0xc9, 0x3d, 0x1c, 0x1d, 0x54, 0xbe, 0x9d, 0x1a, 0xcd, 0x34, 0xdd,
+	0x19, 0x47, 0x94, 0x57, 0x69, 0xc8, 0x19, 0x27, 0x98, 0x3f, 0x1b, 0xf0, 0xd6, 0xc8, 0x09, 0xf5,
+	0xec, 0xf2, 0x63, 0xc8, 0xcb, 0x27, 0x80, 0x1d, 0x12, 0xd6, 0xf5, 0x23, 0x1f, 0xa7, 0xf3, 0x6e,
+	0x4e, 0x6a, 0x58, 0x52, 0x01, 0xd5, 0xa1, 0x10, 0x01, 0xfc, 0x92, 0x38, 0x9c, 0xb8, 0x53, 0xc7,
+	0x45, 0x35, 0x26, 0x6a, 0x49, 0x6b, 0xfd, 0xd9, 0xf0, 0x67, 0xf9, 0xdf, 0x06, 0xec, 0xa9, 0x83,
+	0xb9, 0x52, 0x4e, 0xf8, 0x7b, 0x48, 0xdb, 0x1d, 0x9f, 0x08, 0x61, 0x1d, 0xca, 0x47, 0xa3, 0xf9,
+	0x78, 0x3f, 0xd5, 0xd0, 0x45, 0x38, 0x6f, 0x20, 0x37, 0xd7, 0x20, 0x23, 0x75, 0x35, 0x51, 0x66,
+	0xad, 0x55, 0xf1, 0x59, 0x77, 0xcb, 0xb7, 0xe0, 0xe6, 0x94, 0xe3, 0xe9, 0x82, 0xfc, 0x87, 0x01,
+	0x37, 0x0e, 0x71, 0xe0, 0x10, 0xff, 0x51, 0x97, 0x33, 0x8e, 0x03, 0xd7, 0x0b, 0x4e, 0xc5, 0x14,
+	0x3a, 0x13, 0xeb, 0x24, 0xc6, 0xde, 0xc5, 0x91, 0xb1, 0xf7, 0x43, 0x28, 0xc4, 0x4e, 0x0d, 0xde,
+	0xde, 0x85, 0x09, 0xd7, 0x64, 0xe4, 0x99, 0xba, 0x26, 0xf9, 0xd0, 0xd7, 0xab, 0x70, 0x4d, 0x79,
+	0x17, 0x76, 0x26, 0xb8, 0xa7, 0x03, 0xf0, 0x2b, 0xb8, 0x76, 0x44, 0x98, 0x13, 0x7a, 0xc7, 0x24,
+	0x56, 0xd7, 0xae, 0x3f, 0x18, 0xad, 0x81, 0x77, 0x53, 0xad, 0x4e, 0x50, 0x9f, 0x2d, 0xf5, 0xe5,
+	0x2f, 0x0c, 0x30, 0xc7, 0x11, 0x74, 0xdb, 0x7c, 0x00, 0x19, 0x15, 0x4e, 0x66, 0x1a, 0xf2, 0x6d,
+	0xb6, 0x3b, 0xf1, 0xf9, 0x42, 0x42, 0xf9, 0x38, 0x8e, 0xe4, 0xd1, 0x43, 0xd8, 0x18, 0x44, 0x9f,
+	0x71, 0xcc, 0xbb, 0x4c, 0xb7, 0xcc, 0xad, 0xa9, 0xb1, 0x7b, 0x2a, 0x45, 0xad, 0x02, 0x4f, 0x7c,
+	0x97, 0x19, 0xec, 0xc8, 0x7c, 0xe8, 0xd5, 0xc7, 0x38, 0xe4, 0x9e, 0x60, 0x5b, 0x16, 0x05, 0x6b,
+	0x0b, 0x56, 0xf5, 0x08, 0xa3, 0x8a, 0x44, 0x7f, 0x25, 0x93, 0xb7, 0x38, 0x5f, 0xf2, 0x7e, 0xbb,
+	0x08, 0xa5, 0x49, 0x56, 0x75, 0x84, 0x9e, 0xc1, 0xce, 0xe0, 0xf5, 0x11, 0xfb, 0xdb, 0x89, 0x05,
+	0x75, 0xdc, 0x2a, 0x53, 0x4d, 0xc6, 0xb8, 0x0f, 0x09, 0xc7, 0x2e, 0xe6, 0xd8, 0x2a, 0xe2, 0x21,
+	0xf6, 0x4e, 0x9a, 0x16, 0x26, 0xe3, 0x7f, 0x31, 0x52, 0x4d, 0x2e, 0x5e, 0xce, 0xa4, 0x3b, 0x34,
+	0x0f, 0x24, 0x4d, 0xd6, 0xbe, 0xc8, 0x42, 0xee, 0xa1, 0x7e, 0x87, 0xdf, 0x7d, 0x5c, 0x47, 0xbf,
+	0x31, 0xe0, 0x6a, 0xca, 0x5b, 0x1c, 0x7d, 0x7f, 0xce, 0xa7, 0xbb, 0x4c, 0x5d, 0xf1, 0xfd, 0x4b,
+	0x3d, 0xf8, 0x87, 0x0f, 0x31, 0x7c, 0xd7, 0xcd, 0x70, 0x88, 0x94, 0xe9, 0x66, 0x86, 0x43, 0xa4,
+	0x3e, 0x8a, 0x7b, 0x70, 0x65, 0x64, 0x94, 0x42, 0xdf, 0x9b, 0x8c, 0x94, 0x3e, 0x0e, 0x17, 0x0f,
+	0xe6, 0xd0, 0x48, 0xd8, 0x4d, 0xf8, 0x3d, 0xdd, 0x6e, 0x9a, 0xcf, 0x07, 0x73, 0x68, 0x68, 0xbb,
+	0x1d, 0x58, 0x4f, 0xdc, 0xb0, 0xa8, 0x32, 0x19, 0x23, 0x6d, 0x58, 0x28, 0x56, 0x67, 0x96, 0xd7,
+	0x16, 0xff, 0x60, 0xc0, 0xf6, 0xc4, 0x7b, 0x04, 0xdd, 0x99, 0x0c, 0x77, 0xd1, 0xdd, 0x58, 0xfc,
+	0xd1, 0xa5, 0x74, 0xf5, 0xb1, 0x7e, 0x67, 0xc0, 0x5b, 0xa9, 0xcc, 0x8e, 0x7e, 0x30, 0x19, 0x76,
+	0xda, 0x4d, 0x57, 0xfc, 0xe1, 0xdc, 0x7a, 0xfa, 0x28, 0x7d, 0xd8, 0x18, 0x65, 0x70, 0x34, 0x25,
+	0xb5, 0x13, 0xee, 0x8b, 0x62, 0x6d, 0x1e, 0x15, 0x6d, 0xfa, 0xf7, 0x06, 0x6c, 0xa5, 0x33, 0x24,
+	0x9a, 0xe2, 0xce, 0x54, 0x26, 0x2f, 0xde, 0x9e, 0x5f, 0x51, 0x9d, 0xe6, 0xde, 0x4f, 0x9e, 0xbf,
+	0x28, 0x2d, 0x7c, 0xf5, 0xa2, 0xb4, 0xf0, 0xf5, 0x8b, 0x92, 0xf1, 0xeb, 0xf3, 0x92, 0xf1, 0x97,
+	0xf3, 0x92, 0xf1, 0xe5, 0x79, 0xc9, 0x78, 0x7e, 0x5e, 0x32, 0xfe, 0x75, 0x5e, 0x32, 0xfe, 0x73,
+	0x5e, 0x5a, 0xf8, 0xfa, 0xbc, 0x64, 0x7c, 0xfe, 0xb2, 0xb4, 0xf0, 0xfc, 0x65, 0x69, 0xe1, 0xab,
+	0x97, 0xa5, 0x85, 0x4f, 0x20, 0xb2, 0xd0, 0x3b, 0x38, 0x5e, 0x95, 0xe3, 0xfc, 0x7b, 0xff, 0x0b,
+	0x00, 0x00, 0xff, 0xff, 0xb2, 0xb8, 0xcb, 0x4b, 0xc3, 0x1a, 0x00, 0x00,
 }
 
 func (this *PollForDecisionTaskRequest) Equal(that interface{}) bool {
@@ -1466,7 +1631,82 @@ func (this *PollForActivityTaskResponse) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !this.Response.Equal(that1.Response) {
+	if !bytes.Equal(this.TaskToken, that1.TaskToken) {
+		return false
+	}
+	if !this.WorkflowExecution.Equal(that1.WorkflowExecution) {
+		return false
+	}
+	if this.ActivityId != that1.ActivityId {
+		return false
+	}
+	if !this.ActivityType.Equal(that1.ActivityType) {
+		return false
+	}
+	if !this.Input.Equal(that1.Input) {
+		return false
+	}
+	if that1.ScheduledTimestamp == nil {
+		if this.ScheduledTimestamp != nil {
+			return false
+		}
+	} else if !this.ScheduledTimestamp.Equal(*that1.ScheduledTimestamp) {
+		return false
+	}
+	if that1.StartedTimestamp == nil {
+		if this.StartedTimestamp != nil {
+			return false
+		}
+	} else if !this.StartedTimestamp.Equal(*that1.StartedTimestamp) {
+		return false
+	}
+	if this.ScheduleToCloseTimeout != nil && that1.ScheduleToCloseTimeout != nil {
+		if *this.ScheduleToCloseTimeout != *that1.ScheduleToCloseTimeout {
+			return false
+		}
+	} else if this.ScheduleToCloseTimeout != nil {
+		return false
+	} else if that1.ScheduleToCloseTimeout != nil {
+		return false
+	}
+	if this.StartToCloseTimeout != nil && that1.StartToCloseTimeout != nil {
+		if *this.StartToCloseTimeout != *that1.StartToCloseTimeout {
+			return false
+		}
+	} else if this.StartToCloseTimeout != nil {
+		return false
+	} else if that1.StartToCloseTimeout != nil {
+		return false
+	}
+	if this.HeartbeatTimeout != nil && that1.HeartbeatTimeout != nil {
+		if *this.HeartbeatTimeout != *that1.HeartbeatTimeout {
+			return false
+		}
+	} else if this.HeartbeatTimeout != nil {
+		return false
+	} else if that1.HeartbeatTimeout != nil {
+		return false
+	}
+	if this.Attempt != that1.Attempt {
+		return false
+	}
+	if that1.ScheduledTimestampOfThisAttempt == nil {
+		if this.ScheduledTimestampOfThisAttempt != nil {
+			return false
+		}
+	} else if !this.ScheduledTimestampOfThisAttempt.Equal(*that1.ScheduledTimestampOfThisAttempt) {
+		return false
+	}
+	if !this.HeartbeatDetails.Equal(that1.HeartbeatDetails) {
+		return false
+	}
+	if !this.WorkflowType.Equal(that1.WorkflowType) {
+		return false
+	}
+	if this.WorkflowDomain != that1.WorkflowDomain {
+		return false
+	}
+	if !this.Header.Equal(that1.Header) {
 		return false
 	}
 	return true
@@ -1664,7 +1904,10 @@ func (this *QueryWorkflowResponse) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !this.Response.Equal(that1.Response) {
+	if !this.QueryResult.Equal(that1.QueryResult) {
+		return false
+	}
+	if !this.QueryRejected.Equal(that1.QueryRejected) {
 		return false
 	}
 	return true
@@ -1823,7 +2066,15 @@ func (this *DescribeTaskListResponse) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !this.Response.Equal(that1.Response) {
+	if len(this.Pollers) != len(that1.Pollers) {
+		return false
+	}
+	for i := range this.Pollers {
+		if !this.Pollers[i].Equal(that1.Pollers[i]) {
+			return false
+		}
+	}
+	if !this.TaskListStatus.Equal(that1.TaskListStatus) {
 		return false
 	}
 	return true
@@ -1874,8 +2125,21 @@ func (this *ListTaskListPartitionsResponse) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !this.Response.Equal(that1.Response) {
+	if len(this.ActivityTaskListPartitions) != len(that1.ActivityTaskListPartitions) {
 		return false
+	}
+	for i := range this.ActivityTaskListPartitions {
+		if !this.ActivityTaskListPartitions[i].Equal(that1.ActivityTaskListPartitions[i]) {
+			return false
+		}
+	}
+	if len(this.DecisionTaskListPartitions) != len(that1.DecisionTaskListPartitions) {
+		return false
+	}
+	for i := range this.DecisionTaskListPartitions {
+		if !this.DecisionTaskListPartitions[i].Equal(that1.DecisionTaskListPartitions[i]) {
+			return false
+		}
 	}
 	return true
 }
@@ -1961,10 +2225,35 @@ func (this *PollForActivityTaskResponse) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 5)
+	s := make([]string, 0, 20)
 	s = append(s, "&matchingv1.PollForActivityTaskResponse{")
-	if this.Response != nil {
-		s = append(s, "Response: "+fmt.Sprintf("%#v", this.Response)+",\n")
+	s = append(s, "TaskToken: "+fmt.Sprintf("%#v", this.TaskToken)+",\n")
+	if this.WorkflowExecution != nil {
+		s = append(s, "WorkflowExecution: "+fmt.Sprintf("%#v", this.WorkflowExecution)+",\n")
+	}
+	s = append(s, "ActivityId: "+fmt.Sprintf("%#v", this.ActivityId)+",\n")
+	if this.ActivityType != nil {
+		s = append(s, "ActivityType: "+fmt.Sprintf("%#v", this.ActivityType)+",\n")
+	}
+	if this.Input != nil {
+		s = append(s, "Input: "+fmt.Sprintf("%#v", this.Input)+",\n")
+	}
+	s = append(s, "ScheduledTimestamp: "+fmt.Sprintf("%#v", this.ScheduledTimestamp)+",\n")
+	s = append(s, "StartedTimestamp: "+fmt.Sprintf("%#v", this.StartedTimestamp)+",\n")
+	s = append(s, "ScheduleToCloseTimeout: "+fmt.Sprintf("%#v", this.ScheduleToCloseTimeout)+",\n")
+	s = append(s, "StartToCloseTimeout: "+fmt.Sprintf("%#v", this.StartToCloseTimeout)+",\n")
+	s = append(s, "HeartbeatTimeout: "+fmt.Sprintf("%#v", this.HeartbeatTimeout)+",\n")
+	s = append(s, "Attempt: "+fmt.Sprintf("%#v", this.Attempt)+",\n")
+	s = append(s, "ScheduledTimestampOfThisAttempt: "+fmt.Sprintf("%#v", this.ScheduledTimestampOfThisAttempt)+",\n")
+	if this.HeartbeatDetails != nil {
+		s = append(s, "HeartbeatDetails: "+fmt.Sprintf("%#v", this.HeartbeatDetails)+",\n")
+	}
+	if this.WorkflowType != nil {
+		s = append(s, "WorkflowType: "+fmt.Sprintf("%#v", this.WorkflowType)+",\n")
+	}
+	s = append(s, "WorkflowDomain: "+fmt.Sprintf("%#v", this.WorkflowDomain)+",\n")
+	if this.Header != nil {
+		s = append(s, "Header: "+fmt.Sprintf("%#v", this.Header)+",\n")
 	}
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -2049,10 +2338,13 @@ func (this *QueryWorkflowResponse) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 5)
+	s := make([]string, 0, 6)
 	s = append(s, "&matchingv1.QueryWorkflowResponse{")
-	if this.Response != nil {
-		s = append(s, "Response: "+fmt.Sprintf("%#v", this.Response)+",\n")
+	if this.QueryResult != nil {
+		s = append(s, "QueryResult: "+fmt.Sprintf("%#v", this.QueryResult)+",\n")
+	}
+	if this.QueryRejected != nil {
+		s = append(s, "QueryRejected: "+fmt.Sprintf("%#v", this.QueryRejected)+",\n")
 	}
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -2124,10 +2416,13 @@ func (this *DescribeTaskListResponse) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 5)
+	s := make([]string, 0, 6)
 	s = append(s, "&matchingv1.DescribeTaskListResponse{")
-	if this.Response != nil {
-		s = append(s, "Response: "+fmt.Sprintf("%#v", this.Response)+",\n")
+	if this.Pollers != nil {
+		s = append(s, "Pollers: "+fmt.Sprintf("%#v", this.Pollers)+",\n")
+	}
+	if this.TaskListStatus != nil {
+		s = append(s, "TaskListStatus: "+fmt.Sprintf("%#v", this.TaskListStatus)+",\n")
 	}
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -2149,10 +2444,13 @@ func (this *ListTaskListPartitionsResponse) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 5)
+	s := make([]string, 0, 6)
 	s = append(s, "&matchingv1.ListTaskListPartitionsResponse{")
-	if this.Response != nil {
-		s = append(s, "Response: "+fmt.Sprintf("%#v", this.Response)+",\n")
+	if this.ActivityTaskListPartitions != nil {
+		s = append(s, "ActivityTaskListPartitions: "+fmt.Sprintf("%#v", this.ActivityTaskListPartitions)+",\n")
+	}
+	if this.DecisionTaskListPartitions != nil {
+		s = append(s, "DecisionTaskListPartitions: "+fmt.Sprintf("%#v", this.DecisionTaskListPartitions)+",\n")
 	}
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -2893,15 +3191,163 @@ func (m *PollForActivityTaskResponse) MarshalToSizedBuffer(dAtA []byte) (int, er
 	_ = i
 	var l int
 	_ = l
-	if m.Response != nil {
+	if m.Header != nil {
 		{
-			size, err := m.Response.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.Header.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
 			i -= size
 			i = encodeVarintService(dAtA, i, uint64(size))
 		}
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0x82
+	}
+	if len(m.WorkflowDomain) > 0 {
+		i -= len(m.WorkflowDomain)
+		copy(dAtA[i:], m.WorkflowDomain)
+		i = encodeVarintService(dAtA, i, uint64(len(m.WorkflowDomain)))
+		i--
+		dAtA[i] = 0x7a
+	}
+	if m.WorkflowType != nil {
+		{
+			size, err := m.WorkflowType.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintService(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x72
+	}
+	if m.HeartbeatDetails != nil {
+		{
+			size, err := m.HeartbeatDetails.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintService(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x6a
+	}
+	if m.ScheduledTimestampOfThisAttempt != nil {
+		n14, err14 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.ScheduledTimestampOfThisAttempt, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.ScheduledTimestampOfThisAttempt):])
+		if err14 != nil {
+			return 0, err14
+		}
+		i -= n14
+		i = encodeVarintService(dAtA, i, uint64(n14))
+		i--
+		dAtA[i] = 0x62
+	}
+	if m.Attempt != 0 {
+		i = encodeVarintService(dAtA, i, uint64(m.Attempt))
+		i--
+		dAtA[i] = 0x58
+	}
+	if m.HeartbeatTimeout != nil {
+		n15, err15 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.HeartbeatTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.HeartbeatTimeout):])
+		if err15 != nil {
+			return 0, err15
+		}
+		i -= n15
+		i = encodeVarintService(dAtA, i, uint64(n15))
+		i--
+		dAtA[i] = 0x52
+	}
+	if m.StartToCloseTimeout != nil {
+		n16, err16 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.StartToCloseTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.StartToCloseTimeout):])
+		if err16 != nil {
+			return 0, err16
+		}
+		i -= n16
+		i = encodeVarintService(dAtA, i, uint64(n16))
+		i--
+		dAtA[i] = 0x4a
+	}
+	if m.ScheduleToCloseTimeout != nil {
+		n17, err17 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.ScheduleToCloseTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ScheduleToCloseTimeout):])
+		if err17 != nil {
+			return 0, err17
+		}
+		i -= n17
+		i = encodeVarintService(dAtA, i, uint64(n17))
+		i--
+		dAtA[i] = 0x42
+	}
+	if m.StartedTimestamp != nil {
+		n18, err18 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.StartedTimestamp, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.StartedTimestamp):])
+		if err18 != nil {
+			return 0, err18
+		}
+		i -= n18
+		i = encodeVarintService(dAtA, i, uint64(n18))
+		i--
+		dAtA[i] = 0x3a
+	}
+	if m.ScheduledTimestamp != nil {
+		n19, err19 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.ScheduledTimestamp, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.ScheduledTimestamp):])
+		if err19 != nil {
+			return 0, err19
+		}
+		i -= n19
+		i = encodeVarintService(dAtA, i, uint64(n19))
+		i--
+		dAtA[i] = 0x32
+	}
+	if m.Input != nil {
+		{
+			size, err := m.Input.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintService(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x2a
+	}
+	if m.ActivityType != nil {
+		{
+			size, err := m.ActivityType.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintService(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.ActivityId) > 0 {
+		i -= len(m.ActivityId)
+		copy(dAtA[i:], m.ActivityId)
+		i = encodeVarintService(dAtA, i, uint64(len(m.ActivityId)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.WorkflowExecution != nil {
+		{
+			size, err := m.WorkflowExecution.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintService(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.TaskToken) > 0 {
+		i -= len(m.TaskToken)
+		copy(dAtA[i:], m.TaskToken)
+		i = encodeVarintService(dAtA, i, uint64(len(m.TaskToken)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -2941,12 +3387,12 @@ func (m *AddDecisionTaskRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) 
 		dAtA[i] = 0x30
 	}
 	if m.ScheduleToStartTimeout != nil {
-		n12, err12 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.ScheduleToStartTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ScheduleToStartTimeout):])
-		if err12 != nil {
-			return 0, err12
+		n23, err23 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.ScheduleToStartTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ScheduleToStartTimeout):])
+		if err23 != nil {
+			return 0, err23
 		}
-		i -= n12
-		i = encodeVarintService(dAtA, i, uint64(n12))
+		i -= n23
+		i = encodeVarintService(dAtA, i, uint64(n23))
 		i--
 		dAtA[i] = 0x2a
 	}
@@ -3045,12 +3491,12 @@ func (m *AddActivityTaskRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) 
 		dAtA[i] = 0x38
 	}
 	if m.ScheduleToStartTimeout != nil {
-		n15, err15 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.ScheduleToStartTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ScheduleToStartTimeout):])
-		if err15 != nil {
-			return 0, err15
+		n26, err26 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.ScheduleToStartTimeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ScheduleToStartTimeout):])
+		if err26 != nil {
+			return 0, err26
 		}
-		i -= n15
-		i = encodeVarintService(dAtA, i, uint64(n15))
+		i -= n26
+		i = encodeVarintService(dAtA, i, uint64(n26))
 		i--
 		dAtA[i] = 0x32
 	}
@@ -3204,9 +3650,21 @@ func (m *QueryWorkflowResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.Response != nil {
+	if m.QueryRejected != nil {
 		{
-			size, err := m.Response.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.QueryRejected.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintService(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.QueryResult != nil {
+		{
+			size, err := m.QueryResult.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -3442,9 +3900,9 @@ func (m *DescribeTaskListResponse) MarshalToSizedBuffer(dAtA []byte) (int, error
 	_ = i
 	var l int
 	_ = l
-	if m.Response != nil {
+	if m.TaskListStatus != nil {
 		{
-			size, err := m.Response.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.TaskListStatus.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -3452,7 +3910,21 @@ func (m *DescribeTaskListResponse) MarshalToSizedBuffer(dAtA []byte) (int, error
 			i = encodeVarintService(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0xa
+		dAtA[i] = 0x12
+	}
+	if len(m.Pollers) > 0 {
+		for iNdEx := len(m.Pollers) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Pollers[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintService(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
 	}
 	return len(dAtA) - i, nil
 }
@@ -3519,17 +3991,33 @@ func (m *ListTaskListPartitionsResponse) MarshalToSizedBuffer(dAtA []byte) (int,
 	_ = i
 	var l int
 	_ = l
-	if m.Response != nil {
-		{
-			size, err := m.Response.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
+	if len(m.DecisionTaskListPartitions) > 0 {
+		for iNdEx := len(m.DecisionTaskListPartitions) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.DecisionTaskListPartitions[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintService(dAtA, i, uint64(size))
 			}
-			i -= size
-			i = encodeVarintService(dAtA, i, uint64(size))
+			i--
+			dAtA[i] = 0x12
 		}
-		i--
-		dAtA[i] = 0xa
+	}
+	if len(m.ActivityTaskListPartitions) > 0 {
+		for iNdEx := len(m.ActivityTaskListPartitions) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.ActivityTaskListPartitions[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintService(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
 	}
 	return len(dAtA) - i, nil
 }
@@ -3680,9 +4168,68 @@ func (m *PollForActivityTaskResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.Response != nil {
-		l = m.Response.Size()
+	l = len(m.TaskToken)
+	if l > 0 {
 		n += 1 + l + sovService(uint64(l))
+	}
+	if m.WorkflowExecution != nil {
+		l = m.WorkflowExecution.Size()
+		n += 1 + l + sovService(uint64(l))
+	}
+	l = len(m.ActivityId)
+	if l > 0 {
+		n += 1 + l + sovService(uint64(l))
+	}
+	if m.ActivityType != nil {
+		l = m.ActivityType.Size()
+		n += 1 + l + sovService(uint64(l))
+	}
+	if m.Input != nil {
+		l = m.Input.Size()
+		n += 1 + l + sovService(uint64(l))
+	}
+	if m.ScheduledTimestamp != nil {
+		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.ScheduledTimestamp)
+		n += 1 + l + sovService(uint64(l))
+	}
+	if m.StartedTimestamp != nil {
+		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.StartedTimestamp)
+		n += 1 + l + sovService(uint64(l))
+	}
+	if m.ScheduleToCloseTimeout != nil {
+		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.ScheduleToCloseTimeout)
+		n += 1 + l + sovService(uint64(l))
+	}
+	if m.StartToCloseTimeout != nil {
+		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.StartToCloseTimeout)
+		n += 1 + l + sovService(uint64(l))
+	}
+	if m.HeartbeatTimeout != nil {
+		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.HeartbeatTimeout)
+		n += 1 + l + sovService(uint64(l))
+	}
+	if m.Attempt != 0 {
+		n += 1 + sovService(uint64(m.Attempt))
+	}
+	if m.ScheduledTimestampOfThisAttempt != nil {
+		l = github_com_gogo_protobuf_types.SizeOfStdTime(*m.ScheduledTimestampOfThisAttempt)
+		n += 1 + l + sovService(uint64(l))
+	}
+	if m.HeartbeatDetails != nil {
+		l = m.HeartbeatDetails.Size()
+		n += 1 + l + sovService(uint64(l))
+	}
+	if m.WorkflowType != nil {
+		l = m.WorkflowType.Size()
+		n += 1 + l + sovService(uint64(l))
+	}
+	l = len(m.WorkflowDomain)
+	if l > 0 {
+		n += 1 + l + sovService(uint64(l))
+	}
+	if m.Header != nil {
+		l = m.Header.Size()
+		n += 2 + l + sovService(uint64(l))
 	}
 	return n
 }
@@ -3810,8 +4357,12 @@ func (m *QueryWorkflowResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.Response != nil {
-		l = m.Response.Size()
+	if m.QueryResult != nil {
+		l = m.QueryResult.Size()
+		n += 1 + l + sovService(uint64(l))
+	}
+	if m.QueryRejected != nil {
+		l = m.QueryRejected.Size()
 		n += 1 + l + sovService(uint64(l))
 	}
 	return n
@@ -3907,8 +4458,14 @@ func (m *DescribeTaskListResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.Response != nil {
-		l = m.Response.Size()
+	if len(m.Pollers) > 0 {
+		for _, e := range m.Pollers {
+			l = e.Size()
+			n += 1 + l + sovService(uint64(l))
+		}
+	}
+	if m.TaskListStatus != nil {
+		l = m.TaskListStatus.Size()
 		n += 1 + l + sovService(uint64(l))
 	}
 	return n
@@ -3937,9 +4494,17 @@ func (m *ListTaskListPartitionsResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.Response != nil {
-		l = m.Response.Size()
-		n += 1 + l + sovService(uint64(l))
+	if len(m.ActivityTaskListPartitions) > 0 {
+		for _, e := range m.ActivityTaskListPartitions {
+			l = e.Size()
+			n += 1 + l + sovService(uint64(l))
+		}
+	}
+	if len(m.DecisionTaskListPartitions) > 0 {
+		for _, e := range m.DecisionTaskListPartitions {
+			l = e.Size()
+			n += 1 + l + sovService(uint64(l))
+		}
 	}
 	return n
 }
@@ -4017,7 +4582,22 @@ func (this *PollForActivityTaskResponse) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&PollForActivityTaskResponse{`,
-		`Response:` + strings.Replace(fmt.Sprintf("%v", this.Response), "PollForActivityTaskResponse", "v1.PollForActivityTaskResponse", 1) + `,`,
+		`TaskToken:` + fmt.Sprintf("%v", this.TaskToken) + `,`,
+		`WorkflowExecution:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecution), "WorkflowExecution", "v1.WorkflowExecution", 1) + `,`,
+		`ActivityId:` + fmt.Sprintf("%v", this.ActivityId) + `,`,
+		`ActivityType:` + strings.Replace(fmt.Sprintf("%v", this.ActivityType), "ActivityType", "v1.ActivityType", 1) + `,`,
+		`Input:` + strings.Replace(fmt.Sprintf("%v", this.Input), "Payload", "v1.Payload", 1) + `,`,
+		`ScheduledTimestamp:` + strings.Replace(fmt.Sprintf("%v", this.ScheduledTimestamp), "Timestamp", "timestamp.Timestamp", 1) + `,`,
+		`StartedTimestamp:` + strings.Replace(fmt.Sprintf("%v", this.StartedTimestamp), "Timestamp", "timestamp.Timestamp", 1) + `,`,
+		`ScheduleToCloseTimeout:` + strings.Replace(fmt.Sprintf("%v", this.ScheduleToCloseTimeout), "Duration", "duration.Duration", 1) + `,`,
+		`StartToCloseTimeout:` + strings.Replace(fmt.Sprintf("%v", this.StartToCloseTimeout), "Duration", "duration.Duration", 1) + `,`,
+		`HeartbeatTimeout:` + strings.Replace(fmt.Sprintf("%v", this.HeartbeatTimeout), "Duration", "duration.Duration", 1) + `,`,
+		`Attempt:` + fmt.Sprintf("%v", this.Attempt) + `,`,
+		`ScheduledTimestampOfThisAttempt:` + strings.Replace(fmt.Sprintf("%v", this.ScheduledTimestampOfThisAttempt), "Timestamp", "timestamp.Timestamp", 1) + `,`,
+		`HeartbeatDetails:` + strings.Replace(fmt.Sprintf("%v", this.HeartbeatDetails), "Payload", "v1.Payload", 1) + `,`,
+		`WorkflowType:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowType), "WorkflowType", "v1.WorkflowType", 1) + `,`,
+		`WorkflowDomain:` + fmt.Sprintf("%v", this.WorkflowDomain) + `,`,
+		`Header:` + strings.Replace(fmt.Sprintf("%v", this.Header), "Header", "v1.Header", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4091,7 +4671,8 @@ func (this *QueryWorkflowResponse) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&QueryWorkflowResponse{`,
-		`Response:` + strings.Replace(fmt.Sprintf("%v", this.Response), "QueryWorkflowResponse", "v1.QueryWorkflowResponse", 1) + `,`,
+		`QueryResult:` + strings.Replace(fmt.Sprintf("%v", this.QueryResult), "Payload", "v1.Payload", 1) + `,`,
+		`QueryRejected:` + strings.Replace(fmt.Sprintf("%v", this.QueryRejected), "QueryRejected", "v1.QueryRejected", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4155,8 +4736,14 @@ func (this *DescribeTaskListResponse) String() string {
 	if this == nil {
 		return "nil"
 	}
+	repeatedStringForPollers := "[]*PollerInfo{"
+	for _, f := range this.Pollers {
+		repeatedStringForPollers += strings.Replace(fmt.Sprintf("%v", f), "PollerInfo", "v1.PollerInfo", 1) + ","
+	}
+	repeatedStringForPollers += "}"
 	s := strings.Join([]string{`&DescribeTaskListResponse{`,
-		`Response:` + strings.Replace(fmt.Sprintf("%v", this.Response), "DescribeTaskListResponse", "v1.DescribeTaskListResponse", 1) + `,`,
+		`Pollers:` + repeatedStringForPollers + `,`,
+		`TaskListStatus:` + strings.Replace(fmt.Sprintf("%v", this.TaskListStatus), "TaskListStatus", "v1.TaskListStatus", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4176,8 +4763,19 @@ func (this *ListTaskListPartitionsResponse) String() string {
 	if this == nil {
 		return "nil"
 	}
+	repeatedStringForActivityTaskListPartitions := "[]*TaskListPartitionMetadata{"
+	for _, f := range this.ActivityTaskListPartitions {
+		repeatedStringForActivityTaskListPartitions += strings.Replace(fmt.Sprintf("%v", f), "TaskListPartitionMetadata", "v1.TaskListPartitionMetadata", 1) + ","
+	}
+	repeatedStringForActivityTaskListPartitions += "}"
+	repeatedStringForDecisionTaskListPartitions := "[]*TaskListPartitionMetadata{"
+	for _, f := range this.DecisionTaskListPartitions {
+		repeatedStringForDecisionTaskListPartitions += strings.Replace(fmt.Sprintf("%v", f), "TaskListPartitionMetadata", "v1.TaskListPartitionMetadata", 1) + ","
+	}
+	repeatedStringForDecisionTaskListPartitions += "}"
 	s := strings.Join([]string{`&ListTaskListPartitionsResponse{`,
-		`Response:` + strings.Replace(fmt.Sprintf("%v", this.Response), "ListTaskListPartitionsResponse", "v1.ListTaskListPartitionsResponse", 1) + `,`,
+		`ActivityTaskListPartitions:` + repeatedStringForActivityTaskListPartitions + `,`,
+		`DecisionTaskListPartitions:` + repeatedStringForDecisionTaskListPartitions + `,`,
 		`}`,
 	}, "")
 	return s
@@ -5227,7 +5825,41 @@ func (m *PollForActivityTaskResponse) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Response", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field TaskToken", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.TaskToken = append(m.TaskToken[:0], dAtA[iNdEx:postIndex]...)
+			if m.TaskToken == nil {
+				m.TaskToken = []byte{}
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field WorkflowExecution", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -5254,10 +5886,489 @@ func (m *PollForActivityTaskResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.Response == nil {
-				m.Response = &v1.PollForActivityTaskResponse{}
+			if m.WorkflowExecution == nil {
+				m.WorkflowExecution = &v1.WorkflowExecution{}
 			}
-			if err := m.Response.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.WorkflowExecution.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ActivityId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ActivityId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ActivityType", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ActivityType == nil {
+				m.ActivityType = &v1.ActivityType{}
+			}
+			if err := m.ActivityType.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Input", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Input == nil {
+				m.Input = &v1.Payload{}
+			}
+			if err := m.Input.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ScheduledTimestamp", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ScheduledTimestamp == nil {
+				m.ScheduledTimestamp = new(time.Time)
+			}
+			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.ScheduledTimestamp, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field StartedTimestamp", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.StartedTimestamp == nil {
+				m.StartedTimestamp = new(time.Time)
+			}
+			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.StartedTimestamp, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ScheduleToCloseTimeout", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ScheduleToCloseTimeout == nil {
+				m.ScheduleToCloseTimeout = new(time.Duration)
+			}
+			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.ScheduleToCloseTimeout, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field StartToCloseTimeout", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.StartToCloseTimeout == nil {
+				m.StartToCloseTimeout = new(time.Duration)
+			}
+			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.StartToCloseTimeout, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 10:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field HeartbeatTimeout", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.HeartbeatTimeout == nil {
+				m.HeartbeatTimeout = new(time.Duration)
+			}
+			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(m.HeartbeatTimeout, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 11:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Attempt", wireType)
+			}
+			m.Attempt = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Attempt |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 12:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ScheduledTimestampOfThisAttempt", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ScheduledTimestampOfThisAttempt == nil {
+				m.ScheduledTimestampOfThisAttempt = new(time.Time)
+			}
+			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.ScheduledTimestampOfThisAttempt, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 13:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field HeartbeatDetails", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.HeartbeatDetails == nil {
+				m.HeartbeatDetails = &v1.Payload{}
+			}
+			if err := m.HeartbeatDetails.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 14:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field WorkflowType", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.WorkflowType == nil {
+				m.WorkflowType = &v1.WorkflowType{}
+			}
+			if err := m.WorkflowType.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 15:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field WorkflowDomain", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.WorkflowDomain = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 16:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Header", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Header == nil {
+				m.Header = &v1.Header{}
+			}
+			if err := m.Header.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -6169,7 +7280,7 @@ func (m *QueryWorkflowResponse) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Response", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field QueryResult", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -6196,10 +7307,46 @@ func (m *QueryWorkflowResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.Response == nil {
-				m.Response = &v1.QueryWorkflowResponse{}
+			if m.QueryResult == nil {
+				m.QueryResult = &v1.Payload{}
 			}
-			if err := m.Response.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.QueryResult.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field QueryRejected", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.QueryRejected == nil {
+				m.QueryRejected = &v1.QueryRejected{}
+			}
+			if err := m.QueryRejected.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -6846,7 +7993,7 @@ func (m *DescribeTaskListResponse) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Response", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Pollers", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -6873,10 +8020,44 @@ func (m *DescribeTaskListResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.Response == nil {
-				m.Response = &v1.DescribeTaskListResponse{}
+			m.Pollers = append(m.Pollers, &v1.PollerInfo{})
+			if err := m.Pollers[len(m.Pollers)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
 			}
-			if err := m.Response.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TaskListStatus", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.TaskListStatus == nil {
+				m.TaskListStatus = &v1.TaskListStatus{}
+			}
+			if err := m.TaskListStatus.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -7056,7 +8237,7 @@ func (m *ListTaskListPartitionsResponse) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Response", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ActivityTaskListPartitions", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -7083,10 +8264,42 @@ func (m *ListTaskListPartitionsResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.Response == nil {
-				m.Response = &v1.ListTaskListPartitionsResponse{}
+			m.ActivityTaskListPartitions = append(m.ActivityTaskListPartitions, &v1.TaskListPartitionMetadata{})
+			if err := m.ActivityTaskListPartitions[len(m.ActivityTaskListPartitions)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
 			}
-			if err := m.Response.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DecisionTaskListPartitions", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthService
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.DecisionTaskListPartitions = append(m.DecisionTaskListPartitions, &v1.TaskListPartitionMetadata{})
+			if err := m.DecisionTaskListPartitions[len(m.DecisionTaskListPartitions)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

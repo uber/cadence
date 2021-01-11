@@ -24,23 +24,9 @@ package uber.cadence.shared.v1;
 
 option go_package = "sharedv1";
 
-message HostInfo {
-  string identity = 1;
-}
-
-message RingInfo {
-  string role = 1;
-  int32 member_count = 2;
-  repeated HostInfo members = 3;
-}
-
-message MembershipInfo {
-  HostInfo current_host = 1;
-  repeated string reachable_members = 2;
-  repeated RingInfo rings = 3;
-}
-
-message DomainCacheInfo {
-  int64 num_of_items_in_cache_by_id = 1;
-  int64 num_of_items_in_cache_by_name = 2;
+enum TaskType {
+  TASK_TYPE_INVALID = 0;
+  TASK_TYPE_TRANSFER = 1;
+  TASK_TYPE_TIMER = 2;
+  TASK_TYPE_REPLICATION = 3;
 }
