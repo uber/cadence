@@ -75,7 +75,7 @@ type (
 		DescribeTimerQueue(ctx context.Context, clusterName string) (*types.DescribeQueueResponse, error)
 
 		NotifyNewHistoryEvent(event *events.Notification)
-		NotifyNewTransferTasks(tasks []persistence.Task)
-		NotifyNewTimerTasks(tasks []persistence.Task)
+		NotifyNewTransferTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
+		NotifyNewTimerTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
 	}
 )

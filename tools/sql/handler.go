@@ -29,8 +29,11 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common/auth"
+	mysql_db "github.com/uber/cadence/common/persistence/sql/sqlplugin/mysql"
+	postgres_db "github.com/uber/cadence/common/persistence/sql/sqlplugin/postgres"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/schema/mysql"
+	"github.com/uber/cadence/schema/postgres"
 	"github.com/uber/cadence/tools/common/schema"
 )
 
@@ -42,14 +45,28 @@ func VerifyCompatibleVersion(
 
 	ds, ok := cfg.DataStores[cfg.DefaultStore]
 	if ok && ds.SQL != nil {
-		err := CheckCompatibleVersion(*ds.SQL, mysql.Version)
+		expectedVersion := mysql.Version
+		switch ds.SQL.PluginName {
+		case mysql_db.PluginName:
+			expectedVersion = mysql.Version
+		case postgres_db.PluginName:
+			expectedVersion = postgres.Version
+		}
+		err := CheckCompatibleVersion(*ds.SQL, expectedVersion)
 		if err != nil {
 			return err
 		}
 	}
 	ds, ok = cfg.DataStores[cfg.VisibilityStore]
 	if ok && ds.SQL != nil {
-		err := CheckCompatibleVersion(*ds.SQL, mysql.VisibilityVersion)
+		expectedVersion := mysql.VisibilityVersion
+		switch ds.SQL.PluginName {
+		case mysql_db.PluginName:
+			expectedVersion = mysql.VisibilityVersion
+		case postgres_db.PluginName:
+			expectedVersion = postgres.VisibilityVersion
+		}
+		err := CheckCompatibleVersion(*ds.SQL, expectedVersion)
 		if err != nil {
 			return err
 		}

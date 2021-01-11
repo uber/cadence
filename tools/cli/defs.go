@@ -113,23 +113,25 @@ var (
 	optionErr               = "there is something wrong with your command options"
 	osExit                  = os.Exit
 	workflowClosedStatusMap = map[string]s.WorkflowExecutionCloseStatus{
-		"completed":      s.WorkflowExecutionCloseStatusCompleted,
-		"failed":         s.WorkflowExecutionCloseStatusFailed,
-		"canceled":       s.WorkflowExecutionCloseStatusCanceled,
-		"terminated":     s.WorkflowExecutionCloseStatusTerminated,
+		"completed":        s.WorkflowExecutionCloseStatusCompleted,
+		"failed":           s.WorkflowExecutionCloseStatusFailed,
+		"canceled":         s.WorkflowExecutionCloseStatusCanceled,
+		"terminated":       s.WorkflowExecutionCloseStatusTerminated,
+		"continued_as_new": s.WorkflowExecutionCloseStatusContinuedAsNew,
+		"timed_out":        s.WorkflowExecutionCloseStatusTimedOut,
+		// below are some alias
+		"c":              s.WorkflowExecutionCloseStatusCompleted,
+		"complete":       s.WorkflowExecutionCloseStatusCompleted,
+		"f":              s.WorkflowExecutionCloseStatusFailed,
+		"fail":           s.WorkflowExecutionCloseStatusFailed,
+		"cancel":         s.WorkflowExecutionCloseStatusCanceled,
+		"terminate":      s.WorkflowExecutionCloseStatusTerminated,
+		"term":           s.WorkflowExecutionCloseStatusTerminated,
+		"continue":       s.WorkflowExecutionCloseStatusContinuedAsNew,
+		"cont":           s.WorkflowExecutionCloseStatusContinuedAsNew,
 		"continuedasnew": s.WorkflowExecutionCloseStatusContinuedAsNew,
 		"continueasnew":  s.WorkflowExecutionCloseStatusContinuedAsNew,
 		"timedout":       s.WorkflowExecutionCloseStatusTimedOut,
-		// below are some alias
-		"c":         s.WorkflowExecutionCloseStatusCompleted,
-		"complete":  s.WorkflowExecutionCloseStatusCompleted,
-		"f":         s.WorkflowExecutionCloseStatusFailed,
-		"fail":      s.WorkflowExecutionCloseStatusFailed,
-		"cancel":    s.WorkflowExecutionCloseStatusCanceled,
-		"terminate": s.WorkflowExecutionCloseStatusTerminated,
-		"term":      s.WorkflowExecutionCloseStatusTerminated,
-		"continue":  s.WorkflowExecutionCloseStatusContinuedAsNew,
-		"cont":      s.WorkflowExecutionCloseStatusContinuedAsNew,
-		"timeout":   s.WorkflowExecutionCloseStatusTimedOut,
+		"timeout":        s.WorkflowExecutionCloseStatusTimedOut,
 	}
 )

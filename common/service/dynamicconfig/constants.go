@@ -81,6 +81,7 @@ var keys = map[Key]string{
 	EnableFailoverManager:               "system.enableFailoverManager",
 	EnableStickyQuery:                   "system.enableStickyQuery",
 	EnablePriorityTaskProcessor:         "system.enablePriorityTaskProcessor",
+	EnableDebugMode:                     "system.enableDebugMode",
 
 	// size limit
 	BlobSizeLimitError:      "limit.blobSize.error",
@@ -147,6 +148,7 @@ var keys = map[Key]string{
 	MatchingForwarderMaxChildrenPerNode:     "matching.forwarderMaxChildrenPerNode",
 	MatchingShutdownDrainDuration:           "matching.shutdownDrainDuration",
 	MatchingErrorInjectionRate:              "matching.errorInjectionRate",
+	MatchingEnableTaskInfoLogByDomainID:     "matching.enableTaskInfoLogByDomainID",
 
 	// history settings
 	HistoryRPS:                                            "history.rps",
@@ -233,6 +235,8 @@ var keys = map[Key]string{
 	TransferProcessorMaxRedispatchQueueSize:               "history.transferProcessorMaxRedispatchQueueSize",
 	TransferProcessorEnablePriorityTaskProcessor:          "history.transferProcessorEnablePriorityTaskProcessor",
 	TransferProcessorEnableMultiCurosrProcessor:           "history.transferProcessorEnableMultiCursorProcessor",
+	TransferProcessorEnableValidator:                      "history.transferProcessorEnableValidator",
+	TransferProcessorValidationInterval:                   "history.transferProcessorValidationInterval",
 	TransferProcessorVisibilityArchivalTimeLimit:          "history.transferProcessorVisibilityArchivalTimeLimit",
 	ReplicatorTaskBatchSize:                               "history.replicatorTaskBatchSize",
 	ReplicatorTaskWorkerCount:                             "history.replicatorTaskWorkerCount",
@@ -295,6 +299,8 @@ var keys = map[Key]string{
 	EnableDropStuckTaskByDomainID:                         "history.DropStuckTaskByDomain",
 	EnableActivityLocalDispatchByDomain:                   "history.enableActivityLocalDispatchByDomain",
 	HistoryErrorInjectionRate:                             "history.errorInjectionRate",
+	HistoryEnableTaskInfoLogByDomainID:                    "history.enableTaskInfoLogByDomainID",
+	ActivityMaxScheduleToStartTimeoutForRetry:             "history.activityMaxScheduleToStartTimeoutForRetry",
 
 	WorkerPersistenceMaxQPS:                                  "worker.persistenceMaxQPS",
 	WorkerPersistenceGlobalMaxQPS:                            "worker.persistenceGlobalMaxQPS",
@@ -329,6 +335,15 @@ var keys = map[Key]string{
 	CurrentExecutionFixerDomainAllow:                         "worker.currentExecutionFixerDomainAllow",
 	ConcreteExecutionFixerEnabled:                            "worker.concreteExecutionFixerEnabled",
 	CurrentExecutionFixerEnabled:                             "worker.currentExecutionFixerEnabled",
+	TimersScannerEnabled:                                     "worker.timersScannerEnabled",
+	TimersFixerEnabled:                                       "worker.timersFixerEnabled",
+	TimersScannerConcurrency:                                 "worker.timersScannerConcurrency",
+	TimersScannerPersistencePageSize:                         "worker.timersScannerPersistencePageSize",
+	TimersScannerBlobstoreFlushThreshold:                     "worker.timersScannerConcurrency",
+	TimersScannerActivityBatchSize:                           "worker.timersScannerBlobstoreFlushThreshold",
+	TimersScannerPeriodStart:                                 "worker.timersScannerPeriodStart",
+	TimersScannerPeriodEnd:                                   "worker.timersScannerPeriodEnd",
+	TimersFixerDomainAllow:                                   "worker.timersFixerDomainAllow",
 }
 
 const (
@@ -349,13 +364,20 @@ const (
 	testGetBoolPropertyFilteredByDomainIDKey
 	testGetBoolPropertyFilteredByTaskListInfoKey
 
-	// used by internal repos, need to moved out of this repo
-	// TODO https://github.com/uber/cadence/issues/3861
+	// TODO: following configs are used by internal repo, need to moved out of this repo
+	// https://github.com/uber/cadence/issues/3861
+
+	// EnableAuthorization is the key to enable authorization for a domain
 	EnableAuthorization
+	// VisibilityArchivalQueryMaxRangeInDays is the maximum number of days for a visibility archival query
 	VisibilityArchivalQueryMaxRangeInDays
+	// VisibilityArchivalQueryMaxQPS is the timeout for a visibility archival query
 	VisibilityArchivalQueryMaxQPS
+	// EnableArchivalCompression indicates whether blobs are compressed before they are archived
 	EnableArchivalCompression
+	// WorkerDeterministicConstructionCheckProbability controls the probability of running a deterministic construction check for any given archival
 	WorkerDeterministicConstructionCheckProbability
+	// WorkerBlobIntegrityCheckProbability controls the probability of running an integrity check for any given archival
 	WorkerBlobIntegrityCheckProbability
 
 	// EnableGlobalDomain is key for enable global domain
@@ -397,6 +419,8 @@ const (
 	DisallowQuery
 	// EnablePriorityTaskProcessor is the key for enabling priority task processor
 	EnablePriorityTaskProcessor
+	// EnableDebugMode is the key for enabling debugging components, logs and metrics
+	EnableDebugMode
 
 	// BlobSizeLimitError is the per event blob size limit
 	BlobSizeLimitError
@@ -527,6 +551,8 @@ const (
 	MatchingShutdownDrainDuration
 	// MatchingErrorInjectionRate is the rate for injecting random error in matching client
 	MatchingErrorInjectionRate
+	// MatchingEnableTaskInfoLogByDomainID enables info level logs for decision/activity task based on the request domainID
+	MatchingEnableTaskInfoLogByDomainID
 
 	// key for history
 
@@ -698,6 +724,10 @@ const (
 	TransferProcessorEnablePriorityTaskProcessor
 	// TransferProcessorEnableMultiCurosrProcessor indicates whether multi-cursor queue processor should be used for transferQueueProcessor
 	TransferProcessorEnableMultiCurosrProcessor
+	// TransferProcessorEnableValidator indicates whether validator should be enabled for transferQueueProcessor
+	TransferProcessorEnableValidator
+	// TransferProcessorValidationInterval is the interval for performing transfer queue validation
+	TransferProcessorValidationInterval
 	// TransferProcessorVisibilityArchivalTimeLimit is the upper time limit for archiving visibility records
 	TransferProcessorVisibilityArchivalTimeLimit
 	// ReplicatorTaskBatchSize is batch size for ReplicatorProcessor
@@ -771,6 +801,12 @@ const (
 	// HistoryErrorInjectionRate is the rate for injecting random error in history client
 	HistoryErrorInjectionRate
 
+	// HistoryEnableTaskInfoLogByDomainID enables info level logs for decision/activity task based on the request domainID
+	HistoryEnableTaskInfoLogByDomainID
+
+	// ActivityMaxScheduleToStartTimeoutForRetry is the maximum value allowed when overwritting the schedule to start timeout for activities with retry policy
+	ActivityMaxScheduleToStartTimeoutForRetry
+
 	// key for worker
 
 	// WorkerPersistenceMaxQPS is the max qps worker host can query DB
@@ -835,6 +871,24 @@ const (
 	ConcreteExecutionFixerDomainAllow
 	// CurrentExecutionFixerDomainAllow indicates which domains are allowed to be fixed by current fixer workflow
 	CurrentExecutionFixerDomainAllow
+	// TimersScannerEnabled indicates if timers scanner should be started as part of worker.Scanner
+	TimersScannerEnabled
+	// TimersFixerEnabled indicates if timers fixer should be started as part of worker.Scanner
+	TimersFixerEnabled
+	// TimersScannerConcurrency indicates the concurrency of timers scanner
+	TimersScannerConcurrency
+	// TimersScannerPersistencePageSize indicates the page size of timers persistence fetches in timers scanner.
+	TimersScannerPersistencePageSize
+	// TimersScannerBlobstoreFlushThreshold
+	TimersScannerBlobstoreFlushThreshold
+	// TimersScannerActivityBatchSize
+	TimersScannerActivityBatchSize
+	// TimersScannerPeriodStart indicates interval start for fetching scheduled timers
+	TimersScannerPeriodStart
+	// TimersScannerPeriodEnd indicates interval end for fetching scheduled timers
+	TimersScannerPeriodEnd
+	// TimersFixerDomainAllow indicates if domain is allowed to fix timers
+	TimersFixerDomainAllow
 	// ConcreteExecutionFixerEnabled indicates if concrete execution fixer workflow is enabled
 	ConcreteExecutionFixerEnabled
 	// CurrentExecutionFixerEnabled indicates if current execution fixer workflow is enabled

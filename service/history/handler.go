@@ -49,7 +49,7 @@ import (
 	"github.com/uber/cadence/service/history/task"
 )
 
-//go:generate mockgen -copyright_file=../../LICENSE -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package history github.com/uber/cadence/service/history Handler
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package history github.com/uber/cadence/service/history Handler
 
 type (
 	// Handler interface for history service
@@ -198,6 +198,7 @@ func (h *handlerImpl) Start() {
 		h.GetMetadataManager(),
 		h.GetHistoryClient(),
 		h.GetTimeSource(),
+		h.GetDomainCache(),
 		h.config,
 		h.GetMetricsClient(),
 		h.GetLogger(),
@@ -325,6 +326,16 @@ func (h *handlerImpl) RecordActivityTaskStarted(
 	domainID := recordRequest.GetDomainUUID()
 	workflowExecution := recordRequest.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
+
+	h.emitInfoOrDebugLog(
+		domainID,
+		"RecordActivityTaskStarted",
+		tag.WorkflowDomainID(domainID),
+		tag.WorkflowID(workflowExecution.GetWorkflowID()),
+		tag.WorkflowRunID(common.StringDefault(recordRequest.WorkflowExecution.RunID)),
+		tag.WorkflowScheduleID(recordRequest.GetScheduleID()),
+	)
+
 	if recordRequest.GetDomainUUID() == "" {
 		return nil, h.error(errDomainNotSet, scope, domainID, workflowID)
 	}
@@ -354,11 +365,6 @@ func (h *handlerImpl) RecordDecisionTaskStarted(
 
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
-	h.GetLogger().Debug(fmt.Sprintf("RecordDecisionTaskStarted. DomainID: %v, WorkflowID: %v, RunID: %v, ScheduleID: %v",
-		recordRequest.GetDomainUUID(),
-		recordRequest.WorkflowExecution.GetWorkflowID(),
-		common.StringDefault(recordRequest.WorkflowExecution.RunID),
-		recordRequest.GetScheduleID()))
 
 	scope := metrics.HistoryRecordDecisionTaskStartedScope
 	h.GetMetricsClient().IncCounter(scope, metrics.CadenceRequests)
@@ -368,6 +374,16 @@ func (h *handlerImpl) RecordDecisionTaskStarted(
 	domainID := recordRequest.GetDomainUUID()
 	workflowExecution := recordRequest.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
+
+	h.emitInfoOrDebugLog(
+		domainID,
+		"RecordDecisionTaskStarted",
+		tag.WorkflowDomainID(domainID),
+		tag.WorkflowID(workflowExecution.GetWorkflowID()),
+		tag.WorkflowRunID(common.StringDefault(recordRequest.WorkflowExecution.RunID)),
+		tag.WorkflowScheduleID(recordRequest.GetScheduleID()),
+	)
+
 	if domainID == "" {
 		return nil, h.error(errDomainNotSet, scope, domainID, workflowID)
 	}
@@ -2005,6 +2021,18 @@ func (h *handlerImpl) getLoggerWithTags(
 	}
 
 	return logger
+}
+
+func (h *handlerImpl) emitInfoOrDebugLog(
+	domainID string,
+	msg string,
+	tags ...tag.Tag,
+) {
+	if h.config.EnableDebugMode && h.config.EnableTaskInfoLogByDomainID(domainID) {
+		h.GetLogger().Info(msg, tags...)
+	} else {
+		h.GetLogger().Debug(msg, tags...)
+	}
 }
 
 func validateTaskToken(token *common.TaskToken) error {

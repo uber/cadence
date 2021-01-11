@@ -588,6 +588,11 @@ func (s *ESVisibilitySuite) TestGetESQueryDSL() {
 	s.Nil(err)
 	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}},{"bool":{"should":[{"match_phrase":{"WorkflowID":{"query":"wid"}}},{"bool":{"must_not":{"exists":{"field":"CloseTime"}}}}]}}]}},"from":0,"size":10,"sort":[{"StartTime":"desc"},{"RunID":"desc"}]}`, dsl)
 
+	request.Query = `WorkflowID = 'wid' and CloseStatus = "completed"`
+	dsl, err = v.getESQueryDSL(request, token)
+	s.Nil(err)
+	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}},{"bool":{"must":[{"match_phrase":{"WorkflowID":{"query":"wid"}}},{"match_phrase":{"CloseStatus":{"query":"0"}}}]}}]}},"from":0,"size":10,"sort":[{"StartTime":"desc"},{"RunID":"desc"}]}`, dsl)
+
 	request.Query = `CloseTime = missing order by CloseTime desc`
 	dsl, err = v.getESQueryDSL(request, token)
 	s.Nil(err)
@@ -836,7 +841,7 @@ func (s *ESVisibilitySuite) TestTimeProcessFunc() {
 		returnErr bool
 	}{
 		{value: `"1528358645000000000"`, returnErr: false},
-		{value: `"1528358645000000000"`},
+		{value: `"1528358645000000000"`, returnErr: false},
 		{value: "", returnErr: true},
 		{value: `"should not be modified"`, returnErr: false},
 	}
@@ -844,6 +849,45 @@ func (s *ESVisibilitySuite) TestTimeProcessFunc() {
 	for i, testCase := range cases {
 		value := fastjson.MustParse(fmt.Sprintf(`{"%s": "%s"}`, testCase.key, testCase.value))
 		err := timeProcessFunc(nil, "", value)
+		if expected[i].returnErr {
+			s.Error(err)
+			continue
+		}
+		s.Equal(expected[i].value, value.Get(testCase.key).String())
+	}
+}
+
+func (s *ESVisibilitySuite) TestCloseStatusProcessFunc() {
+	cases := []struct {
+		key   string
+		value string
+	}{
+		{key: "from", value: types.WorkflowExecutionCloseStatusTerminated.String()},
+		{key: "to", value: strings.ToLower(types.WorkflowExecutionCloseStatusContinuedAsNew.String())},
+		{key: "gt", value: fmt.Sprintf(`%d`, types.WorkflowExecutionCloseStatusFailed)},
+		{key: "query", value: types.WorkflowExecutionCloseStatusCompleted.String()},
+		{key: "query", value: fmt.Sprintf(`%d`, types.WorkflowExecutionCloseStatusCanceled)},
+		{key: "query", value: strings.ToTitle(strings.ToLower(types.WorkflowExecutionCloseStatusTimedOut.String()))},
+		{key: "query", value: "timeout"},
+		{key: "unrelatedKey", value: "should not be modified"},
+	}
+	expected := []struct {
+		value     string
+		returnErr bool
+	}{
+		{value: fmt.Sprintf(`"%d"`, types.WorkflowExecutionCloseStatusTerminated), returnErr: false},
+		{value: fmt.Sprintf(`"%d"`, types.WorkflowExecutionCloseStatusContinuedAsNew), returnErr: false},
+		{value: fmt.Sprintf(`"%d"`, types.WorkflowExecutionCloseStatusFailed), returnErr: false},
+		{value: fmt.Sprintf(`"%d"`, types.WorkflowExecutionCloseStatusCompleted), returnErr: false},
+		{value: fmt.Sprintf(`"%d"`, types.WorkflowExecutionCloseStatusCanceled), returnErr: false},
+		{value: fmt.Sprintf(`"%d"`, types.WorkflowExecutionCloseStatusTimedOut), returnErr: false},
+		{value: "", returnErr: true},
+		{value: `"should not be modified"`, returnErr: false},
+	}
+
+	for i, testCase := range cases {
+		value := fastjson.MustParse(fmt.Sprintf(`{"%s": "%s"}`, testCase.key, testCase.value))
+		err := closeStatusProcessFunc(nil, "", value)
 		if expected[i].returnErr {
 			s.Error(err)
 			continue
@@ -881,11 +925,11 @@ func (s *ESVisibilitySuite) TestProcessAllValuesForKey() {
 	s.NoError(processAllValuesForKey(dsl, testKeyFilter, testProcessFunc))
 
 	expectedProcessedValue := map[string]struct{}{
-		`"value1"`: struct{}{},
-		`"value2"`: struct{}{},
-		`"value5"`: struct{}{},
-		`[{"testKey7":"should not be processed"}]`: struct{}{},
-		`"value8"`: struct{}{},
+		`"value1"`: {},
+		`"value2"`: {},
+		`"value5"`: {},
+		`[{"testKey7":"should not be processed"}]`: {},
+		`"value8"`: {},
 	}
 	s.Equal(expectedProcessedValue, processedValue)
 }

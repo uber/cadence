@@ -115,8 +115,8 @@ func (s *timerActiveTaskExecutorSuite) SetupTest() {
 
 	s.mockEngine = engine.NewMockEngine(s.controller)
 	s.mockEngine.EXPECT().NotifyNewHistoryEvent(gomock.Any()).AnyTimes()
-	s.mockEngine.EXPECT().NotifyNewTransferTasks(gomock.Any()).AnyTimes()
-	s.mockEngine.EXPECT().NotifyNewTimerTasks(gomock.Any()).AnyTimes()
+	s.mockEngine.EXPECT().NotifyNewTransferTasks(gomock.Any(), gomock.Any()).AnyTimes()
+	s.mockEngine.EXPECT().NotifyNewTimerTasks(gomock.Any(), gomock.Any()).AnyTimes()
 	s.mockShard.SetEngine(s.mockEngine)
 
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
@@ -360,6 +360,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
+	s.mockDomainCache.EXPECT().GetDomainName(s.domainID).Return(s.domainEntry.GetInfo().Name, nil).Times(1)
 
 	s.timeSource.Update(s.now.Add(2 * timerTimeout))
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
@@ -872,6 +873,7 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionTimeout_Fire() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
+	s.mockDomainCache.EXPECT().GetDomainName(s.domainID).Return(s.domainEntry.GetInfo().Name, nil).Times(1)
 
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
 	s.NoError(err)

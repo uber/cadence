@@ -35,7 +35,7 @@ import (
 
 var _ Handler = (*handlerImpl)(nil)
 
-//go:generate mockgen -copyright_file=../../LICENSE -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package matching github.com/uber/cadence/service/matching Handler
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination handler_mock.go -package matching github.com/uber/cadence/service/matching Handler
 
 type (
 	// Handler interface for matching service
@@ -126,6 +126,7 @@ func (h *handlerImpl) newHandlerContext(
 		taskList,
 		h.metricsClient,
 		scope,
+		h.GetLogger(),
 	)
 }
 
@@ -376,6 +377,7 @@ func (h *handlerImpl) ListTaskListPartitions(
 		request.GetTaskList(),
 		h.metricsClient,
 		metrics.MatchingListTaskListPartitionsScope,
+		h.GetLogger(),
 	)
 
 	sw := hCtx.startProfiling(&h.startWG)

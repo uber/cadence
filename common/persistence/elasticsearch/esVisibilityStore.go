@@ -468,9 +468,9 @@ const (
 
 var (
 	timeKeys = map[string]bool{
-		"StartTime":     true,
-		"CloseTime":     true,
-		"ExecutionTime": true,
+		es.StartTime:     true,
+		es.CloseTime:     true,
+		es.ExecutionTime: true,
 	}
 	rangeKeys = map[string]bool{
 		"from":  true,
@@ -575,7 +575,7 @@ func getCustomizedDSLFromSQL(sql string, domainID string) (*fastjson.Value, erro
 		addQueryForExecutionTime(dsl)
 	}
 	addDomainToQuery(dsl, domainID)
-	if err := processAllValuesForKey(dsl, timeKeyFilter, timeProcessFunc); err != nil {
+	if err := processAllValuesForKey(dsl, isCombinedKey, combinedProcessFunc); err != nil {
 		return nil, err
 	}
 	return dsl, nil
@@ -782,7 +782,9 @@ func checkPageSize(request *p.ListWorkflowExecutionsByQueryRequest) {
 	}
 }
 
-func processAllValuesForKey(dsl *fastjson.Value, keyFilter func(k string) bool,
+func processAllValuesForKey(
+	dsl *fastjson.Value,
+	keyFilter func(k string) bool,
 	processFunc func(obj *fastjson.Object, key string, v *fastjson.Value) error,
 ) error {
 	switch dsl.Type() {
@@ -817,7 +819,23 @@ func processAllValuesForKey(dsl *fastjson.Value, keyFilter func(k string) bool,
 	return nil
 }
 
-func timeKeyFilter(key string) bool {
+func isCombinedKey(key string) bool {
+	return isTimeKey(key) || isCloseStatusKey(key)
+}
+
+func combinedProcessFunc(obj *fastjson.Object, key string, value *fastjson.Value) error {
+	if isTimeKey(key) {
+		return timeProcessFunc(obj, key, value)
+	}
+
+	if isCloseStatusKey(key) {
+		return closeStatusProcessFunc(obj, key, value)
+	}
+
+	return fmt.Errorf("unknown es dsl key %v for processing value", key)
+}
+
+func isTimeKey(key string) bool {
 	return timeKeys[key]
 }
 
@@ -839,6 +857,33 @@ func timeProcessFunc(obj *fastjson.Object, key string, value *fastjson.Value) er
 		}
 
 		obj.Set(key, fastjson.MustParse(fmt.Sprintf(`"%v"`, parsedTime.UnixNano())))
+		return nil
+	})
+}
+
+func isCloseStatusKey(key string) bool {
+	return key == es.CloseStatus
+}
+
+func closeStatusProcessFunc(obj *fastjson.Object, key string, value *fastjson.Value) error {
+	return processAllValuesForKey(value, func(key string) bool {
+		return rangeKeys[key]
+	}, func(obj *fastjson.Object, key string, v *fastjson.Value) error {
+		statusStr := string(v.GetStringBytes())
+
+		// first check if already in int64 format
+		if _, err := strconv.ParseInt(statusStr, 10, 64); err == nil {
+			return nil
+		}
+
+		// try to parse close status string
+		var parsedStatus types.WorkflowExecutionCloseStatus
+		err := parsedStatus.UnmarshalText([]byte(statusStr))
+		if err != nil {
+			return err
+		}
+
+		obj.Set(key, fastjson.MustParse(fmt.Sprintf(`"%d"`, parsedStatus)))
 		return nil
 	})
 }
