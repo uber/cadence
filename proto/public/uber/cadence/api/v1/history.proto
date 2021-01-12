@@ -110,7 +110,7 @@ message WorkflowExecutionStartedEventAttributes {
   string first_execution_run_id = 15;
   RetryPolicy retry_policy = 16;
   int32 attempt = 17;
-  google.protobuf.Timestamp expiration_timestamp = 19 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp expiration_time = 19 [(gogoproto.stdtime) = true];
   string cron_schedule = 20;
   google.protobuf.Duration first_decision_task_backoff = 21 [(gogoproto.stdduration) = true];
   Memo memo = 22;

@@ -127,8 +127,8 @@ message ContinueAsNewWorkflowExecutionDecisionAttributes {
   TaskList task_list = 2;
   Payload input = 3;
   google.protobuf.Duration execution_start_to_close_timeout = 4 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration task_start_to_close_timeout_seconds = 5 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration backoff_start_interval_in_seconds = 6 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration task_start_to_close_timeout = 5 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration backoff_start_interval = 6 [(gogoproto.stdduration) = true];
   RetryPolicy retry_policy = 7;
   ContinueAsNewInitiator initiator = 8;
   Failure failure = 9;

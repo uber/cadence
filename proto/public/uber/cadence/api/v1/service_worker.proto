@@ -208,13 +208,13 @@ message PollForActivityTaskResponse {
   string activity_id = 3;
   ActivityType activity_type = 4;
   Payload input = 5;
-  google.protobuf.Timestamp scheduled_timestamp = 6 [(gogoproto.stdtime) = true];
-  google.protobuf.Timestamp started_timestamp = 7 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp scheduled_time = 6 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp started_time = 7 [(gogoproto.stdtime) = true];
   google.protobuf.Duration schedule_to_close_timeout = 8 [(gogoproto.stdduration) = true];
   google.protobuf.Duration start_to_close_timeout = 9 [(gogoproto.stdduration) = true];
   google.protobuf.Duration heartbeat_timeout = 10 [(gogoproto.stdduration) = true];
   int32 attempt = 11;
-  google.protobuf.Timestamp scheduled_timestamp_of_this_attempt = 12 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp scheduled_time_of_this_attempt = 12 [(gogoproto.stdtime) = true];
   Payload heartbeat_details = 13;
   WorkflowType workflow_type = 14;
   string workflow_domain = 15;
