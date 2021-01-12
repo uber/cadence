@@ -186,10 +186,11 @@ func AdminMergeDLQMessages(c *cli.Context) {
 		for {
 			response, err := adminClient.MergeDLQMessages(ctx, request)
 			if err != nil {
-				ErrorAndExit(fmt.Sprintf("Failed to merge DLQ message in shard %v.", shardID), err)
+				fmt.Printf("Failed to merge DLQ message in shard %v with error: %v.\n", shardID, err)
+				break
 			}
 
-			if response == nil || len(response.NextPageToken) == 0 {
+			if len(response.NextPageToken) == 0 {
 				break
 			}
 
