@@ -591,9 +591,10 @@ func (v *ReadDLQMessagesRequest) GetNextPageToken() (o []byte) {
 
 // ReadDLQMessagesResponse is an internal type (TBD...)
 type ReadDLQMessagesResponse struct {
-	Type             *DLQType           `json:"type,omitempty"`
-	ReplicationTasks []*ReplicationTask `json:"replicationTasks,omitempty"`
-	NextPageToken    []byte             `json:"nextPageToken,omitempty"`
+	Type                 *DLQType               `json:"type,omitempty"`
+	ReplicationTasks     []*ReplicationTask     `json:"replicationTasks,omitempty"`
+	ReplicationTasksInfo []*ReplicationTaskInfo `json:"replicationTasksInfo,omitempty"`
+	NextPageToken        []byte                 `json:"nextPageToken,omitempty"`
 }
 
 // GetType is an internal getter (TBD...)
@@ -608,6 +609,14 @@ func (v *ReadDLQMessagesResponse) GetType() (o DLQType) {
 func (v *ReadDLQMessagesResponse) GetReplicationTasks() (o []*ReplicationTask) {
 	if v != nil && v.ReplicationTasks != nil {
 		return v.ReplicationTasks
+	}
+	return
+}
+
+// GetReplicationTasksInfo is an internal getter (TBD...)
+func (v *ReadDLQMessagesResponse) GetReplicationTasksInfo() (o []*ReplicationTaskInfo) {
+	if v != nil && v.ReplicationTasksInfo != nil {
+		return v.ReplicationTasksInfo
 	}
 	return
 }

@@ -49,7 +49,7 @@ type (
 			lastMessageID int64,
 			pageSize int,
 			pageToken []byte,
-		) ([]*types.ReplicationTask, []byte, error)
+		) ([]*types.ReplicationTask, []*types.ReplicationTaskInfo, []byte, error)
 		PurgeMessages(
 			ctx context.Context,
 			sourceCluster string,
@@ -96,7 +96,7 @@ func (r *dlqHandlerImpl) ReadMessages(
 	lastMessageID int64,
 	pageSize int,
 	pageToken []byte,
-) ([]*types.ReplicationTask, []byte, error) {
+) ([]*types.ReplicationTask, []*types.ReplicationTaskInfo, []byte, error) {
 
 	return r.readMessagesWithAckLevel(
 		ctx,
@@ -113,7 +113,7 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 	lastMessageID int64,
 	pageSize int,
 	pageToken []byte,
-) ([]*types.ReplicationTask, []byte, error) {
+) ([]*types.ReplicationTask, []*types.ReplicationTaskInfo, []byte, error) {
 
 	resp, err := r.shard.GetExecutionManager().GetReplicationTasksFromDLQ(
 		ctx,
@@ -128,12 +128,12 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 		},
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	remoteAdminClient := r.shard.GetService().GetClientBean().GetRemoteAdminClient(sourceCluster)
 	if remoteAdminClient == nil {
-		return nil, nil, errInvalidCluster
+		return nil, nil, nil, errInvalidCluster
 	}
 
 	taskInfo := make([]*types.ReplicationTaskInfo, 0, len(resp.Tasks))
@@ -159,11 +159,11 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 			},
 		)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
-	return response.ReplicationTasks, resp.NextPageToken, nil
+	return response.ReplicationTasks, taskInfo, resp.NextPageToken, nil
 }
 
 func (r *dlqHandlerImpl) PurgeMessages(
@@ -198,7 +198,7 @@ func (r *dlqHandlerImpl) MergeMessages(
 		return nil, errInvalidCluster
 	}
 
-	tasks, token, err := r.readMessagesWithAckLevel(
+	tasks, _, token, err := r.readMessagesWithAckLevel(
 		ctx,
 		sourceCluster,
 		lastMessageID,
