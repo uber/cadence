@@ -107,7 +107,7 @@ func AdminGetDLQMessages(c *cli.Context) {
 	}
 
 	if showRawTask {
-		_, err := outputFile.WriteString(fmt.Sprintf("#### REPLICARION DLQ RAW TASKS INFO ####\n"))
+		_, err := outputFile.WriteString(fmt.Sprintf("#### REPLICATION DLQ RAW TASKS INFO ####\n"))
 		if err != nil {
 			ErrorAndExit("fail to print dlq raw tasks.", err)
 		}
@@ -117,9 +117,16 @@ func AdminGetDLQMessages(c *cli.Context) {
 				ErrorAndExit("fail to encode dlq raw tasks.", err)
 			}
 
-			_, err = outputFile.WriteString(fmt.Sprintf("%v\n", string(str)))
-			if err != nil {
+			if _, err = outputFile.WriteString(fmt.Sprintf("%v\n", string(str))); err != nil {
 				ErrorAndExit("fail to print dlq raw tasks.", err)
+			}
+		}
+	} else {
+		if lastReadMessageID == 0 && len(rawTasksInfo) > 0 {
+			if _, err := outputFile.WriteString(
+				fmt.Sprintf("WARN: Received empty replication task but metadata is not empty. Please use %v to show metadata task.\n", FlagDLQRawTask),
+			); err != nil {
+				ErrorAndExit("fail to print warning message.", err)
 			}
 		}
 	}

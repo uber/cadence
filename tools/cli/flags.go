@@ -231,7 +231,7 @@ const (
 	FlagTLSEnableHostVerification         = "tls_enable_host_verification"
 	FlagDLQType                           = "dlq_type"
 	FlagDLQTypeWithAlias                  = FlagDLQType + ", dt"
-	FlagDLQRawTask                        = "show_dlq_raw_task"
+	FlagDLQRawTask                        = "dlq_raw_task"
 	FlagMaxMessageCount                   = "max_message_count"
 	FlagMaxMessageCountWithAlias          = FlagMaxMessageCount + ", mmc"
 	FlagLastMessageID                     = "last_message_id"
