@@ -275,11 +275,10 @@ message RefreshWorkflowTasksResponse {
 
 message ResendReplicationTasksRequest {
   string domain_id = 1;
-  string workflow_id = 2;
-  string run_id = 3;
-  string remote_cluster = 4;
-  shared.v1.VersionHistoryItem start_event = 5;
-  shared.v1.VersionHistoryItem end_event = 6;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  string remote_cluster = 3;
+  shared.v1.VersionHistoryItem start_event = 4;
+  shared.v1.VersionHistoryItem end_event = 5;
 }
 
 message ResendReplicationTasksResponse {

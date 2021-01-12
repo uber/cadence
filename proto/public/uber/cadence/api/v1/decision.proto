@@ -111,10 +111,9 @@ message CancelWorkflowExecutionDecisionAttributes {
 
 message RequestCancelExternalWorkflowExecutionDecisionAttributes {
   string domain = 1;
-  string workflow_id = 2;
-  string run_id = 3;
-  bytes control = 4;
-  bool child_workflow_only = 5;
+  WorkflowExecution workflow_execution = 2;
+  bytes control = 3;
+  bool child_workflow_only = 4;
 }
 
 message RecordMarkerDecisionAttributes {

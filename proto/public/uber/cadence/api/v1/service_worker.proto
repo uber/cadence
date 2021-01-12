@@ -232,11 +232,10 @@ message RespondActivityTaskCompletedResponse {
 
 message RespondActivityTaskCompletedByIDRequest {
   string domain = 1;
-  string workflow_id = 2;
-  string run_id = 3;
-  string activity_id = 4;
-  Payload result = 5;
-  string identity = 6;
+  WorkflowExecution workflow_execution = 2;
+  string activity_id = 3;
+  Payload result = 4;
+  string identity = 5;
 }
 
 message RespondActivityTaskCompletedByIDResponse {
@@ -253,11 +252,10 @@ message RespondActivityTaskFailedResponse {
 
 message RespondActivityTaskFailedByIDRequest {
   string domain = 1;
-  string workflow_id = 2;
-  string run_id = 3;
-  string activity_id = 4;
-  Failure failure = 5;
-  string identity = 6;
+  WorkflowExecution workflow_execution = 2;
+  string activity_id = 3;
+  Failure failure = 4;
+  string identity = 5;
 }
 
 message RespondActivityTaskFailedByIDResponse {
@@ -274,11 +272,10 @@ message RespondActivityTaskCanceledResponse {
 
 message RespondActivityTaskCanceledByIDRequest {
   string domain = 1;
-  string workflow_id = 2;
-  string run_id = 3;
-  string activity_id = 4;
-  Payload details = 5;
-  string identity = 6;
+  WorkflowExecution workflow_execution = 2;
+  string activity_id = 3;
+  Payload details = 4;
+  string identity = 5;
 }
 
 message RespondActivityTaskCanceledByIDResponse {
@@ -296,11 +293,10 @@ message RecordActivityTaskHeartbeatResponse {
 
 message RecordActivityTaskHeartbeatByIDRequest {
   string domain = 1;
-  string workflow_id = 2;
-  string run_id = 3;
-  string activity_id = 4;
-  Payload details = 5;
-  string identity = 6;
+  WorkflowExecution workflow_execution = 2;
+  string activity_id = 3;
+  Payload details = 4;
+  string identity = 5;
 }
 
 message RecordActivityTaskHeartbeatByIDResponse {

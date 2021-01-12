@@ -71,11 +71,10 @@ message PendingActivityInfo {
 }
 
 message PendingChildExecutionInfo {
-  string workflow_id = 1;
-  string run_id = 2;
-  string workflow_type_name = 3;
-  int64 initiated_id = 4;
-  ParentClosePolicy parent_close_policy = 5;
+  WorkflowExecution workflow_execution = 1;
+  string workflow_type_name = 2;
+  int64 initiated_id = 3;
+  ParentClosePolicy parent_close_policy = 4;
 }
 
 message PendingDecisionInfo {

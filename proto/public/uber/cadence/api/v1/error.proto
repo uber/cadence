@@ -27,6 +27,8 @@ option java_multiple_files = true;
 option java_outer_classname = "ApiProto";
 option java_package = "com.uber.cadence.api.v1";
 
+import "uber/cadence/api/v1/common.proto";
+
 message WorkflowExecutionAlreadyStartedError {
   string start_request_id = 1;
   string run_id = 2;
@@ -45,12 +47,11 @@ message DomainNotActiveError {
 
 message RetryTaskV2Error {
   string domain_id = 1;
-  string workflow_id = 2;
-  string run_id = 3;
-  int64 start_event_id = 4;
-  int64 start_event_version = 5;
-  int64 end_event_id = 6;
-  int64 end_event_version =7;
+  WorkflowExecution workflow_execution = 2;
+  int64 start_event_id = 3;
+  int64 start_event_version = 4;
+  int64 end_event_id = 5;
+  int64 end_event_version = 6;
 }
 
 message ClientVersionNotSupportedError {

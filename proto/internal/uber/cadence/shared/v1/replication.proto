@@ -75,30 +75,28 @@ message SyncShardStatusTaskAttributes {
 
 message SyncActivityTaskAttributes {
   string domain_id = 1;
-  string workflow_id = 2;
-  string run_id = 3;
-  int64 version = 4;
-  int64 scheduled_id = 5;
-  google.protobuf.Timestamp scheduled_time = 6 [(gogoproto.stdtime) = true];
-  int64 started_id = 7;
-  google.protobuf.Timestamp started_time = 8 [(gogoproto.stdtime) = true];
-  google.protobuf.Timestamp last_heartbeat_time = 9 [(gogoproto.stdtime) = true];
-  api.v1.Payload details = 10;
-  int32 attempt = 11;
-  api.v1.Failure last_failure = 12;
-  string last_worker_identity = 13;
-  shared.v1.VersionHistory version_history = 14;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  int64 version = 3;
+  int64 scheduled_id = 4;
+  google.protobuf.Timestamp scheduled_time = 5 [(gogoproto.stdtime) = true];
+  int64 started_id = 6;
+  google.protobuf.Timestamp started_time = 7 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp last_heartbeat_time = 8 [(gogoproto.stdtime) = true];
+  api.v1.Payload details = 9;
+  int32 attempt = 10;
+  api.v1.Failure last_failure = 11;
+  string last_worker_identity = 12;
+  shared.v1.VersionHistory version_history = 13;
 }
 
 message HistoryTaskV2Attributes {
   int64 task_id = 1;
   string domain_id = 2;
-  string workflow_id = 3;
-  string run_id = 4;
-  repeated shared.v1.VersionHistoryItem version_history_items = 5;
-  api.v1.DataBlob events = 6;
+  api.v1.WorkflowExecution workflow_execution = 3;
+  repeated shared.v1.VersionHistoryItem version_history_items = 4;
+  api.v1.DataBlob events = 5;
   // New run events does not need version history since there is no prior events.
-  api.v1.DataBlob new_run_events = 7;
+  api.v1.DataBlob new_run_events = 6;
 }
 
 message FailoverMarkerAttributes {
@@ -114,14 +112,13 @@ message FailoverMarkerToken {
 
 message ReplicationTaskInfo {
   string domain_id = 1;
-  string workflow_id = 2;
-  string run_id = 3;
-  int32 task_type = 4;
-  int64 task_id = 5;
-  int64 version = 6;
-  int64 first_event_id = 7;
-  int64 next_event_id = 8;
-  int64 scheduled_id = 9;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  int32 task_type = 3;
+  int64 task_id = 4;
+  int64 version = 5;
+  int64 first_event_id = 6;
+  int64 next_event_id = 7;
+  int64 scheduled_id = 8;
 }
 
 enum ReplicationTaskType {

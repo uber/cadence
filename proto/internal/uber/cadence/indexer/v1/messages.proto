@@ -24,13 +24,14 @@ package uber.cadence.indexer.v1;
 
 option go_package = "indexerv1";
 
+import "uber/cadence/api/v1/common.proto";
+
 message Message {
   MessageType message_type = 1;
   string domain_id = 2;
-  string workflow_id = 3;
-  string run_id = 4;
-  int64 version = 5;
-  map<string, Field> fields = 6;
+  api.v1.WorkflowExecution workflow_execution = 3;
+  int64 version = 4;
+  map<string, Field> fields = 5;
 }
 
 message Field {

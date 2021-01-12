@@ -519,19 +519,18 @@ message SyncShardStatusResponse {
 
 message SyncActivityRequest {
   string domain_id = 1;
-  string workflow_id = 2;
-  string run_id = 3;
-  int64 version = 4;
-  int64 scheduled_id = 5;
-  google.protobuf.Timestamp scheduled_time = 6 [(gogoproto.stdtime) = true];
-  int64 started_id = 7;
-  google.protobuf.Timestamp started_time = 8 [(gogoproto.stdtime) = true];
-  google.protobuf.Timestamp last_heartbeat_time = 9 [(gogoproto.stdtime) = true];
-  api.v1.Payload details = 10;
-  int32 attempt = 11;
-  api.v1.Failure last_failure = 12;
-  string last_worker_identity = 13;
-  shared.v1.VersionHistory version_history = 14;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  int64 version = 3;
+  int64 scheduled_id = 4;
+  google.protobuf.Timestamp scheduled_time = 5 [(gogoproto.stdtime) = true];
+  int64 started_id = 6;
+  google.protobuf.Timestamp started_time = 7 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp last_heartbeat_time = 8 [(gogoproto.stdtime) = true];
+  api.v1.Payload details = 9;
+  int32 attempt = 10;
+  api.v1.Failure last_failure = 11;
+  string last_worker_identity = 12;
+  shared.v1.VersionHistory version_history = 13;
 }
 
 message SyncActivityResponse {
