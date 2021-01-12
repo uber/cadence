@@ -99,7 +99,7 @@ message DescribeWorkflowExecutionRequest {
 }
 
 message DescribeWorkflowExecutionResponse {
-  string shard_id = 1;
+  int32 shard_id = 1;
   string history_addr = 2;
   string mutable_state_in_cache = 3;
   string mutable_state_in_database = 4;
