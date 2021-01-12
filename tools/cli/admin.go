@@ -705,6 +705,10 @@ func newAdminDLQCommands() []cli.Command {
 					Name:  FlagOutputFilenameWithAlias,
 					Usage: "Output file to write to, if not provided output is written to stdout",
 				},
+				cli.BoolFlag{
+					Name:  FlagDLQRawTask,
+					Usage: "Show DLQ raw task information",
+				},
 			},
 			Action: func(c *cli.Context) {
 				AdminGetDLQMessages(c)

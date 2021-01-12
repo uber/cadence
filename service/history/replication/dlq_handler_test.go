@@ -145,9 +145,12 @@ func (s *dlqHandlerSuite) TestReadMessages_OK() {
 	s.adminClient.EXPECT().
 		GetDLQReplicationMessages(ctx, gomock.Any()).
 		Return(&types.GetDLQReplicationMessagesResponse{}, nil)
-	tasks, token, err := s.messageHandler.ReadMessages(ctx, s.sourceCluster, lastMessageID, pageSize, pageToken)
+	tasks, info, token, err := s.messageHandler.ReadMessages(ctx, s.sourceCluster, lastMessageID, pageSize, pageToken)
 	s.NoError(err)
 	s.Nil(token)
+	s.Equal(resp.Tasks[0].GetDomainID(), info[0].GetDomainID())
+	s.Equal(resp.Tasks[0].GetWorkflowID(), info[0].GetWorkflowID())
+	s.Equal(resp.Tasks[0].GetRunID(), info[0].GetRunID())
 	s.Nil(tasks)
 }
 
