@@ -126,6 +126,7 @@ func (s *timerActiveTaskExecutorSuite) SetupTest() {
 	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	// ack manager will use the domain information
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(constants.TestDomainName, nil).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
 	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
@@ -360,7 +361,6 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
-	s.mockDomainCache.EXPECT().GetDomainName(s.domainID).Return(s.domainEntry.GetInfo().Name, nil).Times(1)
 
 	s.timeSource.Update(s.now.Add(2 * timerTimeout))
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
@@ -873,7 +873,6 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionTimeout_Fire() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
-	s.mockDomainCache.EXPECT().GetDomainName(s.domainID).Return(s.domainEntry.GetInfo().Name, nil).Times(1)
 
 	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
 	s.NoError(err)
