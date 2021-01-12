@@ -1889,6 +1889,7 @@ const (
 	ReplicationTasksLag
 	ReplicationTasksFetched
 	ReplicationTasksReturned
+	ReplicationTasksReturnedDiff
 	ReplicationTasksAppliedLatency
 	ReplicationDLQFailed
 	ReplicationDLQMaxLevelGauge
@@ -2371,6 +2372,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTasksLag:                               {metricName: "replication_tasks_lag", metricType: Timer},
 		ReplicationTasksFetched:                           {metricName: "replication_tasks_fetched", metricType: Timer},
 		ReplicationTasksReturned:                          {metricName: "replication_tasks_returned", metricType: Timer},
+		ReplicationTasksReturnedDiff:                      {metricName: "replication_tasks_returned_diff", metricType: Timer},
 		ReplicationTasksAppliedLatency:                    {metricName: "replication_tasks_applied_latency", metricType: Timer},
 		ReplicationDLQFailed:                              {metricName: "replication_dlq_enqueue_failed", metricType: Counter},
 		ReplicationDLQMaxLevelGauge:                       {metricName: "replication_dlq_max_level", metricType: Gauge},

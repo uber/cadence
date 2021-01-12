@@ -164,7 +164,7 @@ func (t *taskAckManagerImpl) GetTasks(
 
 		err = backoff.Retry(op, t.retryPolicy, common.IsPersistenceTransientError)
 		if err != nil {
-			t.logger.Debug("Failed to get replication task. Return what we have so far.", tag.Error(err))
+			t.logger.Error("Failed to get replication task. Return what we have so far.", tag.Error(err))
 			hasMore = true
 			break
 		}
@@ -180,15 +180,17 @@ func (t *taskAckManagerImpl) GetTasks(
 		metrics.ReplicationTasksLag,
 		time.Duration(t.shard.GetTransferMaxReadLevel()-readLevel),
 	)
-
 	replicationScope.RecordTimer(
 		metrics.ReplicationTasksFetched,
 		time.Duration(len(taskInfoList)),
 	)
-
 	replicationScope.RecordTimer(
 		metrics.ReplicationTasksReturned,
 		time.Duration(len(replicationTasks)),
+	)
+	replicationScope.RecordTimer(
+		metrics.ReplicationTasksReturnedDiff,
+		time.Duration(len(taskInfoList)-len(replicationTasks)),
 	)
 
 	if err := t.shard.UpdateClusterReplicationLevel(
