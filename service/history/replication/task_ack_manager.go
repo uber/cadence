@@ -189,7 +189,7 @@ func (t *taskAckManagerImpl) GetTasks(
 		time.Duration(len(replicationTasks)),
 	)
 	replicationScope.RecordTimer(
-		metrics.ReplicationTasksReturned,
+		metrics.ReplicationTasksReturnedDiff,
 		time.Duration(len(taskInfoList)-len(replicationTasks)),
 	)
 
