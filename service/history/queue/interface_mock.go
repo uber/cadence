@@ -435,15 +435,15 @@ func (mr *MockProcessorMockRecorder) FailoverDomain(domainIDs interface{}) *gomo
 }
 
 // NotifyNewTask mocks base method
-func (m *MockProcessor) NotifyNewTask(clusterName string, transferTasks []persistence.Task) {
+func (m *MockProcessor) NotifyNewTask(clusterName string, executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "NotifyNewTask", clusterName, transferTasks)
+	m.ctrl.Call(m, "NotifyNewTask", clusterName, executionInfo, tasks)
 }
 
 // NotifyNewTask indicates an expected call of NotifyNewTask
-func (mr *MockProcessorMockRecorder) NotifyNewTask(clusterName, transferTasks interface{}) *gomock.Call {
+func (mr *MockProcessorMockRecorder) NotifyNewTask(clusterName, executionInfo, tasks interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTask", reflect.TypeOf((*MockProcessor)(nil).NotifyNewTask), clusterName, transferTasks)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTask", reflect.TypeOf((*MockProcessor)(nil).NotifyNewTask), clusterName, executionInfo, tasks)
 }
 
 // HandleAction mocks base method

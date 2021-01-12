@@ -173,6 +173,7 @@ func (t *transferQueueProcessorImpl) Stop() {
 // This should be called each time new transfer task arrives, otherwise tasks maybe delayed.
 func (t *transferQueueProcessorImpl) NotifyNewTask(
 	clusterName string,
+	_ *persistence.WorkflowExecutionInfo,
 	transferTasks []persistence.Task,
 ) {
 

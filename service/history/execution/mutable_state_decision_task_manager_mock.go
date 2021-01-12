@@ -264,6 +264,21 @@ func (mr *MockmutableStateDecisionTaskManagerMockRecorder) AddDecisionTaskTimedO
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDecisionTaskTimedOutEvent", reflect.TypeOf((*MockmutableStateDecisionTaskManager)(nil).AddDecisionTaskTimedOutEvent), scheduleEventID, startedEventID)
 }
 
+// AddDecisionTaskResetTimeoutEvent mocks base method
+func (m *MockmutableStateDecisionTaskManager) AddDecisionTaskResetTimeoutEvent(scheduleEventID int64, baseRunID, newRunID string, forkEventVersion int64, reason string) (*types.HistoryEvent, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddDecisionTaskResetTimeoutEvent", scheduleEventID, baseRunID, newRunID, forkEventVersion, reason)
+	ret0, _ := ret[0].(*types.HistoryEvent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AddDecisionTaskResetTimeoutEvent indicates an expected call of AddDecisionTaskResetTimeoutEvent
+func (mr *MockmutableStateDecisionTaskManagerMockRecorder) AddDecisionTaskResetTimeoutEvent(scheduleEventID, baseRunID, newRunID, forkEventVersion, reason interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDecisionTaskResetTimeoutEvent", reflect.TypeOf((*MockmutableStateDecisionTaskManager)(nil).AddDecisionTaskResetTimeoutEvent), scheduleEventID, baseRunID, newRunID, forkEventVersion, reason)
+}
+
 // FailDecision mocks base method
 func (m *MockmutableStateDecisionTaskManager) FailDecision(incrementAttempt bool) {
 	m.ctrl.T.Helper()

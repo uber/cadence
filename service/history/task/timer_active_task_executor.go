@@ -232,6 +232,7 @@ Loop:
 			mutableState.GetExecutionInfo().DomainID,
 			metrics.TimerActiveTaskActivityTimeoutScope,
 			timerSequenceID.TimerType,
+			getActivityTimeout(activityInfo, timerSequenceID.TimerType),
 		)
 		if _, err := mutableState.AddActivityTaskTimedOutEvent(
 			activityInfo.ScheduleID,
@@ -296,6 +297,7 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 			mutableState.GetExecutionInfo().DomainID,
 			metrics.TimerActiveTaskDecisionTimeoutScope,
 			execution.TimerTypeStartToClose,
+			decision.DecisionTimeout,
 		)
 		if _, err := mutableState.AddDecisionTaskTimedOutEvent(
 			decision.ScheduleID,
@@ -315,6 +317,7 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 			mutableState.GetExecutionInfo().DomainID,
 			metrics.TimerActiveTaskDecisionTimeoutScope,
 			execution.TimerTypeScheduleToStart,
+			mutableState.GetExecutionInfo().StickyScheduleToStartTimeout,
 		)
 		_, err := mutableState.AddDecisionTaskScheduleToStartTimeoutEvent(scheduleID)
 		if err != nil {
@@ -596,21 +599,49 @@ func (t *timerActiveTaskExecutor) emitTimeoutMetricScopeWithDomainTag(
 	domainID string,
 	scope int,
 	timerType execution.TimerType,
+	timeout int32,
 ) {
-
-	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
+	domainName, err := t.shard.GetDomainCache().GetDomainName(domainID)
 	if err != nil {
 		return
 	}
-	metricsScope := t.metricsClient.Scope(scope).Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
+	domainTag := metrics.DomainTag(domainName)
+
+	metricsScope := t.metricsClient.Scope(scope).Tagged(domainTag)
 	switch timerType {
 	case execution.TimerTypeScheduleToStart:
 		metricsScope.IncCounter(metrics.ScheduleToStartTimeoutCounter)
+
+		// check if's possible that the timeout is due to task lost
+		// note that we ignore the race condition for the dynamic config value change here
+		// as it's only for metric purpose
+		if scope == metrics.TimerActiveTaskActivityTimeoutScope &&
+			timeout == int32(t.config.ActivityMaxScheduleToStartTimeoutForRetry(domainName).Seconds()) {
+			metricsScope.IncCounter(metrics.ActivityLostCounter)
+		}
 	case execution.TimerTypeScheduleToClose:
 		metricsScope.IncCounter(metrics.ScheduleToCloseTimeoutCounter)
 	case execution.TimerTypeStartToClose:
 		metricsScope.IncCounter(metrics.StartToCloseTimeoutCounter)
 	case execution.TimerTypeHeartbeat:
 		metricsScope.IncCounter(metrics.HeartbeatTimeoutCounter)
+	}
+}
+
+func getActivityTimeout(
+	activityInfo *persistence.ActivityInfo,
+	timeoutType execution.TimerType,
+) int32 {
+	switch timeoutType {
+	case execution.TimerTypeScheduleToStart:
+		return activityInfo.ScheduleToStartTimeout
+	case execution.TimerTypeScheduleToClose:
+		return activityInfo.ScheduleToCloseTimeout
+	case execution.TimerTypeStartToClose:
+		return activityInfo.StartToCloseTimeout
+	case execution.TimerTypeHeartbeat:
+		return activityInfo.HeartbeatTimeout
+	default:
+		panic(fmt.Sprintf("unknown activity timeout type: %v", timeoutType))
 	}
 }

@@ -111,9 +111,10 @@ func (s *matchingEngineSuite) SetupTest() {
 	s.handlerContext = newHandlerContext(
 		context.Background(),
 		matchingTestDomainName,
-		&types.TaskList{common.StringPtr(matchingTestTaskList), &tlKindNormal},
+		&types.TaskList{Name: common.StringPtr(matchingTestTaskList), Kind: &tlKindNormal},
 		metrics.NewClient(tally.NoopScope, metrics.Matching),
 		metrics.MatchingTaskListMgrScope,
+		loggerimpl.NewDevelopmentForTest(s.Suite),
 	)
 
 	s.matchingEngine = s.newMatchingEngine(defaultTestConfig(), s.taskManager)

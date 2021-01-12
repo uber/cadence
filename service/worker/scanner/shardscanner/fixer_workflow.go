@@ -66,7 +66,10 @@ type FixerHooks struct {
 }
 
 // NewFixerHooks returns initialized callbacks for shard scanner workflow implementation.
-func NewFixerHooks(manager FixerManagerCB, iterator FixerIteratorCB) (*FixerHooks, error) {
+func NewFixerHooks(
+	manager FixerManagerCB,
+	iterator FixerIteratorCB,
+) (*FixerHooks, error) {
 	if manager == nil || iterator == nil {
 		return nil, errors.New("manager or iterator not provided")
 	}
@@ -104,6 +107,10 @@ func NewFixerWorkflow(
 	if err != nil {
 		return nil, err
 	}
+	if corruptKeys.CorruptedKeys == nil {
+		return nil, errors.New("corrupted keys not found")
+	}
+
 	wf.Keys = corruptKeys
 	wf.Aggregator = NewShardFixResultAggregator(corruptKeys.CorruptedKeys, *corruptKeys.MinShard, *corruptKeys.MaxShard)
 

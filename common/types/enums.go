@@ -68,7 +68,7 @@ func EventTypeValues() []EventType {
 	}
 }
 
-// DecisionType_Values returns all recognized values of DecisionType.
+// DecisionTypeValues returns all recognized values of DecisionType.
 func DecisionTypeValues() []DecisionType {
 	return []DecisionType{
 		DecisionTypeScheduleActivityTask,

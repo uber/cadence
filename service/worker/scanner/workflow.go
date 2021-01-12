@@ -24,16 +24,16 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/service/worker/scanner/executions"
-
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/service/worker/scanner/executions"
 	"github.com/uber/cadence/service/worker/scanner/history"
 	"github.com/uber/cadence/service/worker/scanner/tasklist"
+	"github.com/uber/cadence/service/worker/scanner/timers"
 )
 
 const (
@@ -96,7 +96,8 @@ func init() {
 	workflow.RegisterWithOptions(executions.CurrentScannerWorkflow, workflow.RegisterOptions{Name: executions.CurrentExecutionsScannerWFTypeName})
 	workflow.RegisterWithOptions(executions.ConcreteFixerWorkflow, workflow.RegisterOptions{Name: executions.ConcreteExecutionsFixerWFTypeName})
 	workflow.RegisterWithOptions(executions.CurrentFixerWorkflow, workflow.RegisterOptions{Name: executions.CurrentExecutionsFixerWFTypeName})
-
+	workflow.RegisterWithOptions(timers.ScannerWorkflow, workflow.RegisterOptions{Name: timers.ScannerWFTypeName})
+	workflow.RegisterWithOptions(timers.FixerWorkflow, workflow.RegisterOptions{Name: timers.FixerWFTypeName})
 }
 
 // TaskListScannerWorkflow is the workflow that runs the task-list scanner background daemon

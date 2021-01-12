@@ -1,4 +1,5 @@
-// Copyright (c) 2018 Uber Technologies, Inc.
+// Copyright (c) 2020 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -531,17 +532,24 @@ func (m *sqlTaskManager) shardID(domainID string, name string) int {
 func lockTaskList(ctx context.Context, tx sqlplugin.Tx, shardID int, domainID serialization.UUID, name string, taskListType int, oldRangeID int64) error {
 	rangeID, err := tx.LockTaskLists(ctx, &sqlplugin.TaskListsFilter{
 		ShardID: shardID, DomainID: &domainID, Name: &name, TaskType: common.Int64Ptr(int64(taskListType))})
-	if err != nil {
+
+	switch err {
+	case nil:
+		if rangeID != oldRangeID {
+			return &persistence.ConditionFailedError{
+				Msg: fmt.Sprintf("Task list range ID was %v when it was should have been %v", rangeID, oldRangeID),
+			}
+		}
+		return nil
+	case sql.ErrNoRows:
+		return &persistence.ConditionFailedError{
+			Msg: "Task list does not exist.",
+		}
+	default:
 		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Failed to lock task list. Error: %v", err),
 		}
 	}
-	if rangeID != oldRangeID {
-		return &persistence.ConditionFailedError{
-			Msg: fmt.Sprintf("Task list range ID was %v when it was should have been %v", rangeID, oldRangeID),
-		}
-	}
-	return nil
 }
 
 func stickyTaskListExpiry() time.Time {

@@ -43,6 +43,8 @@ const (
 	loadDomainEntryForTaskRetryDelay = 100 * time.Millisecond
 
 	activeTaskResubmitMaxAttempts = 10
+
+	defaultTaskEventLoggerSize = 100
 )
 
 var (
@@ -76,6 +78,7 @@ type (
 		timeSource    clock.TimeSource
 		submitTime    time.Time
 		logger        log.Logger
+		eventLogger   eventLogger
 		scopeIdx      int
 		scope         metrics.Scope // initialized when processing task to make the initialization parallel
 		taskExecutor  Executor
@@ -182,6 +185,14 @@ func newQueueTaskBase(
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
 ) *taskBase {
+	var eventLogger eventLogger
+	if shard.GetConfig().EnableDebugMode &&
+		(queueType == QueueTypeActiveTimer || queueType == QueueTypeActiveTransfer) &&
+		shard.GetConfig().EnableTaskInfoLogByDomainID(taskInfo.GetDomainID()) {
+		eventLogger = newEventLogger(logger, timeSource, defaultTaskEventLoggerSize)
+		eventLogger.AddEvent("Created task")
+	}
+
 	return &taskBase{
 		Info:          taskInfo,
 		shard:         shard,
@@ -191,6 +202,7 @@ func newQueueTaskBase(
 		scopeIdx:      scopeIdx,
 		scope:         nil,
 		logger:        logger,
+		eventLogger:   eventLogger,
 		attempt:       0,
 		submitTime:    timeSource.Now(),
 		timeSource:    timeSource,
@@ -262,6 +274,7 @@ func (t *taskBase) Execute() error {
 	var err error
 	t.shouldProcessTask, err = t.taskFilter(t.Info)
 	if err != nil {
+		t.logEvent("TaskFilter execution failed", err)
 		time.Sleep(loadDomainEntryForTaskRetryDelay)
 		return err
 	}
@@ -275,6 +288,7 @@ func (t *taskBase) Execute() error {
 		}
 	}()
 
+	t.logEvent("Executing task", t.shouldProcessTask)
 	return t.taskExecutor.Execute(t.Info, t.shouldProcessTask)
 }
 
@@ -283,6 +297,8 @@ func (t *taskBase) HandleErr(
 ) (retErr error) {
 	defer func() {
 		if retErr != nil {
+			t.logEvent("Failed to handle error", retErr)
+
 			t.Lock()
 			defer t.Unlock()
 
@@ -298,6 +314,8 @@ func (t *taskBase) HandleErr(
 	if err == nil {
 		return nil
 	}
+
+	t.logEvent("Handling task processing error", err)
 
 	if _, ok := err.(*types.EntityNotExistsError); ok {
 		return nil
@@ -376,6 +394,8 @@ func (t *taskBase) RetryErr(
 }
 
 func (t *taskBase) Ack() {
+	t.logEvent("Acked task")
+
 	t.Lock()
 	defer t.Unlock()
 
@@ -385,9 +405,16 @@ func (t *taskBase) Ack() {
 		t.scope.RecordTimer(metrics.TaskLatencyPerDomain, time.Since(t.submitTime))
 		t.scope.RecordTimer(metrics.TaskQueueLatencyPerDomain, time.Since(t.GetVisibilityTimestamp()))
 	}
+
+	if t.eventLogger != nil && t.shouldProcessTask && t.attempt != 0 {
+		// only dump events when the task should be processed and has been retried
+		t.eventLogger.FlushEvents("Task processing events")
+	}
 }
 
 func (t *taskBase) Nack() {
+	t.logEvent("Nacked task")
+
 	t.Lock()
 	defer t.Unlock()
 
@@ -438,6 +465,15 @@ func (t *taskBase) shouldResubmitOnNack() bool {
 	// this may require change the Nack() interface to Nack(error)
 	return t.GetAttempt() < activeTaskResubmitMaxAttempts &&
 		(t.queueType == QueueTypeActiveTransfer || t.queueType == QueueTypeActiveTimer)
+}
+
+func (t *taskBase) logEvent(
+	msg string,
+	detail ...interface{},
+) {
+	if t.eventLogger != nil {
+		t.eventLogger.AddEvent(msg, detail...)
+	}
 }
 
 // GetOrCreateDomainTaggedScope returns cached domain-tagged metrics scope if exists

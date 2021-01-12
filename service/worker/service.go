@@ -28,8 +28,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/service/worker/scanner/shardscanner"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
@@ -49,6 +47,8 @@ import (
 	"github.com/uber/cadence/service/worker/replicator"
 	"github.com/uber/cadence/service/worker/scanner"
 	"github.com/uber/cadence/service/worker/scanner/executions"
+	"github.com/uber/cadence/service/worker/scanner/shardscanner"
+	"github.com/uber/cadence/service/worker/scanner/timers"
 )
 
 type (
@@ -137,6 +137,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			ShardScanners: []*shardscanner.ScannerConfig{
 				executions.ConcreteExecutionScannerConfig(dc),
 				executions.CurrentExecutionScannerConfig(dc),
+				timers.ScannerConfig(dc),
 			},
 		},
 		BatcherCfg: &batcher.Config{

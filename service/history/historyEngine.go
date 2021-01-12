@@ -462,8 +462,8 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				// its length > 0 and has correct timestamp, to trigger a db scan
 				fakeDecisionTask := []persistence.Task{&persistence.DecisionTask{}}
 				fakeDecisionTimeoutTask := []persistence.Task{&persistence.DecisionTimeoutTask{VisibilityTimestamp: now}}
-				e.txProcessor.NotifyNewTask(e.currentClusterName, fakeDecisionTask)
-				e.timerProcessor.NotifyNewTask(e.currentClusterName, fakeDecisionTimeoutTask)
+				e.txProcessor.NotifyNewTask(e.currentClusterName, nil, fakeDecisionTask)
+				e.timerProcessor.NotifyNewTask(e.currentClusterName, nil, fakeDecisionTimeoutTask)
 			}
 
 			// handle graceful failover on active to passive
@@ -2433,8 +2433,8 @@ func (e *historyEngineImpl) SyncShardStatus(
 	// 2. notify the timer gate in the timer queue standby processor
 	// 3, notify the transfer (essentially a no op, just put it here so it looks symmetric)
 	e.shard.SetCurrentTime(clusterName, now)
-	e.txProcessor.NotifyNewTask(clusterName, []persistence.Task{})
-	e.timerProcessor.NotifyNewTask(clusterName, []persistence.Task{})
+	e.txProcessor.NotifyNewTask(clusterName, nil, []persistence.Task{})
+	e.timerProcessor.NotifyNewTask(clusterName, nil, []persistence.Task{})
 	return nil
 }
 
@@ -2746,24 +2746,26 @@ func (e *historyEngineImpl) NotifyNewHistoryEvent(
 }
 
 func (e *historyEngineImpl) NotifyNewTransferTasks(
+	executionInfo *persistence.WorkflowExecutionInfo,
 	tasks []persistence.Task,
 ) {
 
 	if len(tasks) > 0 {
 		task := tasks[0]
 		clusterName := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
-		e.txProcessor.NotifyNewTask(clusterName, tasks)
+		e.txProcessor.NotifyNewTask(clusterName, executionInfo, tasks)
 	}
 }
 
 func (e *historyEngineImpl) NotifyNewTimerTasks(
+	executionInfo *persistence.WorkflowExecutionInfo,
 	tasks []persistence.Task,
 ) {
 
 	if len(tasks) > 0 {
 		task := tasks[0]
 		clusterName := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
-		e.timerProcessor.NotifyNewTask(clusterName, tasks)
+		e.timerProcessor.NotifyNewTask(clusterName, executionInfo, tasks)
 	}
 }
 

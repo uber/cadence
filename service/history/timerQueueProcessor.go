@@ -164,6 +164,7 @@ func (t *timerQueueProcessorImpl) Stop() {
 // This should be called each time new timer arrives, otherwise timers maybe fired unexpected.
 func (t *timerQueueProcessorImpl) NotifyNewTask(
 	clusterName string,
+	_ *persistence.WorkflowExecutionInfo,
 	timerTasks []persistence.Task,
 ) {
 

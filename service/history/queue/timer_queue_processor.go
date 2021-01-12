@@ -201,6 +201,7 @@ func (t *timerQueueProcessor) Stop() {
 
 func (t *timerQueueProcessor) NotifyNewTask(
 	clusterName string,
+	_ *persistence.WorkflowExecutionInfo,
 	timerTasks []persistence.Task,
 ) {
 	if clusterName == t.currentClusterName {

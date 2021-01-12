@@ -634,25 +634,25 @@ func (mr *MockEngineMockRecorder) NotifyNewHistoryEvent(event interface{}) *gomo
 }
 
 // NotifyNewTransferTasks mocks base method
-func (m *MockEngine) NotifyNewTransferTasks(tasks []persistence.Task) {
+func (m *MockEngine) NotifyNewTransferTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "NotifyNewTransferTasks", tasks)
+	m.ctrl.Call(m, "NotifyNewTransferTasks", executionInfo, tasks)
 }
 
 // NotifyNewTransferTasks indicates an expected call of NotifyNewTransferTasks
-func (mr *MockEngineMockRecorder) NotifyNewTransferTasks(tasks interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) NotifyNewTransferTasks(executionInfo, tasks interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTransferTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewTransferTasks), tasks)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTransferTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewTransferTasks), executionInfo, tasks)
 }
 
 // NotifyNewTimerTasks mocks base method
-func (m *MockEngine) NotifyNewTimerTasks(tasks []persistence.Task) {
+func (m *MockEngine) NotifyNewTimerTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "NotifyNewTimerTasks", tasks)
+	m.ctrl.Call(m, "NotifyNewTimerTasks", executionInfo, tasks)
 }
 
 // NotifyNewTimerTasks indicates an expected call of NotifyNewTimerTasks
-func (mr *MockEngineMockRecorder) NotifyNewTimerTasks(tasks interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) NotifyNewTimerTasks(executionInfo, tasks interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTimerTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewTimerTasks), tasks)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTimerTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewTimerTasks), executionInfo, tasks)
 }

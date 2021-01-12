@@ -212,6 +212,7 @@ func (t *transferQueueProcessor) Stop() {
 
 func (t *transferQueueProcessor) NotifyNewTask(
 	clusterName string,
+	executionInfo *persistence.WorkflowExecutionInfo,
 	transferTasks []persistence.Task,
 ) {
 	if len(transferTasks) == 0 {
@@ -219,7 +220,7 @@ func (t *transferQueueProcessor) NotifyNewTask(
 	}
 
 	if clusterName == t.currentClusterName {
-		t.activeQueueProcessor.notifyNewTask()
+		t.activeQueueProcessor.notifyNewTask(executionInfo, transferTasks)
 		return
 	}
 
@@ -227,7 +228,7 @@ func (t *transferQueueProcessor) NotifyNewTask(
 	if !ok {
 		panic(fmt.Sprintf("Cannot find transfer processor for %s.", clusterName))
 	}
-	standbyQueueProcessor.notifyNewTask()
+	standbyQueueProcessor.notifyNewTask(executionInfo, transferTasks)
 }
 
 func (t *transferQueueProcessor) FailoverDomain(

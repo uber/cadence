@@ -83,7 +83,7 @@ type (
 	Processor interface {
 		common.Daemon
 		FailoverDomain(domainIDs map[string]struct{})
-		NotifyNewTask(clusterName string, transferTasks []persistence.Task)
+		NotifyNewTask(clusterName string, executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
 		HandleAction(clusterName string, action *Action) (*ActionResult, error) // TODO: enforce context timeout for Actions
 		LockTaskProcessing()
 		UnlockTaskProcessing()
