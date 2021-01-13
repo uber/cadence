@@ -366,7 +366,7 @@ func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
 
 // TestConcurrentlyCreateAndAppendBranches test
 func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), largeTestContextTimeout)
 	defer cancel()
 
 	treeID := uuid.New()
