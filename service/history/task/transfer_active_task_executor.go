@@ -59,6 +59,7 @@ var (
 
 var (
 	errUnknownTransferTask = errors.New("Unknown transfer task")
+	errWorkflowBusy        = errors.New("Unable to get workflow execution lock within specified timeout")
 )
 
 type (
@@ -154,6 +155,9 @@ func (t *transferActiveTaskExecutor) processActivityTask(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() { release(retError) }()
@@ -194,6 +198,9 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() { release(retError) }()
@@ -252,6 +259,9 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() { release(retError) }()
@@ -368,6 +378,9 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() { release(retError) }()
@@ -459,6 +472,9 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() { release(retError) }()
@@ -575,6 +591,9 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() { release(retError) }()
@@ -700,6 +719,9 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() { release(retError) }()
@@ -784,6 +806,9 @@ func (t *transferActiveTaskExecutor) processResetWorkflow(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() { currentRelease(retError) }()
@@ -867,6 +892,9 @@ func (t *transferActiveTaskExecutor) processResetWorkflow(
 			baseExecution,
 			taskGetExecutionContextTimeout,
 		)
+		if err != nil {
+			return err
+		}
 
 		defer func() { baseRelease(retError) }()
 		baseMutableState, err = loadMutableStateForTransferTask(ctx, baseContext, task, t.metricsClient, t.logger)
