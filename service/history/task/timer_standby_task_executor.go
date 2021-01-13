@@ -420,6 +420,9 @@ func (t *timerStandbyTaskExecutor) processTimer(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() {

@@ -111,6 +111,9 @@ func (t *timerActiveTaskExecutor) executeUserTimerTimeoutTask(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() { release(retError) }()
@@ -166,6 +169,9 @@ func (t *timerActiveTaskExecutor) executeActivityTimeoutTask(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() { release(retError) }()
@@ -280,6 +286,9 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() { release(retError) }()
@@ -355,6 +364,9 @@ func (t *timerActiveTaskExecutor) executeWorkflowBackoffTimerTask(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() { release(retError) }()
@@ -393,6 +405,9 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() { release(retError) }()
@@ -480,6 +495,9 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() { release(retError) }()

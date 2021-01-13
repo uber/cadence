@@ -330,6 +330,11 @@ func (t *taskBase) HandleErr(
 		return nil
 	}
 
+	if err == errWorkflowBusy {
+		t.scope.IncCounter(metrics.TaskWorkflowBusyPerDomain)
+		return err
+	}
+
 	// this is a transient error
 	if err == ErrTaskRedispatch {
 		t.scope.IncCounter(metrics.TaskStandbyRetryCounterPerDomain)
@@ -386,7 +391,7 @@ func (t *taskBase) HandleErr(
 func (t *taskBase) RetryErr(
 	err error,
 ) bool {
-	if err == ErrTaskRedispatch || err == ErrTaskPendingActive || common.IsContextTimeoutError(err) {
+	if err == errWorkflowBusy || err == ErrTaskRedispatch || err == ErrTaskPendingActive || common.IsContextTimeoutError(err) {
 		return false
 	}
 
