@@ -153,6 +153,7 @@ func (t *taskAckManagerImpl) GetTasks(
 
 	var replicationTasks []*types.ReplicationTask
 	readLevel := lastReadTaskID
+TaskInfoLoop:
 	for _, taskInfo := range taskInfoList {
 		_ = t.rateLimiter.Wait(ctx)
 		var replicationTask *types.ReplicationTask
@@ -163,10 +164,15 @@ func (t *taskAckManagerImpl) GetTasks(
 		}
 
 		err = backoff.Retry(op, t.retryPolicy, common.IsPersistenceTransientError)
-		if err != nil {
+		switch err.(type) {
+		case nil:
+			// No action
+		case *types.BadRequestError, *types.InternalDataInconsistencyError, *types.EntityNotExistsError:
+			t.logger.Warn("Failed to get replication task.", tag.Error(err))
+		default:
 			t.logger.Error("Failed to get replication task. Return what we have so far.", tag.Error(err))
 			hasMore = true
-			break
+			break TaskInfoLoop
 		}
 		readLevel = taskInfo.GetTaskID()
 		if replicationTask != nil {
@@ -326,7 +332,7 @@ func (t *taskAckManagerImpl) getEventsBlob(
 	}
 
 	if len(eventBatchBlobs) != 1 {
-		return nil, &types.InternalServiceError{
+		return nil, &types.InternalDataInconsistencyError{
 			Message: "replicatorQueueProcessor encounter more than 1 NDC raw event batch",
 		}
 	}
@@ -615,7 +621,7 @@ func getVersionHistoryItems(
 ) ([]*types.VersionHistoryItem, []byte, error) {
 
 	if versionHistories == nil {
-		return nil, nil, &types.InternalServiceError{
+		return nil, nil, &types.BadRequestError{
 			Message: "replicatorQueueProcessor encounter workflow without version histories",
 		}
 	}
