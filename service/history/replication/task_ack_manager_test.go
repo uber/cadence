@@ -945,7 +945,7 @@ func (s *taskAckManagerSuite) TestGetTasks_ReturnDataErrors() {
 	taskID := int64(10)
 	taskInfo := &persistence.ReplicationTaskInfo{
 		TaskType:     persistence.ReplicationTaskTypeHistory,
-		TaskID:       taskID+1,
+		TaskID:       taskID + 1,
 		DomainID:     domainID,
 		WorkflowID:   workflowID,
 		RunID:        runID,
