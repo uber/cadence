@@ -103,7 +103,7 @@ message WorkflowExecutionStartedEventAttributes {
   ContinueAsNewInitiator initiator = 10;
   Failure continued_failure = 11;
   Payload last_completion_result = 12;
-  // This is the runID when the WorkflowExecutionStarted event is written
+  // This is the previous runID of ContinueAsNew.
   string original_execution_run_id = 13;
   string identity = 14;
   // This is the very first runID along the chain of ContinueAsNew and Reset.
