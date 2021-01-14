@@ -74,8 +74,10 @@ message RegisterDomainResponse {
 }
 
 message DescribeDomainRequest {
-  string name = 1;
-  string id = 2;
+  oneof describe_by {
+    string id = 1;
+    string name = 2;
+  }
 }
 
 message DescribeDomainResponse {
