@@ -176,11 +176,11 @@ func (h *nosqlHistoryManager) ReadHistoryBranch(
 
 		switch {
 		case nodeID < lastNodeID:
-			return nil, &types.InternalServiceError{
+			return nil, &types.InternalDataInconsistencyError{
 				Message: fmt.Sprintf("corrupted data, nodeID cannot decrease"),
 			}
 		case nodeID == lastNodeID:
-			return nil, &types.InternalServiceError{
+			return nil, &types.InternalDataInconsistencyError{
 				Message: fmt.Sprintf("corrupted data, same nodeID must have smaller txnID"),
 			}
 		default: // row.NodeID > lastNodeID:
