@@ -82,7 +82,9 @@ message WorkerVersionInfo {
 }
 
 message SupportedClientVersions {
+  // Indicates the highest Go SDK version server will accept requests from.
   string go_sdk = 1;
+  // Indicates the highest Java SDK version server will accept requests from.
   string java_sdk = 2;
 }
 

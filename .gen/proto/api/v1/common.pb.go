@@ -546,7 +546,9 @@ func (m *WorkerVersionInfo) GetFeatureVersion() string {
 }
 
 type SupportedClientVersions struct {
-	GoSdk   string `protobuf:"bytes,1,opt,name=go_sdk,json=goSdk,proto3" json:"go_sdk,omitempty"`
+	// Indicates the highest Go SDK version server will accept requests from.
+	GoSdk string `protobuf:"bytes,1,opt,name=go_sdk,json=goSdk,proto3" json:"go_sdk,omitempty"`
+	// Indicates the highest Java SDK version server will accept requests from.
 	JavaSdk string `protobuf:"bytes,2,opt,name=java_sdk,json=javaSdk,proto3" json:"java_sdk,omitempty"`
 }
 
