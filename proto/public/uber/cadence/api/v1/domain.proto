@@ -32,12 +32,12 @@ import "google/protobuf/timestamp.proto";
 import "dependencies/gogoproto.proto";
 
 message DomainInfo {
-  string name = 1;
-  DomainStatus status = 2;
-  string description = 3;
-  string owner_email = 4;
-  map<string, string> data = 5;
-  string uuid = 6;
+  string id = 1;
+  string name = 2;
+  DomainStatus status = 3;
+  string description = 4;
+  string owner_email = 5;
+  map<string, string> data = 6;
 }
 
 message DomainConfiguration {
