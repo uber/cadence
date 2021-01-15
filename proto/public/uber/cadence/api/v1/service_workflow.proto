@@ -116,10 +116,10 @@ message StartWorkflowExecutionResponse {
 message SignalWorkflowExecutionRequest {
   string domain = 1;
   WorkflowExecution workflow_execution = 2;
-  string signal_name = 3;
-  Payload input = 4;
-  string identity = 5;
-  string request_id = 6;
+  string identity = 3;
+  string request_id = 4;
+  string signal_name = 5;
+  Payload signal_input = 6;
   bytes control = 7;
 }
 
@@ -127,24 +127,10 @@ message SignalWorkflowExecutionResponse {
 }
 
 message SignalWithStartWorkflowExecutionRequest {
-  string domain = 1;
-  string workflow_id = 2;
-  WorkflowType workflow_type = 3;
-  TaskList task_list = 4;
-  Payload input = 5;
-  google.protobuf.Duration execution_start_to_close_timeout = 6 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration task_start_to_close_timeout = 7 [(gogoproto.stdduration) = true];
-  string identity = 8;
-  string request_id = 9;
-  WorkflowIdReusePolicy workflow_id_reuse_policy = 10;
-  string signal_name = 11;
-  Payload signal_input = 12;
-  bytes control = 13;
-  RetryPolicy retry_policy = 14;
-  string cron_schedule = 15;
-  Memo memo = 16;
-  SearchAttributes search_attributes = 17;
-  Header header = 18;
+  StartWorkflowExecutionRequest start_request = 1;
+  string signal_name = 2;
+  Payload signal_input = 3;
+  bytes control = 4;
 }
 
 message SignalWithStartWorkflowExecutionResponse {
