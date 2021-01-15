@@ -688,7 +688,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	domainEntry, err := wh.GetDomainCache().GetDomainByID(taskToken.DomainID)
+	domainName, err := wh.GetDomainCache().GetDomainName(taskToken.DomainID)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -696,7 +696,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 	scope, sw := wh.startRequestProfileWithDomain(
 		metrics.FrontendRecordActivityTaskHeartbeatScope,
 		domainWrapper{
-			domain: domainEntry.GetInfo().Name,
+			domain: domainName,
 		},
 	)
 	defer sw.Stop()
@@ -705,8 +705,8 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 		return nil, errShuttingDown
 	}
 
-	sizeLimitError := wh.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
-	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
+	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
+	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
 
 	if err := common.CheckEventBlobSizeLimit(
 		len(heartbeatRequest.Details),
@@ -803,16 +803,16 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 		return nil, wh.error(err, scope)
 	}
 
-	domainEntry, err := wh.GetDomainCache().GetDomainByID(taskToken.DomainID)
+	domainName, err := wh.GetDomainCache().GetDomainName(taskToken.DomainID)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
 
 	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
+	scope = scope.Tagged(metrics.DomainTag(domainName))
 
-	sizeLimitError := wh.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
-	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
+	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
+	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
 
 	if err := common.CheckEventBlobSizeLimit(
 		len(heartbeatRequest.Details),
@@ -889,18 +889,18 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 		return wh.error(errDomainNotSet, scope)
 	}
 
-	domainEntry, err := wh.GetDomainCache().GetDomainByID(taskToken.DomainID)
+	domainName, err := wh.GetDomainCache().GetDomainName(taskToken.DomainID)
 	if err != nil {
 		return wh.error(err, scope)
 	}
-	if !wh.validIDLength(completeRequest.GetIdentity(), scope, domainEntry.GetInfo().Name) {
+	if !wh.validIDLength(completeRequest.GetIdentity(), scope, domainName) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
 	scope, sw := wh.startRequestProfileWithDomain(
 		metrics.FrontendRespondActivityTaskCompletedScope,
 		domainWrapper{
-			domain: domainEntry.GetInfo().Name,
+			domain: domainName,
 		},
 	)
 	defer sw.Stop()
@@ -909,8 +909,8 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 		return errShuttingDown
 	}
 
-	sizeLimitError := wh.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
-	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
+	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
+	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
 
 	if err := common.CheckEventBlobSizeLimit(
 		len(completeRequest.Result),
@@ -1009,16 +1009,16 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 		return wh.error(err, scope)
 	}
 
-	domainEntry, err := wh.GetDomainCache().GetDomainByID(taskToken.DomainID)
+	domainName, err := wh.GetDomainCache().GetDomainName(taskToken.DomainID)
 	if err != nil {
 		return wh.error(err, scope)
 	}
 
 	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
+	scope = scope.Tagged(metrics.DomainTag(domainName))
 
-	sizeLimitError := wh.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
-	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
+	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
+	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
 
 	if err := common.CheckEventBlobSizeLimit(
 		len(completeRequest.Result),
@@ -1094,7 +1094,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 		return wh.error(errDomainNotSet, scope)
 	}
 
-	domainEntry, err := wh.GetDomainCache().GetDomainByID(taskToken.DomainID)
+	domainName, err := wh.GetDomainCache().GetDomainName(taskToken.DomainID)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -1102,7 +1102,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 	scope, sw := wh.startRequestProfileWithDomain(
 		metrics.FrontendRespondActivityTaskFailedScope,
 		domainWrapper{
-			domain: domainEntry.GetInfo().Name,
+			domain: domainName,
 		},
 	)
 	defer sw.Stop()
@@ -1111,12 +1111,12 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 		return errShuttingDown
 	}
 
-	if !wh.validIDLength(failedRequest.GetIdentity(), scope, domainEntry.GetInfo().Name) {
+	if !wh.validIDLength(failedRequest.GetIdentity(), scope, domainName) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
-	sizeLimitError := wh.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
-	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
+	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
+	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
 
 	if err := common.CheckEventBlobSizeLimit(
 		len(failedRequest.Details),
@@ -1202,16 +1202,16 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 		return wh.error(err, scope)
 	}
 
-	domainEntry, err := wh.GetDomainCache().GetDomainByID(taskToken.DomainID)
+	domainName, err := wh.GetDomainCache().GetDomainName(taskToken.DomainID)
 	if err != nil {
 		return wh.error(err, scope)
 	}
 
 	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
+	scope = scope.Tagged(metrics.DomainTag(domainName))
 
-	sizeLimitError := wh.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
-	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
+	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
+	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
 
 	if err := common.CheckEventBlobSizeLimit(
 		len(failedRequest.Details),
@@ -1276,7 +1276,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 		return wh.error(errDomainNotSet, scope)
 	}
 
-	domainEntry, err := wh.GetDomainCache().GetDomainByID(taskToken.DomainID)
+	domainName, err := wh.GetDomainCache().GetDomainName(taskToken.DomainID)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -1284,7 +1284,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 	scope, sw := wh.startRequestProfileWithDomain(
 		metrics.FrontendRespondActivityTaskCanceledScope,
 		domainWrapper{
-			domain: domainEntry.GetInfo().Name,
+			domain: domainName,
 		},
 	)
 	defer sw.Stop()
@@ -1293,12 +1293,12 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 		return errShuttingDown
 	}
 
-	if !wh.validIDLength(cancelRequest.GetIdentity(), scope, domainEntry.GetInfo().Name) {
+	if !wh.validIDLength(cancelRequest.GetIdentity(), scope, domainName) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
-	sizeLimitError := wh.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
-	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
+	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
+	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
 
 	if err := common.CheckEventBlobSizeLimit(
 		len(cancelRequest.Details),
@@ -1396,16 +1396,16 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 		return wh.error(err, scope)
 	}
 
-	domainEntry, err := wh.GetDomainCache().GetDomainByID(taskToken.DomainID)
+	domainName, err := wh.GetDomainCache().GetDomainName(taskToken.DomainID)
 	if err != nil {
 		return wh.error(err, scope)
 	}
 
 	// add domain tag to scope, so further metrics will have the domain tag
-	scope = scope.Tagged(metrics.DomainTag(domainEntry.GetInfo().Name))
+	scope = scope.Tagged(metrics.DomainTag(domainName))
 
-	sizeLimitError := wh.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
-	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
+	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
+	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
 
 	if err := common.CheckEventBlobSizeLimit(
 		len(cancelRequest.Details),
@@ -1481,7 +1481,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	domainEntry, err := wh.GetDomainCache().GetDomainByID(taskToken.DomainID)
+	domainName, err := wh.GetDomainCache().GetDomainName(taskToken.DomainID)
 	if err != nil {
 		return nil, wh.error(err, scope)
 	}
@@ -1489,7 +1489,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	scope, sw := wh.startRequestProfileWithDomain(
 		metrics.FrontendRespondDecisionTaskCompletedScope,
 		domainWrapper{
-			domain: domainEntry.GetInfo().Name,
+			domain: domainName,
 		},
 	)
 	defer sw.Stop()
@@ -1506,7 +1506,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		return nil, wh.error(err, scope)
 	}
 
-	if !wh.validIDLength(completeRequest.GetIdentity(), scope, domainEntry.GetInfo().Name) {
+	if !wh.validIDLength(completeRequest.GetIdentity(), scope, domainName) {
 		return nil, wh.error(errIdentityTooLong, scope)
 	}
 
@@ -1567,7 +1567,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 		return wh.error(errDomainNotSet, scope)
 	}
 
-	domainEntry, err := wh.GetDomainCache().GetDomainByID(taskToken.DomainID)
+	domainName, err := wh.GetDomainCache().GetDomainName(taskToken.DomainID)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -1575,7 +1575,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 	scope, sw := wh.startRequestProfileWithDomain(
 		metrics.FrontendRespondDecisionTaskFailedScope,
 		domainWrapper{
-			domain: domainEntry.GetInfo().Name,
+			domain: domainName,
 		},
 	)
 	defer sw.Stop()
@@ -1584,12 +1584,12 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 		return errShuttingDown
 	}
 
-	if !wh.validIDLength(failedRequest.GetIdentity(), scope, domainEntry.GetInfo().Name) {
+	if !wh.validIDLength(failedRequest.GetIdentity(), scope, domainName) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
-	sizeLimitError := wh.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
-	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
+	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
+	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
 
 	if err := common.CheckEventBlobSizeLimit(
 		len(failedRequest.Details),
@@ -1646,7 +1646,7 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 		return wh.error(errInvalidTaskToken, scope)
 	}
 
-	domainEntry, err := wh.GetDomainCache().GetDomainByID(queryTaskToken.DomainID)
+	domainName, err := wh.GetDomainCache().GetDomainName(queryTaskToken.DomainID)
 	if err != nil {
 		return wh.error(err, scope)
 	}
@@ -1654,7 +1654,7 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	scope, sw := wh.startRequestProfileWithDomain(
 		metrics.FrontendRespondQueryTaskCompletedScope,
 		domainWrapper{
-			domain: domainEntry.GetInfo().Name,
+			domain: domainName,
 		},
 	)
 	defer sw.Stop()
@@ -1663,8 +1663,8 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 		return errShuttingDown
 	}
 
-	sizeLimitError := wh.config.BlobSizeLimitError(domainEntry.GetInfo().Name)
-	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainEntry.GetInfo().Name)
+	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
+	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
 
 	if err := common.CheckEventBlobSizeLimit(
 		len(completeRequest.GetQueryResult()),
@@ -3622,11 +3622,11 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 		if matchingResp.GetStickyExecutionEnabled() {
 			firstEventID = matchingResp.GetPreviousStartedEventID() + 1
 		}
-		domain, dErr := wh.GetDomainCache().GetDomainByID(domainID)
+		domainName, dErr := wh.GetDomainCache().GetDomainName(domainID)
 		if dErr != nil {
 			return nil, dErr
 		}
-		scope = scope.Tagged(metrics.DomainTag(domain.GetInfo().Name))
+		scope = scope.Tagged(metrics.DomainTag(domainName))
 		history, persistenceToken, err = wh.getHistory(
 			ctx,
 			scope,
@@ -3634,7 +3634,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 			*matchingResp.WorkflowExecution,
 			firstEventID,
 			nextEventID,
-			int32(wh.config.HistoryMaxPageSize(domain.GetInfo().Name)),
+			int32(wh.config.HistoryMaxPageSize(domainName)),
 			nil,
 			matchingResp.DecisionInfo,
 			branchToken,

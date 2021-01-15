@@ -108,7 +108,7 @@ func (f *ShardFixer) Fix() FixReport {
 			return result
 		}
 
-		de, err := f.domainCache.GetDomainByID(soe.Execution.(entity.Entity).GetDomainID())
+		domainName, err := f.domainCache.GetDomainName(soe.Execution.(entity.Entity).GetDomainID())
 		if err != nil {
 			result.Result.ControlFlowFailure = &ControlFlowFailure{
 				Info:        "failed to get domain name",
@@ -119,7 +119,7 @@ func (f *ShardFixer) Fix() FixReport {
 
 		var fixResult invariant.ManagerFixResult
 
-		if f.allowDomain(de.GetInfo().Name) {
+		if f.allowDomain(domainName) {
 			fixResult = f.invariantManager.RunFixes(f.ctx, soe.Execution)
 		} else {
 			fixResult = invariant.ManagerFixResult{

@@ -403,16 +403,15 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 		return err
 	}
 
-	targetDomainEntry, err := t.shard.GetDomainCache().GetDomainByID(task.TargetDomainID)
+	targetDomainName, err := t.shard.GetDomainCache().GetDomainName(task.TargetDomainID)
 	if err != nil {
 		return err
 	}
-	targetDomain := targetDomainEntry.GetInfo().Name
 
 	// handle workflow cancel itself
 	if task.DomainID == task.TargetDomainID && task.WorkflowID == task.TargetWorkflowID {
 		// it does not matter if the run ID is a mismatch
-		err = t.requestCancelExternalExecutionFailed(ctx, task, wfContext, targetDomain, task.TargetWorkflowID, task.TargetRunID)
+		err = t.requestCancelExternalExecutionFailed(ctx, task, wfContext, targetDomainName, task.TargetWorkflowID, task.TargetRunID)
 		if _, ok := err.(*types.EntityNotExistsError); ok {
 			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
 			return nil
@@ -423,7 +422,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 	if err = t.requestCancelExternalExecutionWithRetry(
 		ctx,
 		task,
-		targetDomain,
+		targetDomainName,
 		requestCancelInfo,
 	); err != nil {
 		t.logger.Debug(fmt.Sprintf("Failed to cancel external workflow execution. Error: %v", err))
@@ -438,7 +437,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 			ctx,
 			task,
 			wfContext,
-			targetDomain,
+			targetDomainName,
 			task.TargetWorkflowID,
 			task.TargetRunID,
 		)
@@ -455,7 +454,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 		ctx,
 		task,
 		wfContext,
-		targetDomain,
+		targetDomainName,
 		task.TargetWorkflowID,
 		task.TargetRunID,
 	)
@@ -500,11 +499,10 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		return err
 	}
 
-	targetDomainEntry, err := t.shard.GetDomainCache().GetDomainByID(task.TargetDomainID)
+	targetDomainName, err := t.shard.GetDomainCache().GetDomainName(task.TargetDomainID)
 	if err != nil {
 		return err
 	}
-	targetDomain := targetDomainEntry.GetInfo().Name
 
 	// handle workflow signal itself
 	if task.DomainID == task.TargetDomainID && task.WorkflowID == task.TargetWorkflowID {
@@ -513,7 +511,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 			ctx,
 			task,
 			wfContext,
-			targetDomain,
+			targetDomainName,
 			task.TargetWorkflowID,
 			task.TargetRunID,
 			signalInfo.Control,
@@ -523,7 +521,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 	if err = t.signalExternalExecutionWithRetry(
 		ctx,
 		task,
-		targetDomain,
+		targetDomainName,
 		signalInfo,
 	); err != nil {
 		t.logger.Debug(fmt.Sprintf("Failed to signal external workflow execution. Error: %v", err))
@@ -538,7 +536,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 			ctx,
 			task,
 			wfContext,
-			targetDomain,
+			targetDomainName,
 			task.TargetWorkflowID,
 			task.TargetRunID,
 			signalInfo.Control,
@@ -555,7 +553,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		ctx,
 		task,
 		wfContext,
-		targetDomain,
+		targetDomainName,
 		task.TargetWorkflowID,
 		task.TargetRunID,
 		signalInfo.Control,
@@ -606,28 +604,24 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		return nil
 	}
 
-	// Get parent domain name
-	var domain string
-	if domainEntry, err := t.shard.GetDomainCache().GetDomainByID(task.DomainID); err != nil {
+	// Get parent domainName name
+	var domainName string
+	if domainName, err = t.shard.GetDomainCache().GetDomainName(task.DomainID); err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			return err
 		}
 		// it is possible that the domain got deleted. Use domainID instead as this is only needed for the history event
-		domain = task.DomainID
-	} else {
-		domain = domainEntry.GetInfo().Name
+		domainName = task.DomainID
 	}
 
 	// Get target domain name
-	var targetDomain string
-	if domainEntry, err := t.shard.GetDomainCache().GetDomainByID(task.TargetDomainID); err != nil {
+	var targetDomainName string
+	if targetDomainName, err = t.shard.GetDomainCache().GetDomainName(task.TargetDomainID); err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			return err
 		}
 		// it is possible that the domain got deleted. Use domainID instead as this is only needed for the history event
-		targetDomain = task.TargetDomainID
-	} else {
-		targetDomain = domainEntry.GetInfo().Name
+		targetDomainName = task.TargetDomainID
 	}
 
 	initiatedEventID := task.ScheduleID
@@ -658,8 +652,8 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	childRunID, err := t.startWorkflowWithRetry(
 		ctx,
 		task,
-		domain,
-		targetDomain,
+		domainName,
+		targetDomainName,
 		childInfo,
 		attributes,
 	)

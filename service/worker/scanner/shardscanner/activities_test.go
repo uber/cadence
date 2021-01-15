@@ -229,17 +229,7 @@ func (s *activitiesSuite) TestFixShardActivity() {
 				Mock.On("Put", mock.Anything, mock.Anything).
 				Return(&blobstore.PutResponse{}, nil)
 			domainCache := cache.NewMockDomainCache(s.controller)
-			domainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.NewDomainCacheEntryForTest(
-				&persistence.DomainInfo{
-					Name: "test_domain",
-				},
-				nil,
-				false,
-				nil,
-				0,
-				nil,
-				nil),
-				nil).AnyTimes()
+			domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil).AnyTimes()
 			s.mockResource.DomainCache = domainCache
 
 			fc := FixerContext{
