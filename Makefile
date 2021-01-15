@@ -1,38 +1,19 @@
 .PHONY: git-submodules test bins clean cover cover_ci help
-PROJECT_ROOT = github.com/uber/cadence
+default: help
 
 export PATH := $(shell go env GOPATH)/bin:$(PATH)
 
-ifndef GOOS
-GOOS := $(shell go env GOOS)
-endif
+PROJECT_ROOT = github.com/uber/cadence
 
-ifndef GOARCH
-GOARCH := $(shell go env GOARCH)
-endif
+GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
 
 THRIFT_GENDIR=.gen
+THRIFTRW_SRCS = $(shell find idls -name '*.thrift')
 
-default: help
-
-# define the list of thrift files the service depends on
-# (if you have some)
-THRIFTRW_SRCS = \
-  idls/thrift/cadence.thrift \
-  idls/thrift/health.thrift \
-  idls/thrift/history.thrift \
-  idls/thrift/matching.thrift \
-  idls/thrift/replicator.thrift \
-  idls/thrift/indexer.thrift \
-  idls/thrift/shared.thrift \
-  idls/thrift/admin.thrift \
-  idls/thrift/sqlblobs.thrift \
-  idls/thrift/checksum.thrift \
-
-PROGS = cadence
 TEST_TIMEOUT = 20m
 TEST_ARG ?= -race -v -timeout $(TEST_TIMEOUT)
-BUILD := ./build
+BUILD := .build
 TOOLS_CMD_ROOT=./cmd/tools
 INTEG_TEST_ROOT=./host
 INTEG_TEST_DIR=host
@@ -47,14 +28,8 @@ GO_BUILD_LDFLAGS          := $(shell $(GO_BUILD_LDFLAGS_CMD) LDFLAG)
 # TODO to be consistent, use nosql as PERSISTENCE_TYPE and cassandra PERSISTENCE_PLUGIN
 # file names like integ_cassandra__cover should become integ_nosql_cassandra_cover
 # for https://github.com/uber/cadence/issues/3514
-ifndef PERSISTENCE_TYPE
-override PERSISTENCE_TYPE = cassandra
-endif
-
-ifndef TEST_RUN_COUNT
-override TEST_RUN_COUNT = 1
-endif
-
+PERSISTENCE_TYPE ?= cassandra
+TEST_RUN_COUNT ?= 1
 ifdef TEST_TAG
 override TEST_TAG := -tags $(TEST_TAG)
 endif
@@ -71,16 +46,22 @@ $(foreach tsrc,$(THRIFTRW_SRCS),$(eval $(call \
 	thriftrwrule,$(basename $(notdir \
 	$(shell echo $(tsrc) | tr A-Z a-z))),$(tsrc))))
 
-# Automatically gather all srcs
-ALL_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor \
-	-e ".*/\..*" \
-	-e ".*/_.*" \
-	-e ".*/mocks.*")
-
-# filter out the src files for tools
-TOOLS_SRC := $(shell find ./tools -name "*.go")
-TOOLS_SRC += $(TOOLS_CMD_ROOT)
-
+# Automatically gather all srcs.
+# Works by ignoring everything in the parens (and does not descend into matching folders) due to `-prune`,
+# and everything else goes to the other side of the `-o` branch, which is `-print`ed.
+# This is dramatically faster than a `find . | grep -v vendor` pipeline.
+ALL_SRC := $(shell \
+	find . \
+	\( \
+		-path './vendor/*' \
+		-o -path './.*' \
+		-o -path '*/mocks*' \
+	\) \
+	-prune \
+	-o -name '*.go' -print \
+)
+FMT_SRC := $(filter-out .gen/%, $(ALL_SRC))
+LINT_SRC := $(filter-out %_test.go, $(FMT_SRC))
 # all directories with *_test.go files in them (exclude host/xdc)
 TEST_DIRS := $(filter-out $(INTEG_TEST_XDC_ROOT)%, $(sort $(dir $(filter %_test.go,$(ALL_SRC)))))
 
@@ -188,15 +169,15 @@ proto-go-imports:
 copyright: cmd/tools/copyright/licensegen.go
 	GOOS= GOARCH= go run ./cmd/tools/copyright/licensegen.go --verifyOnly
 
-cadence-cassandra-tool: $(TOOLS_SRC)
+cadence-cassandra-tool: $(ALL_SRC)
 	@echo "compiling cadence-cassandra-tool with OS: $(GOOS), ARCH: $(GOARCH)"
 	go build -o cadence-cassandra-tool cmd/tools/cassandra/main.go
 
-cadence-sql-tool: $(TOOLS_SRC)
+cadence-sql-tool: $(ALL_SRC)
 	@echo "compiling cadence-sql-tool with OS: $(GOOS), ARCH: $(GOARCH)"
 	go build -o cadence-sql-tool cmd/tools/sql/main.go
 
-cadence: $(TOOLS_SRC)
+cadence: $(ALL_SRC)
 	@echo "compiling cadence with OS: $(GOOS), ARCH: $(GOARCH)"
 	go build -o cadence cmd/tools/cli/main.go
 
@@ -219,25 +200,19 @@ go-generate:
 	@echo "running go run cmd/tools/copyright/licensegen.go"
 	@go run cmd/tools/copyright/licensegen.go
 
-lint:
+lint: fmt
 	@echo "running linter"
-	@lintFail=0; for file in $(ALL_SRC); do \
+	@lintFail=0; for file in $(sort $(LINT_SRC)); do \
 		golint "$$file"; \
 		if [ $$? -eq 1 ]; then lintFail=1; fi; \
 	done; \
 	if [ $$lintFail -eq 1 ]; then exit 1; fi;
-	@OUTPUT=`gofmt -l $(ALL_SRC) 2>&1`; \
-	if [ "$$OUTPUT" ]; then \
-		echo "Run 'make fmt'. gofmt must be run on the following files:"; \
-		echo "$$OUTPUT"; \
-		exit 1; \
-	fi
 
 fmt:
 	GO111MODULE=off go get -u github.com/myitcv/gobin
 	GOOS= GOARCH= gobin -mod=readonly golang.org/x/tools/cmd/goimports
 	@echo "running goimports"
-	@goimports -local "github.com/uber/cadence" -w $(ALL_SRC)
+	@goimports -local "github.com/uber/cadence" -w $(FMT_SRC)
 
 bins_nothrift: fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server cadence-canary
 
