@@ -1,4 +1,4 @@
-.PHONY: git-submodules test bins clean cover cover_ci
+.PHONY: git-submodules test bins clean cover cover_ci help
 PROJECT_ROOT = github.com/uber/cadence
 
 export PATH := $(shell go env GOPATH)/bin:$(PATH)
@@ -13,7 +13,7 @@ endif
 
 THRIFT_GENDIR=.gen
 
-default: test
+default: help
 
 # define the list of thrift files the service depends on
 # (if you have some)
@@ -154,7 +154,7 @@ go-generate:
 	@echo "running go generate ./..."
 	@go generate ./...
 	@echo "running go run cmd/tools/copyright/licensegen.go"
-	@go run cmd/tools/copyright/licensegen.go 
+	@go run cmd/tools/copyright/licensegen.go
 
 lint:
 	@echo "running linter"
@@ -178,18 +178,18 @@ fmt:
 
 bins_nothrift: fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server cadence-canary
 
-bins: thriftc bins_nothrift
+bins: thriftc bins_nothrift ## Build, format, and lint everything.  Also regenerates thrift.
 
 tools: cadence-cassandra-tool cadence-sql-tool cadence
 
-test: bins
+test: bins ## Build and run all tests
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(PKG_TEST_DIRS); do \
 		go test -timeout $(TEST_TIMEOUT) -race -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
-release: go-generate test
+release: go-generate test ## Re-generate generated code and run tests
 
 test_e2e: bins
 	@rm -f test
@@ -254,7 +254,7 @@ cover: $(COVER_ROOT)/cover.out
 cover_ci: $(COVER_ROOT)/cover.out
 	goveralls -coverprofile=$(COVER_ROOT)/cover.out -service=buildkite || echo Coveralls failed;
 
-clean:
+clean: ## Clean binaries and build folder
 	rm -f cadence
 	rm -f cadence-server
 	rm -f cadence-canary
@@ -336,3 +336,9 @@ start-mysql: bins
 
 start-postgres: bins
 	./cadence-server --zone postgres start
+
+help:
+	@# print help first, so it's visible
+	@printf "\033[36m%-20s\033[0m %s\n" 'help' 'Prints a help message showing any specially-commented targets'
+	@# then everything matching "target: ## magic comments"
+	@cat $(MAKEFILE_LIST) | grep -e "^[a-zA-Z_\-]*:.* ## .*" | sort | awk 'BEGIN {FS = ":.*? ## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
