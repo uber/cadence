@@ -206,6 +206,10 @@ func BenchmarkLogValue(b *testing.B) {
 		0.1,
 		30 * time.Second,
 	}
+	filters := map[Filter]interface{}{
+		ClusterName: "development",
+		DomainName:  "domainName",
+	}
 	cmpFuncs := []func(interface{}, interface{}) bool{
 		intCompareEquals,
 		float64CompareEquals,
@@ -215,12 +219,12 @@ func BenchmarkLogValue(b *testing.B) {
 	collection := NewCollection(NewInMemoryClient(), log.NewNoop())
 	// pre-warm the collection logValue map
 	for i := range keys {
-		collection.logValue(keys[i], values[i], values[i], cmpFuncs[i])
+		collection.logValue(keys[i], filters, values[i], values[i], cmpFuncs[i])
 	}
 
 	for i := 0; i < b.N; i++ {
 		for i := range keys {
-			collection.logValue(keys[i], values[i], values[i], cmpFuncs[i])
+			collection.logValue(keys[i], filters, values[i], values[i], cmpFuncs[i])
 		}
 	}
 }

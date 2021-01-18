@@ -199,7 +199,7 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 			//  -> batch with lower transaction ID is invalid (happens before)
 			//  -> batch with higher transaction ID is valid
 			if row.NodeID < lastNodeID {
-				return nil, &types.InternalServiceError{
+				return nil, &types.InternalDataInconsistencyError{
 					Message: fmt.Sprintf("corrupted data, nodeID cannot decrease"),
 				}
 			} else if row.NodeID > lastNodeID {
@@ -213,11 +213,11 @@ func (m *sqlHistoryV2Manager) ReadHistoryBranch(
 
 		switch {
 		case row.NodeID < lastNodeID:
-			return nil, &types.InternalServiceError{
+			return nil, &types.InternalDataInconsistencyError{
 				Message: fmt.Sprintf("corrupted data, nodeID cannot decrease"),
 			}
 		case row.NodeID == lastNodeID:
-			return nil, &types.InternalServiceError{
+			return nil, &types.InternalDataInconsistencyError{
 				Message: fmt.Sprintf("corrupted data, same nodeID must have smaller txnID"),
 			}
 		default: // row.NodeID > lastNodeID:
