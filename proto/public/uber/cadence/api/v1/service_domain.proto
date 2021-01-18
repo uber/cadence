@@ -58,16 +58,15 @@ message RegisterDomainRequest {
   string description = 2;
   string owner_email = 3;
   google.protobuf.Duration workflow_execution_retention_period = 4 [(gogoproto.stdduration) = true];
-  bool emit_metric = 5;
-  repeated ClusterReplicationConfiguration clusters = 6;
-  string active_cluster_name = 7;
-  map<string, string> data = 8;
-  string security_token = 9;
-  bool is_global_domain = 10;
-  ArchivalStatus history_archival_status = 11;
-  string history_archival_uri = 12;
-  ArchivalStatus visibility_archival_status = 13;
-  string visibility_archival_uri = 14;
+  repeated ClusterReplicationConfiguration clusters = 5;
+  string active_cluster_name = 6;
+  map<string, string> data = 7;
+  string security_token = 8;
+  bool is_global_domain = 9;
+  ArchivalStatus history_archival_status = 10;
+  string history_archival_uri = 11;
+  ArchivalStatus visibility_archival_status = 12;
+  string visibility_archival_uri = 13;
 }
 
 message RegisterDomainResponse {

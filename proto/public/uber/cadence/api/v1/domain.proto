@@ -42,12 +42,11 @@ message DomainInfo {
 
 message DomainConfiguration {
   google.protobuf.Duration workflow_execution_retention_period = 1 [(gogoproto.stdduration) = true];
-  bool emit_metric = 2;
-  BadBinaries bad_binaries = 3;
-  ArchivalStatus history_archival_status = 4;
-  string history_archival_uri = 5;
-  ArchivalStatus visibility_archival_status = 6;
-  string visibility_archival_uri = 7;
+  BadBinaries bad_binaries = 2;
+  ArchivalStatus history_archival_status = 3;
+  string history_archival_uri = 4;
+  ArchivalStatus visibility_archival_status = 5;
+  string visibility_archival_uri = 6;
 }
 
 message ClusterReplicationConfiguration {
