@@ -507,6 +507,9 @@ func (t *transferStandbyTaskExecutor) processTransfer(
 		taskGetExecutionContextTimeout,
 	)
 	if err != nil {
+		if err == context.DeadlineExceeded {
+			return errWorkflowBusy
+		}
 		return err
 	}
 	defer func() {

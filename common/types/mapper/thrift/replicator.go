@@ -438,9 +438,10 @@ func FromReadDLQMessagesResponse(t *types.ReadDLQMessagesResponse) *replicator.R
 		return nil
 	}
 	return &replicator.ReadDLQMessagesResponse{
-		Type:             FromDLQType(t.Type),
-		ReplicationTasks: FromReplicationTaskArray(t.ReplicationTasks),
-		NextPageToken:    t.NextPageToken,
+		Type:                 FromDLQType(t.Type),
+		ReplicationTasks:     FromReplicationTaskArray(t.ReplicationTasks),
+		ReplicationTasksInfo: FromReplicationTaskInfoArray(t.ReplicationTasksInfo),
+		NextPageToken:        t.NextPageToken,
 	}
 }
 
@@ -450,9 +451,10 @@ func ToReadDLQMessagesResponse(t *replicator.ReadDLQMessagesResponse) *types.Rea
 		return nil
 	}
 	return &types.ReadDLQMessagesResponse{
-		Type:             ToDLQType(t.Type),
-		ReplicationTasks: ToReplicationTaskArray(t.ReplicationTasks),
-		NextPageToken:    t.NextPageToken,
+		Type:                 ToDLQType(t.Type),
+		ReplicationTasks:     ToReplicationTaskArray(t.ReplicationTasks),
+		ReplicationTasksInfo: ToReplicationTaskInfoArray(t.ReplicationTasksInfo),
+		NextPageToken:        t.NextPageToken,
 	}
 }
 

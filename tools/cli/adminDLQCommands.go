@@ -21,9 +21,8 @@
 package cli
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/urfave/cli"
@@ -51,6 +50,8 @@ func AdminGetDLQMessages(c *cli.Context) {
 	outputFile := getOutputFile(c.String(FlagOutputFilename))
 	defer outputFile.Close()
 
+	showRawTask := c.Bool(FlagDLQRawTask)
+	var rawTasksInfo []*types.ReplicationTaskInfo
 	remainingMessageCount := common.EndMessageID
 	if c.IsSet(FlagMaxMessageCount) {
 		remainingMessageCount = c.Int64(FlagMaxMessageCount)
@@ -76,6 +77,10 @@ func AdminGetDLQMessages(c *cli.Context) {
 		for _, item := range resp.GetReplicationTasks() {
 			paginateItems = append(paginateItems, item)
 		}
+		if showRawTask {
+			rawTasksInfo = append(rawTasksInfo, resp.GetReplicationTasksInfo()...)
+		}
+
 		return paginateItems, resp.GetNextPageToken(), err
 	}
 
@@ -98,6 +103,31 @@ func AdminGetDLQMessages(c *cli.Context) {
 		_, err = outputFile.WriteString(fmt.Sprintf("%v\n", string(taskStr)))
 		if err != nil {
 			ErrorAndExit("fail to print dlq messages.", err)
+		}
+	}
+
+	if showRawTask {
+		_, err := outputFile.WriteString(fmt.Sprintf("#### REPLICATION DLQ RAW TASKS INFO ####\n"))
+		if err != nil {
+			ErrorAndExit("fail to print dlq raw tasks.", err)
+		}
+		for _, info := range rawTasksInfo {
+			str, err := json.Marshal(info)
+			if err != nil {
+				ErrorAndExit("fail to encode dlq raw tasks.", err)
+			}
+
+			if _, err = outputFile.WriteString(fmt.Sprintf("%v\n", string(str))); err != nil {
+				ErrorAndExit("fail to print dlq raw tasks.", err)
+			}
+		}
+	} else {
+		if lastReadMessageID == 0 && len(rawTasksInfo) > 0 {
+			if _, err := outputFile.WriteString(
+				fmt.Sprintf("WARN: Received empty replication task but metadata is not empty. Please use %v to show metadata task.\n", FlagDLQRawTask),
+			); err != nil {
+				ErrorAndExit("fail to print warning message.", err)
+			}
 		}
 	}
 }
@@ -157,6 +187,7 @@ func AdminMergeDLQMessages(c *cli.Context) {
 			response, err := adminClient.MergeDLQMessages(ctx, request)
 			if err != nil {
 				fmt.Printf("Failed to merge DLQ message in shard %v with error: %v.\n", shardID, err)
+				break
 			}
 
 			if len(response.NextPageToken) == 0 {
@@ -180,16 +211,4 @@ func toQueueType(dlqType string) *types.DLQType {
 		ErrorAndExit("The queue type is not supported.", fmt.Errorf("the queue type is not supported. Type: %v", dlqType))
 	}
 	return nil
-}
-
-func confirmOrExit(message string) {
-	fmt.Println(message + " (Y/n)")
-	reader := bufio.NewReader(os.Stdin)
-	confirm, err := reader.ReadByte()
-	if err != nil {
-		panic(err)
-	}
-	if confirm != 'Y' {
-		osExit(0)
-	}
 }
