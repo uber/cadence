@@ -34,39 +34,21 @@ import "uber/cadence/api/v1/tasklist.proto";
 import "uber/cadence/api/v1/workflow.proto";
 
 message Decision {
-  DecisionType decision_type = 1;
   oneof attributes {
-    ScheduleActivityTaskDecisionAttributes schedule_activity_task_decision_attributes = 2;
-    StartTimerDecisionAttributes start_timer_decision_attributes = 3;
-    CompleteWorkflowExecutionDecisionAttributes complete_workflow_execution_decision_attributes = 4;
-    FailWorkflowExecutionDecisionAttributes fail_workflow_execution_decision_attributes = 5;
-    RequestCancelActivityTaskDecisionAttributes request_cancel_activity_task_decision_attributes = 6;
-    CancelTimerDecisionAttributes cancel_timer_decision_attributes = 7;
-    CancelWorkflowExecutionDecisionAttributes cancel_workflow_execution_decision_attributes = 8;
-    RequestCancelExternalWorkflowExecutionDecisionAttributes request_cancel_external_workflow_execution_decision_attributes = 9;
-    RecordMarkerDecisionAttributes record_marker_decision_attributes = 10;
-    ContinueAsNewWorkflowExecutionDecisionAttributes continue_as_new_workflow_execution_decision_attributes = 11;
-    StartChildWorkflowExecutionDecisionAttributes start_child_workflow_execution_decision_attributes = 12;
-    SignalExternalWorkflowExecutionDecisionAttributes signal_external_workflow_execution_decision_attributes = 13;
-    UpsertWorkflowSearchAttributesDecisionAttributes upsert_workflow_search_attributes_decision_attributes = 14;
+    ScheduleActivityTaskDecisionAttributes schedule_activity_task_decision_attributes = 1;
+    StartTimerDecisionAttributes start_timer_decision_attributes = 2;
+    CompleteWorkflowExecutionDecisionAttributes complete_workflow_execution_decision_attributes = 3;
+    FailWorkflowExecutionDecisionAttributes fail_workflow_execution_decision_attributes = 4;
+    RequestCancelActivityTaskDecisionAttributes request_cancel_activity_task_decision_attributes = 5;
+    CancelTimerDecisionAttributes cancel_timer_decision_attributes = 6;
+    CancelWorkflowExecutionDecisionAttributes cancel_workflow_execution_decision_attributes = 7;
+    RequestCancelExternalWorkflowExecutionDecisionAttributes request_cancel_external_workflow_execution_decision_attributes = 8;
+    RecordMarkerDecisionAttributes record_marker_decision_attributes = 9;
+    ContinueAsNewWorkflowExecutionDecisionAttributes continue_as_new_workflow_execution_decision_attributes = 10;
+    StartChildWorkflowExecutionDecisionAttributes start_child_workflow_execution_decision_attributes = 11;
+    SignalExternalWorkflowExecutionDecisionAttributes signal_external_workflow_execution_decision_attributes = 12;
+    UpsertWorkflowSearchAttributesDecisionAttributes upsert_workflow_search_attributes_decision_attributes = 13;
   }
-}
-
-enum DecisionType {
-  DECISION_TYPE_INVALID = 0;
-  DECISION_TYPE_SCHEDULE_ACTIVITY_TASK = 1;
-  DECISION_TYPE_REQUEST_CANCEL_ACTIVITY_TASK = 2;
-  DECISION_TYPE_START_TIMER = 3;
-  DECISION_TYPE_COMPLETE_WORKFLOW_EXECUTION = 4;
-  DECISION_TYPE_FAIL_WORKFLOW_EXECUTION = 5;
-  DECISION_TYPE_CANCEL_TIMER = 6;
-  DECISION_TYPE_CANCEL_WORKFLOW_EXECUTION = 7;
-  DECISION_TYPE_REQUEST_CANCEL_EXTERNAL_WORKFLOW_EXECUTION = 8;
-  DECISION_TYPE_RECORD_MARKER = 9;
-  DECISION_TYPE_CONTINUE_AS_NEW_WORKFLOW_EXECUTION = 10;
-  DECISION_TYPE_START_CHILD_WORKFLOW_EXECUTION = 11;
-  DECISION_TYPE_SIGNAL_EXTERNAL_WORKFLOW_EXECUTION = 12;
-  DECISION_TYPE_UPSERT_WORKFLOW_SEARCH_ATTRIBUTES = 13;
 }
 
 message ScheduleActivityTaskDecisionAttributes {
