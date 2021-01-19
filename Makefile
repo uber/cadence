@@ -8,9 +8,6 @@ PROJECT_ROOT = github.com/uber/cadence
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
-THRIFT_GENDIR=.gen
-THRIFTRW_SRCS = $(shell find idls -name '*.thrift')
-
 TEST_TIMEOUT = 20m
 TEST_ARG ?= -race -v -timeout $(TEST_TIMEOUT)
 BUILD := .build
@@ -34,17 +31,17 @@ ifdef TEST_TAG
 override TEST_TAG := -tags $(TEST_TAG)
 endif
 
-define thriftrwrule
-THRIFTRW_GEN_SRC += $(THRIFT_GENDIR)/go/$1/$1.go
+THRIFT_GENDIR=.gen/go
+THRIFT_SRCS := $(shell find idls -name '*.thrift')
+# concrete targets to build / the "sentinel" go files that need to be produced per thrift file.
+# idls/thrift/thing.thrift -> thing.thrift -> thing -> .gen/go/thing/thing.go
+THRIFT_GEN_SRC := $(foreach tsrc,$(basename $(subst idls/thrift/,,$(THRIFT_SRCS))),$(THRIFT_GENDIR)/$(tsrc)/$(tsrc).go)
 
-$(THRIFT_GENDIR)/go/$1/$1.go:: $2
-	@mkdir -p $(THRIFT_GENDIR)/go
-	thriftrw --plugin=yarpc --pkg-prefix=$(PROJECT_ROOT)/$(THRIFT_GENDIR)/go/ --out=$(THRIFT_GENDIR)/go $2
-endef
-
-$(foreach tsrc,$(THRIFTRW_SRCS),$(eval $(call \
-	thriftrwrule,$(basename $(notdir \
-	$(shell echo $(tsrc) | tr A-Z a-z))),$(tsrc))))
+# how to generate each thrift file.
+# note that each generated file depends on ALL thrift files - this is necessary because they can import each other.
+$(THRIFT_GEN_SRC): $(THRIFT_SRCS)
+	@# .gen/go/thing/thing.go -> thing.go -> "thing " -> thing -> idls/thrift/thing.thrift
+	thriftrw --plugin=yarpc --pkg-prefix=$(PROJECT_ROOT)/$(THRIFT_GENDIR) --out=$(THRIFT_GENDIR) --no-recurse idls/thrift/$(strip $(basename $(notdir $@))).thrift
 
 # Automatically gather all srcs.
 # Works by ignoring everything in the parens (and does not descend into matching folders) due to `-prune`,
@@ -60,11 +57,13 @@ ALL_SRC := $(shell \
 	-prune \
 	-o -name '*.go' -print \
 )
+
+# make sure a sentinel thrift-generated file is in ALL_SRC, so thrift is (re)generated if necessary
+ALL_SRC += $(THRIFT_GEN_SRC)
 FMT_SRC := $(filter-out .gen/%, $(ALL_SRC))
 LINT_SRC := $(filter-out %_test.go, $(FMT_SRC))
 # all directories with *_test.go files in them (exclude host/xdc)
 TEST_DIRS := $(filter-out $(INTEG_TEST_XDC_ROOT)%, $(sort $(dir $(filter %_test.go,$(ALL_SRC)))))
-
 # all tests other than end-to-end integration test fall into the pkg_test category
 PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
 
@@ -101,7 +100,7 @@ yarpc-install:
 clean_thrift:
 	rm -rf .gen
 
-thriftc: yarpc-install git-submodules $(THRIFTRW_GEN_SRC) copyright
+thriftc: yarpc-install git-submodules $(THRIFT_GEN_SRC) copyright ## rebuild thrift-generated source files
 
 define NEWLINE
 
