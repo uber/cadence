@@ -1,7 +1,9 @@
+# get rid of default behaviors, they're just noise
+MAKEFLAGS += --no-builtin-rules
+.SUFFIXES:
+
 .PHONY: git-submodules test bins clean cover cover_ci help
 default: help
-
-export PATH := $(shell go env GOPATH)/bin:$(PATH)
 
 PROJECT_ROOT = github.com/uber/cadence
 
@@ -31,6 +33,41 @@ ifdef TEST_TAG
 override TEST_TAG := -tags $(TEST_TAG)
 endif
 
+export PATH := $(shell pwd)/$(BUILD)/bin:$(PATH)
+THRIFTRW_BIN = $(BUILD)/bin/thriftrw
+COPYRIGHT_BIN = $(BUILD)/bin/copyright
+MOCKGEN_BIN = $(BUILD)/bin/mockgen
+ENUMER_BIN = $(BUILD)/bin/enumer
+GOIMPORTS_BIN = $(BUILD)/bin/goimports
+GOLINT_BIN = $(BUILD)/bin/golint
+
+# downloads and builds a go-gettable tool, versioned by go.mod, and installs
+# it into the build folder, named the same as the last portion of the URL.
+define get_tool
+@echo "building $(1) into $(BUILD)/bin/$(notdir $(1)) ..."
+@go build -mod=readonly -o $(BUILD)/bin/$(notdir $(1)) $(1)
+endef
+
+$(THRIFTRW_BIN): go.mod
+	$(call get_tool,go.uber.org/thriftrw)
+	$(call get_tool,go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc)
+
+$(COPYRIGHT_BIN): cmd/tools/copyright/licensegen.go
+	go build -o $(COPYRIGHT_BIN) ./cmd/tools/copyright/licensegen.go
+
+$(MOCKGEN_BIN): go.mod
+	$(call get_tool,github.com/golang/mock/mockgen)
+
+$(ENUMER_BIN): go.mod
+	$(call get_tool,github.com/dmarkham/enumer)
+
+$(GOIMPORTS_BIN): go.mod
+	$(call get_tool,golang.org/x/tools/cmd/goimports)
+
+$(GOLINT_BIN): go.mod
+	$(call get_tool,golang.org/x/lint/golint)
+
+
 THRIFT_GENDIR=.gen/go
 THRIFT_SRCS := $(shell find idls -name '*.thrift')
 # concrete targets to build / the "sentinel" go files that need to be produced per thrift file.
@@ -39,9 +76,9 @@ THRIFT_GEN_SRC := $(foreach tsrc,$(basename $(subst idls/thrift/,,$(THRIFT_SRCS)
 
 # how to generate each thrift file.
 # note that each generated file depends on ALL thrift files - this is necessary because they can import each other.
-$(THRIFT_GEN_SRC): $(THRIFT_SRCS)
+$(THRIFT_GEN_SRC): $(THRIFT_SRCS) $(THRIFTRW_BIN)
 	@# .gen/go/thing/thing.go -> thing.go -> "thing " -> thing -> idls/thrift/thing.thrift
-	thriftrw --plugin=yarpc --pkg-prefix=$(PROJECT_ROOT)/$(THRIFT_GENDIR) --out=$(THRIFT_GENDIR) --no-recurse idls/thrift/$(strip $(basename $(notdir $@))).thrift
+	$(THRIFTRW_BIN) --plugin=yarpc --pkg-prefix=$(PROJECT_ROOT)/$(THRIFT_GENDIR) --out=$(THRIFT_GENDIR) --no-recurse idls/thrift/$(strip $(basename $(notdir $@))).thrift
 
 # Automatically gather all srcs.
 # Works by ignoring everything in the parens (and does not descend into matching folders) due to `-prune`,
@@ -92,15 +129,7 @@ GOCOVERPKG_ARG := -coverpkg="$(PROJECT_ROOT)/common/...,$(PROJECT_ROOT)/service/
 git-submodules:
 	git submodule update --init --recursive
 
-yarpc-install:
-	GO111MODULE=off go get -u github.com/myitcv/gobin
-	GOOS= GOARCH= gobin -mod=readonly go.uber.org/thriftrw
-	GOOS= GOARCH= gobin -mod=readonly go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc
-
-clean_thrift:
-	rm -rf .gen
-
-thriftc: yarpc-install git-submodules $(THRIFT_GEN_SRC) copyright ## rebuild thrift-generated source files
+thriftc: $(THRIFT_GEN_SRC) copyright ## rebuild thrift-generated source files
 
 define NEWLINE
 
@@ -162,11 +191,11 @@ proto-compile: $(PROTOC_BIN)
 			$(PROTO_DIR)*.proto \
 		$(NEWLINE))
 
-proto-go-imports:
-	goimports -w $(PROTO_OUT)
+proto-go-imports: $(GOIMPORTS_BIN)
+	$(GOIMPORTS_BIN) -w $(PROTO_OUT)
 
-copyright: cmd/tools/copyright/licensegen.go
-	GOOS= GOARCH= go run ./cmd/tools/copyright/licensegen.go --verifyOnly
+copyright: $(COPYRIGHT_BIN)
+	$(COPYRIGHT_BIN) --verifyOnly
 
 cadence-cassandra-tool: $(ALL_SRC)
 	@echo "compiling cadence-cassandra-tool with OS: $(GOOS), ARCH: $(GOARCH)"
@@ -190,28 +219,23 @@ cadence-canary: $(ALL_SRC)
 
 go-generate-format: go-generate fmt
 
-go-generate:
-	GO111MODULE=off go get -u github.com/myitcv/gobin
-	GOOS= GOARCH= gobin -mod=readonly github.com/golang/mock/mockgen
-	GOOS= GOARCH= gobin -mod=readonly github.com/dmarkham/enumer
+go-generate: $(MOCKGEN_BIN) $(ENUMER_BIN)
 	@echo "running go generate ./..."
 	@go generate ./...
 	@echo "running go run cmd/tools/copyright/licensegen.go"
-	@go run cmd/tools/copyright/licensegen.go
+	@$(MAKE) --no-print-directory copyright
 
-lint: fmt
+lint: $(GOLINT_BIN) fmt
 	@echo "running linter"
 	@lintFail=0; for file in $(sort $(LINT_SRC)); do \
-		golint "$$file"; \
+		$(GOLINT_BIN) "$$file"; \
 		if [ $$? -eq 1 ]; then lintFail=1; fi; \
 	done; \
 	if [ $$lintFail -eq 1 ]; then exit 1; fi;
 
-fmt:
-	GO111MODULE=off go get -u github.com/myitcv/gobin
-	GOOS= GOARCH= gobin -mod=readonly golang.org/x/tools/cmd/goimports
+fmt: $(GOIMPORTS_BIN)
 	@echo "running goimports"
-	@goimports -local "github.com/uber/cadence" -w $(FMT_SRC)
+	@$(GOIMPORTS_BIN) -local "github.com/uber/cadence" -w $(FMT_SRC)
 
 bins_nothrift: fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server cadence-canary
 

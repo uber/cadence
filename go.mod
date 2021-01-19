@@ -64,6 +64,7 @@ require (
 	go.uber.org/thriftrw v1.20.2
 	go.uber.org/yarpc v1.42.0
 	go.uber.org/zap v1.12.0
+	golang.org/x/lint v0.0.0-20200302205851-738671d3881b
 	golang.org/x/net v0.0.0-20201031054903-ff519b6c9102
 	golang.org/x/oauth2 v0.0.0-20201109201403-9fd604954f58
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0

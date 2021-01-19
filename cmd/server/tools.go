@@ -34,4 +34,6 @@ import (
 	_ "github.com/golang/mock/mockgen"
 	// enumer for generating utility methods for const enums
 	_ "github.com/dmarkham/enumer"
+	// golint - functional, but worth replacing with something less problematic and abandoned
+	_ "golang.org/x/lint/golint"
 )
