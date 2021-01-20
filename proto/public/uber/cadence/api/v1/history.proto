@@ -29,7 +29,6 @@ option java_package = "com.uber.cadence.api.v1";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
-import "dependencies/gogoproto.proto";
 import "uber/cadence/api/v1/common.proto";
 import "uber/cadence/api/v1/tasklist.proto";
 import "uber/cadence/api/v1/workflow.proto";
@@ -40,7 +39,7 @@ message History {
 
 message HistoryEvent {
   int64 event_id = 1;
-  google.protobuf.Timestamp event_time = 2 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp event_time = 2;
   int64 version = 3;
   int64 task_id = 4;
   oneof attributes {
@@ -96,8 +95,8 @@ message WorkflowExecutionStartedEventAttributes {
   int64 parent_initiated_event_id = 4;
   TaskList task_list = 5;
   Payload input = 6;
-  google.protobuf.Duration execution_start_to_close_timeout = 7 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration task_start_to_close_timeout = 8 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration execution_start_to_close_timeout = 7;
+  google.protobuf.Duration task_start_to_close_timeout = 8;
   string continued_execution_run_id = 9;
   ContinueAsNewInitiator initiator = 10;
   Failure continued_failure = 11;
@@ -109,9 +108,9 @@ message WorkflowExecutionStartedEventAttributes {
   string first_execution_run_id = 15;
   RetryPolicy retry_policy = 16;
   int32 attempt = 17;
-  google.protobuf.Timestamp expiration_time = 19 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp expiration_time = 19;
   string cron_schedule = 20;
-  google.protobuf.Duration first_decision_task_backoff = 21 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration first_decision_task_backoff = 21;
   Memo memo = 22;
   SearchAttributes search_attributes = 23;
   ResetPoints prev_auto_reset_points = 24;
@@ -134,7 +133,7 @@ message WorkflowExecutionTimedOutEventAttributes {
 
 message DecisionTaskScheduledEventAttributes {
   TaskList task_list = 1;
-  google.protobuf.Duration start_to_close_timeout = 2 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration start_to_close_timeout = 2;
   int32 attempt = 3;
 }
 
@@ -177,10 +176,10 @@ message ActivityTaskScheduledEventAttributes {
   string domain = 3;
   TaskList task_list = 4;
   Payload input = 6;
-  google.protobuf.Duration schedule_to_close_timeout = 7 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration schedule_to_start_timeout = 8 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration start_to_close_timeout = 9 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration heartbeat_timeout = 10 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration schedule_to_close_timeout = 7;
+  google.protobuf.Duration schedule_to_start_timeout = 8;
+  google.protobuf.Duration start_to_close_timeout = 9;
+  google.protobuf.Duration heartbeat_timeout = 10;
   int64 decision_task_completed_event_id = 11;
   RetryPolicy retry_policy = 12;
   Header header = 13;
@@ -239,7 +238,7 @@ message ActivityTaskCanceledEventAttributes {
 
 message TimerStartedEventAttributes {
   string timer_id = 1;
-  google.protobuf.Duration start_to_fire_timeout = 2 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration start_to_fire_timeout = 2;
   int64 decision_task_completed_event_id = 3;
 }
 
@@ -267,10 +266,10 @@ message WorkflowExecutionContinuedAsNewEventAttributes {
   WorkflowType workflow_type = 2;
   TaskList task_list = 3;
   Payload input = 4;
-  google.protobuf.Duration execution_start_to_close_timeout = 5 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration task_start_to_close_timeout = 6 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration execution_start_to_close_timeout = 5;
+  google.protobuf.Duration task_start_to_close_timeout = 6;
   int64 decision_task_completed_event_id = 7;
-  google.protobuf.Duration backoff_start_interval = 8 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration backoff_start_interval = 8;
   ContinueAsNewInitiator initiator = 9;
   Failure failure = 10;
   Payload last_completion_result = 11;
@@ -370,8 +369,8 @@ message StartChildWorkflowExecutionInitiatedEventAttributes {
   WorkflowType workflow_type = 3;
   TaskList task_list = 4;
   Payload input = 5;
-  google.protobuf.Duration execution_start_to_close_timeout = 6 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration task_start_to_close_timeout = 7 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration execution_start_to_close_timeout = 6;
+  google.protobuf.Duration task_start_to_close_timeout = 7;
   ParentClosePolicy parent_close_policy = 8;
   bytes control = 9;
   int64 decision_task_completed_event_id = 10;

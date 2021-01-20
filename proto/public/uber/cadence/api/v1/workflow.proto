@@ -29,20 +29,19 @@ option java_package = "com.uber.cadence.api.v1";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
-import "dependencies/gogoproto.proto";
 import "uber/cadence/api/v1/common.proto";
 import "uber/cadence/api/v1/tasklist.proto";
 
 message WorkflowExecutionInfo {
   WorkflowExecution workflow_execution = 1;
   WorkflowType type = 2;
-  google.protobuf.Timestamp start_time = 3 [(gogoproto.stdtime) = true];
-  google.protobuf.Timestamp close_time = 4 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp start_time = 3;
+  google.protobuf.Timestamp close_time = 4;
   WorkflowExecutionCloseStatus close_status = 5;
   int64 history_length = 6;
   string parent_domain_id = 7;
   WorkflowExecution parent_execution = 8;
-  google.protobuf.Timestamp execution_time = 9 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp execution_time = 9;
   Memo memo = 10;
   SearchAttributes search_attributes = 11;
   ResetPoints auto_reset_points = 12;
@@ -51,8 +50,8 @@ message WorkflowExecutionInfo {
 
 message WorkflowExecutionConfiguration {
   TaskList task_list = 1;
-  google.protobuf.Duration execution_start_to_close_timeout = 2 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration task_start_to_close_timeout = 3 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration execution_start_to_close_timeout = 2;
+  google.protobuf.Duration task_start_to_close_timeout = 3;
 }
 
 message PendingActivityInfo {
@@ -60,12 +59,12 @@ message PendingActivityInfo {
   ActivityType activity_type = 2;
   PendingActivityState state = 3;
   Payload heartbeat_details = 4;
-  google.protobuf.Timestamp last_heartbeat_time = 5 [(gogoproto.stdtime) = true];
-  google.protobuf.Timestamp last_started_time = 6 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp last_heartbeat_time = 5;
+  google.protobuf.Timestamp last_started_time = 6;
   int32 attempt = 7;
   int32 maximum_attempts = 8;
-  google.protobuf.Timestamp scheduled_time = 9 [(gogoproto.stdtime) = true];
-  google.protobuf.Timestamp expiration_time = 10 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp scheduled_time = 9;
+  google.protobuf.Timestamp expiration_time = 10;
   Failure last_failure = 11;
   string last_worker_identity = 12;
 }
@@ -79,17 +78,17 @@ message PendingChildExecutionInfo {
 
 message PendingDecisionInfo {
   PendingDecisionState state = 1;
-  google.protobuf.Timestamp scheduled_time = 2 [(gogoproto.stdtime) = true];
-  google.protobuf.Timestamp started_time = 3 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp scheduled_time = 2;
+  google.protobuf.Timestamp started_time = 3;
   int32 attempt = 4;
-  google.protobuf.Timestamp original_scheduled_time = 5 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp original_scheduled_time = 5;
 }
 
 message ActivityLocalDispatchInfo {
   string activity_id = 1;
-  google.protobuf.Timestamp scheduled_time = 2 [(gogoproto.stdtime) = true];
-  google.protobuf.Timestamp started_time = 3 [(gogoproto.stdtime) = true];
-  google.protobuf.Timestamp scheduled_time_of_this_attempt = 4 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp scheduled_time = 2;
+  google.protobuf.Timestamp started_time = 3;
+  google.protobuf.Timestamp scheduled_time_of_this_attempt = 4;
   bytes task_token = 5;
 }
 
@@ -101,8 +100,8 @@ message ResetPointInfo {
   string binary_checksum = 1;
   string run_id = 2;
   int64 first_decision_completed_id = 3;
-  google.protobuf.Timestamp created_time = 4 [(gogoproto.stdtime) = true];
-  google.protobuf.Timestamp expiring_time = 5 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp created_time = 4;
+  google.protobuf.Timestamp expiring_time = 5;
   bool resettable = 6;
 }
 

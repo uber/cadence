@@ -28,7 +28,6 @@ option java_outer_classname = "ApiProto";
 option java_package = "com.uber.cadence.api.v1";
 
 import "google/protobuf/duration.proto";
-import "dependencies/gogoproto.proto";
 import "uber/cadence/api/v1/common.proto";
 import "uber/cadence/api/v1/tasklist.proto";
 import "uber/cadence/api/v1/workflow.proto";
@@ -57,10 +56,10 @@ message ScheduleActivityTaskDecisionAttributes {
   string domain = 3;
   TaskList task_list = 4;
   Payload input = 5;
-  google.protobuf.Duration schedule_to_close_timeout = 6 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration schedule_to_start_timeout = 7 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration start_to_close_timeout = 8 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration heartbeat_timeout = 9 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration schedule_to_close_timeout = 6;
+  google.protobuf.Duration schedule_to_start_timeout = 7;
+  google.protobuf.Duration start_to_close_timeout = 8;
+  google.protobuf.Duration heartbeat_timeout = 9;
   RetryPolicy retry_policy = 11;
   Header header = 12;
   bool request_local_dispatch = 13;
@@ -68,7 +67,7 @@ message ScheduleActivityTaskDecisionAttributes {
 
 message StartTimerDecisionAttributes {
   string timer_id = 1;
-  google.protobuf.Duration start_to_fire_timeout = 2 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration start_to_fire_timeout = 2;
 }
 
 message CompleteWorkflowExecutionDecisionAttributes {
@@ -108,9 +107,9 @@ message ContinueAsNewWorkflowExecutionDecisionAttributes {
   WorkflowType workflow_type = 1;
   TaskList task_list = 2;
   Payload input = 3;
-  google.protobuf.Duration execution_start_to_close_timeout = 4 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration task_start_to_close_timeout = 5 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration backoff_start_interval = 6 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration execution_start_to_close_timeout = 4;
+  google.protobuf.Duration task_start_to_close_timeout = 5;
+  google.protobuf.Duration backoff_start_interval = 6;
   RetryPolicy retry_policy = 7;
   ContinueAsNewInitiator initiator = 8;
   Failure failure = 9;
@@ -127,8 +126,8 @@ message StartChildWorkflowExecutionDecisionAttributes {
   WorkflowType workflow_type = 3;
   TaskList task_list = 4;
   Payload input = 5;
-  google.protobuf.Duration execution_start_to_close_timeout = 6 [(gogoproto.stdduration) = true];
-  google.protobuf.Duration task_start_to_close_timeout = 7 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration execution_start_to_close_timeout = 6;
+  google.protobuf.Duration task_start_to_close_timeout = 7;
   ParentClosePolicy parent_close_policy = 8;
   bytes control = 9;
   WorkflowIdReusePolicy workflow_id_reuse_policy = 10;

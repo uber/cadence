@@ -28,7 +28,6 @@ option java_outer_classname = "ApiProto";
 option java_package = "com.uber.cadence.api.v1";
 
 import "google/protobuf/timestamp.proto";
-import "dependencies/gogoproto.proto";
 import "uber/cadence/api/v1/workflow.proto";
 
 message WorkflowExecutionFilter {
@@ -41,8 +40,8 @@ message WorkflowTypeFilter {
 }
 
 message StartTimeFilter {
-  google.protobuf.Timestamp earliest_time = 1 [(gogoproto.stdtime) = true];
-  google.protobuf.Timestamp latest_time = 2 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp earliest_time = 1;
+  google.protobuf.Timestamp latest_time = 2;
 }
 
 message StatusFilter {

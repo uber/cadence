@@ -25,7 +25,6 @@ package uber.cadence.admin.v1;
 option go_package = "adminv1";
 
 import "google/protobuf/timestamp.proto";
-import "dependencies/gogoproto.proto";
 import "uber/cadence/api/v1/common.proto";
 import "uber/cadence/api/v1/visibility.proto";
 import "uber/cadence/shared/v1/cluster.proto";
@@ -130,7 +129,7 @@ message RemoveTaskRequest {
   int32 shard_id = 1;
   shared.v1.TaskType task_type = 2;
   int64 task_id = 3;
-  google.protobuf.Timestamp visibility_time = 4 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp visibility_time = 4;
 }
 
 message RemoveTaskResponse {
