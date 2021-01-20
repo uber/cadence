@@ -106,26 +106,34 @@ func (ArchivalStatus) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_824795d6ae7d8e2f, []int{1}
 }
 
-type DomainInfo struct {
-	Id          string            `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name        string            `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Status      DomainStatus      `protobuf:"varint,3,opt,name=status,proto3,enum=uber.cadence.api.v1.DomainStatus" json:"status,omitempty"`
-	Description string            `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	OwnerEmail  string            `protobuf:"bytes,5,opt,name=owner_email,json=ownerEmail,proto3" json:"owner_email,omitempty"`
-	Data        map[string]string `protobuf:"bytes,6,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+type Domain struct {
+	Id                               string                             `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name                             string                             `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Status                           DomainStatus                       `protobuf:"varint,3,opt,name=status,proto3,enum=uber.cadence.api.v1.DomainStatus" json:"status,omitempty"`
+	Description                      string                             `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	OwnerEmail                       string                             `protobuf:"bytes,5,opt,name=owner_email,json=ownerEmail,proto3" json:"owner_email,omitempty"`
+	Data                             map[string]string                  `protobuf:"bytes,6,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	WorkflowExecutionRetentionPeriod *time.Duration                     `protobuf:"bytes,7,opt,name=workflow_execution_retention_period,json=workflowExecutionRetentionPeriod,proto3,stdduration" json:"workflow_execution_retention_period,omitempty"`
+	BadBinaries                      *BadBinaries                       `protobuf:"bytes,8,opt,name=bad_binaries,json=badBinaries,proto3" json:"bad_binaries,omitempty"`
+	HistoryArchival                  *Archival                          `protobuf:"bytes,9,opt,name=history_archival,json=historyArchival,proto3" json:"history_archival,omitempty"`
+	VisibilityArchival               *Archival                          `protobuf:"bytes,10,opt,name=visibility_archival,json=visibilityArchival,proto3" json:"visibility_archival,omitempty"`
+	ActiveClusterName                string                             `protobuf:"bytes,11,opt,name=active_cluster_name,json=activeClusterName,proto3" json:"active_cluster_name,omitempty"`
+	Clusters                         []*ClusterReplicationConfiguration `protobuf:"bytes,12,rep,name=clusters,proto3" json:"clusters,omitempty"`
+	FailoverVersion                  int64                              `protobuf:"varint,13,opt,name=failover_version,json=failoverVersion,proto3" json:"failover_version,omitempty"`
+	IsGlobalDomain                   bool                               `protobuf:"varint,14,opt,name=is_global_domain,json=isGlobalDomain,proto3" json:"is_global_domain,omitempty"`
 }
 
-func (m *DomainInfo) Reset()      { *m = DomainInfo{} }
-func (*DomainInfo) ProtoMessage() {}
-func (*DomainInfo) Descriptor() ([]byte, []int) {
+func (m *Domain) Reset()      { *m = Domain{} }
+func (*Domain) ProtoMessage() {}
+func (*Domain) Descriptor() ([]byte, []int) {
 	return fileDescriptor_824795d6ae7d8e2f, []int{0}
 }
-func (m *DomainInfo) XXX_Unmarshal(b []byte) error {
+func (m *Domain) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *DomainInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Domain) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_DomainInfo.Marshal(b, m, deterministic)
+		return xxx_messageInfo_Domain.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -135,141 +143,114 @@ func (m *DomainInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *DomainInfo) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DomainInfo.Merge(m, src)
+func (m *Domain) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Domain.Merge(m, src)
 }
-func (m *DomainInfo) XXX_Size() int {
+func (m *Domain) XXX_Size() int {
 	return m.Size()
 }
-func (m *DomainInfo) XXX_DiscardUnknown() {
-	xxx_messageInfo_DomainInfo.DiscardUnknown(m)
+func (m *Domain) XXX_DiscardUnknown() {
+	xxx_messageInfo_Domain.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_DomainInfo proto.InternalMessageInfo
+var xxx_messageInfo_Domain proto.InternalMessageInfo
 
-func (m *DomainInfo) GetId() string {
+func (m *Domain) GetId() string {
 	if m != nil {
 		return m.Id
 	}
 	return ""
 }
 
-func (m *DomainInfo) GetName() string {
+func (m *Domain) GetName() string {
 	if m != nil {
 		return m.Name
 	}
 	return ""
 }
 
-func (m *DomainInfo) GetStatus() DomainStatus {
+func (m *Domain) GetStatus() DomainStatus {
 	if m != nil {
 		return m.Status
 	}
 	return DOMAIN_STATUS_INVALID
 }
 
-func (m *DomainInfo) GetDescription() string {
+func (m *Domain) GetDescription() string {
 	if m != nil {
 		return m.Description
 	}
 	return ""
 }
 
-func (m *DomainInfo) GetOwnerEmail() string {
+func (m *Domain) GetOwnerEmail() string {
 	if m != nil {
 		return m.OwnerEmail
 	}
 	return ""
 }
 
-func (m *DomainInfo) GetData() map[string]string {
+func (m *Domain) GetData() map[string]string {
 	if m != nil {
 		return m.Data
 	}
 	return nil
 }
 
-type DomainConfiguration struct {
-	WorkflowExecutionRetentionPeriod *time.Duration `protobuf:"bytes,1,opt,name=workflow_execution_retention_period,json=workflowExecutionRetentionPeriod,proto3,stdduration" json:"workflow_execution_retention_period,omitempty"`
-	BadBinaries                      *BadBinaries   `protobuf:"bytes,2,opt,name=bad_binaries,json=badBinaries,proto3" json:"bad_binaries,omitempty"`
-	HistoryArchivalStatus            ArchivalStatus `protobuf:"varint,3,opt,name=history_archival_status,json=historyArchivalStatus,proto3,enum=uber.cadence.api.v1.ArchivalStatus" json:"history_archival_status,omitempty"`
-	HistoryArchivalUri               string         `protobuf:"bytes,4,opt,name=history_archival_uri,json=historyArchivalUri,proto3" json:"history_archival_uri,omitempty"`
-	VisibilityArchivalStatus         ArchivalStatus `protobuf:"varint,5,opt,name=visibility_archival_status,json=visibilityArchivalStatus,proto3,enum=uber.cadence.api.v1.ArchivalStatus" json:"visibility_archival_status,omitempty"`
-	VisibilityArchivalUri            string         `protobuf:"bytes,6,opt,name=visibility_archival_uri,json=visibilityArchivalUri,proto3" json:"visibility_archival_uri,omitempty"`
-}
-
-func (m *DomainConfiguration) Reset()      { *m = DomainConfiguration{} }
-func (*DomainConfiguration) ProtoMessage() {}
-func (*DomainConfiguration) Descriptor() ([]byte, []int) {
-	return fileDescriptor_824795d6ae7d8e2f, []int{1}
-}
-func (m *DomainConfiguration) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *DomainConfiguration) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_DomainConfiguration.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *DomainConfiguration) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DomainConfiguration.Merge(m, src)
-}
-func (m *DomainConfiguration) XXX_Size() int {
-	return m.Size()
-}
-func (m *DomainConfiguration) XXX_DiscardUnknown() {
-	xxx_messageInfo_DomainConfiguration.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_DomainConfiguration proto.InternalMessageInfo
-
-func (m *DomainConfiguration) GetWorkflowExecutionRetentionPeriod() *time.Duration {
+func (m *Domain) GetWorkflowExecutionRetentionPeriod() *time.Duration {
 	if m != nil {
 		return m.WorkflowExecutionRetentionPeriod
 	}
 	return nil
 }
 
-func (m *DomainConfiguration) GetBadBinaries() *BadBinaries {
+func (m *Domain) GetBadBinaries() *BadBinaries {
 	if m != nil {
 		return m.BadBinaries
 	}
 	return nil
 }
 
-func (m *DomainConfiguration) GetHistoryArchivalStatus() ArchivalStatus {
+func (m *Domain) GetHistoryArchival() *Archival {
 	if m != nil {
-		return m.HistoryArchivalStatus
+		return m.HistoryArchival
 	}
-	return ARCHIVAL_STATUS_INVALID
+	return nil
 }
 
-func (m *DomainConfiguration) GetHistoryArchivalUri() string {
+func (m *Domain) GetVisibilityArchival() *Archival {
 	if m != nil {
-		return m.HistoryArchivalUri
+		return m.VisibilityArchival
+	}
+	return nil
+}
+
+func (m *Domain) GetActiveClusterName() string {
+	if m != nil {
+		return m.ActiveClusterName
 	}
 	return ""
 }
 
-func (m *DomainConfiguration) GetVisibilityArchivalStatus() ArchivalStatus {
+func (m *Domain) GetClusters() []*ClusterReplicationConfiguration {
 	if m != nil {
-		return m.VisibilityArchivalStatus
+		return m.Clusters
 	}
-	return ARCHIVAL_STATUS_INVALID
+	return nil
 }
 
-func (m *DomainConfiguration) GetVisibilityArchivalUri() string {
+func (m *Domain) GetFailoverVersion() int64 {
 	if m != nil {
-		return m.VisibilityArchivalUri
+		return m.FailoverVersion
 	}
-	return ""
+	return 0
+}
+
+func (m *Domain) GetIsGlobalDomain() bool {
+	if m != nil {
+		return m.IsGlobalDomain
+	}
+	return false
 }
 
 type ClusterReplicationConfiguration struct {
@@ -279,7 +260,7 @@ type ClusterReplicationConfiguration struct {
 func (m *ClusterReplicationConfiguration) Reset()      { *m = ClusterReplicationConfiguration{} }
 func (*ClusterReplicationConfiguration) ProtoMessage() {}
 func (*ClusterReplicationConfiguration) Descriptor() ([]byte, []int) {
-	return fileDescriptor_824795d6ae7d8e2f, []int{2}
+	return fileDescriptor_824795d6ae7d8e2f, []int{1}
 }
 func (m *ClusterReplicationConfiguration) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -315,57 +296,6 @@ func (m *ClusterReplicationConfiguration) GetClusterName() string {
 	return ""
 }
 
-type DomainReplicationConfiguration struct {
-	ActiveClusterName string                             `protobuf:"bytes,1,opt,name=active_cluster_name,json=activeClusterName,proto3" json:"active_cluster_name,omitempty"`
-	Clusters          []*ClusterReplicationConfiguration `protobuf:"bytes,2,rep,name=clusters,proto3" json:"clusters,omitempty"`
-}
-
-func (m *DomainReplicationConfiguration) Reset()      { *m = DomainReplicationConfiguration{} }
-func (*DomainReplicationConfiguration) ProtoMessage() {}
-func (*DomainReplicationConfiguration) Descriptor() ([]byte, []int) {
-	return fileDescriptor_824795d6ae7d8e2f, []int{3}
-}
-func (m *DomainReplicationConfiguration) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *DomainReplicationConfiguration) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_DomainReplicationConfiguration.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *DomainReplicationConfiguration) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DomainReplicationConfiguration.Merge(m, src)
-}
-func (m *DomainReplicationConfiguration) XXX_Size() int {
-	return m.Size()
-}
-func (m *DomainReplicationConfiguration) XXX_DiscardUnknown() {
-	xxx_messageInfo_DomainReplicationConfiguration.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_DomainReplicationConfiguration proto.InternalMessageInfo
-
-func (m *DomainReplicationConfiguration) GetActiveClusterName() string {
-	if m != nil {
-		return m.ActiveClusterName
-	}
-	return ""
-}
-
-func (m *DomainReplicationConfiguration) GetClusters() []*ClusterReplicationConfiguration {
-	if m != nil {
-		return m.Clusters
-	}
-	return nil
-}
-
 type BadBinaries struct {
 	Binaries map[string]*BadBinaryInfo `protobuf:"bytes,1,rep,name=binaries,proto3" json:"binaries,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
@@ -373,7 +303,7 @@ type BadBinaries struct {
 func (m *BadBinaries) Reset()      { *m = BadBinaries{} }
 func (*BadBinaries) ProtoMessage() {}
 func (*BadBinaries) Descriptor() ([]byte, []int) {
-	return fileDescriptor_824795d6ae7d8e2f, []int{4}
+	return fileDescriptor_824795d6ae7d8e2f, []int{2}
 }
 func (m *BadBinaries) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -418,7 +348,7 @@ type BadBinaryInfo struct {
 func (m *BadBinaryInfo) Reset()      { *m = BadBinaryInfo{} }
 func (*BadBinaryInfo) ProtoMessage() {}
 func (*BadBinaryInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_824795d6ae7d8e2f, []int{5}
+	return fileDescriptor_824795d6ae7d8e2f, []int{3}
 }
 func (m *BadBinaryInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -468,17 +398,67 @@ func (m *BadBinaryInfo) GetCreatedTime() *time.Time {
 	return nil
 }
 
+type Archival struct {
+	Status ArchivalStatus `protobuf:"varint,1,opt,name=status,proto3,enum=uber.cadence.api.v1.ArchivalStatus" json:"status,omitempty"`
+	Uri    string         `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
+}
+
+func (m *Archival) Reset()      { *m = Archival{} }
+func (*Archival) ProtoMessage() {}
+func (*Archival) Descriptor() ([]byte, []int) {
+	return fileDescriptor_824795d6ae7d8e2f, []int{4}
+}
+func (m *Archival) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Archival) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Archival.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *Archival) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Archival.Merge(m, src)
+}
+func (m *Archival) XXX_Size() int {
+	return m.Size()
+}
+func (m *Archival) XXX_DiscardUnknown() {
+	xxx_messageInfo_Archival.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Archival proto.InternalMessageInfo
+
+func (m *Archival) GetStatus() ArchivalStatus {
+	if m != nil {
+		return m.Status
+	}
+	return ARCHIVAL_STATUS_INVALID
+}
+
+func (m *Archival) GetUri() string {
+	if m != nil {
+		return m.Uri
+	}
+	return ""
+}
+
 func init() {
 	proto.RegisterEnum("uber.cadence.api.v1.DomainStatus", DomainStatus_name, DomainStatus_value)
 	proto.RegisterEnum("uber.cadence.api.v1.ArchivalStatus", ArchivalStatus_name, ArchivalStatus_value)
-	proto.RegisterType((*DomainInfo)(nil), "uber.cadence.api.v1.DomainInfo")
-	proto.RegisterMapType((map[string]string)(nil), "uber.cadence.api.v1.DomainInfo.DataEntry")
-	proto.RegisterType((*DomainConfiguration)(nil), "uber.cadence.api.v1.DomainConfiguration")
+	proto.RegisterType((*Domain)(nil), "uber.cadence.api.v1.Domain")
+	proto.RegisterMapType((map[string]string)(nil), "uber.cadence.api.v1.Domain.DataEntry")
 	proto.RegisterType((*ClusterReplicationConfiguration)(nil), "uber.cadence.api.v1.ClusterReplicationConfiguration")
-	proto.RegisterType((*DomainReplicationConfiguration)(nil), "uber.cadence.api.v1.DomainReplicationConfiguration")
 	proto.RegisterType((*BadBinaries)(nil), "uber.cadence.api.v1.BadBinaries")
 	proto.RegisterMapType((map[string]*BadBinaryInfo)(nil), "uber.cadence.api.v1.BadBinaries.BinariesEntry")
 	proto.RegisterType((*BadBinaryInfo)(nil), "uber.cadence.api.v1.BadBinaryInfo")
+	proto.RegisterType((*Archival)(nil), "uber.cadence.api.v1.Archival")
 }
 
 func init() {
@@ -486,62 +466,64 @@ func init() {
 }
 
 var fileDescriptor_824795d6ae7d8e2f = []byte{
-	// 872 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x54, 0xbf, 0x73, 0x1b, 0x45,
-	0x14, 0xd6, 0x4a, 0xb2, 0xc6, 0x79, 0xe7, 0x78, 0xcc, 0x3a, 0xc6, 0x8a, 0xc8, 0x9c, 0x15, 0xa5,
-	0x31, 0x29, 0x4e, 0x58, 0x30, 0x10, 0x98, 0xa1, 0x38, 0xe9, 0x6e, 0x40, 0x8c, 0x31, 0x9a, 0x93,
-	0x9c, 0x02, 0x8a, 0x63, 0x75, 0xb7, 0x96, 0x77, 0x22, 0xdd, 0xde, 0xec, 0x9d, 0x64, 0xdc, 0xa5,
-	0xa4, 0x4c, 0x49, 0x4d, 0xc1, 0xf0, 0x37, 0xf0, 0x17, 0x50, 0xba, 0x4c, 0x07, 0x96, 0x1b, 0xca,
-	0x14, 0xfc, 0x01, 0xcc, 0xed, 0xad, 0x64, 0xfd, 0x38, 0xe2, 0x74, 0xbb, 0xef, 0x7d, 0xef, 0xdb,
-	0x6f, 0xf7, 0xbd, 0x6f, 0xa1, 0x3a, 0xee, 0x53, 0x51, 0xf7, 0x88, 0x4f, 0x03, 0x8f, 0xd6, 0x49,
-	0xc8, 0xea, 0x93, 0xa3, 0xba, 0xcf, 0x47, 0x84, 0x05, 0x46, 0x28, 0x78, 0xcc, 0xf1, 0x6e, 0x82,
-	0x30, 0x14, 0xc2, 0x20, 0x21, 0x33, 0x26, 0x47, 0x15, 0x7d, 0xc0, 0xf9, 0x60, 0x48, 0xeb, 0x12,
-	0xd2, 0x1f, 0x9f, 0xd5, 0xfd, 0xb1, 0x20, 0x31, 0xe3, 0xaa, 0xa8, 0x72, 0xb0, 0x9a, 0x8f, 0xd9,
-	0x88, 0x46, 0x31, 0x19, 0x85, 0x0a, 0xf0, 0xc8, 0xa7, 0x21, 0x0d, 0x12, 0x4e, 0x46, 0xa3, 0xfa,
-	0x80, 0x0f, 0xb8, 0x8c, 0xa7, 0xd9, 0xda, 0x6f, 0x79, 0x00, 0x4b, 0x8a, 0x68, 0x07, 0x67, 0x1c,
-	0x6f, 0x43, 0x9e, 0xf9, 0x65, 0x54, 0x45, 0x87, 0xf7, 0x9c, 0x3c, 0xf3, 0x31, 0x86, 0x62, 0x40,
-	0x46, 0xb4, 0x9c, 0x97, 0x11, 0xb9, 0xc6, 0x9f, 0x43, 0x29, 0x8a, 0x49, 0x3c, 0x8e, 0xca, 0x85,
-	0x2a, 0x3a, 0xdc, 0x6e, 0x3c, 0x36, 0x32, 0x74, 0x1b, 0x29, 0x69, 0x57, 0x02, 0x1d, 0x55, 0x80,
-	0xab, 0xa0, 0xf9, 0x34, 0xf2, 0x04, 0x0b, 0x93, 0x1b, 0x94, 0x8b, 0x92, 0x75, 0x31, 0x84, 0x0f,
-	0x40, 0xe3, 0x17, 0x01, 0x15, 0x2e, 0x1d, 0x11, 0x36, 0x2c, 0x6f, 0x48, 0x04, 0xc8, 0x90, 0x9d,
-	0x44, 0xf0, 0x97, 0x50, 0xf4, 0x49, 0x4c, 0xca, 0xa5, 0x6a, 0xe1, 0x50, 0x6b, 0x7c, 0xf8, 0x96,
-	0xb3, 0x93, 0x0b, 0x19, 0x16, 0x89, 0x89, 0x1d, 0xc4, 0xe2, 0xd2, 0x91, 0x65, 0x95, 0xcf, 0xe0,
-	0xde, 0x3c, 0x84, 0x77, 0xa0, 0xf0, 0x82, 0x5e, 0xaa, 0xeb, 0x26, 0x4b, 0xfc, 0x00, 0x36, 0x26,
-	0x64, 0x38, 0x9e, 0x5d, 0x38, 0xdd, 0x7c, 0x91, 0x7f, 0x86, 0x6a, 0xff, 0x16, 0x60, 0x37, 0xe5,
-	0x6d, 0xf1, 0xe0, 0x8c, 0x0d, 0x54, 0x17, 0x70, 0x00, 0x4f, 0x2e, 0xb8, 0x78, 0x71, 0x36, 0xe4,
-	0x17, 0x2e, 0xfd, 0x89, 0x7a, 0xe3, 0x24, 0xea, 0x0a, 0x1a, 0xd3, 0x40, 0xae, 0x42, 0x2a, 0x18,
-	0x4f, 0x9f, 0x54, 0x6b, 0x3c, 0x34, 0xd2, 0x6e, 0x19, 0xb3, 0x6e, 0x19, 0x96, 0xe2, 0x69, 0x16,
-	0x7f, 0xf9, 0xeb, 0x00, 0x39, 0xd5, 0x19, 0x97, 0x3d, 0xa3, 0x72, 0x66, 0x4c, 0x1d, 0x49, 0x84,
-	0x5b, 0xb0, 0xd5, 0x27, 0xbe, 0xdb, 0x67, 0x01, 0x11, 0x8c, 0x46, 0x52, 0xa8, 0xd6, 0xa8, 0x66,
-	0xbe, 0x43, 0x93, 0xf8, 0x4d, 0x85, 0x73, 0xb4, 0xfe, 0xed, 0x06, 0xff, 0x00, 0xfb, 0xe7, 0x2c,
-	0x8a, 0xb9, 0xb8, 0x74, 0x89, 0xf0, 0xce, 0xd9, 0x84, 0x0c, 0xdd, 0xa5, 0x9e, 0x3e, 0xc9, 0xe4,
-	0x33, 0x15, 0x56, 0x75, 0x75, 0x4f, 0x71, 0x2c, 0x87, 0xf1, 0x47, 0xf0, 0x60, 0x8d, 0x7c, 0x2c,
-	0x98, 0xea, 0x36, 0x5e, 0x29, 0x3a, 0x15, 0x0c, 0x13, 0xa8, 0x4c, 0x58, 0xc4, 0xfa, 0x6c, 0xc8,
-	0xe2, 0x75, 0x45, 0x1b, 0xef, 0xae, 0xa8, 0x7c, 0x4b, 0xb3, 0x22, 0xea, 0x53, 0xd8, 0xcf, 0x3a,
-	0x22, 0xd1, 0x55, 0x92, 0xba, 0xf6, 0xd6, 0x4b, 0x4f, 0x05, 0xab, 0x59, 0x70, 0xd0, 0x1a, 0x8e,
-	0xa3, 0x98, 0x0a, 0x87, 0x86, 0x43, 0xe6, 0xc9, 0x66, 0x2d, 0x4f, 0xc0, 0x63, 0xd8, 0xf2, 0x52,
-	0x88, 0x2b, 0xbd, 0x92, 0x8e, 0x93, 0xa6, 0x62, 0x27, 0x64, 0x44, 0x6b, 0xbf, 0x22, 0xd0, 0xd3,
-	0xe1, 0xf9, 0x5f, 0x16, 0x03, 0x76, 0x89, 0x17, 0xb3, 0x09, 0x75, 0x33, 0xc8, 0xde, 0x4b, 0x53,
-	0xad, 0x5b, 0x4a, 0xdc, 0x81, 0x4d, 0x05, 0x4c, 0x66, 0x20, 0xf1, 0xc2, 0x27, 0x99, 0x2f, 0x74,
-	0x87, 0x7a, 0x67, 0xce, 0x52, 0xfb, 0x03, 0x81, 0xb6, 0x30, 0x31, 0xf8, 0x1b, 0xd8, 0x9c, 0x4f,
-	0x19, 0x92, 0x27, 0x18, 0x77, 0x4d, 0x99, 0x31, 0x5b, 0xa4, 0x96, 0x9b, 0xd7, 0x57, 0x5c, 0xb8,
-	0xbf, 0x94, 0xca, 0xb0, 0xde, 0xb3, 0x45, 0xeb, 0x69, 0x8d, 0xda, 0x5b, 0xcf, 0xba, 0x4c, 0xcc,
-	0xbd, 0x68, 0xcf, 0x9f, 0x11, 0xdc, 0x5f, 0x4a, 0xe2, 0xf7, 0xa1, 0x24, 0x28, 0x89, 0x78, 0xa0,
-	0x0e, 0x51, 0x3b, 0x5c, 0x81, 0x4d, 0x1e, 0x52, 0x41, 0x62, 0x2e, 0x94, 0xcb, 0xe7, 0xfb, 0xc4,
-	0x5c, 0x9e, 0xa0, 0x24, 0xa6, 0xbe, 0x9b, 0x7c, 0xa3, 0xd2, 0x0c, 0x5a, 0xa3, 0xb2, 0xe6, 0xda,
-	0xde, 0xec, 0x8f, 0x6d, 0x16, 0x5f, 0x25, 0xb6, 0xd5, 0x54, 0x55, 0x12, 0x7f, 0xfa, 0x12, 0xc1,
-	0xd6, 0xe2, 0xef, 0x87, 0x1f, 0xc2, 0x9e, 0xf5, 0xdd, 0xb7, 0x66, 0xfb, 0xc4, 0xed, 0xf6, 0xcc,
-	0xde, 0x69, 0xd7, 0x6d, 0x9f, 0x3c, 0x37, 0x8f, 0xdb, 0xd6, 0x4e, 0x0e, 0x3f, 0x82, 0xf2, 0x72,
-	0xca, 0xb1, 0xbf, 0x6a, 0x77, 0x7b, 0xb6, 0x63, 0x5b, 0x3b, 0x68, 0x3d, 0x6b, 0xd9, 0x1d, 0xc7,
-	0x6e, 0x99, 0x3d, 0xdb, 0xda, 0xc9, 0xaf, 0xd3, 0x5a, 0xf6, 0xb1, 0x9d, 0xa4, 0x0a, 0x4f, 0xcf,
-	0x61, 0x7b, 0x65, 0xfe, 0x3f, 0x80, 0x7d, 0xd3, 0x69, 0x7d, 0xdd, 0x7e, 0x6e, 0x1e, 0x67, 0xaa,
-	0x58, 0x4d, 0x5a, 0xed, 0xae, 0xd9, 0x3c, 0x96, 0x2a, 0x32, 0x4a, 0xed, 0x93, 0x34, 0x99, 0x6f,
-	0xfe, 0x78, 0x75, 0xad, 0xe7, 0x5e, 0x5f, 0xeb, 0xb9, 0x37, 0xd7, 0x3a, 0x7a, 0x39, 0xd5, 0xd1,
-	0xef, 0x53, 0x1d, 0xfd, 0x39, 0xd5, 0xd1, 0xd5, 0x54, 0x47, 0x7f, 0x4f, 0x75, 0xf4, 0xcf, 0x54,
-	0xcf, 0xbd, 0x99, 0xea, 0xe8, 0xd5, 0x8d, 0x9e, 0xbb, 0xba, 0xd1, 0x73, 0xaf, 0x6f, 0xf4, 0x1c,
-	0xec, 0x7b, 0x7c, 0x94, 0xd5, 0xdf, 0xe6, 0xa6, 0x19, 0xb2, 0x4e, 0xf2, 0xca, 0x1d, 0xf4, 0xfd,
-	0x06, 0x09, 0xd9, 0xe4, 0xa8, 0x5f, 0x92, 0xaf, 0xfe, 0xf1, 0x7f, 0x01, 0x00, 0x00, 0xff, 0xff,
-	0x41, 0xea, 0x3c, 0x01, 0x40, 0x07, 0x00, 0x00,
+	// 901 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x54, 0x41, 0x73, 0xdb, 0x44,
+	0x14, 0xf6, 0xda, 0x89, 0x71, 0x9e, 0x92, 0xd4, 0x6c, 0x80, 0xaa, 0xa6, 0x28, 0xaa, 0x3b, 0xcc,
+	0x98, 0x1e, 0xe4, 0x89, 0x61, 0x86, 0x16, 0x4e, 0xb6, 0xa5, 0x69, 0xcd, 0x04, 0xe3, 0x91, 0x4d,
+	0x66, 0xe0, 0x22, 0xd6, 0xd2, 0xda, 0xd9, 0xa9, 0xac, 0xd5, 0xac, 0x64, 0x87, 0xdc, 0x7a, 0xe4,
+	0xd8, 0x23, 0x3f, 0x81, 0xdf, 0xc0, 0x99, 0x03, 0xc7, 0x1c, 0x7b, 0x83, 0x38, 0x17, 0x8e, 0xfd,
+	0x09, 0x8c, 0x56, 0xb2, 0x63, 0x27, 0x9e, 0xb4, 0xb7, 0xd5, 0xfb, 0xde, 0xfb, 0xf6, 0xe9, 0xdb,
+	0xef, 0x3d, 0xd0, 0xa7, 0x43, 0x2a, 0xea, 0x2e, 0xf1, 0x68, 0xe0, 0xd2, 0x3a, 0x09, 0x59, 0x7d,
+	0x76, 0x54, 0xf7, 0xf8, 0x84, 0xb0, 0xc0, 0x08, 0x05, 0x8f, 0x39, 0x3e, 0x48, 0x32, 0x8c, 0x2c,
+	0xc3, 0x20, 0x21, 0x33, 0x66, 0x47, 0x15, 0x6d, 0xcc, 0xf9, 0xd8, 0xa7, 0x75, 0x99, 0x32, 0x9c,
+	0x8e, 0xea, 0xde, 0x54, 0x90, 0x98, 0xf1, 0xac, 0xa8, 0x72, 0x78, 0x13, 0x8f, 0xd9, 0x84, 0x46,
+	0x31, 0x99, 0x84, 0x59, 0xc2, 0x43, 0x8f, 0x86, 0x34, 0x48, 0x38, 0x19, 0x8d, 0xea, 0x63, 0x3e,
+	0xe6, 0x32, 0x9e, 0xa2, 0xd5, 0xbf, 0x8a, 0x50, 0x34, 0x65, 0x13, 0x78, 0x1f, 0xf2, 0xcc, 0x53,
+	0x91, 0x8e, 0x6a, 0x3b, 0x76, 0x9e, 0x79, 0x18, 0xc3, 0x56, 0x40, 0x26, 0x54, 0xcd, 0xcb, 0x88,
+	0x3c, 0xe3, 0x67, 0x50, 0x8c, 0x62, 0x12, 0x4f, 0x23, 0xb5, 0xa0, 0xa3, 0xda, 0x7e, 0xe3, 0x91,
+	0xb1, 0xa1, 0x67, 0x23, 0x25, 0xec, 0xcb, 0x44, 0x3b, 0x2b, 0xc0, 0x3a, 0x28, 0x1e, 0x8d, 0x5c,
+	0xc1, 0xc2, 0xa4, 0x7b, 0x75, 0x4b, 0xb2, 0xae, 0x86, 0xf0, 0x21, 0x28, 0xfc, 0x2c, 0xa0, 0xc2,
+	0xa1, 0x13, 0xc2, 0x7c, 0x75, 0x5b, 0x66, 0x80, 0x0c, 0x59, 0x49, 0x04, 0x3f, 0x83, 0x2d, 0x8f,
+	0xc4, 0x44, 0x2d, 0xea, 0x85, 0x9a, 0xd2, 0xf8, 0xfc, 0x8e, 0xbb, 0x0d, 0x93, 0xc4, 0xc4, 0x0a,
+	0x62, 0x71, 0x6e, 0xcb, 0x12, 0x1c, 0xc0, 0xe3, 0x33, 0x2e, 0x5e, 0x8e, 0x7c, 0x7e, 0xe6, 0xd0,
+	0x5f, 0xa9, 0x3b, 0x4d, 0x6e, 0x74, 0x04, 0x8d, 0x69, 0x20, 0x4f, 0x21, 0x15, 0x8c, 0x7b, 0xea,
+	0x07, 0x3a, 0xaa, 0x29, 0x8d, 0x07, 0x46, 0x2a, 0xaa, 0xb1, 0x10, 0xd5, 0x30, 0x33, 0xd1, 0x5b,
+	0x5b, 0xbf, 0xff, 0x73, 0x88, 0x6c, 0x7d, 0xc1, 0x65, 0x2d, 0xa8, 0xec, 0x05, 0x53, 0x4f, 0x12,
+	0xe1, 0x36, 0xec, 0x0e, 0x89, 0xe7, 0x0c, 0x59, 0x40, 0x04, 0xa3, 0x91, 0x5a, 0x92, 0xc4, 0xfa,
+	0xc6, 0x96, 0x5b, 0xc4, 0x6b, 0x65, 0x79, 0xb6, 0x32, 0xbc, 0xfe, 0xc0, 0x2f, 0xa0, 0x7c, 0xca,
+	0xa2, 0x98, 0x8b, 0x73, 0x87, 0x08, 0xf7, 0x94, 0xcd, 0x88, 0xaf, 0xee, 0x48, 0xa2, 0xcf, 0x36,
+	0x12, 0x35, 0xb3, 0x24, 0xfb, 0x5e, 0x56, 0xb6, 0x08, 0xe0, 0x2e, 0x1c, 0xcc, 0x58, 0xc4, 0x86,
+	0xcc, 0x67, 0xf1, 0x0a, 0x19, 0xbc, 0x0f, 0x19, 0xbe, 0xae, 0x5c, 0xf2, 0x19, 0x70, 0x40, 0xdc,
+	0x98, 0xcd, 0xa8, 0xe3, 0xfa, 0xd3, 0x28, 0xa6, 0xc2, 0x91, 0x56, 0x51, 0xe4, 0x93, 0x7d, 0x98,
+	0x42, 0xed, 0x14, 0xe9, 0x26, 0xbe, 0xe9, 0x41, 0x29, 0x4b, 0x8c, 0xd4, 0x5d, 0xf9, 0x7a, 0x5f,
+	0x6d, 0xbc, 0x34, 0xab, 0xb1, 0x69, 0xe8, 0x33, 0x57, 0x2a, 0xde, 0xe6, 0xc1, 0x88, 0x8d, 0x33,
+	0xf9, 0xed, 0x25, 0x0b, 0xfe, 0x02, 0xca, 0x23, 0xc2, 0x7c, 0x3e, 0xa3, 0xc2, 0x99, 0x51, 0x11,
+	0x25, 0x9e, 0xda, 0xd3, 0x51, 0xad, 0x60, 0xdf, 0x5b, 0xc4, 0x4f, 0xd2, 0x30, 0xae, 0x41, 0x99,
+	0x45, 0xce, 0xd8, 0xe7, 0x43, 0xe2, 0x3b, 0xe9, 0xc4, 0xa9, 0xfb, 0x3a, 0xaa, 0x95, 0xec, 0x7d,
+	0x16, 0x3d, 0x97, 0xe1, 0xd4, 0x35, 0x95, 0xaf, 0x61, 0x67, 0x69, 0x1c, 0x5c, 0x86, 0xc2, 0x4b,
+	0x7a, 0x9e, 0x0d, 0x44, 0x72, 0xc4, 0x1f, 0xc1, 0xf6, 0x8c, 0xf8, 0xd3, 0xc5, 0x48, 0xa4, 0x1f,
+	0xdf, 0xe4, 0x9f, 0xa2, 0xaa, 0x09, 0x87, 0xef, 0x68, 0x1d, 0x3f, 0x82, 0xdd, 0x35, 0xad, 0x52,
+	0x5e, 0xc5, 0xbd, 0x56, 0xa9, 0xfa, 0x27, 0x02, 0x65, 0xc5, 0x0c, 0xf8, 0x3b, 0x28, 0x2d, 0x0d,
+	0x84, 0xa4, 0x6a, 0xc6, 0xbb, 0x0c, 0x64, 0x2c, 0x0e, 0xa9, 0xf9, 0x97, 0xf5, 0x15, 0x07, 0xf6,
+	0xd6, 0xa0, 0x0d, 0xbf, 0xf7, 0x74, 0xf5, 0xf7, 0x94, 0x46, 0xf5, 0xce, 0xbb, 0xce, 0x3b, 0xc1,
+	0x88, 0xaf, 0x4a, 0xf0, 0x1b, 0x82, 0xbd, 0x35, 0x10, 0x7f, 0x02, 0x45, 0x41, 0x49, 0xc4, 0x83,
+	0xec, 0x92, 0xec, 0x0b, 0x57, 0xa0, 0xc4, 0x43, 0x2a, 0x48, 0xcc, 0x45, 0xa6, 0xe4, 0xf2, 0x3b,
+	0x99, 0x1b, 0x57, 0x50, 0x12, 0x53, 0xcf, 0x49, 0x16, 0x99, 0x5c, 0x33, 0x4a, 0xa3, 0x72, 0x6b,
+	0x20, 0x07, 0x8b, 0x2d, 0xd7, 0xda, 0x7a, 0x9d, 0x4c, 0xa4, 0x92, 0x55, 0x25, 0xf1, 0xea, 0x4f,
+	0x50, 0x5a, 0x3a, 0xf5, 0xdb, 0xe5, 0xc6, 0x42, 0x72, 0x63, 0x3d, 0xbe, 0xd3, 0xec, 0x37, 0x76,
+	0x56, 0x19, 0x0a, 0x53, 0xc1, 0xb2, 0x26, 0x93, 0xe3, 0x93, 0x57, 0x08, 0x76, 0x57, 0xd7, 0x1b,
+	0x7e, 0x00, 0x1f, 0x9b, 0x3f, 0x7c, 0xdf, 0xec, 0x74, 0x9d, 0xfe, 0xa0, 0x39, 0xf8, 0xb1, 0xef,
+	0x74, 0xba, 0x27, 0xcd, 0xe3, 0x8e, 0x59, 0xce, 0xe1, 0x87, 0xa0, 0xae, 0x43, 0xb6, 0xf5, 0xbc,
+	0xd3, 0x1f, 0x58, 0xb6, 0x65, 0x96, 0xd1, 0x6d, 0xd4, 0xb4, 0x7a, 0xb6, 0xd5, 0x6e, 0x0e, 0x2c,
+	0xb3, 0x9c, 0xbf, 0x4d, 0x6b, 0x5a, 0xc7, 0x56, 0x02, 0x15, 0x9e, 0x9c, 0xc2, 0xfe, 0x7a, 0xbb,
+	0xf8, 0x53, 0xb8, 0xdf, 0xb4, 0xdb, 0x2f, 0x3a, 0x27, 0xcd, 0xe3, 0x8d, 0x5d, 0xdc, 0x04, 0xcd,
+	0x4e, 0xbf, 0xd9, 0x3a, 0x96, 0x5d, 0x6c, 0x28, 0xb5, 0xba, 0x29, 0x98, 0x6f, 0xfd, 0x72, 0x71,
+	0xa9, 0xe5, 0xde, 0x5c, 0x6a, 0xb9, 0xb7, 0x97, 0x1a, 0x7a, 0x35, 0xd7, 0xd0, 0x1f, 0x73, 0x0d,
+	0xfd, 0x3d, 0xd7, 0xd0, 0xc5, 0x5c, 0x43, 0xff, 0xce, 0x35, 0xf4, 0xdf, 0x5c, 0xcb, 0xbd, 0x9d,
+	0x6b, 0xe8, 0xf5, 0x95, 0x96, 0xbb, 0xb8, 0xd2, 0x72, 0x6f, 0xae, 0xb4, 0x1c, 0xdc, 0x77, 0xf9,
+	0x64, 0x93, 0xc8, 0xad, 0x52, 0x33, 0x64, 0xbd, 0xe4, 0x01, 0x7b, 0xe8, 0xe7, 0x6d, 0x12, 0xb2,
+	0xd9, 0xd1, 0xb0, 0x28, 0x1f, 0xf4, 0xcb, 0xff, 0x03, 0x00, 0x00, 0xff, 0xff, 0x56, 0x88, 0xf1,
+	0xdb, 0x1d, 0x07, 0x00, 0x00,
 }
 
 func (x DomainStatus) String() string {
@@ -558,14 +540,14 @@ func (x ArchivalStatus) String() string {
 	}
 	return strconv.Itoa(int(x))
 }
-func (this *DomainInfo) Equal(that interface{}) bool {
+func (this *Domain) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*DomainInfo)
+	that1, ok := that.(*Domain)
 	if !ok {
-		that2, ok := that.(DomainInfo)
+		that2, ok := that.(Domain)
 		if ok {
 			that1 = &that2
 		} else {
@@ -600,27 +582,6 @@ func (this *DomainInfo) Equal(that interface{}) bool {
 			return false
 		}
 	}
-	return true
-}
-func (this *DomainConfiguration) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DomainConfiguration)
-	if !ok {
-		that2, ok := that.(DomainConfiguration)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
 	if this.WorkflowExecutionRetentionPeriod != nil && that1.WorkflowExecutionRetentionPeriod != nil {
 		if *this.WorkflowExecutionRetentionPeriod != *that1.WorkflowExecutionRetentionPeriod {
 			return false
@@ -633,16 +594,27 @@ func (this *DomainConfiguration) Equal(that interface{}) bool {
 	if !this.BadBinaries.Equal(that1.BadBinaries) {
 		return false
 	}
-	if this.HistoryArchivalStatus != that1.HistoryArchivalStatus {
+	if !this.HistoryArchival.Equal(that1.HistoryArchival) {
 		return false
 	}
-	if this.HistoryArchivalUri != that1.HistoryArchivalUri {
+	if !this.VisibilityArchival.Equal(that1.VisibilityArchival) {
 		return false
 	}
-	if this.VisibilityArchivalStatus != that1.VisibilityArchivalStatus {
+	if this.ActiveClusterName != that1.ActiveClusterName {
 		return false
 	}
-	if this.VisibilityArchivalUri != that1.VisibilityArchivalUri {
+	if len(this.Clusters) != len(that1.Clusters) {
+		return false
+	}
+	for i := range this.Clusters {
+		if !this.Clusters[i].Equal(that1.Clusters[i]) {
+			return false
+		}
+	}
+	if this.FailoverVersion != that1.FailoverVersion {
+		return false
+	}
+	if this.IsGlobalDomain != that1.IsGlobalDomain {
 		return false
 	}
 	return true
@@ -668,38 +640,6 @@ func (this *ClusterReplicationConfiguration) Equal(that interface{}) bool {
 	}
 	if this.ClusterName != that1.ClusterName {
 		return false
-	}
-	return true
-}
-func (this *DomainReplicationConfiguration) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DomainReplicationConfiguration)
-	if !ok {
-		that2, ok := that.(DomainReplicationConfiguration)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ActiveClusterName != that1.ActiveClusterName {
-		return false
-	}
-	if len(this.Clusters) != len(that1.Clusters) {
-		return false
-	}
-	for i := range this.Clusters {
-		if !this.Clusters[i].Equal(that1.Clusters[i]) {
-			return false
-		}
 	}
 	return true
 }
@@ -766,12 +706,39 @@ func (this *BadBinaryInfo) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *DomainInfo) GoString() string {
+func (this *Archival) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Archival)
+	if !ok {
+		that2, ok := that.(Archival)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Status != that1.Status {
+		return false
+	}
+	if this.Uri != that1.Uri {
+		return false
+	}
+	return true
+}
+func (this *Domain) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 10)
-	s = append(s, "&apiv1.DomainInfo{")
+	s := make([]string, 0, 18)
+	s = append(s, "&apiv1.Domain{")
 	s = append(s, "Id: "+fmt.Sprintf("%#v", this.Id)+",\n")
 	s = append(s, "Name: "+fmt.Sprintf("%#v", this.Name)+",\n")
 	s = append(s, "Status: "+fmt.Sprintf("%#v", this.Status)+",\n")
@@ -790,23 +757,22 @@ func (this *DomainInfo) GoString() string {
 	if this.Data != nil {
 		s = append(s, "Data: "+mapStringForData+",\n")
 	}
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DomainConfiguration) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&apiv1.DomainConfiguration{")
 	s = append(s, "WorkflowExecutionRetentionPeriod: "+fmt.Sprintf("%#v", this.WorkflowExecutionRetentionPeriod)+",\n")
 	if this.BadBinaries != nil {
 		s = append(s, "BadBinaries: "+fmt.Sprintf("%#v", this.BadBinaries)+",\n")
 	}
-	s = append(s, "HistoryArchivalStatus: "+fmt.Sprintf("%#v", this.HistoryArchivalStatus)+",\n")
-	s = append(s, "HistoryArchivalUri: "+fmt.Sprintf("%#v", this.HistoryArchivalUri)+",\n")
-	s = append(s, "VisibilityArchivalStatus: "+fmt.Sprintf("%#v", this.VisibilityArchivalStatus)+",\n")
-	s = append(s, "VisibilityArchivalUri: "+fmt.Sprintf("%#v", this.VisibilityArchivalUri)+",\n")
+	if this.HistoryArchival != nil {
+		s = append(s, "HistoryArchival: "+fmt.Sprintf("%#v", this.HistoryArchival)+",\n")
+	}
+	if this.VisibilityArchival != nil {
+		s = append(s, "VisibilityArchival: "+fmt.Sprintf("%#v", this.VisibilityArchival)+",\n")
+	}
+	s = append(s, "ActiveClusterName: "+fmt.Sprintf("%#v", this.ActiveClusterName)+",\n")
+	if this.Clusters != nil {
+		s = append(s, "Clusters: "+fmt.Sprintf("%#v", this.Clusters)+",\n")
+	}
+	s = append(s, "FailoverVersion: "+fmt.Sprintf("%#v", this.FailoverVersion)+",\n")
+	s = append(s, "IsGlobalDomain: "+fmt.Sprintf("%#v", this.IsGlobalDomain)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -817,19 +783,6 @@ func (this *ClusterReplicationConfiguration) GoString() string {
 	s := make([]string, 0, 5)
 	s = append(s, "&apiv1.ClusterReplicationConfiguration{")
 	s = append(s, "ClusterName: "+fmt.Sprintf("%#v", this.ClusterName)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DomainReplicationConfiguration) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&apiv1.DomainReplicationConfiguration{")
-	s = append(s, "ActiveClusterName: "+fmt.Sprintf("%#v", this.ActiveClusterName)+",\n")
-	if this.Clusters != nil {
-		s = append(s, "Clusters: "+fmt.Sprintf("%#v", this.Clusters)+",\n")
-	}
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -867,6 +820,17 @@ func (this *BadBinaryInfo) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
+func (this *Archival) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 6)
+	s = append(s, "&apiv1.Archival{")
+	s = append(s, "Status: "+fmt.Sprintf("%#v", this.Status)+",\n")
+	s = append(s, "Uri: "+fmt.Sprintf("%#v", this.Uri)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
 func valueToGoStringDomain(v interface{}, typ string) string {
 	rv := reflect.ValueOf(v)
 	if rv.IsNil() {
@@ -875,7 +839,7 @@ func valueToGoStringDomain(v interface{}, typ string) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
 }
-func (m *DomainInfo) Marshal() (dAtA []byte, err error) {
+func (m *Domain) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -885,16 +849,98 @@ func (m *DomainInfo) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *DomainInfo) MarshalTo(dAtA []byte) (int, error) {
+func (m *Domain) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *DomainInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Domain) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
+	if m.IsGlobalDomain {
+		i--
+		if m.IsGlobalDomain {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x70
+	}
+	if m.FailoverVersion != 0 {
+		i = encodeVarintDomain(dAtA, i, uint64(m.FailoverVersion))
+		i--
+		dAtA[i] = 0x68
+	}
+	if len(m.Clusters) > 0 {
+		for iNdEx := len(m.Clusters) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Clusters[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintDomain(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x62
+		}
+	}
+	if len(m.ActiveClusterName) > 0 {
+		i -= len(m.ActiveClusterName)
+		copy(dAtA[i:], m.ActiveClusterName)
+		i = encodeVarintDomain(dAtA, i, uint64(len(m.ActiveClusterName)))
+		i--
+		dAtA[i] = 0x5a
+	}
+	if m.VisibilityArchival != nil {
+		{
+			size, err := m.VisibilityArchival.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintDomain(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x52
+	}
+	if m.HistoryArchival != nil {
+		{
+			size, err := m.HistoryArchival.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintDomain(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x4a
+	}
+	if m.BadBinaries != nil {
+		{
+			size, err := m.BadBinaries.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintDomain(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x42
+	}
+	if m.WorkflowExecutionRetentionPeriod != nil {
+		n4, err4 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.WorkflowExecutionRetentionPeriod, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.WorkflowExecutionRetentionPeriod):])
+		if err4 != nil {
+			return 0, err4
+		}
+		i -= n4
+		i = encodeVarintDomain(dAtA, i, uint64(n4))
+		i--
+		dAtA[i] = 0x3a
+	}
 	if len(m.Data) > 0 {
 		for k := range m.Data {
 			v := m.Data[k]
@@ -950,75 +996,6 @@ func (m *DomainInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *DomainConfiguration) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *DomainConfiguration) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *DomainConfiguration) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.VisibilityArchivalUri) > 0 {
-		i -= len(m.VisibilityArchivalUri)
-		copy(dAtA[i:], m.VisibilityArchivalUri)
-		i = encodeVarintDomain(dAtA, i, uint64(len(m.VisibilityArchivalUri)))
-		i--
-		dAtA[i] = 0x32
-	}
-	if m.VisibilityArchivalStatus != 0 {
-		i = encodeVarintDomain(dAtA, i, uint64(m.VisibilityArchivalStatus))
-		i--
-		dAtA[i] = 0x28
-	}
-	if len(m.HistoryArchivalUri) > 0 {
-		i -= len(m.HistoryArchivalUri)
-		copy(dAtA[i:], m.HistoryArchivalUri)
-		i = encodeVarintDomain(dAtA, i, uint64(len(m.HistoryArchivalUri)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if m.HistoryArchivalStatus != 0 {
-		i = encodeVarintDomain(dAtA, i, uint64(m.HistoryArchivalStatus))
-		i--
-		dAtA[i] = 0x18
-	}
-	if m.BadBinaries != nil {
-		{
-			size, err := m.BadBinaries.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintDomain(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	if m.WorkflowExecutionRetentionPeriod != nil {
-		n2, err2 := github_com_gogo_protobuf_types.StdDurationMarshalTo(*m.WorkflowExecutionRetentionPeriod, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(*m.WorkflowExecutionRetentionPeriod):])
-		if err2 != nil {
-			return 0, err2
-		}
-		i -= n2
-		i = encodeVarintDomain(dAtA, i, uint64(n2))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
 func (m *ClusterReplicationConfiguration) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -1043,50 +1020,6 @@ func (m *ClusterReplicationConfiguration) MarshalToSizedBuffer(dAtA []byte) (int
 		i -= len(m.ClusterName)
 		copy(dAtA[i:], m.ClusterName)
 		i = encodeVarintDomain(dAtA, i, uint64(len(m.ClusterName)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *DomainReplicationConfiguration) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *DomainReplicationConfiguration) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *DomainReplicationConfiguration) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.Clusters) > 0 {
-		for iNdEx := len(m.Clusters) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Clusters[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintDomain(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x12
-		}
-	}
-	if len(m.ActiveClusterName) > 0 {
-		i -= len(m.ActiveClusterName)
-		copy(dAtA[i:], m.ActiveClusterName)
-		i = encodeVarintDomain(dAtA, i, uint64(len(m.ActiveClusterName)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -1163,12 +1096,12 @@ func (m *BadBinaryInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	var l int
 	_ = l
 	if m.CreatedTime != nil {
-		n4, err4 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.CreatedTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.CreatedTime):])
-		if err4 != nil {
-			return 0, err4
+		n6, err6 := github_com_gogo_protobuf_types.StdTimeMarshalTo(*m.CreatedTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(*m.CreatedTime):])
+		if err6 != nil {
+			return 0, err6
 		}
-		i -= n4
-		i = encodeVarintDomain(dAtA, i, uint64(n4))
+		i -= n6
+		i = encodeVarintDomain(dAtA, i, uint64(n6))
 		i--
 		dAtA[i] = 0x1a
 	}
@@ -1189,6 +1122,41 @@ func (m *BadBinaryInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *Archival) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Archival) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Archival) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Uri) > 0 {
+		i -= len(m.Uri)
+		copy(dAtA[i:], m.Uri)
+		i = encodeVarintDomain(dAtA, i, uint64(len(m.Uri)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Status != 0 {
+		i = encodeVarintDomain(dAtA, i, uint64(m.Status))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintDomain(dAtA []byte, offset int, v uint64) int {
 	offset -= sovDomain(v)
 	base := offset
@@ -1200,7 +1168,7 @@ func encodeVarintDomain(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *DomainInfo) Size() (n int) {
+func (m *Domain) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1233,15 +1201,6 @@ func (m *DomainInfo) Size() (n int) {
 			n += mapEntrySize + 1 + sovDomain(uint64(mapEntrySize))
 		}
 	}
-	return n
-}
-
-func (m *DomainConfiguration) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
 	if m.WorkflowExecutionRetentionPeriod != nil {
 		l = github_com_gogo_protobuf_types.SizeOfStdDuration(*m.WorkflowExecutionRetentionPeriod)
 		n += 1 + l + sovDomain(uint64(l))
@@ -1250,19 +1209,29 @@ func (m *DomainConfiguration) Size() (n int) {
 		l = m.BadBinaries.Size()
 		n += 1 + l + sovDomain(uint64(l))
 	}
-	if m.HistoryArchivalStatus != 0 {
-		n += 1 + sovDomain(uint64(m.HistoryArchivalStatus))
+	if m.HistoryArchival != nil {
+		l = m.HistoryArchival.Size()
+		n += 1 + l + sovDomain(uint64(l))
 	}
-	l = len(m.HistoryArchivalUri)
+	if m.VisibilityArchival != nil {
+		l = m.VisibilityArchival.Size()
+		n += 1 + l + sovDomain(uint64(l))
+	}
+	l = len(m.ActiveClusterName)
 	if l > 0 {
 		n += 1 + l + sovDomain(uint64(l))
 	}
-	if m.VisibilityArchivalStatus != 0 {
-		n += 1 + sovDomain(uint64(m.VisibilityArchivalStatus))
+	if len(m.Clusters) > 0 {
+		for _, e := range m.Clusters {
+			l = e.Size()
+			n += 1 + l + sovDomain(uint64(l))
+		}
 	}
-	l = len(m.VisibilityArchivalUri)
-	if l > 0 {
-		n += 1 + l + sovDomain(uint64(l))
+	if m.FailoverVersion != 0 {
+		n += 1 + sovDomain(uint64(m.FailoverVersion))
+	}
+	if m.IsGlobalDomain {
+		n += 2
 	}
 	return n
 }
@@ -1276,25 +1245,6 @@ func (m *ClusterReplicationConfiguration) Size() (n int) {
 	l = len(m.ClusterName)
 	if l > 0 {
 		n += 1 + l + sovDomain(uint64(l))
-	}
-	return n
-}
-
-func (m *DomainReplicationConfiguration) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.ActiveClusterName)
-	if l > 0 {
-		n += 1 + l + sovDomain(uint64(l))
-	}
-	if len(m.Clusters) > 0 {
-		for _, e := range m.Clusters {
-			l = e.Size()
-			n += 1 + l + sovDomain(uint64(l))
-		}
 	}
 	return n
 }
@@ -1342,16 +1292,37 @@ func (m *BadBinaryInfo) Size() (n int) {
 	return n
 }
 
+func (m *Archival) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Status != 0 {
+		n += 1 + sovDomain(uint64(m.Status))
+	}
+	l = len(m.Uri)
+	if l > 0 {
+		n += 1 + l + sovDomain(uint64(l))
+	}
+	return n
+}
+
 func sovDomain(x uint64) (n int) {
 	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozDomain(x uint64) (n int) {
 	return sovDomain(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (this *DomainInfo) String() string {
+func (this *Domain) String() string {
 	if this == nil {
 		return "nil"
 	}
+	repeatedStringForClusters := "[]*ClusterReplicationConfiguration{"
+	for _, f := range this.Clusters {
+		repeatedStringForClusters += strings.Replace(f.String(), "ClusterReplicationConfiguration", "ClusterReplicationConfiguration", 1) + ","
+	}
+	repeatedStringForClusters += "}"
 	keysForData := make([]string, 0, len(this.Data))
 	for k, _ := range this.Data {
 		keysForData = append(keysForData, k)
@@ -1362,28 +1333,21 @@ func (this *DomainInfo) String() string {
 		mapStringForData += fmt.Sprintf("%v: %v,", k, this.Data[k])
 	}
 	mapStringForData += "}"
-	s := strings.Join([]string{`&DomainInfo{`,
+	s := strings.Join([]string{`&Domain{`,
 		`Id:` + fmt.Sprintf("%v", this.Id) + `,`,
 		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
 		`Status:` + fmt.Sprintf("%v", this.Status) + `,`,
 		`Description:` + fmt.Sprintf("%v", this.Description) + `,`,
 		`OwnerEmail:` + fmt.Sprintf("%v", this.OwnerEmail) + `,`,
 		`Data:` + mapStringForData + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DomainConfiguration) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DomainConfiguration{`,
 		`WorkflowExecutionRetentionPeriod:` + strings.Replace(fmt.Sprintf("%v", this.WorkflowExecutionRetentionPeriod), "Duration", "duration.Duration", 1) + `,`,
 		`BadBinaries:` + strings.Replace(this.BadBinaries.String(), "BadBinaries", "BadBinaries", 1) + `,`,
-		`HistoryArchivalStatus:` + fmt.Sprintf("%v", this.HistoryArchivalStatus) + `,`,
-		`HistoryArchivalUri:` + fmt.Sprintf("%v", this.HistoryArchivalUri) + `,`,
-		`VisibilityArchivalStatus:` + fmt.Sprintf("%v", this.VisibilityArchivalStatus) + `,`,
-		`VisibilityArchivalUri:` + fmt.Sprintf("%v", this.VisibilityArchivalUri) + `,`,
+		`HistoryArchival:` + strings.Replace(this.HistoryArchival.String(), "Archival", "Archival", 1) + `,`,
+		`VisibilityArchival:` + strings.Replace(this.VisibilityArchival.String(), "Archival", "Archival", 1) + `,`,
+		`ActiveClusterName:` + fmt.Sprintf("%v", this.ActiveClusterName) + `,`,
+		`Clusters:` + repeatedStringForClusters + `,`,
+		`FailoverVersion:` + fmt.Sprintf("%v", this.FailoverVersion) + `,`,
+		`IsGlobalDomain:` + fmt.Sprintf("%v", this.IsGlobalDomain) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -1394,22 +1358,6 @@ func (this *ClusterReplicationConfiguration) String() string {
 	}
 	s := strings.Join([]string{`&ClusterReplicationConfiguration{`,
 		`ClusterName:` + fmt.Sprintf("%v", this.ClusterName) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DomainReplicationConfiguration) String() string {
-	if this == nil {
-		return "nil"
-	}
-	repeatedStringForClusters := "[]*ClusterReplicationConfiguration{"
-	for _, f := range this.Clusters {
-		repeatedStringForClusters += strings.Replace(f.String(), "ClusterReplicationConfiguration", "ClusterReplicationConfiguration", 1) + ","
-	}
-	repeatedStringForClusters += "}"
-	s := strings.Join([]string{`&DomainReplicationConfiguration{`,
-		`ActiveClusterName:` + fmt.Sprintf("%v", this.ActiveClusterName) + `,`,
-		`Clusters:` + repeatedStringForClusters + `,`,
 		`}`,
 	}, "")
 	return s
@@ -1446,6 +1394,17 @@ func (this *BadBinaryInfo) String() string {
 	}, "")
 	return s
 }
+func (this *Archival) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Archival{`,
+		`Status:` + fmt.Sprintf("%v", this.Status) + `,`,
+		`Uri:` + fmt.Sprintf("%v", this.Uri) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func valueToStringDomain(v interface{}) string {
 	rv := reflect.ValueOf(v)
 	if rv.IsNil() {
@@ -1454,7 +1413,7 @@ func valueToStringDomain(v interface{}) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("*%v", pv)
 }
-func (m *DomainInfo) Unmarshal(dAtA []byte) error {
+func (m *Domain) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1477,10 +1436,10 @@ func (m *DomainInfo) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: DomainInfo: wiretype end group for non-group")
+			return fmt.Errorf("proto: Domain: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: DomainInfo: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Domain: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1757,60 +1716,7 @@ func (m *DomainInfo) Unmarshal(dAtA []byte) error {
 			}
 			m.Data[mapkey] = mapvalue
 			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipDomain(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthDomain
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthDomain
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *DomainConfiguration) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowDomain
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: DomainConfiguration: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: DomainConfiguration: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
+		case 7:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field WorkflowExecutionRetentionPeriod", wireType)
 			}
@@ -1846,7 +1752,7 @@ func (m *DomainConfiguration) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 2:
+		case 8:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field BadBinaries", wireType)
 			}
@@ -1882,11 +1788,11 @@ func (m *DomainConfiguration) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field HistoryArchivalStatus", wireType)
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field HistoryArchival", wireType)
 			}
-			m.HistoryArchivalStatus = 0
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowDomain
@@ -1896,14 +1802,67 @@ func (m *DomainConfiguration) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.HistoryArchivalStatus |= ArchivalStatus(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-		case 4:
+			if msglen < 0 {
+				return ErrInvalidLengthDomain
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthDomain
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.HistoryArchival == nil {
+				m.HistoryArchival = &Archival{}
+			}
+			if err := m.HistoryArchival.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 10:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field HistoryArchivalUri", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field VisibilityArchival", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDomain
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthDomain
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthDomain
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.VisibilityArchival == nil {
+				m.VisibilityArchival = &Archival{}
+			}
+			if err := m.VisibilityArchival.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 11:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ActiveClusterName", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -1931,32 +1890,13 @@ func (m *DomainConfiguration) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.HistoryArchivalUri = string(dAtA[iNdEx:postIndex])
+			m.ActiveClusterName = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 5:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field VisibilityArchivalStatus", wireType)
-			}
-			m.VisibilityArchivalStatus = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowDomain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.VisibilityArchivalStatus |= ArchivalStatus(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 6:
+		case 12:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field VisibilityArchivalUri", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Clusters", wireType)
 			}
-			var stringLen uint64
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowDomain
@@ -1966,24 +1906,65 @@ func (m *DomainConfiguration) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if msglen < 0 {
 				return ErrInvalidLengthDomain
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return ErrInvalidLengthDomain
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.VisibilityArchivalUri = string(dAtA[iNdEx:postIndex])
+			m.Clusters = append(m.Clusters, &ClusterReplicationConfiguration{})
+			if err := m.Clusters[len(m.Clusters)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
+		case 13:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FailoverVersion", wireType)
+			}
+			m.FailoverVersion = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDomain
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.FailoverVersion |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 14:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IsGlobalDomain", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDomain
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IsGlobalDomain = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipDomain(dAtA[iNdEx:])
@@ -2068,125 +2049,6 @@ func (m *ClusterReplicationConfiguration) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.ClusterName = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipDomain(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthDomain
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthDomain
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *DomainReplicationConfiguration) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowDomain
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: DomainReplicationConfiguration: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: DomainReplicationConfiguration: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ActiveClusterName", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowDomain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthDomain
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthDomain
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ActiveClusterName = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Clusters", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowDomain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthDomain
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthDomain
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Clusters = append(m.Clusters, &ClusterReplicationConfiguration{})
-			if err := m.Clusters[len(m.Clusters)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -2522,6 +2384,110 @@ func (m *BadBinaryInfo) Unmarshal(dAtA []byte) error {
 			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(m.CreatedTime, dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipDomain(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthDomain
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthDomain
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Archival) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowDomain
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Archival: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Archival: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Status", wireType)
+			}
+			m.Status = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDomain
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Status |= ArchivalStatus(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Uri", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowDomain
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthDomain
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthDomain
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Uri = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

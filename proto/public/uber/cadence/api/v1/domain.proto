@@ -32,36 +32,24 @@ import "google/protobuf/timestamp.proto";
 import "dependencies/gogoproto.proto";
 
 message Domain {
-  DomainInfo info = 1;
-  DomainConfiguration configuration = 2;
-  DomainReplicationConfiguration replication_configuration = 3;
-  int64 failover_version = 4;
-  bool is_global_domain = 5;
-}
-
-message DomainInfo {
   string id = 1;
   string name = 2;
   DomainStatus status = 3;
   string description = 4;
   string owner_email = 5;
   map<string, string> data = 6;
-}
-
-message DomainConfiguration {
-  google.protobuf.Duration workflow_execution_retention_period = 1 [(gogoproto.stdduration) = true];
-  BadBinaries bad_binaries = 2;
-  Archival history_archival = 3;
-  Archival visibility_archival = 4;
+  google.protobuf.Duration workflow_execution_retention_period = 7 [(gogoproto.stdduration) = true];
+  BadBinaries bad_binaries = 8;
+  Archival history_archival = 9;
+  Archival visibility_archival = 10;
+  string active_cluster_name = 11;
+  repeated ClusterReplicationConfiguration clusters = 12;
+  int64 failover_version = 13;
+  bool is_global_domain = 14;
 }
 
 message ClusterReplicationConfiguration {
   string cluster_name = 1;
-}
-
-message DomainReplicationConfiguration {
-  string active_cluster_name = 1;
-  repeated ClusterReplicationConfiguration clusters = 2;
 }
 
 message BadBinaries {
