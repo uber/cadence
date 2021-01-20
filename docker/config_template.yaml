@@ -215,8 +215,8 @@ archival:
     enableRead: {{ default .Env.HISTORY_ARCHIVAL_ENABLE_READ "false" }}
     provider:
       filestore:
-        fileMode: {{ default .Env.HISTORY_ARCHIVAL_FILE_MODE }}
-        dirMode: {{ default .Env.HISTORY_ARCHIVAL_DIR_MODE }}
+        fileMode: {{ default .Env.HISTORY_ARCHIVAL_FILE_MODE "" }}
+        dirMode: {{ default .Env.HISTORY_ARCHIVAL_DIR_MODE "" }}
   visibility:
     status: {{ default .Env.VISIBILITY_ARCHIVAL_STATUS "disabled" }}
     enableRead: {{ default .Env.VISIBILITY_ARCHIVAL_ENABLE_READ "false" }}
