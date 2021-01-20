@@ -71,27 +71,6 @@ message RegisterDomainRequest {
 message RegisterDomainResponse {
 }
 
-message DescribeDomainRequest {
-  oneof describe_by {
-    string id = 1;
-    string name = 2;
-  }
-}
-
-message DescribeDomainResponse {
-  Domain domain = 1;
-}
-
-message ListDomainsRequest {
-  int32 page_size = 1;
-  bytes next_page_token = 2;
-}
-
-message ListDomainsResponse {
-  repeated Domain domains = 1;
-  bytes next_page_token = 2;
-}
-
 message UpdateDomainRequest {
   string security_token = 1;
   string name = 2;
@@ -121,4 +100,25 @@ message DeprecateDomainRequest {
 }
 
 message DeprecateDomainResponse {
+}
+
+message DescribeDomainRequest {
+  oneof describe_by {
+    string id = 1;
+    string name = 2;
+  }
+}
+
+message DescribeDomainResponse {
+  Domain domain = 1;
+}
+
+message ListDomainsRequest {
+  int32 page_size = 1;
+  bytes next_page_token = 2;
+}
+
+message ListDomainsResponse {
+  repeated Domain domains = 1;
+  bytes next_page_token = 2;
 }
