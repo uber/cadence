@@ -63,10 +63,8 @@ message RegisterDomainRequest {
   map<string, string> data = 7;
   string security_token = 8;
   bool is_global_domain = 9;
-  ArchivalStatus history_archival_status = 10;
-  string history_archival_uri = 11;
-  ArchivalStatus visibility_archival_status = 12;
-  string visibility_archival_uri = 13;
+  Archival history_archival = 10;
+  Archival visibility_archival = 11;
 }
 
 message RegisterDomainResponse {

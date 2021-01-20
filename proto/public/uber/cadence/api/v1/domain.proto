@@ -43,10 +43,8 @@ message DomainInfo {
 message DomainConfiguration {
   google.protobuf.Duration workflow_execution_retention_period = 1 [(gogoproto.stdduration) = true];
   BadBinaries bad_binaries = 2;
-  ArchivalStatus history_archival_status = 3;
-  string history_archival_uri = 4;
-  ArchivalStatus visibility_archival_status = 5;
-  string visibility_archival_uri = 6;
+  Archival history_archival = 3;
+  Archival visibility_archival = 4;
 }
 
 message ClusterReplicationConfiguration {
@@ -66,6 +64,11 @@ message BadBinaryInfo {
   string reason = 1;
   string operator = 2;
   google.protobuf.Timestamp created_time = 3 [(gogoproto.stdtime) = true];
+}
+
+message Archival {
+  ArchivalStatus status = 1;
+  string uri = 2;
 }
 
 enum DomainStatus {
