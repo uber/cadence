@@ -95,20 +95,16 @@ message ListDomainsResponse {
   bytes next_page_token = 2;
 }
 
-message UpdateDomainInfo {
-  string description = 1;
-  string owner_email = 2;
-  map<string, string> data = 3;
-}
-
 message UpdateDomainRequest {
   string name = 1;
-  UpdateDomainInfo info = 2;
-  DomainConfiguration configuration = 3;
-  DomainReplicationConfiguration replication_configuration = 4;
-  string security_token = 5;
-  string delete_bad_binary = 6;
-  google.protobuf.Duration failover_timeout = 7 [(gogoproto.stdduration) = true];
+  string description = 2;
+  string owner_email = 3;
+  map<string, string> data = 4;
+  DomainConfiguration configuration = 5;
+  DomainReplicationConfiguration replication_configuration = 6;
+  string security_token = 7;
+  string delete_bad_binary = 8;
+  google.protobuf.Duration failover_timeout = 9 [(gogoproto.stdduration) = true];
 }
 
 message UpdateDomainResponse {
