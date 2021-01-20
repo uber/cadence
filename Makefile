@@ -127,7 +127,7 @@ define NEWLINE
 
 endef
 
-proto: proto-lint proto-compile proto-fix-path proto-fix-imports proto-go-imports copyright
+proto: proto-lint proto-compile proto-go-imports copyright
 
 PROTO_ROOT := proto
 PROTO_OUT := .gen/proto
@@ -142,20 +142,10 @@ proto-compile:
 	$(foreach PROTO_DIR, $(PROTO_DIRS), \
 		protoc \
 			-I=$(PROTO_ROOT)/public -I=$(PROTO_ROOT)/internal \
-			--gogoslick_out=Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,plugins=grpc,paths=source_relative:$(PROTO_OUT) \
+			--go_out=plugins=grpc:. \
+			--go_opt=module=$(PROJECT_ROOT) \
 			$(PROTO_DIR)*.proto \
 		$(NEWLINE))
-
-# Proto compiler puts generated files based on proto package.
-# As all proto package have uber.cadence prefix, this make final package to be:
-# github.com/uber/cadence/.gen/proto/uber/cadence/<package>
-# Next two fixes removes extra uber/cadence within file path and fixes import paths accordingly.
-
-proto-fix-path:
-	cp -r $(PROTO_OUT)/uber/cadence/* $(PROTO_OUT) && rm -rf $(PROTO_OUT)/uber
-
-proto-fix-imports:
-	find ./$(PROTO_OUT) -name "*.pb.go" | xargs sed -i '' -e 's;"uber/cadence;"$(PROJECT_ROOT)/$(PROTO_OUT);g'
 
 proto-go-imports:
 	goimports -w $(PROTO_OUT)
