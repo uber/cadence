@@ -28,6 +28,7 @@ option java_outer_classname = "ApiProto";
 option java_package = "com.uber.cadence.api.v1";
 
 import "google/protobuf/duration.proto";
+import "google/protobuf/field_mask.proto";
 import "dependencies/gogoproto.proto";
 import "uber/cadence/api/v1/domain.proto";
 
@@ -94,13 +95,16 @@ message ListDomainsResponse {
 message UpdateDomainRequest {
   string security_token = 1;
   string name = 2;
-  string description = 3;
-  string owner_email = 4;
-  map<string, string> data = 5;
-  DomainConfiguration configuration = 6;
-  DomainReplicationConfiguration replication_configuration = 7;
-  string delete_bad_binary = 8;
-  google.protobuf.Duration failover_timeout = 9 [(gogoproto.stdduration) = true];
+
+  // Below are the fields that can be updated if specified by update_mask.
+  google.protobuf.FieldMask update_mask = 10;
+  string description = 11;
+  string owner_email = 12;
+  map<string, string> data = 13;
+  DomainConfiguration configuration = 14;
+  DomainReplicationConfiguration replication_configuration = 15;
+  string delete_bad_binary = 16;
+  google.protobuf.Duration failover_timeout = 17 [(gogoproto.stdduration) = true];
 }
 
 message UpdateDomainResponse {
