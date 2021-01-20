@@ -211,28 +211,28 @@ dcRedirectionPolicy:
 
 archival:
   history:
-    status: {{ default .Env.HISTORY_ARCHIVAL "disabled" }}
-    enableRead: true
+    status: {{ default .Env.HISTORY_ARCHIVAL_STATUS "disabled" }}
+    enableRead: {{ default .Env.HISTORY_ARCHIVAL_ENABLE_READ "false" }}
     provider:
       filestore:
-        fileMode: "0666"
-        dirMode: "0766"
+        fileMode: {{ default .Env.HISTORY_ARCHIVAL_FILE_MODE }}
+        dirMode: {{ default .Env.HISTORY_ARCHIVAL_DIR_MODE }}
   visibility:
-    status: {{ default .Env.VISIBILITY_ARCHIVAL "disabled" }}
-    enableRead: true
+    status: {{ default .Env.VISIBILITY_ARCHIVAL_STATUS "disabled" }}
+    enableRead: {{ default .Env.VISIBILITY_ARCHIVAL_ENABLE_READ "false" }}
     provider:
       filestore:
-        fileMode: "0666"
-        dirMode: "0766"
+        fileMode: {{ default .Env.VISIBILITY_ARCHIVAL_FILE_MODE "" }}
+        dirMode: {{ default .Env.VISIBILITY_ARCHIVAL_DIR_MODE "" }}
 
 domainDefaults:
   archival:
     history:
-      status: {{ default .Env.HISTORY_ARCHIVAL "disabled" }}
-      URI: "file:///tmp/cadence_archival/development"
+      status: {{ default .Env.DOMAIN_DEFAULTS_HISTORY_ARCHIVAL_STATUS "disabled" }}
+      URI: {{ default .Env.DOMAIN_DEFAULTS_HISTORY_ARCHIVAL_URI "" }}
     visibility:
-      status: {{ default .Env.VISIBILITY_ARCHIVAL "disabled" }}
-      URI: "file:///tmp/cadence_vis_archival/development"
+      status: {{ default .Env.DOMAIN_DEFAULTS_VISIBILITY_ARCHIVAL_STATUS "disabled" }}
+      URI: {{ default .Env.DOMAIN_DEFAULTS_VISIBILITY_ARCHIVAL_URI "" }}
 
 kafka:
     tls:
@@ -260,4 +260,4 @@ dynamicConfigClient:
 
 blobstore:
   filestore:
-    outputDirectory: {{ default .Env.FILE_BLOB_STORE_OUTPUT_DIRECTYORY "/tmp/blobstore" }}
+    outputDirectory: {{ default .Env.FILE_BLOB_STORE_OUTPUT_DIRECTYORY "" }}
