@@ -22,7 +22,6 @@ package config
 
 import (
 	"errors"
-
 	"github.com/uber/cadence/common"
 )
 
@@ -50,6 +49,6 @@ func isArchivalConfigValid(
 	URISet := len(domianDefaultURI) != 0
 
 	validEnable := archivalEnabled && URISet && specifiedProvider
-	validDisabled := !archivalEnabled && !enableRead && domainDefaultStatus != common.ArchivalEnabled && !URISet && !specifiedProvider
+	validDisabled := !archivalEnabled && !enableRead && domainDefaultStatus != common.ArchivalEnabled && !URISet
 	return validEnable || validDisabled
 }
