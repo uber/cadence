@@ -31,6 +31,14 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "dependencies/gogoproto.proto";
 
+message Domain {
+  DomainInfo info = 1;
+  DomainConfiguration configuration = 2;
+  DomainReplicationConfiguration replication_configuration = 3;
+  int64 failover_version = 4;
+  bool is_global_domain = 5;
+}
+
 message DomainInfo {
   string id = 1;
   string name = 2;

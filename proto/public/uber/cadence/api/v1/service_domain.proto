@@ -78,11 +78,7 @@ message DescribeDomainRequest {
 }
 
 message DescribeDomainResponse {
-  DomainInfo info = 1;
-  DomainConfiguration configuration = 2;
-  DomainReplicationConfiguration replication_configuration = 3;
-  int64 failover_version = 4;
-  bool is_global_domain = 5;
+  Domain domain = 1;
 }
 
 message ListDomainsRequest {
@@ -91,7 +87,7 @@ message ListDomainsRequest {
 }
 
 message ListDomainsResponse {
-  repeated DescribeDomainResponse domains = 1;
+  repeated Domain domains = 1;
   bytes next_page_token = 2;
 }
 
@@ -108,11 +104,7 @@ message UpdateDomainRequest {
 }
 
 message UpdateDomainResponse {
-  DomainInfo info = 1;
-  DomainConfiguration configuration = 2;
-  DomainReplicationConfiguration replication_configuration = 3;
-  int64 failover_version = 4;
-  bool is_global_domain = 5;
+  Domain domain = 1;
 }
 
 message DeprecateDomainRequest {
