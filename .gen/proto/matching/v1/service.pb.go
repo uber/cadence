@@ -27,9 +27,6 @@
 package matchingv1
 
 import (
-	reflect "reflect"
-	sync "sync"
-
 	proto "github.com/golang/protobuf/proto"
 	v1 "github.com/uber/cadence/.gen/proto/api/v1"
 	v11 "github.com/uber/cadence/.gen/proto/shared/v1"
@@ -37,6 +34,8 @@ import (
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	reflect "reflect"
+	sync "sync"
 )
 
 const (
