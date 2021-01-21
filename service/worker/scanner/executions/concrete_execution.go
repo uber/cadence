@@ -47,6 +47,7 @@ const (
 
 	// ConcreteExecutionsFixerWFTypeName defines workflow type name for concrete executions fixer
 	ConcreteExecutionsFixerWFTypeName   = "cadence-sys-executions-fixer-workflow"
+	concreteExecutionsFixerWFID         = "cadence-sys-executions-fixer"
 	concreteExecutionsFixerTaskListName = "cadence-sys-executions-fixer-tasklist-0"
 )
 
@@ -173,10 +174,16 @@ func ConcreteExecutionScannerConfig(dc *dynamicconfig.Collection) *shardscanner.
 		DynamicCollection: dc,
 		ScannerHooks:      ConcreteExecutionHooks,
 		FixerHooks:        ConcreteExecutionFixerHooks,
-		FixerTLName:       concreteExecutionsFixerTaskListName,
 		StartWorkflowOptions: cclient.StartWorkflowOptions{
 			ID:                           concreteExecutionsScannerWFID,
 			TaskList:                     concreteExecutionsScannerTaskListName,
+			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
+			WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
+			CronSchedule:                 "* * * * *",
+		},
+		StartFixerOptions: cclient.StartWorkflowOptions{
+			ID:                           concreteExecutionsFixerWFID,
+			TaskList:                     concreteExecutionsFixerTaskListName,
 			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
 			WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
 			CronSchedule:                 "* * * * *",

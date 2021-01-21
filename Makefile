@@ -127,35 +127,60 @@ define NEWLINE
 
 endef
 
-proto: proto-lint proto-compile proto-fix-path proto-fix-imports proto-go-imports copyright
+proto: proto-lint proto-compile proto-go-imports copyright
 
 PROTO_ROOT := proto
 PROTO_OUT := .gen/proto
 PROTO_FILES = $(shell find ./$(PROTO_ROOT) -name "*.proto" | grep -v "persistenceblobs")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 
-proto-lint:
+BUILD_BIN = .build/bin
+$(BUILD_BIN):
+	mkdir -p $(BUILD_BIN)
+
+OS = $(shell uname -s)
+ARCH = $(shell uname -m)
+
+# https://docs.buf.build/
+BUF_BIN = $(BUILD_BIN)/buf
+BUF_VERSION = 0.36.0
+BUF_URL = https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-$(OS)-$(ARCH)
+$(BUF_BIN): | $(BUILD_BIN)
+	@echo "Getting buf $(BUF_VERSION)"
+	curl -sSL $(BUF_URL) -o $(BUF_BIN)
+	chmod +x $(BUF_BIN)
+
+# https://www.grpc.io/docs/languages/go/quickstart/
+PROTOC_BIN = $(BUILD_BIN)/protoc
+PROTOC_VERSION = 3.14.0
+PROTOC_GEN_GO_VERSION = 1.25.0
+PROTOC_GEN_GO_GRPC_VERSION = 1.1.0
+PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(subst Darwin,osx,$(OS))-$(ARCH).zip
+$(PROTOC_BIN): | $(BUILD_BIN)
+	@echo "Getting protoc $(PROTOC_VERSION)"
+	curl -sSL $(PROTOC_URL) -o $(PROTOC_BIN).zip
+	unzip $(PROTOC_BIN).zip -d $(PROTOC_BIN)-files
+	cp $(PROTOC_BIN)-files/bin/protoc $(PROTOC_BIN)
+	rm $(PROTOC_BIN).zip
+
+proto-lint: $(BUF_BIN)
 	cd $(PROTO_ROOT) && buf check lint
 
-proto-compile:
+proto-compile: $(PROTOC_BIN)
+	GOOS= GOARCH= gobin -mod=readonly google.golang.org/protobuf/cmd/protoc-gen-go@v$(PROTOC_GEN_GO_VERSION)
+	GOOS= GOARCH= gobin -mod=readonly google.golang.org/grpc/cmd/protoc-gen-go-grpc@v$(PROTOC_GEN_GO_GRPC_VERSION)
 	mkdir -p $(PROTO_OUT)
 	$(foreach PROTO_DIR, $(PROTO_DIRS), \
-		protoc \
-			-I=$(PROTO_ROOT)/public -I=$(PROTO_ROOT)/internal \
-			--gogoslick_out=Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,plugins=grpc,paths=source_relative:$(PROTO_OUT) \
+		$(PROTOC_BIN) \
+			-I=$(PROTO_ROOT)/public \
+			-I=$(PROTO_ROOT)/internal \
+			-I=$(PROTOC_BIN)-files/include \
+			--go_out=. \
+			--go_opt=module=$(PROJECT_ROOT) \
+			--go-grpc_out=. \
+			--go-grpc_opt=module=$(PROJECT_ROOT) \
 			$(PROTO_DIR)*.proto \
 		$(NEWLINE))
-
-# Proto compiler puts generated files based on proto package.
-# As all proto package have uber.cadence prefix, this make final package to be:
-# github.com/uber/cadence/.gen/proto/uber/cadence/<package>
-# Next two fixes removes extra uber/cadence within file path and fixes import paths accordingly.
-
-proto-fix-path:
-	cp -r $(PROTO_OUT)/uber/cadence/* $(PROTO_OUT) && rm -rf $(PROTO_OUT)/uber
-
-proto-fix-imports:
-	find ./$(PROTO_OUT) -name "*.pb.go" | xargs sed -i '' -e 's;"uber/cadence;"$(PROJECT_ROOT)/$(PROTO_OUT);g'
 
 proto-go-imports:
 	goimports -w $(PROTO_OUT)

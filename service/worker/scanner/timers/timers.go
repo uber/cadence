@@ -50,6 +50,7 @@ const (
 	// FixerWFTypeName defines workflow type name for timers fixer
 	FixerWFTypeName   = "cadence-sys-timers-fixer-workflow"
 	fixerTaskListName = "cadence-sys-timers-fixer-tasklist-0"
+	fixerwfid         = "cadence-sys-timers-fixer"
 	periodStartKey    = "period_start"
 	periodEndKey      = "period_end"
 
@@ -183,10 +184,17 @@ func ScannerConfig(dc *dynamicconfig.Collection) *shardscanner.ScannerConfig {
 		DynamicCollection: dc,
 		ScannerHooks:      ScannerHooks,
 		FixerHooks:        FixerHooks,
-		FixerTLName:       fixerTaskListName,
+
 		StartWorkflowOptions: client.StartWorkflowOptions{
 			ID:                           wfid,
 			TaskList:                     scannerTaskListName,
+			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
+			WorkflowIDReusePolicy:        client.WorkflowIDReusePolicyAllowDuplicate,
+			CronSchedule:                 "* * * * *",
+		},
+		StartFixerOptions: client.StartWorkflowOptions{
+			ID:                           fixerwfid,
+			TaskList:                     fixerTaskListName,
 			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
 			WorkflowIDReusePolicy:        client.WorkflowIDReusePolicyAllowDuplicate,
 			CronSchedule:                 "* * * * *",

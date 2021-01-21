@@ -22,14 +22,13 @@ syntax = "proto3";
 
 package uber.cadence.api.v1;
 
-option go_package = "apiv1";
+option go_package = "github.com/uber/cadence/.gen/proto/api/v1;apiv1";
 option java_multiple_files = true;
 option java_outer_classname = "ApiProto";
 option java_package = "com.uber.cadence.api.v1";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/field_mask.proto";
-import "dependencies/gogoproto.proto";
 import "uber/cadence/api/v1/domain.proto";
 
 service DomainAPI {
@@ -59,7 +58,7 @@ message RegisterDomainRequest {
   string name = 2;
   string description = 3;
   string owner_email = 4;
-  google.protobuf.Duration workflow_execution_retention_period = 5 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration workflow_execution_retention_period = 5;
   repeated ClusterReplicationConfiguration clusters = 6;
   string active_cluster_name = 7;
   map<string, string> data = 8;
@@ -80,14 +79,14 @@ message UpdateDomainRequest {
   string description = 11;
   string owner_email = 12;
   map<string, string> data = 13;
-  google.protobuf.Duration workflow_execution_retention_period = 14 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration workflow_execution_retention_period = 14;
   BadBinaries bad_binaries = 15;
   Archival history_archival = 16;
   Archival visibility_archival = 17;
   string active_cluster_name = 18;
   repeated ClusterReplicationConfiguration clusters = 19;
   string delete_bad_binary = 20;
-  google.protobuf.Duration failover_timeout = 21 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration failover_timeout = 21;
 }
 
 message UpdateDomainResponse {

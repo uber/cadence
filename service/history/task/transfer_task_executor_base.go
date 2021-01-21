@@ -196,14 +196,12 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 	searchAttributes map[string][]byte,
 ) error {
 
-	domain := defaultDomainName
-	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
+	domain, err := t.shard.GetDomainCache().GetDomainName(domainID)
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			return err
 		}
-	} else {
-		domain = domainEntry.GetInfo().Name
+		domain = defaultDomainName
 	}
 
 	request := &persistence.UpsertWorkflowExecutionRequest{

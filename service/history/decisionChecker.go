@@ -558,11 +558,11 @@ func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes
 		return &types.BadRequestError{Message: "BackoffStartInterval is less than 0."}
 	}
 
-	domainEntry, err := v.domainCache.GetDomainByID(executionInfo.DomainID)
+	domainName, err := v.domainCache.GetDomainName(executionInfo.DomainID)
 	if err != nil {
 		return err
 	}
-	return v.searchAttributesValidator.ValidateSearchAttributes(attributes.GetSearchAttributes(), domainEntry.GetInfo().Name)
+	return v.searchAttributesValidator.ValidateSearchAttributes(attributes.GetSearchAttributes(), domainName)
 }
 
 func (v *decisionAttrValidator) validateStartChildExecutionAttributes(

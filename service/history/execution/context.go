@@ -204,11 +204,11 @@ func (c *contextImpl) GetExecution() *types.WorkflowExecution {
 }
 
 func (c *contextImpl) GetDomainName() string {
-	domainEntry, err := c.shard.GetDomainCache().GetDomainByID(c.domainID)
+	domainName, err := c.shard.GetDomainCache().GetDomainName(c.domainID)
 	if err != nil {
 		return ""
 	}
-	return domainEntry.GetInfo().Name
+	return domainName
 }
 
 func (c *contextImpl) GetHistorySize() int64 {
