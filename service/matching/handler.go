@@ -392,9 +392,9 @@ func (h *handlerImpl) ListTaskListPartitions(
 }
 
 func (h *handlerImpl) domainName(id string) string {
-	entry, err := h.GetDomainCache().GetDomainByID(id)
+	domainName, err := h.GetDomainCache().GetDomainName(id)
 	if err != nil {
 		return ""
 	}
-	return entry.GetInfo().Name
+	return domainName
 }
