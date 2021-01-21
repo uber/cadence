@@ -40,8 +40,8 @@ import (
 )
 
 const (
-	// CurrentExecutionsScannerWFID is the current execution scanner workflow ID
-	CurrentExecutionsScannerWFID = "cadence-sys-current-executions-scanner"
+	// currentExecutionsScannerWFID is the current execution scanner workflow ID
+	currentExecutionsScannerWFID = "cadence-sys-current-executions-scanner"
 	// CurrentExecutionsScannerWFTypeName is the current execution scanner workflow type
 	CurrentExecutionsScannerWFTypeName = "cadence-sys-current-executions-scanner-workflow"
 	// CurrentExecutionsScannerTaskListName is the current execution scanner workflow tasklist
@@ -49,6 +49,7 @@ const (
 
 	// CurrentExecutionsFixerWFTypeName is the current execution fixer workflow ID
 	CurrentExecutionsFixerWFTypeName = "cadence-sys-current-executions-fixer-workflow"
+	currentExecutionsFixerWFID       = "cadence-sys-current-executions-fixer"
 	// CurrentExecutionsFixerTaskListName is the current execution fixer workflow tasklist
 	CurrentExecutionsFixerTaskListName = "cadence-sys-current-executions-fixer-tasklist-0"
 )
@@ -144,10 +145,16 @@ func CurrentExecutionScannerConfig(dc *dynamicconfig.Collection) *shardscanner.S
 		},
 		ScannerHooks: CurrentExecutionsHooks,
 		FixerHooks:   CurrentExecutionFixerHooks,
-		FixerTLName:  CurrentExecutionsFixerTaskListName,
 		StartWorkflowOptions: cclient.StartWorkflowOptions{
-			ID:                           CurrentExecutionsScannerWFID,
+			ID:                           currentExecutionsScannerWFID,
 			TaskList:                     CurrentExecutionsScannerTaskListName,
+			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
+			WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
+			CronSchedule:                 "* * * * *",
+		},
+		StartFixerOptions: cclient.StartWorkflowOptions{
+			ID:                           currentExecutionsFixerWFID,
+			TaskList:                     CurrentExecutionsFixerTaskListName,
 			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
 			WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
 			CronSchedule:                 "* * * * *",

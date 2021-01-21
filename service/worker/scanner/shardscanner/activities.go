@@ -25,6 +25,8 @@ package shardscanner
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"time"
 
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/.gen/go/shared"
@@ -179,6 +181,30 @@ func FixerCorruptedKeysActivity(
 ) (*FixerCorruptedKeysActivityResult, error) {
 	resource := activityCtx.Value(params.ContextKey).(FixerContext).Resource
 	client := resource.GetSDKClient()
+	if params.ScannerWorkflowRunID == "" {
+		listResp, err := client.ListClosedWorkflowExecutions(activityCtx, &shared.ListClosedWorkflowExecutionsRequest{
+			Domain:          c.StringPtr(c.SystemLocalDomainName),
+			MaximumPageSize: c.Int32Ptr(1),
+			NextPageToken:   nil,
+			StartTimeFilter: &shared.StartTimeFilter{
+				EarliestTime: c.Int64Ptr(0),
+				LatestTime:   c.Int64Ptr(time.Now().UnixNano()),
+			},
+			ExecutionFilter: &shared.WorkflowExecutionFilter{
+				WorkflowId: c.StringPtr(params.ScannerWorkflowWorkflowID),
+			},
+			StatusFilter: shared.WorkflowExecutionCloseStatusCompleted.Ptr(),
+		})
+		if err != nil {
+			return nil, err
+		}
+		if len(listResp.Executions) != 1 {
+			return nil, errors.New("got unexpected number of executions back from list")
+		}
+
+		params.ScannerWorkflowRunID = *listResp.Executions[0].Execution.RunId
+	}
+
 	descResp, err := client.DescribeWorkflowExecution(activityCtx, &shared.DescribeWorkflowExecutionRequest{
 		Domain: c.StringPtr(c.SystemLocalDomainName),
 		Execution: &shared.WorkflowExecution{

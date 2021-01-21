@@ -26,7 +26,9 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
+	"github.com/pborman/uuid"
 	"github.com/uber-go/tally"
 
 	"github.com/golang/mock/gomock"
@@ -75,7 +77,10 @@ func (s *activitiesSuite) SetupSuite() {
 func (s *activitiesSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 	s.mockResource = resource.NewTest(s.controller, metrics.Worker)
-	defer s.controller.Finish()
+}
+
+func (s *activitiesSuite) TearDownTest() {
+	s.controller.Finish()
 }
 
 func (s *activitiesSuite) TestScanShardActivity() {
@@ -414,7 +419,26 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
 		},
 	}
 	queryResultData, err := json.Marshal(queryResult)
+	response := &shared.ListClosedWorkflowExecutionsResponse{
+		Executions: []*shared.WorkflowExecutionInfo{
+			{
+				Execution: &shared.WorkflowExecution{
+					WorkflowId: common.StringPtr("test-list-workflow-id"),
+					RunId:      common.StringPtr(uuid.New()),
+				},
+				Type: &shared.WorkflowType{
+					Name: common.StringPtr("test-list-workflow-type"),
+				},
+				StartTime:     common.Int64Ptr(time.Now().UnixNano()),
+				CloseTime:     common.Int64Ptr(time.Now().Add(time.Hour).UnixNano()),
+				CloseStatus:   shared.WorkflowExecutionCloseStatusCompleted.Ptr(),
+				HistoryLength: common.Int64Ptr(12),
+			},
+		},
+	}
 	s.NoError(err)
+	s.mockResource.SDKClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return(response, nil)
+
 	s.mockResource.SDKClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(&shared.QueryWorkflowResponse{
 		QueryResult: queryResultData,
 	}, nil)
