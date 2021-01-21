@@ -41,7 +41,7 @@ const (
  WHERE shard_id = ? AND domain_id = ? AND workflow_id = ? AND run_id = ?`
 
 	listExecutionQuery = `SELECT ` + executionsColumns + ` FROM executions
- WHERE shard_id = ? AND workflow_id > ? AND run_id > ? ORDER BY workflow_id, run_id LIMIT ?`
+ WHERE shard_id = ? AND workflow_id > ? ORDER BY workflow_id LIMIT ?`
 
 	deleteExecutionQuery = `DELETE FROM executions 
  WHERE shard_id = ? AND domain_id = ? AND workflow_id = ? AND run_id = ?`
@@ -173,11 +173,12 @@ func (mdb *db) UpdateExecutions(ctx context.Context, row *sqlplugin.ExecutionsRo
 }
 
 // SelectFromExecutions reads a single row from executions table
+// The list execution query result is order by workflow ID only. It may returns duplicate record with pagination.
 func (mdb *db) SelectFromExecutions(ctx context.Context, filter *sqlplugin.ExecutionsFilter) ([]sqlplugin.ExecutionsRow, error) {
 	var rows []sqlplugin.ExecutionsRow
 	var err error
 	if len(filter.DomainID) == 0 && filter.Size > 0 {
-		err = mdb.conn.SelectContext(ctx, &rows, listExecutionQuery, filter.ShardID, filter.WorkflowID, filter.RunID, filter.Size)
+		err = mdb.conn.SelectContext(ctx, &rows, listExecutionQuery, filter.ShardID, filter.WorkflowID, filter.Size)
 		if err != nil {
 			return nil, err
 		}
