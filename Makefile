@@ -96,6 +96,8 @@ $(BIN)/protoc: | $(BIN)
 	cp $(BIN)/protoc-zip/bin/protoc $(BIN)/protoc
 	rm $(BIN)/protoc.zip
 
+# any generated file - they all depend on each other / are generated at once, so any will work
+PROTO_GEN_SRC = .gen/proto/admin/v1/service.pb.go
 
 THRIFT_GENDIR=.gen/go
 THRIFT_SRCS := $(shell find idls -name '*.thrift')
@@ -115,10 +117,10 @@ $(THRIFT_GEN_SRC): $(THRIFT_SRCS) $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc
 		--no-recurse \
 		idls/thrift/$(strip $(basename $(notdir $@))).thrift
 
-# Automatically gather all srcs.
-# Works by ignoring everything in the parens (and does not descend into matching folders) due to `-prune`,
+# automatically gather all srcs that currently exist.
+# works by ignoring everything in the parens (and does not descend into matching folders) due to `-prune`,
 # and everything else goes to the other side of the `-o` branch, which is `-print`ed.
-# This is dramatically faster than a `find . | grep -v vendor` pipeline.
+# this is dramatically faster than a `find . | grep -v vendor` pipeline, and scales far better.
 FRESH_ALL_SRC = $(shell \
 	find . \
 	\( \
@@ -135,8 +137,10 @@ FRESH_ALL_SRC = $(shell \
 # if you require a fully up-to-date list, use FRESH_ALL_SRC instead.
 ALL_SRC := $(FRESH_ALL_SRC)
 
-# make sure a sentinel thrift-generated file is in ALL_SRC, so thrift is (re)generated if necessary
-ALL_SRC += $(sort $(THRIFT_GEN_SRC))
+# make sure sentinel thrift-generated + proto-generated files are in ALL_SRC, so they are (re)generated if necessary
+ALL_SRC += $(THRIFT_GEN_SRC)
+ALL_SRC += $(PROTO_GEN_SRC)
+ALL_SRC := $(sort $(ALL_SRC)) # dedup
 LINT_SRC := $(filter-out %_test.go ./.gen/%, $(ALL_SRC))
 # all directories with *_test.go files in them (exclude host/xdc)
 TEST_DIRS := $(filter-out $(INTEG_TEST_XDC_ROOT)%, $(sort $(dir $(filter %_test.go,$(ALL_SRC)))))
@@ -189,21 +193,21 @@ proto-lint: $(BIN)/buf
 # includes the well-known protobuf types, e.g. timestamp, wrappers, and the language meta-definition for extensions.
 # they're part of the protoc zip, and "normally" are installed globally and found implicitly.
 # since they're in an abnormal location, passing that path explicitly lets protoc find them.
-proto-compile: $(BIN)/protoc $(BIN)/protoc-gen-go $(BIN)/protoc-gen-go-grpc
+$(PROTO_GEN_SRC): $(BIN)/protoc $(BIN)/protoc-gen-go $(BIN)/protoc-gen-go-grpc $(PROTO_FILES)
 	@mkdir -p $(PROTO_OUT)
-	$(foreach PROTO_DIR, $(PROTO_DIRS), \
-		$(BIN)/protoc \
-			--plugin $(BIN)/protoc-gen-go \
-			--plugin $(BIN)/protoc-gen-go-grpc \
-			-I=$(PROTO_ROOT)/public \
-			-I=$(PROTO_ROOT)/internal \
-			-I=$(BIN)/protoc-zip/include \
-			--go_out=. \
-			--go_opt=module=$(PROJECT_ROOT) \
-			--go-grpc_out=. \
-			--go-grpc_opt=module=$(PROJECT_ROOT) \
-			$(PROTO_DIR)*.proto \
-		$(NEWLINE))
+	$(BIN)/protoc \
+		--plugin $(BIN)/protoc-gen-go \
+		--plugin $(BIN)/protoc-gen-go-grpc \
+		-I=$(PROTO_ROOT)/public \
+		-I=$(PROTO_ROOT)/internal \
+		-I=$(BIN)/protoc-zip/include \
+		--go_out=. \
+		--go_opt=module=$(PROJECT_ROOT) \
+		--go-grpc_out=. \
+		--go-grpc_opt=module=$(PROJECT_ROOT) \
+		$$(find $(PROTO_DIRS) -name '*.proto')
+
+proto-compile: $(PROTO_GEN_SRC)
 
 copyright: $(BIN)/copyright
 	$(BIN)/copyright --verifyOnly
