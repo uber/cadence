@@ -173,6 +173,7 @@ func (mdb *db) UpdateExecutions(ctx context.Context, row *sqlplugin.ExecutionsRo
 }
 
 // SelectFromExecutions reads a single row from executions table
+// The list execution query result is order by workflow ID only. It may returns duplicate record with pagination.
 func (mdb *db) SelectFromExecutions(ctx context.Context, filter *sqlplugin.ExecutionsFilter) ([]sqlplugin.ExecutionsRow, error) {
 	var rows []sqlplugin.ExecutionsRow
 	var err error

@@ -264,6 +264,9 @@ type taskListPageToken struct {
 	TaskType int64
 }
 
+// ListTaskList lists tasklist from DB
+// DomainID translates into byte array in SQL. The minUUID is not the minimum byte array.
+// This API could return incomplete result set.
 func (m *sqlTaskManager) ListTaskList(
 	ctx context.Context,
 	request *persistence.ListTaskListRequest,
