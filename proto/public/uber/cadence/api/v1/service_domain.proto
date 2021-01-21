@@ -1,0 +1,130 @@
+// Copyright (c) 2020 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package uber.cadence.api.v1;
+
+option go_package = "apiv1";
+option java_multiple_files = true;
+option java_outer_classname = "ApiProto";
+option java_package = "com.uber.cadence.api.v1";
+
+import "google/protobuf/duration.proto";
+import "dependencies/gogoproto.proto";
+import "uber/cadence/api/v1/domain.proto";
+
+service DomainAPI {
+  // RegisterDomain creates a new domain which can be used as a container for all resources.  Domain is a top level
+  // entity within Cadence, used as a container for all resources like workflow executions, task lists, etc.  Domain
+  // acts as a sandbox and provides isolation for all resources within the domain.  All resources belongs to exactly one
+  // domain.
+  rpc RegisterDomain(RegisterDomainRequest) returns (RegisterDomainResponse);
+
+  // DescribeDomain returns the information and configuration for a registered domain.
+  rpc DescribeDomain(DescribeDomainRequest) returns (DescribeDomainResponse);
+
+  // ListDomains returns the information and configuration for all domains.
+  rpc ListDomains(ListDomainsRequest) returns (ListDomainsResponse);
+
+  // UpdateDomain is used to update the information and configuration for a registered domain.
+  rpc UpdateDomain(UpdateDomainRequest) returns (UpdateDomainResponse);
+
+  // DeprecateDomain us used to update status of a registered domain to DEPRECATED.  Once the domain is deprecated
+  // it cannot be used to start new workflow executions.  Existing workflow executions will continue to run on
+  // deprecated domains.
+  rpc DeprecateDomain(DeprecateDomainRequest) returns (DeprecateDomainResponse);
+}
+
+message RegisterDomainRequest {
+  string name = 1;
+  string description = 2;
+  string owner_email = 3;
+  google.protobuf.Duration workflow_execution_retention_period = 4 [(gogoproto.stdduration) = true];
+  repeated ClusterReplicationConfiguration clusters = 5;
+  string active_cluster_name = 6;
+  map<string, string> data = 7;
+  string security_token = 8;
+  bool is_global_domain = 9;
+  ArchivalStatus history_archival_status = 10;
+  string history_archival_uri = 11;
+  ArchivalStatus visibility_archival_status = 12;
+  string visibility_archival_uri = 13;
+}
+
+message RegisterDomainResponse {
+}
+
+message DescribeDomainRequest {
+  oneof describe_by {
+    string id = 1;
+    string name = 2;
+  }
+}
+
+message DescribeDomainResponse {
+  DomainInfo info = 1;
+  DomainConfiguration configuration = 2;
+  DomainReplicationConfiguration replication_configuration = 3;
+  int64 failover_version = 4;
+  bool is_global_domain = 5;
+}
+
+message ListDomainsRequest {
+  int32 page_size = 1;
+  bytes next_page_token = 2;
+}
+
+message ListDomainsResponse {
+  repeated DescribeDomainResponse domains = 1;
+  bytes next_page_token = 2;
+}
+
+message UpdateDomainInfo {
+  string description = 1;
+  string owner_email = 2;
+  map<string, string> data = 3;
+}
+
+message UpdateDomainRequest {
+  string name = 1;
+  UpdateDomainInfo info = 2;
+  DomainConfiguration configuration = 3;
+  DomainReplicationConfiguration replication_configuration = 4;
+  string security_token = 5;
+  string delete_bad_binary = 6;
+  google.protobuf.Duration failover_timeout = 7 [(gogoproto.stdduration) = true];
+}
+
+message UpdateDomainResponse {
+  DomainInfo info = 1;
+  DomainConfiguration configuration = 2;
+  DomainReplicationConfiguration replication_configuration = 3;
+  int64 failover_version = 4;
+  bool is_global_domain = 5;
+}
+
+message DeprecateDomainRequest {
+  string name = 1;
+  string security_token = 2;
+}
+
+message DeprecateDomainResponse {
+}

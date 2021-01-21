@@ -1,0 +1,241 @@
+// Copyright (c) 2020 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package uber.cadence.api.v1;
+
+option go_package = "apiv1";
+option java_multiple_files = true;
+option java_outer_classname = "ApiProto";
+option java_package = "com.uber.cadence.api.v1";
+
+import "google/protobuf/duration.proto";
+import "dependencies/gogoproto.proto";
+import "uber/cadence/api/v1/common.proto";
+import "uber/cadence/api/v1/history.proto";
+import "uber/cadence/api/v1/query.proto";
+import "uber/cadence/api/v1/tasklist.proto";
+import "uber/cadence/api/v1/workflow.proto";
+
+service WorkflowAPI {
+  // StartWorkflowExecution starts a new long running workflow instance.  It will create the instance with
+  // 'WorkflowExecutionStarted' event in history and also schedule the first DecisionTask for the worker to make the
+  // first decision for this instance.  It will return 'WorkflowExecutionAlreadyStartedError', if an instance already
+  // exists with same workflowId.
+  rpc StartWorkflowExecution(StartWorkflowExecutionRequest) returns (StartWorkflowExecutionResponse);
+
+  // SignalWorkflowExecution is used to send a signal event to running workflow execution.  This results in
+  // WorkflowExecutionSignaled event recorded in the history and a decision task being created for the execution.
+  rpc SignalWorkflowExecution(SignalWorkflowExecutionRequest) returns (SignalWorkflowExecutionResponse);
+
+  // SignalWithStartWorkflowExecution is used to ensure sending signal to a workflow.  If the workflow is running,
+  // this results in WorkflowExecutionSignaled event being recorded in the history and a decision task being created for
+  // the execution.  If the workflow is not running or not found, this results in WorkflowExecutionStarted and
+  // WorkflowExecutionSignaled events being recorded in history, and a decision task being created for the execution.
+  rpc SignalWithStartWorkflowExecution(SignalWithStartWorkflowExecutionRequest) returns (SignalWithStartWorkflowExecutionResponse);
+
+  // ResetWorkflowExecution reset an existing workflow execution to DecisionTaskCompleted event(exclusive).
+  // And it will immediately terminating the current execution instance.
+  rpc ResetWorkflowExecution(ResetWorkflowExecutionRequest) returns (ResetWorkflowExecutionResponse);
+
+  // TerminateWorkflowExecution terminates an existing workflow execution by recording WorkflowExecutionTerminated event
+  // in the history and immediately terminating the execution instance.
+  rpc TerminateWorkflowExecution(TerminateWorkflowExecutionRequest) returns (TerminateWorkflowExecutionResponse);
+
+  // DescribeWorkflowExecution returns information about the specified workflow execution.
+  rpc DescribeWorkflowExecution(DescribeWorkflowExecutionRequest) returns (DescribeWorkflowExecutionResponse);
+
+  // QueryWorkflow returns query result for a specified workflow execution.
+  rpc QueryWorkflow(QueryWorkflowRequest) returns (QueryWorkflowResponse);
+
+  // DescribeTaskList returns information about the target tasklist, right now this API returns the
+  // pollers which polled this tasklist in last few minutes.
+  rpc DescribeTaskList(DescribeTaskListRequest) returns (DescribeTaskListResponse);
+
+  // ListTaskListPartitions returns information about task list partitions.
+  rpc ListTaskListPartitions(ListTaskListPartitionsRequest) returns(ListTaskListPartitionsResponse);
+
+  // Reset the sticky tasklist related information in mutable state of a given workflow.
+  // Things cleared are:
+  // 1. StickyTaskList
+  // 2. StickyScheduleToStartTimeout
+  // 3. ClientLibraryVersion
+  // 4. ClientFeatureVersion
+  // 5. ClientImpl
+  rpc ResetStickyTaskList(ResetStickyTaskListRequest) returns(ResetStickyTaskListResponse);
+
+  // GetClusterInfo returns information about cadence cluster.
+  rpc GetClusterInfo(GetClusterInfoRequest) returns(GetClusterInfoResponse);
+
+  // Returns the history of specified workflow execution.  It fails with 'EntityNotExistError' if specified workflow
+  // execution in unknown to the service.
+  rpc GetWorkflowExecutionHistory(GetWorkflowExecutionHistoryRequest) returns(GetWorkflowExecutionHistoryResponse);
+}
+
+
+message StartWorkflowExecutionRequest {
+  string domain = 1;
+  string workflow_id = 2;
+  WorkflowType workflow_type = 3;
+  TaskList task_list = 4;
+  Payload input = 5;
+  google.protobuf.Duration execution_start_to_close_timeout = 6 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration task_start_to_close_timeout = 7 [(gogoproto.stdduration) = true];
+  string identity = 8;
+  string request_id = 9;
+  WorkflowIdReusePolicy workflow_id_reuse_policy = 10;
+  RetryPolicy retry_policy = 11;
+  string cron_schedule = 12;
+  Memo memo = 13;
+  SearchAttributes search_attributes = 14;
+  Header header = 15;
+}
+
+message StartWorkflowExecutionResponse {
+  string run_id = 1;
+}
+
+message SignalWorkflowExecutionRequest {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+  string identity = 3;
+  string request_id = 4;
+  string signal_name = 5;
+  Payload signal_input = 6;
+  bytes control = 7;
+}
+
+message SignalWorkflowExecutionResponse {
+}
+
+message SignalWithStartWorkflowExecutionRequest {
+  StartWorkflowExecutionRequest start_request = 1;
+  string signal_name = 2;
+  Payload signal_input = 3;
+  bytes control = 4;
+}
+
+message SignalWithStartWorkflowExecutionResponse {
+  string run_id = 1;
+}
+
+message ResetWorkflowExecutionRequest {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+  string reason = 3;
+  int64 decision_finish_event_id = 4;
+  string request_id = 5;
+}
+
+message ResetWorkflowExecutionResponse {
+  string run_id = 1;
+}
+
+message TerminateWorkflowExecutionRequest {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+  string reason = 3;
+  Payload details = 4;
+  string identity = 5;
+}
+
+message TerminateWorkflowExecutionResponse {
+}
+
+message DescribeWorkflowExecutionRequest {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+}
+
+message DescribeWorkflowExecutionResponse {
+  WorkflowExecutionConfiguration execution_configuration = 1;
+  WorkflowExecutionInfo workflow_execution_info = 2;
+  repeated PendingActivityInfo pending_activities = 3;
+  repeated PendingChildExecutionInfo pending_children = 4;
+  PendingDecisionInfo pending_decision = 5;
+}
+
+message QueryWorkflowRequest {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+  WorkflowQuery query = 3;
+  QueryRejectCondition query_reject_condition = 4;
+  QueryConsistencyLevel query_consistency_level = 5;
+}
+
+message QueryWorkflowResponse {
+  Payload query_result = 1;
+  QueryRejected query_rejected = 2;
+}
+
+message DescribeTaskListRequest {
+  string domain = 1;
+  TaskList task_list = 2;
+  TaskListType task_list_type = 3;
+  bool include_task_list_status = 4;
+}
+
+message DescribeTaskListResponse {
+  repeated PollerInfo pollers = 1;
+  TaskListStatus task_list_status = 2;
+}
+
+message ListTaskListPartitionsRequest {
+  string domain = 1;
+  TaskList task_list = 2;
+}
+
+message ListTaskListPartitionsResponse {
+  repeated TaskListPartitionMetadata activity_task_list_partitions = 1;
+  repeated TaskListPartitionMetadata decision_task_list_partitions = 2;
+}
+
+message ResetStickyTaskListRequest {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+}
+
+message ResetStickyTaskListResponse {
+}
+
+message GetClusterInfoRequest {
+}
+
+message GetClusterInfoResponse {
+  SupportedClientVersions supported_client_versions = 1;
+}
+
+message GetWorkflowExecutionHistoryRequest {
+  string domain = 1;
+  WorkflowExecution workflow_execution = 2;
+  int32 page_size = 3;
+  bytes next_page_token = 4;
+  bool wait_for_new_event = 5;
+  EventFilterType history_event_filter_type = 6;
+  bool skip_archival = 7;
+}
+
+message GetWorkflowExecutionHistoryResponse {
+  History history = 1;
+  repeated DataBlob raw_history = 2;
+  bytes next_page_token = 3;
+  bool archived = 4;
+}
