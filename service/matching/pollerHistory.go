@@ -48,12 +48,13 @@ type pollerHistory struct {
 	history cache.Cache
 }
 
-func newPollerHistory() *pollerHistory {
+func newPollerHistory(historyUpdatedFunc cache.UpdatedFunc) *pollerHistory {
 	opts := &cache.Options{
 		InitialCapacity: pollerHistoryInitSize,
 		TTL:             pollerHistoryTTL,
 		Pin:             false,
 		MaxCount:        pollerHistoryInitMaxSize,
+		UpdatedFunc:     historyUpdatedFunc,
 	}
 
 	return &pollerHistory{

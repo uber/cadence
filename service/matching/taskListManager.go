@@ -151,7 +151,6 @@ func newTaskListManager(
 		taskAckManager:      messaging.NewAckManager(e.logger),
 		taskGC:              newTaskGC(db, taskListConfig),
 		config:              taskListConfig,
-		pollerHistory:       newPollerHistory(),
 		outstandingPollsMap: make(map[string]context.CancelFunc),
 	}
 
@@ -166,7 +165,15 @@ func newTaskListManager(
 			metrics.MatchingTaskListMgrScope,
 		))
 	}
-
+	var taskListTypeTag metrics.Tag
+	if taskList.taskType == persistence.TaskListTypeActivity {
+		taskListTypeTag = metrics.TaskListTypeTag("activity")
+	} else {
+		taskListTypeTag = metrics.TaskListTypeTag("decision")
+	}
+	tlMgr.pollerHistory = newPollerHistory(func(newSize int) {
+		tlMgr.metricScope().Tagged(taskListTypeTag).UpdateGauge(metrics.PollerPerTaskListCounter, float64(newSize))
+	})
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.taskReader = newTaskReader(tlMgr)
 	var fwdr *Forwarder
