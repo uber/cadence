@@ -3,7 +3,7 @@ module github.com/uber/cadence
 go 1.12
 
 require (
-	cloud.google.com/go v0.72.0
+	cloud.google.com/go/storage v1.10.0
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/Shopify/sarama v1.23.0
 	github.com/apache/thrift v0.0.0-20161221203622-b2a4d4ae21c7
@@ -67,12 +67,10 @@ require (
 	golang.org/x/net v0.0.0-20201031054903-ff519b6c9102
 	golang.org/x/oauth2 v0.0.0-20201109201403-9fd604954f58
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
-	golang.org/x/tools v0.0.0-20201201161351-ac6f37ff4c2a
+	golang.org/x/tools v0.1.0
 	gonum.org/v1/gonum v0.7.0
 	google.golang.org/api v0.36.0
 	google.golang.org/grpc v1.35.0 // indirect
-	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0 // indirect
-	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
 	gopkg.in/jcmturner/gokrb5.v7 v7.3.0 // indirect
 	gopkg.in/validator.v2 v2.0.0-20180514200540-135c24b11c19
