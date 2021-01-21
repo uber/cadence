@@ -250,7 +250,13 @@ func commentOutLines(str string) (string, error) {
 	var lines []string
 	scanner := bufio.NewScanner(strings.NewReader(str))
 	for scanner.Scan() {
-		lines = append(lines, "// "+scanner.Text()+"\n")
+		text := scanner.Text()
+		if text == "" {
+			// do not add trailing whitespace, gofmt / goimports removes it
+			lines = append(lines, "//\n")
+		} else {
+			lines = append(lines, "// "+scanner.Text()+"\n")
+		}
 	}
 	lines = append(lines, "\n")
 
