@@ -39,12 +39,14 @@ message Domain {
   map<string, string> data = 6;
   google.protobuf.Duration workflow_execution_retention_period = 7;
   BadBinaries bad_binaries = 8;
-  Archival history_archival = 9;
-  Archival visibility_archival = 10;
-  string active_cluster_name = 11;
-  repeated ClusterReplicationConfiguration clusters = 12;
-  int64 failover_version = 13;
-  bool is_global_domain = 14;
+  ArchivalStatus history_archival_status = 9;
+  string history_archival_uri = 10;
+  ArchivalStatus visibility_archival_status = 11;
+  string visibility_archival_uri = 12;
+  string active_cluster_name = 13;
+  repeated ClusterReplicationConfiguration clusters = 14;
+  int64 failover_version = 15;
+  bool is_global_domain = 16;
 }
 
 message ClusterReplicationConfiguration {
@@ -59,11 +61,6 @@ message BadBinaryInfo {
   string reason = 1;
   string operator = 2;
   google.protobuf.Timestamp created_time = 3;
-}
-
-message Archival {
-  ArchivalStatus status = 1;
-  string uri = 2;
 }
 
 enum DomainStatus {

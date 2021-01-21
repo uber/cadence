@@ -63,8 +63,10 @@ message RegisterDomainRequest {
   string active_cluster_name = 7;
   map<string, string> data = 8;
   bool is_global_domain = 9;
-  Archival history_archival = 10;
-  Archival visibility_archival = 11;
+  ArchivalStatus history_archival_status = 10;
+  string history_archival_uri = 11;
+  ArchivalStatus visibility_archival_status = 12;
+  string visibility_archival_uri = 13;
 }
 
 message RegisterDomainResponse {
@@ -81,12 +83,14 @@ message UpdateDomainRequest {
   map<string, string> data = 13;
   google.protobuf.Duration workflow_execution_retention_period = 14;
   BadBinaries bad_binaries = 15;
-  Archival history_archival = 16;
-  Archival visibility_archival = 17;
-  string active_cluster_name = 18;
-  repeated ClusterReplicationConfiguration clusters = 19;
-  string delete_bad_binary = 20;
-  google.protobuf.Duration failover_timeout = 21;
+  ArchivalStatus history_archival_status = 16;
+  string history_archival_uri = 17;
+  ArchivalStatus visibility_archival_status = 18;
+  string visibility_archival_uri = 19;
+  string active_cluster_name = 20;
+  repeated ClusterReplicationConfiguration clusters = 21;
+  string delete_bad_binary = 22;
+  google.protobuf.Duration failover_timeout = 23;
 }
 
 message UpdateDomainResponse {
