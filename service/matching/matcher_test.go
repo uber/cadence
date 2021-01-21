@@ -450,13 +450,9 @@ func (t *MatcherTestSuite) TestRemotePollForQuery() {
 }
 
 func (t *MatcherTestSuite) newDomainCache() cache.DomainCache {
-	entry := cache.NewLocalDomainCacheEntryForTest(
-		&persistence.DomainInfo{Name: "test-domain"},
-		&persistence.DomainConfig{},
-		"",
-		nil)
+	domainName := "test-domain"
 	dc := cache.NewMockDomainCache(t.controller)
-	dc.EXPECT().GetDomainByID(gomock.Any()).Return(entry, nil).AnyTimes()
+	dc.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil).AnyTimes()
 	return dc
 }
 

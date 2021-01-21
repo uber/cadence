@@ -179,8 +179,8 @@ func (s *stateRebuilderSuite) TestPagination() {
 		EventID:                              common.Int64Ptr(5),
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
 	}
-	history1 := []*types.History{{[]*types.HistoryEvent{event1, event2, event3}}}
-	history2 := []*types.History{{[]*types.HistoryEvent{event4, event5}}}
+	history1 := []*types.History{{Events: []*types.HistoryEvent{event1, event2, event3}}}
+	history2 := []*types.History{{Events: []*types.HistoryEvent{event4, event5}}}
 	history := append(history1, history2...)
 	pageToken := []byte("some random token")
 
@@ -260,8 +260,8 @@ func (s *stateRebuilderSuite) TestRebuild() {
 			Identity:   common.StringPtr("some random identity"),
 		},
 	}}
-	history1 := []*types.History{{events1}}
-	history2 := []*types.History{{events2}}
+	history1 := []*types.History{{Events: events1}}
+	history2 := []*types.History{{Events: events2}}
 	pageToken := []byte("some random pagination token")
 
 	historySize1 := 12345
