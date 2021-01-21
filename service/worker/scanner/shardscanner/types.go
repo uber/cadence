@@ -251,7 +251,6 @@ type (
 
 	// ScannerConfig is the  config for ShardScanner workflow
 	ScannerConfig struct {
-		FixerTLName          string
 		ScannerWFTypeName    string
 		FixerWFTypeName      string
 		ScannerHooks         func() *ScannerHooks
@@ -259,6 +258,7 @@ type (
 		DynamicParams        DynamicParams
 		DynamicCollection    *dynamicconfig.Collection
 		StartWorkflowOptions cclient.StartWorkflowOptions
+		StartFixerOptions    cclient.StartWorkflowOptions
 	}
 
 	// FixerWorkflowConfigOverwrites enables overwriting the default values.

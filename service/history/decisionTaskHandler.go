@@ -748,11 +748,10 @@ func (handler *decisionTaskHandlerImpl) handleDecisionContinueAsNewWorkflow(
 	var parentDomainName string
 	if handler.mutableState.HasParentExecution() {
 		parentDomainID := executionInfo.ParentDomainID
-		parentDomainEntry, err := handler.domainCache.GetDomainByID(parentDomainID)
+		parentDomainName, err = handler.domainCache.GetDomainName(parentDomainID)
 		if err != nil {
 			return err
 		}
-		parentDomainName = parentDomainEntry.GetInfo().Name
 	}
 
 	_, newStateBuilder, err := handler.mutableState.AddContinueAsNewEvent(
@@ -905,13 +904,12 @@ func (handler *decisionTaskHandlerImpl) handleDecisionUpsertWorkflowSearchAttrib
 	// get domain name
 	executionInfo := handler.mutableState.GetExecutionInfo()
 	domainID := executionInfo.DomainID
-	domainEntry, err := handler.domainCache.GetDomainByID(domainID)
+	domainName, err := handler.domainCache.GetDomainName(domainID)
 	if err != nil {
 		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Unable to get domain for domainID: %v.", domainID),
 		}
 	}
-	domainName := domainEntry.GetInfo().Name
 
 	// valid search attributes for upsert
 	if err := handler.validateDecisionAttr(

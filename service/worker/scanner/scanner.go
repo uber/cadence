@@ -181,20 +181,31 @@ func (s *Scanner) startShardScanner(
 			getShardFixerContext(s.context, config),
 		)
 
-		workerTaskListNames = append(workerTaskListNames, config.FixerTLName)
+		go s.startWorkflowWithRetry(
+			config.StartFixerOptions,
+			config.FixerWFTypeName,
+			shardscanner.FixerWorkflowParams{
+				ScannerWorkflowWorkflowID: config.StartWorkflowOptions.ID,
+			},
+		)
+
+		workerTaskListNames = append(workerTaskListNames, config.StartFixerOptions.TaskList)
 	}
 
 	if config.DynamicParams.ScannerEnabled() {
 		workerTaskListNames = append(workerTaskListNames, config.StartWorkflowOptions.TaskList)
 
-		go s.startWorkflowWithRetry(config.StartWorkflowOptions, config.ScannerWFTypeName, shardscanner.ScannerWorkflowParams{
-			Shards: shardscanner.Shards{
-				Range: &shardscanner.ShardRange{
-					Min: 0,
-					Max: s.context.cfg.Persistence.NumHistoryShards,
+		go s.startWorkflowWithRetry(
+			config.StartWorkflowOptions,
+			config.ScannerWFTypeName,
+			shardscanner.ScannerWorkflowParams{
+				Shards: shardscanner.Shards{
+					Range: &shardscanner.ShardRange{
+						Min: 0,
+						Max: s.context.cfg.Persistence.NumHistoryShards,
+					},
 				},
-			},
-		})
+			})
 	}
 
 	return backgroundActivityContext, workerTaskListNames
