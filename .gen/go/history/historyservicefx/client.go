@@ -26,10 +26,11 @@
 package historyservicefx
 
 import (
-	historyserviceclient "github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	fx "go.uber.org/fx"
 	yarpc "go.uber.org/yarpc"
 	thrift "go.uber.org/yarpc/encoding/thrift"
+
+	historyserviceclient "github.com/uber/cadence/.gen/go/history/historyserviceclient"
 )
 
 // Params defines the dependencies for the HistoryService client.

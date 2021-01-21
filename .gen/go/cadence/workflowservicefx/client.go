@@ -26,10 +26,11 @@
 package workflowservicefx
 
 import (
-	workflowserviceclient "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	fx "go.uber.org/fx"
 	yarpc "go.uber.org/yarpc"
 	thrift "go.uber.org/yarpc/encoding/thrift"
+
+	workflowserviceclient "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 )
 
 // Params defines the dependencies for the WorkflowService client.

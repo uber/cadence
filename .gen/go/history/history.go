@@ -30,13 +30,15 @@ import (
 	base64 "encoding/base64"
 	errors "errors"
 	fmt "fmt"
-	replicator "github.com/uber/cadence/.gen/go/replicator"
-	shared "github.com/uber/cadence/.gen/go/shared"
+	strings "strings"
+
 	multierr "go.uber.org/multierr"
 	thriftreflect "go.uber.org/thriftrw/thriftreflect"
 	wire "go.uber.org/thriftrw/wire"
 	zapcore "go.uber.org/zap/zapcore"
-	strings "strings"
+
+	replicator "github.com/uber/cadence/.gen/go/replicator"
+	shared "github.com/uber/cadence/.gen/go/shared"
 )
 
 type DescribeMutableStateRequest struct {

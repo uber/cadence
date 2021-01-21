@@ -24,6 +24,7 @@ import (
 	context "context"
 
 	"github.com/stretchr/testify/mock"
+
 	"github.com/uber/cadence/common/messaging"
 )
 

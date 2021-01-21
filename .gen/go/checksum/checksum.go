@@ -27,12 +27,14 @@ package checksum
 
 import (
 	fmt "fmt"
-	shared "github.com/uber/cadence/.gen/go/shared"
+	strings "strings"
+
 	multierr "go.uber.org/multierr"
 	thriftreflect "go.uber.org/thriftrw/thriftreflect"
 	wire "go.uber.org/thriftrw/wire"
 	zapcore "go.uber.org/zap/zapcore"
-	strings "strings"
+
+	shared "github.com/uber/cadence/.gen/go/shared"
 )
 
 type MutableStateChecksumPayload struct {

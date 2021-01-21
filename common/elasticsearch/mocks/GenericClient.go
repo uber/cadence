@@ -26,6 +26,7 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+
 	elasticsearch "github.com/uber/cadence/common/elasticsearch"
 
 	persistence "github.com/uber/cadence/common/persistence"

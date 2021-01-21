@@ -31,14 +31,16 @@ import (
 	json "encoding/json"
 	errors "errors"
 	fmt "fmt"
-	shared "github.com/uber/cadence/.gen/go/shared"
+	math "math"
+	strconv "strconv"
+	strings "strings"
+
 	multierr "go.uber.org/multierr"
 	thriftreflect "go.uber.org/thriftrw/thriftreflect"
 	wire "go.uber.org/thriftrw/wire"
 	zapcore "go.uber.org/zap/zapcore"
-	math "math"
-	strconv "strconv"
-	strings "strings"
+
+	shared "github.com/uber/cadence/.gen/go/shared"
 )
 
 type AddActivityTaskRequest struct {
