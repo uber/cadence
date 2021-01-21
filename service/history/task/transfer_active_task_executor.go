@@ -604,7 +604,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		return nil
 	}
 
-	// Get parent domainName name
+	// Get parent domain name
 	var domainName string
 	if domainName, err = t.shard.GetDomainCache().GetDomainName(task.DomainID); err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); !ok {
