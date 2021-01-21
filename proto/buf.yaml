@@ -8,5 +8,3 @@ lint: # Uber style rules: https://docs.buf.build/migration-prototool/#uber1-uber
     - DEFAULT
   enum_zero_value_suffix: _INVALID
   service_suffix: API
-  ignore:
-    - dependencies
