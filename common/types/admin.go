@@ -1224,7 +1224,7 @@ func (v *MembershipInfo) GetRings() (o []*RingInfo) {
 
 // ResendReplicationTasksRequest is an internal type (TBD...)
 type ResendReplicationTasksRequest struct {
-	DomainID      string `json:"domainID,omitempty"`
+	DomainID      string  `json:"domainID,omitempty"`
 	WorkflowID    *string `json:"workflowID,omitempty"`
 	RunID         *string `json:"runID,omitempty"`
 	RemoteCluster *string `json:"remoteCluster,omitempty"`

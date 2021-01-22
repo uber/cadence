@@ -7060,7 +7060,7 @@ func (v *RetryPolicy) GetExpirationIntervalInSeconds() (o int32) {
 // RetryTaskV2Error is an internal type (TBD...)
 type RetryTaskV2Error struct {
 	Message           string  `json:"message,required"`
-	DomainID          string `json:"domainId,omitempty"`
+	DomainID          string  `json:"domainId,omitempty"`
 	WorkflowID        *string `json:"workflowId,omitempty"`
 	RunID             *string `json:"runId,omitempty"`
 	StartEventID      *int64  `json:"startEventId,omitempty"`

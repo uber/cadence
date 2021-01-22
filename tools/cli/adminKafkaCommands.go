@@ -490,7 +490,7 @@ func doRereplicate(
 	if err := adminClient.ResendReplicationTasks(
 		ctx,
 		&types.ResendReplicationTasksRequest{
-			DomainID:      common.StringPtr(domainID),
+			DomainID:      domainID,
 			WorkflowID:    common.StringPtr(wid),
 			RunID:         common.StringPtr(rid),
 			RemoteCluster: common.StringPtr(sourceCluster),
