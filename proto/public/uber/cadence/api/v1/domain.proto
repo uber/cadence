@@ -22,14 +22,13 @@ syntax = "proto3";
 
 package uber.cadence.api.v1;
 
-option go_package = "apiv1";
+option go_package = "github.com/uber/cadence/.gen/proto/api/v1;apiv1";
 option java_multiple_files = true;
 option java_outer_classname = "ApiProto";
 option java_package = "com.uber.cadence.api.v1";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
-import "dependencies/gogoproto.proto";
 
 message DomainInfo {
   string id = 1;
@@ -41,7 +40,7 @@ message DomainInfo {
 }
 
 message DomainConfiguration {
-  google.protobuf.Duration workflow_execution_retention_period = 1 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration workflow_execution_retention_period = 1;
   BadBinaries bad_binaries = 2;
   ArchivalStatus history_archival_status = 3;
   string history_archival_uri = 4;
@@ -65,7 +64,7 @@ message BadBinaries {
 message BadBinaryInfo {
   string reason = 1;
   string operator = 2;
-  google.protobuf.Timestamp created_time = 3 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp created_time = 3;
 }
 
 enum DomainStatus {

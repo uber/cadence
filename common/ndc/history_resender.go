@@ -273,12 +273,11 @@ func (n *HistoryResenderImpl) getHistory(
 
 	logger := n.logger.WithTags(tag.WorkflowRunID(runID))
 
-	domainEntry, err := n.domainCache.GetDomainByID(domainID)
+	domainName, err := n.domainCache.GetDomainName(domainID)
 	if err != nil {
 		logger.Error("error getting domain", tag.Error(err))
 		return nil, err
 	}
-	domainName := domainEntry.GetInfo().Name
 
 	ctx, cancel := context.WithTimeout(ctx, resendContextTimeout)
 	defer cancel()

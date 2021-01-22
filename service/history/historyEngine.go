@@ -1022,11 +1022,11 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 			return response, nil
 		}
 
-		domainCache, err := e.shard.GetDomainCache().GetDomainByID(domainID)
+		domainName, err := e.shard.GetDomainCache().GetDomainName(domainID)
 		if err != nil {
 			return nil, err
 		}
-		timer := time.NewTimer(e.shard.GetConfig().LongPollExpirationInterval(domainCache.GetInfo().Name))
+		timer := time.NewTimer(e.shard.GetConfig().LongPollExpirationInterval(domainName))
 		defer timer.Stop()
 		for {
 			select {

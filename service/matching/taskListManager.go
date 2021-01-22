@@ -559,12 +559,10 @@ func (c *taskListManagerImpl) tryInitDomainNameAndScope() {
 		return
 	}
 
-	entry, err := c.domainCache.GetDomainByID(c.taskListID.domainID)
+	domainName, err := c.domainCache.GetDomainName(c.taskListID.domainID)
 	if err != nil {
 		return
 	}
-
-	domainName = entry.GetInfo().Name
 
 	scope := newPerTaskListScope(
 		domainName,

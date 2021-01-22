@@ -22,7 +22,7 @@ syntax = "proto3";
 
 package uber.cadence.api.v1;
 
-option go_package = "apiv1";
+option go_package = "github.com/uber/cadence/.gen/proto/api/v1;apiv1";
 option java_multiple_files = true;
 option java_outer_classname = "ApiProto";
 option java_package = "com.uber.cadence.api.v1";
@@ -30,7 +30,6 @@ option java_package = "com.uber.cadence.api.v1";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
-import "dependencies/gogoproto.proto";
 
 message TaskList {
   string name = 1;
@@ -72,12 +71,12 @@ message TaskIDBlock {
 }
 
 message PollerInfo {
-  google.protobuf.Timestamp last_access_time = 1 [(gogoproto.stdtime) = true];
+  google.protobuf.Timestamp last_access_time = 1;
   string identity = 2;
   double rate_per_second = 3;
 }
 
 message StickyExecutionAttributes {
   TaskList worker_task_list = 1;
-  google.protobuf.Duration schedule_to_start_timeout = 2 [(gogoproto.stdduration) = true];
+  google.protobuf.Duration schedule_to_start_timeout = 2;
 }

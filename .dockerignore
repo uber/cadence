@@ -1,4 +1,4 @@
-build/
+.build/
 cadence
 cadence-server
 cadence-canary

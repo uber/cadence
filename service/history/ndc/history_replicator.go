@@ -233,12 +233,12 @@ func (r *historyReplicatorImpl) applyEvents(
 		// the continue as new + start workflow execution combination will also be processed here
 		var mutableState execution.MutableState
 		var err error
-		domainEntry, err := r.domainCache.GetDomainByID(context.GetDomainID())
+		domainName, err := r.domainCache.GetDomainName(context.GetDomainID())
 		if err != nil {
 			return err
 		}
 
-		if r.shard.GetConfig().ReplicationEventsFromCurrentCluster(domainEntry.GetInfo().Name) {
+		if r.shard.GetConfig().ReplicationEventsFromCurrentCluster(domainName) {
 			// this branch is used when replicating events (generated from current cluster)from remote cluster to current cluster.
 			// this could happen when the events are lost in current cluster and plan to recover them from remote cluster.
 			mutableState, err = context.LoadWorkflowExecutionForReplication(ctx, task.getVersion())

@@ -1857,7 +1857,7 @@ func isLastEventDecisionTaskFailedWithNonDeterminism(ctx context.Context, domain
 		attr := decisionFailed.GetDecisionTaskFailedEventAttributes()
 		if attr.GetCause() == types.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure ||
 			strings.Contains(string(attr.GetDetails()), "nondeterministic") {
-			fmt.Printf("found non determnistic workflow wid:%v, rid:%v, orignalStartTime:%v \n", wid, rid, time.Unix(0, firstEvent.GetTimestamp()))
+			fmt.Printf("found non-deterministic workflow wid:%v, rid:%v, originalStartTime:%v \n", wid, rid, time.Unix(0, firstEvent.GetTimestamp()))
 			return true, nil
 		}
 	}
@@ -1948,13 +1948,14 @@ func getFirstDecisionTaskByType(
 		if err != nil {
 			return 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 		}
+
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == decisionType {
 				decisionFinishID = e.GetEventID()
 				return decisionFinishID, nil
 			}
-			decisionFinishID = e.GetEventID()
 		}
+
 		if len(resp.NextPageToken) != 0 {
 			req.NextPageToken = resp.NextPageToken
 		} else {
@@ -2002,7 +2003,7 @@ func getBadDecisionCompletedID(ctx context.Context, domain, wid, rid, binChecksu
 	}
 
 	if decisionFinishID == 0 {
-		return 0, printErrorAndReturn("Get DecisionFinishID failed", &types.BadRequestError{"no DecisionFinishID"})
+		return 0, printErrorAndReturn("Get DecisionFinishID failed", &types.BadRequestError{Message: "no DecisionFinishID"})
 	}
 	return
 }
@@ -2031,12 +2032,13 @@ func getLastDecisionTaskByType(
 		if err != nil {
 			return 0, printErrorAndReturn("GetWorkflowExecutionHistory failed", err)
 		}
+
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == decisionType {
 				decisionFinishID = e.GetEventID()
 			}
-			decisionFinishID = e.GetEventID()
 		}
+
 		if len(resp.NextPageToken) != 0 {
 			req.NextPageToken = resp.NextPageToken
 		} else {

@@ -119,7 +119,7 @@ func (s *markerNotifierSuite) TestNotifyPendingFailoverMarker() {
 		ActiveClusterName: s.mockClusterMetadata.GetCurrentClusterName(),
 		Clusters: []*persistence.ClusterReplicationConfig{
 			{
-				s.mockClusterMetadata.GetCurrentClusterName(),
+				ClusterName: s.mockClusterMetadata.GetCurrentClusterName(),
 			},
 		},
 	}
