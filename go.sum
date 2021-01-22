@@ -95,6 +95,8 @@ github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2 h1:tdlZCpZ/P9DhczC
 github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2/go.mod h1:SqUrOPUnsFjfmXRMNPybcSiG0BgUW2AuFH8PAnS2iTw=
 github.com/dmarkham/enumer v1.5.1 h1:wu5fRfgGALOeMiwo9m5JnBnXOdNOi38j0Bq86Ap6rEQ=
 github.com/dmarkham/enumer v1.5.1/go.mod h1:jZ3PNbNJDEkFGx54MlkSjnDQUo7445l7/guoKdh9cY8=
+github.com/dmetzgar/goveralls v0.0.3 h1:PFQ5jBL6PXbgTeDyogIszCqtvbzOI+T9RTgiYMzXySk=
+github.com/dmetzgar/goveralls v0.0.3/go.mod h1:kSS2IYY6FaFQKx7FSMVmA2g1SEwoNO5KaNVMJjTtmjs=
 github.com/eapache/go-resiliency v1.1.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5mFgVsvEsIPBvNs=
 github.com/eapache/go-resiliency v1.2.0 h1:v7g92e/KSN71Rq7vSThKaWIq68fL4YHvWyiUKorFR1Q=
 github.com/eapache/go-resiliency v1.2.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5mFgVsvEsIPBvNs=
