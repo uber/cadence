@@ -24,6 +24,7 @@ package frontend
 
 import (
 	"context"
+	"github.com/uber/cadence/common"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -136,7 +137,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("PollForActivityTask", func(t *testing.T) {
 		h.EXPECT().PollForActivityTask(ctx, &types.PollForActivityTaskRequest{}).Return(&types.PollForActivityTaskResponse{}, internalErr).Times(1)
 		resp, err := th.PollForActivityTask(ctx, &shared.PollForActivityTaskRequest{})
-		assert.Equal(t, shared.PollForActivityTaskResponse{}, *resp)
+		assert.Equal(t, shared.PollForActivityTaskResponse{WorkflowDomain: common.StringPtr("")}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("PollForDecisionTask", func(t *testing.T) {
