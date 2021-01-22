@@ -45,7 +45,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 	activityName := "activity_timer"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -171,7 +171,7 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 	activityName := "activity_heartbeat_retry"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -347,7 +347,7 @@ func (s *integrationSuite) TestActivityRetry() {
 	timeoutActivityName := "timeout_activity"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -560,7 +560,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
 	activityName := "activity_timer"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -663,7 +663,7 @@ func (s *integrationSuite) TestActivityTimeouts() {
 	activityName := "timeout_activity"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -905,7 +905,7 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 	activityName := "timeout_activity"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -1096,7 +1096,7 @@ func (s *integrationSuite) TestActivityCancellation() {
 	activityName := "activity_timer"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -1223,7 +1223,7 @@ func (s *integrationSuite) TestActivityCancellationNotStarted() {
 	activityName := "activity_notstarted"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)

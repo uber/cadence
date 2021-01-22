@@ -80,7 +80,7 @@ func (s *integrationSuite) TestStartWorkflowExecution() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -129,7 +129,7 @@ func (s *integrationSuite) TestStartWorkflowExecution_IDReusePolicy() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -290,7 +290,7 @@ func (s *integrationSuite) TestTerminateWorkflow() {
 	activityName := "activity_type1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -448,7 +448,7 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 	activityName := "activity_type1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -557,7 +557,7 @@ func (s *integrationSuite) TestCompleteDecisionTaskAndCreateNewOne() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -642,7 +642,7 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 	activityName := "activity_timer"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -764,7 +764,7 @@ func (s *integrationSuite) TestWorkflowRetry() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -874,7 +874,7 @@ func (s *integrationSuite) TestWorkflowRetryFailures() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -1022,7 +1022,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	backoffDurationTolerance := time.Millisecond * 500
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -1229,7 +1229,7 @@ func (s *integrationSuite) TestCronWorkflowTimeout() {
 	cronSchedule := "@every 3s"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -1330,7 +1330,7 @@ func (s *integrationSuite) TestSequential_UserTimers() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -1409,7 +1409,7 @@ func (s *integrationSuite) TestRateLimitBufferedEvents() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -1509,7 +1509,7 @@ func (s *integrationSuite) TestBufferedEvents() {
 	identity := "worker1"
 	signalName := "buffered-signal"
 
-	workflowType := &types.WorkflowType{Name: &wt}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: &tl}
 
 	// Start workflow execution
@@ -1628,7 +1628,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 	tl := "integration-describe-wfe-test-tasklist"
 	identity := "worker1"
 
-	workflowType := &types.WorkflowType{Name: &wt}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: &tl}
 
 	// Start workflow execution
@@ -1757,7 +1757,7 @@ func (s *integrationSuite) TestVisibility() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -1892,10 +1892,10 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	identity := "worker1"
 
 	parentWorkflowType := &types.WorkflowType{}
-	parentWorkflowType.Name = common.StringPtr(wtParent)
+	parentWorkflowType.Name = wtParent
 
 	childWorkflowType := &types.WorkflowType{}
-	childWorkflowType.Name = common.StringPtr(wtChild)
+	childWorkflowType.Name = wtChild
 
 	taskListParent := &types.TaskList{}
 	taskListParent.Name = common.StringPtr(tlParent)
@@ -2064,7 +2064,7 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	completedAttributes := completedEvent.ChildWorkflowExecutionCompletedEventAttributes
 	s.Empty(completedAttributes.Domain)
 	s.Equal(childID, completedAttributes.WorkflowExecution.WorkflowID)
-	s.Equal(wtChild, *completedAttributes.WorkflowType.Name)
+	s.Equal(wtChild, completedAttributes.WorkflowType.Name)
 	s.Equal([]byte("Child Done."), completedAttributes.Result)
 }
 
@@ -2082,10 +2082,10 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	backoffDurationTolerance := time.Second
 
 	parentWorkflowType := &types.WorkflowType{}
-	parentWorkflowType.Name = common.StringPtr(wtParent)
+	parentWorkflowType.Name = wtParent
 
 	childWorkflowType := &types.WorkflowType{}
-	childWorkflowType.Name = common.StringPtr(wtChild)
+	childWorkflowType.Name = wtChild
 
 	taskListParent := &types.TaskList{}
 	taskListParent.Name = common.StringPtr(tlParent)
@@ -2236,7 +2236,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	terminatedAttributes := terminatedEvent.ChildWorkflowExecutionTerminatedEventAttributes
 	s.Empty(terminatedAttributes.Domain)
 	s.Equal(childID, terminatedAttributes.WorkflowExecution.WorkflowID)
-	s.Equal(wtChild, *terminatedAttributes.WorkflowType.Name)
+	s.Equal(wtChild, terminatedAttributes.WorkflowType.Name)
 
 	startFilter.EarliestTime = common.Int64Ptr(startParentWorkflowTS.UnixNano())
 	startFilter.LatestTime = common.Int64Ptr(time.Now().UnixNano())
@@ -2284,7 +2284,7 @@ func (s *integrationSuite) TestWorkflowTimeout() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -2366,7 +2366,7 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 	activityName := "activity_type1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -2569,7 +2569,7 @@ func (s *integrationSuite) TestDescribeTaskList() {
 	activityName := "activity_type1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(workflowTypeName)
+	workflowType.Name = workflowTypeName
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tasklistName)
@@ -2694,7 +2694,7 @@ func (s *integrationSuite) TestTransientDecisionTimeout() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -2789,7 +2789,7 @@ func (s *integrationSuite) TestNoTransientDecisionAfterFlushBufferedEvents() {
 	tl := "integration-no-transient-decision-after-flush-buffered-events-test-tasklist"
 	identity := "worker1"
 
-	workflowType := &types.WorkflowType{Name: &wt}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: &tl}
 
 	// Start workflow execution
@@ -2884,7 +2884,7 @@ func (s *integrationSuite) TestRelayDecisionTimeout() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -2986,7 +2986,7 @@ func (s *integrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -3104,7 +3104,7 @@ func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -3278,7 +3278,7 @@ func (s *integrationSuite) TestStickyTasklistResetThenTimeout() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -3444,7 +3444,7 @@ func (s *integrationSuite) TestBufferedEventsOutOfOrder() {
 	tl := "integration-buffered-events-out-of-order-test-tasklist"
 	identity := "worker1"
 
-	workflowType := &types.WorkflowType{Name: &wt}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: &tl}
 
 	// Start workflow execution
@@ -3604,7 +3604,7 @@ func (s *integrationSuite) TestStartWithMemo() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -3642,7 +3642,7 @@ func (s *integrationSuite) TestSignalWithStartWithMemo() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -3684,7 +3684,7 @@ func (s *integrationSuite) TestCancelTimer() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -3821,7 +3821,7 @@ func (s *integrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)

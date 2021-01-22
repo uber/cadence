@@ -897,7 +897,7 @@ func (e *mutableStateBuilder) shouldBufferEvent(
 
 func (e *mutableStateBuilder) GetWorkflowType() *types.WorkflowType {
 	wType := &types.WorkflowType{}
-	wType.Name = common.StringPtr(e.executionInfo.WorkflowTypeName)
+	wType.Name = e.executionInfo.WorkflowTypeName
 
 	return wType
 }
@@ -1613,7 +1613,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		workflowType = attributes.WorkflowType.GetName()
 	}
 	wType := &types.WorkflowType{}
-	wType.Name = common.StringPtr(workflowType)
+	wType.Name = workflowType
 
 	decisionTimeout := previousExecutionInfo.DecisionStartToCloseTimeout
 	if attributes.TaskStartToCloseTimeoutSeconds != nil {
@@ -3553,7 +3553,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(
 	}
 
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(ci.WorkflowTypeName),
+		Name: ci.WorkflowTypeName,
 	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionCompletedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
@@ -3596,7 +3596,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionFailedEvent(
 	}
 
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(ci.WorkflowTypeName),
+		Name: ci.WorkflowTypeName,
 	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionFailedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
@@ -3639,7 +3639,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCanceledEvent(
 	}
 
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(ci.WorkflowTypeName),
+		Name: ci.WorkflowTypeName,
 	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionCanceledEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
@@ -3682,7 +3682,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTerminatedEvent(
 	}
 
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(ci.WorkflowTypeName),
+		Name: ci.WorkflowTypeName,
 	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionTerminatedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
@@ -3725,7 +3725,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(
 	}
 
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(ci.WorkflowTypeName),
+		Name: ci.WorkflowTypeName,
 	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionTimedOutEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,

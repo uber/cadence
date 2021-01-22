@@ -40,7 +40,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -146,7 +146,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -251,7 +251,7 @@ func (s *integrationSuite) TestWorkflowContinueAsNew_TaskID() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -343,10 +343,10 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 	identity := "worker1"
 
 	parentWorkflowType := &types.WorkflowType{}
-	parentWorkflowType.Name = common.StringPtr(wtParent)
+	parentWorkflowType.Name = wtParent
 
 	childWorkflowType := &types.WorkflowType{}
-	childWorkflowType.Name = common.StringPtr(wtChild)
+	childWorkflowType.Name = wtChild
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -486,7 +486,7 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 	s.Equal(childID, completedAttributes.WorkflowExecution.WorkflowID)
 	s.NotEqual(startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowExecution.RunID,
 		completedAttributes.WorkflowExecution.RunID)
-	s.Equal(wtChild, *completedAttributes.WorkflowType.Name)
+	s.Equal(wtChild, completedAttributes.WorkflowType.Name)
 	s.Equal([]byte("Child Done."), completedAttributes.Result)
 
 	s.Logger.Info("Parent Workflow Execution History: ")

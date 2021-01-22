@@ -240,7 +240,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_RequestIdNotSet
 		Domain:     "test-domain",
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
 			Name: common.StringPtr("task-list"),
@@ -278,7 +278,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_DomainNotSet() 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
 			Name: common.StringPtr("task-list"),
@@ -307,7 +307,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowIdNotSe
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
 		Domain: "test-domain",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
 			Name: common.StringPtr("task-list"),
@@ -337,7 +337,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowTypeNot
 		Domain:     "test-domain",
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr(""),
+			Name: "",
 		},
 		TaskList: &types.TaskList{
 			Name: common.StringPtr("task-list"),
@@ -367,7 +367,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_TaskListNotSet(
 		Domain:     "test-domain",
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
 			Name: common.StringPtr(""),
@@ -397,7 +397,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidExecutio
 		Domain:     "test-domain",
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
 			Name: common.StringPtr("task-list"),
@@ -427,7 +427,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStar
 		Domain:     "test-domain",
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
 			Name: common.StringPtr("task-list"),

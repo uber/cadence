@@ -4865,7 +4865,7 @@ const (
 type PendingChildExecutionInfo struct {
 	WorkflowID        string             `json:"workflowID,omitempty"`
 	RunID             string             `json:"runID,omitempty"`
-	WorkflowTypName   *string            `json:"workflowTypName,omitempty"`
+	WorkflowTypName   string             `json:"workflowTypName,omitempty"`
 	InitiatedID       *int64             `json:"initiatedID,omitempty"`
 	ParentClosePolicy *ParentClosePolicy `json:"parentClosePolicy,omitempty"`
 }
@@ -4888,8 +4888,8 @@ func (v *PendingChildExecutionInfo) GetRunID() (o string) {
 
 // GetWorkflowTypName is an internal getter (TBD...)
 func (v *PendingChildExecutionInfo) GetWorkflowTypName() (o string) {
-	if v != nil && v.WorkflowTypName != nil {
-		return *v.WorkflowTypName
+	if v != nil {
+		return v.WorkflowTypName
 	}
 	return
 }
@@ -10038,13 +10038,13 @@ func (v *WorkflowQueryResult) GetErrorMessage() (o string) {
 
 // WorkflowType is an internal type (TBD...)
 type WorkflowType struct {
-	Name *string `json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 // GetName is an internal getter (TBD...)
 func (v *WorkflowType) GetName() (o string) {
-	if v != nil && v.Name != nil {
-		return *v.Name
+	if v != nil {
+		return v.Name
 	}
 	return
 }

@@ -477,7 +477,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedConflictOnUpdate() {
 	})
 	s.Nil(err)
 	s.NotNil(response)
-	s.Equal("wType", *response.WorkflowType.Name)
+	s.Equal("wType", response.WorkflowType.Name)
 	s.True(response.PreviousStartedEventID == nil)
 	s.Equal(int64(3), *response.StartedEventID)
 }
@@ -522,7 +522,7 @@ func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
 
 	s.Nil(err)
 	s.NotNil(response)
-	s.Equal("wType", *response.WorkflowType.Name)
+	s.Equal("wType", response.WorkflowType.Name)
 	s.True(response.PreviousStartedEventID == nil)
 	s.Equal(startedEventID.EventID, response.StartedEventID)
 }
@@ -661,7 +661,7 @@ func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 
 	s.Nil(err)
 	s.NotNil(response)
-	s.Equal("wType", *response.WorkflowType.Name)
+	s.Equal("wType", response.WorkflowType.Name)
 	s.True(response.PreviousStartedEventID == nil)
 	s.Equal(int64(3), *response.StartedEventID)
 	expectedQueryMap := map[string]*types.WorkflowQuery{
@@ -921,7 +921,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_BrandNew() {
 		StartRequest: &types.StartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
@@ -958,7 +958,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_Dedup() {
 		StartRequest: &types.StartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
@@ -994,7 +994,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_NonDeDup() {
 		StartRequest: &types.StartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
@@ -1059,7 +1059,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				Domain:                              domainID,
 				WorkflowID:                          workflowID,
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
@@ -1142,7 +1142,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 				StartRequest: &types.StartWorkflowExecutionRequest{
 					Domain:                              domainID,
 					WorkflowID:                          workflowID,
-					WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+					WorkflowType:                        &types.WorkflowType{Name: workflowType},
 					TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
@@ -1228,7 +1228,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
@@ -1269,7 +1269,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_CreateTimeout() {
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
@@ -1311,7 +1311,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
@@ -1361,7 +1361,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_DuplicateReque
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
@@ -1419,7 +1419,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_WorkflowAlread
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),

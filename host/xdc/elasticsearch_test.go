@@ -172,7 +172,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	wt := "xdc-search-attr-test-type"
 	tl := "xdc-search-attr-test-tasklist"
 	identity := "worker1"
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: common.StringPtr(tl)}
 	attrValBytes, _ := json.Marshal(s.testSearchAttributeVal)
 	searchAttr := &types.SearchAttributes{

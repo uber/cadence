@@ -189,7 +189,7 @@ func (s *integrationClustersTestSuite) TestDomainFailover() {
 	wt := "integration-domain-failover-test-type"
 	tl := "integration-domain-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: common.StringPtr(tl)}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -247,7 +247,7 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 	wt := "integration-simple-workflow-failover-test-type"
 	tl := "integration-simple-workflow-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: common.StringPtr(tl)}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -546,7 +546,7 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	identity1 := "worker1"
 	identity2 := "worker2"
 
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: common.StringPtr(tl)}
 	stickyTaskList1 := &types.TaskList{Name: common.StringPtr(stl1)}
 	stickyTaskList2 := &types.TaskList{Name: common.StringPtr(stl2)}
@@ -721,7 +721,7 @@ func (s *integrationClustersTestSuite) TestStartWorkflowExecution_Failover_Workf
 	wt := "integration-start-workflow-failover-ID-reuse-policy-test-type"
 	tl := "integration-start-workflow-failover-ID-reuse-policy-test-tasklist"
 	identity := "worker1"
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: common.StringPtr(tl)}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -854,7 +854,7 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 	wt := "integration-terminate-workflow-failover-test-type"
 	tl := "integration-terminate-workflow-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: common.StringPtr(tl)}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -1039,7 +1039,7 @@ func (s *integrationClustersTestSuite) TestContinueAsNewFailover() {
 	wt := "integration-continueAsNew-workflow-failover-test-type"
 	tl := "integration-continueAsNew-workflow-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: common.StringPtr(tl)}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -1177,7 +1177,7 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 	wt := "integration-signal-workflow-failover-test-type"
 	tl := "integration-signal-workflow-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: common.StringPtr(tl)}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -1358,7 +1358,7 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 	wt := "integration-user-timer-workflow-failover-test-type"
 	tl := "integration-user-timer-workflow-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: common.StringPtr(tl)}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -1531,7 +1531,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	tl := "integration-activity-heartbeat-workflow-failover-test-tasklist"
 	identity1 := "worker1"
 	identity2 := "worker2"
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: common.StringPtr(tl)}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -1740,7 +1740,7 @@ func (s *integrationClustersTestSuite) TestTransientDecisionFailover() {
 	wt := "integration-transient-decision-workflow-failover-test-type"
 	tl := "integration-transient-decision-workflow-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: common.StringPtr(tl)}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -1861,7 +1861,7 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 	wt := "integration-cron-workflow-failover-test-type"
 	tl := "integration-cron-workflow-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: common.StringPtr(tl)}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -1961,7 +1961,7 @@ func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
 	wt := "integration-workflow-retry-failover-test-type"
 	tl := "integration-workflow-retry-failover-test-tasklist"
 	identity := "worker1"
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: common.StringPtr(tl)}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),

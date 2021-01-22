@@ -248,7 +248,7 @@ func (s *engine3Suite) TestStartWorkflowExecution_BrandNew() {
 		StartRequest: &types.StartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
@@ -336,7 +336,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),

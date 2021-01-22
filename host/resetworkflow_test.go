@@ -39,7 +39,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 	tl := "integration-reset-workflow-test-taskqueue"
 	identity := "worker1"
 
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 
 	tasklist := &types.TaskList{Name: common.StringPtr(tl)}
 
@@ -253,7 +253,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 	tl := "integration-reset-workflow-test-taskqueue-no-decision-completed"
 	identity := "worker1"
 
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 
 	tasklist := &types.TaskList{Name: common.StringPtr(tl)}
 

@@ -433,7 +433,7 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowStartFailures() {
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowID:                          we.WorkflowID,
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(wt)},
+				WorkflowType:                        &types.WorkflowType{Name: wt},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(tl)},
 				Input:                               input,
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(execTimeout),
@@ -938,7 +938,7 @@ func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we types.Workflow
 
 	request := &types.StartWorkflowExecutionRequest{
 		WorkflowID:                          we.WorkflowID,
-		WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+		WorkflowType:                        &types.WorkflowType{Name: workflowType},
 		TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 		Input:                               input,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
@@ -1127,7 +1127,7 @@ func (s *historyBuilderSuite) validateWorkflowExecutionStartedEvent(event *types
 	s.Equal(common.FirstEventID, *event.EventID)
 	attributes := event.WorkflowExecutionStartedEventAttributes
 	s.NotNil(attributes)
-	s.Equal(workflowType, *attributes.WorkflowType.Name)
+	s.Equal(workflowType, attributes.WorkflowType.Name)
 	s.Equal(taskList, *attributes.TaskList.Name)
 	s.Equal(input, attributes.Input)
 	s.Equal(executionStartToCloseTimeout, *attributes.ExecutionStartToCloseTimeoutSeconds)
