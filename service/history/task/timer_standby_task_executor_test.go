@@ -158,8 +158,8 @@ func (s *timerStandbyTaskExecutorSuite) TearDownTest() {
 func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Pending() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -242,8 +242,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Pending() {
 func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Success() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -310,8 +310,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Success() {
 func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Multiple() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -382,8 +382,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Multiple() {
 func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Pending() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -468,8 +468,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Pending() {
 func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Success() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -540,8 +540,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Success() {
 
 func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noop() {
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -613,8 +613,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noo
 func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Multiple_CanUpdate() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -732,8 +732,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Multiple_CanU
 func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Pending() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -803,8 +803,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Pending() {
 func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_ScheduleToStartTimer() {
 
 	execution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 
 	decisionScheduleID := int64(16384)
@@ -829,8 +829,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_ScheduleToSta
 func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Success() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -884,8 +884,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Success() {
 func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowBackoffTimer_Pending() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -951,8 +951,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowBackoffTimer_Pending(
 func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowBackoffTimer_Success() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1001,8 +1001,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowBackoffTimer_Success(
 func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Pending() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1074,8 +1074,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Pending() {
 func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Success() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1129,8 +1129,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Success() {
 func (s *timerStandbyTaskExecutorSuite) TestProcessRetryTimeout() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"

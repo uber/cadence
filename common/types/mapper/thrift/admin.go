@@ -1051,8 +1051,8 @@ func FromResendReplicationTasksRequest(t *types.ResendReplicationTasksRequest) *
 	}
 	return &admin.ResendReplicationTasksRequest{
 		DomainID:      t.DomainID,
-		WorkflowID:    t.WorkflowID,
-		RunID:         t.RunID,
+		WorkflowID:    &t.WorkflowID,
+		RunID:         &t.RunID,
 		RemoteCluster: t.RemoteCluster,
 		StartEventID:  t.StartEventID,
 		StartVersion:  t.StartVersion,
@@ -1068,8 +1068,8 @@ func ToResendReplicationTasksRequest(t *admin.ResendReplicationTasksRequest) *ty
 	}
 	return &types.ResendReplicationTasksRequest{
 		DomainID:      t.DomainID,
-		WorkflowID:    t.WorkflowID,
-		RunID:         t.RunID,
+		WorkflowID:    t.GetWorkflowID(),
+		RunID:         t.GetRunID(),
 		RemoteCluster: t.RemoteCluster,
 		StartEventID:  t.StartEventID,
 		StartVersion:  t.StartVersion,

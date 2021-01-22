@@ -155,8 +155,8 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 
 	domainID := constants.TestDomainID
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	stickyTl := "stickyTaskList"
@@ -247,7 +247,7 @@ func (s *engine3Suite) TestStartWorkflowExecution_BrandNew() {
 		DomainUUID: common.StringPtr(domainID),
 		StartRequest: &types.StartWorkflowExecutionRequest{
 			Domain:                              common.StringPtr(domainID),
-			WorkflowID:                          common.StringPtr(workflowID),
+			WorkflowID:                          workflowID,
 			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
@@ -282,7 +282,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 		DomainUUID: common.StringPtr(domainID),
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:     common.StringPtr(domainID),
-			WorkflowID: common.StringPtr(workflowID),
+			WorkflowID: workflowID,
 			Identity:   common.StringPtr(identity),
 			SignalName: common.StringPtr(signalName),
 			Input:      input,
@@ -335,7 +335,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 		DomainUUID: common.StringPtr(domainID),
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              common.StringPtr(domainID),
-			WorkflowID:                          common.StringPtr(workflowID),
+			WorkflowID:                          workflowID,
 			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),

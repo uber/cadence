@@ -247,7 +247,7 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 		return nil, adh.error(err, scope)
 	}
 
-	shardID := common.WorkflowIDToHistoryShard(*request.Execution.WorkflowID, adh.numberOfHistoryShards)
+	shardID := common.WorkflowIDToHistoryShard(request.Execution.WorkflowID, adh.numberOfHistoryShards)
 	shardIDstr := string(shardID)
 	shardIDForOutput := strconv.Itoa(shardID)
 

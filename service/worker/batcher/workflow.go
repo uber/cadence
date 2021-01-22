@@ -356,8 +356,8 @@ func startTaskProcessor(
 						return client.TerminateWorkflowExecution(ctx, &types.TerminateWorkflowExecutionRequest{
 							Domain: common.StringPtr(batchParams.DomainName),
 							WorkflowExecution: &types.WorkflowExecution{
-								WorkflowID: common.StringPtr(workflowID),
-								RunID:      common.StringPtr(runID),
+								WorkflowID: workflowID,
+								RunID:      runID,
 							},
 							Reason:   common.StringPtr(batchParams.Reason),
 							Identity: common.StringPtr(BatchWFTypeName),
@@ -370,8 +370,8 @@ func startTaskProcessor(
 						return client.RequestCancelWorkflowExecution(ctx, &types.RequestCancelWorkflowExecutionRequest{
 							Domain: common.StringPtr(batchParams.DomainName),
 							WorkflowExecution: &types.WorkflowExecution{
-								WorkflowID: common.StringPtr(workflowID),
-								RunID:      common.StringPtr(runID),
+								WorkflowID: workflowID,
+								RunID:      runID,
 							},
 							Identity:  common.StringPtr(BatchWFTypeName),
 							RequestID: common.StringPtr(requestID),
@@ -383,8 +383,8 @@ func startTaskProcessor(
 						return client.SignalWorkflowExecution(ctx, &types.SignalWorkflowExecutionRequest{
 							Domain: common.StringPtr(batchParams.DomainName),
 							WorkflowExecution: &types.WorkflowExecution{
-								WorkflowID: common.StringPtr(workflowID),
-								RunID:      common.StringPtr(runID),
+								WorkflowID: workflowID,
+								RunID:      runID,
 							},
 							Identity:   common.StringPtr(BatchWFTypeName),
 							RequestID:  common.StringPtr(requestID),
@@ -444,8 +444,8 @@ func processTask(
 		resp, err := client.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 			Domain: common.StringPtr(batchParams.DomainName),
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(wf.GetWorkflowID()),
-				RunID:      common.StringPtr(wf.GetRunID()),
+				WorkflowID: wf.WorkflowID,
+				RunID:      wf.RunID,
 			},
 		})
 		if err != nil {

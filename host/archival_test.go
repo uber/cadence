@@ -53,8 +53,8 @@ func (s *integrationSuite) TestArchival_TimerQueueProcessor() {
 	RunID := s.startAndFinishWorkflow(WorkflowID, workflowType, taskList, s.archivalDomainName, domainID, numActivities, numRuns)[0]
 
 	execution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(WorkflowID),
-		RunID:      common.StringPtr(RunID),
+		WorkflowID: WorkflowID,
+		RunID:      RunID,
 	}
 	s.True(s.isHistoryArchived(s.archivalDomainName, execution))
 	s.True(s.isHistoryDeleted(domainID, execution))
@@ -74,8 +74,8 @@ func (s *integrationSuite) TestArchival_ContinueAsNew() {
 
 	for _, RunID := range RunIDs {
 		execution := &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(WorkflowID),
-			RunID:      common.StringPtr(RunID),
+			WorkflowID: WorkflowID,
+			RunID:      RunID,
 		}
 		s.True(s.isHistoryArchived(s.archivalDomainName, execution))
 		s.True(s.isHistoryDeleted(domainID, execution))
@@ -94,8 +94,8 @@ func (s *integrationSuite) TestArchival_ArchiverWorker() {
 	RunID := s.startAndFinishWorkflow(WorkflowID, workflowType, taskList, s.archivalDomainName, domainID, numActivities, 1)[0]
 
 	execution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(WorkflowID),
-		RunID:      common.StringPtr(RunID),
+		WorkflowID: WorkflowID,
+		RunID:      RunID,
 	}
 	s.True(s.isHistoryArchived(s.archivalDomainName, execution))
 	s.True(s.isHistoryDeleted(domainID, execution))
@@ -172,7 +172,7 @@ func (s *integrationSuite) isHistoryArchived(domain string, execution *types.Wor
 }
 
 func (s *integrationSuite) isHistoryDeleted(domainID string, execution *types.WorkflowExecution) bool {
-	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowID, s.testClusterConfig.HistoryConfig.NumHistoryShards)
+	shardID := common.WorkflowIDToHistoryShard(execution.WorkflowID, s.testClusterConfig.HistoryConfig.NumHistoryShards)
 	request := &persistence.GetHistoryTreeRequest{
 		TreeID:  execution.GetRunID(),
 		ShardID: common.IntPtr(shardID),
@@ -221,7 +221,7 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domain),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -231,7 +231,7 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 	}
 	we, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 	RunIDs := make([]string, numRuns)
 
 	workflowComplete := false
@@ -299,7 +299,7 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 		input []byte,
 		taskToken []byte,
 	) ([]byte, bool, error) {
-		s.Equal(id, *execution.WorkflowID)
+		s.Equal(id, execution.WorkflowID)
 		s.Equal(activityName, *activityType.Name)
 		id, _ := strconv.Atoi(activityID)
 		s.Equal(int(expectedActivityID), id)

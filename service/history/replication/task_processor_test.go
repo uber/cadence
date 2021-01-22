@@ -174,8 +174,8 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_SyncActivityReplication
 		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
 		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
 			DomainID:   common.StringPtr(domainID),
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	}
 	request := &persistence.PutReplicationTaskToDLQRequest{
@@ -209,8 +209,8 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTas
 		TaskType: types.ReplicationTaskTypeHistoryV2.Ptr(),
 		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
 			DomainID:   common.StringPtr(domainID),
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 			Events: &types.DataBlob{
 				EncodingType: types.EncodingTypeThriftRW.Ptr(),
 				Data:         data.Data,
@@ -251,8 +251,8 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeHistoryV2
 		TaskType: types.ReplicationTaskTypeHistoryV2.Ptr(),
 		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
 			DomainID:   common.StringPtr(domainID),
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 			Events: &types.DataBlob{
 				EncodingType: types.EncodingTypeThriftRW.Ptr(),
 				Data:         data.Data,
@@ -279,8 +279,8 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeSyncActiv
 		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
 		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
 			DomainID:    common.StringPtr(domainID),
-			WorkflowID:  common.StringPtr(workflowID),
-			RunID:       common.StringPtr(runID),
+			WorkflowID:  workflowID,
+			RunID:       runID,
 			ScheduledID: common.Int64Ptr(1),
 		},
 	}

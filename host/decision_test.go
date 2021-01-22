@@ -52,7 +52,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -65,7 +65,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 	s.Nil(err0)
 
 	we := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
+		WorkflowID: id,
 		RunID:      resp0.RunID,
 	}
 
@@ -159,7 +159,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -172,7 +172,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 	s.Nil(err0)
 
 	we := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
+		WorkflowID: id,
 		RunID:      resp0.RunID,
 	}
 
@@ -297,7 +297,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionSta
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -310,7 +310,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionSta
 	s.Nil(err0)
 
 	we := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
+		WorkflowID: id,
 		RunID:      resp0.RunID,
 	}
 
@@ -372,7 +372,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -385,7 +385,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	s.Nil(err0)
 
 	we := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
+		WorkflowID: id,
 		RunID:      resp0.RunID,
 	}
 
@@ -447,7 +447,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -460,7 +460,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	s.Nil(err0)
 
 	we := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
+		WorkflowID: id,
 		RunID:      resp0.RunID,
 	}
 
@@ -534,7 +534,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -547,7 +547,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 	s.Nil(err0)
 
 	we := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
+		WorkflowID: id,
 		RunID:      resp0.RunID,
 	}
 
@@ -639,7 +639,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -652,7 +652,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	s.Nil(err0)
 
 	we := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
+		WorkflowID: id,
 		RunID:      resp0.RunID,
 	}
 
@@ -741,7 +741,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -754,7 +754,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	s.Nil(err0)
 
 	we := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
+		WorkflowID: id,
 		RunID:      resp0.RunID,
 	}
 

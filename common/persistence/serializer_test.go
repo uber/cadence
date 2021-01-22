@@ -91,7 +91,7 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 		Points: []*types.ResetPointInfo{
 			{
 				BinaryChecksum:           common.StringPtr("bad-binary-cs"),
-				RunID:                    common.StringPtr("test-run-id"),
+				RunID:                    "test-run-id",
 				FirstDecisionCompletedID: common.Int64Ptr(123),
 				CreatedTimeNano:          common.Int64Ptr(456),
 				ExpiringTimeNano:         common.Int64Ptr(789),

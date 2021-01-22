@@ -101,12 +101,8 @@ func (err RetryTaskV2Error) Error() string {
 	if err.DomainID != nil {
 		printField(sb, "DomainID", *err.DomainID)
 	}
-	if err.WorkflowID != nil {
-		printField(sb, "WorkflowID", *err.WorkflowID)
-	}
-	if err.RunID != nil {
-		printField(sb, "RunID", *err.RunID)
-	}
+	printField(sb, "WorkflowID", err.WorkflowID)
+	printField(sb, "RunID", err.RunID)
 	if err.StartEventID != nil {
 		printField(sb, "StartEventID", *err.StartEventID)
 	}
@@ -134,9 +130,7 @@ func (err WorkflowExecutionAlreadyStartedError) Error() string {
 	if err.StartRequestID != nil {
 		printField(sb, "StartRequestID", *err.StartRequestID)
 	}
-	if err.RunID != nil {
-		printField(sb, "RunID", *err.RunID)
-	}
+	printField(sb, "RunID", err.RunID)
 	return fmt.Sprintf("WorkflowExecutionAlreadyStartedError{%s}", sb.String())
 }
 

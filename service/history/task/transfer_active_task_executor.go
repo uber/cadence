@@ -342,13 +342,13 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		err = t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &types.RecordChildExecutionCompletedRequest{
 			DomainUUID: common.StringPtr(parentDomainID),
 			WorkflowExecution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(parentWorkflowID),
-				RunID:      common.StringPtr(parentRunID),
+				WorkflowID: parentWorkflowID,
+				RunID:      parentRunID,
 			},
 			InitiatedID: common.Int64Ptr(initiatedID),
 			CompletedExecution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(task.WorkflowID),
-				RunID:      common.StringPtr(task.RunID),
+				WorkflowID: task.WorkflowID,
+				RunID:      task.RunID,
 			},
 			CompletionEvent: completionEvent,
 		})
@@ -571,8 +571,8 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 	return t.historyClient.RemoveSignalMutableState(removeSignalCtx, &types.RemoveSignalMutableStateRequest{
 		DomainUUID: common.StringPtr(task.TargetDomainID),
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(task.TargetWorkflowID),
-			RunID:      common.StringPtr(task.TargetRunID),
+			WorkflowID: task.TargetWorkflowID,
+			RunID:      task.TargetRunID,
 		},
 		RequestID: common.StringPtr(signalInfo.SignalRequestID),
 	})
@@ -642,8 +642,8 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	// ChildExecution already started, just create DecisionTask and complete transfer task
 	if childInfo.StartedID != common.EmptyEventID {
 		childExecution := &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(childInfo.StartedWorkflowID),
-			RunID:      common.StringPtr(childInfo.StartedRunID),
+			WorkflowID: childInfo.StartedWorkflowID,
+			RunID:      childInfo.StartedRunID,
 		}
 		return t.createFirstDecisionTask(ctx, task.TargetDomainID, childExecution)
 	}
@@ -670,7 +670,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	}
 
 	t.logger.Debug(fmt.Sprintf("Child Execution started successfully.  task.WorkflowID: %v, RunID: %v",
-		*attributes.WorkflowID, childRunID))
+		attributes.WorkflowID, childRunID))
 
 	// Child execution is successfully started, record ChildExecutionStartedEvent in parent execution
 	err = t.recordChildExecutionStarted(ctx, task, wfContext, attributes, childRunID)
@@ -680,8 +680,8 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	}
 	// Finally create first decision task for Child execution so it is really started
 	return t.createFirstDecisionTask(ctx, task.TargetDomainID, &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(task.TargetWorkflowID),
-		RunID:      common.StringPtr(childRunID),
+		WorkflowID: task.TargetWorkflowID,
+		RunID:      childRunID,
 	})
 }
 
@@ -878,8 +878,8 @@ func (t *transferActiveTaskExecutor) processResetWorkflow(
 		baseRelease = currentRelease
 	} else {
 		baseExecution := types.WorkflowExecution{
-			WorkflowID: common.StringPtr(task.WorkflowID),
-			RunID:      common.StringPtr(resetPoint.GetRunID()),
+			WorkflowID: task.WorkflowID,
+			RunID:      resetPoint.GetRunID(),
 		}
 		baseContext, baseRelease, err = t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 			task.DomainID,
@@ -943,8 +943,8 @@ func (t *transferActiveTaskExecutor) recordChildExecutionStarted(
 			_, err := mutableState.AddChildWorkflowExecutionStartedEvent(
 				domain,
 				&types.WorkflowExecution{
-					WorkflowID: common.StringPtr(task.TargetWorkflowID),
-					RunID:      common.StringPtr(runID),
+					WorkflowID: task.TargetWorkflowID,
+					RunID:      runID,
 				},
 				initiatedAttributes.WorkflowType,
 				initiatedEventID,
@@ -1207,8 +1207,8 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionWithRetry(
 		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
 			Domain: common.StringPtr(targetDomain),
 			WorkflowExecution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(task.TargetWorkflowID),
-				RunID:      common.StringPtr(task.TargetRunID),
+				WorkflowID: task.TargetWorkflowID,
+				RunID:      task.TargetRunID,
 			},
 			Identity: common.StringPtr(identityHistoryService),
 			// Use the same request ID to dedupe RequestCancelWorkflowExecution calls
@@ -1216,8 +1216,8 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionWithRetry(
 		},
 		ExternalInitiatedEventID: common.Int64Ptr(task.ScheduleID),
 		ExternalWorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(task.WorkflowID),
-			RunID:      common.StringPtr(task.RunID),
+			WorkflowID: task.WorkflowID,
+			RunID:      task.RunID,
 		},
 		ChildWorkflowOnly: common.BoolPtr(task.TargetChildWorkflowOnly),
 	}
@@ -1251,8 +1251,8 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionWithRetry(
 		SignalRequest: &types.SignalWorkflowExecutionRequest{
 			Domain: common.StringPtr(targetDomain),
 			WorkflowExecution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(task.TargetWorkflowID),
-				RunID:      common.StringPtr(task.TargetRunID),
+				WorkflowID: task.TargetWorkflowID,
+				RunID:      task.TargetRunID,
 			},
 			Identity:   common.StringPtr(identityHistoryService),
 			SignalName: common.StringPtr(signalInfo.SignalName),
@@ -1262,8 +1262,8 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionWithRetry(
 			Control:   signalInfo.Control,
 		},
 		ExternalWorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(task.WorkflowID),
-			RunID:      common.StringPtr(task.RunID),
+			WorkflowID: task.WorkflowID,
+			RunID:      task.RunID,
 		},
 		ChildWorkflowOnly: common.BoolPtr(task.TargetChildWorkflowOnly),
 	}
@@ -1311,8 +1311,8 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 		DomainUUID: common.StringPtr(task.DomainID),
 		Domain:     common.StringPtr(domain),
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(task.WorkflowID),
-			RunID:      common.StringPtr(task.RunID),
+			WorkflowID: task.WorkflowID,
+			RunID:      task.RunID,
 		},
 		InitiatedID: common.Int64Ptr(task.ScheduleID),
 	}
@@ -1494,8 +1494,8 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 			TerminateRequest: &types.TerminateWorkflowExecutionRequest{
 				Domain: common.StringPtr(domainName),
 				WorkflowExecution: &types.WorkflowExecution{
-					WorkflowID: common.StringPtr(childInfo.StartedWorkflowID),
-					RunID:      common.StringPtr(childInfo.StartedRunID),
+					WorkflowID: childInfo.StartedWorkflowID,
+					RunID:      childInfo.StartedRunID,
 				},
 				Reason:   common.StringPtr("by parent close policy"),
 				Identity: common.StringPtr(identityHistoryService),
@@ -1508,8 +1508,8 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 			CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
 				Domain: common.StringPtr(domainName),
 				WorkflowExecution: &types.WorkflowExecution{
-					WorkflowID: common.StringPtr(childInfo.StartedWorkflowID),
-					RunID:      common.StringPtr(childInfo.StartedRunID),
+					WorkflowID: childInfo.StartedWorkflowID,
+					RunID:      childInfo.StartedRunID,
 				},
 				Identity: common.StringPtr(identityHistoryService),
 			},

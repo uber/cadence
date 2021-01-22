@@ -233,8 +233,8 @@ func (s *Scavenger) startTaskProcessor(
 			_, err = s.client.DescribeMutableState(ctx, &types.DescribeMutableStateRequest{
 				DomainUUID: common.StringPtr(task.domainID),
 				Execution: &types.WorkflowExecution{
-					WorkflowID: common.StringPtr(task.workflowID),
-					RunID:      common.StringPtr(task.runID),
+					WorkflowID: task.workflowID,
+					RunID:      task.runID,
 				},
 			})
 

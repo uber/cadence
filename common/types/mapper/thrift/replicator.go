@@ -302,8 +302,8 @@ func FromHistoryTaskV2Attributes(t *types.HistoryTaskV2Attributes) *replicator.H
 	return &replicator.HistoryTaskV2Attributes{
 		TaskId:              t.TaskID,
 		DomainId:            t.DomainID,
-		WorkflowId:          t.WorkflowID,
-		RunId:               t.RunID,
+		WorkflowId:          &t.WorkflowID,
+		RunId:               &t.RunID,
 		VersionHistoryItems: FromVersionHistoryItemArray(t.VersionHistoryItems),
 		Events:              FromDataBlob(t.Events),
 		NewRunEvents:        FromDataBlob(t.NewRunEvents),
@@ -318,8 +318,8 @@ func ToHistoryTaskV2Attributes(t *replicator.HistoryTaskV2Attributes) *types.His
 	return &types.HistoryTaskV2Attributes{
 		TaskID:              t.TaskId,
 		DomainID:            t.DomainId,
-		WorkflowID:          t.WorkflowId,
-		RunID:               t.RunId,
+		WorkflowID:          t.GetWorkflowId(),
+		RunID:               t.GetRunId(),
 		VersionHistoryItems: ToVersionHistoryItemArray(t.VersionHistoryItems),
 		Events:              ToDataBlob(t.Events),
 		NewRunEvents:        ToDataBlob(t.NewRunEvents),
@@ -525,8 +525,8 @@ func FromReplicationTaskInfo(t *types.ReplicationTaskInfo) *replicator.Replicati
 	}
 	return &replicator.ReplicationTaskInfo{
 		DomainID:     t.DomainID,
-		WorkflowID:   t.WorkflowID,
-		RunID:        t.RunID,
+		WorkflowID:   &t.WorkflowID,
+		RunID:        &t.RunID,
 		TaskType:     t.TaskType,
 		TaskID:       t.TaskID,
 		Version:      t.Version,
@@ -543,8 +543,8 @@ func ToReplicationTaskInfo(t *replicator.ReplicationTaskInfo) *types.Replication
 	}
 	return &types.ReplicationTaskInfo{
 		DomainID:     t.DomainID,
-		WorkflowID:   t.WorkflowID,
-		RunID:        t.RunID,
+		WorkflowID:   t.GetWorkflowID(),
+		RunID:        t.GetRunID(),
 		TaskType:     t.TaskType,
 		TaskID:       t.TaskID,
 		Version:      t.Version,
@@ -647,8 +647,8 @@ func FromSyncActivityTaskAttributes(t *types.SyncActivityTaskAttributes) *replic
 	}
 	return &replicator.SyncActivityTaskAttributes{
 		DomainId:           t.DomainID,
-		WorkflowId:         t.WorkflowID,
-		RunId:              t.RunID,
+		WorkflowId:         &t.WorkflowID,
+		RunId:              &t.RunID,
 		Version:            t.Version,
 		ScheduledId:        t.ScheduledID,
 		ScheduledTime:      t.ScheduledTime,
@@ -671,8 +671,8 @@ func ToSyncActivityTaskAttributes(t *replicator.SyncActivityTaskAttributes) *typ
 	}
 	return &types.SyncActivityTaskAttributes{
 		DomainID:           t.DomainId,
-		WorkflowID:         t.WorkflowId,
-		RunID:              t.RunId,
+		WorkflowID:         t.GetWorkflowId(),
+		RunID:              t.GetRunId(),
 		Version:            t.Version,
 		ScheduledID:        t.ScheduledId,
 		ScheduledTime:      t.ScheduledTime,

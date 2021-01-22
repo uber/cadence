@@ -88,7 +88,7 @@ func (s *integrationSuite) TestStartWorkflowExecution() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -107,7 +107,7 @@ func (s *integrationSuite) TestStartWorkflowExecution() {
 	newRequest := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -138,7 +138,7 @@ func (s *integrationSuite) TestStartWorkflowExecution_IDReusePolicy() {
 		return &types.StartWorkflowExecutionRequest{
 			RequestID:                           common.StringPtr(uuid.New()),
 			Domain:                              common.StringPtr(s.domainName),
-			WorkflowID:                          common.StringPtr(id),
+			WorkflowID:                          id,
 			WorkflowType:                        workflowType,
 			TaskList:                            taskList,
 			Input:                               nil,
@@ -180,7 +180,7 @@ GetHistoryLoop:
 		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 			Domain: common.StringPtr(s.domainName),
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
+				WorkflowID: id,
 				RunID:      we.RunID,
 			},
 		})
@@ -207,7 +207,7 @@ GetHistoryLoop:
 	err = s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain: common.StringPtr(s.domainName),
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 			RunID:      we1.RunID,
 		},
 		Reason:   common.StringPtr("kill workflow"),
@@ -298,7 +298,7 @@ func (s *integrationSuite) TestTerminateWorkflow() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -310,7 +310,7 @@ func (s *integrationSuite) TestTerminateWorkflow() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	activityCount := int32(1)
 	activityCounter := int32(0)
@@ -370,8 +370,8 @@ func (s *integrationSuite) TestTerminateWorkflow() {
 	err = s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain: common.StringPtr(s.domainName),
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(*we.RunID),
+			WorkflowID: id,
+			RunID:      we.RunID,
 		},
 		Reason:   common.StringPtr(terminateReason),
 		Details:  terminateDetails,
@@ -385,8 +385,8 @@ GetHistoryLoop:
 		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 			Domain: common.StringPtr(s.domainName),
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
-				RunID:      common.StringPtr(*we.RunID),
+				WorkflowID: id,
+				RunID:      we.RunID,
 			},
 		})
 		s.Nil(err)
@@ -415,7 +415,7 @@ StartNewExecutionLoop:
 		request := &types.StartWorkflowExecutionRequest{
 			RequestID:                           common.StringPtr(uuid.New()),
 			Domain:                              common.StringPtr(s.domainName),
-			WorkflowID:                          common.StringPtr(id),
+			WorkflowID:                          id,
 			WorkflowType:                        workflowType,
 			TaskList:                            taskList,
 			Input:                               nil,
@@ -432,7 +432,7 @@ StartNewExecutionLoop:
 		}
 
 		s.Logger.Info("New Execution Started with the same ID", tag.WorkflowID(id),
-			tag.WorkflowRunID(*newExecution.RunID))
+			tag.WorkflowRunID(newExecution.RunID))
 		newExecutionStarted = true
 		break StartNewExecutionLoop
 	}
@@ -456,7 +456,7 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -468,7 +468,7 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	workflowComplete := false
 	activityCount := int32(10)
@@ -507,7 +507,7 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 	expectedActivity := int32(1)
 	atHandler := func(execution *types.WorkflowExecution, activityType *types.ActivityType,
 		ActivityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
-		s.Equal(id, *execution.WorkflowID)
+		s.Equal(id, execution.WorkflowID)
 		s.Equal(activityName, *activityType.Name)
 		id, _ := strconv.Atoi(ActivityID)
 		s.Equal(int(expectedActivity), id)
@@ -565,7 +565,7 @@ func (s *integrationSuite) TestCompleteDecisionTaskAndCreateNewOne() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -577,7 +577,7 @@ func (s *integrationSuite) TestCompleteDecisionTaskAndCreateNewOne() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	decisionCount := 0
 	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
@@ -650,7 +650,7 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -662,7 +662,7 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	workflowComplete := false
 	activityCount := int32(4)
@@ -703,7 +703,7 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 
 	atHandler := func(execution *types.WorkflowExecution, activityType *types.ActivityType,
 		ActivityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
-		s.Equal(id, *execution.WorkflowID)
+		s.Equal(id, execution.WorkflowID)
 		s.Equal(activityName, *activityType.Name)
 		s.Logger.Info("Activity ID", tag.WorkflowActivityID(ActivityID))
 		return []byte("Activity Result."), false, nil
@@ -733,8 +733,8 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 			historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 				Domain: common.StringPtr(s.domainName),
 				Execution: &types.WorkflowExecution{
-					WorkflowID: common.StringPtr(id),
-					RunID:      common.StringPtr(*we.RunID),
+					WorkflowID: id,
+					RunID:      we.RunID,
 				},
 			})
 			s.Nil(err)
@@ -749,7 +749,7 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 		}
 	}
 
-	s.Logger.Info("Waiting for workflow to complete", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("Waiting for workflow to complete", tag.WorkflowRunID(we.RunID))
 
 	s.False(workflowComplete)
 	_, err := poller.PollAndProcessDecisionTask(false, false)
@@ -775,7 +775,7 @@ func (s *integrationSuite) TestWorkflowRetry() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -795,7 +795,7 @@ func (s *integrationSuite) TestWorkflowRetry() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	var executions []*types.WorkflowExecution
 
@@ -913,7 +913,7 @@ func (s *integrationSuite) TestWorkflowRetryFailures() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -933,7 +933,7 @@ func (s *integrationSuite) TestWorkflowRetryFailures() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	executions := []*types.WorkflowExecution{}
 	dtHandler := workflowImpl(5, "retryable-error", &executions)
@@ -969,7 +969,7 @@ func (s *integrationSuite) TestWorkflowRetryFailures() {
 	request = &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -989,7 +989,7 @@ func (s *integrationSuite) TestWorkflowRetryFailures() {
 	we, err0 = s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	executions = []*types.WorkflowExecution{}
 	dtHandler = workflowImpl(5, "bad-bug", &executions)
@@ -1037,7 +1037,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1053,7 +1053,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	var executions []*types.WorkflowExecution
 
@@ -1132,7 +1132,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	terminateErr := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain: common.StringPtr(s.domainName),
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 	})
 	s.NoError(terminateErr)
@@ -1188,7 +1188,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	dweResponse, err := s.engine.DescribeWorkflowExecution(createContext(), &types.DescribeWorkflowExecutionRequest{
 		Domain: common.StringPtr(s.domainName),
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 			RunID:      we.RunID,
 		},
 	})
@@ -1244,7 +1244,7 @@ func (s *integrationSuite) TestCronWorkflowTimeout() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1259,7 +1259,7 @@ func (s *integrationSuite) TestCronWorkflowTimeout() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	var executions []*types.WorkflowExecution
 	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
@@ -1317,7 +1317,7 @@ func (s *integrationSuite) TestCronWorkflowTimeout() {
 	terminateErr := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain: common.StringPtr(s.domainName),
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 	})
 	s.NoError(terminateErr)
@@ -1338,7 +1338,7 @@ func (s *integrationSuite) TestSequential_UserTimers() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1350,7 +1350,7 @@ func (s *integrationSuite) TestSequential_UserTimers() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	workflowComplete := false
 	timerCount := int32(4)
@@ -1418,7 +1418,7 @@ func (s *integrationSuite) TestRateLimitBufferedEvents() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1430,10 +1430,10 @@ func (s *integrationSuite) TestRateLimitBufferedEvents() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 	workflowExecution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(*we.RunID),
+		WorkflowID: id,
+		RunID:      we.RunID,
 	}
 
 	// decider logic
@@ -1516,7 +1516,7 @@ func (s *integrationSuite) TestBufferedEvents() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1528,7 +1528,7 @@ func (s *integrationSuite) TestBufferedEvents() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	// decider logic
 	workflowComplete := false
@@ -1544,7 +1544,7 @@ func (s *integrationSuite) TestBufferedEvents() {
 				&types.SignalWorkflowExecutionRequest{
 					Domain: common.StringPtr(s.domainName),
 					WorkflowExecution: &types.WorkflowExecution{
-						WorkflowID: common.StringPtr(id),
+						WorkflowID: id,
 					},
 					SignalName: common.StringPtr("buffered-signal"),
 					Input:      []byte("buffered-signal-input"),
@@ -1601,7 +1601,7 @@ func (s *integrationSuite) TestBufferedEvents() {
 	histResp, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(s.domainName),
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 			RunID:      we.RunID,
 		},
 	})
@@ -1635,7 +1635,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1647,13 +1647,13 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	describeWorkflowExecution := func() (*types.DescribeWorkflowExecutionResponse, error) {
 		return s.engine.DescribeWorkflowExecution(createContext(), &types.DescribeWorkflowExecutionRequest{
 			Domain: common.StringPtr(s.domainName),
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
+				WorkflowID: id,
 				RunID:      we.RunID,
 			},
 		})
@@ -1765,7 +1765,7 @@ func (s *integrationSuite) TestVisibility() {
 	startRequest := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id1),
+		WorkflowID:                          id1,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1827,7 +1827,7 @@ func (s *integrationSuite) TestVisibility() {
 	startRequest = &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id2),
+		WorkflowID:                          id2,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1909,7 +1909,7 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(parentID),
+		WorkflowID:                          parentID,
 		WorkflowType:                        parentWorkflowType,
 		TaskList:                            taskListParent,
 		Input:                               nil,
@@ -1921,7 +1921,7 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	// decider logic
 	childComplete := false
@@ -1945,9 +1945,9 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	// Parent Decider Logic
 	dtHandlerParent := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
-		s.Logger.Info("Processing decision task for ", tag.WorkflowID(*execution.WorkflowID))
+		s.Logger.Info("Processing decision task for ", tag.WorkflowID(execution.WorkflowID))
 
-		if *execution.WorkflowID == parentID {
+		if execution.WorkflowID == parentID {
 			if !childExecutionStarted {
 				s.Logger.Info("Starting child execution.")
 				childExecutionStarted = true
@@ -1955,7 +1955,7 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 				return nil, []*types.Decision{{
 					DecisionType: types.DecisionTypeStartChildWorkflowExecution.Ptr(),
 					StartChildWorkflowExecutionDecisionAttributes: &types.StartChildWorkflowExecutionDecisionAttributes{
-						WorkflowID:                          common.StringPtr(childID),
+						WorkflowID:                          childID,
 						WorkflowType:                        childWorkflowType,
 						TaskList:                            taskListChild,
 						Input:                               []byte("child-workflow-input"),
@@ -1998,7 +1998,7 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 			childStartedEvent = history.Events[0]
 		}
 
-		s.Logger.Info("Processing decision task for Child ", tag.WorkflowID(*execution.WorkflowID))
+		s.Logger.Info("Processing decision task for Child ", tag.WorkflowID(execution.WorkflowID))
 		childComplete = true
 		return nil, []*types.Decision{{
 			DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
@@ -2063,7 +2063,7 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	s.NotNil(completedEvent)
 	completedAttributes := completedEvent.ChildWorkflowExecutionCompletedEventAttributes
 	s.Nil(completedAttributes.Domain)
-	s.Equal(childID, *completedAttributes.WorkflowExecution.WorkflowID)
+	s.Equal(childID, completedAttributes.WorkflowExecution.WorkflowID)
 	s.Equal(wtChild, *completedAttributes.WorkflowType.Name)
 	s.Equal([]byte("Child Done."), completedAttributes.Result)
 }
@@ -2095,7 +2095,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(parentID),
+		WorkflowID:                          parentID,
 		WorkflowType:                        parentWorkflowType,
 		TaskList:                            taskListParent,
 		Input:                               nil,
@@ -2107,7 +2107,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	startParentWorkflowTS := time.Now()
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	// decider logic
 	childExecutionStarted := false
@@ -2116,7 +2116,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	// Parent Decider Logic
 	dtHandlerParent := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
-		s.Logger.Info("Processing decision task for ", tag.WorkflowID(*execution.WorkflowID))
+		s.Logger.Info("Processing decision task for ", tag.WorkflowID(execution.WorkflowID))
 
 		if !childExecutionStarted {
 			s.Logger.Info("Starting child execution.")
@@ -2125,7 +2125,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeStartChildWorkflowExecution.Ptr(),
 				StartChildWorkflowExecutionDecisionAttributes: &types.StartChildWorkflowExecutionDecisionAttributes{
-					WorkflowID:                          common.StringPtr(childID),
+					WorkflowID:                          childID,
 					WorkflowType:                        childWorkflowType,
 					TaskList:                            taskListChild,
 					Input:                               nil,
@@ -2154,7 +2154,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	dtHandlerChild := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
 
-		s.Logger.Info("Processing decision task for Child ", tag.WorkflowID(*execution.WorkflowID))
+		s.Logger.Info("Processing decision task for Child ", tag.WorkflowID(execution.WorkflowID))
 		return nil, []*types.Decision{{
 			DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
 			CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{},
@@ -2223,7 +2223,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	terminateErr := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain: common.StringPtr(s.domainName),
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(childID),
+			WorkflowID: childID,
 		},
 	})
 	s.Nil(terminateErr)
@@ -2235,7 +2235,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	s.NotNil(terminatedEvent)
 	terminatedAttributes := terminatedEvent.ChildWorkflowExecutionTerminatedEventAttributes
 	s.Nil(terminatedAttributes.Domain)
-	s.Equal(childID, *terminatedAttributes.WorkflowExecution.WorkflowID)
+	s.Equal(childID, terminatedAttributes.WorkflowExecution.WorkflowID)
 	s.Equal(wtChild, *terminatedAttributes.WorkflowType.Name)
 
 	startFilter.EarliestTime = common.Int64Ptr(startParentWorkflowTS.UnixNano())
@@ -2292,7 +2292,7 @@ func (s *integrationSuite) TestWorkflowTimeout() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -2304,7 +2304,7 @@ func (s *integrationSuite) TestWorkflowTimeout() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	workflowComplete := false
 
@@ -2313,8 +2313,8 @@ GetHistoryLoop:
 		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 			Domain: common.StringPtr(s.domainName),
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
-				RunID:      common.StringPtr(*we.RunID),
+				WorkflowID: id,
+				RunID:      we.RunID,
 			},
 		})
 		s.Nil(err)
@@ -2375,7 +2375,7 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -2386,11 +2386,11 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	workflowExecution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(*we.RunID),
+		WorkflowID: id,
+		RunID:      we.RunID,
 	}
 
 	// decider logic
@@ -2578,7 +2578,7 @@ func (s *integrationSuite) TestDescribeTaskList() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(WorkflowID),
+		WorkflowID:                          WorkflowID,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -2590,7 +2590,7 @@ func (s *integrationSuite) TestDescribeTaskList() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	// decider logic
 	activityScheduled := false
@@ -2703,7 +2703,7 @@ func (s *integrationSuite) TestTransientDecisionTimeout() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -2714,11 +2714,11 @@ func (s *integrationSuite) TestTransientDecisionTimeout() {
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	workflowExecution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(*we.RunID),
+		WorkflowID: id,
+		RunID:      we.RunID,
 	}
 
 	// decider logic
@@ -2796,7 +2796,7 @@ func (s *integrationSuite) TestNoTransientDecisionAfterFlushBufferedEvents() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -2808,7 +2808,7 @@ func (s *integrationSuite) TestNoTransientDecisionAfterFlushBufferedEvents() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	// decider logic
 	workflowComplete := false
@@ -2823,7 +2823,7 @@ func (s *integrationSuite) TestNoTransientDecisionAfterFlushBufferedEvents() {
 				&types.SignalWorkflowExecutionRequest{
 					Domain: common.StringPtr(s.domainName),
 					WorkflowExecution: &types.WorkflowExecution{
-						WorkflowID: common.StringPtr(id),
+						WorkflowID: id,
 					},
 					SignalName: common.StringPtr("buffered-signal-1"),
 					Input:      []byte("buffered-signal-input"),
@@ -2893,7 +2893,7 @@ func (s *integrationSuite) TestRelayDecisionTimeout() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -2904,11 +2904,11 @@ func (s *integrationSuite) TestRelayDecisionTimeout() {
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	workflowExecution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(*we.RunID),
+		WorkflowID: id,
+		RunID:      we.RunID,
 	}
 
 	workflowComplete, isFirst := false, true
@@ -2995,7 +2995,7 @@ func (s *integrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -3007,10 +3007,10 @@ func (s *integrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 	workflowExecution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(*we.RunID),
+		WorkflowID: id,
+		RunID:      we.RunID,
 	}
 
 	// decider logic
@@ -3117,7 +3117,7 @@ func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -3129,9 +3129,9 @@ func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 	workflowExecution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
+		WorkflowID: id,
 		RunID:      we.RunID,
 	}
 
@@ -3291,7 +3291,7 @@ func (s *integrationSuite) TestStickyTasklistResetThenTimeout() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -3303,9 +3303,9 @@ func (s *integrationSuite) TestStickyTasklistResetThenTimeout() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 	workflowExecution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
+		WorkflowID: id,
 		RunID:      we.RunID,
 	}
 
@@ -3451,7 +3451,7 @@ func (s *integrationSuite) TestBufferedEventsOutOfOrder() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -3463,9 +3463,9 @@ func (s *integrationSuite) TestBufferedEventsOutOfOrder() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 	workflowExecution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
+		WorkflowID: id,
 		RunID:      we.RunID,
 	}
 
@@ -3619,7 +3619,7 @@ func (s *integrationSuite) TestStartWithMemo() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -3659,7 +3659,7 @@ func (s *integrationSuite) TestSignalWithStartWithMemo() {
 	request := &types.SignalWithStartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -3692,7 +3692,7 @@ func (s *integrationSuite) TestCancelTimer() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -3704,8 +3704,8 @@ func (s *integrationSuite) TestCancelTimer() {
 	creatResp, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 	workflowExecution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(creatResp.GetRunID()),
+		WorkflowID: id,
+		RunID:      creatResp.GetRunID(),
 	}
 
 	TimerID := 1
@@ -3829,7 +3829,7 @@ func (s *integrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -3841,8 +3841,8 @@ func (s *integrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
 	creatResp, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 	workflowExecution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(creatResp.GetRunID()),
+		WorkflowID: id,
+		RunID:      creatResp.GetRunID(),
 	}
 
 	TimerID := 1
@@ -3959,7 +3959,7 @@ func (s *integrationSuite) startWithMemoHelper(startFn startFunc, id string, tas
 	we, err0 := startFn()
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution: response", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution: response", tag.WorkflowRunID(we.RunID))
 
 	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
@@ -4013,7 +4013,7 @@ func (s *integrationSuite) startWithMemoHelper(startFn startFunc, id string, tas
 
 	// verify history
 	execution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
+		WorkflowID: id,
 		RunID:      we.RunID,
 	}
 	historyResponse, historyErr := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{

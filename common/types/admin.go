@@ -1225,8 +1225,8 @@ func (v *MembershipInfo) GetRings() (o []*RingInfo) {
 // ResendReplicationTasksRequest is an internal type (TBD...)
 type ResendReplicationTasksRequest struct {
 	DomainID      *string `json:"domainID,omitempty"`
-	WorkflowID    *string `json:"workflowID,omitempty"`
-	RunID         *string `json:"runID,omitempty"`
+	WorkflowID    string  `json:"workflowID,omitempty"`
+	RunID         string  `json:"runID,omitempty"`
 	RemoteCluster *string `json:"remoteCluster,omitempty"`
 	StartEventID  *int64  `json:"startEventID,omitempty"`
 	StartVersion  *int64  `json:"startVersion,omitempty"`
@@ -1244,16 +1244,16 @@ func (v *ResendReplicationTasksRequest) GetDomainID() (o string) {
 
 // GetWorkflowID is an internal getter (TBD...)
 func (v *ResendReplicationTasksRequest) GetWorkflowID() (o string) {
-	if v != nil && v.WorkflowID != nil {
-		return *v.WorkflowID
+	if v != nil {
+		return v.WorkflowID
 	}
 	return
 }
 
 // GetRunID is an internal getter (TBD...)
 func (v *ResendReplicationTasksRequest) GetRunID() (o string) {
-	if v != nil && v.RunID != nil {
-		return *v.RunID
+	if v != nil {
+		return v.RunID
 	}
 	return
 }

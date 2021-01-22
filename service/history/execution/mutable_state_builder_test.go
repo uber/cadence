@@ -255,8 +255,8 @@ OtherEventsLoop:
 func (s *mutableStateSuite) TestReorderEvents() {
 	domainID := testDomainID
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(testRunID),
+		WorkflowID: "wId",
+		RunID:      testRunID,
 	}
 	tl := "testTaskList"
 	activityID := "activity_id"
@@ -536,8 +536,8 @@ func (s *mutableStateSuite) TestEventReapplied() {
 func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicated(version int64, runID string) (*types.HistoryEvent, *types.HistoryEvent) {
 	domainID := testDomainID
 	execution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(runID),
+		WorkflowID: "some random workflow ID",
+		RunID:      runID,
 	}
 
 	now := time.Now()
@@ -704,8 +704,8 @@ func (s *mutableStateSuite) newDomainCacheEntry() *cache.DomainCacheEntry {
 func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMutableState {
 	domainID := testDomainID
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(testRunID),
+		WorkflowID: "wId",
+		RunID:      testRunID,
 	}
 	tl := "testTaskList"
 	failoverVersion := int64(300)

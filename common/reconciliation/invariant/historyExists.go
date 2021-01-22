@@ -154,8 +154,8 @@ func ExecutionStillExists(
 	req := &persistence.GetWorkflowExecutionRequest{
 		DomainID: exec.DomainID,
 		Execution: types.WorkflowExecution{
-			WorkflowID: &exec.WorkflowID,
-			RunID:      &exec.RunID,
+			WorkflowID: exec.WorkflowID,
+			RunID:      exec.RunID,
 		},
 	}
 	_, err := pr.GetWorkflowExecution(ctx, req)

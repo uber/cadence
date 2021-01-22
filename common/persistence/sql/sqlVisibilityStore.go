@@ -250,7 +250,7 @@ func (s *sqlVisibilityStore) GetClosedWorkflowExecution(
 	rows, err := s.db.SelectFromVisibility(ctx, &sqlplugin.VisibilityFilter{
 		DomainID: request.DomainUUID,
 		Closed:   true,
-		RunID:    execution.RunID,
+		RunID:    &execution.RunID,
 	})
 	if err != nil {
 		if err == sql.ErrNoRows {

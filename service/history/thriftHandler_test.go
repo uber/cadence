@@ -28,6 +28,7 @@ import (
 	hist "github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 
 	"github.com/golang/mock/gomock"
@@ -198,7 +199,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("ResetWorkflowExecution", func(t *testing.T) {
 		h.EXPECT().ResetWorkflowExecution(ctx, &types.HistoryResetWorkflowExecutionRequest{}).Return(&types.ResetWorkflowExecutionResponse{}, internalErr).Times(1)
 		resp, err := th.ResetWorkflowExecution(ctx, &hist.ResetWorkflowExecutionRequest{})
-		assert.Equal(t, shared.ResetWorkflowExecutionResponse{}, *resp)
+		assert.Equal(t, shared.ResetWorkflowExecutionResponse{RunId: common.StringPtr("")}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("RespondActivityTaskCanceled", func(t *testing.T) {
@@ -235,7 +236,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("SignalWithStartWorkflowExecution", func(t *testing.T) {
 		h.EXPECT().SignalWithStartWorkflowExecution(ctx, &types.HistorySignalWithStartWorkflowExecutionRequest{}).Return(&types.StartWorkflowExecutionResponse{}, internalErr).Times(1)
 		resp, err := th.SignalWithStartWorkflowExecution(ctx, &hist.SignalWithStartWorkflowExecutionRequest{})
-		assert.Equal(t, shared.StartWorkflowExecutionResponse{}, *resp)
+		assert.Equal(t, shared.StartWorkflowExecutionResponse{RunId: common.StringPtr("")}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("SignalWorkflowExecution", func(t *testing.T) {
@@ -246,7 +247,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("StartWorkflowExecution", func(t *testing.T) {
 		h.EXPECT().StartWorkflowExecution(ctx, &types.HistoryStartWorkflowExecutionRequest{}).Return(&types.StartWorkflowExecutionResponse{}, internalErr).Times(1)
 		resp, err := th.StartWorkflowExecution(ctx, &hist.StartWorkflowExecutionRequest{})
-		assert.Equal(t, shared.StartWorkflowExecutionResponse{}, *resp)
+		assert.Equal(t, shared.StartWorkflowExecutionResponse{RunId: common.StringPtr("")}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("SyncActivity", func(t *testing.T) {

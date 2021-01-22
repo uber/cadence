@@ -178,14 +178,14 @@ func (s *taskExecutorSuite) TestProcessTaskOnce_SyncActivityReplicationTask() {
 		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
 		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
 			DomainID:   common.StringPtr(domainID),
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	}
 	request := &types.SyncActivityRequest{
 		DomainID:   common.StringPtr(domainID),
-		WorkflowID: common.StringPtr(workflowID),
-		RunID:      common.StringPtr(runID),
+		WorkflowID: workflowID,
+		RunID:      runID,
 	}
 
 	s.mockEngine.EXPECT().SyncActivity(gomock.Any(), request).Return(nil).Times(2)
@@ -201,15 +201,15 @@ func (s *taskExecutorSuite) TestProcess_HistoryV2ReplicationTask() {
 		TaskType: types.ReplicationTaskTypeHistoryV2.Ptr(),
 		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
 			DomainID:   common.StringPtr(domainID),
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	}
 	request := &types.ReplicateEventsV2Request{
 		DomainUUID: common.StringPtr(domainID),
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	}
 

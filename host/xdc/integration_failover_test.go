@@ -194,7 +194,7 @@ func (s *integrationClustersTestSuite) TestDomainFailover() {
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -252,7 +252,7 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -357,8 +357,8 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 		queryResp, err := client.QueryWorkflow(createContext(), &types.QueryWorkflowRequest{
 			Domain: common.StringPtr(domainName),
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
-				RunID:      common.StringPtr(*we.RunID),
+				WorkflowID: id,
+				RunID:      we.RunID,
 			},
 			Query: &types.WorkflowQuery{
 				QueryType: common.StringPtr(queryType),
@@ -430,8 +430,8 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 	getHistoryReq := &types.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domainName),
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(rid),
+			WorkflowID: id,
+			RunID:      rid,
 		},
 	}
 	var historyResponse *types.GetWorkflowExecutionHistoryResponse
@@ -554,7 +554,7 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -627,8 +627,8 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	err = client1.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain: common.StringPtr(domainName),
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(we.GetRunID()),
+			WorkflowID: id,
+			RunID:      we.GetRunID(),
 		},
 		SignalName: common.StringPtr(signalName),
 		Input:      signalInput,
@@ -660,8 +660,8 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	err = client2.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain: common.StringPtr(domainName),
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(we.GetRunID()),
+			WorkflowID: id,
+			RunID:      we.GetRunID(),
 		},
 		SignalName: common.StringPtr(signalName),
 		Input:      signalInput,
@@ -726,7 +726,7 @@ func (s *integrationClustersTestSuite) TestStartWorkflowExecution_Failover_Workf
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -859,7 +859,7 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -948,7 +948,7 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 	err = client2.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain: common.StringPtr(domainName),
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 		Reason:   common.StringPtr(terminateReason),
 		Details:  terminateDetails,
@@ -961,7 +961,7 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 	getHistoryReq := &types.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domainName),
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 	}
 GetHistoryLoop:
@@ -1044,7 +1044,7 @@ func (s *integrationClustersTestSuite) TestContinueAsNewFailover() {
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1182,7 +1182,7 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1242,8 +1242,8 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 	err = client1.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain: common.StringPtr(domainName),
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(we.GetRunID()),
+			WorkflowID: id,
+			RunID:      we.GetRunID(),
 		},
 		SignalName: common.StringPtr(signalName),
 		Input:      signalInput,
@@ -1278,7 +1278,7 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 	getHistoryReq := &types.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domainName),
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 	}
 	var historyResponse *types.GetWorkflowExecutionHistoryResponse
@@ -1300,7 +1300,7 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 	err = client2.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain: common.StringPtr(domainName),
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 		SignalName: common.StringPtr(signalName2),
 		Input:      signalInput2,
@@ -1363,7 +1363,7 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1399,8 +1399,8 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 			err = client1.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 				Domain: common.StringPtr(domainName),
 				WorkflowExecution: &types.WorkflowExecution{
-					WorkflowID: common.StringPtr(id),
-					RunID:      common.StringPtr(we.GetRunID()),
+					WorkflowID: id,
+					RunID:      we.GetRunID(),
 				},
 				SignalName: common.StringPtr(signalName),
 				Input:      signalInput,
@@ -1420,8 +1420,8 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 			resp, err := client2.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 				Domain: common.StringPtr(domainName),
 				Execution: &types.WorkflowExecution{
-					WorkflowID: common.StringPtr(id),
-					RunID:      common.StringPtr(we.GetRunID()),
+					WorkflowID: id,
+					RunID:      we.GetRunID(),
 				},
 			})
 			s.Nil(err)
@@ -1536,7 +1536,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1640,7 +1640,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 		return client.DescribeWorkflowExecution(createContext(), &types.DescribeWorkflowExecutionRequest{
 			Domain: common.StringPtr(domainName),
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
+				WorkflowID: id,
 				RunID:      we.RunID,
 			},
 		})
@@ -1694,7 +1694,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	historyResponse, err := client2.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(domainName),
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 	})
 	s.Nil(err)
@@ -1745,7 +1745,7 @@ func (s *integrationClustersTestSuite) TestTransientDecisionFailover() {
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1866,7 +1866,7 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1926,7 +1926,7 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 	err = client2.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain: common.StringPtr(domainName),
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 	})
 	s.Nil(err)
@@ -1966,7 +1966,7 @@ func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              common.StringPtr(domainName),
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,

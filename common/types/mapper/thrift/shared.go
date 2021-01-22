@@ -1232,8 +1232,8 @@ func FromDecisionTaskFailedEventAttributes(t *types.DecisionTaskFailedEventAttri
 		Details:          t.Details,
 		Identity:         t.Identity,
 		Reason:           t.Reason,
-		BaseRunId:        t.BaseRunID,
-		NewRunId:         t.NewRunID,
+		BaseRunId:        &t.BaseRunID,
+		NewRunId:         &t.NewRunID,
 		ForkEventVersion: t.ForkEventVersion,
 		BinaryChecksum:   t.BinaryChecksum,
 	}
@@ -1251,8 +1251,8 @@ func ToDecisionTaskFailedEventAttributes(t *shared.DecisionTaskFailedEventAttrib
 		Details:          t.Details,
 		Identity:         t.Identity,
 		Reason:           t.Reason,
-		BaseRunID:        t.BaseRunId,
-		NewRunID:         t.NewRunId,
+		BaseRunID:        t.GetBaseRunId(),
+		NewRunID:         t.GetNewRunId(),
 		ForkEventVersion: t.ForkEventVersion,
 		BinaryChecksum:   t.BinaryChecksum,
 	}
@@ -3188,8 +3188,8 @@ func FromPendingChildExecutionInfo(t *types.PendingChildExecutionInfo) *shared.P
 		return nil
 	}
 	return &shared.PendingChildExecutionInfo{
-		WorkflowID:        t.WorkflowID,
-		RunID:             t.RunID,
+		WorkflowID:        &t.WorkflowID,
+		RunID:             &t.RunID,
 		WorkflowTypName:   t.WorkflowTypName,
 		InitiatedID:       t.InitiatedID,
 		ParentClosePolicy: FromParentClosePolicy(t.ParentClosePolicy),
@@ -3202,8 +3202,8 @@ func ToPendingChildExecutionInfo(t *shared.PendingChildExecutionInfo) *types.Pen
 		return nil
 	}
 	return &types.PendingChildExecutionInfo{
-		WorkflowID:        t.WorkflowID,
-		RunID:             t.RunID,
+		WorkflowID:        t.GetWorkflowID(),
+		RunID:             t.GetRunID(),
 		WorkflowTypName:   t.WorkflowTypName,
 		InitiatedID:       t.InitiatedID,
 		ParentClosePolicy: ToParentClosePolicy(t.ParentClosePolicy),
@@ -3691,8 +3691,8 @@ func FromRecordActivityTaskHeartbeatByIDRequest(t *types.RecordActivityTaskHeart
 	}
 	return &shared.RecordActivityTaskHeartbeatByIDRequest{
 		Domain:     t.Domain,
-		WorkflowID: t.WorkflowID,
-		RunID:      t.RunID,
+		WorkflowID: &t.WorkflowID,
+		RunID:      &t.RunID,
 		ActivityID: t.ActivityID,
 		Details:    t.Details,
 		Identity:   t.Identity,
@@ -3706,8 +3706,8 @@ func ToRecordActivityTaskHeartbeatByIDRequest(t *shared.RecordActivityTaskHeartb
 	}
 	return &types.RecordActivityTaskHeartbeatByIDRequest{
 		Domain:     t.Domain,
-		WorkflowID: t.WorkflowID,
-		RunID:      t.RunID,
+		WorkflowID: t.GetWorkflowID(),
+		RunID:      t.GetRunID(),
 		ActivityID: t.ActivityID,
 		Details:    t.Details,
 		Identity:   t.Identity,
@@ -3947,8 +3947,8 @@ func FromRequestCancelExternalWorkflowExecutionDecisionAttributes(t *types.Reque
 	}
 	return &shared.RequestCancelExternalWorkflowExecutionDecisionAttributes{
 		Domain:            t.Domain,
-		WorkflowId:        t.WorkflowID,
-		RunId:             t.RunID,
+		WorkflowId:        &t.WorkflowID,
+		RunId:             &t.RunID,
 		Control:           t.Control,
 		ChildWorkflowOnly: t.ChildWorkflowOnly,
 	}
@@ -3961,8 +3961,8 @@ func ToRequestCancelExternalWorkflowExecutionDecisionAttributes(t *shared.Reques
 	}
 	return &types.RequestCancelExternalWorkflowExecutionDecisionAttributes{
 		Domain:            t.Domain,
-		WorkflowID:        t.WorkflowId,
-		RunID:             t.RunId,
+		WorkflowID:        t.GetWorkflowId(),
+		RunID:             t.GetRunId(),
 		Control:           t.Control,
 		ChildWorkflowOnly: t.ChildWorkflowOnly,
 	}
@@ -4059,7 +4059,7 @@ func FromResetPointInfo(t *types.ResetPointInfo) *shared.ResetPointInfo {
 	}
 	return &shared.ResetPointInfo{
 		BinaryChecksum:           t.BinaryChecksum,
-		RunId:                    t.RunID,
+		RunId:                    &t.RunID,
 		FirstDecisionCompletedId: t.FirstDecisionCompletedID,
 		CreatedTimeNano:          t.CreatedTimeNano,
 		ExpiringTimeNano:         t.ExpiringTimeNano,
@@ -4074,7 +4074,7 @@ func ToResetPointInfo(t *shared.ResetPointInfo) *types.ResetPointInfo {
 	}
 	return &types.ResetPointInfo{
 		BinaryChecksum:           t.BinaryChecksum,
-		RunID:                    t.RunId,
+		RunID:                    t.GetRunId(),
 		FirstDecisionCompletedID: t.FirstDecisionCompletedId,
 		CreatedTimeNano:          t.CreatedTimeNano,
 		ExpiringTimeNano:         t.ExpiringTimeNano,
@@ -4200,7 +4200,7 @@ func FromResetWorkflowExecutionResponse(t *types.ResetWorkflowExecutionResponse)
 		return nil
 	}
 	return &shared.ResetWorkflowExecutionResponse{
-		RunId: t.RunID,
+		RunId: &t.RunID,
 	}
 }
 
@@ -4210,7 +4210,7 @@ func ToResetWorkflowExecutionResponse(t *shared.ResetWorkflowExecutionResponse) 
 		return nil
 	}
 	return &types.ResetWorkflowExecutionResponse{
-		RunID: t.RunId,
+		RunID: t.GetRunId(),
 	}
 }
 
@@ -4221,8 +4221,8 @@ func FromRespondActivityTaskCanceledByIDRequest(t *types.RespondActivityTaskCanc
 	}
 	return &shared.RespondActivityTaskCanceledByIDRequest{
 		Domain:     t.Domain,
-		WorkflowID: t.WorkflowID,
-		RunID:      t.RunID,
+		WorkflowID: &t.WorkflowID,
+		RunID:      &t.RunID,
 		ActivityID: t.ActivityID,
 		Details:    t.Details,
 		Identity:   t.Identity,
@@ -4236,8 +4236,8 @@ func ToRespondActivityTaskCanceledByIDRequest(t *shared.RespondActivityTaskCance
 	}
 	return &types.RespondActivityTaskCanceledByIDRequest{
 		Domain:     t.Domain,
-		WorkflowID: t.WorkflowID,
-		RunID:      t.RunID,
+		WorkflowID: t.GetWorkflowID(),
+		RunID:      t.GetRunID(),
 		ActivityID: t.ActivityID,
 		Details:    t.Details,
 		Identity:   t.Identity,
@@ -4275,8 +4275,8 @@ func FromRespondActivityTaskCompletedByIDRequest(t *types.RespondActivityTaskCom
 	}
 	return &shared.RespondActivityTaskCompletedByIDRequest{
 		Domain:     t.Domain,
-		WorkflowID: t.WorkflowID,
-		RunID:      t.RunID,
+		WorkflowID: &t.WorkflowID,
+		RunID:      &t.RunID,
 		ActivityID: t.ActivityID,
 		Result:     t.Result,
 		Identity:   t.Identity,
@@ -4290,8 +4290,8 @@ func ToRespondActivityTaskCompletedByIDRequest(t *shared.RespondActivityTaskComp
 	}
 	return &types.RespondActivityTaskCompletedByIDRequest{
 		Domain:     t.Domain,
-		WorkflowID: t.WorkflowID,
-		RunID:      t.RunID,
+		WorkflowID: t.GetWorkflowID(),
+		RunID:      t.GetRunID(),
 		ActivityID: t.ActivityID,
 		Result:     t.Result,
 		Identity:   t.Identity,
@@ -4329,8 +4329,8 @@ func FromRespondActivityTaskFailedByIDRequest(t *types.RespondActivityTaskFailed
 	}
 	return &shared.RespondActivityTaskFailedByIDRequest{
 		Domain:     t.Domain,
-		WorkflowID: t.WorkflowID,
-		RunID:      t.RunID,
+		WorkflowID: &t.WorkflowID,
+		RunID:      &t.RunID,
 		ActivityID: t.ActivityID,
 		Reason:     t.Reason,
 		Details:    t.Details,
@@ -4345,8 +4345,8 @@ func ToRespondActivityTaskFailedByIDRequest(t *shared.RespondActivityTaskFailedB
 	}
 	return &types.RespondActivityTaskFailedByIDRequest{
 		Domain:     t.Domain,
-		WorkflowID: t.WorkflowID,
-		RunID:      t.RunID,
+		WorkflowID: t.GetWorkflowID(),
+		RunID:      t.GetRunID(),
 		ActivityID: t.ActivityID,
 		Reason:     t.Reason,
 		Details:    t.Details,
@@ -4532,8 +4532,8 @@ func FromRetryTaskV2Error(t *types.RetryTaskV2Error) *shared.RetryTaskV2Error {
 	return &shared.RetryTaskV2Error{
 		Message:           t.Message,
 		DomainId:          t.DomainID,
-		WorkflowId:        t.WorkflowID,
-		RunId:             t.RunID,
+		WorkflowId:        &t.WorkflowID,
+		RunId:             &t.RunID,
 		StartEventId:      t.StartEventID,
 		StartEventVersion: t.StartEventVersion,
 		EndEventId:        t.EndEventID,
@@ -4549,8 +4549,8 @@ func ToRetryTaskV2Error(t *shared.RetryTaskV2Error) *types.RetryTaskV2Error {
 	return &types.RetryTaskV2Error{
 		Message:           t.Message,
 		DomainID:          t.DomainId,
-		WorkflowID:        t.WorkflowId,
-		RunID:             t.RunId,
+		WorkflowID:        t.GetWorkflowId(),
+		RunID:             t.GetRunId(),
 		StartEventID:      t.StartEventId,
 		StartEventVersion: t.StartEventVersion,
 		EndEventID:        t.EndEventId,
@@ -4765,7 +4765,7 @@ func FromSignalWithStartWorkflowExecutionRequest(t *types.SignalWithStartWorkflo
 	}
 	return &shared.SignalWithStartWorkflowExecutionRequest{
 		Domain:                              t.Domain,
-		WorkflowId:                          t.WorkflowID,
+		WorkflowId:                          &t.WorkflowID,
 		WorkflowType:                        FromWorkflowType(t.WorkflowType),
 		TaskList:                            FromTaskList(t.TaskList),
 		Input:                               t.Input,
@@ -4792,7 +4792,7 @@ func ToSignalWithStartWorkflowExecutionRequest(t *shared.SignalWithStartWorkflow
 	}
 	return &types.SignalWithStartWorkflowExecutionRequest{
 		Domain:                              t.Domain,
-		WorkflowID:                          t.WorkflowId,
+		WorkflowID:                          t.GetWorkflowId(),
 		WorkflowType:                        ToWorkflowType(t.WorkflowType),
 		TaskList:                            ToTaskList(t.TaskList),
 		Input:                               t.Input,
@@ -4851,7 +4851,7 @@ func FromStartChildWorkflowExecutionDecisionAttributes(t *types.StartChildWorkfl
 	}
 	return &shared.StartChildWorkflowExecutionDecisionAttributes{
 		Domain:                              t.Domain,
-		WorkflowId:                          t.WorkflowID,
+		WorkflowId:                          &t.WorkflowID,
 		WorkflowType:                        FromWorkflowType(t.WorkflowType),
 		TaskList:                            FromTaskList(t.TaskList),
 		Input:                               t.Input,
@@ -4875,7 +4875,7 @@ func ToStartChildWorkflowExecutionDecisionAttributes(t *shared.StartChildWorkflo
 	}
 	return &types.StartChildWorkflowExecutionDecisionAttributes{
 		Domain:                              t.Domain,
-		WorkflowID:                          t.WorkflowId,
+		WorkflowID:                          t.GetWorkflowId(),
 		WorkflowType:                        ToWorkflowType(t.WorkflowType),
 		TaskList:                            ToTaskList(t.TaskList),
 		Input:                               t.Input,
@@ -4899,7 +4899,7 @@ func FromStartChildWorkflowExecutionFailedEventAttributes(t *types.StartChildWor
 	}
 	return &shared.StartChildWorkflowExecutionFailedEventAttributes{
 		Domain:                       t.Domain,
-		WorkflowId:                   t.WorkflowID,
+		WorkflowId:                   &t.WorkflowID,
 		WorkflowType:                 FromWorkflowType(t.WorkflowType),
 		Cause:                        FromChildWorkflowExecutionFailedCause(t.Cause),
 		Control:                      t.Control,
@@ -4915,7 +4915,7 @@ func ToStartChildWorkflowExecutionFailedEventAttributes(t *shared.StartChildWork
 	}
 	return &types.StartChildWorkflowExecutionFailedEventAttributes{
 		Domain:                       t.Domain,
-		WorkflowID:                   t.WorkflowId,
+		WorkflowID:                   t.GetWorkflowId(),
 		WorkflowType:                 ToWorkflowType(t.WorkflowType),
 		Cause:                        ToChildWorkflowExecutionFailedCause(t.Cause),
 		Control:                      t.Control,
@@ -4931,7 +4931,7 @@ func FromStartChildWorkflowExecutionInitiatedEventAttributes(t *types.StartChild
 	}
 	return &shared.StartChildWorkflowExecutionInitiatedEventAttributes{
 		Domain:                              t.Domain,
-		WorkflowId:                          t.WorkflowID,
+		WorkflowId:                          &t.WorkflowID,
 		WorkflowType:                        FromWorkflowType(t.WorkflowType),
 		TaskList:                            FromTaskList(t.TaskList),
 		Input:                               t.Input,
@@ -4956,7 +4956,7 @@ func ToStartChildWorkflowExecutionInitiatedEventAttributes(t *shared.StartChildW
 	}
 	return &types.StartChildWorkflowExecutionInitiatedEventAttributes{
 		Domain:                              t.Domain,
-		WorkflowID:                          t.WorkflowId,
+		WorkflowID:                          t.GetWorkflowId(),
 		WorkflowType:                        ToWorkflowType(t.WorkflowType),
 		TaskList:                            ToTaskList(t.TaskList),
 		Input:                               t.Input,
@@ -5025,7 +5025,7 @@ func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *
 	}
 	return &shared.StartWorkflowExecutionRequest{
 		Domain:                              t.Domain,
-		WorkflowId:                          t.WorkflowID,
+		WorkflowId:                          &t.WorkflowID,
 		WorkflowType:                        FromWorkflowType(t.WorkflowType),
 		TaskList:                            FromTaskList(t.TaskList),
 		Input:                               t.Input,
@@ -5049,7 +5049,7 @@ func ToStartWorkflowExecutionRequest(t *shared.StartWorkflowExecutionRequest) *t
 	}
 	return &types.StartWorkflowExecutionRequest{
 		Domain:                              t.Domain,
-		WorkflowID:                          t.WorkflowId,
+		WorkflowID:                          t.GetWorkflowId(),
 		WorkflowType:                        ToWorkflowType(t.WorkflowType),
 		TaskList:                            ToTaskList(t.TaskList),
 		Input:                               t.Input,
@@ -5072,7 +5072,7 @@ func FromStartWorkflowExecutionResponse(t *types.StartWorkflowExecutionResponse)
 		return nil
 	}
 	return &shared.StartWorkflowExecutionResponse{
-		RunId: t.RunID,
+		RunId: &t.RunID,
 	}
 }
 
@@ -5082,7 +5082,7 @@ func ToStartWorkflowExecutionResponse(t *shared.StartWorkflowExecutionResponse) 
 		return nil
 	}
 	return &types.StartWorkflowExecutionResponse{
-		RunID: t.RunId,
+		RunID: t.GetRunId(),
 	}
 }
 
@@ -5694,8 +5694,8 @@ func FromWorkflowExecution(t *types.WorkflowExecution) *shared.WorkflowExecution
 		return nil
 	}
 	return &shared.WorkflowExecution{
-		WorkflowId: t.WorkflowID,
-		RunId:      t.RunID,
+		WorkflowId: &t.WorkflowID,
+		RunId:      &t.RunID,
 	}
 }
 
@@ -5705,8 +5705,8 @@ func ToWorkflowExecution(t *shared.WorkflowExecution) *types.WorkflowExecution {
 		return nil
 	}
 	return &types.WorkflowExecution{
-		WorkflowID: t.WorkflowId,
-		RunID:      t.RunId,
+		WorkflowID: t.GetWorkflowId(),
+		RunID:      t.GetRunId(),
 	}
 }
 
@@ -5718,7 +5718,7 @@ func FromWorkflowExecutionAlreadyStartedError(t *types.WorkflowExecutionAlreadyS
 	return &shared.WorkflowExecutionAlreadyStartedError{
 		Message:        t.Message,
 		StartRequestId: t.StartRequestID,
-		RunId:          t.RunID,
+		RunId:          &t.RunID,
 	}
 }
 
@@ -5730,7 +5730,7 @@ func ToWorkflowExecutionAlreadyStartedError(t *shared.WorkflowExecutionAlreadySt
 	return &types.WorkflowExecutionAlreadyStartedError{
 		Message:        t.Message,
 		StartRequestID: t.StartRequestId,
-		RunID:          t.RunId,
+		RunID:          t.GetRunId(),
 	}
 }
 
@@ -5890,7 +5890,7 @@ func FromWorkflowExecutionContinuedAsNewEventAttributes(t *types.WorkflowExecuti
 		return nil
 	}
 	return &shared.WorkflowExecutionContinuedAsNewEventAttributes{
-		NewExecutionRunId:                   t.NewExecutionRunID,
+		NewExecutionRunId:                   &t.NewExecutionRunID,
 		WorkflowType:                        FromWorkflowType(t.WorkflowType),
 		TaskList:                            FromTaskList(t.TaskList),
 		Input:                               t.Input,
@@ -5914,7 +5914,7 @@ func ToWorkflowExecutionContinuedAsNewEventAttributes(t *shared.WorkflowExecutio
 		return nil
 	}
 	return &types.WorkflowExecutionContinuedAsNewEventAttributes{
-		NewExecutionRunID:                   t.NewExecutionRunId,
+		NewExecutionRunID:                   t.GetNewExecutionRunId(),
 		WorkflowType:                        ToWorkflowType(t.WorkflowType),
 		TaskList:                            ToTaskList(t.TaskList),
 		Input:                               t.Input,
@@ -6065,9 +6065,9 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		ContinuedFailureReason:              t.ContinuedFailureReason,
 		ContinuedFailureDetails:             t.ContinuedFailureDetails,
 		LastCompletionResult:                t.LastCompletionResult,
-		OriginalExecutionRunId:              t.OriginalExecutionRunID,
+		OriginalExecutionRunId:              &t.OriginalExecutionRunID,
 		Identity:                            t.Identity,
-		FirstExecutionRunId:                 t.FirstExecutionRunID,
+		FirstExecutionRunId:                 &t.FirstExecutionRunID,
 		RetryPolicy:                         FromRetryPolicy(t.RetryPolicy),
 		Attempt:                             t.Attempt,
 		ExpirationTimestamp:                 t.ExpirationTimestamp,
@@ -6099,9 +6099,9 @@ func ToWorkflowExecutionStartedEventAttributes(t *shared.WorkflowExecutionStarte
 		ContinuedFailureReason:              t.ContinuedFailureReason,
 		ContinuedFailureDetails:             t.ContinuedFailureDetails,
 		LastCompletionResult:                t.LastCompletionResult,
-		OriginalExecutionRunID:              t.OriginalExecutionRunId,
+		OriginalExecutionRunID:              t.GetOriginalExecutionRunId(),
 		Identity:                            t.Identity,
-		FirstExecutionRunID:                 t.FirstExecutionRunId,
+		FirstExecutionRunID:                 t.GetFirstExecutionRunId(),
 		RetryPolicy:                         ToRetryPolicy(t.RetryPolicy),
 		Attempt:                             t.Attempt,
 		ExpirationTimestamp:                 t.ExpirationTimestamp,

@@ -238,7 +238,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_RequestIdNotSet
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
 		Domain:     common.StringPtr("test-domain"),
-		WorkflowID: common.StringPtr("workflow-id"),
+		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
 			Name: common.StringPtr("workflow-type"),
 		},
@@ -276,7 +276,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_DomainNotSet() 
 	wh := s.getWorkflowHandler(config)
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
-		WorkflowID: common.StringPtr("workflow-id"),
+		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
 			Name: common.StringPtr("workflow-type"),
 		},
@@ -335,7 +335,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowTypeNot
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
 		Domain:     common.StringPtr("test-domain"),
-		WorkflowID: common.StringPtr("workflow-id"),
+		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
 			Name: common.StringPtr(""),
 		},
@@ -365,7 +365,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_TaskListNotSet(
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
 		Domain:     common.StringPtr("test-domain"),
-		WorkflowID: common.StringPtr("workflow-id"),
+		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
 			Name: common.StringPtr("workflow-type"),
 		},
@@ -395,7 +395,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidExecutio
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
 		Domain:     common.StringPtr("test-domain"),
-		WorkflowID: common.StringPtr("workflow-id"),
+		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
 			Name: common.StringPtr("workflow-type"),
 		},
@@ -425,7 +425,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStar
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
 		Domain:     common.StringPtr("test-domain"),
-		WorkflowID: common.StringPtr("workflow-id"),
+		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
 			Name: common.StringPtr("workflow-type"),
 		},
@@ -846,8 +846,8 @@ func (s *workflowHandlerSuite) TestHistoryArchived() {
 	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
 	getHistoryRequest = &types.GetWorkflowExecutionHistoryRequest{
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(testWorkflowID),
-			RunID:      common.StringPtr(testRunID),
+			WorkflowID: testWorkflowID,
+			RunID:      testRunID,
 		},
 	}
 	s.False(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
@@ -855,8 +855,8 @@ func (s *workflowHandlerSuite) TestHistoryArchived() {
 	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(nil, &types.EntityNotExistsError{Message: "got archival indication error"}).Times(1)
 	getHistoryRequest = &types.GetWorkflowExecutionHistoryRequest{
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(testWorkflowID),
-			RunID:      common.StringPtr(testRunID),
+			WorkflowID: testWorkflowID,
+			RunID:      testRunID,
 		},
 	}
 	s.True(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
@@ -864,8 +864,8 @@ func (s *workflowHandlerSuite) TestHistoryArchived() {
 	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), gomock.Any()).Return(nil, errors.New("got non-archival indication error")).Times(1)
 	getHistoryRequest = &types.GetWorkflowExecutionHistoryRequest{
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(testWorkflowID),
-			RunID:      common.StringPtr(testRunID),
+			WorkflowID: testWorkflowID,
+			RunID:      testRunID,
 		},
 	}
 	s.False(wh.historyArchived(context.Background(), getHistoryRequest, "test-domain"))
@@ -974,10 +974,10 @@ func (s *workflowHandlerSuite) TestGetHistory() {
 	nextEventID := int64(101)
 	branchToken := []byte{1}
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wid"),
-		RunID:      common.StringPtr("rid"),
+		WorkflowID: "wid",
+		RunID:      "rid",
 	}
-	shardID := common.WorkflowIDToHistoryShard(*we.WorkflowID, numHistoryShards)
+	shardID := common.WorkflowIDToHistoryShard(we.WorkflowID, numHistoryShards)
 	req := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
@@ -1146,8 +1146,8 @@ func (s *workflowHandlerSuite) getWorkflowExecutionHistory(nextEventID int64, tr
 	resp, err := wh.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
 		Domain: common.StringPtr(s.testDomain),
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(testWorkflowID),
-			RunID:      common.StringPtr(testRunID),
+			WorkflowID: testWorkflowID,
+			RunID:      testRunID,
 		},
 		SkipArchival:  common.BoolPtr(true),
 		NextPageToken: token,
@@ -1454,8 +1454,8 @@ func registerDomainRequest(
 func getHistoryRequest(nextPageToken []byte) *types.GetWorkflowExecutionHistoryRequest {
 	return &types.GetWorkflowExecutionHistoryRequest{
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(testWorkflowID),
-			RunID:      common.StringPtr(testRunID),
+			WorkflowID: testWorkflowID,
+			RunID:      testRunID,
 		},
 		NextPageToken: nextPageToken,
 	}

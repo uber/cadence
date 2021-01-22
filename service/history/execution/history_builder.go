@@ -569,8 +569,8 @@ func (b *HistoryBuilder) newWorkflowExecutionStartedEvent(
 	attributes.ContinuedFailureDetails = startRequest.ContinuedFailureDetails
 	attributes.Initiator = startRequest.ContinueAsNewInitiator
 	attributes.FirstDecisionTaskBackoffSeconds = startRequest.FirstDecisionTaskBackoffSeconds
-	attributes.FirstExecutionRunID = common.StringPtr(firstRunID)
-	attributes.OriginalExecutionRunID = common.StringPtr(originalRunID)
+	attributes.FirstExecutionRunID = firstRunID
+	attributes.OriginalExecutionRunID = originalRunID
 	attributes.Memo = request.Memo
 	attributes.SearchAttributes = request.SearchAttributes
 
@@ -642,8 +642,8 @@ func (b *HistoryBuilder) newDecisionTaskTimedOutEvent(
 	attributes.ScheduledEventID = common.Int64Ptr(scheduleEventID)
 	attributes.StartedEventID = common.Int64Ptr(startedEventID)
 	attributes.TimeoutType = timeoutType.Ptr()
-	attributes.BaseRunID = common.StringPtr(baseRunID)
-	attributes.NewRunID = common.StringPtr(newRunID)
+	attributes.BaseRunID = baseRunID
+	attributes.NewRunID = newRunID
 	attributes.ForkEventVersion = common.Int64Ptr(forkEventVersion)
 	attributes.Reason = common.StringPtr(reason)
 	attributes.Cause = cause.Ptr()
@@ -869,8 +869,8 @@ func (b *HistoryBuilder) newRequestCancelExternalWorkflowExecutionFailedEvent(de
 	attributes.InitiatedEventID = common.Int64Ptr(initiatedEventID)
 	attributes.Domain = common.StringPtr(domain)
 	attributes.WorkflowExecution = &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(workflowID),
-		RunID:      common.StringPtr(runID),
+		WorkflowID: workflowID,
+		RunID:      runID,
 	}
 	attributes.Cause = cause.Ptr()
 	event.RequestCancelExternalWorkflowExecutionFailedEventAttributes = attributes
@@ -885,8 +885,8 @@ func (b *HistoryBuilder) newExternalWorkflowExecutionCancelRequestedEvent(initia
 	attributes.InitiatedEventID = common.Int64Ptr(initiatedEventID)
 	attributes.Domain = common.StringPtr(domain)
 	attributes.WorkflowExecution = &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(workflowID),
-		RunID:      common.StringPtr(runID),
+		WorkflowID: workflowID,
+		RunID:      runID,
 	}
 	event.ExternalWorkflowExecutionCancelRequestedEventAttributes = attributes
 
@@ -931,8 +931,8 @@ func (b *HistoryBuilder) newSignalExternalWorkflowExecutionFailedEvent(decisionT
 	attributes.InitiatedEventID = common.Int64Ptr(initiatedEventID)
 	attributes.Domain = common.StringPtr(domain)
 	attributes.WorkflowExecution = &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(workflowID),
-		RunID:      common.StringPtr(runID),
+		WorkflowID: workflowID,
+		RunID:      runID,
 	}
 	attributes.Cause = cause.Ptr()
 	attributes.Control = control
@@ -948,8 +948,8 @@ func (b *HistoryBuilder) newExternalWorkflowExecutionSignaledEvent(initiatedEven
 	attributes.InitiatedEventID = common.Int64Ptr(initiatedEventID)
 	attributes.Domain = common.StringPtr(domain)
 	attributes.WorkflowExecution = &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(workflowID),
-		RunID:      common.StringPtr(runID),
+		WorkflowID: workflowID,
+		RunID:      runID,
 	}
 	attributes.Control = control
 	event.ExternalWorkflowExecutionSignaledEventAttributes = attributes
@@ -961,7 +961,7 @@ func (b *HistoryBuilder) newWorkflowExecutionContinuedAsNewEvent(decisionTaskCom
 	newRunID string, request *types.ContinueAsNewWorkflowExecutionDecisionAttributes) *types.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(types.EventTypeWorkflowExecutionContinuedAsNew)
 	attributes := &types.WorkflowExecutionContinuedAsNewEventAttributes{}
-	attributes.NewExecutionRunID = common.StringPtr(newRunID)
+	attributes.NewExecutionRunID = newRunID
 	attributes.WorkflowType = request.WorkflowType
 	attributes.TaskList = request.TaskList
 	attributes.Header = request.Header
@@ -1034,7 +1034,7 @@ func (b *HistoryBuilder) newStartChildWorkflowExecutionFailedEvent(initiatedID i
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(types.EventTypeStartChildWorkflowExecutionFailed)
 	attributes := &types.StartChildWorkflowExecutionFailedEventAttributes{}
 	attributes.Domain = common.StringPtr(*initiatedEventAttributes.Domain)
-	attributes.WorkflowID = common.StringPtr(*initiatedEventAttributes.WorkflowID)
+	attributes.WorkflowID = initiatedEventAttributes.WorkflowID
 	attributes.WorkflowType = initiatedEventAttributes.WorkflowType
 	attributes.InitiatedEventID = common.Int64Ptr(initiatedID)
 	attributes.DecisionTaskCompletedEventID = common.Int64Ptr(*initiatedEventAttributes.DecisionTaskCompletedEventID)

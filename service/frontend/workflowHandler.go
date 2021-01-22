@@ -1522,8 +1522,8 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		}
 		token, _ := wh.tokenSerializer.Serialize(taskToken)
 		workflowExecution := &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(taskToken.WorkflowID),
-			RunID:      common.StringPtr(taskToken.RunID),
+			WorkflowID: taskToken.WorkflowID,
+			RunID:      taskToken.RunID,
 		}
 		matchingResp := common.CreateMatchingPollForDecisionTaskResponse(histResp.StartedResponse, workflowExecution, token)
 
@@ -1941,11 +1941,11 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		if err != nil {
 			return nil, wh.error(errInvalidNextPageToken, scope, getWfIDRunIDTags(wfExecution)...)
 		}
-		if execution.RunID != nil && execution.GetRunID() != token.RunID {
+		if execution.RunID != "" && execution.GetRunID() != token.RunID {
 			return nil, wh.error(errNextPageTokenRunIDMismatch, scope, getWfIDRunIDTags(wfExecution)...)
 		}
 
-		execution.RunID = common.StringPtr(token.RunID)
+		execution.RunID = token.RunID
 
 		// we need to update the current next event ID and whether workflow is running
 		if len(token.PersistenceToken) == 0 && isLongPoll && token.IsWorkflowRunning {
@@ -1981,7 +1981,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			return nil, wh.error(err, scope, getWfIDRunIDTags(wfExecution)...)
 		}
 
-		execution.RunID = &runID
+		execution.RunID = runID
 
 		token.RunID = runID
 		token.FirstEventID = common.FirstEventID
@@ -3320,7 +3320,7 @@ func (wh *WorkflowHandler) getRawHistory(
 	branchToken []byte,
 ) ([]*types.DataBlob, []byte, error) {
 	rawHistory := []*types.DataBlob{}
-	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowID, wh.config.NumHistoryShards)
+	shardID := common.WorkflowIDToHistoryShard(execution.WorkflowID, wh.config.NumHistoryShards)
 
 	resp, err := wh.GetHistoryManager().ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
@@ -3388,7 +3388,7 @@ func (wh *WorkflowHandler) getHistory(
 	var size int
 
 	isFirstPage := len(nextPageToken) == 0
-	shardID := common.WorkflowIDToHistoryShard(*execution.WorkflowID, wh.config.NumHistoryShards)
+	shardID := common.WorkflowIDToHistoryShard(execution.WorkflowID, wh.config.NumHistoryShards)
 	var err error
 	historyEvents, size, nextPageToken, err := persistence.ReadFullPageV2Events(ctx, wh.GetHistoryManager(), &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
@@ -3575,7 +3575,7 @@ func validateExecution(w *types.WorkflowExecution) error {
 	if w == nil {
 		return errExecutionNotSet
 	}
-	if w.WorkflowID == nil || w.GetWorkflowID() == "" {
+	if w.GetWorkflowID() == "" {
 		return errWorkflowIDNotSet
 	}
 	if w.GetRunID() != "" && uuid.Parse(w.GetRunID()) == nil {

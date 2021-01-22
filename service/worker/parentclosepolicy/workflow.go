@@ -114,8 +114,8 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
 					Domain: common.StringPtr(request.DomainName),
 					WorkflowExecution: &types.WorkflowExecution{
-						WorkflowID: common.StringPtr(execution.WorkflowID),
-						RunID:      common.StringPtr(execution.RunID),
+						WorkflowID: execution.WorkflowID,
+						RunID:      execution.RunID,
 					},
 					Reason:   common.StringPtr("by parent close policy"),
 					Identity: common.StringPtr(processorWFTypeName),
@@ -127,8 +127,8 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 				CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
 					Domain: common.StringPtr(request.DomainName),
 					WorkflowExecution: &types.WorkflowExecution{
-						WorkflowID: common.StringPtr(execution.WorkflowID),
-						RunID:      common.StringPtr(execution.RunID),
+						WorkflowID: execution.WorkflowID,
+						RunID:      execution.RunID,
 					},
 					Identity: common.StringPtr(processorWFTypeName),
 				},

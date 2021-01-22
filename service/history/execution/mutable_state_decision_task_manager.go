@@ -561,8 +561,8 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskFailedEvent(
 		Identity:         common.StringPtr(identity),
 		Reason:           common.StringPtr(reason),
 		BinaryChecksum:   common.StringPtr(binChecksum),
-		BaseRunID:        common.StringPtr(baseRunID),
-		NewRunID:         common.StringPtr(newRunID),
+		BaseRunID:        baseRunID,
+		NewRunID:         newRunID,
 		ForkEventVersion: common.Int64Ptr(forkEventVersion),
 	}
 

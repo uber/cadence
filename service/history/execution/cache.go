@@ -100,8 +100,8 @@ func (c *Cache) GetOrCreateCurrentWorkflowExecution(
 	// using empty run ID as current workflow run ID
 	runID := ""
 	execution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(workflowID),
-		RunID:      common.StringPtr(runID),
+		WorkflowID: workflowID,
+		RunID:      runID,
 	}
 
 	return c.getOrCreateWorkflowExecutionInternal(
@@ -266,7 +266,7 @@ func (c *Cache) validateWorkflowExecutionInfo(
 			return err
 		}
 
-		execution.RunID = common.StringPtr(response.RunID)
+		execution.RunID = response.RunID
 	} else if uuid.Parse(execution.GetRunID()) == nil { // immediately return if invalid runID
 		return &types.BadRequestError{Message: "RunID is not valid UUID."}
 	}

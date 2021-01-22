@@ -26,7 +26,6 @@ import (
 	"context"
 
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
@@ -53,8 +52,8 @@ func ConcreteExecution(
 	req := persistence.GetWorkflowExecutionRequest{
 		DomainID: request.DomainID,
 		Execution: types.WorkflowExecution{
-			WorkflowID: common.StringPtr(request.WorkflowID),
-			RunID:      common.StringPtr(request.RunID),
+			WorkflowID: request.WorkflowID,
+			RunID:      request.RunID,
 		},
 	}
 	e, err := retryer.GetWorkflowExecution(ctx, &req)

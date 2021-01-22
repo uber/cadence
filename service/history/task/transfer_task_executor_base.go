@@ -96,8 +96,8 @@ func (t *transferTaskExecutorBase) pushActivity(
 		DomainUUID:       common.StringPtr(task.TargetDomainID),
 		SourceDomainUUID: common.StringPtr(task.DomainID),
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(task.WorkflowID),
-			RunID:      common.StringPtr(task.RunID),
+			WorkflowID: task.WorkflowID,
+			RunID:      task.RunID,
 		},
 		TaskList:                      &types.TaskList{Name: &task.TaskList},
 		ScheduleID:                    &task.ScheduleID,
@@ -122,8 +122,8 @@ func (t *transferTaskExecutorBase) pushDecision(
 	return t.matchingClient.AddDecisionTask(ctx, &types.AddDecisionTaskRequest{
 		DomainUUID: common.StringPtr(task.DomainID),
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(task.WorkflowID),
-			RunID:      common.StringPtr(task.RunID),
+			WorkflowID: task.WorkflowID,
+			RunID:      task.RunID,
 		},
 		TaskList:                      tasklist,
 		ScheduleID:                    common.Int64Ptr(task.ScheduleID),
@@ -165,8 +165,8 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		DomainUUID: domainID,
 		Domain:     domain,
 		Execution: types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		WorkflowTypeName:   workflowTypeName,
 		StartTimestamp:     startTimeUnixNano,
@@ -208,8 +208,8 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 		DomainUUID: domainID,
 		Domain:     domain,
 		Execution: types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		WorkflowTypeName:   workflowTypeName,
 		StartTimestamp:     startTimeUnixNano,
@@ -272,8 +272,8 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 			DomainUUID: domainID,
 			Domain:     domain,
 			Execution: types.WorkflowExecution{
-				WorkflowID: common.StringPtr(workflowID),
-				RunID:      common.StringPtr(runID),
+				WorkflowID: workflowID,
+				RunID:      runID,
 			},
 			WorkflowTypeName:   workflowTypeName,
 			StartTimestamp:     startTimeUnixNano,

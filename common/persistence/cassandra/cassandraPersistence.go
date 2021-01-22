@@ -932,8 +932,8 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 		d.shardID,
 		rowTypeExecution,
 		request.DomainID,
-		*execution.WorkflowID,
-		*execution.RunID,
+		execution.WorkflowID,
+		execution.RunID,
 		defaultVisibilityTimestamp,
 		rowTypeExecutionTaskID,
 	).WithContext(ctx)
@@ -943,7 +943,7 @@ func (d *cassandraPersistence) GetWorkflowExecution(
 		if d.client.IsNotFoundError(err) {
 			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Workflow execution not found.  WorkflowId: %v, RunId: %v",
-					*execution.WorkflowID, *execution.RunID),
+					execution.WorkflowID, execution.RunID),
 			}
 		}
 
