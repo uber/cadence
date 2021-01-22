@@ -188,7 +188,7 @@ func (s *IntegrationBase) printWorkflowHistory(domain string, execution *types.W
 
 func (s *IntegrationBase) getHistory(domain string, execution *types.WorkflowExecution) []*types.HistoryEvent {
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-		Domain:          common.StringPtr(domain),
+		Domain:          domain,
 		Execution:       execution,
 		MaximumPageSize: common.Int32Ptr(5), // Use small page size to force pagination code path
 	})
@@ -197,7 +197,7 @@ func (s *IntegrationBase) getHistory(domain string, execution *types.WorkflowExe
 	events := historyResponse.History.Events
 	for historyResponse.NextPageToken != nil {
 		historyResponse, err = s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-			Domain:        common.StringPtr(domain),
+			Domain:        domain,
 			Execution:     execution,
 			NextPageToken: historyResponse.NextPageToken,
 		})

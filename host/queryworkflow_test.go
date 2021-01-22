@@ -57,7 +57,7 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -149,7 +149,7 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 	queryResultCh := make(chan QueryResult)
 	queryWorkflowFn := func(queryType string) {
 		queryResp, err := s.engine.QueryWorkflow(createContext(), &types.QueryWorkflowRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
 				WorkflowID: common.StringPtr(id),
 				RunID:      common.StringPtr(*we.RunID),
@@ -220,7 +220,7 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -312,7 +312,7 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 	queryResultCh := make(chan QueryResult)
 	queryWorkflowFn := func(queryType string) {
 		queryResp, err := s.engine.QueryWorkflow(createContext(), &types.QueryWorkflowRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
 				WorkflowID: common.StringPtr(id),
 				RunID:      common.StringPtr(*we.RunID),
@@ -364,7 +364,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -453,7 +453,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	queryResultCh := make(chan QueryResult)
 	queryWorkflowFn := func(queryType string, rejectCondition *types.QueryRejectCondition) {
 		queryResp, err := s.engine.QueryWorkflow(createContext(), &types.QueryWorkflowRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
 				WorkflowID: common.StringPtr(id),
 				RunID:      common.StringPtr(*we.RunID),
@@ -571,7 +571,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -671,7 +671,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 		// to the worker yet
 		s.False(handledSignal)
 		queryResp, err := s.engine.QueryWorkflow(createContext(), &types.QueryWorkflowRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
 				WorkflowID: common.StringPtr(id),
 				RunID:      common.StringPtr(*we.RunID),
@@ -693,7 +693,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 	signalName := "my signal"
 	signalInput := []byte("my signal input.")
 	err = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: common.StringPtr(id),
 			RunID:      common.StringPtr(*we.RunID),
@@ -756,7 +756,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -853,7 +853,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 	queryWorkflowFn := func(queryType string, rejectCondition *types.QueryRejectCondition) {
 		shortCtx, cancel := context.WithTimeout(context.Background(), time.Second)
 		queryResp, err := s.engine.QueryWorkflow(shortCtx, &types.QueryWorkflowRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
 				WorkflowID: common.StringPtr(id),
 				RunID:      common.StringPtr(*we.RunID),
@@ -871,7 +871,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 	signalName := "my signal"
 	signalInput := []byte("my signal input.")
 	err = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: common.StringPtr(id),
 			RunID:      common.StringPtr(*we.RunID),
@@ -917,7 +917,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -1017,7 +1017,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 	queryWorkflowFn := func(queryType string, rejectCondition *types.QueryRejectCondition) {
 		s.False(handledSignal)
 		queryResp, err := s.engine.QueryWorkflow(createContext(), &types.QueryWorkflowRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
 				WorkflowID: common.StringPtr(id),
 				RunID:      common.StringPtr(*we.RunID),
@@ -1037,7 +1037,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 	signalName := "my signal"
 	signalInput := []byte("my signal input.")
 	err = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: common.StringPtr(id),
 			RunID:      common.StringPtr(*we.RunID),
@@ -1106,7 +1106,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -1207,7 +1207,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 	queryWorkflowFn := func(queryType string, rejectCondition *types.QueryRejectCondition) {
 		s.False(handledSignal)
 		queryResp, err := s.engine.QueryWorkflow(createContext(), &types.QueryWorkflowRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
 				WorkflowID: common.StringPtr(id),
 				RunID:      common.StringPtr(*we.RunID),
@@ -1227,7 +1227,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 	signalName := "my signal"
 	signalInput := []byte("my signal input.")
 	err = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: common.StringPtr(id),
 			RunID:      common.StringPtr(*we.RunID),
@@ -1249,7 +1249,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 		signalName := "my signal"
 		signalInput := []byte("my signal input.")
 		err = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: common.StringPtr(id),
 				RunID:      common.StringPtr(*we.RunID),
@@ -1319,7 +1319,7 @@ func (s *integrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -1339,7 +1339,7 @@ func (s *integrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
 
 	// query workflow without any decision task should produce an error
 	queryResp, err := s.engine.QueryWorkflow(createContext(), &types.QueryWorkflowRequest{
-		Domain:    common.StringPtr(s.domainName),
+		Domain:    s.domainName,
 		Execution: workflowExecution,
 		Query: &types.WorkflowQuery{
 			QueryType: common.StringPtr(queryType),

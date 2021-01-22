@@ -1567,7 +1567,7 @@ func (h *handlerImpl) SyncActivity(
 	}
 
 	domainID := syncActivityRequest.GetDomainID()
-	if syncActivityRequest.DomainID == nil || uuid.Parse(syncActivityRequest.GetDomainID()) == nil {
+	if syncActivityRequest.DomainID == "" || uuid.Parse(syncActivityRequest.GetDomainID()) == nil {
 		return h.error(errDomainNotSet, scope, domainID, "")
 	}
 
@@ -1873,7 +1873,7 @@ func (h *handlerImpl) RefreshWorkflowTasks(
 		return errShuttingDown
 	}
 
-	domainID := request.GetDomainUIID()
+	domainID := request.DomainUIID
 	execution := request.GetRequest().GetExecution()
 	workflowID := execution.GetWorkflowID()
 	engine, err := h.controller.GetEngine(workflowID)

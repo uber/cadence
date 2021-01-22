@@ -173,7 +173,7 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_SyncActivityReplication
 	task := &types.ReplicationTask{
 		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
 		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
-			DomainID:   common.StringPtr(domainID),
+			DomainID:   domainID,
 			WorkflowID: common.StringPtr(workflowID),
 			RunID:      common.StringPtr(runID),
 		},
@@ -208,7 +208,7 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTas
 	task := &types.ReplicationTask{
 		TaskType: types.ReplicationTaskTypeHistoryV2.Ptr(),
 		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
-			DomainID:   common.StringPtr(domainID),
+			DomainID:   domainID,
 			WorkflowID: common.StringPtr(workflowID),
 			RunID:      common.StringPtr(runID),
 			Events: &types.DataBlob{
@@ -250,7 +250,7 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeHistoryV2
 	task := &types.ReplicationTask{
 		TaskType: types.ReplicationTaskTypeHistoryV2.Ptr(),
 		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
-			DomainID:   common.StringPtr(domainID),
+			DomainID:   domainID,
 			WorkflowID: common.StringPtr(workflowID),
 			RunID:      common.StringPtr(runID),
 			Events: &types.DataBlob{
@@ -278,7 +278,7 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeSyncActiv
 	task := &types.ReplicationTask{
 		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
 		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
-			DomainID:    common.StringPtr(domainID),
+			DomainID:    domainID,
 			WorkflowID:  common.StringPtr(workflowID),
 			RunID:       common.StringPtr(runID),
 			ScheduledID: common.Int64Ptr(1),

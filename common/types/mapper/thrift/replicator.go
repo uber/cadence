@@ -130,7 +130,7 @@ func FromFailoverMarkerAttributes(t *types.FailoverMarkerAttributes) *replicator
 		return nil
 	}
 	return &replicator.FailoverMarkerAttributes{
-		DomainID:        t.DomainID,
+		DomainID:        &t.DomainID,
 		FailoverVersion: t.FailoverVersion,
 		CreationTime:    t.CreationTime,
 	}
@@ -142,7 +142,7 @@ func ToFailoverMarkerAttributes(t *replicator.FailoverMarkerAttributes) *types.F
 		return nil
 	}
 	return &types.FailoverMarkerAttributes{
-		DomainID:        t.DomainID,
+		DomainID:        t.GetDomainID(),
 		FailoverVersion: t.FailoverVersion,
 		CreationTime:    t.CreationTime,
 	}
@@ -301,7 +301,7 @@ func FromHistoryTaskV2Attributes(t *types.HistoryTaskV2Attributes) *replicator.H
 	}
 	return &replicator.HistoryTaskV2Attributes{
 		TaskId:              t.TaskID,
-		DomainId:            t.DomainID,
+		DomainId:            &t.DomainID,
 		WorkflowId:          t.WorkflowID,
 		RunId:               t.RunID,
 		VersionHistoryItems: FromVersionHistoryItemArray(t.VersionHistoryItems),
@@ -317,7 +317,7 @@ func ToHistoryTaskV2Attributes(t *replicator.HistoryTaskV2Attributes) *types.His
 	}
 	return &types.HistoryTaskV2Attributes{
 		TaskID:              t.TaskId,
-		DomainID:            t.DomainId,
+		DomainID:            t.GetDomainId(),
 		WorkflowID:          t.WorkflowId,
 		RunID:               t.RunId,
 		VersionHistoryItems: ToVersionHistoryItemArray(t.VersionHistoryItems),
@@ -524,7 +524,7 @@ func FromReplicationTaskInfo(t *types.ReplicationTaskInfo) *replicator.Replicati
 		return nil
 	}
 	return &replicator.ReplicationTaskInfo{
-		DomainID:     t.DomainID,
+		DomainID:     &t.DomainID,
 		WorkflowID:   t.WorkflowID,
 		RunID:        t.RunID,
 		TaskType:     t.TaskType,
@@ -542,7 +542,7 @@ func ToReplicationTaskInfo(t *replicator.ReplicationTaskInfo) *types.Replication
 		return nil
 	}
 	return &types.ReplicationTaskInfo{
-		DomainID:     t.DomainID,
+		DomainID:     t.GetDomainID(),
 		WorkflowID:   t.WorkflowID,
 		RunID:        t.RunID,
 		TaskType:     t.TaskType,
@@ -646,7 +646,7 @@ func FromSyncActivityTaskAttributes(t *types.SyncActivityTaskAttributes) *replic
 		return nil
 	}
 	return &replicator.SyncActivityTaskAttributes{
-		DomainId:           t.DomainID,
+		DomainId:           &t.DomainID,
 		WorkflowId:         t.WorkflowID,
 		RunId:              t.RunID,
 		Version:            t.Version,
@@ -670,7 +670,7 @@ func ToSyncActivityTaskAttributes(t *replicator.SyncActivityTaskAttributes) *typ
 		return nil
 	}
 	return &types.SyncActivityTaskAttributes{
-		DomainID:           t.DomainId,
+		DomainID:           t.GetDomainId(),
 		WorkflowID:         t.WorkflowId,
 		RunID:              t.RunId,
 		Version:            t.Version,

@@ -274,7 +274,7 @@ Loop:
 				} else {
 					outStr = fmt.Sprintf(
 						"%v, %v, %v",
-						*task.GetHistoryTaskV2Attributes().DomainID,
+						task.GetHistoryTaskV2Attributes().DomainID,
 						*task.GetHistoryTaskV2Attributes().WorkflowID,
 						*task.GetHistoryTaskV2Attributes().RunID,
 					)

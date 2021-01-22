@@ -32,9 +32,9 @@ func FromAddActivityTaskRequest(t *types.AddActivityTaskRequest) *matching.AddAc
 		return nil
 	}
 	return &matching.AddActivityTaskRequest{
-		DomainUUID:                    t.DomainUUID,
+		DomainUUID:                    &t.DomainUUID,
 		Execution:                     FromWorkflowExecution(t.Execution),
-		SourceDomainUUID:              t.SourceDomainUUID,
+		SourceDomainUUID:              &t.SourceDomainUUID,
 		TaskList:                      FromTaskList(t.TaskList),
 		ScheduleId:                    t.ScheduleID,
 		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
@@ -49,9 +49,9 @@ func ToAddActivityTaskRequest(t *matching.AddActivityTaskRequest) *types.AddActi
 		return nil
 	}
 	return &types.AddActivityTaskRequest{
-		DomainUUID:                    t.DomainUUID,
+		DomainUUID:                    t.GetDomainUUID(),
 		Execution:                     ToWorkflowExecution(t.Execution),
-		SourceDomainUUID:              t.SourceDomainUUID,
+		SourceDomainUUID:              t.GetSourceDomainUUID(),
 		TaskList:                      ToTaskList(t.TaskList),
 		ScheduleID:                    t.ScheduleId,
 		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
@@ -66,7 +66,7 @@ func FromAddDecisionTaskRequest(t *types.AddDecisionTaskRequest) *matching.AddDe
 		return nil
 	}
 	return &matching.AddDecisionTaskRequest{
-		DomainUUID:                    t.DomainUUID,
+		DomainUUID:                    &t.DomainUUID,
 		Execution:                     FromWorkflowExecution(t.Execution),
 		TaskList:                      FromTaskList(t.TaskList),
 		ScheduleId:                    t.ScheduleID,
@@ -82,7 +82,7 @@ func ToAddDecisionTaskRequest(t *matching.AddDecisionTaskRequest) *types.AddDeci
 		return nil
 	}
 	return &types.AddDecisionTaskRequest{
-		DomainUUID:                    t.DomainUUID,
+		DomainUUID:                    t.GetDomainUUID(),
 		Execution:                     ToWorkflowExecution(t.Execution),
 		TaskList:                      ToTaskList(t.TaskList),
 		ScheduleID:                    t.ScheduleId,
@@ -98,7 +98,7 @@ func FromCancelOutstandingPollRequest(t *types.CancelOutstandingPollRequest) *ma
 		return nil
 	}
 	return &matching.CancelOutstandingPollRequest{
-		DomainUUID:   t.DomainUUID,
+		DomainUUID:   &t.DomainUUID,
 		TaskListType: t.TaskListType,
 		TaskList:     FromTaskList(t.TaskList),
 		PollerID:     t.PollerID,
@@ -111,7 +111,7 @@ func ToCancelOutstandingPollRequest(t *matching.CancelOutstandingPollRequest) *t
 		return nil
 	}
 	return &types.CancelOutstandingPollRequest{
-		DomainUUID:   t.DomainUUID,
+		DomainUUID:   t.GetDomainUUID(),
 		TaskListType: t.TaskListType,
 		TaskList:     ToTaskList(t.TaskList),
 		PollerID:     t.PollerID,
@@ -124,7 +124,7 @@ func FromMatchingDescribeTaskListRequest(t *types.MatchingDescribeTaskListReques
 		return nil
 	}
 	return &matching.DescribeTaskListRequest{
-		DomainUUID:  t.DomainUUID,
+		DomainUUID:  &t.DomainUUID,
 		DescRequest: FromDescribeTaskListRequest(t.DescRequest),
 	}
 }
@@ -135,7 +135,7 @@ func ToMatchingDescribeTaskListRequest(t *matching.DescribeTaskListRequest) *typ
 		return nil
 	}
 	return &types.MatchingDescribeTaskListRequest{
-		DomainUUID:  t.DomainUUID,
+		DomainUUID:  t.GetDomainUUID(),
 		DescRequest: ToDescribeTaskListRequest(t.DescRequest),
 	}
 }
@@ -146,7 +146,7 @@ func FromMatchingListTaskListPartitionsRequest(t *types.MatchingListTaskListPart
 		return nil
 	}
 	return &matching.ListTaskListPartitionsRequest{
-		Domain:   t.Domain,
+		Domain:   &t.Domain,
 		TaskList: FromTaskList(t.TaskList),
 	}
 }
@@ -157,7 +157,7 @@ func ToMatchingListTaskListPartitionsRequest(t *matching.ListTaskListPartitionsR
 		return nil
 	}
 	return &types.MatchingListTaskListPartitionsRequest{
-		Domain:   t.Domain,
+		Domain:   t.GetDomain(),
 		TaskList: ToTaskList(t.TaskList),
 	}
 }
@@ -602,7 +602,7 @@ func FromMatchingPollForActivityTaskRequest(t *types.MatchingPollForActivityTask
 		return nil
 	}
 	return &matching.PollForActivityTaskRequest{
-		DomainUUID:    t.DomainUUID,
+		DomainUUID:    &t.DomainUUID,
 		PollerID:      t.PollerID,
 		PollRequest:   FromPollForActivityTaskRequest(t.PollRequest),
 		ForwardedFrom: t.ForwardedFrom,
@@ -615,7 +615,7 @@ func ToMatchingPollForActivityTaskRequest(t *matching.PollForActivityTaskRequest
 		return nil
 	}
 	return &types.MatchingPollForActivityTaskRequest{
-		DomainUUID:    t.DomainUUID,
+		DomainUUID:    t.GetDomainUUID(),
 		PollerID:      t.PollerID,
 		PollRequest:   ToPollForActivityTaskRequest(t.PollRequest),
 		ForwardedFrom: t.ForwardedFrom,
@@ -628,7 +628,7 @@ func FromMatchingPollForDecisionTaskRequest(t *types.MatchingPollForDecisionTask
 		return nil
 	}
 	return &matching.PollForDecisionTaskRequest{
-		DomainUUID:    t.DomainUUID,
+		DomainUUID:    &t.DomainUUID,
 		PollerID:      t.PollerID,
 		PollRequest:   FromPollForDecisionTaskRequest(t.PollRequest),
 		ForwardedFrom: t.ForwardedFrom,
@@ -641,7 +641,7 @@ func ToMatchingPollForDecisionTaskRequest(t *matching.PollForDecisionTaskRequest
 		return nil
 	}
 	return &types.MatchingPollForDecisionTaskRequest{
-		DomainUUID:    t.DomainUUID,
+		DomainUUID:    t.GetDomainUUID(),
 		PollerID:      t.PollerID,
 		PollRequest:   ToPollForDecisionTaskRequest(t.PollRequest),
 		ForwardedFrom: t.ForwardedFrom,
@@ -706,7 +706,7 @@ func FromMatchingQueryWorkflowRequest(t *types.MatchingQueryWorkflowRequest) *ma
 		return nil
 	}
 	return &matching.QueryWorkflowRequest{
-		DomainUUID:    t.DomainUUID,
+		DomainUUID:    &t.DomainUUID,
 		TaskList:      FromTaskList(t.TaskList),
 		QueryRequest:  FromQueryWorkflowRequest(t.QueryRequest),
 		ForwardedFrom: t.ForwardedFrom,
@@ -719,7 +719,7 @@ func ToMatchingQueryWorkflowRequest(t *matching.QueryWorkflowRequest) *types.Mat
 		return nil
 	}
 	return &types.MatchingQueryWorkflowRequest{
-		DomainUUID:    t.DomainUUID,
+		DomainUUID:    t.GetDomainUUID(),
 		TaskList:      ToTaskList(t.TaskList),
 		QueryRequest:  ToQueryWorkflowRequest(t.QueryRequest),
 		ForwardedFrom: t.ForwardedFrom,
@@ -732,7 +732,7 @@ func FromMatchingRespondQueryTaskCompletedRequest(t *types.MatchingRespondQueryT
 		return nil
 	}
 	return &matching.RespondQueryTaskCompletedRequest{
-		DomainUUID:       t.DomainUUID,
+		DomainUUID:       &t.DomainUUID,
 		TaskList:         FromTaskList(t.TaskList),
 		TaskID:           t.TaskID,
 		CompletedRequest: FromRespondQueryTaskCompletedRequest(t.CompletedRequest),
@@ -745,7 +745,7 @@ func ToMatchingRespondQueryTaskCompletedRequest(t *matching.RespondQueryTaskComp
 		return nil
 	}
 	return &types.MatchingRespondQueryTaskCompletedRequest{
-		DomainUUID:       t.DomainUUID,
+		DomainUUID:       t.GetDomainUUID(),
 		TaskList:         ToTaskList(t.TaskList),
 		TaskID:           t.TaskID,
 		CompletedRequest: ToRespondQueryTaskCompletedRequest(t.CompletedRequest),

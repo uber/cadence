@@ -121,7 +121,7 @@ func (s *integrationSuite) TestVisibilityArchival() {
 	for i := 0; i != retryLimit; i++ {
 		executions = []*types.WorkflowExecutionInfo{}
 		request := &types.ListArchivedWorkflowExecutionsRequest{
-			Domain:   common.StringPtr(s.archivalDomainName),
+			Domain:   s.archivalDomainName,
 			PageSize: common.Int32Ptr(2),
 			Query:    common.StringPtr(fmt.Sprintf("CloseTime >= %v and CloseTime <= %v and WorkflowType = '%s'", startTime, endTime, workflowType)),
 		}
@@ -157,7 +157,7 @@ func (s *integrationSuite) getDomainID(domain string) string {
 
 func (s *integrationSuite) isHistoryArchived(domain string, execution *types.WorkflowExecution) bool {
 	request := &types.GetWorkflowExecutionHistoryRequest{
-		Domain:    common.StringPtr(s.archivalDomainName),
+		Domain:    s.archivalDomainName,
 		Execution: execution,
 	}
 
@@ -220,7 +220,7 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 	}
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(domain),
+		Domain:                              domain,
 		WorkflowID:                          common.StringPtr(id),
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,

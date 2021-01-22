@@ -1205,7 +1205,7 @@ func (c *contextImpl) ReapplyEvents(
 	return sourceCluster.ReapplyEvents(
 		ctx,
 		&types.ReapplyEventsRequest{
-			DomainName:        common.StringPtr(domainEntry.GetInfo().Name),
+			DomainName:        domainEntry.GetInfo().Name,
 			WorkflowExecution: execution,
 			Events:            reapplyEventsDataBlob.ToInternal(),
 		},

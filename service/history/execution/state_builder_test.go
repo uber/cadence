@@ -1318,7 +1318,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		StartChildWorkflowExecutionInitiatedEventAttributes: &types.StartChildWorkflowExecutionInitiatedEventAttributes{
-			Domain:     common.StringPtr(constants.TestTargetDomainName),
+			Domain:     constants.TestTargetDomainName,
 			WorkflowID: common.StringPtr(targetWorkflowID),
 		},
 	}
@@ -1535,7 +1535,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkfl
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		RequestCancelExternalWorkflowExecutionInitiatedEventAttributes: &types.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes{
-			Domain: common.StringPtr(constants.TestTargetDomainName),
+			Domain: constants.TestTargetDomainName,
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: common.StringPtr(targetWorkflowID),
 				RunID:      common.StringPtr(targetRunID),
@@ -1672,7 +1672,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecu
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		SignalExternalWorkflowExecutionInitiatedEventAttributes: &types.SignalExternalWorkflowExecutionInitiatedEventAttributes{
-			Domain: common.StringPtr(constants.TestTargetDomainName),
+			Domain: constants.TestTargetDomainName,
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: common.StringPtr(targetWorkflowID),
 				RunID:      common.StringPtr(targetRunID),

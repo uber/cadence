@@ -133,7 +133,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
 	version := int64(100)
 
 	request := &types.SyncActivityRequest{
-		DomainID:   common.StringPtr(domainID),
+		DomainID:   domainID,
 		WorkflowID: common.StringPtr(workflowID),
 		RunID:      common.StringPtr(runID),
 	}
@@ -180,7 +180,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowClosed() {
 	_, err := s.executionCache.PutIfNotExist(key, context)
 	s.NoError(err)
 	request := &types.SyncActivityRequest{
-		DomainID:   common.StringPtr(domainID),
+		DomainID:   domainID,
 		WorkflowID: common.StringPtr(workflowID),
 		RunID:      common.StringPtr(runID),
 	}
@@ -240,7 +240,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 		versionHistoryItem2,
 	})
 	request := &types.SyncActivityRequest{
-		DomainID:       common.StringPtr(domainID),
+		DomainID:       domainID,
 		WorkflowID:     common.StringPtr(workflowID),
 		RunID:          common.StringPtr(runID),
 		Version:        common.Int64Ptr(version),
@@ -291,7 +291,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:    common.StringPtr(domainID),
+		DomainID:    domainID,
 		WorkflowID:  common.StringPtr(workflowID),
 		RunID:       common.StringPtr(runID),
 		Version:     common.Int64Ptr(version),
@@ -353,7 +353,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingVers
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:       common.StringPtr(domainID),
+		DomainID:       domainID,
 		WorkflowID:     common.StringPtr(workflowID),
 		RunID:          common.StringPtr(runID),
 		Version:        common.Int64Ptr(version),
@@ -432,7 +432,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_DifferentVersionHistories_Inc
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:       common.StringPtr(domainID),
+		DomainID:       domainID,
 		WorkflowID:     common.StringPtr(workflowID),
 		RunID:          common.StringPtr(runID),
 		Version:        common.Int64Ptr(version),
@@ -522,7 +522,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingSche
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:       common.StringPtr(domainID),
+		DomainID:       domainID,
 		WorkflowID:     common.StringPtr(workflowID),
 		RunID:          common.StringPtr(runID),
 		Version:        common.Int64Ptr(version),
@@ -608,7 +608,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_SameSchedule
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:       common.StringPtr(domainID),
+		DomainID:       domainID,
 		WorkflowID:     common.StringPtr(workflowID),
 		RunID:          common.StringPtr(runID),
 		Version:        common.Int64Ptr(version),
@@ -681,7 +681,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_LocalVersion
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:       common.StringPtr(domainID),
+		DomainID:       domainID,
 		WorkflowID:     common.StringPtr(workflowID),
 		RunID:          common.StringPtr(runID),
 		Version:        common.Int64Ptr(version),
@@ -755,7 +755,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:       common.StringPtr(domainID),
+		DomainID:       domainID,
 		WorkflowID:     common.StringPtr(workflowID),
 		RunID:          common.StringPtr(runID),
 		Version:        common.Int64Ptr(version),
@@ -812,7 +812,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivity
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:       common.StringPtr(domainID),
+		DomainID:       domainID,
 		WorkflowID:     common.StringPtr(workflowID),
 		RunID:          common.StringPtr(runID),
 		Version:        common.Int64Ptr(version),
@@ -876,7 +876,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:          common.StringPtr(domainID),
+		DomainID:          domainID,
 		WorkflowID:        common.StringPtr(workflowID),
 		RunID:             common.StringPtr(runID),
 		Version:           common.Int64Ptr(version),
@@ -953,7 +953,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:          common.StringPtr(domainID),
+		DomainID:          domainID,
 		WorkflowID:        common.StringPtr(workflowID),
 		RunID:             common.StringPtr(runID),
 		Version:           common.Int64Ptr(version),
@@ -1030,7 +1030,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_Larger
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:          common.StringPtr(domainID),
+		DomainID:          domainID,
 		WorkflowID:        common.StringPtr(workflowID),
 		RunID:             common.StringPtr(runID),
 		Version:           common.Int64Ptr(version),
@@ -1106,7 +1106,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning() {
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:          common.StringPtr(domainID),
+		DomainID:          domainID,
 		WorkflowID:        common.StringPtr(workflowID),
 		RunID:             common.StringPtr(runID),
 		Version:           common.Int64Ptr(version),
@@ -1195,7 +1195,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_ZombieWorkflo
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:          common.StringPtr(domainID),
+		DomainID:          domainID,
 		WorkflowID:        common.StringPtr(workflowID),
 		RunID:             common.StringPtr(runID),
 		Version:           common.Int64Ptr(version),

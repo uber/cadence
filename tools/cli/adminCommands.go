@@ -170,7 +170,7 @@ func describeMutableState(c *cli.Context) *types.AdminDescribeWorkflowExecutionR
 	defer cancel()
 
 	resp, err := adminClient.DescribeWorkflowExecution(ctx, &types.AdminDescribeWorkflowExecutionRequest{
-		Domain: common.StringPtr(domain),
+		Domain: domain,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: common.StringPtr(wid),
 			RunID:      common.StringPtr(rid),
@@ -559,7 +559,7 @@ func AdminRefreshWorkflowTasks(c *cli.Context) {
 	defer cancel()
 
 	err := adminClient.RefreshWorkflowTasks(ctx, &types.RefreshWorkflowTasksRequest{
-		Domain: common.StringPtr(domain),
+		Domain: domain,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: common.StringPtr(wid),
 			RunID:      common.StringPtr(rid),
