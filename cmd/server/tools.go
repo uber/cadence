@@ -28,10 +28,16 @@ import (
 	// yarpc plugin for thriftrw code gen
 	_ "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc"
 
+	// protobuf stuff
+	_ "google.golang.org/grpc/cmd/protoc-gen-go-grpc"
+	_ "google.golang.org/protobuf/cmd/protoc-gen-go"
+
 	// goimports
 	_ "golang.org/x/tools/cmd/goimports"
 	// mockgen for generating mocks
 	_ "github.com/golang/mock/mockgen"
 	// enumer for generating utility methods for const enums
 	_ "github.com/dmarkham/enumer"
+	// golint - functional, but worth replacing with something less problematic and abandoned
+	_ "golang.org/x/lint/golint"
 )

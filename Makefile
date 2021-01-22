@@ -1,38 +1,19 @@
+# get rid of default behaviors, they're just noise
+MAKEFLAGS += --no-builtin-rules
+.SUFFIXES:
+
 .PHONY: git-submodules test bins clean cover cover_ci help
-PROJECT_ROOT = github.com/uber/cadence
-
-export PATH := $(shell go env GOPATH)/bin:$(PATH)
-
-ifndef GOOS
-GOOS := $(shell go env GOOS)
-endif
-
-ifndef GOARCH
-GOARCH := $(shell go env GOARCH)
-endif
-
-THRIFT_GENDIR=.gen
-
 default: help
 
-# define the list of thrift files the service depends on
-# (if you have some)
-THRIFTRW_SRCS = \
-  idls/thrift/cadence.thrift \
-  idls/thrift/health.thrift \
-  idls/thrift/history.thrift \
-  idls/thrift/matching.thrift \
-  idls/thrift/replicator.thrift \
-  idls/thrift/indexer.thrift \
-  idls/thrift/shared.thrift \
-  idls/thrift/admin.thrift \
-  idls/thrift/sqlblobs.thrift \
-  idls/thrift/checksum.thrift \
+PROJECT_ROOT = github.com/uber/cadence
 
-PROGS = cadence
+GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
+
 TEST_TIMEOUT = 20m
 TEST_ARG ?= -race -v -timeout $(TEST_TIMEOUT)
-BUILD := ./build
+BUILD := .build
+BIN := $(BUILD)/bin
 TOOLS_CMD_ROOT=./cmd/tools
 INTEG_TEST_ROOT=./host
 INTEG_TEST_DIR=host
@@ -41,49 +22,128 @@ INTEG_TEST_XDC_DIR=hostxdc
 INTEG_TEST_NDC_ROOT=./host/ndc
 INTEG_TEST_NDC_DIR=hostndc
 
+# helper for executing bins that need other bins, just `$(BIN_PATH) the_command ...`
+# I'd recommend not exporting this in general, to reduce the chance of accidentally using non-versioned tools.
+BIN_PATH := PATH="$(abspath $(BIN)):$$PATH"
+
 GO_BUILD_LDFLAGS_CMD      := $(abspath ./scripts/go-build-ldflags.sh)
 GO_BUILD_LDFLAGS          := $(shell $(GO_BUILD_LDFLAGS_CMD) LDFLAG)
 
 # TODO to be consistent, use nosql as PERSISTENCE_TYPE and cassandra PERSISTENCE_PLUGIN
 # file names like integ_cassandra__cover should become integ_nosql_cassandra_cover
 # for https://github.com/uber/cadence/issues/3514
-ifndef PERSISTENCE_TYPE
-override PERSISTENCE_TYPE = cassandra
-endif
-
-ifndef TEST_RUN_COUNT
-override TEST_RUN_COUNT = 1
-endif
-
+PERSISTENCE_TYPE ?= cassandra
+TEST_RUN_COUNT ?= 1
 ifdef TEST_TAG
 override TEST_TAG := -tags $(TEST_TAG)
 endif
 
-define thriftrwrule
-THRIFTRW_GEN_SRC += $(THRIFT_GENDIR)/go/$1/$1.go
-
-$(THRIFT_GENDIR)/go/$1/$1.go:: $2
-	@mkdir -p $(THRIFT_GENDIR)/go
-	thriftrw --plugin=yarpc --pkg-prefix=$(PROJECT_ROOT)/$(THRIFT_GENDIR)/go/ --out=$(THRIFT_GENDIR)/go $2
+# downloads and builds a go-gettable tool, versioned by go.mod, and installs
+# it into the build folder, named the same as the last portion of the URL.
+define get_tool
+@echo "building $(notdir $(1)) from $(1)..."
+@go build -mod=readonly -o $(BIN)/$(notdir $(1)) $(1)
 endef
 
-$(foreach tsrc,$(THRIFTRW_SRCS),$(eval $(call \
-	thriftrwrule,$(basename $(notdir \
-	$(shell echo $(tsrc) | tr A-Z a-z))),$(tsrc))))
+$(BIN):
+	@mkdir -p $(BIN)
 
-# Automatically gather all srcs
-ALL_SRC := $(shell find . -name "*.go" | grep -v -e Godeps -e vendor \
-	-e ".*/\..*" \
-	-e ".*/_.*" \
-	-e ".*/mocks.*")
+$(BIN)/thriftrw: go.mod | $(BIN)
+	$(call get_tool,go.uber.org/thriftrw)
 
-# filter out the src files for tools
-TOOLS_SRC := $(shell find ./tools -name "*.go")
-TOOLS_SRC += $(TOOLS_CMD_ROOT)
+$(BIN)/thriftrw-plugin-yarpc: go.mod | $(BIN)
+	$(call get_tool,go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc)
 
+$(BIN)/copyright: cmd/tools/copyright/licensegen.go | $(BIN)
+	go build -o $@ ./cmd/tools/copyright/licensegen.go
+
+$(BIN)/mockgen: go.mod | $(BIN)
+	$(call get_tool,github.com/golang/mock/mockgen)
+
+$(BIN)/enumer: go.mod | $(BIN)
+	$(call get_tool,github.com/dmarkham/enumer)
+
+$(BIN)/goimports: go.mod | $(BIN)
+	$(call get_tool,golang.org/x/tools/cmd/goimports)
+
+$(BIN)/golint: go.mod | $(BIN)
+	$(call get_tool,golang.org/x/lint/golint)
+
+$(BIN)/protoc-gen-go: go.mod | $(BIN)
+	$(call get_tool,google.golang.org/protobuf/cmd/protoc-gen-go)
+
+$(BIN)/protoc-gen-go-grpc: go.mod | $(BIN)
+	$(call get_tool,google.golang.org/grpc/cmd/protoc-gen-go-grpc)
+
+# https://docs.buf.build/
+BUF_VERSION = 0.36.0
+BUF_URL = https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-$(OS)-$(ARCH)
+$(BIN)/buf: | $(BIN)
+	@echo "Getting buf $(BUF_VERSION)"
+	curl -sSL $(BUF_URL) -o $(BIN)/buf
+	chmod +x $(BIN)/buf
+
+# https://www.grpc.io/docs/languages/go/quickstart/
+# protoc-gen-go(-grpc) are versioned via tools.go + go.mod (built above)
+PROTOC_VERSION = 3.14.0
+OS = $(shell uname -s)
+ARCH = $(shell uname -m)
+PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(subst Darwin,osx,$(OS))-$(ARCH).zip
+$(BIN)/protoc: | $(BIN)
+	@echo "Getting protoc $(PROTOC_VERSION)"
+	curl -sSL $(PROTOC_URL) -o $(BIN)/protoc.zip
+	unzip -q $(BIN)/protoc.zip -d $(BIN)/protoc-zip
+	cp $(BIN)/protoc-zip/bin/protoc $(BIN)/protoc
+	rm $(BIN)/protoc.zip
+
+# any generated file - they all depend on each other / are generated at once, so any will work
+PROTO_GEN_SRC = .gen/proto/admin/v1/service.pb.go
+
+THRIFT_GENDIR=.gen/go
+THRIFT_SRCS := $(shell find idls -name '*.thrift')
+# concrete targets to build / the "sentinel" go files that need to be produced per thrift file.
+# idls/thrift/thing.thrift -> thing.thrift -> thing -> .gen/go/thing/thing.go
+THRIFT_GEN_SRC := $(foreach tsrc,$(basename $(subst idls/thrift/,,$(THRIFT_SRCS))),$(THRIFT_GENDIR)/$(tsrc)/$(tsrc).go)
+
+# how to generate each thrift file.
+# note that each generated file depends on ALL thrift files - this is necessary because they can import each other.
+$(THRIFT_GEN_SRC): $(THRIFT_SRCS) $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc
+	@# .gen/go/thing/thing.go -> thing.go -> "thing " -> thing -> idls/thrift/thing.thrift
+	@echo 'thriftrw for idls/thrift/$(strip $(basename $(notdir $@))).thrift...'
+	@$(BIN_PATH) $(BIN)/thriftrw \
+		--plugin=yarpc \
+		--pkg-prefix=$(PROJECT_ROOT)/$(THRIFT_GENDIR) \
+		--out=$(THRIFT_GENDIR) \
+		--no-recurse \
+		idls/thrift/$(strip $(basename $(notdir $@))).thrift
+
+# automatically gather all srcs that currently exist.
+# works by ignoring everything in the parens (and does not descend into matching folders) due to `-prune`,
+# and everything else goes to the other side of the `-o` branch, which is `-print`ed.
+# this is dramatically faster than a `find . | grep -v vendor` pipeline, and scales far better.
+FRESH_ALL_SRC = $(shell \
+	find . \
+	\( \
+		-path './vendor/*' \
+	\) \
+	-prune \
+	-o -name '*.go' -print \
+)
+# most things can use a cached copy, e.g. all dependencies.
+# this will not include any files that are created during a `make` run, e.g. via protoc,
+# but that doesn't always matter (e.g. dependencies are computed at parse time, so it
+# won't affect behavior either way - choose the fast option).
+#
+# if you require a fully up-to-date list, use FRESH_ALL_SRC instead.
+ALL_SRC := $(FRESH_ALL_SRC)
+
+# make sure sentinel thrift-generated + proto-generated files are in ALL_SRC, so they are (re)generated if necessary
+ALL_SRC += $(THRIFT_GEN_SRC)
+ALL_SRC += $(PROTO_GEN_SRC)
+ALL_SRC := $(sort $(ALL_SRC)) # dedup
+LINT_SRC := $(filter-out %_test.go ./.gen/%, $(ALL_SRC))
 # all directories with *_test.go files in them (exclude host/xdc)
 TEST_DIRS := $(filter-out $(INTEG_TEST_XDC_ROOT)%, $(sort $(dir $(filter %_test.go,$(ALL_SRC)))))
-
 # all tests other than end-to-end integration test fall into the pkg_test category
 PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
 
@@ -112,91 +172,55 @@ GOCOVERPKG_ARG := -coverpkg="$(PROJECT_ROOT)/common/...,$(PROJECT_ROOT)/service/
 git-submodules:
 	git submodule update --init --recursive
 
-yarpc-install:
-	GO111MODULE=off go get -u github.com/myitcv/gobin
-	GOOS= GOARCH= gobin -mod=readonly go.uber.org/thriftrw
-	GOOS= GOARCH= gobin -mod=readonly go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc
-
-clean_thrift:
-	rm -rf .gen
-
-thriftc: yarpc-install git-submodules $(THRIFTRW_GEN_SRC) copyright
+thriftc: $(THRIFT_GEN_SRC) copyright ## rebuild thrift-generated source files
 
 define NEWLINE
 
 
 endef
 
-proto: proto-lint proto-compile proto-go-imports copyright
+proto: proto-lint proto-compile fmt copyright
 
 PROTO_ROOT := proto
 PROTO_OUT := .gen/proto
 PROTO_FILES = $(shell find ./$(PROTO_ROOT) -name "*.proto" | grep -v "persistenceblobs")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 
-BUILD_BIN = .build/bin
-$(BUILD_BIN):
-	mkdir -p $(BUILD_BIN)
+proto-lint: $(BIN)/buf
+	cd $(PROTO_ROOT) && ../$(BIN)/buf lint
 
-OS = $(shell uname -s)
-ARCH = $(shell uname -m)
+# this line: -I=$(BIN)/protoc-zip/include
+# includes the well-known protobuf types, e.g. timestamp, wrappers, and the language meta-definition for extensions.
+# they're part of the protoc zip, and "normally" are installed globally and found implicitly.
+# since they're in an abnormal location, passing that path explicitly lets protoc find them.
+$(PROTO_GEN_SRC): $(BIN)/protoc $(BIN)/protoc-gen-go $(BIN)/protoc-gen-go-grpc $(PROTO_FILES)
+	@mkdir -p $(PROTO_OUT)
+	$(BIN)/protoc \
+		--plugin $(BIN)/protoc-gen-go \
+		--plugin $(BIN)/protoc-gen-go-grpc \
+		-I=$(PROTO_ROOT)/public \
+		-I=$(PROTO_ROOT)/internal \
+		-I=$(BIN)/protoc-zip/include \
+		--go_out=. \
+		--go_opt=module=$(PROJECT_ROOT) \
+		--go-grpc_out=. \
+		--go-grpc_opt=module=$(PROJECT_ROOT) \
+		$$(find $(PROTO_DIRS) -name '*.proto')
 
-# https://docs.buf.build/
-BUF_BIN = $(BUILD_BIN)/buf
-BUF_VERSION = 0.36.0
-BUF_URL = https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-$(OS)-$(ARCH)
-$(BUF_BIN): | $(BUILD_BIN)
-	@echo "Getting buf $(BUF_VERSION)"
-	curl -sSL $(BUF_URL) -o $(BUF_BIN)
-	chmod +x $(BUF_BIN)
+proto-compile: $(PROTO_GEN_SRC)
 
-# https://www.grpc.io/docs/languages/go/quickstart/
-PROTOC_BIN = $(BUILD_BIN)/protoc
-PROTOC_VERSION = 3.14.0
-PROTOC_GEN_GO_VERSION = 1.25.0
-PROTOC_GEN_GO_GRPC_VERSION = 1.1.0
-PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(subst Darwin,osx,$(OS))-$(ARCH).zip
-$(PROTOC_BIN): | $(BUILD_BIN)
-	@echo "Getting protoc $(PROTOC_VERSION)"
-	curl -sSL $(PROTOC_URL) -o $(PROTOC_BIN).zip
-	unzip $(PROTOC_BIN).zip -d $(PROTOC_BIN)-files
-	cp $(PROTOC_BIN)-files/bin/protoc $(PROTOC_BIN)
-	rm $(PROTOC_BIN).zip
+copyright: $(BIN)/copyright
+	$(BIN)/copyright --verifyOnly
 
-proto-lint: $(BUF_BIN)
-	cd $(PROTO_ROOT) && buf check lint
-
-proto-compile: $(PROTOC_BIN)
-	GOOS= GOARCH= gobin -mod=readonly google.golang.org/protobuf/cmd/protoc-gen-go@v$(PROTOC_GEN_GO_VERSION)
-	GOOS= GOARCH= gobin -mod=readonly google.golang.org/grpc/cmd/protoc-gen-go-grpc@v$(PROTOC_GEN_GO_GRPC_VERSION)
-	mkdir -p $(PROTO_OUT)
-	$(foreach PROTO_DIR, $(PROTO_DIRS), \
-		$(PROTOC_BIN) \
-			-I=$(PROTO_ROOT)/public \
-			-I=$(PROTO_ROOT)/internal \
-			-I=$(PROTOC_BIN)-files/include \
-			--go_out=. \
-			--go_opt=module=$(PROJECT_ROOT) \
-			--go-grpc_out=. \
-			--go-grpc_opt=module=$(PROJECT_ROOT) \
-			$(PROTO_DIR)*.proto \
-		$(NEWLINE))
-
-proto-go-imports:
-	goimports -w $(PROTO_OUT)
-
-copyright: cmd/tools/copyright/licensegen.go
-	GOOS= GOARCH= go run ./cmd/tools/copyright/licensegen.go --verifyOnly
-
-cadence-cassandra-tool: $(TOOLS_SRC)
+cadence-cassandra-tool: $(ALL_SRC)
 	@echo "compiling cadence-cassandra-tool with OS: $(GOOS), ARCH: $(GOARCH)"
 	go build -o cadence-cassandra-tool cmd/tools/cassandra/main.go
 
-cadence-sql-tool: $(TOOLS_SRC)
+cadence-sql-tool: $(ALL_SRC)
 	@echo "compiling cadence-sql-tool with OS: $(GOOS), ARCH: $(GOARCH)"
 	go build -o cadence-sql-tool cmd/tools/sql/main.go
 
-cadence: $(TOOLS_SRC)
+cadence: $(ALL_SRC)
 	@echo "compiling cadence with OS: $(GOOS), ARCH: $(GOARCH)"
 	go build -o cadence cmd/tools/cli/main.go
 
@@ -210,34 +234,25 @@ cadence-canary: $(ALL_SRC)
 
 go-generate-format: go-generate fmt
 
-go-generate:
-	GO111MODULE=off go get -u github.com/myitcv/gobin
-	GOOS= GOARCH= gobin -mod=readonly github.com/golang/mock/mockgen
-	GOOS= GOARCH= gobin -mod=readonly github.com/dmarkham/enumer
-	@echo "running go generate ./..."
-	@go generate ./...
-	@echo "running go run cmd/tools/copyright/licensegen.go"
-	@go run cmd/tools/copyright/licensegen.go
+go-generate: $(BIN)/mockgen $(BIN)/enumer
+	@echo "running go generate ./..., this takes almost 5 minutes..."
+	@# add our bins to PATH so `go generate` can find them
+	@$(BIN_PATH) go generate ./...
+	@echo "updating copyright headers"
+	@$(MAKE) --no-print-directory copyright
 
-lint:
+lint: $(BIN)/golint fmt
 	@echo "running linter"
-	@lintFail=0; for file in $(ALL_SRC); do \
-		golint "$$file"; \
+	@lintFail=0; for file in $(sort $(LINT_SRC)); do \
+		$(BIN)/golint "$$file"; \
 		if [ $$? -eq 1 ]; then lintFail=1; fi; \
 	done; \
 	if [ $$lintFail -eq 1 ]; then exit 1; fi;
-	@OUTPUT=`gofmt -l $(ALL_SRC) 2>&1`; \
-	if [ "$$OUTPUT" ]; then \
-		echo "Run 'make fmt'. gofmt must be run on the following files:"; \
-		echo "$$OUTPUT"; \
-		exit 1; \
-	fi
 
-fmt:
-	GO111MODULE=off go get -u github.com/myitcv/gobin
-	GOOS= GOARCH= gobin -mod=readonly golang.org/x/tools/cmd/goimports
+fmt: $(BIN)/goimports $(ALL_SRC)
 	@echo "running goimports"
-	@goimports -local "github.com/uber/cadence" -w $(ALL_SRC)
+	@# use FRESH_ALL_SRC so it won't miss any generated files produced earlier
+	@$(BIN)/goimports -local "github.com/uber/cadence" -w $(FRESH_ALL_SRC)
 
 bins_nothrift: fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server cadence-canary
 

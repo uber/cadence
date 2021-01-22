@@ -15,14 +15,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       python-pip \
       python-setuptools \
       time \
+      unzip \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl https://bootstrap.pypa.io/get-pip.py | python
 RUN pip install PyYAML==3.13 cqlsh==5.0.4
 
-RUN go get -u github.com/golang/dep/cmd/dep
-RUN go get -u github.com/Masterminds/glide
-RUN go get -u golang.org/x/lint/golint
 RUN go get github.com/axw/gocov/gocov
 RUN go get github.com/dmetzgar/goveralls
 RUN go get golang.org/x/tools/cmd/cover
