@@ -2,6 +2,11 @@
 MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
+# a literal space value, for makefile purposes
+SPACE :=
+SPACE +=
+COMMA := ,
+
 .PHONY: git-submodules test bins clean cover cover_ci help
 default: help
 
@@ -75,6 +80,9 @@ $(BIN)/protoc-gen-go: go.mod | $(BIN)
 $(BIN)/protoc-gen-go-grpc: go.mod | $(BIN)
 	$(call get_tool,google.golang.org/grpc/cmd/protoc-gen-go-grpc)
 
+$(BIN)/goveralls: go.mod | $(BIN)
+	$(call get_tool,github.com/dmetzgar/goveralls)
+
 # https://docs.buf.build/
 BUF_VERSION = 0.36.0
 BUF_URL = https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-$(OS)-$(ARCH)
@@ -97,13 +105,13 @@ $(BIN)/protoc: | $(BIN)
 	rm $(BIN)/protoc.zip
 
 # any generated file - they all depend on each other / are generated at once, so any will work
-PROTO_GEN_SRC = .gen/proto/admin/v1/service.pb.go
+PROTO_GEN_SRC = ./.gen/proto/admin/v1/service.pb.go
 
 THRIFT_GENDIR=.gen/go
 THRIFT_SRCS := $(shell find idls -name '*.thrift')
 # concrete targets to build / the "sentinel" go files that need to be produced per thrift file.
-# idls/thrift/thing.thrift -> thing.thrift -> thing -> .gen/go/thing/thing.go
-THRIFT_GEN_SRC := $(foreach tsrc,$(basename $(subst idls/thrift/,,$(THRIFT_SRCS))),$(THRIFT_GENDIR)/$(tsrc)/$(tsrc).go)
+# idls/thrift/thing.thrift -> thing.thrift -> thing -> ./.gen/go/thing/thing.go
+THRIFT_GEN_SRC := $(foreach tsrc,$(basename $(subst idls/thrift/,,$(THRIFT_SRCS))),./$(THRIFT_GENDIR)/$(tsrc)/$(tsrc).go)
 
 # how to generate each thrift file.
 # note that each generated file depends on ALL thrift files - this is necessary because they can import each other.
@@ -167,17 +175,14 @@ INTEG_NDC_COVER_FILE_POSTGRES   := $(COVER_ROOT)/integ_ndc_sql_postgres_cover.ou
 #   Apply coverage analysis in each test to the given list of packages.
 #   The default is for each test to analyze only the package being tested.
 #   Packages are specified as import paths.
-GOCOVERPKG_ARG := -coverpkg="$(PROJECT_ROOT)/common/...,$(PROJECT_ROOT)/service/...,$(PROJECT_ROOT)/client/...,$(PROJECT_ROOT)/tools/..."
+COVER_PKGS = client common host service tools
+# pkg -> pkg/... -> github.com/uber/cadence/pkg/... -> join with commas
+GOCOVERPKG_ARG := -coverpkg="$(subst $(SPACE),$(COMMA),$(addprefix $(PROJECT_ROOT)/,$(addsuffix /...,$(COVER_PKGS))))"
 
 git-submodules:
 	git submodule update --init --recursive
 
 thriftc: $(THRIFT_GEN_SRC) copyright ## rebuild thrift-generated source files
-
-define NEWLINE
-
-
-endef
 
 proto: proto-lint proto-compile fmt copyright
 
@@ -329,8 +334,8 @@ $(COVER_ROOT)/cover.out: $(UNIT_COVER_FILE) $(INTEG_COVER_FILE_CASS) $(INTEG_COV
 cover: $(COVER_ROOT)/cover.out
 	go tool cover -html=$(COVER_ROOT)/cover.out;
 
-cover_ci: $(COVER_ROOT)/cover.out
-	goveralls -coverprofile=$(COVER_ROOT)/cover.out -service=buildkite || echo Coveralls failed;
+cover_ci: $(COVER_ROOT)/cover.out $(BIN)/goveralls
+	$(BIN)/goveralls -coverprofile=$(COVER_ROOT)/cover.out -service=buildkite || echo Coveralls failed;
 
 clean: ## Clean binaries and build folder
 	rm -f cadence
