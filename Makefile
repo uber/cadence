@@ -99,10 +99,10 @@ ARCH = $(shell uname -m)
 PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(subst Darwin,osx,$(OS))-$(ARCH).zip
 $(BIN)/protoc: | $(BIN)
 	@echo "Getting protoc $(PROTOC_VERSION)"
+	rm -rf $(BIN)/protoc.zip $(BIN)/protoc-zip
 	curl -sSL $(PROTOC_URL) -o $(BIN)/protoc.zip
 	unzip -q $(BIN)/protoc.zip -d $(BIN)/protoc-zip
 	cp $(BIN)/protoc-zip/bin/protoc $(BIN)/protoc
-	rm $(BIN)/protoc.zip
 
 # any generated file - they all depend on each other / are generated at once, so any will work
 PROTO_GEN_SRC = ./.gen/proto/admin/v1/service.pb.go
@@ -113,9 +113,23 @@ THRIFT_SRCS := $(shell find idls -name '*.thrift')
 # idls/thrift/thing.thrift -> thing.thrift -> thing -> ./.gen/go/thing/thing.go
 THRIFT_GEN_SRC := $(foreach tsrc,$(basename $(subst idls/thrift/,,$(THRIFT_SRCS))),./$(THRIFT_GENDIR)/$(tsrc)/$(tsrc).go)
 
+# this is a "false" dependency chain, but it convinces make that "need to make thriftrw(-plugin-yarpc)"
+# does not mean "need to update generated code" because there is no rule body for the thrift files, i.e.:
+#     No recipe for 'idls/thrift/admin.thrift' and no prerequisites actually changed.
+#     No need to remake target 'idls/thrift/admin.thrift'
+# therefore it does not cause a remake any of $(THRIFT_GEN_SRC).
+# note that this relies on thrift files having NO build rules whatsoever, including anywhere else.
+#
+# this is a little weird, but useful.  it means we download and build the tools in all cases, but do
+# not actually run the generators unless the generated files are missing (or older than their .thrift file).
+#
+# on its own, this would mean that changes to the binaries themselves (i.e. go.mod version changes)
+# would not trigger a re-generation pass.  that is corrected by making thrift-gen-srcs depend on go.mod.
+$(THRIFT_SRCS): $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc
+
 # how to generate each thrift file.
 # note that each generated file depends on ALL thrift files - this is necessary because they can import each other.
-$(THRIFT_GEN_SRC): $(THRIFT_SRCS) $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc
+$(THRIFT_GEN_SRC): $(THRIFT_SRCS) go.mod
 	@# .gen/go/thing/thing.go -> thing.go -> "thing " -> thing -> idls/thrift/thing.thrift
 	@echo 'thriftrw for idls/thrift/$(strip $(basename $(notdir $@))).thrift...'
 	@$(BIN_PATH) $(BIN)/thriftrw \
@@ -194,11 +208,21 @@ PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 proto-lint: $(BIN)/buf
 	cd $(PROTO_ROOT) && ../$(BIN)/buf lint
 
+# same trick as for thrift.
+#
+# for proto though, it's important that this works because the alpine images used to build release
+# binaries are not compatible with the protoc tool (glibc vs musl issues).
+#
+# for this reason, proto *must not* be executed in those release builds, unless for some reason the
+# files are not up to date (in which case a failure is probably correct behavior).
+# the tools can still be downloaded and built safely, though it's wasted effort to do so.
+$(PROTO_FILES): $(BIN)/protoc $(BIN)/protoc-gen-go $(BIN)/protoc-gen-go-grpc
+
 # this line: -I=$(BIN)/protoc-zip/include
 # includes the well-known protobuf types, e.g. timestamp, wrappers, and the language meta-definition for extensions.
 # they're part of the protoc zip, and "normally" are installed globally and found implicitly.
 # since they're in an abnormal location, passing that path explicitly lets protoc find them.
-$(PROTO_GEN_SRC): $(BIN)/protoc $(BIN)/protoc-gen-go $(BIN)/protoc-gen-go-grpc $(PROTO_FILES)
+$(PROTO_GEN_SRC): $(PROTO_FILES) go.mod
 	@mkdir -p $(PROTO_OUT)
 	$(BIN)/protoc \
 		--plugin $(BIN)/protoc-gen-go \
