@@ -174,8 +174,8 @@ func newTaskListManager(
 	} else {
 		taskListTypeMetricScope = tlMgr.metricScope().Tagged(taskListDecisionTypeTag)
 	}
-	tlMgr.pollerHistory = newPollerHistory(func(newSize int) {
-		taskListTypeMetricScope.UpdateGauge(metrics.PollerPerTaskListCounter, float64(newSize))
+	tlMgr.pollerHistory = newPollerHistory(func(state *cache.UpdatedState) {
+		taskListTypeMetricScope.UpdateGauge(metrics.PollerPerTaskListCounter, float64(state.NewSize))
 	})
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.taskReader = newTaskReader(tlMgr)

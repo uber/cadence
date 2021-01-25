@@ -345,6 +345,6 @@ func (c *lru) updateSizeOnDelete(key interface{}) {
 
 func (c *lru) notifyOnUpdate() {
 	if c.updatedFunc != nil {
-		c.updatedFunc(c.byAccess.Len())
+		c.updatedFunc(&UpdatedState{c.byAccess.Len()})
 	}
 }

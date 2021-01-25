@@ -107,7 +107,13 @@ type RemovedFunc func(interface{})
 
 // UpdatedFunc is a type for notifying applications when the cache item was put/deleted
 // returns the resulted size (which can be the same in case of put)
-type UpdatedFunc func(newSize int)
+type UpdatedFunc func(state *UpdatedState)
+
+// the struct provides the info for notified applications upon the UpdatedFunc call(intended to be extended)
+type UpdatedState struct {
+	// the cache size after the update
+	NewSize int
+}
 
 // Iterator represents the interface for cache iterators
 type Iterator interface {
