@@ -3046,7 +3046,7 @@ func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workf
 	return &types.WorkflowExecutionAlreadyStartedError{
 		Message:        common.StringPtr(fmt.Sprintf(errMsg, workflowID, runID)),
 		StartRequestID: common.StringPtr(fmt.Sprintf("%v", createRequestID)),
-		RunID:          fmt.Sprintf("%v", runID),
+		RunID:          runID,
 	}
 }
 
