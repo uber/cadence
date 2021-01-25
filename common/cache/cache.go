@@ -71,8 +71,8 @@ type Options struct {
 	// is scheduled for deletion
 	RemovedFunc RemovedFunc
 
-	// UpdatedFunc is an optional function called when the cache item was put/deleted
-	UpdatedFunc UpdatedFunc
+	// OnCacheUpdatedFunc is an optional function called when the cache item was put/deleted
+	OnCacheUpdatedFunc OnCacheUpdatedFunc
 
 	// MaxCount controls the max capacity of the cache
 	// It is required option if MaxSize is not provided
@@ -105,11 +105,11 @@ type SimpleOptions struct {
 // deletion, Cache calls go f(i)
 type RemovedFunc func(interface{})
 
-// UpdatedFunc is a type for notifying applications when the cache item was put/deleted
+// OnCacheUpdatedFunc is a type for notifying applications when the cache item was put/deleted
 // returns the resulted size (which can be the same in case of put)
-type UpdatedFunc func(state *UpdatedState)
+type OnCacheUpdatedFunc func(state *UpdatedState)
 
-// the struct provides the info for notified applications upon the UpdatedFunc call(intended to be extended)
+// the struct provides the info for notified applications upon the OnCacheUpdatedFunc call(intended to be extended)
 type UpdatedState struct {
 	// the cache size after the update
 	NewSize int

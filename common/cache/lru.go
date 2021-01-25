@@ -45,7 +45,7 @@ type (
 		ttl         time.Duration
 		pin         bool
 		rmFunc      RemovedFunc
-		updatedFunc UpdatedFunc
+		updatedFunc OnCacheUpdatedFunc
 		sizeFunc    GetCacheItemSizeFunc
 		maxSize     uint64
 		currSize    uint64
@@ -147,7 +147,7 @@ func New(opts *Options) Cache {
 		ttl:         opts.TTL,
 		pin:         opts.Pin,
 		rmFunc:      opts.RemovedFunc,
-		updatedFunc: opts.UpdatedFunc,
+		updatedFunc: opts.OnCacheUpdatedFunc,
 	}
 
 	cache.isSizeBased = opts.GetCacheItemSizeFunc != nil && opts.MaxSize > 0
