@@ -45,6 +45,9 @@ const (
 	returnEmptyTaskTimeBudget time.Duration = time.Second
 )
 
+var taskListActivityTypeTag = metrics.TaskListTypeTag("activity")
+var taskListDecisionTypeTag = metrics.TaskListTypeTag("decision")
+
 type (
 	addTaskParams struct {
 		execution     *types.WorkflowExecution
@@ -165,14 +168,14 @@ func newTaskListManager(
 			metrics.MatchingTaskListMgrScope,
 		))
 	}
-	var taskListTypeTag metrics.Tag
+	var taskListTypeMetricScope metrics.Scope
 	if taskList.taskType == persistence.TaskListTypeActivity {
-		taskListTypeTag = metrics.TaskListTypeTag("activity")
+		taskListTypeMetricScope = tlMgr.metricScope().Tagged(taskListActivityTypeTag)
 	} else {
-		taskListTypeTag = metrics.TaskListTypeTag("decision")
+		taskListTypeMetricScope = tlMgr.metricScope().Tagged(taskListDecisionTypeTag)
 	}
 	tlMgr.pollerHistory = newPollerHistory(func(newSize int) {
-		tlMgr.metricScope().Tagged(taskListTypeTag).UpdateGauge(metrics.PollerPerTaskListCounter, float64(newSize))
+		taskListTypeMetricScope.UpdateGauge(metrics.PollerPerTaskListCounter, float64(newSize))
 	})
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.taskReader = newTaskReader(tlMgr)

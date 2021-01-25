@@ -106,6 +106,7 @@ type SimpleOptions struct {
 type RemovedFunc func(interface{})
 
 // UpdatedFunc is a type for notifying applications when the cache item was put/deleted
+// returns the resulted size (which can be the same in case of put)
 type UpdatedFunc func(newSize int)
 
 // Iterator represents the interface for cache iterators
