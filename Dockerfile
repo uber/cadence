@@ -27,7 +27,7 @@ RUN go install
 # Build Cadence binaries
 FROM golang:1.13.6-alpine AS builder
 
-RUN apk add --update --no-cache ca-certificates make git curl mercurial bzr
+RUN apk add --update --no-cache ca-certificates make git curl mercurial bzr unzip
 
 WORKDIR /cadence
 
