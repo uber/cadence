@@ -40,4 +40,6 @@ import (
 	_ "github.com/dmarkham/enumer"
 	// golint - functional, but worth replacing with something less problematic and abandoned
 	_ "golang.org/x/lint/golint"
+	// coverage reporting
+	_ "github.com/dmetzgar/goveralls"
 )
