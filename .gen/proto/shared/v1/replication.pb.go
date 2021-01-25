@@ -31,10 +31,11 @@ import (
 	sync "sync"
 
 	proto "github.com/golang/protobuf/proto"
-	v1 "github.com/uber/cadence/.gen/proto/api/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+
+	v1 "github.com/uber/cadence/.gen/proto/api/v1"
 )
 
 const (
