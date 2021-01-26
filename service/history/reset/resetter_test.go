@@ -294,7 +294,7 @@ func (s *workflowResetterSuite) TestFailInflightActivity() {
 		&types.RespondActivityTaskFailedRequest{
 			Reason:   common.StringPtr(terminateReason),
 			Details:  activity1.Details,
-			Identity: common.StringPtr(activity1.StartedIdentity),
+			Identity: activity1.StartedIdentity,
 		},
 	).Return(&types.HistoryEvent{}, nil).Times(1)
 
@@ -595,7 +595,7 @@ func (s *workflowResetterSuite) TestReapplyEvents() {
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			SignalName: common.StringPtr("some random signal name"),
 			Input:      []byte("some random signal input"),
-			Identity:   common.StringPtr("some random signal identity"),
+			Identity:   "some random signal identity",
 		},
 	}
 	event2 := &types.HistoryEvent{
@@ -609,7 +609,7 @@ func (s *workflowResetterSuite) TestReapplyEvents() {
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			SignalName: common.StringPtr("another random signal name"),
 			Input:      []byte("another random signal input"),
-			Identity:   common.StringPtr("another random signal identity"),
+			Identity:   "another random signal identity",
 		},
 	}
 	events := []*types.HistoryEvent{event1, event2, event3}

@@ -994,7 +994,7 @@ type pendingActivityInfo struct {
 	MaximumAttempts        *int32  `json:",omitempty"`
 	ExpirationTimestamp    *string `json:",omitempty"` // change from *int64
 	LastFailureReason      *string `json:",omitempty"`
-	LastWorkerIdentity     *string `json:",omitempty"`
+	LastWorkerIdentity     string  `json:",omitempty"`
 	LastFailureDetails     *string `json:",omitempty"` // change from []byte
 }
 
@@ -2124,7 +2124,7 @@ func CompleteActivity(c *cli.Context) {
 		RunID:      rid,
 		ActivityID: common.StringPtr(activityID),
 		Result:     []byte(result),
-		Identity:   common.StringPtr(identity),
+		Identity:   identity,
 	})
 	if err != nil {
 		ErrorAndExit("Completing activity failed", err)
@@ -2156,7 +2156,7 @@ func FailActivity(c *cli.Context) {
 		ActivityID: common.StringPtr(activityID),
 		Reason:     common.StringPtr(reason),
 		Details:    []byte(detail),
-		Identity:   common.StringPtr(identity),
+		Identity:   identity,
 	})
 	if err != nil {
 		ErrorAndExit("Failing activity failed", err)

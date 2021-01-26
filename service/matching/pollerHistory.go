@@ -82,7 +82,7 @@ func (pollers *pollerHistory) getAllPollerInfo() []*types.PollerInfo {
 		// TODO add IP, T1396795
 		lastAccessTime := entry.CreateTime()
 		result = append(result, &types.PollerInfo{
-			Identity:       common.StringPtr(string(key)),
+			Identity:       string(key),
 			LastAccessTime: common.Int64Ptr(lastAccessTime.UnixNano()),
 			RatePerSecond:  common.Float64Ptr(value.ratePerSecond),
 		})

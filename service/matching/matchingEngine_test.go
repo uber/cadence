@@ -236,7 +236,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 		DomainUUID: domainID,
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: stickyTaskList,
-			Identity: &identity},
+			Identity: identity},
 	})
 
 	expectedResp := &types.MatchingPollForDecisionTaskResponse{
@@ -279,7 +279,7 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(callContext context.Co
 				DomainUUID: domainID,
 				PollRequest: &types.PollForActivityTaskRequest{
 					TaskList: taskList,
-					Identity: &identity,
+					Identity: identity,
 				},
 			})
 			s.NoError(err)
@@ -291,7 +291,7 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(callContext context.Co
 				DomainUUID: domainID,
 				PollRequest: &types.PollForDecisionTaskRequest{
 					TaskList: taskList,
-					Identity: &identity},
+					Identity: identity},
 			})
 			s.NoError(err)
 			s.Equal(emptyPollForDecisionTaskResponse, resp)
@@ -515,7 +515,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 			DomainUUID: domainID,
 			PollRequest: &types.PollForActivityTaskRequest{
 				TaskList: taskList,
-				Identity: &identity},
+				Identity: identity},
 		})
 
 		s.NoError(err)
@@ -624,7 +624,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 			DomainUUID: domainID,
 			PollRequest: &types.PollForActivityTaskRequest{
 				TaskList:         taskList,
-				Identity:         &identity,
+				Identity:         identity,
 				TaskListMetadata: &types.TaskListMetadata{MaxTasksPerSecond: &maxDispatch},
 			},
 		})
@@ -851,7 +851,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 					DomainUUID: domainID,
 					PollRequest: &types.PollForActivityTaskRequest{
 						TaskList:         taskList,
-						Identity:         &identity,
+						Identity:         identity,
 						TaskListMetadata: &types.TaskListMetadata{MaxTasksPerSecond: &maxDispatch},
 					},
 				})
@@ -974,7 +974,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 					DomainUUID: domainID,
 					PollRequest: &types.PollForDecisionTaskRequest{
 						TaskList: taskList,
-						Identity: &identity},
+						Identity: identity},
 				})
 				if err != nil {
 					panic(err)
@@ -1036,7 +1036,7 @@ func (s *matchingEngineSuite) TestPollWithExpiredContext() {
 		DomainUUID: domainID,
 		PollRequest: &types.PollForActivityTaskRequest{
 			TaskList: taskList,
-			Identity: &identity},
+			Identity: identity},
 	})
 
 	s.Equal(ctx.Err(), err)
@@ -1049,7 +1049,7 @@ func (s *matchingEngineSuite) TestPollWithExpiredContext() {
 		DomainUUID: domainID,
 		PollRequest: &types.PollForActivityTaskRequest{
 			TaskList: taskList,
-			Identity: &identity},
+			Identity: identity},
 	})
 	s.Nil(err)
 	s.Equal(emptyPollForActivityTaskResponse, resp)
@@ -1153,7 +1153,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 					DomainUUID: domainID,
 					PollRequest: &types.PollForActivityTaskRequest{
 						TaskList: taskList,
-						Identity: &identity},
+						Identity: identity},
 				})
 				if err != nil {
 					panic(err)
@@ -1291,7 +1291,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 					DomainUUID: domainID,
 					PollRequest: &types.PollForDecisionTaskRequest{
 						TaskList: taskList,
-						Identity: &identity},
+						Identity: identity},
 				})
 				if err != nil {
 					panic(err)
@@ -1465,7 +1465,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 			DomainUUID: domainID,
 			PollRequest: &types.PollForActivityTaskRequest{
 				TaskList: taskList,
-				Identity: &identity},
+				Identity: identity},
 		})
 
 		s.NoError(err)
@@ -1578,7 +1578,7 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 
 		pollReq := &types.MatchingPollForActivityTaskRequest{
 			DomainUUID:  domainID,
-			PollRequest: &types.PollForActivityTaskRequest{TaskList: taskList, Identity: common.StringPtr("test")},
+			PollRequest: &types.PollForActivityTaskRequest{TaskList: taskList, Identity: "test"},
 		}
 
 		remaining := taskCount

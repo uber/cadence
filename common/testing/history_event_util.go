@@ -154,7 +154,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.EventType = types.EventTypeDecisionTaskStarted.Ptr()
 		historyEvent.DecisionTaskStartedEventAttributes = &types.DecisionTaskStartedEventAttributes{
 			ScheduledEventID: lastEvent.EventID,
-			Identity:         common.StringPtr(identity),
+			Identity:         identity,
 			RequestID:        common.StringPtr(uuid.New()),
 		}
 		return historyEvent
@@ -171,7 +171,7 @@ func InitializeHistoryEventGenerator(
 			ScheduledEventID: lastEvent.GetDecisionTaskStartedEventAttributes().ScheduledEventID,
 			StartedEventID:   lastEvent.EventID,
 			Cause:            types.DecisionTaskFailedCauseUnhandledDecision.Ptr(),
-			Identity:         common.StringPtr(identity),
+			Identity:         identity,
 			ForkEventVersion: common.Int64Ptr(version),
 		}
 		return historyEvent
@@ -202,7 +202,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.DecisionTaskCompletedEventAttributes = &types.DecisionTaskCompletedEventAttributes{
 			ScheduledEventID: lastEvent.GetDecisionTaskStartedEventAttributes().ScheduledEventID,
 			StartedEventID:   lastEvent.EventID,
-			Identity:         common.StringPtr(identity),
+			Identity:         identity,
 			BinaryChecksum:   common.StringPtr(checksum),
 		}
 		return historyEvent
@@ -237,7 +237,7 @@ func InitializeHistoryEventGenerator(
 			},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(timeout),
-			Identity:                            common.StringPtr(identity),
+			Identity:                            identity,
 			FirstExecutionRunID:                 uuid.New(),
 		}
 		return historyEvent
@@ -251,7 +251,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.EventType = types.EventTypeWorkflowExecutionSignaled.Ptr()
 		historyEvent.WorkflowExecutionSignaledEventAttributes = &types.WorkflowExecutionSignaledEventAttributes{
 			SignalName: common.StringPtr(signal),
-			Identity:   common.StringPtr(identity),
+			Identity:   identity,
 		}
 		return historyEvent
 	})
@@ -329,7 +329,7 @@ func InitializeHistoryEventGenerator(
 				WorkflowID: externalWorkflowID,
 				RunID:      uuid.New(),
 			},
-			Identity: common.StringPtr(identity),
+			Identity: identity,
 		}
 		return historyEvent
 	})
@@ -341,7 +341,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent := getDefaultHistoryEvent(EventID, version)
 		historyEvent.EventType = types.EventTypeWorkflowExecutionTerminated.Ptr()
 		historyEvent.WorkflowExecutionTerminatedEventAttributes = &types.WorkflowExecutionTerminatedEventAttributes{
-			Identity: common.StringPtr(identity),
+			Identity: identity,
 			Reason:   common.StringPtr(reason),
 		}
 		return historyEvent
@@ -410,7 +410,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.EventType = types.EventTypeActivityTaskStarted.Ptr()
 		historyEvent.ActivityTaskStartedEventAttributes = &types.ActivityTaskStartedEventAttributes{
 			ScheduledEventID: lastEvent.EventID,
-			Identity:         common.StringPtr(identity),
+			Identity:         identity,
 			RequestID:        common.StringPtr(uuid.New()),
 			Attempt:          common.Int32Ptr(0),
 		}
@@ -427,7 +427,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.ActivityTaskCompletedEventAttributes = &types.ActivityTaskCompletedEventAttributes{
 			ScheduledEventID: lastEvent.GetActivityTaskStartedEventAttributes().ScheduledEventID,
 			StartedEventID:   lastEvent.EventID,
-			Identity:         common.StringPtr(identity),
+			Identity:         identity,
 		}
 		return historyEvent
 	})
@@ -442,7 +442,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.ActivityTaskFailedEventAttributes = &types.ActivityTaskFailedEventAttributes{
 			ScheduledEventID: lastEvent.GetActivityTaskStartedEventAttributes().ScheduledEventID,
 			StartedEventID:   lastEvent.EventID,
-			Identity:         common.StringPtr(identity),
+			Identity:         identity,
 			Reason:           common.StringPtr(reason),
 		}
 		return historyEvent
@@ -488,7 +488,7 @@ func InitializeHistoryEventGenerator(
 			LatestCancelRequestedEventID: lastEvent.EventID,
 			ScheduledEventID:             lastEvent.EventID,
 			StartedEventID:               lastEvent.EventID,
-			Identity:                     common.StringPtr(identity),
+			Identity:                     identity,
 		}
 		return historyEvent
 	})
@@ -589,7 +589,7 @@ func InitializeHistoryEventGenerator(
 			TimerID:                      lastEvent.GetTimerStartedEventAttributes().TimerID,
 			StartedEventID:               lastEvent.EventID,
 			DecisionTaskCompletedEventID: lastEvent.GetTimerStartedEventAttributes().DecisionTaskCompletedEventID,
-			Identity:                     common.StringPtr(identity),
+			Identity:                     identity,
 		}
 		return historyEvent
 	})

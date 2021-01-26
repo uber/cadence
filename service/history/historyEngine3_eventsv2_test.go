@@ -195,7 +195,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 			TaskList: &types.TaskList{
 				Name: common.StringPtr(stickyTl),
 			},
-			Identity: common.StringPtr(identity),
+			Identity: identity,
 		},
 	}
 
@@ -252,7 +252,7 @@ func (s *engine3Suite) TestStartWorkflowExecution_BrandNew() {
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-			Identity:                            common.StringPtr(identity),
+			Identity:                            identity,
 			RequestID:                           common.StringPtr(requestID),
 		},
 	})
@@ -283,7 +283,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:     domainID,
 			WorkflowID: workflowID,
-			Identity:   common.StringPtr(identity),
+			Identity:   identity,
 			SignalName: common.StringPtr(signalName),
 			Input:      input,
 		},
@@ -340,7 +340,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-			Identity:                            common.StringPtr(identity),
+			Identity:                            identity,
 			SignalName:                          common.StringPtr(signalName),
 			Input:                               input,
 			RequestID:                           common.StringPtr(requestID),
