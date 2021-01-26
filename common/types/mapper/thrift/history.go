@@ -3075,8 +3075,8 @@ func FromSyncActivityRequest(t *types.SyncActivityRequest) *history.SyncActivity
 	}
 	return &history.SyncActivityRequest{
 		DomainId:           &t.DomainID,
-		WorkflowId:         t.WorkflowID,
-		RunId:              t.RunID,
+		WorkflowId:         &t.WorkflowID,
+		RunId:              &t.RunID,
 		Version:            t.Version,
 		ScheduledId:        t.ScheduledID,
 		ScheduledTime:      t.ScheduledTime,
@@ -3099,8 +3099,8 @@ func ToSyncActivityRequest(t *history.SyncActivityRequest) *types.SyncActivityRe
 	}
 	return &types.SyncActivityRequest{
 		DomainID:           t.GetDomainId(),
-		WorkflowID:         t.WorkflowId,
-		RunID:              t.RunId,
+		WorkflowID:         t.GetWorkflowId(),
+		RunID:              t.GetRunId(),
 		Version:            t.Version,
 		ScheduledID:        t.ScheduledId,
 		ScheduledTime:      t.ScheduledTime,

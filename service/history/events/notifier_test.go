@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/metrics"
@@ -79,8 +78,8 @@ func (s *notifierSuite) TearDownTest() {
 func (s *notifierSuite) TestSingleSubscriberWatchingEvents() {
 	domainID := "domain ID"
 	execution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr("workflow ID"),
-		RunID:      common.StringPtr("run ID"),
+		WorkflowID: "workflow ID",
+		RunID:      "run ID",
 	}
 	lastFirstEventID := int64(3)
 	previousStartedEventID := int64(5)
@@ -111,8 +110,8 @@ func (s *notifierSuite) TestSingleSubscriberWatchingEvents() {
 func (s *notifierSuite) TestMultipleSubscriberWatchingEvents() {
 	domainID := "domain ID"
 	execution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr("workflow ID"),
-		RunID:      common.StringPtr("run ID"),
+		WorkflowID: "workflow ID",
+		RunID:      "run ID",
 	}
 
 	lastFirstEventID := int64(3)

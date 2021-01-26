@@ -43,7 +43,7 @@ func AddWorkflowExecutionStartedEventWithParent(
 ) *types.HistoryEvent {
 
 	startRequest := &types.StartWorkflowExecutionRequest{
-		WorkflowID:                          common.StringPtr(*workflowExecution.WorkflowID),
+		WorkflowID:                          workflowExecution.WorkflowID,
 		WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 		TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 		Input:                               input,
@@ -273,8 +273,8 @@ func AddRequestCancelInitiatedEvent(
 	event, rci, _ := builder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID,
 		cancelRequestID, &types.RequestCancelExternalWorkflowExecutionDecisionAttributes{
 			Domain:     domain,
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		})
 
 	return event, rci
@@ -308,8 +308,8 @@ func AddRequestSignalInitiatedEvent(
 		&types.SignalExternalWorkflowExecutionDecisionAttributes{
 			Domain: domain,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(workflowID),
-				RunID:      common.StringPtr(runID),
+				WorkflowID: workflowID,
+				RunID:      runID,
 			},
 			SignalName: common.StringPtr(signalName),
 			Input:      input,
@@ -351,7 +351,7 @@ func AddStartChildWorkflowExecutionInitiatedEvent(
 	event, cei, _ := builder.AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletedID, createRequestID,
 		&types.StartChildWorkflowExecutionDecisionAttributes{
 			Domain:                              domain,
-			WorkflowID:                          common.StringPtr(workflowID),
+			WorkflowID:                          workflowID,
 			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
 			Input:                               input,
@@ -375,8 +375,8 @@ func AddChildWorkflowExecutionStartedEvent(
 	event, _ := builder.AddChildWorkflowExecutionStartedEvent(
 		domain,
 		&types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		&types.WorkflowType{Name: common.StringPtr(workflowType)},
 		initiatedID,

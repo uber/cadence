@@ -239,8 +239,8 @@ func (n *HistoryResenderImpl) createReplicationRawRequest(
 	request := &types.ReplicateEventsV2Request{
 		DomainUUID: domainID,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		Events:              historyBlob,
 		VersionHistoryItems: versionHistoryItems,
@@ -284,8 +284,8 @@ func (n *HistoryResenderImpl) getHistory(
 	response, err := n.adminClient.GetWorkflowExecutionRawHistoryV2(ctx, &types.GetWorkflowExecutionRawHistoryV2Request{
 		Domain: domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		StartEventID:      startEventID,
 		StartEventVersion: startEventVersion,

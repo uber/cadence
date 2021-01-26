@@ -24,7 +24,6 @@ package frontend
 
 import (
 	"context"
-	"github.com/uber/cadence/common"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -32,6 +31,7 @@ import (
 
 	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -183,7 +183,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("ResetWorkflowExecution", func(t *testing.T) {
 		h.EXPECT().ResetWorkflowExecution(ctx, &types.ResetWorkflowExecutionRequest{}).Return(&types.ResetWorkflowExecutionResponse{}, internalErr).Times(1)
 		resp, err := th.ResetWorkflowExecution(ctx, &shared.ResetWorkflowExecutionRequest{})
-		assert.Equal(t, shared.ResetWorkflowExecutionResponse{}, *resp)
+		assert.Equal(t, shared.ResetWorkflowExecutionResponse{RunId: common.StringPtr("")}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("RespondActivityTaskCanceled", func(t *testing.T) {
@@ -241,7 +241,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("SignalWithStartWorkflowExecution", func(t *testing.T) {
 		h.EXPECT().SignalWithStartWorkflowExecution(ctx, &types.SignalWithStartWorkflowExecutionRequest{}).Return(&types.StartWorkflowExecutionResponse{}, internalErr).Times(1)
 		resp, err := th.SignalWithStartWorkflowExecution(ctx, &shared.SignalWithStartWorkflowExecutionRequest{})
-		assert.Equal(t, shared.StartWorkflowExecutionResponse{}, *resp)
+		assert.Equal(t, shared.StartWorkflowExecutionResponse{RunId: common.StringPtr("")}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("SignalWorkflowExecution", func(t *testing.T) {
@@ -252,7 +252,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("StartWorkflowExecution", func(t *testing.T) {
 		h.EXPECT().StartWorkflowExecution(ctx, &types.StartWorkflowExecutionRequest{}).Return(&types.StartWorkflowExecutionResponse{}, internalErr).Times(1)
 		resp, err := th.StartWorkflowExecution(ctx, &shared.StartWorkflowExecutionRequest{})
-		assert.Equal(t, shared.StartWorkflowExecutionResponse{}, *resp)
+		assert.Equal(t, shared.StartWorkflowExecutionResponse{RunId: common.StringPtr("")}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("TerminateWorkflowExecution", func(t *testing.T) {

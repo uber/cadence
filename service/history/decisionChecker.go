@@ -441,7 +441,7 @@ func (v *decisionAttrValidator) validateCancelExternalWorkflowExecutionAttribute
 	if attributes == nil {
 		return &types.BadRequestError{Message: "RequestCancelExternalWorkflowExecutionDecisionAttributes is not set on decision."}
 	}
-	if attributes.WorkflowID == nil {
+	if attributes.WorkflowID == "" {
 		return &types.BadRequestError{Message: "WorkflowId is not set on decision."}
 	}
 	if len(attributes.GetDomain()) > v.maxIDLengthLimit {
@@ -477,7 +477,7 @@ func (v *decisionAttrValidator) validateSignalExternalWorkflowExecutionAttribute
 	if attributes.Execution == nil {
 		return &types.BadRequestError{Message: "Execution is nil on decision."}
 	}
-	if attributes.Execution.WorkflowID == nil {
+	if attributes.Execution.WorkflowID == "" {
 		return &types.BadRequestError{Message: "WorkflowId is not set on decision."}
 	}
 	if len(attributes.GetDomain()) > v.maxIDLengthLimit {

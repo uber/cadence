@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/metrics/mocks"
@@ -52,8 +51,8 @@ var (
 	testDomainUUID        = "fb15e4b5-356f-466d-8c6d-a29223e5c536"
 	testDomain            = "test-domain-name"
 	testWorkflowExecution = types.WorkflowExecution{
-		WorkflowID: common.StringPtr("visibility-workflow-test"),
-		RunID:      common.StringPtr("843f6fc7-102a-4c63-a2d4-7c653b01bf52"),
+		WorkflowID: "visibility-workflow-test",
+		RunID:      "843f6fc7-102a-4c63-a2d4-7c653b01bf52",
 	}
 	testWorkflowTypeName = "visibility-workflow"
 

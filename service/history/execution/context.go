@@ -904,8 +904,8 @@ func (c *contextImpl) PersistFirstWorkflowEvents(
 	workflowID := workflowEvents.WorkflowID
 	runID := workflowEvents.RunID
 	execution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(workflowEvents.WorkflowID),
-		RunID:      common.StringPtr(workflowEvents.RunID),
+		WorkflowID: workflowEvents.WorkflowID,
+		RunID:      workflowEvents.RunID,
 	}
 	branchToken := workflowEvents.BranchToken
 	events := workflowEvents.Events
@@ -936,8 +936,8 @@ func (c *contextImpl) PersistNonFirstWorkflowEvents(
 
 	domainID := workflowEvents.DomainID
 	execution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(workflowEvents.WorkflowID),
-		RunID:      common.StringPtr(workflowEvents.RunID),
+		WorkflowID: workflowEvents.WorkflowID,
+		RunID:      workflowEvents.RunID,
 	}
 	branchToken := workflowEvents.BranchToken
 	events := workflowEvents.Events
@@ -1167,8 +1167,8 @@ func (c *contextImpl) ReapplyEvents(
 	// Reapply events only reapply to the current run.
 	// The run id is only used for reapply event de-duplication
 	execution := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(workflowID),
-		RunID:      common.StringPtr(runID),
+		WorkflowID: workflowID,
+		RunID:      runID,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), defaultRemoteCallTimeout)
 	defer cancel()

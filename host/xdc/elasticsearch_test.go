@@ -183,7 +183,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              domainName,
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -310,7 +310,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	err = client1.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain: domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 		Reason:   common.StringPtr(terminateReason),
 		Details:  terminateDetails,
@@ -323,7 +323,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	getHistoryReq := &types.GetWorkflowExecutionHistoryRequest{
 		Domain: domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 	}
 GetHistoryLoop:

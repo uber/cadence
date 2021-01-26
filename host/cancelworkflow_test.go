@@ -49,7 +49,7 @@ func (s *integrationSuite) TestExternalRequestCancelWorkflowExecution() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              s.domainName,
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -61,7 +61,7 @@ func (s *integrationSuite) TestExternalRequestCancelWorkflowExecution() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	activityCount := int32(1)
 	activityCounter := int32(0)
@@ -122,8 +122,8 @@ func (s *integrationSuite) TestExternalRequestCancelWorkflowExecution() {
 	err = s.engine.RequestCancelWorkflowExecution(createContext(), &types.RequestCancelWorkflowExecutionRequest{
 		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(*we.RunID),
+			WorkflowID: id,
+			RunID:      we.RunID,
 		},
 	})
 	s.Nil(err)
@@ -131,8 +131,8 @@ func (s *integrationSuite) TestExternalRequestCancelWorkflowExecution() {
 	err = s.engine.RequestCancelWorkflowExecution(createContext(), &types.RequestCancelWorkflowExecutionRequest{
 		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(*we.RunID),
+			WorkflowID: id,
+			RunID:      we.RunID,
 		},
 	})
 	s.NotNil(err)
@@ -148,8 +148,8 @@ GetHistoryLoop:
 		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
-				RunID:      common.StringPtr(*we.RunID),
+				WorkflowID: id,
+				RunID:      we.RunID,
 			},
 		})
 		s.Nil(err)
@@ -186,7 +186,7 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              s.domainName,
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -196,12 +196,12 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution() {
 	}
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	foreignRequest := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              s.foreignDomainName,
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -211,7 +211,7 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution() {
 	}
 	we2, err0 := s.engine.StartWorkflowExecution(createContext(), foreignRequest)
 	s.Nil(err0)
-	s.Logger.Info("StartWorkflowExecution on foreign Domain: %v,  response: %v \n", tag.WorkflowDomainName(s.foreignDomainName), tag.WorkflowRunID(*we2.RunID))
+	s.Logger.Info("StartWorkflowExecution on foreign Domain: %v,  response: %v \n", tag.WorkflowDomainName(s.foreignDomainName), tag.WorkflowRunID(we2.RunID))
 
 	activityCount := int32(1)
 	activityCounter := int32(0)
@@ -241,8 +241,8 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution() {
 			DecisionType: types.DecisionTypeRequestCancelExternalWorkflowExecution.Ptr(),
 			RequestCancelExternalWorkflowExecutionDecisionAttributes: &types.RequestCancelExternalWorkflowExecutionDecisionAttributes{
 				Domain:     s.foreignDomainName,
-				WorkflowID: common.StringPtr(id),
-				RunID:      common.StringPtr(*we2.RunID),
+				WorkflowID: id,
+				RunID:      we2.RunID,
 			},
 		}}, nil
 	}
@@ -331,8 +331,8 @@ CheckHistoryLoopForCancelSent:
 		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
-				RunID:      common.StringPtr(*we.RunID),
+				WorkflowID: id,
+				RunID:      we.RunID,
 			},
 		})
 		s.Nil(err)
@@ -347,7 +347,7 @@ CheckHistoryLoopForCancelSent:
 
 		externalWorkflowExecutionCancelRequestedEvent := lastEvent.ExternalWorkflowExecutionCancelRequestedEventAttributes
 		s.Equal(int64(intiatedEventID), *externalWorkflowExecutionCancelRequestedEvent.InitiatedEventID)
-		s.Equal(id, *externalWorkflowExecutionCancelRequestedEvent.WorkflowExecution.WorkflowID)
+		s.Equal(id, externalWorkflowExecutionCancelRequestedEvent.WorkflowExecution.WorkflowID)
 		s.Equal(we2.RunID, externalWorkflowExecutionCancelRequestedEvent.WorkflowExecution.RunID)
 
 		cancellationSent = true
@@ -367,8 +367,8 @@ GetHistoryLoop:
 		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 			Domain: s.foreignDomainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
-				RunID:      common.StringPtr(*we2.RunID),
+				WorkflowID: id,
+				RunID:      we2.RunID,
 			},
 		})
 		s.Nil(err)
@@ -396,7 +396,7 @@ GetHistoryLoop:
 		s.NotNil(cancelRequestEvent)
 		cancelRequestEventAttributes := cancelRequestEvent.WorkflowExecutionCancelRequestedEventAttributes
 		s.Equal(int64(intiatedEventID), *cancelRequestEventAttributes.ExternalInitiatedEventID)
-		s.Equal(id, *cancelRequestEventAttributes.ExternalWorkflowExecution.WorkflowID)
+		s.Equal(id, cancelRequestEventAttributes.ExternalWorkflowExecution.WorkflowID)
 		s.Equal(we.RunID, cancelRequestEventAttributes.ExternalWorkflowExecution.RunID)
 
 		break GetHistoryLoop
@@ -420,7 +420,7 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution_UnKnownTar
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              s.domainName,
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -430,7 +430,7 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution_UnKnownTar
 	}
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	activityCount := int32(1)
 	activityCounter := int32(0)
@@ -460,8 +460,8 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution_UnKnownTar
 			DecisionType: types.DecisionTypeRequestCancelExternalWorkflowExecution.Ptr(),
 			RequestCancelExternalWorkflowExecutionDecisionAttributes: &types.RequestCancelExternalWorkflowExecutionDecisionAttributes{
 				Domain:     s.foreignDomainName,
-				WorkflowID: common.StringPtr("workflow_not_exist"),
-				RunID:      common.StringPtr(*we.RunID),
+				WorkflowID: "workflow_not_exist",
+				RunID:      we.RunID,
 			},
 		}}, nil
 	}
@@ -499,8 +499,8 @@ CheckHistoryLoopForCancelSent:
 		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
-				RunID:      common.StringPtr(*we.RunID),
+				WorkflowID: id,
+				RunID:      we.RunID,
 			},
 		})
 		s.Nil(err)
@@ -515,7 +515,7 @@ CheckHistoryLoopForCancelSent:
 
 		requestCancelExternalWorkflowExecutionFailedEvetn := lastEvent.RequestCancelExternalWorkflowExecutionFailedEventAttributes
 		s.Equal(int64(intiatedEventID), *requestCancelExternalWorkflowExecutionFailedEvetn.InitiatedEventID)
-		s.Equal("workflow_not_exist", *requestCancelExternalWorkflowExecutionFailedEvetn.WorkflowExecution.WorkflowID)
+		s.Equal("workflow_not_exist", requestCancelExternalWorkflowExecutionFailedEvetn.WorkflowExecution.WorkflowID)
 		s.Equal(we.RunID, requestCancelExternalWorkflowExecutionFailedEvetn.WorkflowExecution.RunID)
 
 		cancellationSentFailed = true

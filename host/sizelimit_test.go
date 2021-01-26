@@ -79,7 +79,7 @@ func (s *sizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              s.domainName,
-		WorkflowID:                          common.StringPtr(id),
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -91,7 +91,7 @@ func (s *sizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	activityCount := int32(4)
 	activityCounter := int32(0)
@@ -161,8 +161,8 @@ func (s *sizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(we.GetRunID()),
+			WorkflowID: id,
+			RunID:      we.GetRunID(),
 		},
 	})
 	s.Nil(err)

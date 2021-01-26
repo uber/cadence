@@ -197,7 +197,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 	workflowType := types.WorkflowType{
 		Name: common.StringPtr("workflow"),
 	}
-	execution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	execution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 	scheduleID := int64(0)
 
 	// History service is using mock
@@ -352,7 +352,7 @@ func (s *matchingEngineSuite) AddTasksTest(taskType int, isForwarded bool) {
 
 	runID := "run1"
 	workflowID := "workflow1"
-	execution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	execution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
@@ -411,7 +411,7 @@ func (s *matchingEngineSuite) TestTaskWriterShutdown() {
 
 	runID := "run1"
 	workflowID := "workflow1"
-	execution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	execution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	tlID := newTestTaskListID(domainID, tl, persistence.TaskListTypeActivity)
 	tlKind := types.TaskListKindNormal
@@ -448,7 +448,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 
 	runID := "run1"
 	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	const taskCount = 1000
 	const initialRangeID = 102
@@ -561,7 +561,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 
 	runID := "run1"
 	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	const taskCount = 10
 	const initialRangeID = 102
@@ -763,7 +763,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 	s.matchingEngine.metricsClient = metrics.NewClient(scope, metrics.Matching)
 	runID := "run1"
 	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	const initialRangeID = 0
 	const rangeSize = 3
@@ -911,7 +911,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 	runID := "run1"
 	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	const workerCount = 20
 	const taskCount = 100
@@ -1058,7 +1058,7 @@ func (s *matchingEngineSuite) TestPollWithExpiredContext() {
 func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 	runID := "run1"
 	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	const engineCount = 2
 	const taskCount = 400
@@ -1208,7 +1208,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 	runID := "run1"
 	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	const engineCount = 2
 	const taskCount = 400
@@ -1345,7 +1345,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 func (s *matchingEngineSuite) TestAddTaskAfterStartFailure() {
 	runID := "run1"
 	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	domainID := "domainId"
 	tl := "makeToast"
@@ -1389,7 +1389,7 @@ func (s *matchingEngineSuite) TestAddTaskAfterStartFailure() {
 func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 	runID := "run1"
 	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	domainID := "domainId"
 	tl := "makeToast"
@@ -1519,7 +1519,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch_ReadBatchDone() {
 func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 	runID := uuid.New()
 	workflowID := uuid.New()
-	workflowExecution := types.WorkflowExecution{RunID: &runID, WorkflowID: &workflowID}
+	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	domainID := uuid.New()
 	tl := "task-expiry-completion-tl0"
@@ -1871,10 +1871,10 @@ func (m *testTaskManager) CreateTasks(
 		scheduleID := task.Data.ScheduleID
 		info := &persistence.TaskInfo{
 			DomainID:   domainID,
-			RunID:      *task.Execution.RunID,
+			RunID:      task.Execution.RunID,
 			ScheduleID: scheduleID,
 			TaskID:     task.TaskID,
-			WorkflowID: *task.Execution.WorkflowID,
+			WorkflowID: task.Execution.WorkflowID,
 		}
 		if task.Data.ScheduleToStartTimeout != 0 {
 			info.Expiry = time.Now().Add(time.Duration(task.Data.ScheduleToStartTimeout) * time.Second)

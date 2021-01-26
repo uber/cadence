@@ -355,8 +355,8 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 
 	convertedExecution := &types.WorkflowExecutionInfo{
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(execution.WorkflowID),
-			RunID:      common.StringPtr(execution.RunID),
+			WorkflowID: execution.WorkflowID,
+			RunID:      execution.RunID,
 		},
 		Type: &types.WorkflowType{
 			Name: common.StringPtr(execution.TypeName),

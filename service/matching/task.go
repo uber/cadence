@@ -115,7 +115,7 @@ func (task *internalTask) isForwarded() bool {
 func (task *internalTask) workflowExecution() *types.WorkflowExecution {
 	switch {
 	case task.event != nil:
-		return &types.WorkflowExecution{WorkflowID: &task.event.WorkflowID, RunID: &task.event.RunID}
+		return &types.WorkflowExecution{WorkflowID: task.event.WorkflowID, RunID: task.event.RunID}
 	case task.query != nil:
 		return task.query.request.GetQueryRequest().GetExecution()
 	case task.started != nil && task.started.decisionTaskInfo != nil:

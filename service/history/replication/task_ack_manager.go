@@ -258,8 +258,8 @@ func (t *taskAckManagerImpl) processReplication(
 ) (retReplicationTask *types.ReplicationTask, retError error) {
 
 	execution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(taskInfo.GetWorkflowID()),
-		RunID:      common.StringPtr(taskInfo.GetRunID()),
+		WorkflowID: taskInfo.GetWorkflowID(),
+		RunID:      taskInfo.GetRunID(),
 	}
 
 	context, release, err := t.executionCache.GetOrCreateWorkflowExecution(ctx, taskInfo.GetDomainID(), execution)
@@ -351,8 +351,8 @@ func (t *taskAckManagerImpl) isNewRunNDCEnabled(
 		ctx,
 		domainID,
 		types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	if err != nil {
@@ -517,8 +517,8 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 				TaskType: types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeSyncActivity),
 				SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
 					DomainID:           taskInfo.GetDomainID(),
-					WorkflowID:         common.StringPtr(taskInfo.GetWorkflowID()),
-					RunID:              common.StringPtr(taskInfo.GetRunID()),
+					WorkflowID:         taskInfo.GetWorkflowID(),
+					RunID:              taskInfo.GetRunID(),
 					Version:            common.Int64Ptr(activityInfo.Version),
 					ScheduledID:        common.Int64Ptr(activityInfo.ScheduleID),
 					ScheduledTime:      scheduledTime,
@@ -601,8 +601,8 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 				HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
 					TaskID:              common.Int64Ptr(task.FirstEventID),
 					DomainID:            task.DomainID,
-					WorkflowID:          common.StringPtr(task.WorkflowID),
-					RunID:               common.StringPtr(task.RunID),
+					WorkflowID:          task.WorkflowID,
+					RunID:               task.RunID,
 					VersionHistoryItems: versionHistoryItems,
 					Events:              eventsBlob,
 					NewRunEvents:        newRunEventsBlob,

@@ -332,7 +332,7 @@ func (h *handlerImpl) RecordActivityTaskStarted(
 		"RecordActivityTaskStarted",
 		tag.WorkflowDomainID(domainID),
 		tag.WorkflowID(workflowExecution.GetWorkflowID()),
-		tag.WorkflowRunID(common.StringDefault(recordRequest.WorkflowExecution.RunID)),
+		tag.WorkflowRunID(recordRequest.WorkflowExecution.RunID),
 		tag.WorkflowScheduleID(recordRequest.GetScheduleID()),
 	)
 
@@ -380,7 +380,7 @@ func (h *handlerImpl) RecordDecisionTaskStarted(
 		"RecordDecisionTaskStarted",
 		tag.WorkflowDomainID(domainID),
 		tag.WorkflowID(workflowExecution.GetWorkflowID()),
-		tag.WorkflowRunID(common.StringDefault(recordRequest.WorkflowExecution.RunID)),
+		tag.WorkflowRunID(recordRequest.WorkflowExecution.RunID),
 		tag.WorkflowScheduleID(recordRequest.GetScheduleID()),
 	)
 
@@ -1575,11 +1575,11 @@ func (h *handlerImpl) SyncActivity(
 		return h.error(errHistoryHostThrottle, scope, domainID, "")
 	}
 
-	if syncActivityRequest.WorkflowID == nil {
+	if syncActivityRequest.WorkflowID == "" {
 		return h.error(errWorkflowIDNotSet, scope, domainID, "")
 	}
 
-	if syncActivityRequest.RunID == nil || uuid.Parse(syncActivityRequest.GetRunID()) == nil {
+	if syncActivityRequest.RunID == "" || uuid.Parse(syncActivityRequest.GetRunID()) == nil {
 		return h.error(errRunIDNotValid, scope, domainID, "")
 	}
 

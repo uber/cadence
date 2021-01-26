@@ -442,8 +442,8 @@ retry:
 			p.Logger.Info("Executing RespondActivityTaskCanceled")
 			return p.Engine.RespondActivityTaskCanceledByID(createContext(), &types.RespondActivityTaskCanceledByIDRequest{
 				Domain:     p.Domain,
-				WorkflowID: common.StringPtr(response.WorkflowExecution.GetWorkflowID()),
-				RunID:      common.StringPtr(response.WorkflowExecution.GetRunID()),
+				WorkflowID: response.WorkflowExecution.GetWorkflowID(),
+				RunID:      response.WorkflowExecution.GetRunID(),
 				ActivityID: common.StringPtr(response.GetActivityID()),
 				Details:    []byte("details"),
 				Identity:   common.StringPtr(p.Identity),
@@ -453,8 +453,8 @@ retry:
 		if err2 != nil {
 			return p.Engine.RespondActivityTaskFailedByID(createContext(), &types.RespondActivityTaskFailedByIDRequest{
 				Domain:     p.Domain,
-				WorkflowID: common.StringPtr(response.WorkflowExecution.GetWorkflowID()),
-				RunID:      common.StringPtr(response.WorkflowExecution.GetRunID()),
+				WorkflowID: response.WorkflowExecution.GetWorkflowID(),
+				RunID:      response.WorkflowExecution.GetRunID(),
 				ActivityID: common.StringPtr(response.GetActivityID()),
 				Reason:     common.StringPtr(err2.Error()),
 				Details:    []byte(err2.Error()),
@@ -464,8 +464,8 @@ retry:
 
 		return p.Engine.RespondActivityTaskCompletedByID(createContext(), &types.RespondActivityTaskCompletedByIDRequest{
 			Domain:     p.Domain,
-			WorkflowID: common.StringPtr(response.WorkflowExecution.GetWorkflowID()),
-			RunID:      common.StringPtr(response.WorkflowExecution.GetRunID()),
+			WorkflowID: response.WorkflowExecution.GetWorkflowID(),
+			RunID:      response.WorkflowExecution.GetRunID(),
 			ActivityID: common.StringPtr(response.GetActivityID()),
 			Identity:   common.StringPtr(p.Identity),
 			Result:     result,

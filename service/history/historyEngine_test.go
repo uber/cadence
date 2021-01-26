@@ -187,8 +187,8 @@ func (s *engineSuite) TestGetMutableStateSync() {
 	ctx := context.Background()
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("test-get-workflow-execution-event-id"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "test-get-workflow-execution-event-id",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -220,8 +220,8 @@ func (s *engineSuite) TestGetMutableState_IntestRunID() {
 	ctx := context.Background()
 
 	execution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("test-get-workflow-execution-event-id"),
-		RunID:      common.StringPtr("run-id-not-valid-uuid"),
+		WorkflowID: "test-get-workflow-execution-event-id",
+		RunID:      "run-id-not-valid-uuid",
 	}
 
 	_, err := s.mockHistoryEngine.GetMutableState(ctx, &types.GetMutableStateRequest{
@@ -235,7 +235,7 @@ func (s *engineSuite) TestGetMutableState_EmptyRunID() {
 	ctx := context.Background()
 
 	execution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("test-get-workflow-execution-event-id"),
+		WorkflowID: "test-get-workflow-execution-event-id",
 	}
 
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{}).Once()
@@ -251,8 +251,8 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 	ctx := context.Background()
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("test-get-workflow-execution-event-id"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "test-get-workflow-execution-event-id",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -276,8 +276,8 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 	waitGroup.Add(1)
 	asycWorkflowUpdate := func(delay time.Duration) {
 		taskToken, _ := json.Marshal(&common.TaskToken{
-			WorkflowID: *workflowExecution.WorkflowID,
-			RunID:      *workflowExecution.RunID,
+			WorkflowID: workflowExecution.WorkflowID,
+			RunID:      workflowExecution.RunID,
 			ScheduleID: 2,
 		})
 		s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
@@ -325,8 +325,8 @@ func (s *engineSuite) TestGetMutableStateLongPoll_CurrentBranchChanged() {
 	ctx := context.Background()
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("test-get-workflow-execution-event-id"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "test-get-workflow-execution-event-id",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -390,8 +390,8 @@ func (s *engineSuite) TestGetMutableStateLongPollTimeout() {
 	ctx := context.Background()
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("test-get-workflow-execution-event-id"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "test-get-workflow-execution-event-id",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -441,8 +441,8 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnNotEnabled() {
 
 func (s *engineSuite) TestQueryWorkflow_RejectBasedOnCompleted() {
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("TestQueryWorkflow_RejectBasedOnCompleted"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "TestQueryWorkflow_RejectBasedOnCompleted",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -480,8 +480,8 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnCompleted() {
 
 func (s *engineSuite) TestQueryWorkflow_RejectBasedOnFailed() {
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("TestQueryWorkflow_RejectBasedOnFailed"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "TestQueryWorkflow_RejectBasedOnFailed",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -533,8 +533,8 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnFailed() {
 
 func (s *engineSuite) TestQueryWorkflow_FirstDecisionNotCompleted() {
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("TestQueryWorkflow_FirstDecisionNotCompleted"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "TestQueryWorkflow_FirstDecisionNotCompleted",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -566,8 +566,8 @@ func (s *engineSuite) TestQueryWorkflow_FirstDecisionNotCompleted() {
 
 func (s *engineSuite) TestQueryWorkflow_DirectlyThroughMatching() {
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("TestQueryWorkflow_DirectlyThroughMatching"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "TestQueryWorkflow_DirectlyThroughMatching",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -609,8 +609,8 @@ func (s *engineSuite) TestQueryWorkflow_DirectlyThroughMatching() {
 
 func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Timeout() {
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("TestQueryWorkflow_DecisionTaskDispatch_Timeout"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "TestQueryWorkflow_DecisionTaskDispatch_Timeout",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -669,8 +669,8 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Timeout() {
 
 func (s *engineSuite) TestQueryWorkflow_ConsistentQueryBufferFull() {
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("TestQueryWorkflow_ConsistentQueryBufferFull"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "TestQueryWorkflow_ConsistentQueryBufferFull",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -716,8 +716,8 @@ func (s *engineSuite) TestQueryWorkflow_ConsistentQueryBufferFull() {
 
 func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("TestQueryWorkflow_DecisionTaskDispatch_Complete"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "TestQueryWorkflow_DecisionTaskDispatch_Complete",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -788,8 +788,8 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
 
 func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Unblocked() {
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("TestQueryWorkflow_DecisionTaskDispatch_Unblocked"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "TestQueryWorkflow_DecisionTaskDispatch_Unblocked",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -916,14 +916,14 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfGetExecutionFailed() {
 func (s *engineSuite) TestRespondDecisionTaskCompletedUpdateExecutionFailed() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -960,13 +960,13 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedUpdateExecutionFailed() {
 func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskCompleted() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -1001,13 +1001,13 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskCompleted() {
 func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskNotStarted() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -1039,8 +1039,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskNotStarted() {
 func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	identity := "testIdentity"
@@ -1152,7 +1152,7 @@ func (s *engineSuite) TestValidateSignalRequest() {
 	workflowType := "testType"
 	input := []byte("input")
 	startRequest := &types.StartWorkflowExecutionRequest{
-		WorkflowID:                          common.StringPtr("ID"),
+		WorkflowID:                          "ID",
 		WorkflowType:                        &types.WorkflowType{Name: &workflowType},
 		TaskList:                            &types.TaskList{Name: common.StringPtr("taskptr")},
 		Input:                               input,
@@ -1167,13 +1167,13 @@ func (s *engineSuite) TestValidateSignalRequest() {
 func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -1230,8 +1230,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	identity := "testIdentity"
@@ -1271,8 +1271,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
 		*activity2StartedEvent.EventID, activity2Result, identity)
 
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: di2.ScheduleID,
 	})
 
@@ -1317,8 +1317,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
 func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowFailed() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	identity := "testIdentity"
@@ -1359,8 +1359,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowFailed() {
 		*activity2StartedEvent.EventID, activity2Result, identity)
 
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: di2.ScheduleID,
 	})
 
@@ -1406,8 +1406,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowFailed() {
 func (s *engineSuite) TestRespondDecisionTaskCompletedBadDecisionAttributes() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	identity := "testIdentity"
@@ -1437,8 +1437,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadDecisionAttributes() {
 	test.AddDecisionTaskStartedEvent(msBuilder, di2.ScheduleID, tl, identity)
 
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: di2.ScheduleID,
 	})
 
@@ -1528,8 +1528,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 	for _, iVar := range testIterationVariables {
 
 		we := types.WorkflowExecution{
-			WorkflowID: common.StringPtr("wId"),
-			RunID:      common.StringPtr(constants.TestRunID),
+			WorkflowID: "wId",
+			RunID:      constants.TestRunID,
 		}
 		tl := "testTaskList"
 		taskToken, _ := json.Marshal(&common.TaskToken{
@@ -1611,8 +1611,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 func (s *engineSuite) TestRespondDecisionTaskCompletedBadBinary() {
 	domainID := uuid.New()
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
@@ -1680,8 +1680,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadBinary() {
 func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDecision() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
@@ -1756,13 +1756,13 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatTimeout() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -1804,13 +1804,13 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatTimeout(
 func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeout() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -1852,13 +1852,13 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeout_ZeroOrignalScheduledTime() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -1900,13 +1900,13 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -1958,13 +1958,13 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -2018,13 +2018,13 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowSuccess() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -2079,13 +2079,13 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowSucc
 func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithAbandonPolicy() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -2106,7 +2106,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithAban
 		DecisionType: types.DecisionTypeStartChildWorkflowExecution.Ptr(),
 		StartChildWorkflowExecutionDecisionAttributes: &types.StartChildWorkflowExecutionDecisionAttributes{
 			Domain:     constants.TestDomainName,
-			WorkflowID: common.StringPtr("child-workflow-id"),
+			WorkflowID: "child-workflow-id",
 			WorkflowType: &types.WorkflowType{
 				Name: common.StringPtr("child-workflow-type"),
 			},
@@ -2148,13 +2148,13 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithAban
 func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithTerminatePolicy() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -2175,7 +2175,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithTerm
 		DecisionType: types.DecisionTypeStartChildWorkflowExecution.Ptr(),
 		StartChildWorkflowExecutionDecisionAttributes: &types.StartChildWorkflowExecutionDecisionAttributes{
 			Domain:     constants.TestDomainName,
-			WorkflowID: common.StringPtr("child-workflow-id"),
+			WorkflowID: "child-workflow-id",
 			WorkflowType: &types.WorkflowType{
 				Name: common.StringPtr("child-workflow-type"),
 			},
@@ -2217,8 +2217,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithTerm
 func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFailed() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr("invalid run id"),
+		WorkflowID: "wId",
+		RunID:      "invalid run id",
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
@@ -2268,13 +2268,13 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFailed_UnKnownDomain() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -2410,8 +2410,8 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfGetExecutionFailed() {
 func (s *engineSuite) TestRespondActivityTaskCompletedIfNoAIdProvided() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -2453,8 +2453,8 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNotFound() {
 		ActivityID: "aid",
 	})
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -2487,13 +2487,13 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNotFound() {
 func (s *engineSuite) TestRespondActivityTaskCompletedUpdateExecutionFailed() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -2539,13 +2539,13 @@ func (s *engineSuite) TestRespondActivityTaskCompletedUpdateExecutionFailed() {
 func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskCompleted() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -2592,13 +2592,13 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskCompleted() {
 func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskNotStarted() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -2641,13 +2641,13 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskNotStarted() {
 func (s *engineSuite) TestRespondActivityTaskCompletedConflictOnUpdate() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -2716,13 +2716,13 @@ func (s *engineSuite) TestRespondActivityTaskCompletedConflictOnUpdate() {
 func (s *engineSuite) TestRespondActivityTaskCompletedMaxAttemptsExceeded() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -2769,13 +2769,13 @@ func (s *engineSuite) TestRespondActivityTaskCompletedMaxAttemptsExceeded() {
 func (s *engineSuite) TestRespondActivityTaskCompletedSuccess() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -2831,8 +2831,8 @@ func (s *engineSuite) TestRespondActivityTaskCompletedSuccess() {
 func (s *engineSuite) TestRespondActivityTaskCompletedByIdSuccess() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 
@@ -2842,7 +2842,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedByIdSuccess() {
 	activityInput := []byte("input1")
 	activityResult := []byte("activity result")
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
+		WorkflowID: we.WorkflowID,
 		ScheduleID: common.EmptyEventID,
 		ActivityID: activityID,
 	})
@@ -2864,7 +2864,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedByIdSuccess() {
 
 	ms := execution.CreatePersistenceMutableState(msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
-	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: *we.RunID}
+	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: we.RunID}
 
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gceResponse, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -2984,8 +2984,8 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNoAIdProvided() {
 		ScheduleID: common.EmptyEventID,
 	})
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -3023,8 +3023,8 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNotFound() {
 		ActivityID: "aid",
 	})
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -3057,13 +3057,13 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNotFound() {
 func (s *engineSuite) TestRespondActivityTaskFailedUpdateExecutionFailed() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3107,13 +3107,13 @@ func (s *engineSuite) TestRespondActivityTaskFailedUpdateExecutionFailed() {
 func (s *engineSuite) TestRespondActivityTaskFailedIfTaskCompleted() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3162,13 +3162,13 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskCompleted() {
 func (s *engineSuite) TestRespondActivityTaskFailedIfTaskNotStarted() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3209,13 +3209,13 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskNotStarted() {
 func (s *engineSuite) TestRespondActivityTaskFailedConflictOnUpdate() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3291,13 +3291,13 @@ func (s *engineSuite) TestRespondActivityTaskFailedConflictOnUpdate() {
 func (s *engineSuite) TestRespondActivityTaskFailedMaxAttemptsExceeded() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3342,13 +3342,13 @@ func (s *engineSuite) TestRespondActivityTaskFailedMaxAttemptsExceeded() {
 func (s *engineSuite) TestRespondActivityTaskFailedSuccess() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3406,8 +3406,8 @@ func (s *engineSuite) TestRespondActivityTaskFailedSuccess() {
 func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 
@@ -3418,7 +3418,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
 	failReason := "failed"
 	failDetails := []byte("fail details.")
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
+		WorkflowID: we.WorkflowID,
 		ScheduleID: common.EmptyEventID,
 		ActivityID: activityID,
 	})
@@ -3440,7 +3440,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
 
 	ms := execution.CreatePersistenceMutableState(msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
-	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: *we.RunID}
+	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: we.RunID}
 
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gceResponse, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -3473,13 +3473,13 @@ func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
 func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_NoTimer() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3524,13 +3524,13 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_NoTimer() {
 func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_TimerRunning() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3581,8 +3581,8 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_TimerRunning() {
 func (s *engineSuite) TestRecordActivityTaskHeartBeatByIDSuccess() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	identity := "testIdentity"
@@ -3590,8 +3590,8 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatByIDSuccess() {
 	activityType := "activity_type1"
 	activityInput := []byte("input1")
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: common.EmptyEventID,
 		ActivityID: activityID,
 	})
@@ -3633,13 +3633,13 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatByIDSuccess() {
 func (s *engineSuite) TestRespondActivityTaskCanceled_Scheduled() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3681,13 +3681,13 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Scheduled() {
 func (s *engineSuite) TestRespondActivityTaskCanceled_Started() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 5,
 	})
 	identity := "testIdentity"
@@ -3744,8 +3744,8 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Started() {
 func (s *engineSuite) TestRespondActivityTaskCanceledByID_Started() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	identity := "testIdentity"
@@ -3753,7 +3753,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledByID_Started() {
 	activityType := "activity_type1"
 	activityInput := []byte("input1")
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
+		WorkflowID: we.WorkflowID,
 		ScheduleID: common.EmptyEventID,
 		ActivityID: activityID,
 	})
@@ -3777,7 +3777,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledByID_Started() {
 
 	ms := execution.CreatePersistenceMutableState(msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
-	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: *we.RunID}
+	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: we.RunID}
 
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gceResponse, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -3893,13 +3893,13 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNotFound() {
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NotScheduled() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -3949,13 +3949,13 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NotSchedule
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Scheduled() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 6,
 	})
 	identity := "testIdentity"
@@ -4018,13 +4018,13 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Scheduled()
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Started() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 7,
 	})
 	identity := "testIdentity"
@@ -4084,13 +4084,13 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Started() {
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Completed() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 6,
 	})
 	identity := "testIdentity"
@@ -4157,13 +4157,13 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Completed()
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 7,
 	})
 	identity := "testIdentity"
@@ -4264,13 +4264,13 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 7,
 	})
 	identity := "testIdentity"
@@ -4370,13 +4370,13 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWithQueries() {
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 7,
 	})
 	identity := "testIdentity"
@@ -4517,13 +4517,13 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 
 func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWithConsistentQueriesUnsupported() {
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 7,
 	})
 	identity := "testIdentity"
@@ -4609,13 +4609,13 @@ func (s *engineSuite) constructCallContext(featureVersion string) context.Contex
 func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -4665,8 +4665,8 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 	di2 := test.AddDecisionTaskScheduledEvent(executionBuilder)
 	test.AddDecisionTaskStartedEvent(executionBuilder, di2.ScheduleID, tl, identity)
 	taskToken2, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: di2.ScheduleID,
 	})
 
@@ -4709,13 +4709,13 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 func (s *engineSuite) TestUserTimer_RespondDecisionTaskCompleted() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 6,
 	})
 	identity := "testIdentity"
@@ -4772,13 +4772,13 @@ func (s *engineSuite) TestUserTimer_RespondDecisionTaskCompleted() {
 func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_NoStartTimer() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 2,
 	})
 	identity := "testIdentity"
@@ -4830,13 +4830,13 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_NoStartTimer(
 func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_TimerFired() {
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	taskToken, _ := json.Marshal(&common.TaskToken{
-		WorkflowID: *we.WorkflowID,
-		RunID:      *we.RunID,
+		WorkflowID: we.WorkflowID,
+		RunID:      we.RunID,
 		ScheduleID: 6,
 	})
 	identity := "testIdentity"
@@ -4905,8 +4905,8 @@ func (s *engineSuite) TestSignalWorkflowExecution() {
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -4950,8 +4950,8 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest() {
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId2"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId2",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -4998,8 +4998,8 @@ func (s *engineSuite) TestSignalWorkflowExecution_Failed() {
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
 	we := &types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -5040,8 +5040,8 @@ func (s *engineSuite) TestRemoveSignalMutableState() {
 	s.EqualError(err, "BadRequestError{Message: Missing domain UUID.}")
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tasklist := "testTaskList"
 	identity := "testIdentity"
@@ -5073,8 +5073,8 @@ func (s *engineSuite) TestRemoveSignalMutableState() {
 
 func (s *engineSuite) TestReapplyEvents_ReturnSuccess() {
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("test-reapply"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "test-reapply",
+		RunID:      constants.TestRunID,
 	}
 	history := []*types.HistoryEvent{
 		{
@@ -5099,8 +5099,8 @@ func (s *engineSuite) TestReapplyEvents_ReturnSuccess() {
 	err := s.mockHistoryEngine.ReapplyEvents(
 		context.Background(),
 		constants.TestDomainID,
-		*workflowExecution.WorkflowID,
-		*workflowExecution.RunID,
+		workflowExecution.WorkflowID,
+		workflowExecution.RunID,
 		history,
 	)
 	s.NoError(err)
@@ -5108,8 +5108,8 @@ func (s *engineSuite) TestReapplyEvents_ReturnSuccess() {
 
 func (s *engineSuite) TestReapplyEvents_IgnoreSameVersionEvents() {
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("test-reapply-same-version"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "test-reapply-same-version",
+		RunID:      constants.TestRunID,
 	}
 	history := []*types.HistoryEvent{
 		{
@@ -5135,8 +5135,8 @@ func (s *engineSuite) TestReapplyEvents_IgnoreSameVersionEvents() {
 	err := s.mockHistoryEngine.ReapplyEvents(
 		context.Background(),
 		constants.TestDomainID,
-		*workflowExecution.WorkflowID,
-		*workflowExecution.RunID,
+		workflowExecution.WorkflowID,
+		workflowExecution.RunID,
 		history,
 	)
 	s.NoError(err)
@@ -5144,8 +5144,8 @@ func (s *engineSuite) TestReapplyEvents_IgnoreSameVersionEvents() {
 
 func (s *engineSuite) TestReapplyEvents_ResetWorkflow() {
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("test-reapply-reset-workflow"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "test-reapply-reset-workflow",
+		RunID:      constants.TestRunID,
 	}
 	history := []*types.HistoryEvent{
 		{
@@ -5180,8 +5180,8 @@ func (s *engineSuite) TestReapplyEvents_ResetWorkflow() {
 	err = s.mockHistoryEngine.ReapplyEvents(
 		context.Background(),
 		constants.TestDomainID,
-		*workflowExecution.WorkflowID,
-		*workflowExecution.RunID,
+		workflowExecution.WorkflowID,
+		workflowExecution.RunID,
 		history,
 	)
 	s.NoError(err)

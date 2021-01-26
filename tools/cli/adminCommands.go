@@ -172,8 +172,8 @@ func describeMutableState(c *cli.Context) *types.AdminDescribeWorkflowExecutionR
 	resp, err := adminClient.DescribeWorkflowExecution(ctx, &types.AdminDescribeWorkflowExecutionRequest{
 		Domain: domain,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-			RunID:      common.StringPtr(rid),
+			WorkflowID: wid,
+			RunID:      rid,
 		},
 	})
 	if err != nil {
@@ -527,7 +527,7 @@ func AdminDescribeHistoryHost(c *cli.Context) {
 
 	req := &types.DescribeHistoryHostRequest{}
 	if len(wid) > 0 {
-		req.ExecutionForHost = &types.WorkflowExecution{WorkflowID: common.StringPtr(wid)}
+		req.ExecutionForHost = &types.WorkflowExecution{WorkflowID: wid}
 	}
 	if c.IsSet(FlagShardID) {
 		req.ShardIDForHost = common.Int32Ptr(int32(sid))
@@ -561,8 +561,8 @@ func AdminRefreshWorkflowTasks(c *cli.Context) {
 	err := adminClient.RefreshWorkflowTasks(ctx, &types.RefreshWorkflowTasksRequest{
 		Domain: domain,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-			RunID:      common.StringPtr(rid),
+			WorkflowID: wid,
+			RunID:      rid,
 		},
 	})
 	if err != nil {

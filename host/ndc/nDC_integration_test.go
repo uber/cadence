@@ -237,8 +237,8 @@ func (s *nDCIntegrationTestSuite) verifyEventHistory(
 		&types.GetWorkflowExecutionHistoryRequest{
 			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(workflowID),
-				RunID:      common.StringPtr(runID),
+				WorkflowID: workflowID,
+				RunID:      runID,
 			},
 			MaximumPageSize:        common.Int32Ptr(1000),
 			NextPageToken:          nil,
@@ -876,7 +876,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				Version:   common.Int64Ptr(21),
 				EventType: types.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
 				WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
-					NewExecutionRunID:                   common.StringPtr(uuid.New()),
+					NewExecutionRunID:                   uuid.New(),
 					WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 					TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
 					Input:                               nil,
@@ -1128,8 +1128,8 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 	) (*types.GetWorkflowExecutionRawHistoryV2Response, error) {
 
 		execution := &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		}
 		return adminClient.GetWorkflowExecutionRawHistoryV2(s.createContext(), &types.GetWorkflowExecutionRawHistoryV2Request{
 			Domain:            domain,
@@ -1612,7 +1612,7 @@ func (s *nDCIntegrationTestSuite) generateNewRunHistory(
 		return nil
 	}
 
-	event.WorkflowExecutionContinuedAsNewEventAttributes.NewExecutionRunID = common.StringPtr(uuid.New())
+	event.WorkflowExecutionContinuedAsNewEventAttributes.NewExecutionRunID = uuid.New()
 
 	newRunFirstEvent := &types.HistoryEvent{
 		EventID:   common.Int64Ptr(common.FirstEventID),
@@ -1624,8 +1624,8 @@ func (s *nDCIntegrationTestSuite) generateNewRunHistory(
 			WorkflowType:         &types.WorkflowType{Name: common.StringPtr(workflowType)},
 			ParentWorkflowDomain: common.StringPtr(domain),
 			ParentWorkflowExecution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(uuid.New()),
-				RunID:      common.StringPtr(uuid.New()),
+				WorkflowID: uuid.New(),
+				RunID:      uuid.New(),
 			},
 			ParentInitiatedEventID: common.Int64Ptr(event.GetEventID()),
 			TaskList: &types.TaskList{
@@ -1636,9 +1636,9 @@ func (s *nDCIntegrationTestSuite) generateNewRunHistory(
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
 			ContinuedExecutionRunID:             common.StringPtr(runID),
 			Initiator:                           types.ContinueAsNewInitiatorCronSchedule.Ptr(),
-			OriginalExecutionRunID:              common.StringPtr(runID),
+			OriginalExecutionRunID:              runID,
 			Identity:                            common.StringPtr("NDC-test"),
-			FirstExecutionRunID:                 common.StringPtr(runID),
+			FirstExecutionRunID:                 runID,
 			Attempt:                             common.Int32Ptr(0),
 			ExpirationTimestamp:                 common.Int64Ptr(time.Now().Add(time.Minute).UnixNano()),
 		},
@@ -1711,8 +1711,8 @@ func (s *nDCIntegrationTestSuite) applyEvents(
 		req := &types.ReplicateEventsV2Request{
 			DomainUUID: s.domainID,
 			WorkflowExecution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(workflowID),
-				RunID:      common.StringPtr(runID),
+				WorkflowID: workflowID,
+				RunID:      runID,
 			},
 			VersionHistoryItems: s.toInternalVersionHistoryItems(versionHistory),
 			Events:              s.toInternalDataBlob(eventBlob),
@@ -1744,8 +1744,8 @@ func (s *nDCIntegrationTestSuite) applyEventsThroughFetcher(
 			HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
 				TaskID:              common.Int64Ptr(1),
 				DomainID:            s.domainID,
-				WorkflowID:          common.StringPtr(workflowID),
-				RunID:               common.StringPtr(runID),
+				WorkflowID:          workflowID,
+				RunID:               runID,
 				VersionHistoryItems: s.toInternalVersionHistoryItems(versionHistory),
 				Events:              s.toInternalDataBlob(eventBlob),
 				NewRunEvents:        s.toInternalDataBlob(newRunEventBlob),

@@ -222,8 +222,8 @@ func (m *sqlExecutionManager) GetWorkflowExecution(
 ) (*p.InternalGetWorkflowExecutionResponse, error) {
 
 	domainID := serialization.MustParseUUID(request.DomainID)
-	runID := serialization.MustParseUUID(*request.Execution.RunID)
-	wfID := *request.Execution.WorkflowID
+	runID := serialization.MustParseUUID(request.Execution.RunID)
+	wfID := request.Execution.WorkflowID
 	executions, err := m.db.SelectFromExecutions(ctx, &sqlplugin.ExecutionsFilter{
 		ShardID: m.shardID, DomainID: domainID, WorkflowID: wfID, RunID: runID})
 

@@ -4558,8 +4558,8 @@ func (v *HistoryStartWorkflowExecutionRequest) GetFirstDecisionTaskBackoffSecond
 // SyncActivityRequest is an internal type (TBD...)
 type SyncActivityRequest struct {
 	DomainID           string          `json:"domainId,omitempty"`
-	WorkflowID         *string         `json:"workflowId,omitempty"`
-	RunID              *string         `json:"runId,omitempty"`
+	WorkflowID         string          `json:"workflowId,omitempty"`
+	RunID              string          `json:"runId,omitempty"`
 	Version            *int64          `json:"version,omitempty"`
 	ScheduledID        *int64          `json:"scheduledId,omitempty"`
 	ScheduledTime      *int64          `json:"scheduledTime,omitempty"`
@@ -4584,16 +4584,16 @@ func (v *SyncActivityRequest) GetDomainID() (o string) {
 
 // GetWorkflowID is an internal getter (TBD...)
 func (v *SyncActivityRequest) GetWorkflowID() (o string) {
-	if v != nil && v.WorkflowID != nil {
-		return *v.WorkflowID
+	if v != nil {
+		return v.WorkflowID
 	}
 	return
 }
 
 // GetRunID is an internal getter (TBD...)
 func (v *SyncActivityRequest) GetRunID() (o string) {
-	if v != nil && v.RunID != nil {
-		return *v.RunID
+	if v != nil {
+		return v.RunID
 	}
 	return
 }

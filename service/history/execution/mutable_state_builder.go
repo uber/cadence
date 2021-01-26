@@ -1955,7 +1955,7 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 	}
 	info := &types.ResetPointInfo{
 		BinaryChecksum:           common.StringPtr(binChecksum),
-		RunID:                    common.StringPtr(exeInfo.RunID),
+		RunID:                    exeInfo.RunID,
 		FirstDecisionCompletedID: common.Int64Ptr(event.GetEventID()),
 		CreatedTimeNano:          common.Int64Ptr(e.timeSource.Now().UnixNano()),
 		Resettable:               common.BoolPtr(resettable),
@@ -3293,8 +3293,8 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	var err error
 	newRunID := uuid.New()
 	newExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(e.executionInfo.WorkflowID),
-		RunID:      common.StringPtr(newRunID),
+		WorkflowID: e.executionInfo.WorkflowID,
+		RunID:      newRunID,
 	}
 
 	// Extract ParentExecutionInfo from current run so it can be passed down to the next
@@ -3304,8 +3304,8 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 			DomainUUID: common.StringPtr(e.executionInfo.ParentDomainID),
 			Domain:     common.StringPtr(parentDomainName),
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(e.executionInfo.ParentWorkflowID),
-				RunID:      common.StringPtr(e.executionInfo.ParentRunID),
+				WorkflowID: e.executionInfo.ParentWorkflowID,
+				RunID:      e.executionInfo.ParentRunID,
 			},
 			InitiatedID: common.Int64Ptr(e.executionInfo.InitiatedID),
 		}
