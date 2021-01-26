@@ -56,7 +56,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 	}
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -152,7 +152,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -257,7 +257,7 @@ func (s *integrationSuite) TestWorkflowContinueAsNew_TaskID() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -352,7 +352,7 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          parentID,
 		WorkflowType:                        parentWorkflowType,

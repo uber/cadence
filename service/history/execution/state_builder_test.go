@@ -737,7 +737,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskStarted() {
 		EventType: &evenType,
 		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
 			ScheduledEventID: common.Int64Ptr(scheduleID),
-			RequestID:        common.StringPtr(decisionRequestID),
+			RequestID:        decisionRequestID,
 		},
 	}
 	di := &DecisionInfo{

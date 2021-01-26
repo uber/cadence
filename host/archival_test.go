@@ -219,7 +219,7 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 		Name: common.StringPtr(tl),
 	}
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              domain,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,

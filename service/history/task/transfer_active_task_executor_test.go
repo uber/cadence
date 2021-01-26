@@ -1372,7 +1372,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Success() {
 			WorkflowID: transferTask.TargetWorkflowID,
 			RunID:      transferTask.TargetRunID,
 		},
-		RequestID: common.StringPtr(si.SignalRequestID),
+		RequestID: si.SignalRequestID,
 	}).Return(nil).Times(1)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
@@ -2187,7 +2187,7 @@ func (s *transferActiveTaskExecutorSuite) createRequestCancelWorkflowExecutionRe
 			WorkflowExecution: &targetExecution,
 			Identity:          common.StringPtr(identityHistoryService),
 			// Use the same request ID to dedupe RequestCancelWorkflowExecution calls
-			RequestID: common.StringPtr(rci.CancelRequestID),
+			RequestID: rci.CancelRequestID,
 		},
 		ExternalInitiatedEventID:  common.Int64Ptr(task.ScheduleID),
 		ExternalWorkflowExecution: &sourceExecution,
@@ -2218,7 +2218,7 @@ func (s *transferActiveTaskExecutorSuite) createSignalWorkflowExecutionRequest(
 			Identity:          common.StringPtr(identityHistoryService),
 			SignalName:        common.StringPtr(si.SignalName),
 			Input:             si.Input,
-			RequestID:         common.StringPtr(si.SignalRequestID),
+			RequestID:         si.SignalRequestID,
 			Control:           si.Control,
 		},
 		ExternalWorkflowExecution: &sourceExecution,
@@ -2251,7 +2251,7 @@ func (s *transferActiveTaskExecutorSuite) createChildWorkflowExecutionRequest(
 		ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      attributes.TaskStartToCloseTimeoutSeconds,
 		// Use the same request ID to dedupe StartWorkflowExecution calls
-		RequestID:             common.StringPtr(ci.CreateRequestID),
+		RequestID:             ci.CreateRequestID,
 		WorkflowIDReusePolicy: attributes.WorkflowIDReusePolicy,
 		RetryPolicy:           attributes.RetryPolicy,
 	}

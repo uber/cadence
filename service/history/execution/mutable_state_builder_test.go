@@ -583,7 +583,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		EventType: types.EventTypeDecisionTaskStarted.Ptr(),
 		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
 			ScheduledEventID: common.Int64Ptr(decisionScheduleEvent.GetEventID()),
-			RequestID:        common.StringPtr(uuid.New()),
+			RequestID:        uuid.New(),
 		},
 	}
 	eventID++
@@ -659,7 +659,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		EventType: types.EventTypeDecisionTaskStarted.Ptr(),
 		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
 			ScheduledEventID: common.Int64Ptr(decisionScheduleEvent.GetEventID()),
-			RequestID:        common.StringPtr(uuid.New()),
+			RequestID:        uuid.New(),
 		},
 	}
 	eventID++ //nolint:ineffassign

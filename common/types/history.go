@@ -3659,7 +3659,7 @@ type RecordActivityTaskStartedRequest struct {
 	WorkflowExecution *WorkflowExecution          `json:"workflowExecution,omitempty"`
 	ScheduleID        *int64                      `json:"scheduleId,omitempty"`
 	TaskID            *int64                      `json:"taskId,omitempty"`
-	RequestID         *string                     `json:"requestId,omitempty"`
+	RequestID         string                      `json:"requestId,omitempty"`
 	PollRequest       *PollForActivityTaskRequest `json:"pollRequest,omitempty"`
 }
 
@@ -3697,8 +3697,8 @@ func (v *RecordActivityTaskStartedRequest) GetTaskID() (o int64) {
 
 // GetRequestID is an internal getter (TBD...)
 func (v *RecordActivityTaskStartedRequest) GetRequestID() (o string) {
-	if v != nil && v.RequestID != nil {
-		return *v.RequestID
+	if v != nil {
+		return v.RequestID
 	}
 	return
 }
@@ -3833,7 +3833,7 @@ type RecordDecisionTaskStartedRequest struct {
 	WorkflowExecution *WorkflowExecution          `json:"workflowExecution,omitempty"`
 	ScheduleID        *int64                      `json:"scheduleId,omitempty"`
 	TaskID            *int64                      `json:"taskId,omitempty"`
-	RequestID         *string                     `json:"requestId,omitempty"`
+	RequestID         string                      `json:"requestId,omitempty"`
 	PollRequest       *PollForDecisionTaskRequest `json:"pollRequest,omitempty"`
 }
 
@@ -3871,8 +3871,8 @@ func (v *RecordDecisionTaskStartedRequest) GetTaskID() (o int64) {
 
 // GetRequestID is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedRequest) GetRequestID() (o string) {
-	if v != nil && v.RequestID != nil {
-		return *v.RequestID
+	if v != nil {
+		return v.RequestID
 	}
 	return
 }
@@ -4041,7 +4041,7 @@ func (v *HistoryRefreshWorkflowTasksRequest) GetRequest() (o *RefreshWorkflowTas
 type RemoveSignalMutableStateRequest struct {
 	DomainUUID        string             `json:"domainUUID,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
-	RequestID         *string            `json:"requestId,omitempty"`
+	RequestID         string             `json:"requestId,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4062,8 +4062,8 @@ func (v *RemoveSignalMutableStateRequest) GetWorkflowExecution() (o *WorkflowExe
 
 // GetRequestID is an internal getter (TBD...)
 func (v *RemoveSignalMutableStateRequest) GetRequestID() (o string) {
-	if v != nil && v.RequestID != nil {
-		return *v.RequestID
+	if v != nil {
+		return v.RequestID
 	}
 	return
 }

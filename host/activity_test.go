@@ -55,7 +55,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 	}
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -177,7 +177,7 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -353,7 +353,7 @@ func (s *integrationSuite) TestActivityRetry() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -566,7 +566,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -669,7 +669,7 @@ func (s *integrationSuite) TestActivityTimeouts() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -911,7 +911,7 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1102,7 +1102,7 @@ func (s *integrationSuite) TestActivityCancellation() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1229,7 +1229,7 @@ func (s *integrationSuite) TestActivityCancellationNotStarted() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,

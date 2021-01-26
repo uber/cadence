@@ -77,7 +77,7 @@ func (s *sizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,

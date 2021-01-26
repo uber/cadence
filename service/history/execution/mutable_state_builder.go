@@ -1621,7 +1621,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 	}
 
 	createRequest := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              e.domainEntry.GetInfo().Name,
 		WorkflowID:                          execution.WorkflowID,
 		TaskList:                            tl,

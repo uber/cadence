@@ -2084,11 +2084,8 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 			isCancelRequested, cancelRequestID := mutableState.IsCancelRequested()
 			if isCancelRequested {
 				cancelRequest := req.CancelRequest
-				if cancelRequest.RequestID != nil {
-					requestID := *cancelRequest.RequestID
-					if requestID != "" && cancelRequestID == requestID {
-						return updateWorkflowWithNewDecision, nil
-					}
+				if cancelRequest.RequestID != "" && cancelRequest.RequestID == cancelRequestID {
+					return updateWorkflowWithNewDecision, nil
 				}
 				// if we consider workflow cancellation idempotent, then this error is redundant
 				// this error maybe useful if this API is invoked by external, not decision from transfer queue
@@ -3045,7 +3042,7 @@ func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(
 func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workflowID string, runID string) error {
 	return &types.WorkflowExecutionAlreadyStartedError{
 		Message:        common.StringPtr(fmt.Sprintf(errMsg, workflowID, runID)),
-		StartRequestID: common.StringPtr(fmt.Sprintf("%v", createRequestID)),
+		StartRequestID: createRequestID,
 		RunID:          runID,
 	}
 }
