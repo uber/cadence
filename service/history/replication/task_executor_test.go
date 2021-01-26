@@ -177,13 +177,13 @@ func (s *taskExecutorSuite) TestProcessTaskOnce_SyncActivityReplicationTask() {
 	task := &types.ReplicationTask{
 		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
 		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
-			DomainID:   common.StringPtr(domainID),
+			DomainID:   domainID,
 			WorkflowID: common.StringPtr(workflowID),
 			RunID:      common.StringPtr(runID),
 		},
 	}
 	request := &types.SyncActivityRequest{
-		DomainID:   common.StringPtr(domainID),
+		DomainID:   domainID,
 		WorkflowID: common.StringPtr(workflowID),
 		RunID:      common.StringPtr(runID),
 	}
@@ -200,13 +200,13 @@ func (s *taskExecutorSuite) TestProcess_HistoryV2ReplicationTask() {
 	task := &types.ReplicationTask{
 		TaskType: types.ReplicationTaskTypeHistoryV2.Ptr(),
 		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
-			DomainID:   common.StringPtr(domainID),
+			DomainID:   domainID,
 			WorkflowID: common.StringPtr(workflowID),
 			RunID:      common.StringPtr(runID),
 		},
 	}
 	request := &types.ReplicateEventsV2Request{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: common.StringPtr(workflowID),
 			RunID:      common.StringPtr(runID),

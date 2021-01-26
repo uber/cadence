@@ -1011,14 +1011,14 @@ func (v *DescribeClusterResponse) GetMembershipInfo() (o *MembershipInfo) {
 
 // AdminDescribeWorkflowExecutionRequest is an internal type (TBD...)
 type AdminDescribeWorkflowExecutionRequest struct {
-	Domain    *string            `json:"domain,omitempty"`
+	Domain    string             `json:"domain,omitempty"`
 	Execution *WorkflowExecution `json:"execution,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
 func (v *AdminDescribeWorkflowExecutionRequest) GetDomain() (o string) {
-	if v != nil && v.Domain != nil {
-		return *v.Domain
+	if v != nil {
+		return v.Domain
 	}
 	return
 }
@@ -1073,7 +1073,7 @@ func (v *AdminDescribeWorkflowExecutionResponse) GetMutableStateInDatabase() (o 
 
 // GetWorkflowExecutionRawHistoryV2Request is an internal type (TBD...)
 type GetWorkflowExecutionRawHistoryV2Request struct {
-	Domain            *string            `json:"domain,omitempty"`
+	Domain            string             `json:"domain,omitempty"`
 	Execution         *WorkflowExecution `json:"execution,omitempty"`
 	StartEventID      *int64             `json:"startEventId,omitempty"`
 	StartEventVersion *int64             `json:"startEventVersion,omitempty"`
@@ -1085,8 +1085,8 @@ type GetWorkflowExecutionRawHistoryV2Request struct {
 
 // GetDomain is an internal getter (TBD...)
 func (v *GetWorkflowExecutionRawHistoryV2Request) GetDomain() (o string) {
-	if v != nil && v.Domain != nil {
-		return *v.Domain
+	if v != nil {
+		return v.Domain
 	}
 	return
 }
@@ -1224,7 +1224,7 @@ func (v *MembershipInfo) GetRings() (o []*RingInfo) {
 
 // ResendReplicationTasksRequest is an internal type (TBD...)
 type ResendReplicationTasksRequest struct {
-	DomainID      *string `json:"domainID,omitempty"`
+	DomainID      string  `json:"domainID,omitempty"`
 	WorkflowID    *string `json:"workflowID,omitempty"`
 	RunID         *string `json:"runID,omitempty"`
 	RemoteCluster *string `json:"remoteCluster,omitempty"`
@@ -1236,8 +1236,8 @@ type ResendReplicationTasksRequest struct {
 
 // GetDomainID is an internal getter (TBD...)
 func (v *ResendReplicationTasksRequest) GetDomainID() (o string) {
-	if v != nil && v.DomainID != nil {
-		return *v.DomainID
+	if v != nil {
+		return v.DomainID
 	}
 	return
 }

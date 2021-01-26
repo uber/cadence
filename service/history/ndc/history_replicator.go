@@ -726,7 +726,7 @@ func newNDCRetryTaskErrorWithHint(
 
 	return &types.RetryTaskV2Error{
 		Message:           message,
-		DomainID:          common.StringPtr(domainID),
+		DomainID:          domainID,
 		WorkflowID:        common.StringPtr(workflowID),
 		RunID:             common.StringPtr(runID),
 		StartEventID:      startEventID,

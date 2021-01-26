@@ -340,7 +340,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		recordChildCompletionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 		defer cancel()
 		err = t.historyClient.RecordChildExecutionCompleted(recordChildCompletionCtx, &types.RecordChildExecutionCompletedRequest{
-			DomainUUID: common.StringPtr(parentDomainID),
+			DomainUUID: parentDomainID,
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: common.StringPtr(parentWorkflowID),
 				RunID:      common.StringPtr(parentRunID),
@@ -569,7 +569,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 	removeSignalCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 	defer cancel()
 	return t.historyClient.RemoveSignalMutableState(removeSignalCtx, &types.RemoveSignalMutableStateRequest{
-		DomainUUID: common.StringPtr(task.TargetDomainID),
+		DomainUUID: task.TargetDomainID,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: common.StringPtr(task.TargetWorkflowID),
 			RunID:      common.StringPtr(task.TargetRunID),
@@ -992,7 +992,7 @@ func (t *transferActiveTaskExecutor) createFirstDecisionTask(
 	scheduleDecisionCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 	defer cancel()
 	err := t.historyClient.ScheduleDecisionTask(scheduleDecisionCtx, &types.ScheduleDecisionTaskRequest{
-		DomainUUID:        common.StringPtr(domainID),
+		DomainUUID:        domainID,
 		WorkflowExecution: execution,
 		IsFirstDecision:   common.BoolPtr(true),
 	})
@@ -1203,9 +1203,9 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionWithRetry(
 ) error {
 
 	request := &types.HistoryRequestCancelWorkflowExecutionRequest{
-		DomainUUID: common.StringPtr(task.TargetDomainID),
+		DomainUUID: task.TargetDomainID,
 		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
-			Domain: common.StringPtr(targetDomain),
+			Domain: targetDomain,
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: common.StringPtr(task.TargetWorkflowID),
 				RunID:      common.StringPtr(task.TargetRunID),
@@ -1247,9 +1247,9 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionWithRetry(
 ) error {
 
 	request := &types.HistorySignalWorkflowExecutionRequest{
-		DomainUUID: common.StringPtr(task.TargetDomainID),
+		DomainUUID: task.TargetDomainID,
 		SignalRequest: &types.SignalWorkflowExecutionRequest{
-			Domain: common.StringPtr(targetDomain),
+			Domain: targetDomain,
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: common.StringPtr(task.TargetWorkflowID),
 				RunID:      common.StringPtr(task.TargetRunID),
@@ -1287,7 +1287,7 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 ) (string, error) {
 
 	frontendStartReq := &types.StartWorkflowExecutionRequest{
-		Domain:                              common.StringPtr(targetDomain),
+		Domain:                              targetDomain,
 		WorkflowID:                          attributes.WorkflowID,
 		WorkflowType:                        attributes.WorkflowType,
 		TaskList:                            attributes.TaskList,
@@ -1490,9 +1490,9 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 
 	case types.ParentClosePolicyTerminate:
 		return t.historyClient.TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(domainID),
+			DomainUUID: domainID,
 			TerminateRequest: &types.TerminateWorkflowExecutionRequest{
-				Domain: common.StringPtr(domainName),
+				Domain: domainName,
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: common.StringPtr(childInfo.StartedWorkflowID),
 					RunID:      common.StringPtr(childInfo.StartedRunID),
@@ -1504,9 +1504,9 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 
 	case types.ParentClosePolicyRequestCancel:
 		return t.historyClient.RequestCancelWorkflowExecution(ctx, &types.HistoryRequestCancelWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(domainID),
+			DomainUUID: domainID,
 			CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
-				Domain: common.StringPtr(domainName),
+				Domain: domainName,
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: common.StringPtr(childInfo.StartedWorkflowID),
 					RunID:      common.StringPtr(childInfo.StartedRunID),

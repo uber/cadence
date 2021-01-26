@@ -110,9 +110,9 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 			continue
 		case types.ParentClosePolicyTerminate:
 			err = client.TerminateWorkflowExecution(nil, &types.HistoryTerminateWorkflowExecutionRequest{
-				DomainUUID: common.StringPtr(request.DomainUUID),
+				DomainUUID: request.DomainUUID,
 				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
-					Domain: common.StringPtr(request.DomainName),
+					Domain: request.DomainName,
 					WorkflowExecution: &types.WorkflowExecution{
 						WorkflowID: common.StringPtr(execution.WorkflowID),
 						RunID:      common.StringPtr(execution.RunID),
@@ -123,9 +123,9 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 			})
 		case types.ParentClosePolicyRequestCancel:
 			err = client.RequestCancelWorkflowExecution(nil, &types.HistoryRequestCancelWorkflowExecutionRequest{
-				DomainUUID: common.StringPtr(request.DomainUUID),
+				DomainUUID: request.DomainUUID,
 				CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
-					Domain: common.StringPtr(request.DomainName),
+					Domain: request.DomainName,
 					WorkflowExecution: &types.WorkflowExecution{
 						WorkflowID: common.StringPtr(execution.WorkflowID),
 						RunID:      common.StringPtr(execution.RunID),

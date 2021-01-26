@@ -237,7 +237,7 @@ func (n *HistoryResenderImpl) createReplicationRawRequest(
 ) *types.ReplicateEventsV2Request {
 
 	request := &types.ReplicateEventsV2Request{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: common.StringPtr(workflowID),
 			RunID:      common.StringPtr(runID),
@@ -282,7 +282,7 @@ func (n *HistoryResenderImpl) getHistory(
 	ctx, cancel := context.WithTimeout(ctx, resendContextTimeout)
 	defer cancel()
 	response, err := n.adminClient.GetWorkflowExecutionRawHistoryV2(ctx, &types.GetWorkflowExecutionRawHistoryV2Request{
-		Domain: common.StringPtr(domainName),
+		Domain: domainName,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: common.StringPtr(workflowID),
 			RunID:      common.StringPtr(runID),

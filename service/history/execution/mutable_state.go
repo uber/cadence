@@ -68,7 +68,7 @@ type (
 		AddChildWorkflowExecutionCanceledEvent(int64, *types.WorkflowExecution, *types.WorkflowExecutionCanceledEventAttributes) (*types.HistoryEvent, error)
 		AddChildWorkflowExecutionCompletedEvent(int64, *types.WorkflowExecution, *types.WorkflowExecutionCompletedEventAttributes) (*types.HistoryEvent, error)
 		AddChildWorkflowExecutionFailedEvent(int64, *types.WorkflowExecution, *types.WorkflowExecutionFailedEventAttributes) (*types.HistoryEvent, error)
-		AddChildWorkflowExecutionStartedEvent(*string, *types.WorkflowExecution, *types.WorkflowType, int64, *types.Header) (*types.HistoryEvent, error)
+		AddChildWorkflowExecutionStartedEvent(string, *types.WorkflowExecution, *types.WorkflowType, int64, *types.Header) (*types.HistoryEvent, error)
 		AddChildWorkflowExecutionTerminatedEvent(int64, *types.WorkflowExecution, *types.WorkflowExecutionTerminatedEventAttributes) (*types.HistoryEvent, error)
 		AddChildWorkflowExecutionTimedOutEvent(int64, *types.WorkflowExecution, *types.WorkflowExecutionTimedOutEventAttributes) (*types.HistoryEvent, error)
 		AddCompletedWorkflowEvent(int64, *types.CompleteWorkflowExecutionDecisionAttributes) (*types.HistoryEvent, error)

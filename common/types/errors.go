@@ -98,9 +98,7 @@ func (err RemoteSyncMatchedError) Error() string {
 func (err RetryTaskV2Error) Error() string {
 	sb := &strings.Builder{}
 	printField(sb, "Message", err.Message)
-	if err.DomainID != nil {
-		printField(sb, "DomainID", *err.DomainID)
-	}
+	printField(sb, "DomainID", err.DomainID)
 	if err.WorkflowID != nil {
 		printField(sb, "WorkflowID", *err.WorkflowID)
 	}

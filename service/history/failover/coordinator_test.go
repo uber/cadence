@@ -97,7 +97,7 @@ func (s *coordinatorSuite) TearDownTest() {
 func (s *coordinatorSuite) TestNotifyFailoverMarkers() {
 	doneCh := make(chan struct{})
 	attributes := &types.FailoverMarkerAttributes{
-		DomainID:        common.StringPtr(uuid.New()),
+		DomainID:        uuid.New(),
 		FailoverVersion: common.Int64Ptr(1),
 		CreationTime:    common.Int64Ptr(1),
 	}
@@ -136,7 +136,7 @@ func (s *coordinatorSuite) TestNotifyRemoteCoordinator() {
 
 	requestByMarker := make(map[*types.FailoverMarkerAttributes]*receiveRequest)
 	attributes := &types.FailoverMarkerAttributes{
-		DomainID:        common.StringPtr(uuid.New()),
+		DomainID:        uuid.New(),
 		FailoverVersion: common.Int64Ptr(1),
 		CreationTime:    common.Int64Ptr(1),
 	}
@@ -162,12 +162,12 @@ func (s *coordinatorSuite) TestNotifyRemoteCoordinator() {
 func (s *coordinatorSuite) TestAggregateNotificationRequests() {
 	requestByMarker := make(map[*types.FailoverMarkerAttributes]*receiveRequest)
 	attributes1 := &types.FailoverMarkerAttributes{
-		DomainID:        common.StringPtr(uuid.New()),
+		DomainID:        uuid.New(),
 		FailoverVersion: common.Int64Ptr(1),
 		CreationTime:    common.Int64Ptr(1),
 	}
 	attributes2 := &types.FailoverMarkerAttributes{
-		DomainID:        common.StringPtr(uuid.New()),
+		DomainID:        uuid.New(),
 		FailoverVersion: common.Int64Ptr(2),
 		CreationTime:    common.Int64Ptr(2),
 	}
@@ -193,12 +193,12 @@ func (s *coordinatorSuite) TestAggregateNotificationRequests() {
 func (s *coordinatorSuite) TestHandleFailoverMarkers_DeleteExpiredFailoverMarker() {
 	domainID := uuid.New()
 	attributes1 := &types.FailoverMarkerAttributes{
-		DomainID:        common.StringPtr(domainID),
+		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(1),
 		CreationTime:    common.Int64Ptr(1),
 	}
 	attributes2 := &types.FailoverMarkerAttributes{
-		DomainID:        common.StringPtr(domainID),
+		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(2),
 		CreationTime:    common.Int64Ptr(1),
 	}
@@ -219,12 +219,12 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_DeleteExpiredFailoverMarker
 func (s *coordinatorSuite) TestHandleFailoverMarkers_IgnoreExpiredFailoverMarker() {
 	domainID := uuid.New()
 	attributes1 := &types.FailoverMarkerAttributes{
-		DomainID:        common.StringPtr(domainID),
+		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(1),
 		CreationTime:    common.Int64Ptr(1),
 	}
 	attributes2 := &types.FailoverMarkerAttributes{
-		DomainID:        common.StringPtr(domainID),
+		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(2),
 		CreationTime:    common.Int64Ptr(1),
 	}
@@ -245,12 +245,12 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_IgnoreExpiredFailoverMarker
 func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Success() {
 	domainID := uuid.New()
 	attributes1 := &types.FailoverMarkerAttributes{
-		DomainID:        common.StringPtr(domainID),
+		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(2),
 		CreationTime:    common.Int64Ptr(1),
 	}
 	attributes2 := &types.FailoverMarkerAttributes{
-		DomainID:        common.StringPtr(domainID),
+		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(2),
 		CreationTime:    common.Int64Ptr(1),
 	}
@@ -318,12 +318,12 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Suc
 func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Error() {
 	domainID := uuid.New()
 	attributes1 := &types.FailoverMarkerAttributes{
-		DomainID:        common.StringPtr(domainID),
+		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(2),
 		CreationTime:    common.Int64Ptr(1),
 	}
 	attributes2 := &types.FailoverMarkerAttributes{
-		DomainID:        common.StringPtr(domainID),
+		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(2),
 		CreationTime:    common.Int64Ptr(1),
 	}

@@ -139,7 +139,7 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 	taskInfo := make([]*types.ReplicationTaskInfo, 0, len(resp.Tasks))
 	for _, task := range resp.Tasks {
 		taskInfo = append(taskInfo, &types.ReplicationTaskInfo{
-			DomainID:     common.StringPtr(task.GetDomainID()),
+			DomainID:     task.GetDomainID(),
 			WorkflowID:   common.StringPtr(task.GetWorkflowID()),
 			RunID:        common.StringPtr(task.GetRunID()),
 			TaskType:     common.Int16Ptr(int16(task.GetTaskType())),

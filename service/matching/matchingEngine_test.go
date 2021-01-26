@@ -219,7 +219,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 		}).AnyTimes()
 
 	addRequest := types.AddDecisionTaskRequest{
-		DomainUUID:                    common.StringPtr(domainID),
+		DomainUUID:                    domainID,
 		Execution:                     &execution,
 		ScheduleID:                    &scheduleID,
 		TaskList:                      stickyTaskList,
@@ -233,7 +233,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 	taskList.Name = &tl
 
 	resp, err := s.matchingEngine.PollForDecisionTask(s.handlerContext, &types.MatchingPollForDecisionTaskRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: stickyTaskList,
 			Identity: &identity},
@@ -276,7 +276,7 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(callContext context.Co
 	for i := 0; i < pollCount; i++ {
 		if taskType == persistence.TaskListTypeActivity {
 			pollResp, err := s.matchingEngine.PollForActivityTask(s.handlerContext, &types.MatchingPollForActivityTaskRequest{
-				DomainUUID: common.StringPtr(domainID),
+				DomainUUID: domainID,
 				PollRequest: &types.PollForActivityTaskRequest{
 					TaskList: taskList,
 					Identity: &identity,
@@ -288,7 +288,7 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(callContext context.Co
 			taskListType = types.TaskListTypeActivity
 		} else {
 			resp, err := s.matchingEngine.PollForDecisionTask(s.handlerContext, &types.MatchingPollForDecisionTaskRequest{
-				DomainUUID: common.StringPtr(domainID),
+				DomainUUID: domainID,
 				PollRequest: &types.PollForDecisionTaskRequest{
 					TaskList: taskList,
 					Identity: &identity},
@@ -306,7 +306,7 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(callContext context.Co
 		// check the poller information
 		s.handlerContext.Context = context.Background()
 		descResp, err := s.matchingEngine.DescribeTaskList(s.handlerContext, &types.MatchingDescribeTaskListRequest{
-			DomainUUID: common.StringPtr(domainID),
+			DomainUUID: domainID,
 			DescRequest: &types.DescribeTaskListRequest{
 				TaskList:              taskList,
 				TaskListType:          &taskListType,
@@ -359,8 +359,8 @@ func (s *matchingEngineSuite) AddTasksTest(taskType int, isForwarded bool) {
 		var err error
 		if taskType == persistence.TaskListTypeActivity {
 			addRequest := types.AddActivityTaskRequest{
-				SourceDomainUUID:              common.StringPtr(domainID),
-				DomainUUID:                    common.StringPtr(domainID),
+				SourceDomainUUID:              domainID,
+				DomainUUID:                    domainID,
 				Execution:                     &execution,
 				ScheduleID:                    &scheduleID,
 				TaskList:                      taskList,
@@ -372,7 +372,7 @@ func (s *matchingEngineSuite) AddTasksTest(taskType int, isForwarded bool) {
 			_, err = s.matchingEngine.AddActivityTask(s.handlerContext, &addRequest)
 		} else {
 			addRequest := types.AddDecisionTaskRequest{
-				DomainUUID:                    common.StringPtr(domainID),
+				DomainUUID:                    domainID,
 				Execution:                     &execution,
 				ScheduleID:                    &scheduleID,
 				TaskList:                      taskList,
@@ -419,8 +419,8 @@ func (s *matchingEngineSuite) TestTaskWriterShutdown() {
 	s.Nil(err)
 
 	addRequest := types.AddActivityTaskRequest{
-		SourceDomainUUID:              common.StringPtr(domainID),
-		DomainUUID:                    common.StringPtr(domainID),
+		SourceDomainUUID:              domainID,
+		DomainUUID:                    domainID,
 		Execution:                     &execution,
 		TaskList:                      taskList,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
@@ -467,8 +467,8 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
 		addRequest := types.AddActivityTaskRequest{
-			SourceDomainUUID:              common.StringPtr(domainID),
-			DomainUUID:                    common.StringPtr(domainID),
+			SourceDomainUUID:              domainID,
+			DomainUUID:                    domainID,
 			Execution:                     &workflowExecution,
 			ScheduleID:                    &scheduleID,
 			TaskList:                      taskList,
@@ -512,7 +512,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 		scheduleID := i * 3
 
 		result, err := s.matchingEngine.PollForActivityTask(s.handlerContext, &types.MatchingPollForActivityTaskRequest{
-			DomainUUID: common.StringPtr(domainID),
+			DomainUUID: domainID,
 			PollRequest: &types.PollForActivityTaskRequest{
 				TaskList: taskList,
 				Identity: &identity},
@@ -621,7 +621,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 
 	pollFunc := func(maxDispatch float64) (*types.PollForActivityTaskResponse, error) {
 		return s.matchingEngine.PollForActivityTask(s.handlerContext, &types.MatchingPollForActivityTaskRequest{
-			DomainUUID: common.StringPtr(domainID),
+			DomainUUID: domainID,
 			PollRequest: &types.PollForActivityTaskRequest{
 				TaskList:         taskList,
 				Identity:         &identity,
@@ -647,8 +647,8 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 		}()
 		time.Sleep(20 * time.Millisecond) // Necessary for sync match to happen
 		addRequest := types.AddActivityTaskRequest{
-			SourceDomainUUID:              common.StringPtr(domainID),
-			DomainUUID:                    common.StringPtr(domainID),
+			SourceDomainUUID:              domainID,
+			DomainUUID:                    domainID,
 			Execution:                     &workflowExecution,
 			ScheduleID:                    &scheduleID,
 			TaskList:                      taskList,
@@ -712,7 +712,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 	// check the poller information
 	tlType := types.TaskListTypeActivity
 	descResp, err := s.matchingEngine.DescribeTaskList(s.handlerContext, &types.MatchingDescribeTaskListRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		DescRequest: &types.DescribeTaskListRequest{
 			TaskList:              taskList,
 			TaskListType:          &tlType,
@@ -795,8 +795,8 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 			defer wg.Done()
 			for i := int64(0); i < taskCount; i++ {
 				addRequest := types.AddActivityTaskRequest{
-					SourceDomainUUID:              common.StringPtr(domainID),
-					DomainUUID:                    common.StringPtr(domainID),
+					SourceDomainUUID:              domainID,
+					DomainUUID:                    domainID,
 					Execution:                     &workflowExecution,
 					ScheduleID:                    &scheduleID,
 					TaskList:                      taskList,
@@ -848,7 +848,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 			for i := int64(0); i < taskCount; {
 				maxDispatch := dispatchLimitFn(wNum, i)
 				result, err := s.matchingEngine.PollForActivityTask(s.handlerContext, &types.MatchingPollForActivityTaskRequest{
-					DomainUUID: common.StringPtr(domainID),
+					DomainUUID: domainID,
 					PollRequest: &types.PollForActivityTaskRequest{
 						TaskList:         taskList,
 						Identity:         &identity,
@@ -936,7 +936,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 		go func() {
 			for i := int64(0); i < taskCount; i++ {
 				addRequest := types.AddDecisionTaskRequest{
-					DomainUUID:                    common.StringPtr(domainID),
+					DomainUUID:                    domainID,
 					Execution:                     &workflowExecution,
 					ScheduleID:                    &scheduleID,
 					TaskList:                      taskList,
@@ -971,7 +971,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 		go func() {
 			for i := int64(0); i < taskCount; {
 				result, err := s.matchingEngine.PollForDecisionTask(s.handlerContext, &types.MatchingPollForDecisionTaskRequest{
-					DomainUUID: common.StringPtr(domainID),
+					DomainUUID: domainID,
 					PollRequest: &types.PollForDecisionTaskRequest{
 						TaskList: taskList,
 						Identity: &identity},
@@ -1033,7 +1033,7 @@ func (s *matchingEngineSuite) TestPollWithExpiredContext() {
 	cancel()
 	s.handlerContext.Context = ctx
 	_, err := s.matchingEngine.PollForActivityTask(s.handlerContext, &types.MatchingPollForActivityTaskRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		PollRequest: &types.PollForActivityTaskRequest{
 			TaskList: taskList,
 			Identity: &identity},
@@ -1046,7 +1046,7 @@ func (s *matchingEngineSuite) TestPollWithExpiredContext() {
 	defer cancel()
 	s.handlerContext.Context = ctx
 	resp, err := s.matchingEngine.PollForActivityTask(s.handlerContext, &types.MatchingPollForActivityTaskRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		PollRequest: &types.PollForActivityTaskRequest{
 			TaskList: taskList,
 			Identity: &identity},
@@ -1090,8 +1090,8 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 			engine := engines[p]
 			for i := int64(0); i < taskCount; i++ {
 				addRequest := types.AddActivityTaskRequest{
-					SourceDomainUUID:              common.StringPtr(domainID),
-					DomainUUID:                    common.StringPtr(domainID),
+					SourceDomainUUID:              domainID,
+					DomainUUID:                    domainID,
 					Execution:                     &workflowExecution,
 					ScheduleID:                    &scheduleID,
 					TaskList:                      taskList,
@@ -1150,7 +1150,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 			engine := engines[p]
 			for i := int64(0); i < taskCount; /* incremented explicitly to skip empty polls */ {
 				result, err := engine.PollForActivityTask(s.handlerContext, &types.MatchingPollForActivityTaskRequest{
-					DomainUUID: common.StringPtr(domainID),
+					DomainUUID: domainID,
 					PollRequest: &types.PollForActivityTaskRequest{
 						TaskList: taskList,
 						Identity: &identity},
@@ -1240,7 +1240,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 			engine := engines[p]
 			for i := int64(0); i < taskCount; i++ {
 				addRequest := types.AddDecisionTaskRequest{
-					DomainUUID:                    common.StringPtr(domainID),
+					DomainUUID:                    domainID,
 					Execution:                     &workflowExecution,
 					ScheduleID:                    &scheduleID,
 					TaskList:                      taskList,
@@ -1288,7 +1288,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 			engine := engines[p]
 			for i := int64(0); i < taskCount; /* incremented explicitly to skip empty polls */ {
 				result, err := engine.PollForDecisionTask(s.handlerContext, &types.MatchingPollForDecisionTaskRequest{
-					DomainUUID: common.StringPtr(domainID),
+					DomainUUID: domainID,
 					PollRequest: &types.PollForDecisionTaskRequest{
 						TaskList: taskList,
 						Identity: &identity},
@@ -1357,8 +1357,8 @@ func (s *matchingEngineSuite) TestAddTaskAfterStartFailure() {
 
 	scheduleID := int64(0)
 	addRequest := types.AddActivityTaskRequest{
-		SourceDomainUUID:              common.StringPtr(domainID),
-		DomainUUID:                    common.StringPtr(domainID),
+		SourceDomainUUID:              domainID,
+		DomainUUID:                    domainID,
 		Execution:                     &workflowExecution,
 		ScheduleID:                    &scheduleID,
 		TaskList:                      taskList,
@@ -1406,8 +1406,8 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
 		addRequest := types.AddActivityTaskRequest{
-			SourceDomainUUID:              common.StringPtr(domainID),
-			DomainUUID:                    common.StringPtr(domainID),
+			SourceDomainUUID:              domainID,
+			DomainUUID:                    domainID,
 			Execution:                     &workflowExecution,
 			ScheduleID:                    &scheduleID,
 			TaskList:                      taskList,
@@ -1462,7 +1462,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 	for i := int64(0); i < rangeSize; i++ {
 		identity := "nobody"
 		result, err := s.matchingEngine.PollForActivityTask(s.handlerContext, &types.MatchingPollForActivityTaskRequest{
-			DomainUUID: common.StringPtr(domainID),
+			DomainUUID: domainID,
 			PollRequest: &types.PollForActivityTaskRequest{
 				TaskList: taskList,
 				Identity: &identity},
@@ -1548,8 +1548,8 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 		for i := int64(0); i < taskCount; i++ {
 			scheduleID := i * 3
 			addRequest := types.AddActivityTaskRequest{
-				SourceDomainUUID:              common.StringPtr(domainID),
-				DomainUUID:                    common.StringPtr(domainID),
+				SourceDomainUUID:              domainID,
+				DomainUUID:                    domainID,
 				Execution:                     &workflowExecution,
 				ScheduleID:                    &scheduleID,
 				TaskList:                      taskList,
@@ -1577,7 +1577,7 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 		s.setupRecordActivityTaskStartedMock(tl)
 
 		pollReq := &types.MatchingPollForActivityTaskRequest{
-			DomainUUID:  common.StringPtr(domainID),
+			DomainUUID:  domainID,
 			PollRequest: &types.PollForActivityTaskRequest{TaskList: taskList, Identity: common.StringPtr("test")},
 		}
 

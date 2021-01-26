@@ -1622,7 +1622,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 
 	createRequest := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(e.domainEntry.GetInfo().Name),
+		Domain:                              e.domainEntry.GetInfo().Name,
 		WorkflowID:                          execution.WorkflowID,
 		TaskList:                            tl,
 		WorkflowType:                        wType,
@@ -1637,7 +1637,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 	}
 
 	req := &types.HistoryStartWorkflowExecutionRequest{
-		DomainUUID:                      common.StringPtr(e.domainEntry.GetInfo().ID),
+		DomainUUID:                      e.domainEntry.GetInfo().ID,
 		StartRequest:                    createRequest,
 		ParentExecutionInfo:             parentExecutionInfo,
 		LastCompletionResult:            attributes.LastCompletionResult,
@@ -3449,7 +3449,7 @@ func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionInitiatedEvent
 }
 
 func (e *mutableStateBuilder) AddChildWorkflowExecutionStartedEvent(
-	domain *string,
+	domain string,
 	execution *types.WorkflowExecution,
 	workflowType *types.WorkflowType,
 	initiatedID int64,
@@ -3552,15 +3552,11 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
-	var domain *string
-	if len(ci.DomainName) > 0 {
-		domain = &ci.DomainName
-	}
 	workflowType := &types.WorkflowType{
 		Name: common.StringPtr(ci.WorkflowTypeName),
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionCompletedEvent(domain, childExecution, workflowType, ci.InitiatedID,
+	event := e.hBuilder.AddChildWorkflowExecutionCompletedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
 	if err := e.ReplicateChildWorkflowExecutionCompletedEvent(event); err != nil {
 		return nil, err
@@ -3599,15 +3595,11 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionFailedEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
-	var domain *string
-	if len(ci.DomainName) > 0 {
-		domain = &ci.DomainName
-	}
 	workflowType := &types.WorkflowType{
 		Name: common.StringPtr(ci.WorkflowTypeName),
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionFailedEvent(domain, childExecution, workflowType, ci.InitiatedID,
+	event := e.hBuilder.AddChildWorkflowExecutionFailedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
 	if err := e.ReplicateChildWorkflowExecutionFailedEvent(event); err != nil {
 		return nil, err
@@ -3646,15 +3638,11 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCanceledEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
-	var domain *string
-	if len(ci.DomainName) > 0 {
-		domain = &ci.DomainName
-	}
 	workflowType := &types.WorkflowType{
 		Name: common.StringPtr(ci.WorkflowTypeName),
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionCanceledEvent(domain, childExecution, workflowType, ci.InitiatedID,
+	event := e.hBuilder.AddChildWorkflowExecutionCanceledEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
 	if err := e.ReplicateChildWorkflowExecutionCanceledEvent(event); err != nil {
 		return nil, err
@@ -3693,15 +3681,11 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTerminatedEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
-	var domain *string
-	if len(ci.DomainName) > 0 {
-		domain = &ci.DomainName
-	}
 	workflowType := &types.WorkflowType{
 		Name: common.StringPtr(ci.WorkflowTypeName),
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionTerminatedEvent(domain, childExecution, workflowType, ci.InitiatedID,
+	event := e.hBuilder.AddChildWorkflowExecutionTerminatedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
 	if err := e.ReplicateChildWorkflowExecutionTerminatedEvent(event); err != nil {
 		return nil, err
@@ -3740,15 +3724,11 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
-	var domain *string
-	if len(ci.DomainName) > 0 {
-		domain = &ci.DomainName
-	}
 	workflowType := &types.WorkflowType{
 		Name: common.StringPtr(ci.WorkflowTypeName),
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionTimedOutEvent(domain, childExecution, workflowType, ci.InitiatedID,
+	event := e.hBuilder.AddChildWorkflowExecutionTimedOutEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
 		ci.StartedID, attributes)
 	if err := e.ReplicateChildWorkflowExecutionTimedOutEvent(event); err != nil {
 		return nil, err
