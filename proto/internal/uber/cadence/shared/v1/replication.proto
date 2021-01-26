@@ -58,12 +58,10 @@ message ReplicationTask {
 message DomainTaskAttributes {
   DomainOperation domain_operation = 1;
   string id = 2;
-  api.v1.DomainInfo info = 3;
-  api.v1.DomainConfiguration config = 4;
-  api.v1.DomainReplicationConfiguration replication_config = 5;
-  int64 config_version = 6;
-  int64 failover_version = 7;
-  int64 previous_failover_version = 8;
+  api.v1.Domain domain = 3;
+  int64 config_version = 4;
+  int64 failover_version = 5;
+  int64 previous_failover_version = 6;
 }
 
 message SyncShardStatusTaskAttributes {
