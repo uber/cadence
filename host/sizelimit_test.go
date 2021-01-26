@@ -106,7 +106,7 @@ func (s *sizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),

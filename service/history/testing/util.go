@@ -148,7 +148,7 @@ func AddActivityTaskScheduledEvent(
 
 	event, ai, _, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID:                    common.StringPtr(activityID),
-		ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityType)},
+		ActivityType:                  &types.ActivityType{Name: activityType},
 		TaskList:                      &types.TaskList{Name: common.StringPtr(taskList)},
 		Input:                         input,
 		ScheduleToCloseTimeoutSeconds: common.Int32Ptr(scheduleToCloseTimeout),
@@ -178,7 +178,7 @@ func AddActivityTaskScheduledEventWithRetry(
 
 	event, ai, _, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID:                    common.StringPtr(activityID),
-		ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityType)},
+		ActivityType:                  &types.ActivityType{Name: activityType},
 		TaskList:                      &types.TaskList{Name: common.StringPtr(taskList)},
 		Input:                         input,
 		ScheduleToCloseTimeoutSeconds: common.Int32Ptr(scheduleToCloseTimeout),

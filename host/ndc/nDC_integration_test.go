@@ -437,7 +437,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 				ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
 					DecisionTaskCompletedEventID:  common.Int64Ptr(4),
 					ActivityID:                    common.StringPtr("0"),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr("activity-type")},
+					ActivityType:                  &types.ActivityType{Name: "activity-type"},
 					TaskList:                      &types.TaskList{Name: common.StringPtr(tasklist)},
 					Input:                         nil,
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(20),
@@ -742,7 +742,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
 					DecisionTaskCompletedEventID:  common.Int64Ptr(4),
 					ActivityID:                    common.StringPtr("0"),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr("activity-type")},
+					ActivityType:                  &types.ActivityType{Name: "activity-type"},
 					TaskList:                      &types.TaskList{Name: common.StringPtr(tasklist)},
 					Input:                         nil,
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(20),
@@ -1209,7 +1209,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
 					DecisionTaskCompletedEventID:  common.Int64Ptr(4),
 					ActivityID:                    common.StringPtr("0"),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr("activity-type")},
+					ActivityType:                  &types.ActivityType{Name: "activity-type"},
 					TaskList:                      &types.TaskList{Name: common.StringPtr(tasklist)},
 					Input:                         nil,
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(20),
@@ -1329,7 +1329,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
 					DecisionTaskCompletedEventID:  common.Int64Ptr(4),
 					ActivityID:                    common.StringPtr("0"),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr("activity-type")},
+					ActivityType:                  &types.ActivityType{Name: "activity-type"},
 					TaskList:                      &types.TaskList{Name: common.StringPtr(tasklist)},
 					Input:                         nil,
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(20),

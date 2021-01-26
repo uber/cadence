@@ -325,7 +325,7 @@ func (s *integrationSuite) TestTerminateWorkflow() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -484,7 +484,7 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -508,7 +508,7 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 	atHandler := func(execution *types.WorkflowExecution, activityType *types.ActivityType,
 		ActivityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
 		s.Equal(id, execution.WorkflowID)
-		s.Equal(activityName, *activityType.Name)
+		s.Equal(activityName, activityType.Name)
 		id, _ := strconv.Atoi(ActivityID)
 		s.Equal(int(expectedActivity), id)
 		buf := bytes.NewReader(input)
@@ -679,7 +679,7 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(1),
@@ -704,7 +704,7 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 	atHandler := func(execution *types.WorkflowExecution, activityType *types.ActivityType,
 		ActivityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
 		s.Equal(id, execution.WorkflowID)
-		s.Equal(activityName, *activityType.Name)
+		s.Equal(activityName, activityType.Name)
 		s.Logger.Info("Activity ID", tag.WorkflowActivityID(ActivityID))
 		return []byte("Activity Result."), false, nil
 	}
@@ -1555,7 +1555,7 @@ func (s *integrationSuite) TestBufferedEvents() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr("1"),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr("test-activity-type")},
+					ActivityType:                  &types.ActivityType{Name: "test-activity-type"},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         []byte("test-input"),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -1677,7 +1677,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr("1"),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr("test-activity-type")},
+					ActivityType:                  &types.ActivityType{Name: "test-activity-type"},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         []byte("test-input"),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -2432,7 +2432,7 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(1))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -2608,7 +2608,7 @@ func (s *integrationSuite) TestDescribeTaskList() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(1))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      taskList,
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -3490,7 +3490,7 @@ func (s *integrationSuite) TestBufferedEventsOutOfOrder() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr("Activity-1"),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr("ActivityType")},
+					ActivityType:                  &types.ActivityType{Name: "ActivityType"},
 					Domain:                        s.domainName,
 					TaskList:                      taskList,
 					Input:                         []byte("some random activity input"),

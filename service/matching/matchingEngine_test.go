@@ -482,7 +482,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 
 	activityTypeName := "activity1"
 	activityID := "activityId1"
-	activityType := &types.ActivityType{Name: &activityTypeName}
+	activityType := &types.ActivityType{Name: activityTypeName}
 	activityInput := []byte("Activity1 Input")
 
 	identity := "nobody"
@@ -595,7 +595,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 	taskList.Name = &tl
 	activityTypeName := "activity1"
 	activityID := "activityId1"
-	activityType := &types.ActivityType{Name: &activityTypeName}
+	activityType := &types.ActivityType{Name: activityTypeName}
 	activityInput := []byte("Activity1 Input")
 
 	identity := "nobody"
@@ -814,7 +814,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 
 	activityTypeName := "activity1"
 	activityID := "activityId1"
-	activityType := &types.ActivityType{Name: &activityTypeName}
+	activityType := &types.ActivityType{Name: activityTypeName}
 	activityInput := []byte("Activity1 Input")
 	activityHeader := &types.Header{
 		Fields: map[string][]byte{"tracing": []byte("tracing data")},
@@ -1114,7 +1114,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 
 	activityTypeName := "activity1"
 	activityID := "activityId1"
-	activityType := &types.ActivityType{Name: &activityTypeName}
+	activityType := &types.ActivityType{Name: activityTypeName}
 	activityInput := []byte("Activity1 Input")
 
 	identity := "nobody"
@@ -1600,7 +1600,7 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 func (s *matchingEngineSuite) setupRecordActivityTaskStartedMock(tlName string) {
 	activityTypeName := "activity1"
 	activityID := "activityId1"
-	activityType := &types.ActivityType{Name: &activityTypeName}
+	activityType := &types.ActivityType{Name: activityTypeName}
 	activityInput := []byte("Activity1 Input")
 
 	// History service is using mock

@@ -556,7 +556,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_NoRe
 	attributes := &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID: common.StringPtr("some random activityID"),
 		ActivityType: &types.ActivityType{
-			Name: common.StringPtr("some random activity type"),
+			Name: "some random activity type",
 		},
 		Domain: s.testDomainID,
 		TaskList: &types.TaskList{
@@ -613,7 +613,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 	attributes := &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID: common.StringPtr("some random activityID"),
 		ActivityType: &types.ActivityType{
-			Name: common.StringPtr("some random activity type"),
+			Name: "some random activity type",
 		},
 		Domain: s.testDomainID,
 		TaskList: &types.TaskList{
@@ -675,7 +675,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 	attributes := &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID: common.StringPtr("some random activityID"),
 		ActivityType: &types.ActivityType{
-			Name: common.StringPtr("some random activity type"),
+			Name: "some random activity type",
 		},
 		Domain: s.testDomainID,
 		TaskList: &types.TaskList{

@@ -87,7 +87,7 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(1))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -250,7 +250,7 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(1))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -394,7 +394,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(1))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -602,7 +602,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(1))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -786,7 +786,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(1))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -948,7 +948,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(1))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -1136,7 +1136,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(1))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),

@@ -76,7 +76,7 @@ func (s *integrationSuite) TestExternalRequestCancelWorkflowExecution() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -226,7 +226,7 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -276,7 +276,7 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(foreignActivityCounter))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -445,7 +445,7 @@ func (s *integrationSuite) TestRequestCancelWorkflowDecisionExecution_UnKnownTar
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
