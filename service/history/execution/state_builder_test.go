@@ -910,7 +910,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerStarted() {
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		TimerStartedEventAttributes: &types.TimerStartedEventAttributes{
-			TimerID:                   common.StringPtr(timerID),
+			TimerID:                   timerID,
 			StartToFireTimeoutSeconds: common.Int64Ptr(timeoutSecond),
 		},
 	}

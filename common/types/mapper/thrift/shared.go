@@ -428,7 +428,7 @@ func FromCancelTimerDecisionAttributes(t *types.CancelTimerDecisionAttributes) *
 		return nil
 	}
 	return &shared.CancelTimerDecisionAttributes{
-		TimerId: t.TimerID,
+		TimerId: &t.TimerID,
 	}
 }
 
@@ -438,7 +438,7 @@ func ToCancelTimerDecisionAttributes(t *shared.CancelTimerDecisionAttributes) *t
 		return nil
 	}
 	return &types.CancelTimerDecisionAttributes{
-		TimerID: t.TimerId,
+		TimerID: t.GetTimerId(),
 	}
 }
 
@@ -448,7 +448,7 @@ func FromCancelTimerFailedEventAttributes(t *types.CancelTimerFailedEventAttribu
 		return nil
 	}
 	return &shared.CancelTimerFailedEventAttributes{
-		TimerId:                      t.TimerID,
+		TimerId:                      &t.TimerID,
 		Cause:                        t.Cause,
 		DecisionTaskCompletedEventId: t.DecisionTaskCompletedEventID,
 		Identity:                     t.Identity,
@@ -461,7 +461,7 @@ func ToCancelTimerFailedEventAttributes(t *shared.CancelTimerFailedEventAttribut
 		return nil
 	}
 	return &types.CancelTimerFailedEventAttributes{
-		TimerID:                      t.TimerId,
+		TimerID:                      t.GetTimerId(),
 		Cause:                        t.Cause,
 		DecisionTaskCompletedEventID: t.DecisionTaskCompletedEventId,
 		Identity:                     t.Identity,
@@ -5002,7 +5002,7 @@ func FromStartTimerDecisionAttributes(t *types.StartTimerDecisionAttributes) *sh
 		return nil
 	}
 	return &shared.StartTimerDecisionAttributes{
-		TimerId:                   t.TimerID,
+		TimerId:                   &t.TimerID,
 		StartToFireTimeoutSeconds: t.StartToFireTimeoutSeconds,
 	}
 }
@@ -5013,7 +5013,7 @@ func ToStartTimerDecisionAttributes(t *shared.StartTimerDecisionAttributes) *typ
 		return nil
 	}
 	return &types.StartTimerDecisionAttributes{
-		TimerID:                   t.TimerId,
+		TimerID:                   t.GetTimerId(),
 		StartToFireTimeoutSeconds: t.StartToFireTimeoutSeconds,
 	}
 }
@@ -5386,7 +5386,7 @@ func FromTimerCanceledEventAttributes(t *types.TimerCanceledEventAttributes) *sh
 		return nil
 	}
 	return &shared.TimerCanceledEventAttributes{
-		TimerId:                      t.TimerID,
+		TimerId:                      &t.TimerID,
 		StartedEventId:               t.StartedEventID,
 		DecisionTaskCompletedEventId: t.DecisionTaskCompletedEventID,
 		Identity:                     t.Identity,
@@ -5399,7 +5399,7 @@ func ToTimerCanceledEventAttributes(t *shared.TimerCanceledEventAttributes) *typ
 		return nil
 	}
 	return &types.TimerCanceledEventAttributes{
-		TimerID:                      t.TimerId,
+		TimerID:                      t.GetTimerId(),
 		StartedEventID:               t.StartedEventId,
 		DecisionTaskCompletedEventID: t.DecisionTaskCompletedEventId,
 		Identity:                     t.Identity,
@@ -5412,7 +5412,7 @@ func FromTimerFiredEventAttributes(t *types.TimerFiredEventAttributes) *shared.T
 		return nil
 	}
 	return &shared.TimerFiredEventAttributes{
-		TimerId:        t.TimerID,
+		TimerId:        &t.TimerID,
 		StartedEventId: t.StartedEventID,
 	}
 }
@@ -5423,7 +5423,7 @@ func ToTimerFiredEventAttributes(t *shared.TimerFiredEventAttributes) *types.Tim
 		return nil
 	}
 	return &types.TimerFiredEventAttributes{
-		TimerID:        t.TimerId,
+		TimerID:        t.GetTimerId(),
 		StartedEventID: t.StartedEventId,
 	}
 }
@@ -5434,7 +5434,7 @@ func FromTimerStartedEventAttributes(t *types.TimerStartedEventAttributes) *shar
 		return nil
 	}
 	return &shared.TimerStartedEventAttributes{
-		TimerId:                      t.TimerID,
+		TimerId:                      &t.TimerID,
 		StartToFireTimeoutSeconds:    t.StartToFireTimeoutSeconds,
 		DecisionTaskCompletedEventId: t.DecisionTaskCompletedEventID,
 	}
@@ -5446,7 +5446,7 @@ func ToTimerStartedEventAttributes(t *shared.TimerStartedEventAttributes) *types
 		return nil
 	}
 	return &types.TimerStartedEventAttributes{
-		TimerID:                      t.TimerId,
+		TimerID:                      t.GetTimerId(),
 		StartToFireTimeoutSeconds:    t.StartToFireTimeoutSeconds,
 		DecisionTaskCompletedEventID: t.DecisionTaskCompletedEventId,
 	}

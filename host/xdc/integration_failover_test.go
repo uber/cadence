@@ -1410,7 +1410,7 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeStartTimer.Ptr(),
 				StartTimerDecisionAttributes: &types.StartTimerDecisionAttributes{
-					TimerID:                   common.StringPtr("timer-id"),
+					TimerID:                   "timer-id",
 					StartToFireTimeoutSeconds: common.Int64Ptr(2),
 				},
 			}}, nil
