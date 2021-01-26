@@ -273,6 +273,7 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 			if c.pin {
 				entry.refCount++
 			}
+			c.notifyOnUpdate()
 			return existing, nil
 		}
 	}
