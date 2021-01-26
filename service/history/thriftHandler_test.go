@@ -146,7 +146,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("RecordActivityTaskStarted", func(t *testing.T) {
 		h.EXPECT().RecordActivityTaskStarted(ctx, &types.RecordActivityTaskStartedRequest{}).Return(&types.RecordActivityTaskStartedResponse{}, internalErr).Times(1)
 		resp, err := th.RecordActivityTaskStarted(ctx, &hist.RecordActivityTaskStartedRequest{})
-		assert.Equal(t, hist.RecordActivityTaskStartedResponse{}, *resp)
+		assert.Equal(t, hist.RecordActivityTaskStartedResponse{WorkflowDomain: common.StringPtr("")}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("RecordChildExecutionCompleted", func(t *testing.T) {

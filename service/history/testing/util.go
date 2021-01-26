@@ -55,7 +55,7 @@ func AddWorkflowExecutionStartedEventWithParent(
 	event, _ := builder.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID:          common.StringPtr(constants.TestDomainID),
+			DomainUUID:          constants.TestDomainID,
 			StartRequest:        startRequest,
 			ParentExecutionInfo: parentInfo,
 		},
@@ -272,7 +272,7 @@ func AddRequestCancelInitiatedEvent(
 ) (*types.HistoryEvent, *persistence.RequestCancelInfo) {
 	event, rci, _ := builder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID,
 		cancelRequestID, &types.RequestCancelExternalWorkflowExecutionDecisionAttributes{
-			Domain:     common.StringPtr(domain),
+			Domain:     domain,
 			WorkflowID: workflowID,
 			RunID:      runID,
 		})
@@ -306,7 +306,7 @@ func AddRequestSignalInitiatedEvent(
 ) (*types.HistoryEvent, *persistence.SignalInfo) {
 	event, si, _ := builder.AddSignalExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID, signalRequestID,
 		&types.SignalExternalWorkflowExecutionDecisionAttributes{
-			Domain: common.StringPtr(domain),
+			Domain: domain,
 			Execution: &types.WorkflowExecution{
 				WorkflowID: workflowID,
 				RunID:      runID,
@@ -350,7 +350,7 @@ func AddStartChildWorkflowExecutionInitiatedEvent(
 
 	event, cei, _ := builder.AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletedID, createRequestID,
 		&types.StartChildWorkflowExecutionDecisionAttributes{
-			Domain:                              common.StringPtr(domain),
+			Domain:                              domain,
 			WorkflowID:                          workflowID,
 			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
@@ -373,7 +373,7 @@ func AddChildWorkflowExecutionStartedEvent(
 	workflowType string,
 ) *types.HistoryEvent {
 	event, _ := builder.AddChildWorkflowExecutionStartedEvent(
-		common.StringPtr(domain),
+		domain,
 		&types.WorkflowExecution{
 			WorkflowID: workflowID,
 			RunID:      runID,

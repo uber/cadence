@@ -57,7 +57,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -153,7 +153,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -221,7 +221,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
 GetHistoryLoop:
 	for i := 0; i < 20; i++ {
 		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
 				WorkflowID: id,
 			},
@@ -258,7 +258,7 @@ func (s *integrationSuite) TestWorkflowContinueAsNew_TaskID() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -353,7 +353,7 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          parentID,
 		WorkflowType:                        parentWorkflowType,
 		TaskList:                            taskList,
@@ -414,7 +414,7 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 				return nil, []*types.Decision{{
 					DecisionType: types.DecisionTypeStartChildWorkflowExecution.Ptr(),
 					StartChildWorkflowExecutionDecisionAttributes: &types.StartChildWorkflowExecutionDecisionAttributes{
-						Domain:       common.StringPtr(s.domainName),
+						Domain:       s.domainName,
 						WorkflowID:   childID,
 						WorkflowType: childWorkflowType,
 						Input:        buf.Bytes(),
@@ -482,7 +482,7 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 	s.Nil(err)
 	s.NotNil(completedEvent)
 	completedAttributes := completedEvent.ChildWorkflowExecutionCompletedEventAttributes
-	s.Equal(s.domainName, *completedAttributes.Domain)
+	s.Equal(s.domainName, completedAttributes.Domain)
 	s.Equal(childID, completedAttributes.WorkflowExecution.WorkflowID)
 	s.NotEqual(startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowExecution.RunID,
 		completedAttributes.WorkflowExecution.RunID)

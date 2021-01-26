@@ -475,8 +475,8 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 	release(nil) // release earlier as we don't need the lock anymore
 
 	return t.shard.GetService().GetMatchingClient().AddActivityTask(ctx, &types.AddActivityTaskRequest{
-		DomainUUID:                    common.StringPtr(targetDomainID),
-		SourceDomainUUID:              common.StringPtr(domainID),
+		DomainUUID:                    targetDomainID,
+		SourceDomainUUID:              domainID,
 		Execution:                     &execution,
 		TaskList:                      taskList,
 		ScheduleID:                    common.Int64Ptr(scheduledID),

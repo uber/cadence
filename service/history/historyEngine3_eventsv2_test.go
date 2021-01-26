@@ -186,7 +186,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	}, nil).Once()
 
 	request := types.RecordDecisionTaskStartedRequest{
-		DomainUUID:        common.StringPtr(domainID),
+		DomainUUID:        domainID,
 		WorkflowExecution: &we,
 		ScheduleID:        common.Int64Ptr(2),
 		TaskID:            common.Int64Ptr(100),
@@ -244,9 +244,9 @@ func (s *engine3Suite) TestStartWorkflowExecution_BrandNew() {
 
 	requestID := uuid.New()
 	resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		StartRequest: &types.StartWorkflowExecutionRequest{
-			Domain:                              common.StringPtr(domainID),
+			Domain:                              domainID,
 			WorkflowID:                          workflowID,
 			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
@@ -279,9 +279,9 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 	signalName := "my signal name"
 	input := []byte("test input")
 	sRequest = &types.HistorySignalWithStartWorkflowExecutionRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
-			Domain:     common.StringPtr(domainID),
+			Domain:     domainID,
 			WorkflowID: workflowID,
 			Identity:   common.StringPtr(identity),
 			SignalName: common.StringPtr(signalName),
@@ -332,9 +332,9 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 	input := []byte("test input")
 	requestID := uuid.New()
 	sRequest = &types.HistorySignalWithStartWorkflowExecutionRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
-			Domain:                              common.StringPtr(domainID),
+			Domain:                              domainID,
 			WorkflowID:                          workflowID,
 			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},

@@ -135,7 +135,7 @@ Loop:
 			taskList = p.StickyTaskList
 		}
 		response, err1 := p.Engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
-			Domain:   common.StringPtr(p.Domain),
+			Domain:   p.Domain,
 			TaskList: taskList,
 			Identity: common.StringPtr(p.Identity),
 		})
@@ -171,7 +171,7 @@ Loop:
 			nextPageToken := response.NextPageToken
 			for nextPageToken != nil {
 				resp, err2 := p.Engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-					Domain:        common.StringPtr(p.Domain),
+					Domain:        p.Domain,
 					Execution:     response.WorkflowExecution,
 					NextPageToken: nextPageToken,
 				})
@@ -346,7 +346,7 @@ func (p *TaskPoller) PollAndProcessActivityTask(dropTask bool) error {
 retry:
 	for attempt := 0; attempt < 5; attempt++ {
 		response, err1 := p.Engine.PollForActivityTask(createContext(), &types.PollForActivityTaskRequest{
-			Domain:   common.StringPtr(p.Domain),
+			Domain:   p.Domain,
 			TaskList: p.TaskList,
 			Identity: common.StringPtr(p.Identity),
 		})
@@ -406,7 +406,7 @@ func (p *TaskPoller) PollAndProcessActivityTaskWithID(dropTask bool) error {
 retry:
 	for attempt := 0; attempt < 5; attempt++ {
 		response, err1 := p.Engine.PollForActivityTask(createContext(), &types.PollForActivityTaskRequest{
-			Domain:   common.StringPtr(p.Domain),
+			Domain:   p.Domain,
 			TaskList: p.TaskList,
 			Identity: common.StringPtr(p.Identity),
 		})
@@ -441,7 +441,7 @@ retry:
 		if cancel {
 			p.Logger.Info("Executing RespondActivityTaskCanceled")
 			return p.Engine.RespondActivityTaskCanceledByID(createContext(), &types.RespondActivityTaskCanceledByIDRequest{
-				Domain:     common.StringPtr(p.Domain),
+				Domain:     p.Domain,
 				WorkflowID: response.WorkflowExecution.GetWorkflowID(),
 				RunID:      response.WorkflowExecution.GetRunID(),
 				ActivityID: common.StringPtr(response.GetActivityID()),
@@ -452,7 +452,7 @@ retry:
 
 		if err2 != nil {
 			return p.Engine.RespondActivityTaskFailedByID(createContext(), &types.RespondActivityTaskFailedByIDRequest{
-				Domain:     common.StringPtr(p.Domain),
+				Domain:     p.Domain,
 				WorkflowID: response.WorkflowExecution.GetWorkflowID(),
 				RunID:      response.WorkflowExecution.GetRunID(),
 				ActivityID: common.StringPtr(response.GetActivityID()),
@@ -463,7 +463,7 @@ retry:
 		}
 
 		return p.Engine.RespondActivityTaskCompletedByID(createContext(), &types.RespondActivityTaskCompletedByIDRequest{
-			Domain:     common.StringPtr(p.Domain),
+			Domain:     p.Domain,
 			WorkflowID: response.WorkflowExecution.GetWorkflowID(),
 			RunID:      response.WorkflowExecution.GetRunID(),
 			ActivityID: common.StringPtr(response.GetActivityID()),

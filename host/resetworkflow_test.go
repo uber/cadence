@@ -46,7 +46,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            tasklist,
@@ -164,7 +164,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 
 	// FIRST reset: Reset workflow execution, current is open
 	resp, err := s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 			RunID:      we.RunID,
@@ -202,7 +202,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 	s.Equal(types.EventTypeWorkflowExecutionTerminated, lastEvent.GetEventType())
 	// SECOND reset: reset the first run again, to exercise the code path of resetting closed workflow
 	resp, err = s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 			RunID:      we.GetRunID(),
@@ -235,7 +235,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 
 	// THIRD reset: reset the workflow run that is after a reset
 	_, err = s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 			RunID:      newRunID,
@@ -260,7 +260,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            tasklist,
@@ -287,7 +287,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 
 	// FIRST reset: Reset workflow execution, current is open
 	_, err := s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 			RunID:      we.RunID,
@@ -312,7 +312,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 
 	// SECOND reset: reset the first run again, to exercise the code path of resetting closed workflow
 	resp, err := s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 			RunID:      we.GetRunID(),

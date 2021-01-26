@@ -470,7 +470,7 @@ func (t *taskAckManagerImpl) generateFailoverMarkerTask(
 		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeFailoverMarker),
 		SourceTaskID: common.Int64Ptr(taskInfo.GetTaskID()),
 		FailoverMarkerAttributes: &types.FailoverMarkerAttributes{
-			DomainID:        common.StringPtr(taskInfo.GetDomainID()),
+			DomainID:        taskInfo.GetDomainID(),
 			FailoverVersion: common.Int64Ptr(taskInfo.GetVersion()),
 		},
 		CreationTime: common.Int64Ptr(taskInfo.CreationTime),
@@ -516,7 +516,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 			return &types.ReplicationTask{
 				TaskType: types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeSyncActivity),
 				SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
-					DomainID:           common.StringPtr(taskInfo.GetDomainID()),
+					DomainID:           taskInfo.GetDomainID(),
 					WorkflowID:         taskInfo.GetWorkflowID(),
 					RunID:              taskInfo.GetRunID(),
 					Version:            common.Int64Ptr(activityInfo.Version),
@@ -600,7 +600,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 				TaskType: types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeHistoryV2),
 				HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
 					TaskID:              common.Int64Ptr(task.FirstEventID),
-					DomainID:            common.StringPtr(task.DomainID),
+					DomainID:            task.DomainID,
 					WorkflowID:          task.WorkflowID,
 					RunID:               task.RunID,
 					VersionHistoryItems: versionHistoryItems,

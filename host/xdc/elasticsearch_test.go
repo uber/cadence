@@ -182,7 +182,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(domainName),
+		Domain:                              domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -203,7 +203,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	startFilter.EarliestTime = common.Int64Ptr(startTime)
 	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
 	listRequest := &types.ListWorkflowExecutionsRequest{
-		Domain:   common.StringPtr(domainName),
+		Domain:   domainName,
 		PageSize: common.Int32Ptr(5),
 		Query:    common.StringPtr(query),
 	}
@@ -267,7 +267,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	time.Sleep(waitForESToSettle)
 
 	listRequest = &types.ListWorkflowExecutionsRequest{
-		Domain:   common.StringPtr(domainName),
+		Domain:   domainName,
 		PageSize: common.Int32Ptr(int32(2)),
 		Query:    common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt)),
 	}
@@ -308,7 +308,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	terminateReason := "force terminate to make sure standby process tasks"
 	terminateDetails := []byte("terminate details.")
 	err = client1.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
-		Domain: common.StringPtr(domainName),
+		Domain: domainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 		},
@@ -321,7 +321,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	// check terminate done
 	executionTerminated := false
 	getHistoryReq := &types.GetWorkflowExecutionHistoryRequest{
-		Domain: common.StringPtr(domainName),
+		Domain: domainName,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: id,
 		},

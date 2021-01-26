@@ -235,7 +235,7 @@ func (s *nDCIntegrationTestSuite) verifyEventHistory(
 	replicatedHistory, err := passiveClient.GetWorkflowExecutionHistory(
 		s.createContext(),
 		&types.GetWorkflowExecutionHistoryRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
 				WorkflowID: workflowID,
 				RunID:      runID,
@@ -1132,7 +1132,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 			RunID:      runID,
 		}
 		return adminClient.GetWorkflowExecutionRawHistoryV2(s.createContext(), &types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain:            common.StringPtr(domain),
+			Domain:            domain,
 			Execution:         execution,
 			StartEventID:      startEventID,
 			StartEventVersion: startEventVersion,
@@ -1709,7 +1709,7 @@ func (s *nDCIntegrationTestSuite) applyEvents(
 	for _, batch := range eventBatches {
 		eventBlob, newRunEventBlob := s.generateEventBlobs(workflowID, runID, workflowType, tasklist, batch)
 		req := &types.ReplicateEventsV2Request{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: workflowID,
 				RunID:      runID,
@@ -1743,7 +1743,7 @@ func (s *nDCIntegrationTestSuite) applyEventsThroughFetcher(
 			SourceTaskID: common.Int64Ptr(1),
 			HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
 				TaskID:              common.Int64Ptr(1),
-				DomainID:            common.StringPtr(s.domainID),
+				DomainID:            s.domainID,
 				WorkflowID:          workflowID,
 				RunID:               runID,
 				VersionHistoryItems: s.toInternalVersionHistoryItems(versionHistory),

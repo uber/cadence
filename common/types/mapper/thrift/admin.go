@@ -900,7 +900,7 @@ func FromAdminDescribeWorkflowExecutionRequest(t *types.AdminDescribeWorkflowExe
 		return nil
 	}
 	return &admin.DescribeWorkflowExecutionRequest{
-		Domain:    t.Domain,
+		Domain:    &t.Domain,
 		Execution: FromWorkflowExecution(t.Execution),
 	}
 }
@@ -911,7 +911,7 @@ func ToAdminDescribeWorkflowExecutionRequest(t *admin.DescribeWorkflowExecutionR
 		return nil
 	}
 	return &types.AdminDescribeWorkflowExecutionRequest{
-		Domain:    t.Domain,
+		Domain:    t.GetDomain(),
 		Execution: ToWorkflowExecution(t.Execution),
 	}
 }
@@ -948,7 +948,7 @@ func FromGetWorkflowExecutionRawHistoryV2Request(t *types.GetWorkflowExecutionRa
 		return nil
 	}
 	return &admin.GetWorkflowExecutionRawHistoryV2Request{
-		Domain:            t.Domain,
+		Domain:            &t.Domain,
 		Execution:         FromWorkflowExecution(t.Execution),
 		StartEventId:      t.StartEventID,
 		StartEventVersion: t.StartEventVersion,
@@ -965,7 +965,7 @@ func ToGetWorkflowExecutionRawHistoryV2Request(t *admin.GetWorkflowExecutionRawH
 		return nil
 	}
 	return &types.GetWorkflowExecutionRawHistoryV2Request{
-		Domain:            t.Domain,
+		Domain:            t.GetDomain(),
 		Execution:         ToWorkflowExecution(t.Execution),
 		StartEventID:      t.StartEventId,
 		StartEventVersion: t.StartEventVersion,
@@ -1050,7 +1050,7 @@ func FromResendReplicationTasksRequest(t *types.ResendReplicationTasksRequest) *
 		return nil
 	}
 	return &admin.ResendReplicationTasksRequest{
-		DomainID:      t.DomainID,
+		DomainID:      &t.DomainID,
 		WorkflowID:    &t.WorkflowID,
 		RunID:         &t.RunID,
 		RemoteCluster: t.RemoteCluster,
@@ -1067,7 +1067,7 @@ func ToResendReplicationTasksRequest(t *admin.ResendReplicationTasksRequest) *ty
 		return nil
 	}
 	return &types.ResendReplicationTasksRequest{
-		DomainID:      t.DomainID,
+		DomainID:      t.GetDomainID(),
 		WorkflowID:    t.GetWorkflowID(),
 		RunID:         t.GetRunID(),
 		RemoteCluster: t.RemoteCluster,

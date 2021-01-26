@@ -430,7 +430,7 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowStartFailures() {
 	_, err := s.msBuilder.AddWorkflowExecutionStartedEvent(
 		we,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowID:                          we.WorkflowID,
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(wt)},
@@ -949,7 +949,7 @@ func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we types.Workflow
 	event, err := s.msBuilder.AddWorkflowExecutionStartedEvent(
 		we,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID:   common.StringPtr(s.domainID),
+			DomainUUID:   s.domainID,
 			StartRequest: request,
 		},
 	)
@@ -1089,7 +1089,7 @@ func (s *historyBuilderSuite) addRequestCancelExternalWorkflowExecutionInitiated
 		decisionCompletedEventID,
 		uuid.New(),
 		&types.RequestCancelExternalWorkflowExecutionDecisionAttributes{
-			Domain:            common.StringPtr(targetDomain),
+			Domain:            targetDomain,
 			WorkflowID:        targetExecution.WorkflowID,
 			RunID:             targetExecution.RunID,
 			ChildWorkflowOnly: common.BoolPtr(childWorkflowOnly),

@@ -51,7 +51,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -73,7 +73,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 
 	// start decision
 	resp1, err1 := s.engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
-		Domain:   common.StringPtr(s.domainName),
+		Domain:   s.domainName,
 		TaskList: taskList,
 		Identity: common.StringPtr(identity),
 	})
@@ -100,7 +100,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 			s.Nil(resp2)
 
 			resp, err := s.engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
-				Domain:   common.StringPtr(s.domainName),
+				Domain:   s.domainName,
 				TaskList: taskList,
 				Identity: common.StringPtr(identity),
 			})
@@ -158,7 +158,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -180,7 +180,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 
 	// start decision
 	resp1, err1 := s.engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
-		Domain:   common.StringPtr(s.domainName),
+		Domain:   s.domainName,
 		TaskList: taskList,
 		Identity: common.StringPtr(identity),
 	})
@@ -296,7 +296,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionSta
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -317,7 +317,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionSta
 	s.assertLastHistoryEvent(we, 2, types.EventTypeDecisionTaskScheduled)
 
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain:            common.StringPtr(s.domainName),
+		Domain:            s.domainName,
 		WorkflowExecution: we,
 		SignalName:        common.StringPtr("sig-for-integ-test"),
 		Input:             []byte(""),
@@ -329,7 +329,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionSta
 
 	// start this transient decision, the attempt should be cleared and it becomes again a regular decision
 	resp1, err1 := s.engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
-		Domain:   common.StringPtr(s.domainName),
+		Domain:   s.domainName,
 		TaskList: taskList,
 		Identity: common.StringPtr(identity),
 	})
@@ -340,7 +340,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionSta
 
 	// then terminate the worklfow
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
-		Domain:            common.StringPtr(s.domainName),
+		Domain:            s.domainName,
 		WorkflowExecution: we,
 		Reason:            common.StringPtr("test-reason"),
 	})
@@ -371,7 +371,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -393,7 +393,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 
 	// start decision to make signals into bufferedEvents
 	_, err1 := s.engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
-		Domain:   common.StringPtr(s.domainName),
+		Domain:   s.domainName,
 		TaskList: taskList,
 		Identity: common.StringPtr(identity),
 	})
@@ -403,7 +403,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 
 	// this signal should be buffered
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain:            common.StringPtr(s.domainName),
+		Domain:            s.domainName,
 		WorkflowExecution: we,
 		SignalName:        common.StringPtr("sig-for-integ-test"),
 		Input:             []byte(""),
@@ -415,7 +415,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 
 	// then terminate the worklfow
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
-		Domain:            common.StringPtr(s.domainName),
+		Domain:            s.domainName,
 		WorkflowExecution: we,
 		Reason:            common.StringPtr("test-reason"),
 	})
@@ -446,7 +446,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -470,7 +470,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 
 	// start decision to make signals into bufferedEvents
 	resp1, err1 := s.engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
-		Domain:   common.StringPtr(s.domainName),
+		Domain:   s.domainName,
 		TaskList: taskList,
 		Identity: common.StringPtr(identity),
 	})
@@ -480,7 +480,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 
 	// this signal should be buffered
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain:            common.StringPtr(s.domainName),
+		Domain:            s.domainName,
 		WorkflowExecution: we,
 		SignalName:        common.StringPtr("sig-for-integ-test"),
 		Input:             []byte(""),
@@ -501,7 +501,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 
 	// then terminate the worklfow
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
-		Domain:            common.StringPtr(s.domainName),
+		Domain:            s.domainName,
 		WorkflowExecution: we,
 		Reason:            common.StringPtr("test-reason"),
 	})
@@ -533,7 +533,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -556,7 +556,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 	cause := types.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure
 	for i := 0; i < 10; i++ {
 		resp1, err1 := s.engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
-			Domain:   common.StringPtr(s.domainName),
+			Domain:   s.domainName,
 			TaskList: taskList,
 			Identity: common.StringPtr(identity),
 		})
@@ -581,7 +581,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 	s.assertLastHistoryEvent(we, 4, types.EventTypeDecisionTaskFailed)
 
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain:            common.StringPtr(s.domainName),
+		Domain:            s.domainName,
 		WorkflowExecution: we,
 		SignalName:        common.StringPtr("sig-for-integ-test"),
 		Input:             []byte(""),
@@ -593,7 +593,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 
 	// start this transient decision, the attempt should be cleared and it becomes again a regular decision
 	resp1, err1 := s.engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
-		Domain:   common.StringPtr(s.domainName),
+		Domain:   s.domainName,
 		TaskList: taskList,
 		Identity: common.StringPtr(identity),
 	})
@@ -604,7 +604,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 
 	// then terminate the worklfow
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
-		Domain:            common.StringPtr(s.domainName),
+		Domain:            s.domainName,
 		WorkflowExecution: we,
 		Reason:            common.StringPtr("test-reason"),
 	})
@@ -638,7 +638,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -661,7 +661,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	cause := types.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure
 	for i := 0; i < 10; i++ {
 		resp1, err1 := s.engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
-			Domain:   common.StringPtr(s.domainName),
+			Domain:   s.domainName,
 			TaskList: taskList,
 			Identity: common.StringPtr(identity),
 		})
@@ -687,7 +687,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 
 	// start decision to make signals into bufferedEvents
 	_, err1 := s.engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
-		Domain:   common.StringPtr(s.domainName),
+		Domain:   s.domainName,
 		TaskList: taskList,
 		Identity: common.StringPtr(identity),
 	})
@@ -697,7 +697,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 
 	// this signal should be buffered
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain:            common.StringPtr(s.domainName),
+		Domain:            s.domainName,
 		WorkflowExecution: we,
 		SignalName:        common.StringPtr("sig-for-integ-test"),
 		Input:             []byte(""),
@@ -709,7 +709,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 
 	// then terminate the worklfow
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
-		Domain:            common.StringPtr(s.domainName),
+		Domain:            s.domainName,
 		WorkflowExecution: we,
 		Reason:            common.StringPtr("test-reason"),
 	})
@@ -740,7 +740,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -763,7 +763,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	cause := types.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure
 	for i := 0; i < 10; i++ {
 		resp1, err1 := s.engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
-			Domain:   common.StringPtr(s.domainName),
+			Domain:   s.domainName,
 			TaskList: taskList,
 			Identity: common.StringPtr(identity),
 		})
@@ -789,7 +789,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 
 	// start decision to make signals into bufferedEvents
 	resp1, err1 := s.engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
-		Domain:   common.StringPtr(s.domainName),
+		Domain:   s.domainName,
 		TaskList: taskList,
 		Identity: common.StringPtr(identity),
 	})
@@ -799,7 +799,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 
 	// this signal should be buffered
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain:            common.StringPtr(s.domainName),
+		Domain:            s.domainName,
 		WorkflowExecution: we,
 		SignalName:        common.StringPtr("sig-for-integ-test"),
 		Input:             []byte(""),
@@ -820,7 +820,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 
 	// then terminate the worklfow
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
-		Domain:            common.StringPtr(s.domainName),
+		Domain:            s.domainName,
 		WorkflowExecution: we,
 		Reason:            common.StringPtr("test-reason"),
 	})
@@ -840,7 +840,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 
 func (s *integrationSuite) assertHistory(we *types.WorkflowExecution, expectedHistory []types.EventType) {
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-		Domain:    common.StringPtr(s.domainName),
+		Domain:    s.domainName,
 		Execution: we,
 	})
 	s.Nil(err)
@@ -855,7 +855,7 @@ func (s *integrationSuite) assertHistory(we *types.WorkflowExecution, expectedHi
 
 func (s *integrationSuite) assertLastHistoryEvent(we *types.WorkflowExecution, count int, eventType types.EventType) {
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-		Domain:    common.StringPtr(s.domainName),
+		Domain:    s.domainName,
 		Execution: we,
 	})
 	s.Nil(err)

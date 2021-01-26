@@ -189,7 +189,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessActivityTask_Pending() {
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -250,7 +250,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessActivityTask_Pending_PushT
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -313,7 +313,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessActivityTask_Success() {
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -377,7 +377,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessDecisionTask_Pending() {
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -431,7 +431,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessDecisionTask_Pending_PushT
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -487,7 +487,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessDecisionTask_Success_First
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -544,7 +544,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessDecisionTask_Success_NonFi
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -606,7 +606,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessCloseExecution() {
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -672,7 +672,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessCancelExecution_Pending() 
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -756,7 +756,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessCancelExecution_Success() 
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -827,7 +827,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessSignalExecution_Pending() 
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -914,7 +914,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessSignalExecution_Success() 
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -984,7 +984,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessStartChildExecution_Pendin
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -1069,7 +1069,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessStartChildExecution_Succes
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -1136,7 +1136,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessRecordWorkflowStartedTask(
 	event, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -1205,7 +1205,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttrib
 	event, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},

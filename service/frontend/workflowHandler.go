@@ -464,7 +464,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		return nil, wh.error(err, scope)
 	}
 
-	if pollRequest.Domain == nil || pollRequest.GetDomain() == "" {
+	if pollRequest.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
@@ -487,7 +487,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	pollerID := uuid.New()
 	op := func() error {
 		resp, err = wh.GetMatchingClient().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
-			DomainUUID:  common.StringPtr(domainID),
+			DomainUUID:  domainID,
 			PollerID:    common.StringPtr(pollerID),
 			PollRequest: pollRequest,
 		})
@@ -548,7 +548,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return nil, wh.error(err, scope, tagsForErrorLog...)
 	}
 
-	if pollRequest.Domain == nil || pollRequest.GetDomain() == "" {
+	if pollRequest.GetDomain() == "" {
 		return nil, wh.error(errDomainNotSet, scope, tagsForErrorLog...)
 	}
 	if !wh.validIDLength(pollRequest.GetDomain(), scope, pollRequest.GetDomain()) {
@@ -579,7 +579,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	var matchingResp *types.MatchingPollForDecisionTaskResponse
 	op := func() error {
 		matchingResp, err = wh.GetMatchingClient().PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{
-			DomainUUID:  common.StringPtr(domainID),
+			DomainUUID:  domainID,
 			PollerID:    common.StringPtr(pollerID),
 			PollRequest: pollRequest,
 		})
@@ -638,7 +638,7 @@ func (wh *WorkflowHandler) cancelOutstandingPoll(ctx context.Context, err error,
 		// Our rpc stack does not propagates context cancellation to the other service.  Lets make an explicit
 		// call to matching to notify this poller is gone to prevent any tasks being dispatched to zombie pollers.
 		err = wh.GetMatchingClient().CancelOutstandingPoll(context.Background(), &types.CancelOutstandingPollRequest{
-			DomainUUID:   common.StringPtr(domainID),
+			DomainUUID:   domainID,
 			TaskListType: common.Int32Ptr(taskListType),
 			TaskList:     taskList,
 			PollerID:     common.StringPtr(pollerID),
@@ -727,7 +727,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 			Identity:  heartbeatRequest.Identity,
 		}
 		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
-			DomainUUID:    common.StringPtr(taskToken.DomainID),
+			DomainUUID:    taskToken.DomainID,
 			FailedRequest: failRequest,
 		})
 		if err != nil {
@@ -736,7 +736,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 		resp = &types.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(true)}
 	} else {
 		resp, err = wh.GetHistoryClient().RecordActivityTaskHeartbeat(ctx, &types.HistoryRecordActivityTaskHeartbeatRequest{
-			DomainUUID:       common.StringPtr(taskToken.DomainID),
+			DomainUUID:       taskToken.DomainID,
 			HeartbeatRequest: heartbeatRequest,
 		})
 		if err != nil {
@@ -833,7 +833,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 			Identity:  heartbeatRequest.Identity,
 		}
 		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
-			DomainUUID:    common.StringPtr(taskToken.DomainID),
+			DomainUUID:    taskToken.DomainID,
 			FailedRequest: failRequest,
 		})
 		if err != nil {
@@ -848,7 +848,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 		}
 
 		resp, err = wh.GetHistoryClient().RecordActivityTaskHeartbeat(ctx, &types.HistoryRecordActivityTaskHeartbeatRequest{
-			DomainUUID:       common.StringPtr(taskToken.DomainID),
+			DomainUUID:       taskToken.DomainID,
 			HeartbeatRequest: req,
 		})
 		if err != nil {
@@ -931,7 +931,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 			Identity:  completeRequest.Identity,
 		}
 		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
-			DomainUUID:    common.StringPtr(taskToken.DomainID),
+			DomainUUID:    taskToken.DomainID,
 			FailedRequest: failRequest,
 		})
 		if err != nil {
@@ -939,7 +939,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 		}
 	} else {
 		err = wh.GetHistoryClient().RespondActivityTaskCompleted(ctx, &types.HistoryRespondActivityTaskCompletedRequest{
-			DomainUUID:      common.StringPtr(taskToken.DomainID),
+			DomainUUID:      taskToken.DomainID,
 			CompleteRequest: completeRequest,
 		})
 		if err != nil {
@@ -1039,7 +1039,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 			Identity:  completeRequest.Identity,
 		}
 		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
-			DomainUUID:    common.StringPtr(taskToken.DomainID),
+			DomainUUID:    taskToken.DomainID,
 			FailedRequest: failRequest,
 		})
 		if err != nil {
@@ -1053,7 +1053,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 		}
 
 		err = wh.GetHistoryClient().RespondActivityTaskCompleted(ctx, &types.HistoryRespondActivityTaskCompletedRequest{
-			DomainUUID:      common.StringPtr(taskToken.DomainID),
+			DomainUUID:      taskToken.DomainID,
 			CompleteRequest: req,
 		})
 		if err != nil {
@@ -1135,7 +1135,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 	}
 
 	err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
-		DomainUUID:    common.StringPtr(taskToken.DomainID),
+		DomainUUID:    taskToken.DomainID,
 		FailedRequest: failedRequest,
 	})
 	if err != nil {
@@ -1237,7 +1237,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 	}
 
 	err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
-		DomainUUID:    common.StringPtr(taskToken.DomainID),
+		DomainUUID:    taskToken.DomainID,
 		FailedRequest: req,
 	})
 	if err != nil {
@@ -1319,7 +1319,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 			Identity:  cancelRequest.Identity,
 		}
 		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
-			DomainUUID:    common.StringPtr(taskToken.DomainID),
+			DomainUUID:    taskToken.DomainID,
 			FailedRequest: failRequest,
 		})
 		if err != nil {
@@ -1327,7 +1327,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 		}
 	} else {
 		err = wh.GetHistoryClient().RespondActivityTaskCanceled(ctx, &types.HistoryRespondActivityTaskCanceledRequest{
-			DomainUUID:    common.StringPtr(taskToken.DomainID),
+			DomainUUID:    taskToken.DomainID,
 			CancelRequest: cancelRequest,
 		})
 		if err != nil {
@@ -1426,7 +1426,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 			Identity:  cancelRequest.Identity,
 		}
 		err = wh.GetHistoryClient().RespondActivityTaskFailed(ctx, &types.HistoryRespondActivityTaskFailedRequest{
-			DomainUUID:    common.StringPtr(taskToken.DomainID),
+			DomainUUID:    taskToken.DomainID,
 			FailedRequest: failRequest,
 		})
 		if err != nil {
@@ -1440,7 +1440,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 		}
 
 		err = wh.GetHistoryClient().RespondActivityTaskCanceled(ctx, &types.HistoryRespondActivityTaskCanceledRequest{
-			DomainUUID:    common.StringPtr(taskToken.DomainID),
+			DomainUUID:    taskToken.DomainID,
 			CancelRequest: req,
 		})
 		if err != nil {
@@ -1499,7 +1499,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	}
 
 	histResp, err := wh.GetHistoryClient().RespondDecisionTaskCompleted(ctx, &types.HistoryRespondDecisionTaskCompletedRequest{
-		DomainUUID:      common.StringPtr(taskToken.DomainID),
+		DomainUUID:      taskToken.DomainID,
 		CompleteRequest: completeRequest},
 	)
 	if err != nil {
@@ -1607,7 +1607,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 	}
 
 	err = wh.GetHistoryClient().RespondDecisionTaskFailed(ctx, &types.HistoryRespondDecisionTaskFailedRequest{
-		DomainUUID:    common.StringPtr(taskToken.DomainID),
+		DomainUUID:    taskToken.DomainID,
 		FailedRequest: failedRequest,
 	})
 	if err != nil {
@@ -1692,7 +1692,7 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 		FeatureVersion: common.StringPtr(call.Header(common.FeatureVersionHeaderName)),
 	}
 	matchingRequest := &types.MatchingRespondQueryTaskCompletedRequest{
-		DomainUUID:       common.StringPtr(queryTaskToken.DomainID),
+		DomainUUID:       queryTaskToken.DomainID,
 		TaskList:         &types.TaskList{Name: common.StringPtr(queryTaskToken.TaskList)},
 		TaskID:           common.StringPtr(queryTaskToken.TaskID),
 		CompletedRequest: completeRequest,
@@ -1905,7 +1905,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		currentBranchToken []byte,
 	) ([]byte, string, int64, int64, bool, error) {
 		response, err := wh.GetHistoryClient().PollMutableState(ctx, &types.PollMutableStateRequest{
-			DomainUUID:          common.StringPtr(domainUUID),
+			DomainUUID:          domainUUID,
 			Execution:           execution,
 			ExpectedNextEventID: common.Int64Ptr(expectedNextEventID),
 			CurrentBranchToken:  currentBranchToken,
@@ -2159,7 +2159,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 	}
 
 	err = wh.GetHistoryClient().SignalWorkflowExecution(ctx, &types.HistorySignalWorkflowExecutionRequest{
-		DomainUUID:    common.StringPtr(domainID),
+		DomainUUID:    domainID,
 		SignalRequest: signalRequest,
 	})
 	if err != nil {
@@ -2307,7 +2307,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 	}
 
 	resp, err = wh.GetHistoryClient().SignalWithStartWorkflowExecution(ctx, &types.HistorySignalWithStartWorkflowExecutionRequest{
-		DomainUUID:             common.StringPtr(domainID),
+		DomainUUID:             domainID,
 		SignalWithStartRequest: signalWithStartRequest,
 	})
 	if err != nil {
@@ -2360,7 +2360,7 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 	}
 
 	err = wh.GetHistoryClient().TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
-		DomainUUID:       common.StringPtr(domainID),
+		DomainUUID:       domainID,
 		TerminateRequest: terminateRequest,
 	})
 	if err != nil {
@@ -2413,7 +2413,7 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(
 	}
 
 	resp, err = wh.GetHistoryClient().ResetWorkflowExecution(ctx, &types.HistoryResetWorkflowExecutionRequest{
-		DomainUUID:   common.StringPtr(domainID),
+		DomainUUID:   domainID,
 		ResetRequest: resetRequest,
 	})
 	if err != nil {
@@ -2465,7 +2465,7 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 	}
 
 	err = wh.GetHistoryClient().RequestCancelWorkflowExecution(ctx, &types.HistoryRequestCancelWorkflowExecutionRequest{
-		DomainUUID:    common.StringPtr(domainID),
+		DomainUUID:    domainID,
 		CancelRequest: cancelRequest,
 	})
 	if err != nil {
@@ -3075,7 +3075,7 @@ func (wh *WorkflowHandler) ResetStickyTaskList(
 	}
 
 	_, err = wh.GetHistoryClient().ResetStickyTaskList(ctx, &types.HistoryResetStickyTaskListRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		Execution:  resetRequest.Execution,
 	})
 	if err != nil {
@@ -3153,7 +3153,7 @@ func (wh *WorkflowHandler) QueryWorkflow(
 	}
 
 	req := &types.HistoryQueryWorkflowRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		Request:    queryRequest,
 	}
 	hResponse, err := wh.GetHistoryClient().QueryWorkflow(ctx, req)
@@ -3204,7 +3204,7 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(
 	}
 
 	response, err := wh.GetHistoryClient().DescribeWorkflowExecution(ctx, &types.HistoryDescribeWorkflowExecutionRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		Request:    request,
 	})
 
@@ -3260,7 +3260,7 @@ func (wh *WorkflowHandler) DescribeTaskList(
 	}
 
 	response, err := wh.GetMatchingClient().DescribeTaskList(ctx, &types.MatchingDescribeTaskListRequest{
-		DomainUUID:  common.StringPtr(domainID),
+		DomainUUID:  domainID,
 		DescRequest: request,
 	})
 	if err != nil {
@@ -3834,7 +3834,7 @@ func (wh *WorkflowHandler) historyArchived(ctx context.Context, request *types.G
 		return false
 	}
 	getMutableStateRequest := &types.GetMutableStateRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		Execution:  request.Execution,
 	}
 	_, err := wh.GetHistoryClient().GetMutableState(ctx, getMutableStateRequest)

@@ -22,14 +22,14 @@ package types
 
 // DescribeMutableStateRequest is an internal type (TBD...)
 type DescribeMutableStateRequest struct {
-	DomainUUID *string            `json:"domainUUID,omitempty"`
+	DomainUUID string             `json:"domainUUID,omitempty"`
 	Execution  *WorkflowExecution `json:"execution,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *DescribeMutableStateRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -66,14 +66,14 @@ func (v *DescribeMutableStateResponse) GetMutableStateInDatabase() (o string) {
 
 // HistoryDescribeWorkflowExecutionRequest is an internal type (TBD...)
 type HistoryDescribeWorkflowExecutionRequest struct {
-	DomainUUID *string                           `json:"domainUUID,omitempty"`
+	DomainUUID string                            `json:"domainUUID,omitempty"`
 	Request    *DescribeWorkflowExecutionRequest `json:"request,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistoryDescribeWorkflowExecutionRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -145,7 +145,7 @@ func (v *FailoverMarkerToken) GetFailoverMarker() (o *FailoverMarkerAttributes) 
 
 // GetMutableStateRequest is an internal type (TBD...)
 type GetMutableStateRequest struct {
-	DomainUUID          *string            `json:"domainUUID,omitempty"`
+	DomainUUID          string             `json:"domainUUID,omitempty"`
 	Execution           *WorkflowExecution `json:"execution,omitempty"`
 	ExpectedNextEventID *int64             `json:"expectedNextEventId,omitempty"`
 	CurrentBranchToken  []byte             `json:"currentBranchToken,omitempty"`
@@ -153,8 +153,8 @@ type GetMutableStateRequest struct {
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *GetMutableStateRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -3344,7 +3344,7 @@ func (v *ParentExecutionInfo) GetInitiatedID() (o int64) {
 
 // PollMutableStateRequest is an internal type (TBD...)
 type PollMutableStateRequest struct {
-	DomainUUID          *string            `json:"domainUUID,omitempty"`
+	DomainUUID          string             `json:"domainUUID,omitempty"`
 	Execution           *WorkflowExecution `json:"execution,omitempty"`
 	ExpectedNextEventID *int64             `json:"expectedNextEventId,omitempty"`
 	CurrentBranchToken  []byte             `json:"currentBranchToken,omitempty"`
@@ -3352,8 +3352,8 @@ type PollMutableStateRequest struct {
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *PollMutableStateRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -3576,14 +3576,14 @@ func (v *ProcessingQueueStates) GetStatesByCluster() (o map[string][]*Processing
 
 // HistoryQueryWorkflowRequest is an internal type (TBD...)
 type HistoryQueryWorkflowRequest struct {
-	DomainUUID *string               `json:"domainUUID,omitempty"`
+	DomainUUID string                `json:"domainUUID,omitempty"`
 	Request    *QueryWorkflowRequest `json:"request,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistoryQueryWorkflowRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -3611,14 +3611,14 @@ func (v *HistoryQueryWorkflowResponse) GetResponse() (o *QueryWorkflowResponse) 
 
 // HistoryReapplyEventsRequest is an internal type (TBD...)
 type HistoryReapplyEventsRequest struct {
-	DomainUUID *string               `json:"domainUUID,omitempty"`
+	DomainUUID string                `json:"domainUUID,omitempty"`
 	Request    *ReapplyEventsRequest `json:"request,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistoryReapplyEventsRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -3633,14 +3633,14 @@ func (v *HistoryReapplyEventsRequest) GetRequest() (o *ReapplyEventsRequest) {
 
 // HistoryRecordActivityTaskHeartbeatRequest is an internal type (TBD...)
 type HistoryRecordActivityTaskHeartbeatRequest struct {
-	DomainUUID       *string                             `json:"domainUUID,omitempty"`
+	DomainUUID       string                              `json:"domainUUID,omitempty"`
 	HeartbeatRequest *RecordActivityTaskHeartbeatRequest `json:"heartbeatRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistoryRecordActivityTaskHeartbeatRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -3655,7 +3655,7 @@ func (v *HistoryRecordActivityTaskHeartbeatRequest) GetHeartbeatRequest() (o *Re
 
 // RecordActivityTaskStartedRequest is an internal type (TBD...)
 type RecordActivityTaskStartedRequest struct {
-	DomainUUID        *string                     `json:"domainUUID,omitempty"`
+	DomainUUID        string                      `json:"domainUUID,omitempty"`
 	WorkflowExecution *WorkflowExecution          `json:"workflowExecution,omitempty"`
 	ScheduleID        *int64                      `json:"scheduleId,omitempty"`
 	TaskID            *int64                      `json:"taskId,omitempty"`
@@ -3665,8 +3665,8 @@ type RecordActivityTaskStartedRequest struct {
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *RecordActivityTaskStartedRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -3719,7 +3719,7 @@ type RecordActivityTaskStartedResponse struct {
 	ScheduledTimestampOfThisAttempt *int64        `json:"scheduledTimestampOfThisAttempt,omitempty"`
 	HeartbeatDetails                []byte        `json:"heartbeatDetails,omitempty"`
 	WorkflowType                    *WorkflowType `json:"workflowType,omitempty"`
-	WorkflowDomain                  *string       `json:"workflowDomain,omitempty"`
+	WorkflowDomain                  string        `json:"workflowDomain,omitempty"`
 }
 
 // GetScheduledEvent is an internal getter (TBD...)
@@ -3772,15 +3772,15 @@ func (v *RecordActivityTaskStartedResponse) GetWorkflowType() (o *WorkflowType) 
 
 // GetWorkflowDomain is an internal getter (TBD...)
 func (v *RecordActivityTaskStartedResponse) GetWorkflowDomain() (o string) {
-	if v != nil && v.WorkflowDomain != nil {
-		return *v.WorkflowDomain
+	if v != nil {
+		return v.WorkflowDomain
 	}
 	return
 }
 
 // RecordChildExecutionCompletedRequest is an internal type (TBD...)
 type RecordChildExecutionCompletedRequest struct {
-	DomainUUID         *string            `json:"domainUUID,omitempty"`
+	DomainUUID         string             `json:"domainUUID,omitempty"`
 	WorkflowExecution  *WorkflowExecution `json:"workflowExecution,omitempty"`
 	InitiatedID        *int64             `json:"initiatedId,omitempty"`
 	CompletedExecution *WorkflowExecution `json:"completedExecution,omitempty"`
@@ -3789,8 +3789,8 @@ type RecordChildExecutionCompletedRequest struct {
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *RecordChildExecutionCompletedRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -3829,7 +3829,7 @@ func (v *RecordChildExecutionCompletedRequest) GetCompletionEvent() (o *HistoryE
 
 // RecordDecisionTaskStartedRequest is an internal type (TBD...)
 type RecordDecisionTaskStartedRequest struct {
-	DomainUUID        *string                     `json:"domainUUID,omitempty"`
+	DomainUUID        string                      `json:"domainUUID,omitempty"`
 	WorkflowExecution *WorkflowExecution          `json:"workflowExecution,omitempty"`
 	ScheduleID        *int64                      `json:"scheduleId,omitempty"`
 	TaskID            *int64                      `json:"taskId,omitempty"`
@@ -3839,8 +3839,8 @@ type RecordDecisionTaskStartedRequest struct {
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -4017,14 +4017,14 @@ func (v *RecordDecisionTaskStartedResponse) GetQueries() (o map[string]*Workflow
 
 // HistoryRefreshWorkflowTasksRequest is an internal type (TBD...)
 type HistoryRefreshWorkflowTasksRequest struct {
-	DomainUIID *string                      `json:"domainUIID,omitempty"`
+	DomainUIID string                       `json:"domainUIID,omitempty"`
 	Request    *RefreshWorkflowTasksRequest `json:"request,omitempty"`
 }
 
 // GetDomainUIID is an internal getter (TBD...)
 func (v *HistoryRefreshWorkflowTasksRequest) GetDomainUIID() (o string) {
-	if v != nil && v.DomainUIID != nil {
-		return *v.DomainUIID
+	if v != nil {
+		return v.DomainUIID
 	}
 	return
 }
@@ -4039,15 +4039,15 @@ func (v *HistoryRefreshWorkflowTasksRequest) GetRequest() (o *RefreshWorkflowTas
 
 // RemoveSignalMutableStateRequest is an internal type (TBD...)
 type RemoveSignalMutableStateRequest struct {
-	DomainUUID        *string            `json:"domainUUID,omitempty"`
+	DomainUUID        string             `json:"domainUUID,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
 	RequestID         *string            `json:"requestId,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *RemoveSignalMutableStateRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -4070,7 +4070,7 @@ func (v *RemoveSignalMutableStateRequest) GetRequestID() (o string) {
 
 // ReplicateEventsV2Request is an internal type (TBD...)
 type ReplicateEventsV2Request struct {
-	DomainUUID          *string               `json:"domainUUID,omitempty"`
+	DomainUUID          string                `json:"domainUUID,omitempty"`
 	WorkflowExecution   *WorkflowExecution    `json:"workflowExecution,omitempty"`
 	VersionHistoryItems []*VersionHistoryItem `json:"versionHistoryItems,omitempty"`
 	Events              *DataBlob             `json:"events,omitempty"`
@@ -4079,8 +4079,8 @@ type ReplicateEventsV2Request struct {
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *ReplicateEventsV2Request) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -4119,7 +4119,7 @@ func (v *ReplicateEventsV2Request) GetNewRunEvents() (o *DataBlob) {
 
 // HistoryRequestCancelWorkflowExecutionRequest is an internal type (TBD...)
 type HistoryRequestCancelWorkflowExecutionRequest struct {
-	DomainUUID                *string                                `json:"domainUUID,omitempty"`
+	DomainUUID                string                                 `json:"domainUUID,omitempty"`
 	CancelRequest             *RequestCancelWorkflowExecutionRequest `json:"cancelRequest,omitempty"`
 	ExternalInitiatedEventID  *int64                                 `json:"externalInitiatedEventId,omitempty"`
 	ExternalWorkflowExecution *WorkflowExecution                     `json:"externalWorkflowExecution,omitempty"`
@@ -4128,8 +4128,8 @@ type HistoryRequestCancelWorkflowExecutionRequest struct {
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistoryRequestCancelWorkflowExecutionRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -4168,14 +4168,14 @@ func (v *HistoryRequestCancelWorkflowExecutionRequest) GetChildWorkflowOnly() (o
 
 // HistoryResetStickyTaskListRequest is an internal type (TBD...)
 type HistoryResetStickyTaskListRequest struct {
-	DomainUUID *string            `json:"domainUUID,omitempty"`
+	DomainUUID string             `json:"domainUUID,omitempty"`
 	Execution  *WorkflowExecution `json:"execution,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistoryResetStickyTaskListRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -4194,14 +4194,14 @@ type HistoryResetStickyTaskListResponse struct {
 
 // HistoryResetWorkflowExecutionRequest is an internal type (TBD...)
 type HistoryResetWorkflowExecutionRequest struct {
-	DomainUUID   *string                        `json:"domainUUID,omitempty"`
+	DomainUUID   string                         `json:"domainUUID,omitempty"`
 	ResetRequest *ResetWorkflowExecutionRequest `json:"resetRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistoryResetWorkflowExecutionRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -4216,14 +4216,14 @@ func (v *HistoryResetWorkflowExecutionRequest) GetResetRequest() (o *ResetWorkfl
 
 // HistoryRespondActivityTaskCanceledRequest is an internal type (TBD...)
 type HistoryRespondActivityTaskCanceledRequest struct {
-	DomainUUID    *string                             `json:"domainUUID,omitempty"`
+	DomainUUID    string                              `json:"domainUUID,omitempty"`
 	CancelRequest *RespondActivityTaskCanceledRequest `json:"cancelRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistoryRespondActivityTaskCanceledRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -4238,14 +4238,14 @@ func (v *HistoryRespondActivityTaskCanceledRequest) GetCancelRequest() (o *Respo
 
 // HistoryRespondActivityTaskCompletedRequest is an internal type (TBD...)
 type HistoryRespondActivityTaskCompletedRequest struct {
-	DomainUUID      *string                              `json:"domainUUID,omitempty"`
+	DomainUUID      string                               `json:"domainUUID,omitempty"`
 	CompleteRequest *RespondActivityTaskCompletedRequest `json:"completeRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistoryRespondActivityTaskCompletedRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -4260,14 +4260,14 @@ func (v *HistoryRespondActivityTaskCompletedRequest) GetCompleteRequest() (o *Re
 
 // HistoryRespondActivityTaskFailedRequest is an internal type (TBD...)
 type HistoryRespondActivityTaskFailedRequest struct {
-	DomainUUID    *string                           `json:"domainUUID,omitempty"`
+	DomainUUID    string                            `json:"domainUUID,omitempty"`
 	FailedRequest *RespondActivityTaskFailedRequest `json:"failedRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistoryRespondActivityTaskFailedRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -4282,14 +4282,14 @@ func (v *HistoryRespondActivityTaskFailedRequest) GetFailedRequest() (o *Respond
 
 // HistoryRespondDecisionTaskCompletedRequest is an internal type (TBD...)
 type HistoryRespondDecisionTaskCompletedRequest struct {
-	DomainUUID      *string                              `json:"domainUUID,omitempty"`
+	DomainUUID      string                               `json:"domainUUID,omitempty"`
 	CompleteRequest *RespondDecisionTaskCompletedRequest `json:"completeRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistoryRespondDecisionTaskCompletedRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -4326,14 +4326,14 @@ func (v *HistoryRespondDecisionTaskCompletedResponse) GetActivitiesToDispatchLoc
 
 // HistoryRespondDecisionTaskFailedRequest is an internal type (TBD...)
 type HistoryRespondDecisionTaskFailedRequest struct {
-	DomainUUID    *string                           `json:"domainUUID,omitempty"`
+	DomainUUID    string                            `json:"domainUUID,omitempty"`
 	FailedRequest *RespondDecisionTaskFailedRequest `json:"failedRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistoryRespondDecisionTaskFailedRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -4348,15 +4348,15 @@ func (v *HistoryRespondDecisionTaskFailedRequest) GetFailedRequest() (o *Respond
 
 // ScheduleDecisionTaskRequest is an internal type (TBD...)
 type ScheduleDecisionTaskRequest struct {
-	DomainUUID        *string            `json:"domainUUID,omitempty"`
+	DomainUUID        string             `json:"domainUUID,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
 	IsFirstDecision   *bool              `json:"isFirstDecision,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *ScheduleDecisionTaskRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -4401,14 +4401,14 @@ func (v *ShardOwnershipLostError) GetOwner() (o string) {
 
 // HistorySignalWithStartWorkflowExecutionRequest is an internal type (TBD...)
 type HistorySignalWithStartWorkflowExecutionRequest struct {
-	DomainUUID             *string                                  `json:"domainUUID,omitempty"`
+	DomainUUID             string                                   `json:"domainUUID,omitempty"`
 	SignalWithStartRequest *SignalWithStartWorkflowExecutionRequest `json:"signalWithStartRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistorySignalWithStartWorkflowExecutionRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -4423,7 +4423,7 @@ func (v *HistorySignalWithStartWorkflowExecutionRequest) GetSignalWithStartReque
 
 // HistorySignalWorkflowExecutionRequest is an internal type (TBD...)
 type HistorySignalWorkflowExecutionRequest struct {
-	DomainUUID                *string                         `json:"domainUUID,omitempty"`
+	DomainUUID                string                          `json:"domainUUID,omitempty"`
 	SignalRequest             *SignalWorkflowExecutionRequest `json:"signalRequest,omitempty"`
 	ExternalWorkflowExecution *WorkflowExecution              `json:"externalWorkflowExecution,omitempty"`
 	ChildWorkflowOnly         *bool                           `json:"childWorkflowOnly,omitempty"`
@@ -4431,8 +4431,8 @@ type HistorySignalWorkflowExecutionRequest struct {
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistorySignalWorkflowExecutionRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -4463,7 +4463,7 @@ func (v *HistorySignalWorkflowExecutionRequest) GetChildWorkflowOnly() (o bool) 
 
 // HistoryStartWorkflowExecutionRequest is an internal type (TBD...)
 type HistoryStartWorkflowExecutionRequest struct {
-	DomainUUID                      *string                        `json:"domainUUID,omitempty"`
+	DomainUUID                      string                         `json:"domainUUID,omitempty"`
 	StartRequest                    *StartWorkflowExecutionRequest `json:"startRequest,omitempty"`
 	ParentExecutionInfo             *ParentExecutionInfo           `json:"parentExecutionInfo,omitempty"`
 	Attempt                         *int32                         `json:"attempt,omitempty"`
@@ -4477,8 +4477,8 @@ type HistoryStartWorkflowExecutionRequest struct {
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistoryStartWorkflowExecutionRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
@@ -4557,7 +4557,7 @@ func (v *HistoryStartWorkflowExecutionRequest) GetFirstDecisionTaskBackoffSecond
 
 // SyncActivityRequest is an internal type (TBD...)
 type SyncActivityRequest struct {
-	DomainID           *string         `json:"domainId,omitempty"`
+	DomainID           string          `json:"domainId,omitempty"`
 	WorkflowID         string          `json:"workflowId,omitempty"`
 	RunID              string          `json:"runId,omitempty"`
 	Version            *int64          `json:"version,omitempty"`
@@ -4576,8 +4576,8 @@ type SyncActivityRequest struct {
 
 // GetDomainID is an internal getter (TBD...)
 func (v *SyncActivityRequest) GetDomainID() (o string) {
-	if v != nil && v.DomainID != nil {
-		return *v.DomainID
+	if v != nil {
+		return v.DomainID
 	}
 	return
 }
@@ -4727,14 +4727,14 @@ func (v *SyncShardStatusRequest) GetTimestamp() (o int64) {
 
 // HistoryTerminateWorkflowExecutionRequest is an internal type (TBD...)
 type HistoryTerminateWorkflowExecutionRequest struct {
-	DomainUUID       *string                            `json:"domainUUID,omitempty"`
+	DomainUUID       string                             `json:"domainUUID,omitempty"`
 	TerminateRequest *TerminateWorkflowExecutionRequest `json:"terminateRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistoryTerminateWorkflowExecutionRequest) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }

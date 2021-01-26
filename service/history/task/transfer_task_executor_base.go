@@ -93,8 +93,8 @@ func (t *transferTaskExecutorBase) pushActivity(
 	}
 
 	return t.matchingClient.AddActivityTask(ctx, &types.AddActivityTaskRequest{
-		DomainUUID:       common.StringPtr(task.TargetDomainID),
-		SourceDomainUUID: common.StringPtr(task.DomainID),
+		DomainUUID:       task.TargetDomainID,
+		SourceDomainUUID: task.DomainID,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
@@ -120,7 +120,7 @@ func (t *transferTaskExecutorBase) pushDecision(
 	}
 
 	return t.matchingClient.AddDecisionTask(ctx, &types.AddDecisionTaskRequest{
-		DomainUUID: common.StringPtr(task.DomainID),
+		DomainUUID: task.DomainID,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,

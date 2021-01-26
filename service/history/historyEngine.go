@@ -1237,7 +1237,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		de.IsDomainActive() {
 
 		stickyMatchingRequest := &types.MatchingQueryWorkflowRequest{
-			DomainUUID:   common.StringPtr(domainID),
+			DomainUUID:   domainID,
 			QueryRequest: queryRequest,
 			TaskList:     msResp.GetStickyTaskList(),
 		}
@@ -1271,7 +1271,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 			resetContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			clearStickinessStopWatch := scope.StartTimer(metrics.DirectQueryDispatchClearStickinessLatency)
 			_, err := e.ResetStickyTaskList(resetContext, &types.HistoryResetStickyTaskListRequest{
-				DomainUUID: common.StringPtr(domainID),
+				DomainUUID: domainID,
 				Execution:  queryRequest.GetExecution(),
 			})
 			clearStickinessStopWatch.Stop()
@@ -1302,7 +1302,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		tag.WorkflowNextEventID(msResp.GetNextEventID()))
 
 	nonStickyMatchingRequest := &types.MatchingQueryWorkflowRequest{
-		DomainUUID:   common.StringPtr(domainID),
+		DomainUUID:   domainID,
 		QueryRequest: queryRequest,
 		TaskList:     msResp.TaskList,
 	}
@@ -1669,7 +1669,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			response.HeartbeatDetails = ai.Details
 
 			response.WorkflowType = mutableState.GetWorkflowType()
-			response.WorkflowDomain = common.StringPtr(domainName)
+			response.WorkflowDomain = domainName
 
 			if ai.StartedID != common.EmptyEventID {
 				// If activity is started as part of the current request scope then return a positive response
@@ -2882,19 +2882,19 @@ func (e *historyEngineImpl) overrideStartWorkflowExecutionRequest(
 }
 
 func validateDomainUUID(
-	domainUUID *string,
+	domainUUID string,
 ) (string, error) {
 
-	if domainUUID == nil {
+	if domainUUID == "" {
 		return "", &types.BadRequestError{Message: "Missing domain UUID."}
-	} else if uuid.Parse(*domainUUID) == nil {
+	} else if uuid.Parse(domainUUID) == nil {
 		return "", &types.BadRequestError{Message: "Invalid domain UUID."}
 	}
-	return *domainUUID, nil
+	return domainUUID, nil
 }
 
 func (e *historyEngineImpl) getActiveDomainEntry(
-	domainUUID *string,
+	domainUUID string,
 ) (*cache.DomainCacheEntry, error) {
 
 	return getActiveDomainEntryFromShard(e.shard, domainUUID)
@@ -2902,7 +2902,7 @@ func (e *historyEngineImpl) getActiveDomainEntry(
 
 func getActiveDomainEntryFromShard(
 	shard shard.Context,
-	domainUUID *string,
+	domainUUID string,
 ) (*cache.DomainCacheEntry, error) {
 
 	domainID, err := validateDomainUUID(domainUUID)
@@ -2921,7 +2921,7 @@ func getActiveDomainEntryFromShard(
 }
 
 func (e *historyEngineImpl) getPendingActiveDomainEntry(
-	domainUUID *string,
+	domainUUID string,
 ) (bool, error) {
 
 	domainID, err := validateDomainUUID(domainUUID)
@@ -3110,7 +3110,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 	reapplyEvents []*types.HistoryEvent,
 ) error {
 
-	domainEntry, err := e.getActiveDomainEntry(common.StringPtr(domainUUID))
+	domainEntry, err := e.getActiveDomainEntry(domainUUID)
 	if err != nil {
 		switch {
 		case domainEntry != nil && domainEntry.IsDomainPendingActive():
@@ -3304,7 +3304,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 	workflowExecution types.WorkflowExecution,
 ) (retError error) {
 
-	domainEntry, err := e.getActiveDomainEntry(common.StringPtr(domainUUID))
+	domainEntry, err := e.getActiveDomainEntry(domainUUID)
 	if err != nil {
 		return err
 	}

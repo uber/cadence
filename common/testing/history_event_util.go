@@ -614,7 +614,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent := getDefaultHistoryEvent(EventID, version)
 		historyEvent.EventType = types.EventTypeStartChildWorkflowExecutionInitiated.Ptr()
 		historyEvent.StartChildWorkflowExecutionInitiatedEventAttributes = &types.StartChildWorkflowExecutionInitiatedEventAttributes{
-			Domain:     common.StringPtr(domain),
+			Domain:     domain,
 			WorkflowID: childWorkflowID,
 			WorkflowType: &types.WorkflowType{
 				Name: common.StringPtr(childWorkflowPrefix + workflowType),
@@ -639,7 +639,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent := getDefaultHistoryEvent(EventID, version)
 		historyEvent.EventType = types.EventTypeStartChildWorkflowExecutionFailed.Ptr()
 		historyEvent.StartChildWorkflowExecutionFailedEventAttributes = &types.StartChildWorkflowExecutionFailedEventAttributes{
-			Domain:     common.StringPtr(domain),
+			Domain:     domain,
 			WorkflowID: childWorkflowID,
 			WorkflowType: &types.WorkflowType{
 				Name: common.StringPtr(childWorkflowPrefix + workflowType),
@@ -659,7 +659,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent := getDefaultHistoryEvent(EventID, version)
 		historyEvent.EventType = types.EventTypeChildWorkflowExecutionStarted.Ptr()
 		historyEvent.ChildWorkflowExecutionStartedEventAttributes = &types.ChildWorkflowExecutionStartedEventAttributes{
-			Domain: common.StringPtr(domain),
+			Domain: domain,
 			WorkflowType: &types.WorkflowType{
 				Name: common.StringPtr(childWorkflowPrefix + workflowType),
 			},
@@ -680,7 +680,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent := getDefaultHistoryEvent(EventID, version)
 		historyEvent.EventType = types.EventTypeChildWorkflowExecutionCanceled.Ptr()
 		historyEvent.ChildWorkflowExecutionCanceledEventAttributes = &types.ChildWorkflowExecutionCanceledEventAttributes{
-			Domain: common.StringPtr(domain),
+			Domain: domain,
 			WorkflowType: &types.WorkflowType{
 				Name: common.StringPtr(childWorkflowPrefix + workflowType),
 			},
@@ -702,7 +702,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent := getDefaultHistoryEvent(EventID, version)
 		historyEvent.EventType = types.EventTypeChildWorkflowExecutionCompleted.Ptr()
 		historyEvent.ChildWorkflowExecutionCompletedEventAttributes = &types.ChildWorkflowExecutionCompletedEventAttributes{
-			Domain: common.StringPtr(domain),
+			Domain: domain,
 			WorkflowType: &types.WorkflowType{
 				Name: common.StringPtr(childWorkflowPrefix + workflowType),
 			},
@@ -724,7 +724,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent := getDefaultHistoryEvent(EventID, version)
 		historyEvent.EventType = types.EventTypeChildWorkflowExecutionFailed.Ptr()
 		historyEvent.ChildWorkflowExecutionFailedEventAttributes = &types.ChildWorkflowExecutionFailedEventAttributes{
-			Domain: common.StringPtr(domain),
+			Domain: domain,
 			WorkflowType: &types.WorkflowType{
 				Name: common.StringPtr(childWorkflowPrefix + workflowType),
 			},
@@ -746,7 +746,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent := getDefaultHistoryEvent(EventID, version)
 		historyEvent.EventType = types.EventTypeChildWorkflowExecutionTerminated.Ptr()
 		historyEvent.ChildWorkflowExecutionTerminatedEventAttributes = &types.ChildWorkflowExecutionTerminatedEventAttributes{
-			Domain: common.StringPtr(domain),
+			Domain: domain,
 			WorkflowType: &types.WorkflowType{
 				Name: common.StringPtr(childWorkflowPrefix + workflowType),
 			},
@@ -768,7 +768,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent := getDefaultHistoryEvent(EventID, version)
 		historyEvent.EventType = types.EventTypeChildWorkflowExecutionTimedOut.Ptr()
 		historyEvent.ChildWorkflowExecutionTimedOutEventAttributes = &types.ChildWorkflowExecutionTimedOutEventAttributes{
-			Domain: common.StringPtr(domain),
+			Domain: domain,
 			WorkflowType: &types.WorkflowType{
 				Name: common.StringPtr(childWorkflowPrefix + workflowType),
 			},
@@ -820,7 +820,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.EventType = types.EventTypeSignalExternalWorkflowExecutionInitiated.Ptr()
 		historyEvent.SignalExternalWorkflowExecutionInitiatedEventAttributes = &types.SignalExternalWorkflowExecutionInitiatedEventAttributes{
 			DecisionTaskCompletedEventID: lastEvent.EventID,
-			Domain:                       common.StringPtr(domain),
+			Domain:                       domain,
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: externalWorkflowID,
 				RunID:      uuid.New(),
@@ -841,7 +841,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.SignalExternalWorkflowExecutionFailedEventAttributes = &types.SignalExternalWorkflowExecutionFailedEventAttributes{
 			Cause:                        types.SignalExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution.Ptr(),
 			DecisionTaskCompletedEventID: lastEvent.GetSignalExternalWorkflowExecutionInitiatedEventAttributes().DecisionTaskCompletedEventID,
-			Domain:                       common.StringPtr(domain),
+			Domain:                       domain,
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: lastEvent.GetSignalExternalWorkflowExecutionInitiatedEventAttributes().GetWorkflowExecution().WorkflowID,
 				RunID:      lastEvent.GetSignalExternalWorkflowExecutionInitiatedEventAttributes().GetWorkflowExecution().RunID,
@@ -860,7 +860,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.EventType = types.EventTypeExternalWorkflowExecutionSignaled.Ptr()
 		historyEvent.ExternalWorkflowExecutionSignaledEventAttributes = &types.ExternalWorkflowExecutionSignaledEventAttributes{
 			InitiatedEventID: lastEvent.EventID,
-			Domain:           common.StringPtr(domain),
+			Domain:           domain,
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: lastEvent.GetSignalExternalWorkflowExecutionInitiatedEventAttributes().GetWorkflowExecution().WorkflowID,
 				RunID:      lastEvent.GetSignalExternalWorkflowExecutionInitiatedEventAttributes().GetWorkflowExecution().RunID,
@@ -879,7 +879,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes =
 			&types.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes{
 				DecisionTaskCompletedEventID: lastEvent.EventID,
-				Domain:                       common.StringPtr(domain),
+				Domain:                       domain,
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: externalWorkflowID,
 					RunID:      uuid.New(),
@@ -899,7 +899,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.RequestCancelExternalWorkflowExecutionFailedEventAttributes = &types.RequestCancelExternalWorkflowExecutionFailedEventAttributes{
 			Cause:                        types.CancelExternalWorkflowExecutionFailedCauseUnknownExternalWorkflowExecution.Ptr(),
 			DecisionTaskCompletedEventID: lastEvent.GetRequestCancelExternalWorkflowExecutionInitiatedEventAttributes().DecisionTaskCompletedEventID,
-			Domain:                       common.StringPtr(domain),
+			Domain:                       domain,
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: lastEvent.GetRequestCancelExternalWorkflowExecutionInitiatedEventAttributes().GetWorkflowExecution().WorkflowID,
 				RunID:      lastEvent.GetRequestCancelExternalWorkflowExecutionInitiatedEventAttributes().GetWorkflowExecution().RunID,
@@ -918,7 +918,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.EventType = types.EventTypeExternalWorkflowExecutionCancelRequested.Ptr()
 		historyEvent.ExternalWorkflowExecutionCancelRequestedEventAttributes = &types.ExternalWorkflowExecutionCancelRequestedEventAttributes{
 			InitiatedEventID: lastEvent.EventID,
-			Domain:           common.StringPtr(domain),
+			Domain:           domain,
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: lastEvent.GetRequestCancelExternalWorkflowExecutionInitiatedEventAttributes().GetWorkflowExecution().WorkflowID,
 				RunID:      lastEvent.GetRequestCancelExternalWorkflowExecutionInitiatedEventAttributes().GetWorkflowExecution().RunID,

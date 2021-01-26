@@ -78,7 +78,7 @@ func (s *sizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
@@ -159,7 +159,7 @@ func (s *sizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 
 	// verify last event is terminated event
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: id,
 			RunID:      we.GetRunID(),
@@ -176,7 +176,7 @@ func (s *sizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 	isCloseCorrect := false
 	for i := 0; i < 10; i++ {
 		resp, err1 := s.engine.ListClosedWorkflowExecutions(createContext(), &types.ListClosedWorkflowExecutionsRequest{
-			Domain:          common.StringPtr(s.domainName),
+			Domain:          s.domainName,
 			MaximumPageSize: common.Int32Ptr(100),
 			StartTimeFilter: &types.StartTimeFilter{
 				EarliestTime: common.Int64Ptr(0),

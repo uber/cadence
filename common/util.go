@@ -432,7 +432,7 @@ func CreateHistoryStartWorkflowRequest(
 	now time.Time,
 ) *types.HistoryStartWorkflowExecutionRequest {
 	histRequest := &types.HistoryStartWorkflowExecutionRequest{
-		DomainUUID:   StringPtr(domainID),
+		DomainUUID:   domainID,
 		StartRequest: startRequest,
 	}
 	firstDecisionTaskBackoffSeconds := backoff.GetBackoffForNextScheduleInSeconds(startRequest.GetCronSchedule(), now, now)

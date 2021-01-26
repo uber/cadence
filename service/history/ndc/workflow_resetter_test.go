@@ -252,7 +252,7 @@ func (s *workflowResetterSuite) TestResetWorkflow_Error() {
 	s.True(isRetryError)
 	expectedErr := &types.RetryTaskV2Error{
 		Message:         resendOnResetWorkflowMessage,
-		DomainID:        common.StringPtr(s.domainID),
+		DomainID:        s.domainID,
 		WorkflowID:      s.workflowID,
 		RunID:           s.newRunID,
 		EndEventID:      common.Int64Ptr(incomingFirstEventID),
