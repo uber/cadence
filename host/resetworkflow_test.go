@@ -41,7 +41,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 
 	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
 
-	tasklist := &types.TaskList{Name: common.StringPtr(tl)}
+	tasklist := &types.TaskList{Name: tl}
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
@@ -255,7 +255,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 
 	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
 
-	tasklist := &types.TaskList{Name: common.StringPtr(tl)}
+	tasklist := &types.TaskList{Name: tl}
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{

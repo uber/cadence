@@ -1606,7 +1606,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		taskList = attributes.TaskList.GetName()
 	}
 	tl := &types.TaskList{}
-	tl.Name = common.StringPtr(taskList)
+	tl.Name = taskList
 
 	workflowType := previousExecutionInfo.WorkflowTypeName
 	if attributes.WorkflowType != nil {

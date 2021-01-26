@@ -1152,7 +1152,7 @@ func setDecisionTaskScheduledEventInfo(historyEvent *types.HistoryEvent, taskLis
 	startToCloseTimeoutSeconds int32, attempt int64) *types.HistoryEvent {
 	attributes := &types.DecisionTaskScheduledEventAttributes{}
 	attributes.TaskList = &types.TaskList{}
-	attributes.TaskList.Name = common.StringPtr(taskList)
+	attributes.TaskList.Name = taskList
 	attributes.StartToCloseTimeoutSeconds = common.Int32Ptr(startToCloseTimeoutSeconds)
 	attributes.Attempt = common.Int64Ptr(attempt)
 	historyEvent.DecisionTaskScheduledEventAttributes = attributes

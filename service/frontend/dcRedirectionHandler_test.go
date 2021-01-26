@@ -820,7 +820,7 @@ func (s *dcRedirectionHandlerSuite) TestListTaskListPartitions() {
 	req := &types.ListTaskListPartitionsRequest{
 		Domain: s.domainName,
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("test_tesk_list"),
+			Name: "test_tesk_list",
 			Kind: types.TaskListKind(0).Ptr(),
 		},
 	}
