@@ -46,8 +46,8 @@ func (s *integrationSuite) TestResetWorkflow() {
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            tasklist,
 		Input:                               nil,
@@ -152,8 +152,8 @@ func (s *integrationSuite) TestResetWorkflow() {
 
 	// Find reset point (last completed decision task)
 	events := s.getHistory(s.domainName, &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(we.GetRunID()),
+		WorkflowID: id,
+		RunID:      we.GetRunID(),
 	})
 	var lastDecisionCompleted *types.HistoryEvent
 	for _, event := range events {
@@ -164,9 +164,9 @@ func (s *integrationSuite) TestResetWorkflow() {
 
 	// FIRST reset: Reset workflow execution, current is open
 	resp, err := s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 			RunID:      we.RunID,
 		},
 		Reason:                common.StringPtr("reset execution from test"),
@@ -188,8 +188,8 @@ func (s *integrationSuite) TestResetWorkflow() {
 
 	// get the history of the first run again
 	events = s.getHistory(s.domainName, &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(we.GetRunID()),
+		WorkflowID: id,
+		RunID:      we.GetRunID(),
 	})
 	var lastEvent *types.HistoryEvent
 	for _, event := range events {
@@ -202,10 +202,10 @@ func (s *integrationSuite) TestResetWorkflow() {
 	s.Equal(types.EventTypeWorkflowExecutionTerminated, lastEvent.GetEventType())
 	// SECOND reset: reset the first run again, to exercise the code path of resetting closed workflow
 	resp, err = s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(we.GetRunID()),
+			WorkflowID: id,
+			RunID:      we.GetRunID(),
 		},
 		Reason:                common.StringPtr("reset execution from test"),
 		DecisionFinishEventID: common.Int64Ptr(lastDecisionCompleted.GetEventID()),
@@ -221,8 +221,8 @@ func (s *integrationSuite) TestResetWorkflow() {
 
 	// get the history of the newRunID
 	events = s.getHistory(s.domainName, &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(newRunID),
+		WorkflowID: id,
+		RunID:      newRunID,
 	})
 	for _, event := range events {
 		if event.GetEventType() == types.EventTypeDecisionTaskCompleted {
@@ -235,10 +235,10 @@ func (s *integrationSuite) TestResetWorkflow() {
 
 	// THIRD reset: reset the workflow run that is after a reset
 	_, err = s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(newRunID),
+			WorkflowID: id,
+			RunID:      newRunID,
 		},
 		Reason:                common.StringPtr("reset execution from test"),
 		DecisionFinishEventID: common.Int64Ptr(lastDecisionCompleted.GetEventID()),
@@ -260,8 +260,8 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            tasklist,
 		Input:                               nil,
@@ -275,8 +275,8 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 
 	// Find reset point (last completed decision task)
 	events := s.getHistory(s.domainName, &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(we.GetRunID()),
+		WorkflowID: id,
+		RunID:      we.GetRunID(),
 	})
 	var lastDecisionScheduled *types.HistoryEvent
 	for _, event := range events {
@@ -287,9 +287,9 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 
 	// FIRST reset: Reset workflow execution, current is open
 	_, err := s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 			RunID:      we.RunID,
 		},
 		Reason:                common.StringPtr("reset execution from test"),
@@ -300,8 +300,8 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 
 	// get the history of the first run again
 	events = s.getHistory(s.domainName, &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(we.GetRunID()),
+		WorkflowID: id,
+		RunID:      we.GetRunID(),
 	})
 	var lastEvent *types.HistoryEvent
 	for _, event := range events {
@@ -312,10 +312,10 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 
 	// SECOND reset: reset the first run again, to exercise the code path of resetting closed workflow
 	resp, err := s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(we.GetRunID()),
+			WorkflowID: id,
+			RunID:      we.GetRunID(),
 		},
 		Reason:                common.StringPtr("reset execution from test"),
 		DecisionFinishEventID: common.Int64Ptr(lastDecisionScheduled.GetEventID() + 1),
@@ -388,8 +388,8 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 	s.NoError(err)
 
 	events = s.getHistory(s.domainName, &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(newRunID),
+		WorkflowID: id,
+		RunID:      newRunID,
 	})
 
 	// Process one activity task which also creates second workflow task
@@ -404,8 +404,8 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 
 	// get the history of the newRunID
 	events = s.getHistory(s.domainName, &types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(newRunID),
+		WorkflowID: id,
+		RunID:      newRunID,
 	})
 	for _, event := range events {
 		lastEvent = event

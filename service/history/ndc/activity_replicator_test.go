@@ -133,15 +133,15 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
 	version := int64(100)
 
 	request := &types.SyncActivityRequest{
-		DomainID:   common.StringPtr(domainID),
-		WorkflowID: common.StringPtr(workflowID),
-		RunID:      common.StringPtr(runID),
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
 	}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
 		Execution: types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	}).Return(nil, &types.EntityNotExistsError{})
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(
@@ -180,9 +180,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowClosed() {
 	_, err := s.executionCache.PutIfNotExist(key, context)
 	s.NoError(err)
 	request := &types.SyncActivityRequest{
-		DomainID:   common.StringPtr(domainID),
-		WorkflowID: common.StringPtr(workflowID),
-		RunID:      common.StringPtr(runID),
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
 	}
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(false).AnyTimes()
 	versionHistories := &persistence.VersionHistories{}
@@ -240,9 +240,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 		versionHistoryItem2,
 	})
 	request := &types.SyncActivityRequest{
-		DomainID:       common.StringPtr(domainID),
-		WorkflowID:     common.StringPtr(workflowID),
-		RunID:          common.StringPtr(runID),
+		DomainID:       domainID,
+		WorkflowID:     workflowID,
+		RunID:          runID,
 		Version:        common.Int64Ptr(version),
 		ScheduledID:    common.Int64Ptr(scheduleID),
 		VersionHistory: versionHistory2.ToInternalType(),
@@ -291,9 +291,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:    common.StringPtr(domainID),
-		WorkflowID:  common.StringPtr(workflowID),
-		RunID:       common.StringPtr(runID),
+		DomainID:    domainID,
+		WorkflowID:  workflowID,
+		RunID:       runID,
 		Version:     common.Int64Ptr(version),
 		ScheduledID: common.Int64Ptr(scheduleID),
 	}
@@ -353,9 +353,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingVers
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:       common.StringPtr(domainID),
-		WorkflowID:     common.StringPtr(workflowID),
-		RunID:          common.StringPtr(runID),
+		DomainID:       domainID,
+		WorkflowID:     workflowID,
+		RunID:          runID,
 		Version:        common.Int64Ptr(version),
 		ScheduledID:    common.Int64Ptr(scheduleID),
 		VersionHistory: incomingVersionHistory.ToInternalType(),
@@ -432,9 +432,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_DifferentVersionHistories_Inc
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:       common.StringPtr(domainID),
-		WorkflowID:     common.StringPtr(workflowID),
-		RunID:          common.StringPtr(runID),
+		DomainID:       domainID,
+		WorkflowID:     workflowID,
+		RunID:          runID,
 		Version:        common.Int64Ptr(version),
 		ScheduledID:    common.Int64Ptr(scheduleID),
 		VersionHistory: incomingVersionHistory.ToInternalType(),
@@ -522,9 +522,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingSche
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:       common.StringPtr(domainID),
-		WorkflowID:     common.StringPtr(workflowID),
-		RunID:          common.StringPtr(runID),
+		DomainID:       domainID,
+		WorkflowID:     workflowID,
+		RunID:          runID,
 		Version:        common.Int64Ptr(version),
 		ScheduledID:    common.Int64Ptr(scheduleID),
 		VersionHistory: incomingVersionHistory.ToInternalType(),
@@ -608,9 +608,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_SameSchedule
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:       common.StringPtr(domainID),
-		WorkflowID:     common.StringPtr(workflowID),
-		RunID:          common.StringPtr(runID),
+		DomainID:       domainID,
+		WorkflowID:     workflowID,
+		RunID:          runID,
 		Version:        common.Int64Ptr(version),
 		ScheduledID:    common.Int64Ptr(scheduleID),
 		VersionHistory: incomingVersionHistory.ToInternalType(),
@@ -681,9 +681,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_LocalVersion
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:       common.StringPtr(domainID),
-		WorkflowID:     common.StringPtr(workflowID),
-		RunID:          common.StringPtr(runID),
+		DomainID:       domainID,
+		WorkflowID:     workflowID,
+		RunID:          runID,
 		Version:        common.Int64Ptr(version),
 		ScheduledID:    common.Int64Ptr(scheduleID),
 		VersionHistory: incomingVersionHistory.ToInternalType(),
@@ -755,9 +755,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:       common.StringPtr(domainID),
-		WorkflowID:     common.StringPtr(workflowID),
-		RunID:          common.StringPtr(runID),
+		DomainID:       domainID,
+		WorkflowID:     workflowID,
+		RunID:          runID,
 		Version:        common.Int64Ptr(version),
 		ScheduledID:    common.Int64Ptr(scheduleID),
 		VersionHistory: versionHistory.ToInternalType(),
@@ -812,9 +812,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivity
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:       common.StringPtr(domainID),
-		WorkflowID:     common.StringPtr(workflowID),
-		RunID:          common.StringPtr(runID),
+		DomainID:       domainID,
+		WorkflowID:     workflowID,
+		RunID:          runID,
 		Version:        common.Int64Ptr(version),
 		ScheduledID:    common.Int64Ptr(scheduleID),
 		VersionHistory: versionHistory.ToInternalType(),
@@ -876,9 +876,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:          common.StringPtr(domainID),
-		WorkflowID:        common.StringPtr(workflowID),
-		RunID:             common.StringPtr(runID),
+		DomainID:          domainID,
+		WorkflowID:        workflowID,
+		RunID:             runID,
 		Version:           common.Int64Ptr(version),
 		ScheduledID:       common.Int64Ptr(scheduleID),
 		ScheduledTime:     common.Int64Ptr(scheduledTime.UnixNano()),
@@ -953,9 +953,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:          common.StringPtr(domainID),
-		WorkflowID:        common.StringPtr(workflowID),
-		RunID:             common.StringPtr(runID),
+		DomainID:          domainID,
+		WorkflowID:        workflowID,
+		RunID:             runID,
 		Version:           common.Int64Ptr(version),
 		ScheduledID:       common.Int64Ptr(scheduleID),
 		ScheduledTime:     common.Int64Ptr(scheduledTime.UnixNano()),
@@ -1030,9 +1030,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_Larger
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:          common.StringPtr(domainID),
-		WorkflowID:        common.StringPtr(workflowID),
-		RunID:             common.StringPtr(runID),
+		DomainID:          domainID,
+		WorkflowID:        workflowID,
+		RunID:             runID,
 		Version:           common.Int64Ptr(version),
 		ScheduledID:       common.Int64Ptr(scheduleID),
 		ScheduledTime:     common.Int64Ptr(scheduledTime.UnixNano()),
@@ -1106,9 +1106,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning() {
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:          common.StringPtr(domainID),
-		WorkflowID:        common.StringPtr(workflowID),
-		RunID:             common.StringPtr(runID),
+		DomainID:          domainID,
+		WorkflowID:        workflowID,
+		RunID:             runID,
 		Version:           common.Int64Ptr(version),
 		ScheduledID:       common.Int64Ptr(scheduleID),
 		ScheduledTime:     common.Int64Ptr(scheduledTime.UnixNano()),
@@ -1195,9 +1195,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_ZombieWorkflo
 	s.NoError(err)
 
 	request := &types.SyncActivityRequest{
-		DomainID:          common.StringPtr(domainID),
-		WorkflowID:        common.StringPtr(workflowID),
-		RunID:             common.StringPtr(runID),
+		DomainID:          domainID,
+		WorkflowID:        workflowID,
+		RunID:             runID,
 		Version:           common.Int64Ptr(version),
 		ScheduledID:       common.Int64Ptr(scheduleID),
 		ScheduledTime:     common.Int64Ptr(scheduledTime.UnixNano()),

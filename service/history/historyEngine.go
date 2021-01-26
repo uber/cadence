@@ -614,8 +614,8 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	defer func() { currentRelease(retError) }()
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(workflowID),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: workflowID,
+		RunID:      uuid.New(),
 	}
 	curMutableState, err := e.createMutableState(domainEntry, workflowExecution.GetRunID())
 	if err != nil {
@@ -703,7 +703,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 
 		if t.StartRequestID == request.GetRequestID() {
 			return &types.StartWorkflowExecutionResponse{
-				RunID: common.StringPtr(t.RunID),
+				RunID: t.RunID,
 			}, nil
 		}
 
@@ -1237,7 +1237,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		de.IsDomainActive() {
 
 		stickyMatchingRequest := &types.MatchingQueryWorkflowRequest{
-			DomainUUID:   common.StringPtr(domainID),
+			DomainUUID:   domainID,
 			QueryRequest: queryRequest,
 			TaskList:     msResp.GetStickyTaskList(),
 		}
@@ -1271,7 +1271,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 			resetContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			clearStickinessStopWatch := scope.StartTimer(metrics.DirectQueryDispatchClearStickinessLatency)
 			_, err := e.ResetStickyTaskList(resetContext, &types.HistoryResetStickyTaskListRequest{
-				DomainUUID: common.StringPtr(domainID),
+				DomainUUID: domainID,
 				Execution:  queryRequest.GetExecution(),
 			})
 			clearStickinessStopWatch.Stop()
@@ -1302,7 +1302,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		tag.WorkflowNextEventID(msResp.GetNextEventID()))
 
 	nonStickyMatchingRequest := &types.MatchingQueryWorkflowRequest{
-		DomainUUID:   common.StringPtr(domainID),
+		DomainUUID:   domainID,
 		QueryRequest: queryRequest,
 		TaskList:     msResp.TaskList,
 	}
@@ -1495,8 +1495,8 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 		},
 		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(executionInfo.WorkflowID),
-				RunID:      common.StringPtr(executionInfo.RunID),
+				WorkflowID: executionInfo.WorkflowID,
+				RunID:      executionInfo.RunID,
 			},
 			Type:             &types.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
 			StartTime:        common.Int64Ptr(executionInfo.StartTimestamp.UnixNano()),
@@ -1519,8 +1519,8 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 
 	if executionInfo.ParentRunID != "" {
 		result.WorkflowExecutionInfo.ParentExecution = &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(executionInfo.ParentWorkflowID),
-			RunID:      common.StringPtr(executionInfo.ParentRunID),
+			WorkflowID: executionInfo.ParentWorkflowID,
+			RunID:      executionInfo.ParentRunID,
 		}
 		result.WorkflowExecutionInfo.ParentDomainID = common.StringPtr(executionInfo.ParentDomainID)
 	}
@@ -1584,8 +1584,8 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	if len(mutableState.GetPendingChildExecutionInfos()) > 0 {
 		for _, ch := range mutableState.GetPendingChildExecutionInfos() {
 			p := &types.PendingChildExecutionInfo{
-				WorkflowID:        common.StringPtr(ch.StartedWorkflowID),
-				RunID:             common.StringPtr(ch.StartedRunID),
+				WorkflowID:        ch.StartedWorkflowID,
+				RunID:             ch.StartedRunID,
 				WorkflowTypName:   common.StringPtr(ch.WorkflowTypeName),
 				InitiatedID:       common.Int64Ptr(ch.InitiatedID),
 				ParentClosePolicy: &ch.ParentClosePolicy,
@@ -1676,7 +1676,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			response.HeartbeatDetails = ai.Details
 
 			response.WorkflowType = mutableState.GetWorkflowType()
-			response.WorkflowDomain = common.StringPtr(domainName)
+			response.WorkflowDomain = domainName
 
 			if ai.StartedID != common.EmptyEventID {
 				// If activity is started as part of the current request scope then return a positive response
@@ -1761,8 +1761,8 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 	}
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(token.WorkflowID),
-		RunID:      common.StringPtr(token.RunID),
+		WorkflowID: token.WorkflowID,
+		RunID:      token.RunID,
 	}
 
 	var activityStartedTime time.Time
@@ -1842,8 +1842,8 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 	}
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(token.WorkflowID),
-		RunID:      common.StringPtr(token.RunID),
+		WorkflowID: token.WorkflowID,
+		RunID:      token.RunID,
 	}
 
 	var activityStartedTime time.Time
@@ -1933,8 +1933,8 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 	}
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(token.WorkflowID),
-		RunID:      common.StringPtr(token.RunID),
+		WorkflowID: token.WorkflowID,
+		RunID:      token.RunID,
 	}
 
 	var activityStartedTime time.Time
@@ -2022,8 +2022,8 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 	}
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(token.WorkflowID),
-		RunID:      common.StringPtr(token.RunID),
+		WorkflowID: token.WorkflowID,
+		RunID:      token.RunID,
 	}
 
 	var cancelRequested bool
@@ -2253,7 +2253,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 			}
 			// workflow is running, if policy is TerminateIfRunning, terminate current run then signalWithStart
 			if sRequest.GetWorkflowIDReusePolicy() == types.WorkflowIDReusePolicyTerminateIfRunning {
-				workflowExecution.RunID = common.StringPtr(uuid.New())
+				workflowExecution.RunID = uuid.New()
 				runningWFCtx := newWorkflowContext(wfContext, release, mutableState)
 				return e.terminateAndStartWorkflow(
 					ctx,
@@ -2495,8 +2495,8 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		ctx,
 		domainID,
 		types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(baseRunID),
+			WorkflowID: workflowID,
+			RunID:      baseRunID,
 		},
 	)
 	if err != nil {
@@ -2541,8 +2541,8 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 			ctx,
 			domainID,
 			types.WorkflowExecution{
-				WorkflowID: common.StringPtr(workflowID),
-				RunID:      common.StringPtr(currentRunID),
+				WorkflowID: workflowID,
+				RunID:      currentRunID,
 			},
 		)
 		if err != nil {
@@ -2563,7 +2563,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 			tag.WorkflowRunID(currentRunID),
 			tag.WorkflowDomainID(domainID))
 		return &types.ResetWorkflowExecutionResponse{
-			RunID: common.StringPtr(currentRunID),
+			RunID: currentRunID,
 		}, nil
 	}
 
@@ -2615,7 +2615,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		return nil, err
 	}
 	return &types.ResetWorkflowExecutionResponse{
-		RunID: common.StringPtr(resetRunID),
+		RunID: resetRunID,
 	}, nil
 }
 
@@ -2917,19 +2917,19 @@ func (e *historyEngineImpl) overrideStartWorkflowExecutionRequest(
 }
 
 func validateDomainUUID(
-	domainUUID *string,
+	domainUUID string,
 ) (string, error) {
 
-	if domainUUID == nil {
+	if domainUUID == "" {
 		return "", &types.BadRequestError{Message: "Missing domain UUID."}
-	} else if uuid.Parse(*domainUUID) == nil {
+	} else if uuid.Parse(domainUUID) == nil {
 		return "", &types.BadRequestError{Message: "Invalid domain UUID."}
 	}
-	return *domainUUID, nil
+	return domainUUID, nil
 }
 
 func (e *historyEngineImpl) getActiveDomainEntry(
-	domainUUID *string,
+	domainUUID string,
 ) (*cache.DomainCacheEntry, error) {
 
 	return getActiveDomainEntryFromShard(e.shard, domainUUID)
@@ -2937,7 +2937,7 @@ func (e *historyEngineImpl) getActiveDomainEntry(
 
 func getActiveDomainEntryFromShard(
 	shard shard.Context,
-	domainUUID *string,
+	domainUUID string,
 ) (*cache.DomainCacheEntry, error) {
 
 	domainID, err := validateDomainUUID(domainUUID)
@@ -2956,7 +2956,7 @@ func getActiveDomainEntryFromShard(
 }
 
 func (e *historyEngineImpl) getPendingActiveDomainEntry(
-	domainUUID *string,
+	domainUUID string,
 ) (bool, error) {
 
 	domainID, err := validateDomainUUID(domainUUID)
@@ -3081,7 +3081,7 @@ func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workf
 	return &types.WorkflowExecutionAlreadyStartedError{
 		Message:        common.StringPtr(fmt.Sprintf(errMsg, workflowID, runID)),
 		StartRequestID: common.StringPtr(fmt.Sprintf("%v", createRequestID)),
-		RunID:          common.StringPtr(fmt.Sprintf("%v", runID)),
+		RunID:          runID,
 	}
 }
 
@@ -3145,7 +3145,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 	reapplyEvents []*types.HistoryEvent,
 ) error {
 
-	domainEntry, err := e.getActiveDomainEntry(common.StringPtr(domainUUID))
+	domainEntry, err := e.getActiveDomainEntry(domainUUID)
 	if err != nil {
 		switch {
 		case domainEntry != nil && domainEntry.IsDomainPendingActive():
@@ -3157,7 +3157,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 	domainID := domainEntry.GetInfo().ID
 	// remove run id from the execution so that reapply events to the current run
 	currentExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(workflowID),
+		WorkflowID: workflowID,
 	}
 
 	return e.updateWorkflowExecutionWithAction(
@@ -3339,7 +3339,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 	workflowExecution types.WorkflowExecution,
 ) (retError error) {
 
-	domainEntry, err := e.getActiveDomainEntry(common.StringPtr(domainUUID))
+	domainEntry, err := e.getActiveDomainEntry(domainUUID)
 	if err != nil {
 		return err
 	}
@@ -3393,8 +3393,8 @@ func (e *historyEngineImpl) loadWorkflowOnce(
 		ctx,
 		domainID,
 		types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	if err != nil {

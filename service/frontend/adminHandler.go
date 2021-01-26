@@ -247,7 +247,7 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 		return nil, adh.error(err, scope)
 	}
 
-	shardID := common.WorkflowIDToHistoryShard(*request.Execution.WorkflowID, adh.numberOfHistoryShards)
+	shardID := common.WorkflowIDToHistoryShard(request.Execution.WorkflowID, adh.numberOfHistoryShards)
 	shardIDstr := string(shardID)
 	shardIDForOutput := strconv.Itoa(shardID)
 
@@ -260,7 +260,7 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 
 	historyAddr := historyHost.GetAddress()
 	resp2, err := adh.GetHistoryClient().DescribeMutableState(ctx, &types.DescribeMutableStateRequest{
-		DomainUUID: &domainID,
+		DomainUUID: domainID,
 		Execution:  request.Execution,
 	})
 	if err != nil {
@@ -398,7 +398,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 	var targetVersionHistory *persistence.VersionHistory
 	if request.NextPageToken == nil {
 		response, err := adh.GetHistoryClient().GetMutableState(ctx, &types.GetMutableStateRequest{
-			DomainUUID: common.StringPtr(domainID),
+			DomainUUID: domainID,
 			Execution:  execution,
 		})
 		if err != nil {
@@ -690,7 +690,7 @@ func (adh *adminHandlerImpl) ReapplyEvents(
 	if request == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
-	if request.DomainName == nil || request.GetDomainName() == "" {
+	if request.GetDomainName() == "" {
 		return adh.error(errDomainNotSet, scope)
 	}
 	if request.WorkflowExecution == nil {
@@ -708,7 +708,7 @@ func (adh *adminHandlerImpl) ReapplyEvents(
 	}
 
 	err = adh.GetHistoryClient().ReapplyEvents(ctx, &types.HistoryReapplyEventsRequest{
-		DomainUUID: common.StringPtr(domainEntry.GetInfo().ID),
+		DomainUUID: domainEntry.GetInfo().ID,
 		Request:    request,
 	})
 	if err != nil {
@@ -905,7 +905,7 @@ func (adh *adminHandlerImpl) RefreshWorkflowTasks(
 	}
 
 	err = adh.GetHistoryClient().RefreshWorkflowTasks(ctx, &types.HistoryRefreshWorkflowTasksRequest{
-		DomainUIID: common.StringPtr(domainEntry.GetInfo().ID),
+		DomainUIID: domainEntry.GetInfo().ID,
 		Request:    request,
 	})
 	if err != nil {
@@ -938,7 +938,7 @@ func (adh *adminHandlerImpl) ResendReplicationTasks(
 		adh.GetLogger(),
 	)
 	return resender.SendSingleWorkflowHistory(
-		request.GetDomainID(),
+		request.DomainID,
 		request.GetWorkflowID(),
 		request.GetRunID(),
 		resendStartEventID,

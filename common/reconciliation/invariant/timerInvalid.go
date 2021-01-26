@@ -65,8 +65,8 @@ func (h *TimerInvalid) Check(
 	req := &persistence.GetWorkflowExecutionRequest{
 		DomainID: timer.DomainID,
 		Execution: types.WorkflowExecution{
-			WorkflowID: &timer.WorkflowID,
-			RunID:      &timer.RunID,
+			WorkflowID: timer.WorkflowID,
+			RunID:      timer.RunID,
 		},
 	}
 

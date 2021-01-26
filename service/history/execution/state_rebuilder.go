@@ -222,8 +222,8 @@ func (r *stateRebuilderImpl) applyEvents(
 		workflowIdentifier.DomainID,
 		requestID,
 		types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowIdentifier.WorkflowID),
-			RunID:      common.StringPtr(workflowIdentifier.RunID),
+			WorkflowID: workflowIdentifier.WorkflowID,
+			RunID:      workflowIdentifier.RunID,
 		},
 		events,
 		nil, // no new run history when rebuilding mutable state

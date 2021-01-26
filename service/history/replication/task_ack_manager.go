@@ -258,8 +258,8 @@ func (t *taskAckManagerImpl) processReplication(
 ) (retReplicationTask *types.ReplicationTask, retError error) {
 
 	execution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(taskInfo.GetWorkflowID()),
-		RunID:      common.StringPtr(taskInfo.GetRunID()),
+		WorkflowID: taskInfo.GetWorkflowID(),
+		RunID:      taskInfo.GetRunID(),
 	}
 
 	context, release, err := t.executionCache.GetOrCreateWorkflowExecution(ctx, taskInfo.GetDomainID(), execution)
@@ -351,8 +351,8 @@ func (t *taskAckManagerImpl) isNewRunNDCEnabled(
 		ctx,
 		domainID,
 		types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	if err != nil {
@@ -470,7 +470,7 @@ func (t *taskAckManagerImpl) generateFailoverMarkerTask(
 		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeFailoverMarker),
 		SourceTaskID: common.Int64Ptr(taskInfo.GetTaskID()),
 		FailoverMarkerAttributes: &types.FailoverMarkerAttributes{
-			DomainID:        common.StringPtr(taskInfo.GetDomainID()),
+			DomainID:        taskInfo.GetDomainID(),
 			FailoverVersion: common.Int64Ptr(taskInfo.GetVersion()),
 		},
 		CreationTime: common.Int64Ptr(taskInfo.CreationTime),
@@ -516,9 +516,9 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 			return &types.ReplicationTask{
 				TaskType: types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeSyncActivity),
 				SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
-					DomainID:           common.StringPtr(taskInfo.GetDomainID()),
-					WorkflowID:         common.StringPtr(taskInfo.GetWorkflowID()),
-					RunID:              common.StringPtr(taskInfo.GetRunID()),
+					DomainID:           taskInfo.GetDomainID(),
+					WorkflowID:         taskInfo.GetWorkflowID(),
+					RunID:              taskInfo.GetRunID(),
 					Version:            common.Int64Ptr(activityInfo.Version),
 					ScheduledID:        common.Int64Ptr(activityInfo.ScheduleID),
 					ScheduledTime:      scheduledTime,
@@ -600,9 +600,9 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 				TaskType: types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeHistoryV2),
 				HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
 					TaskID:              common.Int64Ptr(task.FirstEventID),
-					DomainID:            common.StringPtr(task.DomainID),
-					WorkflowID:          common.StringPtr(task.WorkflowID),
-					RunID:               common.StringPtr(task.RunID),
+					DomainID:            task.DomainID,
+					WorkflowID:          task.WorkflowID,
+					RunID:               task.RunID,
 					VersionHistoryItems: versionHistoryItems,
 					Events:              eventsBlob,
 					NewRunEvents:        newRunEventsBlob,

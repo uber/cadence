@@ -389,7 +389,7 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 		EventID:   common.Int64Ptr(127),
 		EventType: types.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
 		WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
-			NewExecutionRunID: common.StringPtr(newRunID),
+			NewExecutionRunID: newRunID,
 		},
 	}
 
@@ -500,7 +500,7 @@ func (s *workflowResetterSuite) TestReapplyWorkflowEvents() {
 		EventID:   common.Int64Ptr(5),
 		EventType: types.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
 		WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
-			NewExecutionRunID: common.StringPtr(newRunID),
+			NewExecutionRunID: newRunID,
 		},
 	}
 	events := []*types.HistoryEvent{event1, event2, event3, event4, event5}

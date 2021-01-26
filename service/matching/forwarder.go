@@ -127,7 +127,7 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) erro
 	switch fwdr.taskListID.taskType {
 	case persistence.TaskListTypeDecision:
 		err = fwdr.client.AddDecisionTask(ctx, &types.AddDecisionTaskRequest{
-			DomainUUID: &task.event.DomainID,
+			DomainUUID: task.event.DomainID,
 			Execution:  task.workflowExecution(),
 			TaskList: &types.TaskList{
 				Name: &name,
@@ -140,8 +140,8 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) erro
 		})
 	case persistence.TaskListTypeActivity:
 		err = fwdr.client.AddActivityTask(ctx, &types.AddActivityTaskRequest{
-			DomainUUID:       &fwdr.taskListID.domainID,
-			SourceDomainUUID: &task.event.DomainID,
+			DomainUUID:       fwdr.taskListID.domainID,
+			SourceDomainUUID: task.event.DomainID,
 			Execution:        task.workflowExecution(),
 			TaskList: &types.TaskList{
 				Name: &name,
@@ -204,7 +204,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 	switch fwdr.taskListID.taskType {
 	case persistence.TaskListTypeDecision:
 		resp, err := fwdr.client.PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{
-			DomainUUID: &fwdr.taskListID.domainID,
+			DomainUUID: fwdr.taskListID.domainID,
 			PollerID:   &pollerID,
 			PollRequest: &types.PollForDecisionTaskRequest{
 				TaskList: &types.TaskList{
@@ -221,7 +221,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 		return newInternalStartedTask(&startedTaskInfo{decisionTaskInfo: resp}), nil
 	case persistence.TaskListTypeActivity:
 		resp, err := fwdr.client.PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
-			DomainUUID: &fwdr.taskListID.domainID,
+			DomainUUID: fwdr.taskListID.domainID,
 			PollerID:   &pollerID,
 			PollRequest: &types.PollForActivityTaskRequest{
 				TaskList: &types.TaskList{

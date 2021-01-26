@@ -147,10 +147,10 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 	ctx := context.Background()
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
 		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(""),
-				RunID:      common.StringPtr(uuid.New()),
+				WorkflowID: "",
+				RunID:      uuid.New(),
 			},
 			StartEventID:      common.Int64Ptr(1),
 			StartEventVersion: common.Int64Ptr(100),
@@ -166,10 +166,10 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 	ctx := context.Background()
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
 		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr("workflowID"),
-				RunID:      common.StringPtr("runID"),
+				WorkflowID: "workflowID",
+				RunID:      "runID",
 			},
 			StartEventID:      common.Int64Ptr(1),
 			StartEventVersion: common.Int64Ptr(100),
@@ -185,10 +185,10 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 	ctx := context.Background()
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
 		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr("workflowID"),
-				RunID:      common.StringPtr(uuid.New()),
+				WorkflowID: "workflowID",
+				RunID:      uuid.New(),
 			},
 			StartEventID:      common.Int64Ptr(1),
 			StartEventVersion: common.Int64Ptr(100),
@@ -205,10 +205,10 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnDomain
 	s.mockDomainCache.EXPECT().GetDomainID(s.domainName).Return("", fmt.Errorf("test")).Times(1)
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
 		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr("workflowID"),
-				RunID:      common.StringPtr(uuid.New()),
+				WorkflowID: "workflowID",
+				RunID:      uuid.New(),
 			},
 			StartEventID:      common.Int64Ptr(1),
 			StartEventVersion: common.Int64Ptr(100),
@@ -243,10 +243,10 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 	}, nil)
 	_, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
 		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr("workflowID"),
-				RunID:      common.StringPtr(uuid.New()),
+				WorkflowID: "workflowID",
+				RunID:      uuid.New(),
 			},
 			StartEventID:      common.Int64Ptr(1),
 			StartEventVersion: common.Int64Ptr(100),
@@ -276,10 +276,10 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_SameStartIDAnd
 
 	resp, err := s.handler.GetWorkflowExecutionRawHistoryV2(ctx,
 		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr("workflowID"),
-				RunID:      common.StringPtr(uuid.New()),
+				WorkflowID: "workflowID",
+				RunID:      uuid.New(),
 			},
 			StartEventID:      common.Int64Ptr(10),
 			StartEventVersion: common.Int64Ptr(100),
@@ -300,10 +300,10 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{firstItem, endItem})
 	versionHistories := persistence.NewVersionHistories(versionHistory)
 	request := &types.GetWorkflowExecutionRawHistoryV2Request{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr("workflowID"),
-			RunID:      common.StringPtr(uuid.New()),
+			WorkflowID: "workflowID",
+			RunID:      uuid.New(),
 		},
 		StartEventID:      common.Int64Ptr(inputStartEventID),
 		StartEventVersion: common.Int64Ptr(inputStartVersion),
@@ -333,10 +333,10 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{firstItem, targetItem})
 	versionHistories := persistence.NewVersionHistories(versionHistory)
 	request := &types.GetWorkflowExecutionRawHistoryV2Request{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr("workflowID"),
-			RunID:      common.StringPtr(uuid.New()),
+			WorkflowID: "workflowID",
+			RunID:      uuid.New(),
 		},
 		StartEventID:      nil,
 		StartEventVersion: nil,
@@ -366,10 +366,10 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{firstItem, targetItem})
 	versionHistories := persistence.NewVersionHistories(versionHistory)
 	request := &types.GetWorkflowExecutionRawHistoryV2Request{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr("workflowID"),
-			RunID:      common.StringPtr(uuid.New()),
+			WorkflowID: "workflowID",
+			RunID:      uuid.New(),
 		},
 		StartEventID:      common.Int64Ptr(inputStartEventID),
 		StartEventVersion: common.Int64Ptr(inputStartVersion),
@@ -404,10 +404,10 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 	_, _, err := versionHistories.AddVersionHistory(versionHistory2)
 	s.NoError(err)
 	request := &types.GetWorkflowExecutionRawHistoryV2Request{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr("workflowID"),
-			RunID:      common.StringPtr(uuid.New()),
+			WorkflowID: "workflowID",
+			RunID:      uuid.New(),
 		},
 		StartEventID:      common.Int64Ptr(9),
 		StartEventVersion: common.Int64Ptr(20),

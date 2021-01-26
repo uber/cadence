@@ -155,8 +155,8 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 
 	domainID := constants.TestDomainID
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("wId"),
-		RunID:      common.StringPtr(constants.TestRunID),
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
 	}
 	tl := "testTaskList"
 	stickyTl := "stickyTaskList"
@@ -186,7 +186,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	}, nil).Once()
 
 	request := types.RecordDecisionTaskStartedRequest{
-		DomainUUID:        common.StringPtr(domainID),
+		DomainUUID:        domainID,
 		WorkflowExecution: &we,
 		ScheduleID:        common.Int64Ptr(2),
 		TaskID:            common.Int64Ptr(100),
@@ -244,10 +244,10 @@ func (s *engine3Suite) TestStartWorkflowExecution_BrandNew() {
 
 	requestID := uuid.New()
 	resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		StartRequest: &types.StartWorkflowExecutionRequest{
-			Domain:                              common.StringPtr(domainID),
-			WorkflowID:                          common.StringPtr(workflowID),
+			Domain:                              domainID,
+			WorkflowID:                          workflowID,
 			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
@@ -279,10 +279,10 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 	signalName := "my signal name"
 	input := []byte("test input")
 	sRequest = &types.HistorySignalWithStartWorkflowExecutionRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
-			Domain:     common.StringPtr(domainID),
-			WorkflowID: common.StringPtr(workflowID),
+			Domain:     domainID,
+			WorkflowID: workflowID,
 			Identity:   common.StringPtr(identity),
 			SignalName: common.StringPtr(signalName),
 			Input:      input,
@@ -332,10 +332,10 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 	input := []byte("test input")
 	requestID := uuid.New()
 	sRequest = &types.HistorySignalWithStartWorkflowExecutionRequest{
-		DomainUUID: common.StringPtr(domainID),
+		DomainUUID: domainID,
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
-			Domain:                              common.StringPtr(domainID),
-			WorkflowID:                          common.StringPtr(workflowID),
+			Domain:                              domainID,
+			WorkflowID:                          workflowID,
 			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),

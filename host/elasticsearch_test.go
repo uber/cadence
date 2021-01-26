@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//+build esintegration
+// +build esintegration
 
 // to run locally, make sure kafka and es is running,
 // then run cmd `go test -v ./host -run TestElasticsearchIntegrationSuite -tags esintegration`
@@ -113,7 +113,7 @@ func (s *elasticsearchIntegrationSuite) TestListOpenWorkflow() {
 	for i := 0; i < numOfRetry; i++ {
 		startFilter.LatestTime = common.Int64Ptr(time.Now().UnixNano())
 		resp, err := s.engine.ListOpenWorkflowExecutions(createContext(), &types.ListOpenWorkflowExecutionsRequest{
-			Domain:          common.StringPtr(s.domainName),
+			Domain:          s.domainName,
 			MaximumPageSize: common.Int32Ptr(defaultTestValueOfESIndexMaxResultWindow),
 			StartTimeFilter: startFilter,
 			ExecutionFilter: &types.WorkflowExecutionFilter{
@@ -156,7 +156,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_ExecutionTime() {
 
 	cronID := id + "-cron"
 	request.CronSchedule = common.StringPtr("@every 1m")
-	request.WorkflowID = common.StringPtr(cronID)
+	request.WorkflowID = cronID
 
 	weCron, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
@@ -226,7 +226,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
 	time.Sleep(waitForESToSettle)
 
 	listRequest := &types.ListWorkflowExecutionsRequest{
-		Domain:   common.StringPtr(s.domainName),
+		Domain:   s.domainName,
 		PageSize: common.Int32Ptr(int32(2)),
 		Query:    common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing and BinaryChecksums = 'binary-v1'`, wt)),
 	}
@@ -235,9 +235,9 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
 
 	// verify DescribeWorkflowExecution
 	descRequest := &types.DescribeWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 	}
 	descResp, err := s.engine.DescribeWorkflowExecution(createContext(), descRequest)
@@ -289,14 +289,14 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrQuery() {
 	s.Nil(err)
 
 	request.RequestID = common.StringPtr(uuid.New())
-	request.WorkflowID = common.StringPtr(id + "-2")
+	request.WorkflowID = id + "-2"
 	attrValBytes, _ = json.Marshal(2)
 	searchAttr.IndexedFields[key] = attrValBytes
 	we2, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
 
 	request.RequestID = common.StringPtr(uuid.New())
-	request.WorkflowID = common.StringPtr(id + "-3")
+	request.WorkflowID = id + "-3"
 	attrValBytes, _ = json.Marshal(3)
 	searchAttr.IndexedFields[key] = attrValBytes
 	we3, err := s.engine.StartWorkflowExecution(createContext(), request)
@@ -308,7 +308,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrQuery() {
 	query1 := fmt.Sprintf(`CustomIntField = %d`, 1)
 	var openExecution *types.WorkflowExecutionInfo
 	listRequest := &types.ListWorkflowExecutionsRequest{
-		Domain:   common.StringPtr(s.domainName),
+		Domain:   s.domainName,
 		PageSize: common.Int32Ptr(defaultTestValueOfESIndexMaxResultWindow),
 		Query:    common.StringPtr(query1),
 	}
@@ -386,7 +386,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 
 	for i := 0; i < defaultTestValueOfESIndexMaxResultWindow; i++ {
 		startRequest.RequestID = common.StringPtr(uuid.New())
-		startRequest.WorkflowID = common.StringPtr(id + strconv.Itoa(i))
+		startRequest.WorkflowID = id + strconv.Itoa(i)
 		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
 		s.Nil(err)
 	}
@@ -397,7 +397,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 	var nextPageToken []byte
 
 	listRequest := &types.ListWorkflowExecutionsRequest{
-		Domain:        common.StringPtr(s.domainName),
+		Domain:        s.domainName,
 		PageSize:      common.Int32Ptr(int32(defaultTestValueOfESIndexMaxResultWindow)),
 		NextPageToken: nextPageToken,
 		Query:         common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt)),
@@ -431,7 +431,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrderBy() {
 
 	for i := 0; i < defaultTestValueOfESIndexMaxResultWindow+1; i++ { // start 6
 		startRequest.RequestID = common.StringPtr(uuid.New())
-		startRequest.WorkflowID = common.StringPtr(id + strconv.Itoa(i))
+		startRequest.WorkflowID = id + strconv.Itoa(i)
 
 		if i < defaultTestValueOfESIndexMaxResultWindow-1 { // 4 workflow has search attr
 			intVal, _ := json.Marshal(i)
@@ -466,7 +466,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrderBy() {
 	query1 := fmt.Sprintf(queryTemplate, wt, definition.CloseTime, asc)
 	var openExecutions []*types.WorkflowExecutionInfo
 	listRequest := &types.ListWorkflowExecutionsRequest{
-		Domain:   common.StringPtr(s.domainName),
+		Domain:   s.domainName,
 		PageSize: common.Int32Ptr(pageSize),
 		Query:    common.StringPtr(query1),
 	}
@@ -562,7 +562,7 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 	// start enough number of workflows
 	for i := 0; i < numOfWorkflows; i++ {
 		startRequest.RequestID = common.StringPtr(uuid.New())
-		startRequest.WorkflowID = common.StringPtr(wid + strconv.Itoa(i))
+		startRequest.WorkflowID = wid + strconv.Itoa(i)
 		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
 		s.Nil(err)
 	}
@@ -573,7 +573,7 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 	var nextPageToken []byte
 
 	listRequest := &types.ListWorkflowExecutionsRequest{
-		Domain:        common.StringPtr(s.domainName),
+		Domain:        s.domainName,
 		PageSize:      common.Int32Ptr(int32(pageSize)),
 		NextPageToken: nextPageToken,
 		Query:         common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wType)),
@@ -629,7 +629,7 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 func (s *elasticsearchIntegrationSuite) testHelperForReadOnce(runID, query string, isScan bool) {
 	var openExecution *types.WorkflowExecutionInfo
 	listRequest := &types.ListWorkflowExecutionsRequest{
-		Domain:   common.StringPtr(s.domainName),
+		Domain:   s.domainName,
 		PageSize: common.Int32Ptr(defaultTestValueOfESIndexMaxResultWindow),
 		Query:    common.StringPtr(query),
 	}
@@ -675,8 +675,8 @@ func (s *elasticsearchIntegrationSuite) TestScanWorkflow() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -724,7 +724,7 @@ func (s *elasticsearchIntegrationSuite) TestScanWorkflow_PageToken() {
 	taskList.Name = common.StringPtr(tl)
 
 	request := &types.StartWorkflowExecutionRequest{
-		Domain:                              common.StringPtr(s.domainName),
+		Domain:                              s.domainName,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -758,7 +758,7 @@ func (s *elasticsearchIntegrationSuite) TestCountWorkflow() {
 
 	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
 	countRequest := &types.CountWorkflowExecutionsRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		Query:  common.StringPtr(query),
 	}
 	var resp *types.CountWorkflowExecutionsResponse
@@ -789,8 +789,8 @@ func (s *elasticsearchIntegrationSuite) createStartWorkflowExecutionRequest(id, 
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -815,8 +815,8 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -828,7 +828,7 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	decisionCount := 0
 	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
@@ -902,7 +902,7 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution() {
 
 	// verify upsert data is on ES
 	listRequest := &types.ListWorkflowExecutionsRequest{
-		Domain:   common.StringPtr(s.domainName),
+		Domain:   s.domainName,
 		PageSize: common.Int32Ptr(int32(2)),
 		Query:    common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt)),
 	}
@@ -1016,8 +1016,8 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey()
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1029,7 +1029,7 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey()
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
@@ -1061,10 +1061,10 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey()
 	s.Nil(err)
 
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(*we.RunID),
+			WorkflowID: id,
+			RunID:      we.RunID,
 		},
 	})
 	s.Nil(err)

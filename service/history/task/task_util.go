@@ -377,8 +377,8 @@ func getWorkflowExecution(
 ) types.WorkflowExecution {
 
 	return types.WorkflowExecution{
-		WorkflowID: common.StringPtr(taskInfo.GetWorkflowID()),
-		RunID:      common.StringPtr(taskInfo.GetRunID()),
+		WorkflowID: taskInfo.GetWorkflowID(),
+		RunID:      taskInfo.GetRunID(),
 	}
 }
 

@@ -124,14 +124,14 @@ func (s *decisionAttrValidatorSuite) TestValidateSignalExternalWorkflowExecution
 	s.EqualError(err, "BadRequestError{Message: Execution is nil on decision.}")
 
 	attributes.Execution = &types.WorkflowExecution{}
-	attributes.Execution.WorkflowID = common.StringPtr("workflow-id")
+	attributes.Execution.WorkflowID = "workflow-id"
 	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(s.testDomainID, s.testTargetDomainID, attributes)
 	s.EqualError(err, "BadRequestError{Message: SignalName is not set on decision.}")
 
-	attributes.Execution.RunID = common.StringPtr("run-id")
+	attributes.Execution.RunID = "run-id"
 	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(s.testDomainID, s.testTargetDomainID, attributes)
 	s.EqualError(err, "BadRequestError{Message: Invalid RunId set on decision.}")
-	attributes.Execution.RunID = common.StringPtr(constants.TestRunID)
+	attributes.Execution.RunID = constants.TestRunID
 
 	attributes.SignalName = common.StringPtr("my signal name")
 	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(s.testDomainID, s.testTargetDomainID, attributes)
@@ -558,7 +558,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_NoRe
 		ActivityType: &types.ActivityType{
 			Name: common.StringPtr("some random activity type"),
 		},
-		Domain: common.StringPtr(s.testDomainID),
+		Domain: s.testDomainID,
 		TaskList: &types.TaskList{
 			Name: common.StringPtr("some random task list"),
 		},
@@ -615,7 +615,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 		ActivityType: &types.ActivityType{
 			Name: common.StringPtr("some random activity type"),
 		},
-		Domain: common.StringPtr(s.testDomainID),
+		Domain: s.testDomainID,
 		TaskList: &types.TaskList{
 			Name: common.StringPtr("some random task list"),
 		},
@@ -677,7 +677,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 		ActivityType: &types.ActivityType{
 			Name: common.StringPtr("some random activity type"),
 		},
-		Domain: common.StringPtr(s.testDomainID),
+		Domain: s.testDomainID,
 		TaskList: &types.TaskList{
 			Name: common.StringPtr("some random task list"),
 		},

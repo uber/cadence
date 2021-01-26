@@ -735,7 +735,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 		// for a query task
 		queryRequest := task.query.request
 		taskToken := &common.QueryTaskToken{
-			DomainID: *queryRequest.DomainUUID,
+			DomainID: queryRequest.DomainUUID,
 			TaskList: *queryRequest.TaskList.Name,
 			TaskID:   task.query.taskID,
 		}
@@ -819,7 +819,7 @@ func (e *matchingEngineImpl) recordDecisionTaskStarted(
 	task *internalTask,
 ) (*types.RecordDecisionTaskStartedResponse, error) {
 	request := &types.RecordDecisionTaskStartedRequest{
-		DomainUUID:        &task.event.DomainID,
+		DomainUUID:        task.event.DomainID,
 		WorkflowExecution: task.workflowExecution(),
 		ScheduleID:        &task.event.ScheduleID,
 		TaskID:            &task.event.TaskID,
@@ -848,7 +848,7 @@ func (e *matchingEngineImpl) recordActivityTaskStarted(
 	task *internalTask,
 ) (*types.RecordActivityTaskStartedResponse, error) {
 	request := &types.RecordActivityTaskStartedRequest{
-		DomainUUID:        &task.event.DomainID,
+		DomainUUID:        task.event.DomainID,
 		WorkflowExecution: task.workflowExecution(),
 		ScheduleID:        &task.event.ScheduleID,
 		TaskID:            &task.event.TaskID,

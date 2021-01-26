@@ -157,10 +157,10 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 	frontendClient := cFactory.ServerFrontendClient(c)
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
-		Domain: common.StringPtr(domain),
+		Domain: domain,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-			RunID:      common.StringPtr(rid),
+			WorkflowID: wid,
+			RunID:      rid,
 		},
 	})
 	if err != nil {
@@ -910,10 +910,10 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) {
 	defer cancel()
 
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
-		Domain: common.StringPtr(domain),
+		Domain: domain,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-			RunID:      common.StringPtr(rid),
+			WorkflowID: wid,
+			RunID:      rid,
 		},
 	})
 	if err != nil {
@@ -1531,10 +1531,10 @@ func ResetWorkflow(c *cli.Context) {
 		}
 	}
 	resp, err := frontendClient.ResetWorkflowExecution(ctx, &types.ResetWorkflowExecutionRequest{
-		Domain: common.StringPtr(domain),
+		Domain: domain,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-			RunID:      common.StringPtr(resetBaseRunID),
+			WorkflowID: wid,
+			RunID:      resetBaseRunID,
 		},
 		Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), reason)),
 		DecisionFinishEventID: common.Int64Ptr(decisionFinishID),
@@ -1691,8 +1691,8 @@ func ResetInBatch(c *cli.Context) {
 			}
 
 			wes <- types.WorkflowExecution{
-				WorkflowID: common.StringPtr(wid),
-				RunID:      common.StringPtr(rid),
+				WorkflowID: wid,
+				RunID:      rid,
 			}
 		}
 	} else {
@@ -1712,8 +1712,8 @@ func ResetInBatch(c *cli.Context) {
 				}
 
 				wes <- types.WorkflowExecution{
-					WorkflowID: common.StringPtr(wid),
-					RunID:      common.StringPtr(rid),
+					WorkflowID: wid,
+					RunID:      rid,
 				}
 			}
 
@@ -1752,9 +1752,9 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 
 	frontendClient := cFactory.ServerFrontendClient(c)
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
-		Domain: common.StringPtr(domain),
+		Domain: domain,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
+			WorkflowID: wid,
 		},
 	})
 	if err != nil {
@@ -1799,10 +1799,10 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 		fmt.Printf("dry run to reset wid: %v, rid:%v to baseRunID:%v, eventID:%v \n", wid, rid, resetBaseRunID, decisionFinishID)
 	} else {
 		resp2, err := frontendClient.ResetWorkflowExecution(ctx, &types.ResetWorkflowExecutionRequest{
-			Domain: common.StringPtr(domain),
+			Domain: domain,
 			WorkflowExecution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(wid),
-				RunID:      common.StringPtr(resetBaseRunID),
+				WorkflowID: wid,
+				RunID:      resetBaseRunID,
 			},
 			DecisionFinishEventID: common.Int64Ptr(decisionFinishID),
 			RequestID:             common.StringPtr(uuid.New()),
@@ -1821,10 +1821,10 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 
 func isLastEventDecisionTaskFailedWithNonDeterminism(ctx context.Context, domain, wid, rid string, frontendClient frontend.Client) (bool, error) {
 	req := &types.GetWorkflowExecutionHistoryRequest{
-		Domain: common.StringPtr(domain),
+		Domain: domain,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-			RunID:      common.StringPtr(rid),
+			WorkflowID: wid,
+			RunID:      rid,
 		},
 		MaximumPageSize: common.Int32Ptr(1000),
 		NextPageToken:   nil,
@@ -1934,10 +1934,10 @@ func getFirstDecisionTaskByType(
 ) (decisionFinishID int64, err error) {
 
 	req := &types.GetWorkflowExecutionHistoryRequest{
-		Domain: common.StringPtr(domain),
+		Domain: domain,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		MaximumPageSize: common.Int32Ptr(1000),
 		NextPageToken:   nil,
@@ -1970,9 +1970,9 @@ func getFirstDecisionTaskByType(
 
 func getCurrentRunID(ctx context.Context, domain, wid string, frontendClient frontend.Client) (string, error) {
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
-		Domain: common.StringPtr(domain),
+		Domain: domain,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
+			WorkflowID: wid,
 		},
 	})
 	if err != nil {
@@ -1983,10 +1983,10 @@ func getCurrentRunID(ctx context.Context, domain, wid string, frontendClient fro
 
 func getBadDecisionCompletedID(ctx context.Context, domain, wid, rid, binChecksum string, frontendClient frontend.Client) (decisionFinishID int64, err error) {
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
-		Domain: common.StringPtr(domain),
+		Domain: domain,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-			RunID:      common.StringPtr(rid),
+			WorkflowID: wid,
+			RunID:      rid,
 		},
 	})
 	if err != nil {
@@ -2018,10 +2018,10 @@ func getLastDecisionTaskByType(
 ) (decisionFinishID int64, err error) {
 
 	req := &types.GetWorkflowExecutionHistoryRequest{
-		Domain: common.StringPtr(domain),
+		Domain: domain,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		MaximumPageSize: common.Int32Ptr(1000),
 		NextPageToken:   nil,
@@ -2054,10 +2054,10 @@ func getLastDecisionTaskByType(
 func getLastContinueAsNewID(ctx context.Context, domain, wid, rid string, frontendClient frontend.Client) (resetBaseRunID string, decisionFinishID int64, err error) {
 	// get first event
 	req := &types.GetWorkflowExecutionHistoryRequest{
-		Domain: common.StringPtr(domain),
+		Domain: domain,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-			RunID:      common.StringPtr(rid),
+			WorkflowID: wid,
+			RunID:      rid,
 		},
 		MaximumPageSize: common.Int32Ptr(1),
 		NextPageToken:   nil,
@@ -2073,10 +2073,10 @@ func getLastContinueAsNewID(ctx context.Context, domain, wid, rid string, fronte
 	}
 
 	req = &types.GetWorkflowExecutionHistoryRequest{
-		Domain: common.StringPtr(domain),
+		Domain: domain,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-			RunID:      common.StringPtr(resetBaseRunID),
+			WorkflowID: wid,
+			RunID:      resetBaseRunID,
 		},
 		MaximumPageSize: common.Int32Ptr(1000),
 		NextPageToken:   nil,
@@ -2119,9 +2119,9 @@ func CompleteActivity(c *cli.Context) {
 
 	frontendClient := cFactory.ServerFrontendClient(c)
 	err := frontendClient.RespondActivityTaskCompletedByID(ctx, &types.RespondActivityTaskCompletedByIDRequest{
-		Domain:     common.StringPtr(domain),
-		WorkflowID: common.StringPtr(wid),
-		RunID:      common.StringPtr(rid),
+		Domain:     domain,
+		WorkflowID: wid,
+		RunID:      rid,
 		ActivityID: common.StringPtr(activityID),
 		Result:     []byte(result),
 		Identity:   common.StringPtr(identity),
@@ -2150,9 +2150,9 @@ func FailActivity(c *cli.Context) {
 
 	frontendClient := cFactory.ServerFrontendClient(c)
 	err := frontendClient.RespondActivityTaskFailedByID(ctx, &types.RespondActivityTaskFailedByIDRequest{
-		Domain:     common.StringPtr(domain),
-		WorkflowID: common.StringPtr(wid),
-		RunID:      common.StringPtr(rid),
+		Domain:     domain,
+		WorkflowID: wid,
+		RunID:      rid,
 		ActivityID: common.StringPtr(activityID),
 		Reason:     common.StringPtr(reason),
 		Details:    []byte(detail),
@@ -2186,10 +2186,10 @@ func getEarliestDecisionID(
 	frontendClient frontend.Client,
 ) (decisionFinishID int64, err error) {
 	req := &types.GetWorkflowExecutionHistoryRequest{
-		Domain: common.StringPtr(domain),
+		Domain: domain,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(wid),
-			RunID:      common.StringPtr(rid),
+			WorkflowID: wid,
+			RunID:      rid,
 		},
 		MaximumPageSize: common.Int32Ptr(1000),
 		NextPageToken:   nil,

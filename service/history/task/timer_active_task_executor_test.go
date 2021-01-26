@@ -152,8 +152,8 @@ func (s *timerActiveTaskExecutorSuite) TearDownTest() {
 func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Fire() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -168,7 +168,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Fire() {
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -222,8 +222,8 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Fire() {
 func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Noop() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -238,7 +238,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Noop() {
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -290,8 +290,8 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Noop() {
 func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_Fire() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -306,7 +306,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -373,8 +373,8 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_
 func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_Noop() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -389,7 +389,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -456,8 +456,8 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_
 func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Retry_StartToClose() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -472,7 +472,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -553,8 +553,8 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Retry_ScheduleToStart() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -569,7 +569,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -646,8 +646,8 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 
 func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Noop() {
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -662,7 +662,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_No
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -737,8 +737,8 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_No
 
 func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noop() {
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -753,7 +753,7 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noop
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -827,8 +827,8 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noop
 func (s *timerActiveTaskExecutorSuite) TestDecisionTimeout_Fire() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -843,7 +843,7 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionTimeout_Fire() {
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -887,8 +887,8 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionTimeout_Fire() {
 func (s *timerActiveTaskExecutorSuite) TestDecisionTimeout_Noop() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -903,7 +903,7 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionTimeout_Noop() {
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -939,8 +939,8 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionTimeout_Noop() {
 func (s *timerActiveTaskExecutorSuite) TestWorkflowBackoffTimer_Fire() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -955,7 +955,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowBackoffTimer_Fire() {
 	event, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -996,8 +996,8 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowBackoffTimer_Fire() {
 func (s *timerActiveTaskExecutorSuite) TestWorkflowBackoffTimer_Noop() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1012,7 +1012,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowBackoffTimer_Noop() {
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -1050,8 +1050,8 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowBackoffTimer_Noop() {
 func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Fire() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1066,7 +1066,7 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Fire() {
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -1126,8 +1126,8 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Fire() {
 	s.mockMatchingClient.EXPECT().AddActivityTask(
 		gomock.Any(),
 		&types.AddActivityTaskRequest{
-			DomainUUID:       common.StringPtr(activityInfo.DomainID),
-			SourceDomainUUID: common.StringPtr(activityInfo.DomainID),
+			DomainUUID:       activityInfo.DomainID,
+			SourceDomainUUID: activityInfo.DomainID,
 			Execution:        &workflowExecution,
 			TaskList: &types.TaskList{
 				Name: common.StringPtr(activityInfo.TaskList),
@@ -1144,8 +1144,8 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Fire() {
 func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Noop() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1160,7 +1160,7 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Noop() {
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -1227,8 +1227,8 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Noop() {
 func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_Fire() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1243,7 +1243,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_Fire() {
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -1285,8 +1285,8 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_Fire() {
 func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_ContinueAsNew_Retry() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1301,7 +1301,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_ContinueAsNew_Retry()
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
@@ -1353,8 +1353,8 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_ContinueAsNew_Retry()
 func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_ContinueAsNew_Cron() {
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 	workflowType := "some random workflow type"
 	taskListName := "some random task list"
@@ -1369,7 +1369,7 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_ContinueAsNew_Cron() 
 	_, err := mutableState.AddWorkflowExecutionStartedEvent(
 		workflowExecution,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},

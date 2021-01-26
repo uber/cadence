@@ -57,8 +57,8 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -73,7 +73,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	workflowComplete := false
 	continueAsNewCount := int32(10)
@@ -153,8 +153,8 @@ func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -166,7 +166,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	workflowComplete := false
 	continueAsNewCount := int32(1)
@@ -221,9 +221,9 @@ func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
 GetHistoryLoop:
 	for i := 0; i < 20; i++ {
 		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
+				WorkflowID: id,
 			},
 		})
 		s.Nil(err)
@@ -258,8 +258,8 @@ func (s *integrationSuite) TestWorkflowContinueAsNew_TaskID() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -271,7 +271,7 @@ func (s *integrationSuite) TestWorkflowContinueAsNew_TaskID() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	var executions []*types.WorkflowExecution
 
@@ -353,8 +353,8 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(parentID),
+		Domain:                              s.domainName,
+		WorkflowID:                          parentID,
 		WorkflowType:                        parentWorkflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -365,7 +365,7 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	// decider logic
 	childComplete := false
@@ -377,10 +377,10 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 	var completedEvent *types.HistoryEvent
 	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
-		s.Logger.Info("Processing decision task for WorkflowID:", tag.WorkflowID(*execution.WorkflowID))
+		s.Logger.Info("Processing decision task for WorkflowID:", tag.WorkflowID(execution.WorkflowID))
 
 		// Child Decider Logic
-		if *execution.WorkflowID == childID {
+		if execution.WorkflowID == childID {
 			if continueAsNewCounter < continueAsNewCount {
 				continueAsNewCounter++
 				buf := new(bytes.Buffer)
@@ -404,7 +404,7 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 		}
 
 		// Parent Decider Logic
-		if *execution.WorkflowID == parentID {
+		if execution.WorkflowID == parentID {
 			if !childExecutionStarted {
 				s.Logger.Info("Starting child execution.")
 				childExecutionStarted = true
@@ -414,8 +414,8 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 				return nil, []*types.Decision{{
 					DecisionType: types.DecisionTypeStartChildWorkflowExecution.Ptr(),
 					StartChildWorkflowExecutionDecisionAttributes: &types.StartChildWorkflowExecutionDecisionAttributes{
-						Domain:       common.StringPtr(s.domainName),
-						WorkflowID:   common.StringPtr(childID),
+						Domain:       s.domainName,
+						WorkflowID:   childID,
 						WorkflowType: childWorkflowType,
 						Input:        buf.Bytes(),
 					},
@@ -482,8 +482,8 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 	s.Nil(err)
 	s.NotNil(completedEvent)
 	completedAttributes := completedEvent.ChildWorkflowExecutionCompletedEventAttributes
-	s.Equal(s.domainName, *completedAttributes.Domain)
-	s.Equal(childID, *completedAttributes.WorkflowExecution.WorkflowID)
+	s.Equal(s.domainName, completedAttributes.Domain)
+	s.Equal(childID, completedAttributes.WorkflowExecution.WorkflowID)
 	s.NotEqual(startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowExecution.RunID,
 		completedAttributes.WorkflowExecution.RunID)
 	s.Equal(wtChild, *completedAttributes.WorkflowType.Name)

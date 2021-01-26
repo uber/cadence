@@ -158,10 +158,10 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 	s.mockAdminClient.EXPECT().GetWorkflowExecutionRawHistoryV2(
 		gomock.Any(),
 		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(workflowID),
-				RunID:      common.StringPtr(runID),
+				WorkflowID: workflowID,
+				RunID:      runID,
 			},
 			StartEventID:      common.Int64Ptr(startEventID),
 			StartEventVersion: common.Int64Ptr(startEventVersion),
@@ -178,10 +178,10 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 	s.mockAdminClient.EXPECT().GetWorkflowExecutionRawHistoryV2(
 		gomock.Any(),
 		&types.GetWorkflowExecutionRawHistoryV2Request{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(workflowID),
-				RunID:      common.StringPtr(runID),
+				WorkflowID: workflowID,
+				RunID:      runID,
 			},
 			StartEventID:      common.Int64Ptr(startEventID),
 			StartEventVersion: common.Int64Ptr(startEventVersion),
@@ -198,10 +198,10 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 	s.mockHistoryClient.EXPECT().ReplicateEventsV2(
 		gomock.Any(),
 		&types.ReplicateEventsV2Request{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			WorkflowExecution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(workflowID),
-				RunID:      common.StringPtr(runID),
+				WorkflowID: workflowID,
+				RunID:      runID,
 			},
 			VersionHistoryItems: versionHistoryItems,
 			Events:              blob,
@@ -235,10 +235,10 @@ func (s *historyResenderSuite) TestCreateReplicateRawEventsRequest() {
 	}
 
 	s.Equal(&types.ReplicateEventsV2Request{
-		DomainUUID: common.StringPtr(s.domainID),
+		DomainUUID: s.domainID,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		VersionHistoryItems: versionHistoryItems,
 		Events:              blob,
@@ -258,10 +258,10 @@ func (s *historyResenderSuite) TestSendReplicationRawRequest() {
 		Version: common.Int64Ptr(1),
 	}
 	request := &types.ReplicateEventsV2Request{
-		DomainUUID: common.StringPtr(s.domainID),
+		DomainUUID: s.domainID,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		Events: &types.DataBlob{
 			EncodingType: types.EncodingTypeThriftRW.Ptr(),
@@ -283,10 +283,10 @@ func (s *historyResenderSuite) TestSendReplicationRawRequest_Err() {
 		Version: common.Int64Ptr(1),
 	}
 	request := &types.ReplicateEventsV2Request{
-		DomainUUID: common.StringPtr(s.domainID),
+		DomainUUID: s.domainID,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		Events: &types.DataBlob{
 			EncodingType: types.EncodingTypeThriftRW.Ptr(),
@@ -295,9 +295,9 @@ func (s *historyResenderSuite) TestSendReplicationRawRequest_Err() {
 		VersionHistoryItems: []*types.VersionHistoryItem{item},
 	}
 	retryErr := &types.RetryTaskV2Error{
-		DomainID:   common.StringPtr(s.domainID),
-		WorkflowID: common.StringPtr(workflowID),
-		RunID:      common.StringPtr(runID),
+		DomainID:   s.domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
 	}
 
 	s.mockHistoryClient.EXPECT().ReplicateEventsV2(gomock.Any(), request).Return(retryErr).Times(1)
@@ -325,10 +325,10 @@ func (s *historyResenderSuite) TestGetHistory() {
 		NextPageToken: nextTokenOut,
 	}
 	s.mockAdminClient.EXPECT().GetWorkflowExecutionRawHistoryV2(gomock.Any(), &types.GetWorkflowExecutionRawHistoryV2Request{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 		StartEventID:      common.Int64Ptr(startEventID),
 		StartEventVersion: common.Int64Ptr(version),

@@ -122,7 +122,7 @@ func (s *dcRedirectionHandlerSuite) TestDescribeTaskList() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.DescribeTaskListRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	resp, err := s.handler.DescribeTaskList(context.Background(), req)
 	s.Nil(err)
@@ -145,7 +145,7 @@ func (s *dcRedirectionHandlerSuite) TestDescribeWorkflowExecution() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.DescribeWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	resp, err := s.handler.DescribeWorkflowExecution(context.Background(), req)
 	s.Nil(err)
@@ -168,7 +168,7 @@ func (s *dcRedirectionHandlerSuite) TestGetWorkflowExecutionHistory() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.GetWorkflowExecutionHistoryRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	resp, err := s.handler.GetWorkflowExecutionHistory(context.Background(), req)
 	s.Nil(err)
@@ -191,7 +191,7 @@ func (s *dcRedirectionHandlerSuite) TestListArchivedWorkflowExecutions() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.ListArchivedWorkflowExecutionsRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	resp, err := s.handler.ListArchivedWorkflowExecutions(context.Background(), req)
 	s.Nil(err)
@@ -214,7 +214,7 @@ func (s *dcRedirectionHandlerSuite) TestListClosedWorkflowExecutions() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.ListClosedWorkflowExecutionsRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	resp, err := s.handler.ListClosedWorkflowExecutions(context.Background(), req)
 	s.Nil(err)
@@ -237,7 +237,7 @@ func (s *dcRedirectionHandlerSuite) TestListOpenWorkflowExecutions() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.ListOpenWorkflowExecutionsRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	resp, err := s.handler.ListOpenWorkflowExecutions(context.Background(), req)
 	s.Nil(err)
@@ -260,7 +260,7 @@ func (s *dcRedirectionHandlerSuite) TestListWorkflowExecutions() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.ListWorkflowExecutionsRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	resp, err := s.handler.ListWorkflowExecutions(context.Background(), req)
 	s.Nil(err)
@@ -283,7 +283,7 @@ func (s *dcRedirectionHandlerSuite) TestScanWorkflowExecutions() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.ListWorkflowExecutionsRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	resp, err := s.handler.ScanWorkflowExecutions(context.Background(), req)
 	s.Nil(err)
@@ -306,7 +306,7 @@ func (s *dcRedirectionHandlerSuite) TestCountWorkflowExecutions() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.CountWorkflowExecutionsRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	resp, err := s.handler.CountWorkflowExecutions(context.Background(), req)
 	s.Nil(err)
@@ -329,7 +329,7 @@ func (s *dcRedirectionHandlerSuite) TestPollForActivityTask() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.PollForActivityTaskRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	resp, err := s.handler.PollForActivityTask(context.Background(), req)
 	s.Nil(err)
@@ -352,7 +352,7 @@ func (s *dcRedirectionHandlerSuite) TestPollForDecisionTask() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.PollForDecisionTaskRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	resp, err := s.handler.PollForDecisionTask(context.Background(), req)
 	s.Nil(err)
@@ -375,7 +375,7 @@ func (s *dcRedirectionHandlerSuite) TestQueryWorkflow() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.QueryWorkflowRequest{
-		Domain:                common.StringPtr(s.domainName),
+		Domain:                s.domainName,
 		QueryConsistencyLevel: types.QueryConsistencyLevelStrong.Ptr(),
 	}
 	resp, err := s.handler.QueryWorkflow(context.Background(), req)
@@ -426,7 +426,7 @@ func (s *dcRedirectionHandlerSuite) TestRecordActivityTaskHeartbeatByID() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.RecordActivityTaskHeartbeatByIDRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	resp, err := s.handler.RecordActivityTaskHeartbeatByID(context.Background(), req)
 	s.Nil(err)
@@ -449,7 +449,7 @@ func (s *dcRedirectionHandlerSuite) TestRequestCancelWorkflowExecution() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.RequestCancelWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	err := s.handler.RequestCancelWorkflowExecution(context.Background(), req)
 	s.Nil(err)
@@ -470,7 +470,7 @@ func (s *dcRedirectionHandlerSuite) TestResetStickyTaskList() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.ResetStickyTaskListRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	resp, err := s.handler.ResetStickyTaskList(context.Background(), req)
 	s.Nil(err)
@@ -493,7 +493,7 @@ func (s *dcRedirectionHandlerSuite) TestResetWorkflowExecution() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.ResetWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	resp, err := s.handler.ResetWorkflowExecution(context.Background(), req)
 	s.Nil(err)
@@ -541,7 +541,7 @@ func (s *dcRedirectionHandlerSuite) TestRespondActivityTaskCanceledByID() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.RespondActivityTaskCanceledByIDRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	err := s.handler.RespondActivityTaskCanceledByID(context.Background(), req)
 	s.Nil(err)
@@ -587,7 +587,7 @@ func (s *dcRedirectionHandlerSuite) TestRespondActivityTaskCompletedByID() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.RespondActivityTaskCompletedByIDRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	err := s.handler.RespondActivityTaskCompletedByID(context.Background(), req)
 	s.Nil(err)
@@ -633,7 +633,7 @@ func (s *dcRedirectionHandlerSuite) TestRespondActivityTaskFailedByID() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.RespondActivityTaskFailedByIDRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	err := s.handler.RespondActivityTaskFailedByID(context.Background(), req)
 	s.Nil(err)
@@ -730,7 +730,7 @@ func (s *dcRedirectionHandlerSuite) TestSignalWithStartWorkflowExecution() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.SignalWithStartWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	resp, err := s.handler.SignalWithStartWorkflowExecution(context.Background(), req)
 	s.Nil(err)
@@ -753,7 +753,7 @@ func (s *dcRedirectionHandlerSuite) TestSignalWorkflowExecution() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.SignalWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	err := s.handler.SignalWorkflowExecution(context.Background(), req)
 	s.Nil(err)
@@ -774,7 +774,7 @@ func (s *dcRedirectionHandlerSuite) TestStartWorkflowExecution() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.StartWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	resp, err := s.handler.StartWorkflowExecution(context.Background(), req)
 	s.Nil(err)
@@ -797,7 +797,7 @@ func (s *dcRedirectionHandlerSuite) TestTerminateWorkflowExecution() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.TerminateWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 	}
 	err := s.handler.TerminateWorkflowExecution(context.Background(), req)
 	s.Nil(err)
@@ -818,7 +818,7 @@ func (s *dcRedirectionHandlerSuite) TestListTaskListPartitions() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.ListTaskListPartitionsRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		TaskList: &types.TaskList{
 			Name: common.StringPtr("test_tesk_list"),
 			Kind: types.TaskListKind(0).Ptr(),

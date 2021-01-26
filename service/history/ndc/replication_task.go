@@ -286,7 +286,7 @@ func (t *replicationTaskImpl) splitTask(
 		domainID:      t.domainID,
 		execution: &types.WorkflowExecution{
 			WorkflowID: t.execution.WorkflowID,
-			RunID:      common.StringPtr(newRunID),
+			RunID:      newRunID,
 		},
 		version:        t.version,
 		firstEvent:     newFirstEvent,

@@ -27,7 +27,6 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/errors"
@@ -606,7 +605,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 				newRunID := event.WorkflowExecutionContinuedAsNewEventAttributes.GetNewExecutionRunID()
 				newExecution := types.WorkflowExecution{
 					WorkflowID: workflowExecution.WorkflowID,
-					RunID:      common.StringPtr(newRunID),
+					RunID:      newRunID,
 				}
 				_, err := newRunStateBuilder.ApplyEvents(
 					domainID,

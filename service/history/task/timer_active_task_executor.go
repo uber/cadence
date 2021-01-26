@@ -465,8 +465,8 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 	}
 
 	execution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(task.WorkflowID),
-		RunID:      common.StringPtr(task.RunID)}
+		WorkflowID: task.WorkflowID,
+		RunID:      task.RunID}
 	taskList := &types.TaskList{
 		Name: common.StringPtr(activityInfo.TaskList),
 	}
@@ -475,8 +475,8 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 	release(nil) // release earlier as we don't need the lock anymore
 
 	return t.shard.GetService().GetMatchingClient().AddActivityTask(ctx, &types.AddActivityTaskRequest{
-		DomainUUID:                    common.StringPtr(targetDomainID),
-		SourceDomainUUID:              common.StringPtr(domainID),
+		DomainUUID:                    targetDomainID,
+		SourceDomainUUID:              domainID,
 		Execution:                     &execution,
 		TaskList:                      taskList,
 		ScheduleID:                    common.Int64Ptr(scheduledID),
@@ -582,8 +582,8 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 		execution.NewContext(
 			newExecutionInfo.DomainID,
 			types.WorkflowExecution{
-				WorkflowID: common.StringPtr(newExecutionInfo.WorkflowID),
-				RunID:      common.StringPtr(newExecutionInfo.RunID),
+				WorkflowID: newExecutionInfo.WorkflowID,
+				RunID:      newExecutionInfo.RunID,
 			},
 			t.shard,
 			t.shard.GetExecutionManager(),

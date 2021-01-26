@@ -107,8 +107,8 @@ func (s *historyBuilderSuite) TestHistoryBuilderDynamicSuccess() {
 	execTimeout := int32(60)
 	taskTimeout := int32(10)
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(rid),
+		WorkflowID: id,
+		RunID:      rid,
 	}
 
 	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity)
@@ -411,8 +411,8 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowStartFailures() {
 	execTimeout := int32(60)
 	taskTimeout := int32(10)
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(rid),
+		WorkflowID: id,
+		RunID:      rid,
 	}
 
 	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity)
@@ -430,9 +430,9 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowStartFailures() {
 	_, err := s.msBuilder.AddWorkflowExecutionStartedEvent(
 		we,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID: common.StringPtr(s.domainID),
+			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowID:                          common.StringPtr(*we.WorkflowID),
+				WorkflowID:                          we.WorkflowID,
 				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(wt)},
 				TaskList:                            &types.TaskList{Name: common.StringPtr(tl)},
 				Input:                               input,
@@ -460,8 +460,8 @@ func (s *historyBuilderSuite) TestHistoryBuilderDecisionScheduledFailures() {
 	execTimeout := int32(60)
 	taskTimeout := int32(10)
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(rid),
+		WorkflowID: id,
+		RunID:      rid,
 	}
 
 	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity)
@@ -495,8 +495,8 @@ func (s *historyBuilderSuite) TestHistoryBuilderDecisionStartedFailures() {
 	execTimeout := int32(60)
 	taskTimeout := int32(10)
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(rid),
+		WorkflowID: id,
+		RunID:      rid,
 	}
 
 	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity)
@@ -551,8 +551,8 @@ func (s *historyBuilderSuite) TestHistoryBuilderFlushBufferedEvents() {
 	execTimeout := int32(60)
 	taskTimeout := int32(10)
 	we := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(id),
-		RunID:      common.StringPtr(rid),
+		WorkflowID: id,
+		RunID:      rid,
 	}
 
 	// 1 execution started
@@ -718,8 +718,8 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowCancellationRequested() 
 	execTimeout := int32(60)
 	taskTimeout := int32(10)
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 
 	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(
@@ -761,8 +761,8 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowCancellationRequested() 
 
 	targetDomain := "some random target domain"
 	targetExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random target workflow ID"),
-		RunID:      common.StringPtr("some random target run ID"),
+		WorkflowID: "some random target workflow ID",
+		RunID:      "some random target run ID",
 	}
 	cancellationChildWorkflowOnly := true
 	cancellationInitiatedEvent := s.addRequestCancelExternalWorkflowExecutionInitiatedEvent(
@@ -790,8 +790,8 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowCancellationFailed() {
 	execTimeout := int32(60)
 	taskTimeout := int32(10)
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 
 	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(
@@ -833,8 +833,8 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowCancellationFailed() {
 
 	targetDomain := "some random target domain"
 	targetExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random target workflow ID"),
-		RunID:      common.StringPtr("some random target run ID"),
+		WorkflowID: "some random target workflow ID",
+		RunID:      "some random target run ID",
 	}
 	cancellationChildWorkflowOnly := true
 	cancellationFailedCause := types.CancelExternalWorkflowExecutionFailedCause(59)
@@ -867,8 +867,8 @@ func (s *historyBuilderSuite) TestHistoryBuilder_DecisionTaskTimedOut() {
 	execTimeout := int32(60)
 	taskTimeout := int32(10)
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("some random workflow ID"),
-		RunID:      common.StringPtr(uuid.New()),
+		WorkflowID: "some random workflow ID",
+		RunID:      uuid.New(),
 	}
 
 	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(
@@ -937,7 +937,7 @@ func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we types.Workflow
 	identity string) *types.HistoryEvent {
 
 	request := &types.StartWorkflowExecutionRequest{
-		WorkflowID:                          common.StringPtr(*we.WorkflowID),
+		WorkflowID:                          we.WorkflowID,
 		WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
 		TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 		Input:                               input,
@@ -949,7 +949,7 @@ func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we types.Workflow
 	event, err := s.msBuilder.AddWorkflowExecutionStartedEvent(
 		we,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID:   common.StringPtr(s.domainID),
+			DomainUUID:   s.domainID,
 			StartRequest: request,
 		},
 	)
@@ -1089,7 +1089,7 @@ func (s *historyBuilderSuite) addRequestCancelExternalWorkflowExecutionInitiated
 		decisionCompletedEventID,
 		uuid.New(),
 		&types.RequestCancelExternalWorkflowExecutionDecisionAttributes{
-			Domain:            common.StringPtr(targetDomain),
+			Domain:            targetDomain,
 			WorkflowID:        targetExecution.WorkflowID,
 			RunID:             targetExecution.RunID,
 			ChildWorkflowOnly: common.BoolPtr(childWorkflowOnly),

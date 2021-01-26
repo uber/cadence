@@ -248,8 +248,8 @@ func (handler *decisionHandlerImpl) handleDecisionTaskFailed(
 	}
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(token.WorkflowID),
-		RunID:      common.StringPtr(token.RunID),
+		WorkflowID: token.WorkflowID,
+		RunID:      token.RunID,
 	}
 
 	return handler.historyEngine.updateWorkflowExecution(ctx, domainID, workflowExecution, true,
@@ -288,8 +288,8 @@ func (handler *decisionHandlerImpl) handleDecisionTaskCompleted(
 	}
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr(token.WorkflowID),
-		RunID:      common.StringPtr(token.RunID),
+		WorkflowID: token.WorkflowID,
+		RunID:      token.RunID,
 	}
 
 	call := yarpc.CallFromContext(ctx)
@@ -521,8 +521,8 @@ Update_History_Loop:
 				execution.NewContext(
 					continueAsNewExecutionInfo.DomainID,
 					types.WorkflowExecution{
-						WorkflowID: common.StringPtr(continueAsNewExecutionInfo.WorkflowID),
-						RunID:      common.StringPtr(continueAsNewExecutionInfo.RunID),
+						WorkflowID: continueAsNewExecutionInfo.WorkflowID,
+						RunID:      continueAsNewExecutionInfo.RunID,
 					},
 					handler.shard,
 					handler.shard.GetExecutionManager(),

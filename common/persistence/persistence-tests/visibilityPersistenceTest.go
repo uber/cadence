@@ -30,7 +30,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -72,8 +71,8 @@ func (s *VisibilityPersistenceSuite) TestBasicVisibility() {
 	testDomainUUID := uuid.New()
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("visibility-workflow-test"),
-		RunID:      common.StringPtr("fb15e4b5-356f-466d-8c6d-a29223e5c536"),
+		WorkflowID: "visibility-workflow-test",
+		RunID:      "fb15e4b5-356f-466d-8c6d-a29223e5c536",
 	}
 
 	startTime := time.Now().Add(time.Second * -5).UnixNano()
@@ -135,8 +134,8 @@ func (s *VisibilityPersistenceSuite) TestBasicVisibilityTimeSkew() {
 	testDomainUUID := uuid.New()
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("visibility-workflow-test-time-skew"),
-		RunID:      common.StringPtr("fb15e4b5-356f-466d-8c6d-a29223e5c536"),
+		WorkflowID: "visibility-workflow-test-time-skew",
+		RunID:      "fb15e4b5-356f-466d-8c6d-a29223e5c536",
 	}
 
 	startTime := time.Now().Add(time.Second * -5).UnixNano()
@@ -196,8 +195,8 @@ func (s *VisibilityPersistenceSuite) TestVisibilityPagination() {
 	// Create 2 executions
 	startTime1 := time.Now()
 	workflowExecution1 := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("visibility-pagination-test1"),
-		RunID:      common.StringPtr("fb15e4b5-356f-466d-8c6d-a29223e5c536"),
+		WorkflowID: "visibility-pagination-test1",
+		RunID:      "fb15e4b5-356f-466d-8c6d-a29223e5c536",
 	}
 
 	startReq1 := &p.RecordWorkflowExecutionStartedRequest{
@@ -212,8 +211,8 @@ func (s *VisibilityPersistenceSuite) TestVisibilityPagination() {
 
 	startTime2 := startTime1.Add(time.Second)
 	workflowExecution2 := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("visibility-pagination-test2"),
-		RunID:      common.StringPtr("843f6fc7-102a-4c63-a2d4-7c653b01bf52"),
+		WorkflowID: "visibility-pagination-test2",
+		RunID:      "843f6fc7-102a-4c63-a2d4-7c653b01bf52",
 	}
 
 	startReq2 := &p.RecordWorkflowExecutionStartedRequest{
@@ -273,8 +272,8 @@ func (s *VisibilityPersistenceSuite) TestFilteringByType() {
 
 	// Create 2 executions
 	workflowExecution1 := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("visibility-filtering-test1"),
-		RunID:      common.StringPtr("fb15e4b5-356f-466d-8c6d-a29223e5c536"),
+		WorkflowID: "visibility-filtering-test1",
+		RunID:      "fb15e4b5-356f-466d-8c6d-a29223e5c536",
 	}
 	err0 := s.VisibilityMgr.RecordWorkflowExecutionStarted(ctx, &p.RecordWorkflowExecutionStartedRequest{
 		DomainUUID:       testDomainUUID,
@@ -285,8 +284,8 @@ func (s *VisibilityPersistenceSuite) TestFilteringByType() {
 	s.Nil(err0)
 
 	workflowExecution2 := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("visibility-filtering-test2"),
-		RunID:      common.StringPtr("843f6fc7-102a-4c63-a2d4-7c653b01bf52"),
+		WorkflowID: "visibility-filtering-test2",
+		RunID:      "843f6fc7-102a-4c63-a2d4-7c653b01bf52",
 	}
 	err1 := s.VisibilityMgr.RecordWorkflowExecutionStarted(ctx, &p.RecordWorkflowExecutionStartedRequest{
 		DomainUUID:       testDomainUUID,
@@ -356,8 +355,8 @@ func (s *VisibilityPersistenceSuite) TestFilteringByWorkflowID() {
 
 	// Create 2 executions
 	workflowExecution1 := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("visibility-filtering-test1"),
-		RunID:      common.StringPtr("fb15e4b5-356f-466d-8c6d-a29223e5c536"),
+		WorkflowID: "visibility-filtering-test1",
+		RunID:      "fb15e4b5-356f-466d-8c6d-a29223e5c536",
 	}
 	err0 := s.VisibilityMgr.RecordWorkflowExecutionStarted(ctx, &p.RecordWorkflowExecutionStartedRequest{
 		DomainUUID:       testDomainUUID,
@@ -368,8 +367,8 @@ func (s *VisibilityPersistenceSuite) TestFilteringByWorkflowID() {
 	s.Nil(err0)
 
 	workflowExecution2 := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("visibility-filtering-test2"),
-		RunID:      common.StringPtr("843f6fc7-102a-4c63-a2d4-7c653b01bf52"),
+		WorkflowID: "visibility-filtering-test2",
+		RunID:      "843f6fc7-102a-4c63-a2d4-7c653b01bf52",
 	}
 	err1 := s.VisibilityMgr.RecordWorkflowExecutionStarted(ctx, &p.RecordWorkflowExecutionStartedRequest{
 		DomainUUID:       testDomainUUID,
@@ -439,8 +438,8 @@ func (s *VisibilityPersistenceSuite) TestFilteringByCloseStatus() {
 
 	// Create 2 executions
 	workflowExecution1 := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("visibility-filtering-test1"),
-		RunID:      common.StringPtr("fb15e4b5-356f-466d-8c6d-a29223e5c536"),
+		WorkflowID: "visibility-filtering-test1",
+		RunID:      "fb15e4b5-356f-466d-8c6d-a29223e5c536",
 	}
 	err0 := s.VisibilityMgr.RecordWorkflowExecutionStarted(ctx, &p.RecordWorkflowExecutionStartedRequest{
 		DomainUUID:       testDomainUUID,
@@ -451,8 +450,8 @@ func (s *VisibilityPersistenceSuite) TestFilteringByCloseStatus() {
 	s.Nil(err0)
 
 	workflowExecution2 := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("visibility-filtering-test2"),
-		RunID:      common.StringPtr("843f6fc7-102a-4c63-a2d4-7c653b01bf52"),
+		WorkflowID: "visibility-filtering-test2",
+		RunID:      "843f6fc7-102a-4c63-a2d4-7c653b01bf52",
 	}
 	err1 := s.VisibilityMgr.RecordWorkflowExecutionStarted(ctx, &p.RecordWorkflowExecutionStartedRequest{
 		DomainUUID:       testDomainUUID,
@@ -508,8 +507,8 @@ func (s *VisibilityPersistenceSuite) TestGetClosedExecution() {
 	testDomainUUID := uuid.New()
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("visibility-workflow-test"),
-		RunID:      common.StringPtr("a3dbc7bf-deb1-4946-b57c-cf0615ea553f"),
+		WorkflowID: "visibility-workflow-test",
+		RunID:      "a3dbc7bf-deb1-4946-b57c-cf0615ea553f",
 	}
 
 	startTime := time.Now().Add(time.Second * -5).UnixNano()
@@ -557,8 +556,8 @@ func (s *VisibilityPersistenceSuite) TestClosedWithoutStarted() {
 
 	testDomainUUID := uuid.New()
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("visibility-workflow-test"),
-		RunID:      common.StringPtr("1bdb0122-e8c9-4b35-b6f8-d692ab259b09"),
+		WorkflowID: "visibility-workflow-test",
+		RunID:      "1bdb0122-e8c9-4b35-b6f8-d692ab259b09",
 	}
 
 	closedResp, err0 := s.VisibilityMgr.GetClosedWorkflowExecution(ctx, &p.GetClosedWorkflowExecutionRequest{
@@ -598,8 +597,8 @@ func (s *VisibilityPersistenceSuite) TestMultipleUpserts() {
 	testDomainUUID := uuid.New()
 
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: common.StringPtr("visibility-workflow-test"),
-		RunID:      common.StringPtr("a3dbc7bf-deb1-4946-b57c-cf0615ea553f"),
+		WorkflowID: "visibility-workflow-test",
+		RunID:      "a3dbc7bf-deb1-4946-b57c-cf0615ea553f",
 	}
 
 	startTime := time.Now().Add(time.Second * -5).UnixNano()
@@ -651,8 +650,8 @@ func (s *VisibilityPersistenceSuite) TestDelete() {
 	startTime := time.Now().Add(time.Second * -5).UnixNano()
 	for i := 0; i < nRows; i++ {
 		workflowExecution := types.WorkflowExecution{
-			WorkflowID: common.StringPtr(uuid.New()),
-			RunID:      common.StringPtr(uuid.New()),
+			WorkflowID: uuid.New(),
+			RunID:      uuid.New(),
 		}
 		err0 := s.VisibilityMgr.RecordWorkflowExecutionStarted(ctx, &p.RecordWorkflowExecutionStartedRequest{
 			DomainUUID:       testDomainUUID,

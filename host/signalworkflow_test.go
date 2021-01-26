@@ -53,10 +53,10 @@ func (s *integrationSuite) TestSignalWorkflow() {
 
 	// Send a signal to non-exist workflow
 	err0 := s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(uuid.New()),
+			WorkflowID: id,
+			RunID:      uuid.New(),
 		},
 		SignalName: common.StringPtr("failed signal."),
 		Input:      nil,
@@ -68,8 +68,8 @@ func (s *integrationSuite) TestSignalWorkflow() {
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -81,7 +81,7 @@ func (s *integrationSuite) TestSignalWorkflow() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	// decider logic
 	workflowComplete := false
@@ -154,10 +154,10 @@ func (s *integrationSuite) TestSignalWorkflow() {
 	signalName := "my signal"
 	signalInput := []byte("my signal input.")
 	err = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(*we.RunID),
+			WorkflowID: id,
+			RunID:      we.RunID,
 		},
 		SignalName: common.StringPtr(signalName),
 		Input:      signalInput,
@@ -180,9 +180,9 @@ func (s *integrationSuite) TestSignalWorkflow() {
 	signalName = "another signal"
 	signalInput = []byte("another signal input.")
 	err = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 		SignalName: common.StringPtr(signalName),
 		Input:      signalInput,
@@ -203,9 +203,9 @@ func (s *integrationSuite) TestSignalWorkflow() {
 
 	// Terminate workflow execution
 	err = s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 		Reason:   common.StringPtr("test signal"),
 		Details:  nil,
@@ -215,10 +215,10 @@ func (s *integrationSuite) TestSignalWorkflow() {
 
 	// Send signal to terminated workflow
 	err = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(*we.RunID),
+			WorkflowID: id,
+			RunID:      we.RunID,
 		},
 		SignalName: common.StringPtr("failed signal 1."),
 		Input:      nil,
@@ -244,8 +244,8 @@ func (s *integrationSuite) TestSignalWorkflow_DuplicateRequest() {
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -256,7 +256,7 @@ func (s *integrationSuite) TestSignalWorkflow_DuplicateRequest() {
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	// decider logic
 	workflowComplete := false
@@ -333,10 +333,10 @@ func (s *integrationSuite) TestSignalWorkflow_DuplicateRequest() {
 	signalInput := []byte("my signal input.")
 	RequestID := uuid.New()
 	signalReqest := &types.SignalWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(*we.RunID),
+			WorkflowID: id,
+			RunID:      we.RunID,
 		},
 		SignalName: common.StringPtr(signalName),
 		Input:      signalInput,
@@ -387,8 +387,8 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -399,12 +399,12 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision() {
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	foreignRequest := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.foreignDomainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.foreignDomainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -414,7 +414,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision() {
 	}
 	we2, err0 := s.engine.StartWorkflowExecution(createContext(), foreignRequest)
 	s.Nil(err0)
-	s.Logger.Info("StartWorkflowExecution on foreign Domain", tag.WorkflowDomainName(s.foreignDomainName), tag.WorkflowRunID(*we2.RunID))
+	s.Logger.Info("StartWorkflowExecution on foreign Domain", tag.WorkflowDomainName(s.foreignDomainName), tag.WorkflowRunID(we2.RunID))
 
 	activityCount := int32(1)
 	activityCounter := int32(0)
@@ -445,10 +445,10 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision() {
 		return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
 			DecisionType: types.DecisionTypeSignalExternalWorkflowExecution.Ptr(),
 			SignalExternalWorkflowExecutionDecisionAttributes: &types.SignalExternalWorkflowExecutionDecisionAttributes{
-				Domain: common.StringPtr(s.foreignDomainName),
+				Domain: s.foreignDomainName,
 				Execution: &types.WorkflowExecution{
-					WorkflowID: common.StringPtr(id),
-					RunID:      common.StringPtr(we2.GetRunID()),
+					WorkflowID: id,
+					RunID:      we2.GetRunID(),
 				},
 				SignalName: common.StringPtr(signalName),
 				Input:      signalInput,
@@ -549,10 +549,10 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision() {
 CheckHistoryLoopForSignalSent:
 	for i := 1; i < 10; i++ {
 		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
-				RunID:      common.StringPtr(*we.RunID),
+				WorkflowID: id,
+				RunID:      we.RunID,
 			},
 		})
 		s.Nil(err)
@@ -606,8 +606,8 @@ func (s *integrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -621,16 +621,16 @@ func (s *integrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	// Send first signal using RunID
 	signalName := "my signal"
 	signalInput := []byte("my signal input.")
 	err := s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
-			RunID:      common.StringPtr(*we.RunID),
+			WorkflowID: id,
+			RunID:      we.RunID,
 		},
 		SignalName: common.StringPtr(signalName),
 		Input:      signalInput,
@@ -684,8 +684,8 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_WithoutRunID() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -696,12 +696,12 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_WithoutRunID() {
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	foreignRequest := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.foreignDomainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.foreignDomainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -711,7 +711,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_WithoutRunID() {
 	}
 	we2, err0 := s.engine.StartWorkflowExecution(createContext(), foreignRequest)
 	s.Nil(err0)
-	s.Logger.Info("StartWorkflowExecution on foreign Domain", tag.WorkflowDomainName(s.foreignDomainName), tag.WorkflowRunID(*we2.RunID))
+	s.Logger.Info("StartWorkflowExecution on foreign Domain", tag.WorkflowDomainName(s.foreignDomainName), tag.WorkflowRunID(we2.RunID))
 
 	activityCount := int32(1)
 	activityCounter := int32(0)
@@ -742,9 +742,9 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_WithoutRunID() {
 		return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
 			DecisionType: types.DecisionTypeSignalExternalWorkflowExecution.Ptr(),
 			SignalExternalWorkflowExecutionDecisionAttributes: &types.SignalExternalWorkflowExecutionDecisionAttributes{
-				Domain: common.StringPtr(s.foreignDomainName),
+				Domain: s.foreignDomainName,
 				Execution: &types.WorkflowExecution{
-					WorkflowID: common.StringPtr(id),
+					WorkflowID: id,
 					// No RunID in decision
 				},
 				SignalName: common.StringPtr(signalName),
@@ -846,10 +846,10 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_WithoutRunID() {
 CheckHistoryLoopForSignalSent:
 	for i := 1; i < 10; i++ {
 		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
-				RunID:      common.StringPtr(*we.RunID),
+				WorkflowID: id,
+				RunID:      we.RunID,
 			},
 		})
 		s.Nil(err)
@@ -901,8 +901,8 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_UnKnownTarget() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -912,7 +912,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_UnKnownTarget() {
 	}
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	activityCount := int32(1)
 	activityCounter := int32(0)
@@ -943,10 +943,10 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_UnKnownTarget() {
 		return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
 			DecisionType: types.DecisionTypeSignalExternalWorkflowExecution.Ptr(),
 			SignalExternalWorkflowExecutionDecisionAttributes: &types.SignalExternalWorkflowExecutionDecisionAttributes{
-				Domain: common.StringPtr(s.foreignDomainName),
+				Domain: s.foreignDomainName,
 				Execution: &types.WorkflowExecution{
-					WorkflowID: common.StringPtr("workflow_not_exist"),
-					RunID:      common.StringPtr(we.GetRunID()),
+					WorkflowID: "workflow_not_exist",
+					RunID:      we.GetRunID(),
 				},
 				SignalName: common.StringPtr(signalName),
 				Input:      signalInput,
@@ -985,10 +985,10 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_UnKnownTarget() {
 CheckHistoryLoopForCancelSent:
 	for i := 1; i < 10; i++ {
 		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
-				RunID:      common.StringPtr(*we.RunID),
+				WorkflowID: id,
+				RunID:      we.RunID,
 			},
 		})
 		s.Nil(err)
@@ -1003,7 +1003,7 @@ CheckHistoryLoopForCancelSent:
 
 		signalExternalWorkflowExecutionFailedEventAttributes := signalFailedEvent.SignalExternalWorkflowExecutionFailedEventAttributes
 		s.Equal(int64(intiatedEventID), *signalExternalWorkflowExecutionFailedEventAttributes.InitiatedEventID)
-		s.Equal("workflow_not_exist", *signalExternalWorkflowExecutionFailedEventAttributes.WorkflowExecution.WorkflowID)
+		s.Equal("workflow_not_exist", signalExternalWorkflowExecutionFailedEventAttributes.WorkflowExecution.WorkflowID)
 		s.Equal(we.RunID, signalExternalWorkflowExecutionFailedEventAttributes.WorkflowExecution.RunID)
 
 		signalSentFailed = true
@@ -1028,8 +1028,8 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_SignalSelf() {
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1039,7 +1039,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_SignalSelf() {
 	}
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	activityCount := int32(1)
 	activityCounter := int32(0)
@@ -1070,10 +1070,10 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_SignalSelf() {
 		return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
 			DecisionType: types.DecisionTypeSignalExternalWorkflowExecution.Ptr(),
 			SignalExternalWorkflowExecutionDecisionAttributes: &types.SignalExternalWorkflowExecutionDecisionAttributes{
-				Domain: common.StringPtr(s.domainName),
+				Domain: s.domainName,
 				Execution: &types.WorkflowExecution{
-					WorkflowID: common.StringPtr(id),
-					RunID:      common.StringPtr(we.GetRunID()),
+					WorkflowID: id,
+					RunID:      we.GetRunID(),
 				},
 				SignalName: common.StringPtr(signalName),
 				Input:      signalInput,
@@ -1112,10 +1112,10 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_SignalSelf() {
 CheckHistoryLoopForCancelSent:
 	for i := 1; i < 10; i++ {
 		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
-				RunID:      common.StringPtr(*we.RunID),
+				WorkflowID: id,
+				RunID:      we.RunID,
 			},
 		})
 		s.Nil(err)
@@ -1130,7 +1130,7 @@ CheckHistoryLoopForCancelSent:
 
 		signalExternalWorkflowExecutionFailedEventAttributes := signalFailedEvent.SignalExternalWorkflowExecutionFailedEventAttributes
 		s.Equal(int64(intiatedEventID), *signalExternalWorkflowExecutionFailedEventAttributes.InitiatedEventID)
-		s.Equal(id, *signalExternalWorkflowExecutionFailedEventAttributes.WorkflowExecution.WorkflowID)
+		s.Equal(id, signalExternalWorkflowExecutionFailedEventAttributes.WorkflowExecution.WorkflowID)
 		s.Equal(we.RunID, signalExternalWorkflowExecutionFailedEventAttributes.WorkflowExecution.RunID)
 
 		signalSentFailed = true
@@ -1161,8 +1161,8 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	// Start a workflow
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1174,7 +1174,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	// decider logic
 	workflowComplete := false
@@ -1265,8 +1265,8 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	wfIDReusePolicy := types.WorkflowIDReusePolicyAllowDuplicate
 	sRequest := &types.SignalWithStartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1295,9 +1295,9 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 
 	// Terminate workflow execution
 	err = s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 		Reason:   common.StringPtr("test signal"),
 		Details:  nil,
@@ -1310,7 +1310,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	signalInput = []byte("signal to terminate input.")
 	sRequest.SignalName = common.StringPtr(signalName)
 	sRequest.SignalInput = signalInput
-	sRequest.WorkflowID = common.StringPtr(id)
+	sRequest.WorkflowID = id
 
 	resp, err = s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
 	s.Nil(err)
@@ -1337,7 +1337,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	signalInput = []byte("signal to non exist input.")
 	sRequest.SignalName = common.StringPtr(signalName)
 	sRequest.SignalInput = signalInput
-	sRequest.WorkflowID = common.StringPtr(id)
+	sRequest.WorkflowID = id
 	resp, err = s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
 	s.Nil(err)
 	s.NotNil(resp.GetRunID())
@@ -1356,7 +1356,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 
 	// Assert visibility is correct
 	listOpenRequest := &types.ListOpenWorkflowExecutionsRequest{
-		Domain:          common.StringPtr(s.domainName),
+		Domain:          s.domainName,
 		MaximumPageSize: common.Int32Ptr(100),
 		StartTimeFilter: &types.StartTimeFilter{
 			EarliestTime: common.Int64Ptr(0),
@@ -1372,9 +1372,9 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 
 	// Terminate workflow execution and assert visibility is correct
 	err = s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
-		Domain: common.StringPtr(s.domainName),
+		Domain: s.domainName,
 		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 		Reason:   common.StringPtr("kill workflow"),
 		Details:  nil,
@@ -1393,7 +1393,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	s.Equal(0, len(listResp.Executions))
 
 	listClosedRequest := &types.ListClosedWorkflowExecutionsRequest{
-		Domain:          common.StringPtr(s.domainName),
+		Domain:          s.domainName,
 		MaximumPageSize: common.Int32Ptr(100),
 		StartTimeFilter: &types.StartTimeFilter{
 			EarliestTime: common.Int64Ptr(0),
@@ -1424,8 +1424,8 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 	// Start a workflow
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1437,7 +1437,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err0)
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(*we.RunID))
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
 
 	workflowComplete := false
 	activityCount := int32(1)
@@ -1504,8 +1504,8 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 	wfIDReusePolicy := types.WorkflowIDReusePolicyRejectDuplicate
 	sRequest := &types.SignalWithStartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
-		Domain:                              common.StringPtr(s.domainName),
-		WorkflowID:                          common.StringPtr(id),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
@@ -1542,9 +1542,9 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 	// Terminate workflow execution
 	terminateWorkflow := func() {
 		err = s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			WorkflowExecution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
+				WorkflowID: id,
 			},
 			Reason:   common.StringPtr("test WorkflowIDReusePolicyAllowDuplicateFailedOnly"),
 			Details:  nil,
@@ -1571,9 +1571,9 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 GetHistoryLoop:
 	for i := 0; i < 10; i++ {
 		historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
-			Domain: common.StringPtr(s.domainName),
+			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: common.StringPtr(id),
+				WorkflowID: id,
 				RunID:      resp.RunID,
 			},
 		})

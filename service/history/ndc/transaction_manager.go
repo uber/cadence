@@ -391,8 +391,8 @@ func (r *transactionManagerImpl) checkWorkflowExists(
 		&persistence.GetWorkflowExecutionRequest{
 			DomainID: domainID,
 			Execution: types.WorkflowExecution{
-				WorkflowID: common.StringPtr(workflowID),
-				RunID:      common.StringPtr(runID),
+				WorkflowID: workflowID,
+				RunID:      runID,
 			},
 		},
 	)
@@ -443,8 +443,8 @@ func (r *transactionManagerImpl) loadNDCWorkflow(
 		ctx,
 		domainID,
 		types.WorkflowExecution{
-			WorkflowID: common.StringPtr(workflowID),
-			RunID:      common.StringPtr(runID),
+			WorkflowID: workflowID,
+			RunID:      runID,
 		},
 	)
 	if err != nil {

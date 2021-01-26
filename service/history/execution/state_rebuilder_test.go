@@ -142,8 +142,8 @@ func (s *stateRebuilderSuite) TestApplyEvents() {
 		s.domainID,
 		requestID,
 		types.WorkflowExecution{
-			WorkflowID: common.StringPtr(s.workflowID),
-			RunID:      common.StringPtr(s.runID),
+			WorkflowID: s.workflowID,
+			RunID:      s.runID,
 		},
 		events,
 		[]*types.HistoryEvent(nil),

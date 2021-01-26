@@ -409,7 +409,7 @@ func (c *taskListManagerImpl) completeTask(task *persistence.TaskInfo, err error
 		// Note that RecordTaskStarted only fails after retrying for a long time, so a single task will not be
 		// re-written to persistence frequently.
 		_, err = c.executeWithRetry(func() (interface{}, error) {
-			wf := &types.WorkflowExecution{WorkflowID: &task.WorkflowID, RunID: &task.RunID}
+			wf := &types.WorkflowExecution{WorkflowID: task.WorkflowID, RunID: task.RunID}
 			return c.taskWriter.appendTask(wf, task)
 		})
 

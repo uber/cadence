@@ -436,8 +436,8 @@ func (r *historyReplicatorImpl) applyNonStartEventsToCurrentBranch(
 		newContext := execution.NewContext(
 			newExecutionInfo.DomainID,
 			types.WorkflowExecution{
-				WorkflowID: common.StringPtr(newExecutionInfo.WorkflowID),
-				RunID:      common.StringPtr(newExecutionInfo.RunID),
+				WorkflowID: newExecutionInfo.WorkflowID,
+				RunID:      newExecutionInfo.RunID,
 			},
 			r.shard,
 			r.shard.GetExecutionManager(),
@@ -726,9 +726,9 @@ func newNDCRetryTaskErrorWithHint(
 
 	return &types.RetryTaskV2Error{
 		Message:           message,
-		DomainID:          common.StringPtr(domainID),
-		WorkflowID:        common.StringPtr(workflowID),
-		RunID:             common.StringPtr(runID),
+		DomainID:          domainID,
+		WorkflowID:        workflowID,
+		RunID:             runID,
 		StartEventID:      startEventID,
 		StartEventVersion: startEventVersion,
 		EndEventID:        endEventID,

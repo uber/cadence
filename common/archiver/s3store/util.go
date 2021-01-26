@@ -263,8 +263,8 @@ func contextExpired(ctx context.Context) bool {
 func convertToExecutionInfo(record *visibilityRecord) *types.WorkflowExecutionInfo {
 	return &types.WorkflowExecutionInfo{
 		Execution: &types.WorkflowExecution{
-			WorkflowID: common.StringPtr(record.WorkflowID),
-			RunID:      common.StringPtr(record.RunID),
+			WorkflowID: record.WorkflowID,
+			RunID:      record.RunID,
 		},
 		Type: &types.WorkflowType{
 			Name: common.StringPtr(record.WorkflowTypeName),
