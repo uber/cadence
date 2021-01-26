@@ -211,10 +211,10 @@ func (s *failoverWorkflowTestSuite) assertQueryState(env *testsuite.TestWorkflow
 
 var clusters = []*types.ClusterReplicationConfiguration{
 	{
-		ClusterName: common.StringPtr("c1"),
+		ClusterName: "c1",
 	},
 	{
-		ClusterName: common.StringPtr("c2"),
+		ClusterName: "c2",
 	},
 }
 

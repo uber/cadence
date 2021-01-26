@@ -318,7 +318,7 @@ func (adh *adminHandlerImpl) ResetQueue(
 	scope, sw := adh.startRequestProfile(metrics.AdminResetQueueScope)
 	defer sw.Stop()
 
-	if request == nil || request.ShardID == nil || request.ClusterName == nil || request.Type == nil {
+	if request == nil || request.ShardID == nil || request.Type == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
 	if request.GetClusterName() == "" {
@@ -339,7 +339,7 @@ func (adh *adminHandlerImpl) DescribeQueue(
 	scope, sw := adh.startRequestProfile(metrics.AdminDescribeQueueScope)
 	defer sw.Stop()
 
-	if request == nil || request.ShardID == nil || request.ClusterName == nil || request.Type == nil {
+	if request == nil || request.ShardID == nil || request.Type == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 	if request.GetClusterName() == "" {
@@ -579,7 +579,7 @@ func (adh *adminHandlerImpl) GetReplicationMessages(
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
-	if request.ClusterName == nil {
+	if request.ClusterName == "" {
 		return nil, adh.error(errClusterNameNotSet, scope)
 	}
 

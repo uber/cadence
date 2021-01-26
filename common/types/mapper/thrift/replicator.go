@@ -216,7 +216,7 @@ func FromGetDomainReplicationMessagesRequest(t *types.GetDomainReplicationMessag
 	return &replicator.GetDomainReplicationMessagesRequest{
 		LastRetrievedMessageId: t.LastRetrievedMessageID,
 		LastProcessedMessageId: t.LastProcessedMessageID,
-		ClusterName:            t.ClusterName,
+		ClusterName:            &t.ClusterName,
 	}
 }
 
@@ -228,7 +228,7 @@ func ToGetDomainReplicationMessagesRequest(t *replicator.GetDomainReplicationMes
 	return &types.GetDomainReplicationMessagesRequest{
 		LastRetrievedMessageID: t.LastRetrievedMessageId,
 		LastProcessedMessageID: t.LastProcessedMessageId,
-		ClusterName:            t.ClusterName,
+		ClusterName:            t.GetClusterName(),
 	}
 }
 
@@ -259,7 +259,7 @@ func FromGetReplicationMessagesRequest(t *types.GetReplicationMessagesRequest) *
 	}
 	return &replicator.GetReplicationMessagesRequest{
 		Tokens:      FromReplicationTokenArray(t.Tokens),
-		ClusterName: t.ClusterName,
+		ClusterName: &t.ClusterName,
 	}
 }
 
@@ -270,7 +270,7 @@ func ToGetReplicationMessagesRequest(t *replicator.GetReplicationMessagesRequest
 	}
 	return &types.GetReplicationMessagesRequest{
 		Tokens:      ToReplicationTokenArray(t.Tokens),
-		ClusterName: t.ClusterName,
+		ClusterName: t.GetClusterName(),
 	}
 }
 

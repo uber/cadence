@@ -92,11 +92,11 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_RegisterDomainTask_Name
 	configVersion := int64(0)
 	failoverVersion := int64(59)
 	clusters := []*types.ClusterReplicationConfiguration{
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterActive),
+		{
+			ClusterName: clusterActive,
 		},
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterStandby),
+		{
+			ClusterName: clusterStandby,
 		},
 	}
 
@@ -161,11 +161,11 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_RegisterDomainTask() {
 	configVersion := int64(0)
 	failoverVersion := int64(59)
 	clusters := []*types.ClusterReplicationConfiguration{
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterActive),
+		{
+			ClusterName: clusterActive,
 		},
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterStandby),
+		{
+			ClusterName: clusterStandby,
 		},
 	}
 
@@ -247,11 +247,11 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Domain
 	failoverVersion := int64(59)
 	domainData := map[string]string{"k1": "v1", "k2": "v2"}
 	clusters := []*types.ClusterReplicationConfiguration{
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterActive),
+		{
+			ClusterName: clusterActive,
 		},
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterStandby),
+		{
+			ClusterName: clusterStandby,
 		},
 	}
 
@@ -329,11 +329,11 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 	configVersion := int64(0)
 	failoverVersion := int64(59)
 	clusters := []*types.ClusterReplicationConfiguration{
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterActive),
+		{
+			ClusterName: clusterActive,
 		},
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterStandby),
+		{
+			ClusterName: clusterStandby,
 		},
 	}
 
@@ -383,11 +383,11 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 	updateConfigVersion := configVersion + 1
 	updateFailoverVersion := failoverVersion + 1
 	updateClusters := []*types.ClusterReplicationConfiguration{
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(updateClusterActive),
+		{
+			ClusterName: updateClusterActive,
 		},
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(updateClusterStandby),
+		{
+			ClusterName: updateClusterStandby,
 		},
 	}
 	updateTask := &types.DomainTaskAttributes{
@@ -463,11 +463,11 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 	failoverVersion := int64(59)
 	previousFailoverVersion := int64(55)
 	clusters := []*types.ClusterReplicationConfiguration{
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterActive),
+		{
+			ClusterName: clusterActive,
 		},
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterStandby),
+		{
+			ClusterName: clusterStandby,
 		},
 	}
 
@@ -517,11 +517,11 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 	updateConfigVersion := configVersion + 1
 	updateFailoverVersion := failoverVersion - 1
 	updateClusters := []*types.ClusterReplicationConfiguration{
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(updateClusterActive),
+		{
+			ClusterName: updateClusterActive,
 		},
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(updateClusterStandby),
+		{
+			ClusterName: updateClusterStandby,
 		},
 	}
 	updateTask := &types.DomainTaskAttributes{
@@ -599,11 +599,11 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 	failoverVersion := int64(59)
 	previousFailoverVersion := int64(55)
 	clusters := []*types.ClusterReplicationConfiguration{
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterActive),
+		{
+			ClusterName: clusterActive,
 		},
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterStandby),
+		{
+			ClusterName: clusterStandby,
 		},
 	}
 
@@ -670,11 +670,11 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 	updateConfigVersion := configVersion - 1
 	updateFailoverVersion := failoverVersion + 1
 	updateClusters := []*types.ClusterReplicationConfiguration{
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(updateClusterActive),
+		{
+			ClusterName: updateClusterActive,
 		},
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(updateClusterStandby),
+		{
+			ClusterName: updateClusterStandby,
 		},
 	}
 	updateTask := &types.DomainTaskAttributes{
@@ -752,11 +752,11 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 	failoverVersion := int64(59)
 	previousFailoverVersion := int64(55)
 	clusters := []*types.ClusterReplicationConfiguration{
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterActive),
+		{
+			ClusterName: clusterActive,
 		},
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterStandby),
+		{
+			ClusterName: clusterStandby,
 		},
 	}
 
@@ -804,11 +804,11 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 	updateConfigVersion := configVersion - 1
 	updateFailoverVersion := failoverVersion - 1
 	updateClusters := []*types.ClusterReplicationConfiguration{
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(updateClusterActive),
+		{
+			ClusterName: updateClusterActive,
 		},
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(updateClusterStandby),
+		{
+			ClusterName: updateClusterStandby,
 		},
 	}
 	updateTask := &types.DomainTaskAttributes{

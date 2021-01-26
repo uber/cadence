@@ -76,9 +76,9 @@ type (
 var (
 	clusterName              = []string{"active", "standby", "other"}
 	clusterReplicationConfig = []*types.ClusterReplicationConfiguration{
-		{ClusterName: common.StringPtr(clusterName[0])},
-		{ClusterName: common.StringPtr(clusterName[1])},
-		{ClusterName: common.StringPtr(clusterName[2])},
+		{ClusterName: clusterName[0]},
+		{ClusterName: clusterName[1]},
+		{ClusterName: clusterName[2]},
 	}
 )
 

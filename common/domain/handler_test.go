@@ -272,7 +272,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 	var cluster1 []*types.ClusterReplicationConfiguration
 	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		cluster1 = append(cluster1, &types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(replicationConfig.ClusterName),
+			ClusterName: replicationConfig.ClusterName,
 		})
 	}
 	err := s.handler.RegisterDomain(context.Background(), &types.RegisterDomainRequest{
@@ -300,7 +300,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 			activeClusterName2 = clusterName
 		}
 		cluster2 = append(cluster2, &types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterName),
+			ClusterName: clusterName,
 		})
 	}
 	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
@@ -432,10 +432,10 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_Success() {
 		ActiveClusterName:                      common.StringPtr("standby"),
 		Clusters: []*types.ClusterReplicationConfiguration{
 			{
-				common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
+				s.ClusterMetadata.GetCurrentClusterName(),
 			},
 			{
-				common.StringPtr("standby"),
+				"standby",
 			},
 		},
 	}
@@ -476,10 +476,10 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_NotCurrentA
 		ActiveClusterName:                      common.StringPtr("active"),
 		Clusters: []*types.ClusterReplicationConfiguration{
 			{
-				common.StringPtr("active"),
+				"active",
 			},
 			{
-				common.StringPtr("standby"),
+				"standby",
 			},
 		},
 	}
@@ -508,10 +508,10 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_OngoingFail
 		ActiveClusterName:                      common.StringPtr("standby"),
 		Clusters: []*types.ClusterReplicationConfiguration{
 			{
-				common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
+				s.ClusterMetadata.GetCurrentClusterName(),
 			},
 			{
-				common.StringPtr("standby"),
+				"standby",
 			},
 		},
 	}
@@ -542,10 +542,10 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_NoUpdateAct
 		ActiveClusterName:                      common.StringPtr("standby"),
 		Clusters: []*types.ClusterReplicationConfiguration{
 			{
-				common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
+				s.ClusterMetadata.GetCurrentClusterName(),
 			},
 			{
-				common.StringPtr("standby"),
+				"standby",
 			},
 		},
 	}
@@ -574,10 +574,10 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_After_Force
 		ActiveClusterName:                      common.StringPtr("standby"),
 		Clusters: []*types.ClusterReplicationConfiguration{
 			{
-				common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
+				s.ClusterMetadata.GetCurrentClusterName(),
 			},
 			{
-				common.StringPtr("standby"),
+				"standby",
 			},
 		},
 	}
@@ -622,10 +622,10 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_ForceFailover_SameActiveClus
 		ActiveClusterName:                      common.StringPtr("standby"),
 		Clusters: []*types.ClusterReplicationConfiguration{
 			{
-				common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
+				s.ClusterMetadata.GetCurrentClusterName(),
 			},
 			{
-				common.StringPtr("standby"),
+				"standby",
 			},
 		},
 	}

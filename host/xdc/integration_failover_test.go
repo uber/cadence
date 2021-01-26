@@ -72,10 +72,10 @@ var (
 	clusterName              = []string{"active", "standby"}
 	clusterReplicationConfig = []*types.ClusterReplicationConfiguration{
 		{
-			ClusterName: common.StringPtr(clusterName[0]),
+			ClusterName: clusterName[0],
 		},
 		{
-			ClusterName: common.StringPtr(clusterName[1]),
+			ClusterName: clusterName[1],
 		},
 	}
 )
