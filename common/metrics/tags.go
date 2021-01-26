@@ -34,6 +34,7 @@ const (
 	targetCluster  = "target_cluster"
 	activeCluster  = "active_cluster"
 	taskList       = "tasklist"
+	taskListType   = "tasklistType"
 	workflowType   = "workflowType"
 	activityType   = "activityType"
 	decisionType   = "decisionType"
@@ -72,6 +73,10 @@ type (
 	}
 
 	taskListTag struct {
+		value string
+	}
+
+	taskListTypeTag struct {
 		value string
 	}
 
@@ -212,6 +217,24 @@ func (d taskListTag) Key() string {
 
 // Value returns the value of the task list tag
 func (d taskListTag) Value() string {
+	return d.value
+}
+
+// TaskListTypeTag returns a new task list type tag.
+func TaskListTypeTag(value string) Tag {
+	if len(value) == 0 {
+		value = unknownValue
+	}
+	return taskListTypeTag{value}
+}
+
+// Key returns the key of the task list type tag
+func (d taskListTypeTag) Key() string {
+	return taskListType
+}
+
+// Value returns the value of the task list type tag
+func (d taskListTypeTag) Value() string {
 	return d.value
 }
 
