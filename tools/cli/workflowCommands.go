@@ -990,8 +990,8 @@ type pendingActivityInfo struct {
 	LastStartedTimestamp   *string `json:",omitempty"` // change from *int64
 	HeartbeatDetails       *string `json:",omitempty"` // change from []byte
 	LastHeartbeatTimestamp *string `json:",omitempty"` // change from *int64
-	Attempt                *int32  `json:",omitempty"`
-	MaximumAttempts        *int32  `json:",omitempty"`
+	Attempt                int32   `json:",omitempty"`
+	MaximumAttempts        int32   `json:",omitempty"`
 	ExpirationTimestamp    *string `json:",omitempty"` // change from *int64
 	LastFailureReason      *string `json:",omitempty"`
 	LastWorkerIdentity     string  `json:",omitempty"`
@@ -1003,7 +1003,7 @@ type pendingDecisionInfo struct {
 	OriginalScheduledTimestamp *string `json:",omitempty"` // change from *int64
 	ScheduledTimestamp         *string `json:",omitempty"` // change from *int64
 	StartedTimestamp           *string `json:",omitempty"` // change from *int64
-	Attempt                    *int64  `json:",omitempty"`
+	Attempt                    int64   `json:",omitempty"`
 }
 
 func convertDescribeWorkflowExecutionResponse(resp *types.DescribeWorkflowExecutionResponse,

@@ -393,7 +393,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
-					Attempt:                    common.Int64Ptr(0),
+					Attempt:                    0,
 				},
 			},
 		}},
@@ -456,7 +456,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 					ScheduledEventID: common.Int64Ptr(6),
 					Identity:         identity,
 					RequestID:        common.StringPtr(uuid.New()),
-					Attempt:          common.Int32Ptr(0),
+					Attempt:          0,
 				},
 			},
 		}},
@@ -478,7 +478,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
-					Attempt:                    common.Int64Ptr(0),
+					Attempt:                    0,
 				},
 			},
 		}},
@@ -522,7 +522,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
-					Attempt:                    common.Int64Ptr(0),
+					Attempt:                    0,
 				},
 			},
 			{
@@ -580,7 +580,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
-					Attempt:                    common.Int64Ptr(0),
+					Attempt:                    0,
 				},
 			},
 		}},
@@ -698,7 +698,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
-					Attempt:                    common.Int64Ptr(0),
+					Attempt:                    0,
 				},
 			},
 		}},
@@ -761,7 +761,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 					ScheduledEventID: common.Int64Ptr(6),
 					Identity:         identity,
 					RequestID:        common.StringPtr(uuid.New()),
-					Attempt:          common.Int32Ptr(0),
+					Attempt:          0,
 				},
 			},
 		}},
@@ -783,7 +783,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
-					Attempt:                    common.Int64Ptr(0),
+					Attempt:                    0,
 				},
 			},
 		}},
@@ -827,7 +827,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
-					Attempt:                    common.Int64Ptr(0),
+					Attempt:                    0,
 				},
 			},
 			{
@@ -1165,7 +1165,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
-					Attempt:                    common.Int64Ptr(0),
+					Attempt:                    0,
 				},
 			},
 		}},
@@ -1228,7 +1228,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 					ScheduledEventID: common.Int64Ptr(6),
 					Identity:         identity,
 					RequestID:        common.StringPtr(uuid.New()),
-					Attempt:          common.Int32Ptr(0),
+					Attempt:          0,
 				},
 			},
 		}},
@@ -1250,7 +1250,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
-					Attempt:                    common.Int64Ptr(0),
+					Attempt:                    0,
 				},
 			},
 		}},
@@ -1294,7 +1294,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
-					Attempt:                    common.Int64Ptr(0),
+					Attempt:                    0,
 				},
 			},
 			{
@@ -1370,7 +1370,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
-					Attempt:                    common.Int64Ptr(0),
+					Attempt:                    0,
 				},
 			},
 		}},
@@ -1639,7 +1639,7 @@ func (s *nDCIntegrationTestSuite) generateNewRunHistory(
 			OriginalExecutionRunID:              runID,
 			Identity:                            "NDC-test",
 			FirstExecutionRunID:                 runID,
-			Attempt:                             common.Int32Ptr(0),
+			Attempt:                             0,
 			ExpirationTimestamp:                 common.Int64Ptr(time.Now().Add(time.Minute).UnixNano()),
 		},
 	}

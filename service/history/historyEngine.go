@@ -1564,10 +1564,10 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 				p.LastStartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
 			}
 			if ai.HasRetryPolicy {
-				p.Attempt = common.Int32Ptr(ai.Attempt)
+				p.Attempt = ai.Attempt
 				p.ExpirationTimestamp = common.Int64Ptr(ai.ExpirationTime.UnixNano())
 				if ai.MaximumAttempts != 0 {
-					p.MaximumAttempts = common.Int32Ptr(ai.MaximumAttempts)
+					p.MaximumAttempts = ai.MaximumAttempts
 				}
 				if ai.LastFailureReason != "" {
 					p.LastFailureReason = common.StringPtr(ai.LastFailureReason)
@@ -1598,7 +1598,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 		pendingDecision := &types.PendingDecisionInfo{
 			State:                      types.PendingDecisionStateScheduled.Ptr(),
 			ScheduledTimestamp:         common.Int64Ptr(di.ScheduledTimestamp),
-			Attempt:                    common.Int64Ptr(di.Attempt),
+			Attempt:                    di.Attempt,
 			OriginalScheduledTimestamp: common.Int64Ptr(di.OriginalScheduledTimestamp),
 		}
 		if di.StartedID != common.EmptyEventID {
@@ -1672,7 +1672,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			response.ScheduledEvent = scheduledEvent
 			response.ScheduledTimestampOfThisAttempt = common.Int64Ptr(ai.ScheduledTime.UnixNano())
 
-			response.Attempt = common.Int64Ptr(int64(ai.Attempt))
+			response.Attempt = int64(ai.Attempt)
 			response.HeartbeatDetails = ai.Details
 
 			response.WorkflowType = mutableState.GetWorkflowType()

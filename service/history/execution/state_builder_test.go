@@ -463,7 +463,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 			TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
 			StartToCloseTimeoutSeconds: common.Int32Ptr(decisionTimeoutSecond),
-			Attempt:                    common.Int64Ptr(newRunDecisionAttempt),
+			Attempt:                    newRunDecisionAttempt,
 		},
 	}
 	newRunEvents := []*types.HistoryEvent{
@@ -686,7 +686,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskScheduled() {
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 			TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
 			StartToCloseTimeoutSeconds: common.Int32Ptr(timeoutSecond),
-			Attempt:                    common.Int64Ptr(decisionAttempt),
+			Attempt:                    decisionAttempt,
 		},
 	}
 	di := &DecisionInfo{

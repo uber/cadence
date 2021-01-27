@@ -561,7 +561,7 @@ func (b *HistoryBuilder) newWorkflowExecutionStartedEvent(
 	attributes.PrevAutoResetPoints = resetPoints
 	attributes.Identity = request.Identity
 	attributes.RetryPolicy = request.RetryPolicy
-	attributes.Attempt = common.Int32Ptr(startRequest.GetAttempt())
+	attributes.Attempt = startRequest.GetAttempt()
 	attributes.ExpirationTimestamp = startRequest.ExpirationTimestamp
 	attributes.CronSchedule = request.CronSchedule
 	attributes.LastCompletionResult = startRequest.LastCompletionResult
@@ -689,7 +689,7 @@ func (b *HistoryBuilder) newActivityTaskStartedEvent(
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(types.EventTypeActivityTaskStarted)
 	attributes := &types.ActivityTaskStartedEventAttributes{}
 	attributes.ScheduledEventID = common.Int64Ptr(ScheduledEventID)
-	attributes.Attempt = common.Int32Ptr(attempt)
+	attributes.Attempt = attempt
 	attributes.Identity = identity
 	attributes.RequestID = common.StringPtr(requestID)
 	attributes.LastFailureReason = common.StringPtr(lastFailureReason)
@@ -1154,7 +1154,7 @@ func setDecisionTaskScheduledEventInfo(historyEvent *types.HistoryEvent, taskLis
 	attributes.TaskList = &types.TaskList{}
 	attributes.TaskList.Name = common.StringPtr(taskList)
 	attributes.StartToCloseTimeoutSeconds = common.Int32Ptr(startToCloseTimeoutSeconds)
-	attributes.Attempt = common.Int64Ptr(attempt)
+	attributes.Attempt = attempt
 	historyEvent.DecisionTaskScheduledEventAttributes = attributes
 
 	return historyEvent

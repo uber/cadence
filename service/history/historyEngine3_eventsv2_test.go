@@ -209,7 +209,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	expectedResponse.StartedEventID = common.Int64Ptr(di.ScheduleID + 1)
 	expectedResponse.StickyExecutionEnabled = common.BoolPtr(true)
 	expectedResponse.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID() + 1)
-	expectedResponse.Attempt = common.Int64Ptr(di.Attempt)
+	expectedResponse.Attempt = di.Attempt
 	expectedResponse.WorkflowExecutionTaskList = &types.TaskList{
 		Name: &executionInfo.TaskList,
 		Kind: types.TaskListKindNormal.Ptr(),

@@ -313,7 +313,7 @@ func CreateMatchingPollForDecisionTaskResponse(historyResponse *types.RecordDeci
 	matchingResp := &types.MatchingPollForDecisionTaskResponse{
 		WorkflowExecution:         workflowExecution,
 		TaskToken:                 token,
-		Attempt:                   Int64Ptr(historyResponse.GetAttempt()),
+		Attempt:                   historyResponse.GetAttempt(),
 		WorkflowType:              historyResponse.WorkflowType,
 		StartedEventID:            historyResponse.StartedEventID,
 		StickyExecutionEnabled:    historyResponse.StickyExecutionEnabled,

@@ -632,7 +632,7 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 	response.StartedEventID = common.Int64Ptr(decision.StartedID)
 	response.StickyExecutionEnabled = common.BoolPtr(msBuilder.IsStickyTaskListEnabled())
 	response.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID())
-	response.Attempt = common.Int64Ptr(decision.Attempt)
+	response.Attempt = decision.Attempt
 	response.WorkflowExecutionTaskList = &types.TaskList{
 		Name: &executionInfo.TaskList,
 		Kind: types.TaskListKindNormal.Ptr(),

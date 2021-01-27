@@ -907,7 +907,7 @@ type MatchingPollForDecisionTaskResponse struct {
 	WorkflowType              *WorkflowType             `json:"workflowType,omitempty"`
 	PreviousStartedEventID    *int64                    `json:"previousStartedEventId,omitempty"`
 	StartedEventID            *int64                    `json:"startedEventId,omitempty"`
-	Attempt                   *int64                    `json:"attempt,omitempty"`
+	Attempt                   int64                     `json:"attempt,omitempty"`
 	NextEventID               *int64                    `json:"nextEventId,omitempty"`
 	BacklogCountHint          *int64                    `json:"backlogCountHint,omitempty"`
 	StickyExecutionEnabled    *bool                     `json:"stickyExecutionEnabled,omitempty"`
@@ -963,8 +963,8 @@ func (v *MatchingPollForDecisionTaskResponse) GetStartedEventID() (o int64) {
 
 // GetAttempt is an internal getter (TBD...)
 func (v *MatchingPollForDecisionTaskResponse) GetAttempt() (o int64) {
-	if v != nil && v.Attempt != nil {
-		return *v.Attempt
+	if v != nil {
+		return v.Attempt
 	}
 	return
 }

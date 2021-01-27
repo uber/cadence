@@ -139,7 +139,7 @@ func InitializeHistoryEventGenerator(
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
 			StartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
-			Attempt:                    common.Int64Ptr(decisionTaskAttempts),
+			Attempt:                    decisionTaskAttempts,
 		}
 		return historyEvent
 	})
@@ -412,7 +412,7 @@ func InitializeHistoryEventGenerator(
 			ScheduledEventID: lastEvent.EventID,
 			Identity:         identity,
 			RequestID:        common.StringPtr(uuid.New()),
-			Attempt:          common.Int32Ptr(0),
+			Attempt:          0,
 		}
 		return historyEvent
 	})
