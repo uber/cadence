@@ -4656,7 +4656,8 @@ func (e *mutableStateBuilder) logDataInconsistency() {
 	workflowID := e.executionInfo.WorkflowID
 	runID := e.executionInfo.RunID
 
-	e.logger.Error("encounter cassandra data inconsistency",
+	e.metricsClient.Scope(metrics.WorkflowContextScope).IncCounter(metrics.DataInconsistentCounter)
+	e.logger.Error("encounter mutable state data inconsistency",
 		tag.WorkflowDomainID(domainID),
 		tag.WorkflowID(workflowID),
 		tag.WorkflowRunID(runID),
