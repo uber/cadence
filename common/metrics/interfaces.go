@@ -69,10 +69,3 @@ type (
 		Tagged(tags ...Tag) Scope
 	}
 )
-
-var sanitizer = tally.NewSanitizer(tally.SanitizeOptions{
-	NameCharacters:       tally.ValidCharacters{tally.AlphanumericRange, tally.UnderscoreCharacters},
-	KeyCharacters:        tally.ValidCharacters{tally.AlphanumericRange, tally.UnderscoreCharacters},
-	ValueCharacters:      tally.ValidCharacters{tally.AlphanumericRange, tally.UnderscoreCharacters},
-	ReplacementCharacter: '_',
-})

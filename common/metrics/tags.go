@@ -20,7 +20,11 @@
 
 package metrics
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/uber-go/tally"
+)
 
 const (
 	revisionTag     = "revision"
@@ -58,6 +62,16 @@ type (
 	}
 )
 
+// sanitizer is used to sanitize tag values, to prevent collisions and invalid data.
+// values should not allow dots for "namespacing" / "grouping" metrics, as they seem to refer to "one thing" in all cases.
+// `-` is not allowed in Prometheus keys or names, but it may be reasonable to allow it in values.
+var sanitizer = tally.NewSanitizer(tally.SanitizeOptions{
+	NameCharacters:       tally.ValidCharacters{tally.AlphanumericRange, tally.UnderscoreCharacters},
+	KeyCharacters:        tally.ValidCharacters{tally.AlphanumericRange, tally.UnderscoreCharacters},
+	ValueCharacters:      tally.ValidCharacters{tally.AlphanumericRange, tally.UnderscoreCharacters},
+	ReplacementCharacter: '_',
+})
+
 func (s simpleMetric) Key() string   { return s.key }
 func (s simpleMetric) Value() string { return s.value }
 
@@ -65,7 +79,7 @@ func metricWithUnknown(key, value string) Tag {
 	if len(value) == 0 {
 		value = unknownValue
 	}
-	return simpleMetric{key: key, value: value}
+	return simpleMetric{key: key, value: sanitizer.Value(value)}
 }
 
 // DomainTag returns a new domain tag. For timers, this also ensures that we
@@ -82,7 +96,7 @@ func DomainUnknownTag() Tag {
 
 // InstanceTag returns a new instance tag
 func InstanceTag(value string) Tag {
-	return simpleMetric{key: instance, value: value}
+	return metricWithUnknown(instance, value)
 }
 
 // TargetClusterTag returns a new target cluster tag.
@@ -97,15 +111,12 @@ func ActiveClusterTag(value string) Tag {
 
 // TaskListTag returns a new task list tag.
 func TaskListTag(value string) Tag {
-	if len(value) == 0 {
-		value = unknownValue
-	}
-	return simpleMetric{key: taskList, value: sanitizer.Value(value)}
+	return metricWithUnknown(taskList, value)
 }
 
 // TaskListUnknownTag returns a new tasklist:unknown tag-value
 func TaskListUnknownTag() Tag {
-	return simpleMetric{key: taskList, value: unknownValue}
+	return TaskListTag("")
 }
 
 // TaskListTypeTag returns a new task list type tag.
