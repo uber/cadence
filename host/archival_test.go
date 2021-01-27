@@ -122,7 +122,7 @@ func (s *integrationSuite) TestVisibilityArchival() {
 		executions = []*types.WorkflowExecutionInfo{}
 		request := &types.ListArchivedWorkflowExecutionsRequest{
 			Domain:   s.archivalDomainName,
-			PageSize: common.Int32Ptr(2),
+			PageSize: 2,
 			Query:    common.StringPtr(fmt.Sprintf("CloseTime >= %v and CloseTime <= %v and WorkflowType = '%s'", startTime, endTime, workflowType)),
 		}
 		for len(executions) == 0 || request.NextPageToken != nil {

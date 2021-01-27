@@ -1357,7 +1357,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	// Assert visibility is correct
 	listOpenRequest := &types.ListOpenWorkflowExecutionsRequest{
 		Domain:          s.domainName,
-		MaximumPageSize: common.Int32Ptr(100),
+		MaximumPageSize: 100,
 		StartTimeFilter: &types.StartTimeFilter{
 			EarliestTime: common.Int64Ptr(0),
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
@@ -1394,7 +1394,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 
 	listClosedRequest := &types.ListClosedWorkflowExecutionsRequest{
 		Domain:          s.domainName,
-		MaximumPageSize: common.Int32Ptr(100),
+		MaximumPageSize: 100,
 		StartTimeFilter: &types.StartTimeFilter{
 			EarliestTime: common.Int64Ptr(0),
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),

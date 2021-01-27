@@ -270,7 +270,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 		//  And we can't use list API because terminate / reset will mutate the result.
 		resp, err := client.ScanWorkflowExecutions(ctx, &types.ListWorkflowExecutionsRequest{
 			Domain:        batchParams.DomainName,
-			PageSize:      common.Int32Ptr(int32(pageSize)),
+			PageSize:      int32(pageSize),
 			NextPageToken: hbd.PageToken,
 			Query:         common.StringPtr(batchParams.Query),
 		})

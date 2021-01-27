@@ -322,7 +322,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 	var token []byte
 	for doPaging := true; doPaging; doPaging = len(token) > 0 {
 		resp, err := s.handler.ListDomains(context.Background(), &types.ListDomainsRequest{
-			PageSize:      common.Int32Ptr(pagesize),
+			PageSize:      pagesize,
 			NextPageToken: token,
 		})
 		s.Nil(err)

@@ -3403,7 +3403,7 @@ func (v *GetSearchAttributesResponse) GetKeys() (o map[string]IndexedValueType) 
 type GetWorkflowExecutionHistoryRequest struct {
 	Domain                 string                  `json:"domain,omitempty"`
 	Execution              *WorkflowExecution      `json:"execution,omitempty"`
-	MaximumPageSize        *int32                  `json:"maximumPageSize,omitempty"`
+	MaximumPageSize        int32                   `json:"maximumPageSize,omitempty"`
 	NextPageToken          []byte                  `json:"nextPageToken,omitempty"`
 	WaitForNewEvent        *bool                   `json:"waitForNewEvent,omitempty"`
 	HistoryEventFilterType *HistoryEventFilterType `json:"HistoryEventFilterType,omitempty"`
@@ -3428,8 +3428,8 @@ func (v *GetWorkflowExecutionHistoryRequest) GetExecution() (o *WorkflowExecutio
 
 // GetMaximumPageSize is an internal getter (TBD...)
 func (v *GetWorkflowExecutionHistoryRequest) GetMaximumPageSize() (o int32) {
-	if v != nil && v.MaximumPageSize != nil {
-		return *v.MaximumPageSize
+	if v != nil {
+		return v.MaximumPageSize
 	}
 	return
 }
@@ -4193,7 +4193,7 @@ func (v *LimitExceededError) GetMessage() (o string) {
 // ListArchivedWorkflowExecutionsRequest is an internal type (TBD...)
 type ListArchivedWorkflowExecutionsRequest struct {
 	Domain        string  `json:"domain,omitempty"`
-	PageSize      *int32  `json:"pageSize,omitempty"`
+	PageSize      int32   `json:"pageSize,omitempty"`
 	NextPageToken []byte  `json:"nextPageToken,omitempty"`
 	Query         *string `json:"query,omitempty"`
 }
@@ -4208,8 +4208,8 @@ func (v *ListArchivedWorkflowExecutionsRequest) GetDomain() (o string) {
 
 // GetPageSize is an internal getter (TBD...)
 func (v *ListArchivedWorkflowExecutionsRequest) GetPageSize() (o int32) {
-	if v != nil && v.PageSize != nil {
-		return *v.PageSize
+	if v != nil {
+		return v.PageSize
 	}
 	return
 }
@@ -4255,7 +4255,7 @@ func (v *ListArchivedWorkflowExecutionsResponse) GetNextPageToken() (o []byte) {
 // ListClosedWorkflowExecutionsRequest is an internal type (TBD...)
 type ListClosedWorkflowExecutionsRequest struct {
 	Domain          string                        `json:"domain,omitempty"`
-	MaximumPageSize *int32                        `json:"maximumPageSize,omitempty"`
+	MaximumPageSize int32                         `json:"maximumPageSize,omitempty"`
 	NextPageToken   []byte                        `json:"nextPageToken,omitempty"`
 	StartTimeFilter *StartTimeFilter              `json:"StartTimeFilter,omitempty"`
 	ExecutionFilter *WorkflowExecutionFilter      `json:"executionFilter,omitempty"`
@@ -4273,8 +4273,8 @@ func (v *ListClosedWorkflowExecutionsRequest) GetDomain() (o string) {
 
 // GetMaximumPageSize is an internal getter (TBD...)
 func (v *ListClosedWorkflowExecutionsRequest) GetMaximumPageSize() (o int32) {
-	if v != nil && v.MaximumPageSize != nil {
-		return *v.MaximumPageSize
+	if v != nil {
+		return v.MaximumPageSize
 	}
 	return
 }
@@ -4343,14 +4343,14 @@ func (v *ListClosedWorkflowExecutionsResponse) GetNextPageToken() (o []byte) {
 
 // ListDomainsRequest is an internal type (TBD...)
 type ListDomainsRequest struct {
-	PageSize      *int32 `json:"pageSize,omitempty"`
+	PageSize      int32  `json:"pageSize,omitempty"`
 	NextPageToken []byte `json:"nextPageToken,omitempty"`
 }
 
 // GetPageSize is an internal getter (TBD...)
 func (v *ListDomainsRequest) GetPageSize() (o int32) {
-	if v != nil && v.PageSize != nil {
-		return *v.PageSize
+	if v != nil {
+		return v.PageSize
 	}
 	return
 }
@@ -4388,7 +4388,7 @@ func (v *ListDomainsResponse) GetNextPageToken() (o []byte) {
 // ListOpenWorkflowExecutionsRequest is an internal type (TBD...)
 type ListOpenWorkflowExecutionsRequest struct {
 	Domain          string                   `json:"domain,omitempty"`
-	MaximumPageSize *int32                   `json:"maximumPageSize,omitempty"`
+	MaximumPageSize int32                    `json:"maximumPageSize,omitempty"`
 	NextPageToken   []byte                   `json:"nextPageToken,omitempty"`
 	StartTimeFilter *StartTimeFilter         `json:"StartTimeFilter,omitempty"`
 	ExecutionFilter *WorkflowExecutionFilter `json:"executionFilter,omitempty"`
@@ -4405,8 +4405,8 @@ func (v *ListOpenWorkflowExecutionsRequest) GetDomain() (o string) {
 
 // GetMaximumPageSize is an internal getter (TBD...)
 func (v *ListOpenWorkflowExecutionsRequest) GetMaximumPageSize() (o int32) {
-	if v != nil && v.MaximumPageSize != nil {
-		return *v.MaximumPageSize
+	if v != nil {
+		return v.MaximumPageSize
 	}
 	return
 }
@@ -4512,7 +4512,7 @@ func (v *ListTaskListPartitionsResponse) GetDecisionTaskListPartitions() (o []*T
 // ListWorkflowExecutionsRequest is an internal type (TBD...)
 type ListWorkflowExecutionsRequest struct {
 	Domain        string  `json:"domain,omitempty"`
-	PageSize      *int32  `json:"pageSize,omitempty"`
+	PageSize      int32   `json:"pageSize,omitempty"`
 	NextPageToken []byte  `json:"nextPageToken,omitempty"`
 	Query         *string `json:"query,omitempty"`
 }
@@ -4527,8 +4527,8 @@ func (v *ListWorkflowExecutionsRequest) GetDomain() (o string) {
 
 // GetPageSize is an internal getter (TBD...)
 func (v *ListWorkflowExecutionsRequest) GetPageSize() (o int32) {
-	if v != nil && v.PageSize != nil {
-		return *v.PageSize
+	if v != nil {
+		return v.PageSize
 	}
 	return
 }

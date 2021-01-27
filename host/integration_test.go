@@ -1101,7 +1101,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	time.Sleep(2 * time.Second)
 	resp, err := s.engine.ListOpenWorkflowExecutions(createContext(), &types.ListOpenWorkflowExecutionsRequest{
 		Domain:          s.domainName,
-		MaximumPageSize: common.Int32Ptr(100),
+		MaximumPageSize: 100,
 		StartTimeFilter: startFilter,
 		ExecutionFilter: &types.WorkflowExecutionFilter{
 			WorkflowID: common.StringPtr(id),
@@ -1171,7 +1171,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	for i := 0; i < 10; i++ {
 		resp, err := s.engine.ListClosedWorkflowExecutions(createContext(), &types.ListClosedWorkflowExecutionsRequest{
 			Domain:          s.domainName,
-			MaximumPageSize: common.Int32Ptr(100),
+			MaximumPageSize: 100,
 			StartTimeFilter: startFilter,
 			ExecutionFilter: &types.WorkflowExecutionFilter{
 				WorkflowID: common.StringPtr(id),
@@ -1850,7 +1850,7 @@ func (s *integrationSuite) TestVisibility() {
 	for i := 0; i < 10; i++ {
 		resp, err3 := s.engine.ListClosedWorkflowExecutions(createContext(), &types.ListClosedWorkflowExecutionsRequest{
 			Domain:          s.domainName,
-			MaximumPageSize: common.Int32Ptr(100),
+			MaximumPageSize: 100,
 			StartTimeFilter: startFilter,
 		})
 		s.Nil(err3)
@@ -1868,7 +1868,7 @@ func (s *integrationSuite) TestVisibility() {
 	for i := 0; i < 10; i++ {
 		resp, err4 := s.engine.ListOpenWorkflowExecutions(createContext(), &types.ListOpenWorkflowExecutionsRequest{
 			Domain:          s.domainName,
-			MaximumPageSize: common.Int32Ptr(100),
+			MaximumPageSize: 100,
 			StartTimeFilter: startFilter,
 		})
 		s.Nil(err4)
@@ -2201,7 +2201,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		startFilter.LatestTime = common.Int64Ptr(time.Now().UnixNano())
 		resp, err := s.engine.ListOpenWorkflowExecutions(createContext(), &types.ListOpenWorkflowExecutionsRequest{
 			Domain:          s.domainName,
-			MaximumPageSize: common.Int32Ptr(100),
+			MaximumPageSize: 100,
 			StartTimeFilter: startFilter,
 			ExecutionFilter: &types.WorkflowExecutionFilter{
 				WorkflowID: common.StringPtr(childID),
@@ -2244,7 +2244,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	for i := 0; i < 10; i++ {
 		resp, err := s.engine.ListClosedWorkflowExecutions(createContext(), &types.ListClosedWorkflowExecutionsRequest{
 			Domain:          s.domainName,
-			MaximumPageSize: common.Int32Ptr(100),
+			MaximumPageSize: 100,
 			StartTimeFilter: startFilter,
 		})
 		s.Nil(err)
@@ -2343,7 +2343,7 @@ ListClosedLoop:
 	for i := 0; i < 10; i++ {
 		resp, err3 := s.engine.ListClosedWorkflowExecutions(createContext(), &types.ListClosedWorkflowExecutionsRequest{
 			Domain:          s.domainName,
-			MaximumPageSize: common.Int32Ptr(100),
+			MaximumPageSize: 100,
 			StartTimeFilter: startFilter,
 		})
 		s.Nil(err3)
@@ -3731,7 +3731,7 @@ func (s *integrationSuite) TestCancelTimer() {
 		resp, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 			Domain:          s.domainName,
 			Execution:       workflowExecution,
-			MaximumPageSize: common.Int32Ptr(200),
+			MaximumPageSize: 200,
 		})
 		s.Nil(err)
 		for _, event := range resp.History.Events {
@@ -3799,7 +3799,7 @@ func (s *integrationSuite) TestCancelTimer() {
 	resp, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 		Domain:          s.domainName,
 		Execution:       workflowExecution,
-		MaximumPageSize: common.Int32Ptr(200),
+		MaximumPageSize: 200,
 	})
 	s.Nil(err)
 	for _, event := range resp.History.Events {
@@ -3868,7 +3868,7 @@ func (s *integrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
 		resp, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 			Domain:          s.domainName,
 			Execution:       workflowExecution,
-			MaximumPageSize: common.Int32Ptr(200),
+			MaximumPageSize: 200,
 		})
 		s.Nil(err)
 		for _, event := range resp.History.Events {
@@ -3937,7 +3937,7 @@ func (s *integrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
 	resp, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 		Domain:          s.domainName,
 		Execution:       workflowExecution,
-		MaximumPageSize: common.Int32Ptr(200),
+		MaximumPageSize: 200,
 	})
 	s.Nil(err)
 	for _, event := range resp.History.Events {
@@ -3986,7 +3986,7 @@ func (s *integrationSuite) startWithMemoHelper(startFn startFunc, id string, tas
 	for i := 0; i < 10; i++ {
 		resp, err1 := s.engine.ListOpenWorkflowExecutions(createContext(), &types.ListOpenWorkflowExecutionsRequest{
 			Domain:          s.domainName,
-			MaximumPageSize: common.Int32Ptr(100),
+			MaximumPageSize: 100,
 			StartTimeFilter: &types.StartTimeFilter{
 				EarliestTime: common.Int64Ptr(0),
 				LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
@@ -4041,7 +4041,7 @@ func (s *integrationSuite) startWithMemoHelper(startFn startFunc, id string, tas
 	for i := 0; i < 10; i++ {
 		resp, err1 := s.engine.ListClosedWorkflowExecutions(createContext(), &types.ListClosedWorkflowExecutionsRequest{
 			Domain:          s.domainName,
-			MaximumPageSize: common.Int32Ptr(100),
+			MaximumPageSize: 100,
 			StartTimeFilter: &types.StartTimeFilter{
 				EarliestTime: common.Int64Ptr(0),
 				LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
