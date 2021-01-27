@@ -155,7 +155,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_ExecutionTime() {
 	s.Nil(err)
 
 	cronID := id + "-cron"
-	request.CronSchedule = common.StringPtr("@every 1m")
+	request.CronSchedule = "@every 1m"
 	request.WorkflowID = cronID
 
 	weCron, err := s.engine.StartWorkflowExecution(createContext(), request)

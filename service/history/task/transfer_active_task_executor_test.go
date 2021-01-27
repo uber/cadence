@@ -1993,7 +1993,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask()
 				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-				CronSchedule:                        common.StringPtr(cronSchedule),
+				CronSchedule:                        cronSchedule,
 			},
 			FirstDecisionTaskBackoffSeconds: common.Int32Ptr(backoffSeconds),
 		},

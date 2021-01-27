@@ -1257,7 +1257,7 @@ type ContinueAsNewWorkflowExecutionDecisionAttributes struct {
 	FailureReason                       *string                 `json:"failureReason,omitempty"`
 	FailureDetails                      []byte                  `json:"failureDetails,omitempty"`
 	LastCompletionResult                []byte                  `json:"lastCompletionResult,omitempty"`
-	CronSchedule                        *string                 `json:"cronSchedule,omitempty"`
+	CronSchedule                        string                  `json:"cronSchedule,omitempty"`
 	Header                              *Header                 `json:"header,omitempty"`
 	Memo                                *Memo                   `json:"memo,omitempty"`
 	SearchAttributes                    *SearchAttributes       `json:"searchAttributes,omitempty"`
@@ -1353,8 +1353,8 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetLastCompletionResu
 
 // GetCronSchedule is an internal getter (TBD...)
 func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetCronSchedule() (o string) {
-	if v != nil && v.CronSchedule != nil {
-		return *v.CronSchedule
+	if v != nil {
+		return v.CronSchedule
 	}
 	return
 }
@@ -7514,7 +7514,7 @@ type SignalWithStartWorkflowExecutionRequest struct {
 	SignalInput                         []byte                 `json:"signalInput,omitempty"`
 	Control                             []byte                 `json:"control,omitempty"`
 	RetryPolicy                         *RetryPolicy           `json:"retryPolicy,omitempty"`
-	CronSchedule                        *string                `json:"cronSchedule,omitempty"`
+	CronSchedule                        string                 `json:"cronSchedule,omitempty"`
 	Memo                                *Memo                  `json:"memo,omitempty"`
 	SearchAttributes                    *SearchAttributes      `json:"searchAttributes,omitempty"`
 	Header                              *Header                `json:"header,omitempty"`
@@ -7634,8 +7634,8 @@ func (v *SignalWithStartWorkflowExecutionRequest) GetRetryPolicy() (o *RetryPoli
 
 // GetCronSchedule is an internal getter (TBD...)
 func (v *SignalWithStartWorkflowExecutionRequest) GetCronSchedule() (o string) {
-	if v != nil && v.CronSchedule != nil {
-		return *v.CronSchedule
+	if v != nil {
+		return v.CronSchedule
 	}
 	return
 }
@@ -7744,7 +7744,7 @@ type StartChildWorkflowExecutionDecisionAttributes struct {
 	Control                             []byte                 `json:"control,omitempty"`
 	WorkflowIDReusePolicy               *WorkflowIDReusePolicy `json:"workflowIdReusePolicy,omitempty"`
 	RetryPolicy                         *RetryPolicy           `json:"retryPolicy,omitempty"`
-	CronSchedule                        *string                `json:"cronSchedule,omitempty"`
+	CronSchedule                        string                 `json:"cronSchedule,omitempty"`
 	Header                              *Header                `json:"header,omitempty"`
 	Memo                                *Memo                  `json:"memo,omitempty"`
 	SearchAttributes                    *SearchAttributes      `json:"searchAttributes,omitempty"`
@@ -7840,8 +7840,8 @@ func (v *StartChildWorkflowExecutionDecisionAttributes) GetRetryPolicy() (o *Ret
 
 // GetCronSchedule is an internal getter (TBD...)
 func (v *StartChildWorkflowExecutionDecisionAttributes) GetCronSchedule() (o string) {
-	if v != nil && v.CronSchedule != nil {
-		return *v.CronSchedule
+	if v != nil {
+		return v.CronSchedule
 	}
 	return
 }
@@ -7951,7 +7951,7 @@ type StartChildWorkflowExecutionInitiatedEventAttributes struct {
 	DecisionTaskCompletedEventID        *int64                 `json:"decisionTaskCompletedEventId,omitempty"`
 	WorkflowIDReusePolicy               *WorkflowIDReusePolicy `json:"workflowIdReusePolicy,omitempty"`
 	RetryPolicy                         *RetryPolicy           `json:"retryPolicy,omitempty"`
-	CronSchedule                        *string                `json:"cronSchedule,omitempty"`
+	CronSchedule                        string                 `json:"cronSchedule,omitempty"`
 	Header                              *Header                `json:"header,omitempty"`
 	Memo                                *Memo                  `json:"memo,omitempty"`
 	SearchAttributes                    *SearchAttributes      `json:"searchAttributes,omitempty"`
@@ -8055,8 +8055,8 @@ func (v *StartChildWorkflowExecutionInitiatedEventAttributes) GetRetryPolicy() (
 
 // GetCronSchedule is an internal getter (TBD...)
 func (v *StartChildWorkflowExecutionInitiatedEventAttributes) GetCronSchedule() (o string) {
-	if v != nil && v.CronSchedule != nil {
-		return *v.CronSchedule
+	if v != nil {
+		return v.CronSchedule
 	}
 	return
 }
@@ -8142,7 +8142,7 @@ type StartWorkflowExecutionRequest struct {
 	RequestID                           *string                `json:"requestId,omitempty"`
 	WorkflowIDReusePolicy               *WorkflowIDReusePolicy `json:"workflowIdReusePolicy,omitempty"`
 	RetryPolicy                         *RetryPolicy           `json:"retryPolicy,omitempty"`
-	CronSchedule                        *string                `json:"cronSchedule,omitempty"`
+	CronSchedule                        string                 `json:"cronSchedule,omitempty"`
 	Memo                                *Memo                  `json:"memo,omitempty"`
 	SearchAttributes                    *SearchAttributes      `json:"searchAttributes,omitempty"`
 	Header                              *Header                `json:"header,omitempty"`
@@ -8238,8 +8238,8 @@ func (v *StartWorkflowExecutionRequest) GetRetryPolicy() (o *RetryPolicy) {
 
 // GetCronSchedule is an internal getter (TBD...)
 func (v *StartWorkflowExecutionRequest) GetCronSchedule() (o string) {
-	if v != nil && v.CronSchedule != nil {
-		return *v.CronSchedule
+	if v != nil {
+		return v.CronSchedule
 	}
 	return
 }
@@ -9666,7 +9666,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 	RetryPolicy                         *RetryPolicy            `json:"retryPolicy,omitempty"`
 	Attempt                             *int32                  `json:"attempt,omitempty"`
 	ExpirationTimestamp                 *int64                  `json:"expirationTimestamp,omitempty"`
-	CronSchedule                        *string                 `json:"cronSchedule,omitempty"`
+	CronSchedule                        string                  `json:"cronSchedule,omitempty"`
 	FirstDecisionTaskBackoffSeconds     *int32                  `json:"firstDecisionTaskBackoffSeconds,omitempty"`
 	Memo                                *Memo                   `json:"memo,omitempty"`
 	SearchAttributes                    *SearchAttributes       `json:"searchAttributes,omitempty"`
@@ -9828,12 +9828,13 @@ func (v *WorkflowExecutionStartedEventAttributes) GetExpirationTimestamp() (o in
 
 // GetCronSchedule is an internal getter (TBD...)
 func (v *WorkflowExecutionStartedEventAttributes) GetCronSchedule() (o string) {
-	if v != nil && v.CronSchedule != nil {
-		return *v.CronSchedule
+	if v != nil {
+		return v.CronSchedule
 	}
 	return
 }
 
+// GetFirstDecisionTaskBackoffSeconds is an internal getter (TBD...)
 // GetFirstDecisionTaskBackoffSeconds is an internal getter (TBD...)
 func (v *WorkflowExecutionStartedEventAttributes) GetFirstDecisionTaskBackoffSeconds() (o int32) {
 	if v != nil && v.FirstDecisionTaskBackoffSeconds != nil {
