@@ -123,7 +123,6 @@ func newTransferQueueProcessorBase(
 				processorBase.redispatcher.AddTask,
 				shard.GetTimeSource(),
 				shard.GetConfig().TransferTaskMaxRetryCount,
-				nil,
 			)
 		},
 

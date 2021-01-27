@@ -2185,7 +2185,7 @@ func (s *transferActiveTaskExecutorSuite) createRequestCancelWorkflowExecutionRe
 		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
 			Domain:            targetDomainName,
 			WorkflowExecution: &targetExecution,
-			Identity:          common.StringPtr(identityHistoryService),
+			Identity:          common.StringPtr(execution.IdentityHistoryService),
 			// Use the same request ID to dedupe RequestCancelWorkflowExecution calls
 			RequestID: common.StringPtr(rci.CancelRequestID),
 		},
@@ -2215,7 +2215,7 @@ func (s *transferActiveTaskExecutorSuite) createSignalWorkflowExecutionRequest(
 		SignalRequest: &types.SignalWorkflowExecutionRequest{
 			Domain:            targetDomainName,
 			WorkflowExecution: &targetExecution,
-			Identity:          common.StringPtr(identityHistoryService),
+			Identity:          common.StringPtr(execution.IdentityHistoryService),
 			SignalName:        common.StringPtr(si.SignalName),
 			Input:             si.Input,
 			RequestID:         common.StringPtr(si.SignalRequestID),

@@ -50,8 +50,6 @@ import (
 )
 
 const (
-	identityHistoryService = "history-service"
-
 	mutableStateInvalidHistoryActionMsg         = "invalid history builder state for action"
 	mutableStateInvalidHistoryActionMsgTemplate = mutableStateInvalidHistoryActionMsg + ": %v"
 

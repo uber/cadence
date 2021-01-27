@@ -229,47 +229,25 @@ func NewEngineWithShardContext(
 	)
 	openExecutionCheck := invariant.NewConcreteExecutionExists(pRetry)
 
-	if config.TransferProcessorEnableMultiCurosrProcessor() {
-		historyEngImpl.txProcessor = queue.NewTransferQueueProcessor(
-			shard,
-			historyEngImpl,
-			queueTaskProcessor,
-			executionCache,
-			historyEngImpl.workflowResetter,
-			historyEngImpl.archivalClient,
-			openExecutionCheck,
-		)
-	} else {
-		historyEngImpl.txProcessor = newTransferQueueProcessor(
-			shard,
-			historyEngImpl,
-			visibilityMgr,
-			matching,
-			historyClient,
-			queueTaskProcessor,
-			openExecutionCheck,
-			logger,
-		)
-	}
-	if config.TimerProcessorEnableMultiCurosrProcessor() {
-		historyEngImpl.timerProcessor = queue.NewTimerQueueProcessor(
-			shard,
-			historyEngImpl,
-			queueTaskProcessor,
-			executionCache,
-			historyEngImpl.archivalClient,
-			openExecutionCheck,
-		)
-	} else {
-		historyEngImpl.timerProcessor = newTimerQueueProcessor(
-			shard,
-			historyEngImpl,
-			matching,
-			queueTaskProcessor,
-			openExecutionCheck,
-			logger,
-		)
-	}
+	historyEngImpl.txProcessor = queue.NewTransferQueueProcessor(
+		shard,
+		historyEngImpl,
+		queueTaskProcessor,
+		executionCache,
+		historyEngImpl.workflowResetter,
+		historyEngImpl.archivalClient,
+		openExecutionCheck,
+	)
+
+	historyEngImpl.timerProcessor = queue.NewTimerQueueProcessor(
+		shard,
+		historyEngImpl,
+		queueTaskProcessor,
+		executionCache,
+		historyEngImpl.archivalClient,
+		openExecutionCheck,
+	)
+
 	historyEngImpl.eventsReapplier = ndc.NewEventsReapplier(shard.GetMetricsClient(), logger)
 
 	// Only start the replicator processor if global domain is enabled

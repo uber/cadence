@@ -587,7 +587,7 @@ CheckHistoryLoopForSignalSent:
 	s.True(signalEvent != nil)
 	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
 	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
-	s.Equal("history-service", *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
+	s.Equal(execution.IdentityHistoryService, *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
 }
 
 func (s *integrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
@@ -883,7 +883,7 @@ CheckHistoryLoopForSignalSent:
 	s.True(signalEvent != nil)
 	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
 	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
-	s.Equal("history-service", *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
+	s.Equal(execution.IdentityHistoryService, *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
 }
 
 func (s *integrationSuite) TestSignalExternalWorkflowDecision_UnKnownTarget() {
@@ -1516,8 +1516,9 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 		Identity:                            common.StringPtr(identity),
 		WorkflowIDReusePolicy:               &wfIDReusePolicy,
 	}
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	resp, err := s.engine.SignalWithStartWorkflowExecution(ctx, sRequest)
+	cancel()
 	s.Nil(resp)
 	s.Error(err)
 	errMsg := err.(*types.WorkflowExecutionAlreadyStartedError).GetMessage()
@@ -1525,8 +1526,9 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 
 	// test policy WorkflowIDReusePolicyAllowDuplicateFailedOnly
 	wfIDReusePolicy = types.WorkflowIDReusePolicyAllowDuplicateFailedOnly
-	ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	resp, err = s.engine.SignalWithStartWorkflowExecution(ctx, sRequest)
+	cancel()
 	s.Nil(resp)
 	s.Error(err)
 	errMsg = err.(*types.WorkflowExecutionAlreadyStartedError).GetMessage()
@@ -1534,8 +1536,9 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 
 	// test policy WorkflowIDReusePolicyAllowDuplicate
 	wfIDReusePolicy = types.WorkflowIDReusePolicyAllowDuplicate
-	ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	resp, err = s.engine.SignalWithStartWorkflowExecution(ctx, sRequest)
+	cancel()
 	s.Nil(err)
 	s.NotEmpty(resp.GetRunID())
 

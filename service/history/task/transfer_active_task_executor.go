@@ -45,8 +45,6 @@ import (
 )
 
 const (
-	identityHistoryService = "history-service"
-
 	resetWorkflowTimeout = 30 * time.Second
 )
 
@@ -1210,7 +1208,7 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionWithRetry(
 				WorkflowID: task.TargetWorkflowID,
 				RunID:      task.TargetRunID,
 			},
-			Identity: common.StringPtr(identityHistoryService),
+			Identity: common.StringPtr(execution.IdentityHistoryService),
 			// Use the same request ID to dedupe RequestCancelWorkflowExecution calls
 			RequestID: common.StringPtr(requestCancelInfo.CancelRequestID),
 		},
@@ -1254,7 +1252,7 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionWithRetry(
 				WorkflowID: task.TargetWorkflowID,
 				RunID:      task.TargetRunID,
 			},
-			Identity:   common.StringPtr(identityHistoryService),
+			Identity:   common.StringPtr(execution.IdentityHistoryService),
 			SignalName: common.StringPtr(signalInfo.SignalName),
 			Input:      signalInfo.Input,
 			// Use same request ID to deduplicate SignalWorkflowExecution calls
@@ -1498,7 +1496,7 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 					RunID:      childInfo.StartedRunID,
 				},
 				Reason:   common.StringPtr("by parent close policy"),
-				Identity: common.StringPtr(identityHistoryService),
+				Identity: common.StringPtr(execution.IdentityHistoryService),
 			},
 		})
 
@@ -1511,7 +1509,7 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 					WorkflowID: childInfo.StartedWorkflowID,
 					RunID:      childInfo.StartedRunID,
 				},
-				Identity: common.StringPtr(identityHistoryService),
+				Identity: common.StringPtr(execution.IdentityHistoryService),
 			},
 		})
 
