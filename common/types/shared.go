@@ -112,11 +112,11 @@ func (v *ActivityTaskCancelRequestedEventAttributes) GetDecisionTaskCompletedEve
 
 // ActivityTaskCanceledEventAttributes is an internal type (TBD...)
 type ActivityTaskCanceledEventAttributes struct {
-	Details                      []byte  `json:"details,omitempty"`
-	LatestCancelRequestedEventID *int64  `json:"latestCancelRequestedEventId,omitempty"`
-	ScheduledEventID             *int64  `json:"scheduledEventId,omitempty"`
-	StartedEventID               *int64  `json:"startedEventId,omitempty"`
-	Identity                     *string `json:"identity,omitempty"`
+	Details                      []byte `json:"details,omitempty"`
+	LatestCancelRequestedEventID *int64 `json:"latestCancelRequestedEventId,omitempty"`
+	ScheduledEventID             *int64 `json:"scheduledEventId,omitempty"`
+	StartedEventID               *int64 `json:"startedEventId,omitempty"`
+	Identity                     string `json:"identity,omitempty"`
 }
 
 // GetDetails is an internal getter (TBD...)
@@ -153,18 +153,18 @@ func (v *ActivityTaskCanceledEventAttributes) GetStartedEventID() (o int64) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *ActivityTaskCanceledEventAttributes) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
 
 // ActivityTaskCompletedEventAttributes is an internal type (TBD...)
 type ActivityTaskCompletedEventAttributes struct {
-	Result           []byte  `json:"result,omitempty"`
-	ScheduledEventID *int64  `json:"scheduledEventId,omitempty"`
-	StartedEventID   *int64  `json:"startedEventId,omitempty"`
-	Identity         *string `json:"identity,omitempty"`
+	Result           []byte `json:"result,omitempty"`
+	ScheduledEventID *int64 `json:"scheduledEventId,omitempty"`
+	StartedEventID   *int64 `json:"startedEventId,omitempty"`
+	Identity         string `json:"identity,omitempty"`
 }
 
 // GetResult is an internal getter (TBD...)
@@ -193,8 +193,8 @@ func (v *ActivityTaskCompletedEventAttributes) GetStartedEventID() (o int64) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *ActivityTaskCompletedEventAttributes) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -205,7 +205,7 @@ type ActivityTaskFailedEventAttributes struct {
 	Details          []byte  `json:"details,omitempty"`
 	ScheduledEventID *int64  `json:"scheduledEventId,omitempty"`
 	StartedEventID   *int64  `json:"startedEventId,omitempty"`
-	Identity         *string `json:"identity,omitempty"`
+	Identity         string  `json:"identity,omitempty"`
 }
 
 // GetReason is an internal getter (TBD...)
@@ -242,8 +242,8 @@ func (v *ActivityTaskFailedEventAttributes) GetStartedEventID() (o int64) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *ActivityTaskFailedEventAttributes) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -363,7 +363,7 @@ func (v *ActivityTaskScheduledEventAttributes) GetHeader() (o *Header) {
 // ActivityTaskStartedEventAttributes is an internal type (TBD...)
 type ActivityTaskStartedEventAttributes struct {
 	ScheduledEventID   *int64  `json:"scheduledEventId,omitempty"`
-	Identity           *string `json:"identity,omitempty"`
+	Identity           string  `json:"identity,omitempty"`
 	RequestID          *string `json:"requestId,omitempty"`
 	Attempt            *int32  `json:"attempt,omitempty"`
 	LastFailureReason  *string `json:"lastFailureReason,omitempty"`
@@ -380,8 +380,8 @@ func (v *ActivityTaskStartedEventAttributes) GetScheduledEventID() (o int64) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *ActivityTaskStartedEventAttributes) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -659,7 +659,7 @@ type CancelTimerFailedEventAttributes struct {
 	TimerID                      *string `json:"timerId,omitempty"`
 	Cause                        *string `json:"cause,omitempty"`
 	DecisionTaskCompletedEventID *int64  `json:"decisionTaskCompletedEventId,omitempty"`
-	Identity                     *string `json:"identity,omitempty"`
+	Identity                     string  `json:"identity,omitempty"`
 }
 
 // GetTimerID is an internal getter (TBD...)
@@ -688,8 +688,8 @@ func (v *CancelTimerFailedEventAttributes) GetDecisionTaskCompletedEventID() (o 
 
 // GetIdentity is an internal getter (TBD...)
 func (v *CancelTimerFailedEventAttributes) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -1597,7 +1597,7 @@ type DecisionTaskCompletedEventAttributes struct {
 	ExecutionContext []byte  `json:"executionContext,omitempty"`
 	ScheduledEventID *int64  `json:"scheduledEventId,omitempty"`
 	StartedEventID   *int64  `json:"startedEventId,omitempty"`
-	Identity         *string `json:"identity,omitempty"`
+	Identity         string  `json:"identity,omitempty"`
 	BinaryChecksum   *string `json:"binaryChecksum,omitempty"`
 }
 
@@ -1627,8 +1627,8 @@ func (v *DecisionTaskCompletedEventAttributes) GetStartedEventID() (o int64) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *DecisionTaskCompletedEventAttributes) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -1845,7 +1845,7 @@ type DecisionTaskFailedEventAttributes struct {
 	StartedEventID   *int64                   `json:"startedEventId,omitempty"`
 	Cause            *DecisionTaskFailedCause `json:"cause,omitempty"`
 	Details          []byte                   `json:"details,omitempty"`
-	Identity         *string                  `json:"identity,omitempty"`
+	Identity         string                   `json:"identity,omitempty"`
 	Reason           *string                  `json:"reason,omitempty"`
 	BaseRunID        string                   `json:"baseRunId,omitempty"`
 	NewRunID         string                   `json:"newRunId,omitempty"`
@@ -1887,8 +1887,8 @@ func (v *DecisionTaskFailedEventAttributes) GetDetails() (o []byte) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *DecisionTaskFailedEventAttributes) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -1967,7 +1967,7 @@ func (v *DecisionTaskScheduledEventAttributes) GetAttempt() (o int64) {
 // DecisionTaskStartedEventAttributes is an internal type (TBD...)
 type DecisionTaskStartedEventAttributes struct {
 	ScheduledEventID *int64  `json:"scheduledEventId,omitempty"`
-	Identity         *string `json:"identity,omitempty"`
+	Identity         string  `json:"identity,omitempty"`
 	RequestID        *string `json:"requestId,omitempty"`
 }
 
@@ -1981,8 +1981,8 @@ func (v *DecisionTaskStartedEventAttributes) GetScheduledEventID() (o int64) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *DecisionTaskStartedEventAttributes) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -4695,7 +4695,7 @@ type PendingActivityInfo struct {
 	ScheduledTimestamp     *int64                `json:"scheduledTimestamp,omitempty"`
 	ExpirationTimestamp    *int64                `json:"expirationTimestamp,omitempty"`
 	LastFailureReason      *string               `json:"lastFailureReason,omitempty"`
-	LastWorkerIdentity     *string               `json:"lastWorkerIdentity,omitempty"`
+	LastWorkerIdentity     string                `json:"lastWorkerIdentity,omitempty"`
 	LastFailureDetails     []byte                `json:"lastFailureDetails,omitempty"`
 }
 
@@ -4789,8 +4789,8 @@ func (v *PendingActivityInfo) GetLastFailureReason() (o string) {
 
 // GetLastWorkerIdentity is an internal getter (TBD...)
 func (v *PendingActivityInfo) GetLastWorkerIdentity() (o string) {
-	if v != nil && v.LastWorkerIdentity != nil {
-		return *v.LastWorkerIdentity
+	if v != nil {
+		return v.LastWorkerIdentity
 	}
 	return
 }
@@ -5014,7 +5014,7 @@ const (
 type PollForActivityTaskRequest struct {
 	Domain           string            `json:"domain,omitempty"`
 	TaskList         *TaskList         `json:"taskList,omitempty"`
-	Identity         *string           `json:"identity,omitempty"`
+	Identity         string            `json:"identity,omitempty"`
 	TaskListMetadata *TaskListMetadata `json:"taskListMetadata,omitempty"`
 }
 
@@ -5036,8 +5036,8 @@ func (v *PollForActivityTaskRequest) GetTaskList() (o *TaskList) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *PollForActivityTaskRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -5202,7 +5202,7 @@ func (v *PollForActivityTaskResponse) GetHeader() (o *Header) {
 type PollForDecisionTaskRequest struct {
 	Domain         string    `json:"domain,omitempty"`
 	TaskList       *TaskList `json:"taskList,omitempty"`
-	Identity       *string   `json:"identity,omitempty"`
+	Identity       string    `json:"identity,omitempty"`
 	BinaryChecksum *string   `json:"binaryChecksum,omitempty"`
 }
 
@@ -5224,8 +5224,8 @@ func (v *PollForDecisionTaskRequest) GetTaskList() (o *TaskList) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *PollForDecisionTaskRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -5371,7 +5371,7 @@ func (v *PollForDecisionTaskResponse) GetQueries() (o map[string]*WorkflowQuery)
 // PollerInfo is an internal type (TBD...)
 type PollerInfo struct {
 	LastAccessTime *int64   `json:"lastAccessTime,omitempty"`
-	Identity       *string  `json:"identity,omitempty"`
+	Identity       string   `json:"identity,omitempty"`
 	RatePerSecond  *float64 `json:"ratePerSecond,omitempty"`
 }
 
@@ -5385,8 +5385,8 @@ func (v *PollerInfo) GetLastAccessTime() (o int64) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *PollerInfo) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -5738,7 +5738,7 @@ type RecordActivityTaskHeartbeatByIDRequest struct {
 	RunID      string  `json:"runID,omitempty"`
 	ActivityID *string `json:"activityID,omitempty"`
 	Details    []byte  `json:"details,omitempty"`
-	Identity   *string `json:"identity,omitempty"`
+	Identity   string  `json:"identity,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -5783,17 +5783,17 @@ func (v *RecordActivityTaskHeartbeatByIDRequest) GetDetails() (o []byte) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *RecordActivityTaskHeartbeatByIDRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
 
 // RecordActivityTaskHeartbeatRequest is an internal type (TBD...)
 type RecordActivityTaskHeartbeatRequest struct {
-	TaskToken []byte  `json:"taskToken,omitempty"`
-	Details   []byte  `json:"details,omitempty"`
-	Identity  *string `json:"identity,omitempty"`
+	TaskToken []byte `json:"taskToken,omitempty"`
+	Details   []byte `json:"details,omitempty"`
+	Identity  string `json:"identity,omitempty"`
 }
 
 // GetTaskToken is an internal getter (TBD...)
@@ -5814,8 +5814,8 @@ func (v *RecordActivityTaskHeartbeatRequest) GetDetails() (o []byte) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *RecordActivityTaskHeartbeatRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -6274,7 +6274,7 @@ func (v *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) GetChil
 type RequestCancelWorkflowExecutionRequest struct {
 	Domain            string             `json:"domain,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
-	Identity          *string            `json:"identity,omitempty"`
+	Identity          string             `json:"identity,omitempty"`
 	RequestID         *string            `json:"requestId,omitempty"`
 }
 
@@ -6296,8 +6296,8 @@ func (v *RequestCancelWorkflowExecutionRequest) GetWorkflowExecution() (o *Workf
 
 // GetIdentity is an internal getter (TBD...)
 func (v *RequestCancelWorkflowExecutionRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -6516,7 +6516,7 @@ type RespondActivityTaskCanceledByIDRequest struct {
 	RunID      string  `json:"runID,omitempty"`
 	ActivityID *string `json:"activityID,omitempty"`
 	Details    []byte  `json:"details,omitempty"`
-	Identity   *string `json:"identity,omitempty"`
+	Identity   string  `json:"identity,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6561,17 +6561,17 @@ func (v *RespondActivityTaskCanceledByIDRequest) GetDetails() (o []byte) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *RespondActivityTaskCanceledByIDRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
 
 // RespondActivityTaskCanceledRequest is an internal type (TBD...)
 type RespondActivityTaskCanceledRequest struct {
-	TaskToken []byte  `json:"taskToken,omitempty"`
-	Details   []byte  `json:"details,omitempty"`
-	Identity  *string `json:"identity,omitempty"`
+	TaskToken []byte `json:"taskToken,omitempty"`
+	Details   []byte `json:"details,omitempty"`
+	Identity  string `json:"identity,omitempty"`
 }
 
 // GetTaskToken is an internal getter (TBD...)
@@ -6592,8 +6592,8 @@ func (v *RespondActivityTaskCanceledRequest) GetDetails() (o []byte) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *RespondActivityTaskCanceledRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -6605,7 +6605,7 @@ type RespondActivityTaskCompletedByIDRequest struct {
 	RunID      string  `json:"runID,omitempty"`
 	ActivityID *string `json:"activityID,omitempty"`
 	Result     []byte  `json:"result,omitempty"`
-	Identity   *string `json:"identity,omitempty"`
+	Identity   string  `json:"identity,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6650,17 +6650,17 @@ func (v *RespondActivityTaskCompletedByIDRequest) GetResult() (o []byte) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *RespondActivityTaskCompletedByIDRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
 
 // RespondActivityTaskCompletedRequest is an internal type (TBD...)
 type RespondActivityTaskCompletedRequest struct {
-	TaskToken []byte  `json:"taskToken,omitempty"`
-	Result    []byte  `json:"result,omitempty"`
-	Identity  *string `json:"identity,omitempty"`
+	TaskToken []byte `json:"taskToken,omitempty"`
+	Result    []byte `json:"result,omitempty"`
+	Identity  string `json:"identity,omitempty"`
 }
 
 // GetTaskToken is an internal getter (TBD...)
@@ -6681,8 +6681,8 @@ func (v *RespondActivityTaskCompletedRequest) GetResult() (o []byte) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *RespondActivityTaskCompletedRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -6695,7 +6695,7 @@ type RespondActivityTaskFailedByIDRequest struct {
 	ActivityID *string `json:"activityID,omitempty"`
 	Reason     *string `json:"reason,omitempty"`
 	Details    []byte  `json:"details,omitempty"`
-	Identity   *string `json:"identity,omitempty"`
+	Identity   string  `json:"identity,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6748,8 +6748,8 @@ func (v *RespondActivityTaskFailedByIDRequest) GetDetails() (o []byte) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *RespondActivityTaskFailedByIDRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -6759,7 +6759,7 @@ type RespondActivityTaskFailedRequest struct {
 	TaskToken []byte  `json:"taskToken,omitempty"`
 	Reason    *string `json:"reason,omitempty"`
 	Details   []byte  `json:"details,omitempty"`
-	Identity  *string `json:"identity,omitempty"`
+	Identity  string  `json:"identity,omitempty"`
 }
 
 // GetTaskToken is an internal getter (TBD...)
@@ -6788,8 +6788,8 @@ func (v *RespondActivityTaskFailedRequest) GetDetails() (o []byte) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *RespondActivityTaskFailedRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -6799,7 +6799,7 @@ type RespondDecisionTaskCompletedRequest struct {
 	TaskToken                  []byte                          `json:"taskToken,omitempty"`
 	Decisions                  []*Decision                     `json:"decisions,omitempty"`
 	ExecutionContext           []byte                          `json:"executionContext,omitempty"`
-	Identity                   *string                         `json:"identity,omitempty"`
+	Identity                   string                          `json:"identity,omitempty"`
 	StickyAttributes           *StickyExecutionAttributes      `json:"stickyAttributes,omitempty"`
 	ReturnNewDecisionTask      *bool                           `json:"returnNewDecisionTask,omitempty"`
 	ForceCreateNewDecisionTask *bool                           `json:"forceCreateNewDecisionTask,omitempty"`
@@ -6833,8 +6833,8 @@ func (v *RespondDecisionTaskCompletedRequest) GetExecutionContext() (o []byte) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *RespondDecisionTaskCompletedRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -6906,7 +6906,7 @@ type RespondDecisionTaskFailedRequest struct {
 	TaskToken      []byte                   `json:"taskToken,omitempty"`
 	Cause          *DecisionTaskFailedCause `json:"cause,omitempty"`
 	Details        []byte                   `json:"details,omitempty"`
-	Identity       *string                  `json:"identity,omitempty"`
+	Identity       string                   `json:"identity,omitempty"`
 	BinaryChecksum *string                  `json:"binaryChecksum,omitempty"`
 }
 
@@ -6936,8 +6936,8 @@ func (v *RespondDecisionTaskFailedRequest) GetDetails() (o []byte) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *RespondDecisionTaskFailedRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -7507,7 +7507,7 @@ type SignalWithStartWorkflowExecutionRequest struct {
 	Input                               []byte                 `json:"input,omitempty"`
 	ExecutionStartToCloseTimeoutSeconds *int32                 `json:"executionStartToCloseTimeoutSeconds,omitempty"`
 	TaskStartToCloseTimeoutSeconds      *int32                 `json:"taskStartToCloseTimeoutSeconds,omitempty"`
-	Identity                            *string                `json:"identity,omitempty"`
+	Identity                            string                 `json:"identity,omitempty"`
 	RequestID                           *string                `json:"requestId,omitempty"`
 	WorkflowIDReusePolicy               *WorkflowIDReusePolicy `json:"workflowIdReusePolicy,omitempty"`
 	SignalName                          *string                `json:"signalName,omitempty"`
@@ -7578,8 +7578,8 @@ func (v *SignalWithStartWorkflowExecutionRequest) GetTaskStartToCloseTimeoutSeco
 
 // GetIdentity is an internal getter (TBD...)
 func (v *SignalWithStartWorkflowExecutionRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -7670,7 +7670,7 @@ type SignalWorkflowExecutionRequest struct {
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
 	SignalName        *string            `json:"signalName,omitempty"`
 	Input             []byte             `json:"input,omitempty"`
-	Identity          *string            `json:"identity,omitempty"`
+	Identity          string             `json:"identity,omitempty"`
 	RequestID         *string            `json:"requestId,omitempty"`
 	Control           []byte             `json:"control,omitempty"`
 }
@@ -7709,8 +7709,8 @@ func (v *SignalWorkflowExecutionRequest) GetInput() (o []byte) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *SignalWorkflowExecutionRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -8138,7 +8138,7 @@ type StartWorkflowExecutionRequest struct {
 	Input                               []byte                 `json:"input,omitempty"`
 	ExecutionStartToCloseTimeoutSeconds *int32                 `json:"executionStartToCloseTimeoutSeconds,omitempty"`
 	TaskStartToCloseTimeoutSeconds      *int32                 `json:"taskStartToCloseTimeoutSeconds,omitempty"`
-	Identity                            *string                `json:"identity,omitempty"`
+	Identity                            string                 `json:"identity,omitempty"`
 	RequestID                           *string                `json:"requestId,omitempty"`
 	WorkflowIDReusePolicy               *WorkflowIDReusePolicy `json:"workflowIdReusePolicy,omitempty"`
 	RetryPolicy                         *RetryPolicy           `json:"retryPolicy,omitempty"`
@@ -8206,8 +8206,8 @@ func (v *StartWorkflowExecutionRequest) GetTaskStartToCloseTimeoutSeconds() (o i
 
 // GetIdentity is an internal getter (TBD...)
 func (v *StartWorkflowExecutionRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -8561,7 +8561,7 @@ type TerminateWorkflowExecutionRequest struct {
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
 	Reason            *string            `json:"reason,omitempty"`
 	Details           []byte             `json:"details,omitempty"`
-	Identity          *string            `json:"identity,omitempty"`
+	Identity          string             `json:"identity,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -8598,8 +8598,8 @@ func (v *TerminateWorkflowExecutionRequest) GetDetails() (o []byte) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *TerminateWorkflowExecutionRequest) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -8674,7 +8674,7 @@ type TimerCanceledEventAttributes struct {
 	TimerID                      *string `json:"timerId,omitempty"`
 	StartedEventID               *int64  `json:"startedEventId,omitempty"`
 	DecisionTaskCompletedEventID *int64  `json:"decisionTaskCompletedEventId,omitempty"`
-	Identity                     *string `json:"identity,omitempty"`
+	Identity                     string  `json:"identity,omitempty"`
 }
 
 // GetTimerID is an internal getter (TBD...)
@@ -8703,8 +8703,8 @@ func (v *TimerCanceledEventAttributes) GetDecisionTaskCompletedEventID() (o int6
 
 // GetIdentity is an internal getter (TBD...)
 func (v *TimerCanceledEventAttributes) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -9112,7 +9112,7 @@ type WorkflowExecutionCancelRequestedEventAttributes struct {
 	Cause                     *string            `json:"cause,omitempty"`
 	ExternalInitiatedEventID  *int64             `json:"externalInitiatedEventId,omitempty"`
 	ExternalWorkflowExecution *WorkflowExecution `json:"externalWorkflowExecution,omitempty"`
-	Identity                  *string            `json:"identity,omitempty"`
+	Identity                  string             `json:"identity,omitempty"`
 }
 
 // GetCause is an internal getter (TBD...)
@@ -9141,8 +9141,8 @@ func (v *WorkflowExecutionCancelRequestedEventAttributes) GetExternalWorkflowExe
 
 // GetIdentity is an internal getter (TBD...)
 func (v *WorkflowExecutionCancelRequestedEventAttributes) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -9618,7 +9618,7 @@ func (v *WorkflowExecutionInfo) GetTaskList() (o string) {
 type WorkflowExecutionSignaledEventAttributes struct {
 	SignalName *string `json:"signalName,omitempty"`
 	Input      []byte  `json:"input,omitempty"`
-	Identity   *string `json:"identity,omitempty"`
+	Identity   string  `json:"identity,omitempty"`
 }
 
 // GetSignalName is an internal getter (TBD...)
@@ -9639,8 +9639,8 @@ func (v *WorkflowExecutionSignaledEventAttributes) GetInput() (o []byte) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *WorkflowExecutionSignaledEventAttributes) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -9661,7 +9661,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 	ContinuedFailureDetails             []byte                  `json:"continuedFailureDetails,omitempty"`
 	LastCompletionResult                []byte                  `json:"lastCompletionResult,omitempty"`
 	OriginalExecutionRunID              string                  `json:"originalExecutionRunId,omitempty"`
-	Identity                            *string                 `json:"identity,omitempty"`
+	Identity                            string                  `json:"identity,omitempty"`
 	FirstExecutionRunID                 string                  `json:"firstExecutionRunId,omitempty"`
 	RetryPolicy                         *RetryPolicy            `json:"retryPolicy,omitempty"`
 	Attempt                             *int32                  `json:"attempt,omitempty"`
@@ -9788,8 +9788,8 @@ func (v *WorkflowExecutionStartedEventAttributes) GetOriginalExecutionRunID() (o
 
 // GetIdentity is an internal getter (TBD...)
 func (v *WorkflowExecutionStartedEventAttributes) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -9878,7 +9878,7 @@ func (v *WorkflowExecutionStartedEventAttributes) GetHeader() (o *Header) {
 type WorkflowExecutionTerminatedEventAttributes struct {
 	Reason   *string `json:"reason,omitempty"`
 	Details  []byte  `json:"details,omitempty"`
-	Identity *string `json:"identity,omitempty"`
+	Identity string  `json:"identity,omitempty"`
 }
 
 // GetReason is an internal getter (TBD...)
@@ -9899,8 +9899,8 @@ func (v *WorkflowExecutionTerminatedEventAttributes) GetDetails() (o []byte) {
 
 // GetIdentity is an internal getter (TBD...)
 func (v *WorkflowExecutionTerminatedEventAttributes) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }

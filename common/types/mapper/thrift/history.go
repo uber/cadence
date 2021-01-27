@@ -3086,7 +3086,7 @@ func FromSyncActivityRequest(t *types.SyncActivityRequest) *history.SyncActivity
 		Details:            t.Details,
 		Attempt:            t.Attempt,
 		LastFailureReason:  t.LastFailureReason,
-		LastWorkerIdentity: t.LastWorkerIdentity,
+		LastWorkerIdentity: &t.LastWorkerIdentity,
 		LastFailureDetails: t.LastFailureDetails,
 		VersionHistory:     FromVersionHistory(t.VersionHistory),
 	}
@@ -3110,7 +3110,7 @@ func ToSyncActivityRequest(t *history.SyncActivityRequest) *types.SyncActivityRe
 		Details:            t.Details,
 		Attempt:            t.Attempt,
 		LastFailureReason:  t.LastFailureReason,
-		LastWorkerIdentity: t.LastWorkerIdentity,
+		LastWorkerIdentity: t.GetLastWorkerIdentity(),
 		LastFailureDetails: t.LastFailureDetails,
 		VersionHistory:     ToVersionHistory(t.VersionHistory),
 	}

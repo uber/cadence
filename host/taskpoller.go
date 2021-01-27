@@ -137,7 +137,7 @@ Loop:
 		response, err1 := p.Engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
 			Domain:   p.Domain,
 			TaskList: taskList,
-			Identity: common.StringPtr(p.Identity),
+			Identity: p.Identity,
 		})
 
 		if err1 == history.ErrDuplicate {
@@ -240,7 +240,7 @@ Loop:
 				TaskToken: response.TaskToken,
 				Cause:     types.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure.Ptr(),
 				Details:   []byte(err.Error()),
-				Identity:  common.StringPtr(p.Identity),
+				Identity:  p.Identity,
 			})
 		}
 
@@ -249,7 +249,7 @@ Loop:
 			// non sticky tasklist
 			newTask, err := p.Engine.RespondDecisionTaskCompleted(createContext(), &types.RespondDecisionTaskCompletedRequest{
 				TaskToken:                  response.TaskToken,
-				Identity:                   common.StringPtr(p.Identity),
+				Identity:                   p.Identity,
 				ExecutionContext:           executionCtx,
 				Decisions:                  decisions,
 				ReturnNewDecisionTask:      common.BoolPtr(forceCreateNewDecision),
@@ -263,7 +263,7 @@ Loop:
 			createContext(),
 			&types.RespondDecisionTaskCompletedRequest{
 				TaskToken:        response.TaskToken,
-				Identity:         common.StringPtr(p.Identity),
+				Identity:         p.Identity,
 				ExecutionContext: executionCtx,
 				Decisions:        decisions,
 				StickyAttributes: &types.StickyExecutionAttributes{
@@ -312,7 +312,7 @@ func (p *TaskPoller) HandlePartialDecision(response *types.PollForDecisionTaskRe
 			TaskToken: response.TaskToken,
 			Cause:     types.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure.Ptr(),
 			Details:   []byte(err.Error()),
-			Identity:  common.StringPtr(p.Identity),
+			Identity:  p.Identity,
 		})
 	}
 
@@ -323,7 +323,7 @@ func (p *TaskPoller) HandlePartialDecision(response *types.PollForDecisionTaskRe
 		createContext(),
 		&types.RespondDecisionTaskCompletedRequest{
 			TaskToken:        response.TaskToken,
-			Identity:         common.StringPtr(p.Identity),
+			Identity:         p.Identity,
 			ExecutionContext: executionCtx,
 			Decisions:        decisions,
 			StickyAttributes: &types.StickyExecutionAttributes{
@@ -348,7 +348,7 @@ retry:
 		response, err1 := p.Engine.PollForActivityTask(createContext(), &types.PollForActivityTaskRequest{
 			Domain:   p.Domain,
 			TaskList: p.TaskList,
-			Identity: common.StringPtr(p.Identity),
+			Identity: p.Identity,
 		})
 
 		if err1 == history.ErrDuplicate {
@@ -378,7 +378,7 @@ retry:
 			return p.Engine.RespondActivityTaskCanceled(createContext(), &types.RespondActivityTaskCanceledRequest{
 				TaskToken: response.TaskToken,
 				Details:   []byte("details"),
-				Identity:  common.StringPtr(p.Identity),
+				Identity:  p.Identity,
 			})
 		}
 
@@ -387,13 +387,13 @@ retry:
 				TaskToken: response.TaskToken,
 				Reason:    common.StringPtr(err2.Error()),
 				Details:   []byte(err2.Error()),
-				Identity:  common.StringPtr(p.Identity),
+				Identity:  p.Identity,
 			})
 		}
 
 		return p.Engine.RespondActivityTaskCompleted(createContext(), &types.RespondActivityTaskCompletedRequest{
 			TaskToken: response.TaskToken,
-			Identity:  common.StringPtr(p.Identity),
+			Identity:  p.Identity,
 			Result:    result,
 		})
 	}
@@ -408,7 +408,7 @@ retry:
 		response, err1 := p.Engine.PollForActivityTask(createContext(), &types.PollForActivityTaskRequest{
 			Domain:   p.Domain,
 			TaskList: p.TaskList,
-			Identity: common.StringPtr(p.Identity),
+			Identity: p.Identity,
 		})
 
 		if err1 == history.ErrDuplicate {
@@ -446,7 +446,7 @@ retry:
 				RunID:      response.WorkflowExecution.GetRunID(),
 				ActivityID: common.StringPtr(response.GetActivityID()),
 				Details:    []byte("details"),
-				Identity:   common.StringPtr(p.Identity),
+				Identity:   p.Identity,
 			})
 		}
 
@@ -458,7 +458,7 @@ retry:
 				ActivityID: common.StringPtr(response.GetActivityID()),
 				Reason:     common.StringPtr(err2.Error()),
 				Details:    []byte(err2.Error()),
-				Identity:   common.StringPtr(p.Identity),
+				Identity:   p.Identity,
 			})
 		}
 
@@ -467,7 +467,7 @@ retry:
 			WorkflowID: response.WorkflowExecution.GetWorkflowID(),
 			RunID:      response.WorkflowExecution.GetRunID(),
 			ActivityID: common.StringPtr(response.GetActivityID()),
-			Identity:   common.StringPtr(p.Identity),
+			Identity:   p.Identity,
 			Result:     result,
 		})
 	}

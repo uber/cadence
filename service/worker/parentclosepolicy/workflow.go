@@ -118,7 +118,7 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 						RunID:      execution.RunID,
 					},
 					Reason:   common.StringPtr("by parent close policy"),
-					Identity: common.StringPtr(processorWFTypeName),
+					Identity: processorWFTypeName,
 				},
 			})
 		case types.ParentClosePolicyRequestCancel:
@@ -130,7 +130,7 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 						WorkflowID: execution.WorkflowID,
 						RunID:      execution.RunID,
 					},
-					Identity: common.StringPtr(processorWFTypeName),
+					Identity: processorWFTypeName,
 				},
 			})
 		}

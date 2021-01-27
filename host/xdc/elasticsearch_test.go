@@ -189,7 +189,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 		SearchAttributes:                    searchAttr,
 	}
 	startTime := time.Now().UnixNano()
@@ -314,7 +314,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 		},
 		Reason:   common.StringPtr(terminateReason),
 		Details:  terminateDetails,
-		Identity: common.StringPtr(identity),
+		Identity: identity,
 	})
 	s.Nil(err)
 
@@ -342,7 +342,7 @@ GetHistoryLoop:
 		terminateEventAttributes := lastEvent.WorkflowExecutionTerminatedEventAttributes
 		s.Equal(terminateReason, *terminateEventAttributes.Reason)
 		s.Equal(terminateDetails, terminateEventAttributes.Details)
-		s.Equal(identity, *terminateEventAttributes.Identity)
+		s.Equal(identity, terminateEventAttributes.Identity)
 		executionTerminated = true
 		break GetHistoryLoop
 	}
@@ -361,7 +361,7 @@ GetHistoryLoop2:
 				terminateEventAttributes := lastEvent.WorkflowExecutionTerminatedEventAttributes
 				s.Equal(terminateReason, *terminateEventAttributes.Reason)
 				s.Equal(terminateDetails, terminateEventAttributes.Details)
-				s.Equal(identity, *terminateEventAttributes.Identity)
+				s.Equal(identity, terminateEventAttributes.Identity)
 				eventsReplicated = true
 				break GetHistoryLoop2
 			}

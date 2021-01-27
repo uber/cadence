@@ -53,7 +53,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -267,7 +267,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)

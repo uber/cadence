@@ -796,7 +796,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 
 	event, _ = mutableState.AddDecisionTaskCompletedEvent(di.ScheduleID, di.StartedID, &types.RespondDecisionTaskCompletedRequest{
 		ExecutionContext: nil,
-		Identity:         common.StringPtr("some random identity"),
+		Identity:         "some random identity",
 		Decisions: []*types.Decision{
 			{
 				DecisionType: &dt,
@@ -955,7 +955,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 
 	event, _ = mutableState.AddDecisionTaskCompletedEvent(di.ScheduleID, di.StartedID, &types.RespondDecisionTaskCompletedRequest{
 		ExecutionContext: nil,
-		Identity:         common.StringPtr("some random identity"),
+		Identity:         "some random identity",
 		Decisions:        decisions,
 	}, config.DefaultHistoryMaxAutoResetPoints)
 
@@ -1052,7 +1052,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 
 	event, _ = mutableState.AddDecisionTaskCompletedEvent(di.ScheduleID, di.StartedID, &types.RespondDecisionTaskCompletedRequest{
 		ExecutionContext: nil,
-		Identity:         common.StringPtr("some random identity"),
+		Identity:         "some random identity",
 		Decisions:        decisions,
 	}, config.DefaultHistoryMaxAutoResetPoints)
 
@@ -2185,7 +2185,7 @@ func (s *transferActiveTaskExecutorSuite) createRequestCancelWorkflowExecutionRe
 		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
 			Domain:            targetDomainName,
 			WorkflowExecution: &targetExecution,
-			Identity:          common.StringPtr(identityHistoryService),
+			Identity:          identityHistoryService,
 			// Use the same request ID to dedupe RequestCancelWorkflowExecution calls
 			RequestID: common.StringPtr(rci.CancelRequestID),
 		},
@@ -2215,7 +2215,7 @@ func (s *transferActiveTaskExecutorSuite) createSignalWorkflowExecutionRequest(
 		SignalRequest: &types.SignalWorkflowExecutionRequest{
 			Domain:            targetDomainName,
 			WorkflowExecution: &targetExecution,
-			Identity:          common.StringPtr(identityHistoryService),
+			Identity:          identityHistoryService,
 			SignalName:        common.StringPtr(si.SignalName),
 			Input:             si.Input,
 			RequestID:         common.StringPtr(si.SignalRequestID),
