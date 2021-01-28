@@ -94,7 +94,7 @@ func (s *integrationSuite) TestStartWorkflowExecution() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we0, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -113,7 +113,7 @@ func (s *integrationSuite) TestStartWorkflowExecution() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 	we2, err2 := s.engine.StartWorkflowExecution(createContext(), newRequest)
 	s.NotNil(err2)
@@ -144,7 +144,7 @@ func (s *integrationSuite) TestStartWorkflowExecution_IDReusePolicy() {
 			Input:                               nil,
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-			Identity:                            common.StringPtr(identity),
+			Identity:                            identity,
 			WorkflowIDReusePolicy:               &policy,
 		}
 	}
@@ -211,7 +211,7 @@ GetHistoryLoop:
 			RunID:      we1.RunID,
 		},
 		Reason:   common.StringPtr("kill workflow"),
-		Identity: common.StringPtr(identity),
+		Identity: identity,
 	})
 	s.Nil(err)
 
@@ -304,7 +304,7 @@ func (s *integrationSuite) TestTerminateWorkflow() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -375,7 +375,7 @@ func (s *integrationSuite) TestTerminateWorkflow() {
 		},
 		Reason:   common.StringPtr(terminateReason),
 		Details:  terminateDetails,
-		Identity: common.StringPtr(identity),
+		Identity: identity,
 	})
 	s.Nil(err)
 
@@ -402,7 +402,7 @@ GetHistoryLoop:
 		terminateEventAttributes := lastEvent.WorkflowExecutionTerminatedEventAttributes
 		s.Equal(terminateReason, *terminateEventAttributes.Reason)
 		s.Equal(terminateDetails, terminateEventAttributes.Details)
-		s.Equal(identity, *terminateEventAttributes.Identity)
+		s.Equal(identity, terminateEventAttributes.Identity)
 		executionTerminated = true
 		break GetHistoryLoop
 	}
@@ -421,7 +421,7 @@ StartNewExecutionLoop:
 			Input:                               nil,
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-			Identity:                            common.StringPtr(identity),
+			Identity:                            identity,
 		}
 
 		newExecution, err := s.engine.StartWorkflowExecution(createContext(), request)
@@ -462,7 +462,7 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -571,7 +571,7 @@ func (s *integrationSuite) TestCompleteDecisionTaskAndCreateNewOne() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -656,7 +656,7 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -781,7 +781,7 @@ func (s *integrationSuite) TestWorkflowRetry() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(int32(initialIntervalInSeconds)),
 			MaximumAttempts:             common.Int32Ptr(int32(maximumAttempts)),
@@ -919,7 +919,7 @@ func (s *integrationSuite) TestWorkflowRetryFailures() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(1),
 			MaximumAttempts:             common.Int32Ptr(3),
@@ -975,7 +975,7 @@ func (s *integrationSuite) TestWorkflowRetryFailures() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    common.Int32Ptr(1),
 			MaximumAttempts:             common.Int32Ptr(3),
@@ -1043,7 +1043,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 		CronSchedule:                        common.StringPtr(cronSchedule), //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
 		Memo:                                memo,
 		SearchAttributes:                    searchAttr,
@@ -1250,7 +1250,7 @@ func (s *integrationSuite) TestCronWorkflowTimeout() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1), // set workflow timeout to 1s
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 		CronSchedule:                        common.StringPtr(cronSchedule), //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
 		Memo:                                memo,
 		SearchAttributes:                    searchAttr,
@@ -1344,7 +1344,7 @@ func (s *integrationSuite) TestSequential_UserTimers() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -1424,7 +1424,7 @@ func (s *integrationSuite) TestRateLimitBufferedEvents() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -1522,7 +1522,7 @@ func (s *integrationSuite) TestBufferedEvents() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -1548,7 +1548,7 @@ func (s *integrationSuite) TestBufferedEvents() {
 					},
 					SignalName: common.StringPtr("buffered-signal"),
 					Input:      []byte("buffered-signal-input"),
-					Identity:   common.StringPtr(identity),
+					Identity:   identity,
 				})
 			s.NoError(err)
 			return nil, []*types.Decision{{
@@ -1618,7 +1618,7 @@ func (s *integrationSuite) TestBufferedEvents() {
 	s.Nil(err)
 	s.NotNil(signalEvent)
 	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
-	s.Equal(identity, *signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
+	s.Equal(identity, signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
 	s.True(workflowComplete)
 }
 
@@ -1641,7 +1641,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -1771,7 +1771,7 @@ func (s *integrationSuite) TestVisibility() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	startResponse, err0 := s.engine.StartWorkflowExecution(createContext(), startRequest)
@@ -1833,7 +1833,7 @@ func (s *integrationSuite) TestVisibility() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	_, err2 := s.engine.StartWorkflowExecution(createContext(), startRequest)
@@ -1916,7 +1916,7 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 		Header:                              header,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -2101,7 +2101,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	startParentWorkflowTS := time.Now()
@@ -2298,7 +2298,7 @@ func (s *integrationSuite) TestWorkflowTimeout() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -2381,7 +2381,7 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -2584,7 +2584,7 @@ func (s *integrationSuite) TestDescribeTaskList() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -2709,7 +2709,7 @@ func (s *integrationSuite) TestTransientDecisionTimeout() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -2802,7 +2802,7 @@ func (s *integrationSuite) TestNoTransientDecisionAfterFlushBufferedEvents() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(20),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -2827,7 +2827,7 @@ func (s *integrationSuite) TestNoTransientDecisionAfterFlushBufferedEvents() {
 					},
 					SignalName: common.StringPtr("buffered-signal-1"),
 					Input:      []byte("buffered-signal-input"),
-					Identity:   common.StringPtr(identity),
+					Identity:   identity,
 				})
 			s.NoError(err)
 
@@ -2899,7 +2899,7 @@ func (s *integrationSuite) TestRelayDecisionTimeout() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -3001,7 +3001,7 @@ func (s *integrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(601),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(600),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -3123,7 +3123,7 @@ func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -3161,7 +3161,7 @@ func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
 					WorkflowExecution: workflowExecution,
 					SignalName:        common.StringPtr("signalB"),
 					Input:             []byte("signal input"),
-					Identity:          common.StringPtr(identity),
+					Identity:          identity,
 					RequestID:         common.StringPtr(uuid.New()),
 				})
 				s.Nil(err)
@@ -3199,7 +3199,7 @@ func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
 		WorkflowExecution: workflowExecution,
 		SignalName:        common.StringPtr("signalA"),
 		Input:             []byte("signal input"),
-		Identity:          common.StringPtr(identity),
+		Identity:          identity,
 		RequestID:         common.StringPtr(uuid.New()),
 	})
 
@@ -3230,7 +3230,7 @@ WaitForStickyTimeoutLoop:
 		WorkflowExecution: workflowExecution,
 		SignalName:        common.StringPtr("signalB"),
 		Input:             []byte("signal input"),
-		Identity:          common.StringPtr(identity),
+		Identity:          identity,
 		RequestID:         common.StringPtr(uuid.New()),
 	})
 	s.Nil(err)
@@ -3297,7 +3297,7 @@ func (s *integrationSuite) TestStickyTasklistResetThenTimeout() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -3361,7 +3361,7 @@ func (s *integrationSuite) TestStickyTasklistResetThenTimeout() {
 		WorkflowExecution: workflowExecution,
 		SignalName:        common.StringPtr("signalA"),
 		Input:             []byte("signal input"),
-		Identity:          common.StringPtr(identity),
+		Identity:          identity,
 		RequestID:         common.StringPtr(uuid.New()),
 	})
 
@@ -3398,7 +3398,7 @@ WaitForStickyTimeoutLoop:
 		WorkflowExecution: workflowExecution,
 		SignalName:        common.StringPtr("signalB"),
 		Input:             []byte("signal input"),
-		Identity:          common.StringPtr(identity),
+		Identity:          identity,
 		RequestID:         common.StringPtr(uuid.New()),
 	})
 	s.Nil(err)
@@ -3457,7 +3457,7 @@ func (s *integrationSuite) TestBufferedEventsOutOfOrder() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(20),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -3625,7 +3625,7 @@ func (s *integrationSuite) TestStartWithMemo() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 		Memo:                                memo,
 	}
 
@@ -3667,7 +3667,7 @@ func (s *integrationSuite) TestSignalWithStartWithMemo() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		SignalName:                          common.StringPtr(signalName),
 		SignalInput:                         signalInput,
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 		Memo:                                memo,
 	}
 
@@ -3698,7 +3698,7 @@ func (s *integrationSuite) TestCancelTimer() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1000),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	creatResp, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -3835,7 +3835,7 @@ func (s *integrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1000),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	creatResp, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -4069,6 +4069,6 @@ func (s *integrationSuite) sendSignal(domainName string, execution *types.Workfl
 		WorkflowExecution: execution,
 		SignalName:        common.StringPtr(signalName),
 		Input:             input,
-		Identity:          common.StringPtr(identity),
+		Identity:          identity,
 	})
 }

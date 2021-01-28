@@ -124,7 +124,7 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
 			ScheduledEventID: common.Int64Ptr(newDecisionScheduleEvent.GetEventID()),
 			StartedEventID:   common.Int64Ptr(newDecisionStartedEvent.GetEventID()),
-			Identity:         common.StringPtr("some random identity"),
+			Identity:         "some random identity",
 		},
 	}
 	err := s.msBuilder.ReplicateDecisionTaskCompletedEvent(newDecisionCompletedEvent)

@@ -290,7 +290,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 			DomainUUID: constants.TestDomainID,
 			CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
 				TaskToken: taskToken,
-				Identity:  &identity,
+				Identity:  identity,
 			},
 		})
 		s.Nil(err)
@@ -862,7 +862,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedInvalidToken() {
 			TaskToken:        invalidToken,
 			Decisions:        nil,
 			ExecutionContext: nil,
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 
@@ -885,7 +885,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfNoExecution() {
 		DomainUUID: constants.TestDomainID,
 		CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.NotNil(err)
@@ -907,7 +907,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfGetExecutionFailed() {
 		DomainUUID: constants.TestDomainID,
 		CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.EqualError(err, "FAILED")
@@ -950,7 +950,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedUpdateExecutionFailed() {
 		DomainUUID: constants.TestDomainID,
 		CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.NotNil(err)
@@ -991,7 +991,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskCompleted() {
 		DomainUUID: constants.TestDomainID,
 		CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.NotNil(err)
@@ -1123,7 +1123,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: executionContext,
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err, s.printHistory(msBuilder))
@@ -1158,7 +1158,7 @@ func (s *engineSuite) TestValidateSignalRequest() {
 		Input:                               input,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
-		Identity:                            common.StringPtr("identity"),
+		Identity:                            "identity",
 	}
 	err := validateStartWorkflowExecutionRequest(startRequest, 999)
 	s.Error(err, "startRequest doesn't have request id, it should error out")
@@ -1220,7 +1220,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: executionContext,
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.NotNil(err)
@@ -1298,7 +1298,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: executionContext,
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err, s.printHistory(msBuilder))
@@ -1387,7 +1387,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowFailed() {
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: executionContext,
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err, s.printHistory(msBuilder))
@@ -1463,7 +1463,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadDecisionAttributes() {
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: executionContext,
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err)
@@ -1581,7 +1581,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 				TaskToken:        taskToken,
 				Decisions:        decisions,
 				ExecutionContext: executionContext,
-				Identity:         &identity,
+				Identity:         identity,
 			},
 		})
 
@@ -1664,7 +1664,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadBinary() {
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: executionContext,
-			Identity:         &identity,
+			Identity:         identity,
 			BinaryChecksum:   common.StringPtr("test-bad-binary"),
 		},
 	})
@@ -1730,7 +1730,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: executionContext,
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err, s.printHistory(msBuilder))
@@ -1795,7 +1795,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatTimeout(
 			TaskToken:                  taskToken,
 			Decisions:                  decisions,
 			ExecutionContext:           executionContext,
-			Identity:                   &identity,
+			Identity:                   identity,
 		},
 	})
 	s.Error(err, "decision heartbeat timeout")
@@ -1843,7 +1843,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 			TaskToken:                  taskToken,
 			Decisions:                  decisions,
 			ExecutionContext:           executionContext,
-			Identity:                   &identity,
+			Identity:                   identity,
 		},
 	})
 	s.Nil(err)
@@ -1891,7 +1891,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 			TaskToken:                  taskToken,
 			Decisions:                  decisions,
 			ExecutionContext:           executionContext,
-			Identity:                   &identity,
+			Identity:                   identity,
 		},
 	})
 	s.Nil(err)
@@ -1943,7 +1943,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: executionContext,
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err, s.printHistory(msBuilder))
@@ -2003,7 +2003,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: executionContext,
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err, s.printHistory(msBuilder))
@@ -2066,7 +2066,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowSucc
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: executionContext,
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err, s.printHistory(msBuilder))
@@ -2127,7 +2127,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithAban
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: executionContext,
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err, s.printHistory(msBuilder))
@@ -2196,7 +2196,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithTerm
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: executionContext,
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err, s.printHistory(msBuilder))
@@ -2258,7 +2258,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: executionContext,
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 
@@ -2318,7 +2318,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: executionContext,
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 
@@ -2335,7 +2335,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedInvalidToken() {
 		CompleteRequest: &types.RespondActivityTaskCompletedRequest{
 			TaskToken: invalidToken,
 			Result:    nil,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 
@@ -2358,7 +2358,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNoExecution() {
 		DomainUUID: constants.TestDomainID,
 		CompleteRequest: &types.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.NotNil(err)
@@ -2379,7 +2379,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNoRunID() {
 		DomainUUID: constants.TestDomainID,
 		CompleteRequest: &types.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.NotNil(err)
@@ -2401,7 +2401,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfGetExecutionFailed() {
 		DomainUUID: constants.TestDomainID,
 		CompleteRequest: &types.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.EqualError(err, "FAILED")
@@ -2439,7 +2439,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNoAIdProvided() {
 		DomainUUID: constants.TestDomainID,
 		CompleteRequest: &types.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.EqualError(err, "BadRequestError{Message: Neither ActivityID nor ScheduleID is provided}")
@@ -2478,7 +2478,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNotFound() {
 		DomainUUID: constants.TestDomainID,
 		CompleteRequest: &types.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.Error(err)
@@ -2530,7 +2530,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedUpdateExecutionFailed() {
 		CompleteRequest: &types.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
 			Result:    activityResult,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.EqualError(err, "FAILED")
@@ -2582,7 +2582,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskCompleted() {
 		CompleteRequest: &types.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
 			Result:    activityResult,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.NotNil(err)
@@ -2631,7 +2631,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskNotStarted() {
 		CompleteRequest: &types.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
 			Result:    activityResult,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.NotNil(err)
@@ -2696,7 +2696,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedConflictOnUpdate() {
 		CompleteRequest: &types.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
 			Result:    activity1Result,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.Nil(err, s.printHistory(msBuilder))
@@ -2760,7 +2760,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedMaxAttemptsExceeded() {
 		CompleteRequest: &types.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
 			Result:    activityResult,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.Equal(ErrMaxAttemptsExceeded, err)
@@ -2811,7 +2811,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedSuccess() {
 		CompleteRequest: &types.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
 			Result:    activityResult,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.Nil(err, s.printHistory(msBuilder))
@@ -2876,7 +2876,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedByIdSuccess() {
 		CompleteRequest: &types.RespondActivityTaskCompletedRequest{
 			TaskToken: taskToken,
 			Result:    activityResult,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.Nil(err, s.printHistory(msBuilder))
@@ -2902,7 +2902,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedInvalidToken() {
 		DomainUUID: constants.TestDomainID,
 		FailedRequest: &types.RespondActivityTaskFailedRequest{
 			TaskToken: invalidToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 
@@ -2926,7 +2926,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfNoExecution() {
 		DomainUUID: constants.TestDomainID,
 		FailedRequest: &types.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.NotNil(err)
@@ -2948,7 +2948,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfNoRunID() {
 		DomainUUID: constants.TestDomainID,
 		FailedRequest: &types.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.NotNil(err)
@@ -2971,7 +2971,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfGetExecutionFailed() {
 		DomainUUID: constants.TestDomainID,
 		FailedRequest: &types.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.EqualError(err, "FAILED")
@@ -3009,7 +3009,7 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNoAIdProvided() {
 		DomainUUID: constants.TestDomainID,
 		FailedRequest: &types.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.EqualError(err, "BadRequestError{Message: Neither ActivityID nor ScheduleID is provided}")
@@ -3048,7 +3048,7 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNotFound() {
 		DomainUUID: constants.TestDomainID,
 		FailedRequest: &types.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.Error(err)
@@ -3098,7 +3098,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedUpdateExecutionFailed() {
 		DomainUUID: constants.TestDomainID,
 		FailedRequest: &types.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.EqualError(err, "FAILED")
@@ -3152,7 +3152,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskCompleted() {
 			TaskToken: taskToken,
 			Reason:    &failReason,
 			Details:   details,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.NotNil(err)
@@ -3199,7 +3199,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskNotStarted() {
 		DomainUUID: constants.TestDomainID,
 		FailedRequest: &types.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.NotNil(err)
@@ -3271,7 +3271,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedConflictOnUpdate() {
 			TaskToken: taskToken,
 			Reason:    &failReason,
 			Details:   details,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.Nil(err, s.printHistory(msBuilder))
@@ -3333,7 +3333,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedMaxAttemptsExceeded() {
 		DomainUUID: constants.TestDomainID,
 		FailedRequest: &types.RespondActivityTaskFailedRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.Equal(ErrMaxAttemptsExceeded, err)
@@ -3386,7 +3386,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedSuccess() {
 			TaskToken: taskToken,
 			Reason:    &failReason,
 			Details:   failDetails,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.Nil(err)
@@ -3453,7 +3453,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
 			TaskToken: taskToken,
 			Reason:    &failReason,
 			Details:   failDetails,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.Nil(err)
@@ -3514,7 +3514,7 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_NoTimer() {
 		DomainUUID: constants.TestDomainID,
 		HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 			Details:   detais,
 		},
 	})
@@ -3566,7 +3566,7 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_TimerRunning() {
 		DomainUUID: constants.TestDomainID,
 		HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 			Details:   detais,
 		},
 	})
@@ -3623,7 +3623,7 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatByIDSuccess() {
 		DomainUUID: constants.TestDomainID,
 		HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 			Details:   detais,
 		},
 	})
@@ -3670,7 +3670,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Scheduled() {
 		DomainUUID: constants.TestDomainID,
 		CancelRequest: &types.RespondActivityTaskCanceledRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 			Details:   []byte("details"),
 		},
 	})
@@ -3723,7 +3723,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Started() {
 		DomainUUID: constants.TestDomainID,
 		CancelRequest: &types.RespondActivityTaskCanceledRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 			Details:   []byte("details"),
 		},
 	})
@@ -3788,7 +3788,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledByID_Started() {
 		DomainUUID: constants.TestDomainID,
 		CancelRequest: &types.RespondActivityTaskCanceledRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 			Details:   []byte("details"),
 		},
 	})
@@ -3820,7 +3820,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNoRunID() {
 		DomainUUID: constants.TestDomainID,
 		CancelRequest: &types.RespondActivityTaskCanceledRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.NotNil(err)
@@ -3852,7 +3852,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNoAIdProvided() {
 		DomainUUID: constants.TestDomainID,
 		CancelRequest: &types.RespondActivityTaskCanceledRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.EqualError(err, "BadRequestError{Message: Neither ActivityID nor ScheduleID is provided}")
@@ -3884,7 +3884,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNotFound() {
 		DomainUUID: constants.TestDomainID,
 		CancelRequest: &types.RespondActivityTaskCanceledRequest{
 			TaskToken: taskToken,
-			Identity:  &identity,
+			Identity:  identity,
 		},
 	})
 	s.Error(err)
@@ -3935,7 +3935,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NotSchedule
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: []byte("context"),
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err)
@@ -3999,7 +3999,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Scheduled()
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: []byte("context"),
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err)
@@ -4069,7 +4069,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Started() {
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: []byte("context"),
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err)
@@ -4142,7 +4142,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Completed()
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: []byte("context"),
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err)
@@ -4208,7 +4208,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: []byte("context"),
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err)
@@ -4232,7 +4232,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 		DomainUUID: constants.TestDomainID,
 		HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
 			TaskToken: activityTaskToken,
-			Identity:  &identity,
+			Identity:  identity,
 			Details:   []byte("details"),
 		},
 	})
@@ -4248,7 +4248,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 		DomainUUID: constants.TestDomainID,
 		CancelRequest: &types.RespondActivityTaskCanceledRequest{
 			TaskToken: activityTaskToken,
-			Identity:  &identity,
+			Identity:  identity,
 			Details:   []byte("details"),
 		},
 	})
@@ -4315,7 +4315,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: []byte("context"),
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err)
@@ -4339,7 +4339,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 		DomainUUID: constants.TestDomainID,
 		HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
 			TaskToken: activityTaskToken,
-			Identity:  &identity,
+			Identity:  identity,
 			Details:   []byte("details"),
 		},
 	})
@@ -4355,7 +4355,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 		DomainUUID: constants.TestDomainID,
 		CancelRequest: &types.RespondActivityTaskCanceledRequest{
 			TaskToken: activityTaskToken,
-			Identity:  &identity,
+			Identity:  identity,
 			Details:   []byte("details"),
 		},
 	})
@@ -4445,7 +4445,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: []byte("context"),
-			Identity:         &identity,
+			Identity:         identity,
 			QueryResults:     queryResults,
 		},
 	})
@@ -4486,7 +4486,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 		DomainUUID: constants.TestDomainID,
 		HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
 			TaskToken: activityTaskToken,
-			Identity:  &identity,
+			Identity:  identity,
 			Details:   []byte("details"),
 		},
 	})
@@ -4502,7 +4502,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 		DomainUUID: constants.TestDomainID,
 		CancelRequest: &types.RespondActivityTaskCanceledRequest{
 			TaskToken: activityTaskToken,
-			Identity:  &identity,
+			Identity:  identity,
 			Details:   []byte("details"),
 		},
 	})
@@ -4580,7 +4580,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: []byte("context"),
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err)
@@ -4653,7 +4653,7 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: []byte("context"),
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err)
@@ -4690,7 +4690,7 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 			TaskToken:        taskToken2,
 			Decisions:        decisions,
 			ExecutionContext: []byte("context"),
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err)
@@ -4757,7 +4757,7 @@ func (s *engineSuite) TestUserTimer_RespondDecisionTaskCompleted() {
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: []byte("context"),
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err)
@@ -4815,7 +4815,7 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_NoStartTimer(
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: []byte("context"),
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err)
@@ -4886,7 +4886,7 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_TimerFired() 
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: []byte("context"),
-			Identity:         &identity,
+			Identity:         identity,
 		},
 	})
 	s.Nil(err)
@@ -4917,7 +4917,7 @@ func (s *engineSuite) TestSignalWorkflowExecution() {
 		SignalRequest: &types.SignalWorkflowExecutionRequest{
 			Domain:            constants.TestDomainID,
 			WorkflowExecution: &we,
-			Identity:          common.StringPtr(identity),
+			Identity:          identity,
 			SignalName:        common.StringPtr(signalName),
 			Input:             input,
 		},
@@ -4963,7 +4963,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest() {
 		SignalRequest: &types.SignalWorkflowExecutionRequest{
 			Domain:            constants.TestDomainID,
 			WorkflowExecution: &we,
-			Identity:          common.StringPtr(identity),
+			Identity:          identity,
 			SignalName:        common.StringPtr(signalName),
 			Input:             input,
 			RequestID:         common.StringPtr(requestID),
@@ -5010,7 +5010,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_Failed() {
 		SignalRequest: &types.SignalWorkflowExecutionRequest{
 			Domain:            constants.TestDomainID,
 			WorkflowExecution: we,
-			Identity:          common.StringPtr(identity),
+			Identity:          identity,
 			SignalName:        common.StringPtr(signalName),
 			Input:             input,
 		},

@@ -247,7 +247,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 			Input:                               []byte("some random input"),
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(123),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(233),
-			Identity:                            common.StringPtr("some random identity"),
+			Identity:                            "some random identity",
 		},
 	}}
 	events2 := []*types.HistoryEvent{{
@@ -257,7 +257,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			SignalName: common.StringPtr("some random signal name"),
 			Input:      []byte("some random signal input"),
-			Identity:   common.StringPtr("some random identity"),
+			Identity:   "some random identity",
 		},
 	}}
 	history1 := []*types.History{{Events: events1}}

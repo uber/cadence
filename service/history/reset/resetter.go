@@ -398,7 +398,7 @@ func (r *workflowResetterImpl) failInflightActivity(
 				&types.RespondActivityTaskFailedRequest{
 					Reason:   common.StringPtr(terminateReason),
 					Details:  ai.Details,
-					Identity: common.StringPtr(ai.StartedIdentity),
+					Identity: ai.StartedIdentity,
 				},
 			); err != nil {
 				return err

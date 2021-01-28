@@ -450,7 +450,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			SignalName: common.StringPtr("some random signal name"),
 			Input:      []byte("some random signal input"),
-			Identity:   common.StringPtr("some random identity"),
+			Identity:   "some random identity",
 		},
 	}
 

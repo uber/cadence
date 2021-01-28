@@ -958,7 +958,7 @@ const (
 	TimerStandbyTaskDeleteHistoryEventScope
 	// TimerStandbyTaskWorkflowBackoffTimerScope is the scope used by metric emitted by timer queue processor for processing retry task.
 	TimerStandbyTaskWorkflowBackoffTimerScope
-	// HistoryEventNotificationScope is the scope used by shard history event nitification
+	// HistoryEventNotificationScope is the scope used by shard history event notification
 	HistoryEventNotificationScope
 	// ReplicatorQueueProcessorScope is the scope used by all metric emitted by replicator queue processor
 	ReplicatorQueueProcessorScope
@@ -1786,6 +1786,7 @@ const (
 	FailedDecisionsCounter
 	DecisionAttemptTimer
 	StaleMutableStateCounter
+	DataInconsistentCounter
 	AutoResetPointsLimitExceededCounter
 	AutoResetPointCorruptionCounter
 	ConcurrencyUpdateFailureCounter
@@ -2270,6 +2271,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		FailedDecisionsCounter:                            {metricName: "failed_decisions", metricType: Counter},
 		DecisionAttemptTimer:                              {metricName: "decision_attempt", metricType: Timer},
 		StaleMutableStateCounter:                          {metricName: "stale_mutable_state", metricType: Counter},
+		DataInconsistentCounter:                           {metricName: "data_inconsistent", metricType: Counter},
 		AutoResetPointsLimitExceededCounter:               {metricName: "auto_reset_points_exceed_limit", metricType: Counter},
 		AutoResetPointCorruptionCounter:                   {metricName: "auto_reset_point_corruption", metricType: Counter},
 		ConcurrencyUpdateFailureCounter:                   {metricName: "concurrency_update_failure", metricType: Counter},
