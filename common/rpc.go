@@ -23,7 +23,11 @@ package common
 import (
 	"context"
 
+	"go.uber.org/thriftrw/wire"
 	"go.uber.org/yarpc"
+
+	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -70,4 +74,24 @@ func AggregateYarpcOptions(ctx context.Context, opts ...yarpc.CallOption) []yarp
 	}
 	result = append(result, opts...)
 	return result
+}
+
+func ToInternalHeaders(ctx context.Context) context.Context {
+	if ctx != nil {
+		call := yarpc.CallFromContext(ctx)
+		for _, key := range shared.RequestHeader_Values() {
+			value := call.Header(key.String())
+			var internalKey interface{}
+			var internalValue interface{}
+			switch key {
+			case shared.RequestHeaderClientType:
+				internalKey = thrift.ToRequestHeader(key)
+				var thriftValue shared.ClientType
+				_ = thriftValue.FromWire(wire.NewValueString(value))
+				internalValue = thrift.ToClientType(thriftValue)
+			}
+			ctx = context.WithValue(ctx, internalKey, internalValue)
+		}
+	}
+	return ctx
 }

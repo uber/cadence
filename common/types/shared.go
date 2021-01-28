@@ -10061,3 +10061,126 @@ func (v *WorkflowTypeFilter) GetName() (o string) {
 	}
 	return
 }
+
+// RequestHeader is an internal type (TBD...)
+type RequestHeader int32
+
+// Ptr is a helper function for getting pointer value
+func (e RequestHeader) Ptr() *RequestHeader {
+	return &e
+}
+
+// String returns a readable string representation of RequestHeader.
+func (e RequestHeader) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "CLIENT_TYPE"
+	}
+	return fmt.Sprintf("RequestHeader(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *RequestHeader) UnmarshalText(value []byte) error {
+	switch s := strings.ToUpper(string(value)); s {
+	case "CLIENT_TYPE":
+		*e = RequestHeaderClientType
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "RequestHeader", err)
+		}
+		*e = RequestHeader(val)
+		return nil
+	}
+}
+
+// MarshalText encodes RequestHeader to text.
+func (e RequestHeader) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
+const (
+	// RequestHeaderClientType is an option for RequestHeader
+	RequestHeaderClientType RequestHeader = iota
+)
+
+// ClientType is an internal type (TBD...)
+type ClientType int32
+
+// Ptr is a helper function for getting pointer value
+func (e ClientType) Ptr() *ClientType {
+	return &e
+}
+
+// String returns a readable string representation of ClientType.
+func (e ClientType) String() string {
+	w := int32(e)
+	switch w {
+	case 0:
+		return "CLI"
+	case 1:
+		return "USER"
+	case 2:
+		return "WEB"
+	case 3:
+		return "WORKER"
+	case 4:
+		return "SHADOW_WORKER"
+	case 5:
+		return "SYSTEM"
+	}
+	return fmt.Sprintf("ClientType(%d)", w)
+}
+
+// UnmarshalText parses enum value from string representation
+func (e *ClientType) UnmarshalText(value []byte) error {
+	switch s := strings.ToUpper(string(value)); s {
+	case "CLI":
+		*e = ClientTypeCli
+		return nil
+	case "USER":
+		*e = ClientTypeUser
+		return nil
+	case "WEB":
+		*e = ClientTypeWeb
+		return nil
+	case "WORKER":
+		*e = ClientTypeWorker
+		return nil
+	case "SHADOW_WORKER":
+		*e = ClientTypeShadowWorker
+		return nil
+	case "SYSTEM":
+		*e = ClientTypeSystem
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "RequestHeader", err)
+		}
+		*e = ClientType(val)
+		return nil
+	}
+}
+
+// MarshalText encodes ClientType to text.
+func (e ClientType) MarshalText() ([]byte, error) {
+	return []byte(e.String()), nil
+}
+
+const (
+	// ClientTypeCli is an option for ClientType
+	ClientTypeCli ClientType = iota
+	// ClientTypeUser is an option for ClientType
+	ClientTypeUser
+	// ClientTypeWeb is an option for ClientType
+	ClientTypeWeb
+	// ClientTypeWorker is an option for ClientType
+	ClientTypeWorker
+	// ClientTypeShadowWorker is an option for ClientType
+	ClientTypeShadowWorker
+	// ClientTypeSystem is an option for ClientType
+	ClientTypeSystem
+)

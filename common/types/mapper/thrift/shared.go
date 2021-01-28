@@ -6767,3 +6767,63 @@ func ToHistoryArray(t []*shared.History) []*types.History {
 	}
 	return v
 }
+
+// FromRequestHeader converts internal RequestHeader type to thrift
+func FromRequestHeader(t types.RequestHeader) shared.RequestHeader {
+
+	switch t {
+	case types.RequestHeaderClientType:
+		return shared.RequestHeaderClientType
+	}
+	panic("unexpected enum value")
+}
+
+// ToRequestHeader converts thrift RequestHeader type to internal
+func ToRequestHeader(t shared.RequestHeader) types.RequestHeader {
+
+	switch t {
+	case shared.RequestHeaderClientType:
+		return types.RequestHeaderClientType
+	}
+	panic("unexpected enum value")
+}
+
+// FromClientType converts internal ClientType type to thrift
+func FromClientType(t types.ClientType) shared.ClientType {
+
+	switch t {
+	case types.ClientTypeCli:
+		return shared.ClientTypeCli
+	case types.ClientTypeUser:
+		return shared.ClientTypeUser
+	case types.ClientTypeWeb:
+		return shared.ClientTypeWeb
+	case types.ClientTypeWorker:
+		return shared.ClientTypeWorker
+	case types.ClientTypeShadowWorker:
+		return shared.ClientTypeShadowWorker
+	case types.ClientTypeSystem:
+		return shared.ClientTypeSystem
+	}
+	panic("unexpected enum value")
+}
+
+// ToClientType converts thrift ClientType type to internal
+func ToClientType(t shared.ClientType) types.ClientType {
+
+	switch t {
+	case shared.ClientTypeCli:
+		return types.ClientTypeCli
+	case shared.ClientTypeUser:
+		return types.ClientTypeUser
+	case shared.ClientTypeWeb:
+		return types.ClientTypeWeb
+	case shared.ClientTypeWorker:
+		return types.ClientTypeWorker
+	case shared.ClientTypeShadowWorker:
+		return types.ClientTypeShadowWorker
+	case shared.ClientTypeSystem:
+		return types.ClientTypeSystem
+	}
+	panic("unexpected enum value")
+}
