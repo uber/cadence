@@ -64,7 +64,7 @@ func (s *utilSuite) TestEncodeDecodeHistoryBatches() {
 					EventID: common.Int64Ptr(common.FirstEventID + 2),
 					Version: common.Int64Ptr(2),
 					DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
-						Identity: common.StringPtr("some random identity"),
+						Identity: "some random identity",
 					},
 				},
 			},

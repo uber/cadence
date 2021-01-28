@@ -173,6 +173,13 @@ func (handler *decisionHandlerImpl) handleDecisionTaskStarted(
 			// some extreme cassandra failure cases.
 			if !isRunning && scheduleID >= mutableState.GetNextEventID() {
 				handler.metricsClient.IncCounter(metrics.HistoryRecordDecisionTaskStartedScope, metrics.StaleMutableStateCounter)
+				handler.logger.Error("Encounter stale mutable state in RecordDecisionTaskStarted",
+					tag.WorkflowDomainName(domainEntry.GetInfo().Name),
+					tag.WorkflowID(workflowExecution.GetWorkflowID()),
+					tag.WorkflowRunID(workflowExecution.GetRunID()),
+					tag.WorkflowScheduleID(scheduleID),
+					tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+				)
 				// Reload workflow execution history
 				// ErrStaleState will trigger updateWorkflowExecutionWithAction function to reload the mutable state
 				return nil, ErrStaleState
@@ -319,6 +326,13 @@ Update_History_Loop:
 		// some extreme cassandra failure cases.
 		if !isRunning && scheduleID >= msBuilder.GetNextEventID() {
 			handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.StaleMutableStateCounter)
+			handler.logger.Error("Encounter stale mutable state in RespondDecisionTaskCompleted",
+				tag.WorkflowDomainName(domainEntry.GetInfo().Name),
+				tag.WorkflowID(workflowExecution.GetWorkflowID()),
+				tag.WorkflowRunID(workflowExecution.GetRunID()),
+				tag.WorkflowScheduleID(scheduleID),
+				tag.WorkflowNextEventID(msBuilder.GetNextEventID()),
+			)
 			// Reload workflow execution history
 			wfContext.Clear()
 			continue Update_History_Loop

@@ -3257,7 +3257,7 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 			DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
 				ScheduledEventID: common.Int64Ptr(2),
 				StartedEventID:   common.Int64Ptr(3),
-				Identity:         common.StringPtr("test_worker"),
+				Identity:         "test_worker",
 			},
 		},
 		{
@@ -3394,7 +3394,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 			DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
 				ScheduledEventID: common.Int64Ptr(2),
 				StartedEventID:   common.Int64Ptr(3),
-				Identity:         common.StringPtr("test_worker"),
+				Identity:         "test_worker",
 			},
 		},
 		{

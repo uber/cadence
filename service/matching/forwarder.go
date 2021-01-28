@@ -211,7 +211,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 					Name: name,
 					Kind: &fwdr.taskListKind,
 				},
-				Identity: &identity,
+				Identity: identity,
 			},
 			ForwardedFrom: &fwdr.taskListID.name,
 		})
@@ -228,7 +228,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 					Name: name,
 					Kind: &fwdr.taskListKind,
 				},
-				Identity: &identity,
+				Identity: identity,
 			},
 			ForwardedFrom: &fwdr.taskListID.name,
 		})

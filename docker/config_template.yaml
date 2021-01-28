@@ -194,45 +194,45 @@ services:
         {{- end }}
 
 clusterMetadata:
-    enableGlobalDomain: false
+    enableGlobalDomain: {{ default .Env.ENABLE_GLOBAL_DOMAIN "false" }}
     failoverVersionIncrement: 10
-    masterClusterName: "active"
-    currentClusterName: "active"
+    masterClusterName: "master"
+    currentClusterName: "master"
     clusterInformation:
-        active:
+        master:
             enabled: true
             initialFailoverVersion: 0
             rpcName: "cadence-frontend"
             rpcAddress: "127.0.0.1:7933"
 
 dcRedirectionPolicy:
-    policy: "noop"
+    policy: {{ default .Env.DC_REDIRECT_POLICY "selected-apis-forwarding" }}
     toDC: ""
 
 archival:
   history:
-    status: "enabled"
-    enableRead: true
+    status: {{ default .Env.HISTORY_ARCHIVAL_STATUS "disabled" }}
+    enableRead: {{ default .Env.HISTORY_ARCHIVAL_ENABLE_READ "false" }}
     provider:
       filestore:
-        fileMode: "0666"
-        dirMode: "0766"
+        fileMode: {{ default .Env.HISTORY_ARCHIVAL_FILE_MODE "" }}
+        dirMode: {{ default .Env.HISTORY_ARCHIVAL_DIR_MODE "" }}
   visibility:
-    status: "enabled"
-    enableRead: true
+    status: {{ default .Env.VISIBILITY_ARCHIVAL_STATUS "disabled" }}
+    enableRead: {{ default .Env.VISIBILITY_ARCHIVAL_ENABLE_READ "false" }}
     provider:
       filestore:
-        fileMode: "0666"
-        dirMode: "0766"
+        fileMode: {{ default .Env.VISIBILITY_ARCHIVAL_FILE_MODE "" }}
+        dirMode: {{ default .Env.VISIBILITY_ARCHIVAL_DIR_MODE "" }}
 
 domainDefaults:
   archival:
     history:
-      status: "enabled"
-      URI: "file:///tmp/cadence_archival/development"
+      status: {{ default .Env.DOMAIN_DEFAULTS_HISTORY_ARCHIVAL_STATUS "disabled" }}
+      URI: {{ default .Env.DOMAIN_DEFAULTS_HISTORY_ARCHIVAL_URI "" }}
     visibility:
-      status: "enabled"
-      URI: "file:///tmp/cadence_vis_archival/development"
+      status: {{ default .Env.DOMAIN_DEFAULTS_VISIBILITY_ARCHIVAL_STATUS "disabled" }}
+      URI: {{ default .Env.DOMAIN_DEFAULTS_VISIBILITY_ARCHIVAL_URI "" }}
 
 kafka:
     tls:
@@ -260,4 +260,4 @@ dynamicConfigClient:
 
 blobstore:
   filestore:
-    outputDirectory: "/tmp/blobstore"
+    outputDirectory: {{ default .Env.FILE_BLOB_STORE_OUTPUT_DIRECTYORY "" }}

@@ -162,7 +162,7 @@ func convertToExecutionInfo(record *visibilityRecord) *types.WorkflowExecutionIn
 			RunID:      record.RunID,
 		},
 		Type: &types.WorkflowType{
-			Name: common.StringPtr(record.WorkflowTypeName),
+			Name: record.WorkflowTypeName,
 		},
 		StartTime:     common.Int64Ptr(record.StartTimestamp),
 		ExecutionTime: common.Int64Ptr(record.ExecutionTimestamp),

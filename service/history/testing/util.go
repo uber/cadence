@@ -44,12 +44,12 @@ func AddWorkflowExecutionStartedEventWithParent(
 
 	startRequest := &types.StartWorkflowExecutionRequest{
 		WorkflowID:                          workflowExecution.WorkflowID,
-		WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+		WorkflowType:                        &types.WorkflowType{Name: workflowType},
 		TaskList:                            &types.TaskList{Name: taskList},
 		Input:                               input,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	event, _ := builder.AddWorkflowExecutionStartedEvent(
@@ -107,7 +107,7 @@ func AddDecisionTaskStartedEventWithRequestID(
 ) *types.HistoryEvent {
 	event, _, _ := builder.AddDecisionTaskStartedEvent(scheduleID, requestID, &types.PollForDecisionTaskRequest{
 		TaskList: &types.TaskList{Name: taskList},
-		Identity: common.StringPtr(identity),
+		Identity: identity,
 	})
 
 	return event
@@ -123,7 +123,7 @@ func AddDecisionTaskCompletedEvent(
 ) *types.HistoryEvent {
 	event, _ := builder.AddDecisionTaskCompletedEvent(scheduleID, startedID, &types.RespondDecisionTaskCompletedRequest{
 		ExecutionContext: context,
-		Identity:         common.StringPtr(identity),
+		Identity:         identity,
 	}, config.DefaultHistoryMaxAutoResetPoints)
 
 	builder.FlushBufferedEvents() //nolint:errcheck
@@ -148,7 +148,7 @@ func AddActivityTaskScheduledEvent(
 
 	event, ai, _, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID:                    common.StringPtr(activityID),
-		ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityType)},
+		ActivityType:                  &types.ActivityType{Name: activityType},
 		TaskList:                      &types.TaskList{Name: taskList},
 		Input:                         input,
 		ScheduleToCloseTimeoutSeconds: common.Int32Ptr(scheduleToCloseTimeout),
@@ -178,7 +178,7 @@ func AddActivityTaskScheduledEventWithRetry(
 
 	event, ai, _, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID:                    common.StringPtr(activityID),
-		ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityType)},
+		ActivityType:                  &types.ActivityType{Name: activityType},
 		TaskList:                      &types.TaskList{Name: taskList},
 		Input:                         input,
 		ScheduleToCloseTimeoutSeconds: common.Int32Ptr(scheduleToCloseTimeout),
@@ -213,7 +213,7 @@ func AddActivityTaskCompletedEvent(
 ) *types.HistoryEvent {
 	event, _ := builder.AddActivityTaskCompletedEvent(scheduleID, startedID, &types.RespondActivityTaskCompletedRequest{
 		Result:   result,
-		Identity: common.StringPtr(identity),
+		Identity: identity,
 	})
 
 	return event
@@ -231,7 +231,7 @@ func AddActivityTaskFailedEvent(
 	event, _ := builder.AddActivityTaskFailedEvent(scheduleID, startedID, &types.RespondActivityTaskFailedRequest{
 		Reason:   common.StringPtr(reason),
 		Details:  details,
-		Identity: common.StringPtr(identity),
+		Identity: identity,
 	})
 
 	return event
@@ -352,7 +352,7 @@ func AddStartChildWorkflowExecutionInitiatedEvent(
 		&types.StartChildWorkflowExecutionDecisionAttributes{
 			Domain:                              domain,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 			TaskList:                            &types.TaskList{Name: tasklist},
 			Input:                               input,
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
@@ -378,7 +378,7 @@ func AddChildWorkflowExecutionStartedEvent(
 			WorkflowID: workflowID,
 			RunID:      runID,
 		},
-		&types.WorkflowType{Name: common.StringPtr(workflowType)},
+		&types.WorkflowType{Name: workflowType},
 		initiatedID,
 		&types.Header{},
 	)

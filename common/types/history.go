@@ -4569,7 +4569,7 @@ type SyncActivityRequest struct {
 	Details            []byte          `json:"details,omitempty"`
 	Attempt            *int32          `json:"attempt,omitempty"`
 	LastFailureReason  *string         `json:"lastFailureReason,omitempty"`
-	LastWorkerIdentity *string         `json:"lastWorkerIdentity,omitempty"`
+	LastWorkerIdentity string          `json:"lastWorkerIdentity,omitempty"`
 	LastFailureDetails []byte          `json:"lastFailureDetails,omitempty"`
 	VersionHistory     *VersionHistory `json:"versionHistory,omitempty"`
 }
@@ -4672,8 +4672,8 @@ func (v *SyncActivityRequest) GetLastFailureReason() (o string) {
 
 // GetLastWorkerIdentity is an internal getter (TBD...)
 func (v *SyncActivityRequest) GetLastWorkerIdentity() (o string) {
-	if v != nil && v.LastWorkerIdentity != nil {
-		return *v.LastWorkerIdentity
+	if v != nil {
+		return v.LastWorkerIdentity
 	}
 	return
 }
