@@ -4387,8 +4387,7 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
 	}
 
 	domainID := e.GetDomainEntry().GetInfo().ID
-	if domainID != "823a90fd-871a-44e8-9297-aef2cc0738c7" &&
-		domainID != "f10f6c8c-03d2-46ec-be9d-57f6edf356ea" &&
+	if domainID != "21641f51-974f-4089-a761-2b90ee2d13d0" &&
 		domainID != "aa4cdf8f-600b-4954-beee-4c496de1d5c4" {
 		if lastWriteVersion != decision.Version {
 			return false, &types.InternalServiceError{Message: fmt.Sprintf(
