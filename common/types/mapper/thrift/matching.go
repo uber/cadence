@@ -101,7 +101,7 @@ func FromCancelOutstandingPollRequest(t *types.CancelOutstandingPollRequest) *ma
 		DomainUUID:   &t.DomainUUID,
 		TaskListType: t.TaskListType,
 		TaskList:     FromTaskList(t.TaskList),
-		PollerID:     t.PollerID,
+		PollerID:     &t.PollerID,
 	}
 }
 
@@ -114,7 +114,7 @@ func ToCancelOutstandingPollRequest(t *matching.CancelOutstandingPollRequest) *t
 		DomainUUID:   t.GetDomainUUID(),
 		TaskListType: t.TaskListType,
 		TaskList:     ToTaskList(t.TaskList),
-		PollerID:     t.PollerID,
+		PollerID:     t.GetPollerID(),
 	}
 }
 
@@ -603,7 +603,7 @@ func FromMatchingPollForActivityTaskRequest(t *types.MatchingPollForActivityTask
 	}
 	return &matching.PollForActivityTaskRequest{
 		DomainUUID:    &t.DomainUUID,
-		PollerID:      t.PollerID,
+		PollerID:      &t.PollerID,
 		PollRequest:   FromPollForActivityTaskRequest(t.PollRequest),
 		ForwardedFrom: t.ForwardedFrom,
 	}
@@ -616,7 +616,7 @@ func ToMatchingPollForActivityTaskRequest(t *matching.PollForActivityTaskRequest
 	}
 	return &types.MatchingPollForActivityTaskRequest{
 		DomainUUID:    t.GetDomainUUID(),
-		PollerID:      t.PollerID,
+		PollerID:      t.GetPollerID(),
 		PollRequest:   ToPollForActivityTaskRequest(t.PollRequest),
 		ForwardedFrom: t.ForwardedFrom,
 	}
@@ -629,7 +629,7 @@ func FromMatchingPollForDecisionTaskRequest(t *types.MatchingPollForDecisionTask
 	}
 	return &matching.PollForDecisionTaskRequest{
 		DomainUUID:    &t.DomainUUID,
-		PollerID:      t.PollerID,
+		PollerID:      &t.PollerID,
 		PollRequest:   FromPollForDecisionTaskRequest(t.PollRequest),
 		ForwardedFrom: t.ForwardedFrom,
 	}
@@ -642,7 +642,7 @@ func ToMatchingPollForDecisionTaskRequest(t *matching.PollForDecisionTaskRequest
 	}
 	return &types.MatchingPollForDecisionTaskRequest{
 		DomainUUID:    t.GetDomainUUID(),
-		PollerID:      t.PollerID,
+		PollerID:      t.GetPollerID(),
 		PollRequest:   ToPollForDecisionTaskRequest(t.PollRequest),
 		ForwardedFrom: t.ForwardedFrom,
 	}

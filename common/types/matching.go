@@ -174,7 +174,7 @@ type CancelOutstandingPollRequest struct {
 	DomainUUID   string    `json:"domainUUID,omitempty"`
 	TaskListType *int32    `json:"taskListType,omitempty"`
 	TaskList     *TaskList `json:"taskList,omitempty"`
-	PollerID     *string   `json:"pollerID,omitempty"`
+	PollerID     string    `json:"pollerID,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -203,8 +203,8 @@ func (v *CancelOutstandingPollRequest) GetTaskList() (o *TaskList) {
 
 // GetPollerID is an internal getter (TBD...)
 func (v *CancelOutstandingPollRequest) GetPollerID() (o string) {
-	if v != nil && v.PollerID != nil {
-		return *v.PollerID
+	if v != nil {
+		return v.PollerID
 	}
 	return
 }
@@ -823,7 +823,7 @@ func (v *MatchingServiceRespondQueryTaskCompletedResult) GetServiceBusyError() (
 // MatchingPollForActivityTaskRequest is an internal type (TBD...)
 type MatchingPollForActivityTaskRequest struct {
 	DomainUUID    string                      `json:"domainUUID,omitempty"`
-	PollerID      *string                     `json:"pollerID,omitempty"`
+	PollerID      string                      `json:"pollerID,omitempty"`
 	PollRequest   *PollForActivityTaskRequest `json:"pollRequest,omitempty"`
 	ForwardedFrom *string                     `json:"forwardedFrom,omitempty"`
 }
@@ -838,8 +838,8 @@ func (v *MatchingPollForActivityTaskRequest) GetDomainUUID() (o string) {
 
 // GetPollerID is an internal getter (TBD...)
 func (v *MatchingPollForActivityTaskRequest) GetPollerID() (o string) {
-	if v != nil && v.PollerID != nil {
-		return *v.PollerID
+	if v != nil {
+		return v.PollerID
 	}
 	return
 }
@@ -863,7 +863,7 @@ func (v *MatchingPollForActivityTaskRequest) GetForwardedFrom() (o string) {
 // MatchingPollForDecisionTaskRequest is an internal type (TBD...)
 type MatchingPollForDecisionTaskRequest struct {
 	DomainUUID    string                      `json:"domainUUID,omitempty"`
-	PollerID      *string                     `json:"pollerID,omitempty"`
+	PollerID      string                      `json:"pollerID,omitempty"`
 	PollRequest   *PollForDecisionTaskRequest `json:"pollRequest,omitempty"`
 	ForwardedFrom *string                     `json:"forwardedFrom,omitempty"`
 }
@@ -878,8 +878,8 @@ func (v *MatchingPollForDecisionTaskRequest) GetDomainUUID() (o string) {
 
 // GetPollerID is an internal getter (TBD...)
 func (v *MatchingPollForDecisionTaskRequest) GetPollerID() (o string) {
-	if v != nil && v.PollerID != nil {
-		return *v.PollerID
+	if v != nil {
+		return v.PollerID
 	}
 	return
 }
