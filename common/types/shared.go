@@ -478,13 +478,13 @@ func (v *ActivityTaskTimedOutEventAttributes) GetLastFailureDetails() (o []byte)
 
 // ActivityType is an internal type (TBD...)
 type ActivityType struct {
-	Name *string `json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 // GetName is an internal getter (TBD...)
 func (v *ActivityType) GetName() (o string) {
-	if v != nil && v.Name != nil {
-		return *v.Name
+	if v != nil {
+		return v.Name
 	}
 	return
 }

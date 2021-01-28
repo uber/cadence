@@ -282,7 +282,7 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -885,7 +885,7 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
+					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -1566,7 +1566,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(1)),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr("some random activity type")},
+					ActivityType:                  &types.ActivityType{Name: "some random activity type"},
 					TaskList:                      &types.TaskList{Name: &tl},
 					Input:                         []byte("some random input"),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(1000),

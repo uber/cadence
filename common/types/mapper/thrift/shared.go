@@ -286,7 +286,7 @@ func FromActivityType(t *types.ActivityType) *shared.ActivityType {
 		return nil
 	}
 	return &shared.ActivityType{
-		Name: t.Name,
+		Name: &t.Name,
 	}
 }
 
@@ -296,7 +296,7 @@ func ToActivityType(t *shared.ActivityType) *types.ActivityType {
 		return nil
 	}
 	return &types.ActivityType{
-		Name: t.Name,
+		Name: t.GetName(),
 	}
 }
 

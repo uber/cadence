@@ -83,7 +83,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 					DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 					ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 						ActivityID:                    common.StringPtr(strconv.Itoa(i)),
-						ActivityType:                  &types.ActivityType{Name: common.StringPtr("ResetActivity")},
+						ActivityType:                  &types.ActivityType{Name: "ResetActivity"},
 						TaskList:                      tasklist,
 						Input:                         buf.Bytes(),
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -342,7 +342,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr("1"),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr("ResetActivity")},
+					ActivityType:                  &types.ActivityType{Name: "ResetActivity"},
 					TaskList:                      tasklist,
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),

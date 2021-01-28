@@ -1089,7 +1089,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 		DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 		ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 			ActivityID:                    common.StringPtr(activity3ID),
-			ActivityType:                  &types.ActivityType{Name: common.StringPtr(activity3Type)},
+			ActivityType:                  &types.ActivityType{Name: activity3Type},
 			TaskList:                      &types.TaskList{Name: &tl},
 			Input:                         activity3Input,
 			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -1134,7 +1134,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 	executionBuilder := s.getBuilder(constants.TestDomainID, we)
 	activity3Attributes := s.getActivityScheduledEvent(executionBuilder, 13).ActivityTaskScheduledEventAttributes
 	s.Equal(activity3ID, *activity3Attributes.ActivityID)
-	s.Equal(activity3Type, *activity3Attributes.ActivityType.Name)
+	s.Equal(activity3Type, activity3Attributes.ActivityType.Name)
 	s.Equal(int64(12), *activity3Attributes.DecisionTaskCompletedEventID)
 	s.Equal(tl, *activity3Attributes.TaskList.Name)
 	s.Equal(activity3Input, activity3Attributes.Input)
@@ -1194,7 +1194,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 		DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 		ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 			ActivityID:                    common.StringPtr("activity1"),
-			ActivityType:                  &types.ActivityType{Name: common.StringPtr("activity_type1")},
+			ActivityType:                  &types.ActivityType{Name: "activity_type1"},
 			TaskList:                      &types.TaskList{Name: &tl},
 			Input:                         input,
 			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -1555,7 +1555,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 			DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 			ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 				ActivityID:                    common.StringPtr("activity1"),
-				ActivityType:                  &types.ActivityType{Name: common.StringPtr("activity_type1")},
+				ActivityType:                  &types.ActivityType{Name: "activity_type1"},
 				TaskList:                      &types.TaskList{Name: &tl},
 				Input:                         input,
 				ScheduleToCloseTimeoutSeconds: iVar.scheduleToClose,
@@ -1707,7 +1707,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 		DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 		ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 			ActivityID:                    common.StringPtr("activity1"),
-			ActivityType:                  &types.ActivityType{Name: common.StringPtr("activity_type1")},
+			ActivityType:                  &types.ActivityType{Name: "activity_type1"},
 			TaskList:                      &types.TaskList{Name: &tl},
 			Input:                         input,
 			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -1743,7 +1743,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 
 	activity1Attributes := s.getActivityScheduledEvent(executionBuilder, int64(5)).ActivityTaskScheduledEventAttributes
 	s.Equal("activity1", *activity1Attributes.ActivityID)
-	s.Equal("activity_type1", *activity1Attributes.ActivityType.Name)
+	s.Equal("activity_type1", activity1Attributes.ActivityType.Name)
 	s.Equal(int64(4), *activity1Attributes.DecisionTaskCompletedEventID)
 	s.Equal(tl, *activity1Attributes.TaskList.Name)
 	s.Equal(input, activity1Attributes.Input)

@@ -386,7 +386,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.ActivityTaskScheduledEventAttributes = &types.ActivityTaskScheduledEventAttributes{
 			ActivityID: common.StringPtr(uuid.New()),
 			ActivityType: &types.ActivityType{
-				Name: common.StringPtr("activity"),
+				Name: "activity",
 			},
 			Domain: common.StringPtr(domain),
 			TaskList: &types.TaskList{
