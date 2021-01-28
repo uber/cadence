@@ -45,7 +45,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 	activityName := "activity_timer"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -64,7 +64,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 		Header:                              header,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -171,7 +171,7 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 	activityName := "activity_heartbeat_retry"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -185,7 +185,7 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -347,7 +347,7 @@ func (s *integrationSuite) TestActivityRetry() {
 	timeoutActivityName := "timeout_activity"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -361,7 +361,7 @@ func (s *integrationSuite) TestActivityRetry() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -560,7 +560,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
 	activityName := "activity_timer"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -574,7 +574,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -663,7 +663,7 @@ func (s *integrationSuite) TestActivityTimeouts() {
 	activityName := "timeout_activity"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -677,7 +677,7 @@ func (s *integrationSuite) TestActivityTimeouts() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(300),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -905,7 +905,7 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 	activityName := "timeout_activity"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -919,7 +919,7 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(70),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -1096,7 +1096,7 @@ func (s *integrationSuite) TestActivityCancellation() {
 	activityName := "activity_timer"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -1110,7 +1110,7 @@ func (s *integrationSuite) TestActivityCancellation() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -1223,7 +1223,7 @@ func (s *integrationSuite) TestActivityCancellationNotStarted() {
 	activityName := "activity_notstarted"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -1237,7 +1237,7 @@ func (s *integrationSuite) TestActivityCancellationNotStarted() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -1322,7 +1322,7 @@ func (s *integrationSuite) TestActivityCancellationNotStarted() {
 		},
 		SignalName: common.StringPtr(signalName),
 		Input:      signalInput,
-		Identity:   common.StringPtr(identity),
+		Identity:   identity,
 	})
 	s.Nil(err)
 

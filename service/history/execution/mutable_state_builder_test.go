@@ -124,7 +124,7 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
 			ScheduledEventID: common.Int64Ptr(newDecisionScheduleEvent.GetEventID()),
 			StartedEventID:   common.Int64Ptr(newDecisionStartedEvent.GetEventID()),
-			Identity:         common.StringPtr("some random identity"),
+			Identity:         "some random identity",
 		},
 	}
 	err := s.msBuilder.ReplicateDecisionTaskCompletedEvent(newDecisionCompletedEvent)
@@ -554,7 +554,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
 			Input:                               nil,
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),

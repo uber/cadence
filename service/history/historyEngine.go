@@ -1350,7 +1350,7 @@ func (e *historyEngineImpl) getMutableState(
 	workflowState, workflowCloseState := mutableState.GetWorkflowStateCloseStatus()
 	retResp = &types.GetMutableStateResponse{
 		Execution:                            &execution,
-		WorkflowType:                         &types.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
+		WorkflowType:                         &types.WorkflowType{Name: executionInfo.WorkflowTypeName},
 		LastFirstEventID:                     common.Int64Ptr(mutableState.GetLastFirstEventID()),
 		NextEventID:                          common.Int64Ptr(mutableState.GetNextEventID()),
 		PreviousStartedEventID:               common.Int64Ptr(mutableState.GetPreviousStartedEventID()),
@@ -1498,7 +1498,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 				WorkflowID: executionInfo.WorkflowID,
 				RunID:      executionInfo.RunID,
 			},
-			Type:             &types.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
+			Type:             &types.WorkflowType{Name: executionInfo.WorkflowTypeName},
 			StartTime:        common.Int64Ptr(executionInfo.StartTimestamp.UnixNano()),
 			HistoryLength:    common.Int64Ptr(mutableState.GetNextEventID() - common.FirstEventID),
 			AutoResetPoints:  executionInfo.AutoResetPoints,
@@ -1574,7 +1574,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 					p.LastFailureDetails = ai.LastFailureDetails
 				}
 				if ai.LastWorkerIdentity != "" {
-					p.LastWorkerIdentity = common.StringPtr(ai.LastWorkerIdentity)
+					p.LastWorkerIdentity = ai.LastWorkerIdentity
 				}
 			}
 			result.PendingActivities = append(result.PendingActivities, p)
@@ -1586,7 +1586,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			p := &types.PendingChildExecutionInfo{
 				WorkflowID:        ch.StartedWorkflowID,
 				RunID:             ch.StartedRunID,
-				WorkflowTypName:   common.StringPtr(ch.WorkflowTypeName),
+				WorkflowTypName:   ch.WorkflowTypeName,
 				InitiatedID:       common.Int64Ptr(ch.InitiatedID),
 				ParentClosePolicy: &ch.ParentClosePolicy,
 			}
@@ -1646,6 +1646,13 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			// some extreme cassandra failure cases.
 			if !isRunning && scheduleID >= mutableState.GetNextEventID() {
 				e.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskStartedScope, metrics.StaleMutableStateCounter)
+				e.logger.Error("Encounter stale mutable state in RecordActivityTaskStarted",
+					tag.WorkflowDomainName(domainName),
+					tag.WorkflowID(workflowExecution.GetWorkflowID()),
+					tag.WorkflowRunID(workflowExecution.GetRunID()),
+					tag.WorkflowScheduleID(scheduleID),
+					tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+				)
 				return ErrStaleState
 			}
 
@@ -1779,6 +1786,13 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 			// some extreme cassandra failure cases.
 			if !isRunning && scheduleID >= mutableState.GetNextEventID() {
 				e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCompletedScope, metrics.StaleMutableStateCounter)
+				e.logger.Error("Encounter stale mutable state in RecordActivityTaskCompleted",
+					tag.WorkflowDomainName(domainName),
+					tag.WorkflowID(workflowExecution.GetWorkflowID()),
+					tag.WorkflowRunID(workflowExecution.GetRunID()),
+					tag.WorkflowScheduleID(scheduleID),
+					tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+				)
 				return ErrStaleState
 			}
 
@@ -1853,6 +1867,13 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 			// some extreme cassandra failure cases.
 			if !isRunning && scheduleID >= mutableState.GetNextEventID() {
 				e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskFailedScope, metrics.StaleMutableStateCounter)
+				e.logger.Error("Encounter stale mutable state in RecordActivityTaskFailed",
+					tag.WorkflowDomainName(domainName),
+					tag.WorkflowID(workflowExecution.GetWorkflowID()),
+					tag.WorkflowRunID(workflowExecution.GetRunID()),
+					tag.WorkflowScheduleID(scheduleID),
+					tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+				)
 				return nil, ErrStaleState
 			}
 
@@ -1937,6 +1958,13 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 			// some extreme cassandra failure cases.
 			if !isRunning && scheduleID >= mutableState.GetNextEventID() {
 				e.metricsClient.IncCounter(metrics.HistoryRespondActivityTaskCanceledScope, metrics.StaleMutableStateCounter)
+				e.logger.Error("Encounter stale mutable state in RecordActivityTaskCanceled",
+					tag.WorkflowDomainName(domainName),
+					tag.WorkflowID(workflowExecution.GetWorkflowID()),
+					tag.WorkflowRunID(workflowExecution.GetRunID()),
+					tag.WorkflowScheduleID(scheduleID),
+					tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+				)
 				return ErrStaleState
 			}
 
@@ -1950,7 +1978,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 				ai.StartedID,
 				ai.CancelRequestID,
 				request.Details,
-				common.StringDefault(request.Identity)); err != nil {
+				request.Identity); err != nil {
 				// Unable to add ActivityTaskCanceled event to history
 				return &types.InternalServiceError{Message: "Unable to add ActivityTaskCanceled event to history."}
 			}
@@ -2019,6 +2047,13 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 			// some extreme cassandra failure cases.
 			if !isRunning && scheduleID >= mutableState.GetNextEventID() {
 				e.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskHeartbeatScope, metrics.StaleMutableStateCounter)
+				e.logger.Error("Encounter stale mutable state in RecordActivityTaskHeartbeat",
+					tag.WorkflowDomainName(domainEntry.GetInfo().Name),
+					tag.WorkflowID(workflowExecution.GetWorkflowID()),
+					tag.WorkflowRunID(workflowExecution.GetRunID()),
+					tag.WorkflowScheduleID(scheduleID),
+					tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+				)
 				return ErrStaleState
 			}
 
@@ -2840,7 +2875,7 @@ func validateStartWorkflowExecutionRequest(
 	if request.TaskList == nil || request.TaskList.Name == nil || request.TaskList.GetName() == "" {
 		return &types.BadRequestError{Message: "Missing Tasklist."}
 	}
-	if request.WorkflowType == nil || request.WorkflowType.Name == nil || request.WorkflowType.GetName() == "" {
+	if request.WorkflowType == nil || request.WorkflowType.GetName() == "" {
 		return &types.BadRequestError{Message: "Missing WorkflowType."}
 	}
 	if len(request.GetDomain()) > maxIDLengthLimit {

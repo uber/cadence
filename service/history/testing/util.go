@@ -44,12 +44,12 @@ func AddWorkflowExecutionStartedEventWithParent(
 
 	startRequest := &types.StartWorkflowExecutionRequest{
 		WorkflowID:                          workflowExecution.WorkflowID,
-		WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+		WorkflowType:                        &types.WorkflowType{Name: workflowType},
 		TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
 		Input:                               input,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	event, _ := builder.AddWorkflowExecutionStartedEvent(
@@ -107,7 +107,7 @@ func AddDecisionTaskStartedEventWithRequestID(
 ) *types.HistoryEvent {
 	event, _, _ := builder.AddDecisionTaskStartedEvent(scheduleID, requestID, &types.PollForDecisionTaskRequest{
 		TaskList: &types.TaskList{Name: common.StringPtr(taskList)},
-		Identity: common.StringPtr(identity),
+		Identity: identity,
 	})
 
 	return event
@@ -123,7 +123,7 @@ func AddDecisionTaskCompletedEvent(
 ) *types.HistoryEvent {
 	event, _ := builder.AddDecisionTaskCompletedEvent(scheduleID, startedID, &types.RespondDecisionTaskCompletedRequest{
 		ExecutionContext: context,
-		Identity:         common.StringPtr(identity),
+		Identity:         identity,
 	}, config.DefaultHistoryMaxAutoResetPoints)
 
 	builder.FlushBufferedEvents() //nolint:errcheck
@@ -213,7 +213,7 @@ func AddActivityTaskCompletedEvent(
 ) *types.HistoryEvent {
 	event, _ := builder.AddActivityTaskCompletedEvent(scheduleID, startedID, &types.RespondActivityTaskCompletedRequest{
 		Result:   result,
-		Identity: common.StringPtr(identity),
+		Identity: identity,
 	})
 
 	return event
@@ -231,7 +231,7 @@ func AddActivityTaskFailedEvent(
 	event, _ := builder.AddActivityTaskFailedEvent(scheduleID, startedID, &types.RespondActivityTaskFailedRequest{
 		Reason:   common.StringPtr(reason),
 		Details:  details,
-		Identity: common.StringPtr(identity),
+		Identity: identity,
 	})
 
 	return event
@@ -352,7 +352,7 @@ func AddStartChildWorkflowExecutionInitiatedEvent(
 		&types.StartChildWorkflowExecutionDecisionAttributes{
 			Domain:                              domain,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 			TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
 			Input:                               input,
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
@@ -378,7 +378,7 @@ func AddChildWorkflowExecutionStartedEvent(
 			WorkflowID: workflowID,
 			RunID:      runID,
 		},
-		&types.WorkflowType{Name: common.StringPtr(workflowType)},
+		&types.WorkflowType{Name: workflowType},
 		initiatedID,
 		&types.Header{},
 	)

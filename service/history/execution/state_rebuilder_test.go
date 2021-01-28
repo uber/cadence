@@ -242,12 +242,12 @@ func (s *stateRebuilderSuite) TestRebuild() {
 		Version:   common.Int64Ptr(version),
 		EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr("some random workflow type")},
+			WorkflowType:                        &types.WorkflowType{Name: "some random workflow type"},
 			TaskList:                            &types.TaskList{Name: common.StringPtr("some random workflow type")},
 			Input:                               []byte("some random input"),
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(123),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(233),
-			Identity:                            common.StringPtr("some random identity"),
+			Identity:                            "some random identity",
 		},
 	}}
 	events2 := []*types.HistoryEvent{{
@@ -257,7 +257,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			SignalName: common.StringPtr("some random signal name"),
 			Input:      []byte("some random signal input"),
-			Identity:   common.StringPtr("some random identity"),
+			Identity:   "some random identity",
 		},
 	}}
 	history1 := []*types.History{{Events: events1}}

@@ -45,7 +45,7 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 	queryType := "test-query"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -64,7 +64,7 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -208,7 +208,7 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 	queryType := "test-query"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -227,7 +227,7 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -356,7 +356,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	queryType := "test-query"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -371,7 +371,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -563,7 +563,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 	queryType := "test-query"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -578,7 +578,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -700,7 +700,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 		},
 		SignalName: common.StringPtr(signalName),
 		Input:      signalInput,
-		Identity:   common.StringPtr(identity),
+		Identity:   identity,
 	})
 	s.Nil(err)
 
@@ -748,7 +748,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 	queryType := "test-query"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -763,7 +763,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10), // ensure longer than time takes to handle signal
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -878,7 +878,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 		},
 		SignalName: common.StringPtr(signalName),
 		Input:      signalInput,
-		Identity:   common.StringPtr(identity),
+		Identity:   identity,
 	})
 	s.Nil(err)
 
@@ -909,7 +909,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 	queryType := "test-query"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -924,7 +924,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10), // ensure longer than time takes to handle signal
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -1044,7 +1044,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 		},
 		SignalName: common.StringPtr(signalName),
 		Input:      signalInput,
-		Identity:   common.StringPtr(identity),
+		Identity:   identity,
 	})
 	s.Nil(err)
 
@@ -1094,7 +1094,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 	queryType := "test-query"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -1113,7 +1113,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10), // ensure longer than time takes to handle signal
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -1234,7 +1234,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 		},
 		SignalName: common.StringPtr(signalName),
 		Input:      signalInput,
-		Identity:   common.StringPtr(identity),
+		Identity:   identity,
 	})
 	s.Nil(err)
 
@@ -1256,7 +1256,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 			},
 			SignalName: common.StringPtr(signalName),
 			Input:      signalInput,
-			Identity:   common.StringPtr(identity),
+			Identity:   identity,
 		})
 		s.Nil(err)
 
@@ -1311,7 +1311,7 @@ func (s *integrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
 	queryType := "test-query"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -1326,7 +1326,7 @@ func (s *integrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)

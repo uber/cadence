@@ -213,7 +213,7 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 	identity := "worker1"
 	activityName := "activity_type1"
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(wt),
+		Name: wt,
 	}
 	taskList := &types.TaskList{
 		Name: common.StringPtr(tl),
@@ -227,7 +227,7 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 	we, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
