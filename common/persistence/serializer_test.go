@@ -90,7 +90,7 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 	resetPoints0 := &types.ResetPoints{
 		Points: []*types.ResetPointInfo{
 			{
-				BinaryChecksum:           common.StringPtr("bad-binary-cs"),
+				BinaryChecksum:           "bad-binary-cs",
 				RunID:                    "test-run-id",
 				FirstDecisionCompletedID: common.Int64Ptr(123),
 				CreatedTimeNano:          common.Int64Ptr(456),

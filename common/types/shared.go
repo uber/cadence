@@ -1594,11 +1594,11 @@ func (v *Decision) GetUpsertWorkflowSearchAttributesDecisionAttributes() (o *Ups
 
 // DecisionTaskCompletedEventAttributes is an internal type (TBD...)
 type DecisionTaskCompletedEventAttributes struct {
-	ExecutionContext []byte  `json:"executionContext,omitempty"`
-	ScheduledEventID *int64  `json:"scheduledEventId,omitempty"`
-	StartedEventID   *int64  `json:"startedEventId,omitempty"`
-	Identity         string  `json:"identity,omitempty"`
-	BinaryChecksum   *string `json:"binaryChecksum,omitempty"`
+	ExecutionContext []byte `json:"executionContext,omitempty"`
+	ScheduledEventID *int64 `json:"scheduledEventId,omitempty"`
+	StartedEventID   *int64 `json:"startedEventId,omitempty"`
+	Identity         string `json:"identity,omitempty"`
+	BinaryChecksum   string `json:"binaryChecksum,omitempty"`
 }
 
 // GetExecutionContext is an internal getter (TBD...)
@@ -1635,8 +1635,8 @@ func (v *DecisionTaskCompletedEventAttributes) GetIdentity() (o string) {
 
 // GetBinaryChecksum is an internal getter (TBD...)
 func (v *DecisionTaskCompletedEventAttributes) GetBinaryChecksum() (o string) {
-	if v != nil && v.BinaryChecksum != nil {
-		return *v.BinaryChecksum
+	if v != nil {
+		return v.BinaryChecksum
 	}
 	return
 }
@@ -1850,7 +1850,7 @@ type DecisionTaskFailedEventAttributes struct {
 	BaseRunID        string                   `json:"baseRunId,omitempty"`
 	NewRunID         string                   `json:"newRunId,omitempty"`
 	ForkEventVersion *int64                   `json:"forkEventVersion,omitempty"`
-	BinaryChecksum   *string                  `json:"binaryChecksum,omitempty"`
+	BinaryChecksum   string                   `json:"binaryChecksum,omitempty"`
 }
 
 // GetScheduledEventID is an internal getter (TBD...)
@@ -1927,8 +1927,8 @@ func (v *DecisionTaskFailedEventAttributes) GetForkEventVersion() (o int64) {
 
 // GetBinaryChecksum is an internal getter (TBD...)
 func (v *DecisionTaskFailedEventAttributes) GetBinaryChecksum() (o string) {
-	if v != nil && v.BinaryChecksum != nil {
-		return *v.BinaryChecksum
+	if v != nil {
+		return v.BinaryChecksum
 	}
 	return
 }
@@ -5203,7 +5203,7 @@ type PollForDecisionTaskRequest struct {
 	Domain         string    `json:"domain,omitempty"`
 	TaskList       *TaskList `json:"taskList,omitempty"`
 	Identity       string    `json:"identity,omitempty"`
-	BinaryChecksum *string   `json:"binaryChecksum,omitempty"`
+	BinaryChecksum string    `json:"binaryChecksum,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -5232,8 +5232,8 @@ func (v *PollForDecisionTaskRequest) GetIdentity() (o string) {
 
 // GetBinaryChecksum is an internal getter (TBD...)
 func (v *PollForDecisionTaskRequest) GetBinaryChecksum() (o string) {
-	if v != nil && v.BinaryChecksum != nil {
-		return *v.BinaryChecksum
+	if v != nil {
+		return v.BinaryChecksum
 	}
 	return
 }
@@ -6312,18 +6312,18 @@ func (v *RequestCancelWorkflowExecutionRequest) GetRequestID() (o string) {
 
 // ResetPointInfo is an internal type (TBD...)
 type ResetPointInfo struct {
-	BinaryChecksum           *string `json:"binaryChecksum,omitempty"`
-	RunID                    string  `json:"runId,omitempty"`
-	FirstDecisionCompletedID *int64  `json:"firstDecisionCompletedId,omitempty"`
-	CreatedTimeNano          *int64  `json:"createdTimeNano,omitempty"`
-	ExpiringTimeNano         *int64  `json:"expiringTimeNano,omitempty"`
-	Resettable               *bool   `json:"resettable,omitempty"`
+	BinaryChecksum           string `json:"binaryChecksum,omitempty"`
+	RunID                    string `json:"runId,omitempty"`
+	FirstDecisionCompletedID *int64 `json:"firstDecisionCompletedId,omitempty"`
+	CreatedTimeNano          *int64 `json:"createdTimeNano,omitempty"`
+	ExpiringTimeNano         *int64 `json:"expiringTimeNano,omitempty"`
+	Resettable               *bool  `json:"resettable,omitempty"`
 }
 
 // GetBinaryChecksum is an internal getter (TBD...)
 func (v *ResetPointInfo) GetBinaryChecksum() (o string) {
-	if v != nil && v.BinaryChecksum != nil {
-		return *v.BinaryChecksum
+	if v != nil {
+		return v.BinaryChecksum
 	}
 	return
 }
@@ -6803,7 +6803,7 @@ type RespondDecisionTaskCompletedRequest struct {
 	StickyAttributes           *StickyExecutionAttributes      `json:"stickyAttributes,omitempty"`
 	ReturnNewDecisionTask      *bool                           `json:"returnNewDecisionTask,omitempty"`
 	ForceCreateNewDecisionTask *bool                           `json:"forceCreateNewDecisionTask,omitempty"`
-	BinaryChecksum             *string                         `json:"binaryChecksum,omitempty"`
+	BinaryChecksum             string                          `json:"binaryChecksum,omitempty"`
 	QueryResults               map[string]*WorkflowQueryResult `json:"queryResults,omitempty"`
 }
 
@@ -6865,8 +6865,8 @@ func (v *RespondDecisionTaskCompletedRequest) GetForceCreateNewDecisionTask() (o
 
 // GetBinaryChecksum is an internal getter (TBD...)
 func (v *RespondDecisionTaskCompletedRequest) GetBinaryChecksum() (o string) {
-	if v != nil && v.BinaryChecksum != nil {
-		return *v.BinaryChecksum
+	if v != nil {
+		return v.BinaryChecksum
 	}
 	return
 }
@@ -6907,7 +6907,7 @@ type RespondDecisionTaskFailedRequest struct {
 	Cause          *DecisionTaskFailedCause `json:"cause,omitempty"`
 	Details        []byte                   `json:"details,omitempty"`
 	Identity       string                   `json:"identity,omitempty"`
-	BinaryChecksum *string                  `json:"binaryChecksum,omitempty"`
+	BinaryChecksum string                   `json:"binaryChecksum,omitempty"`
 }
 
 // GetTaskToken is an internal getter (TBD...)
@@ -6944,8 +6944,8 @@ func (v *RespondDecisionTaskFailedRequest) GetIdentity() (o string) {
 
 // GetBinaryChecksum is an internal getter (TBD...)
 func (v *RespondDecisionTaskFailedRequest) GetBinaryChecksum() (o string) {
-	if v != nil && v.BinaryChecksum != nil {
-		return *v.BinaryChecksum
+	if v != nil {
+		return v.BinaryChecksum
 	}
 	return
 }

@@ -1665,7 +1665,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadBinary() {
 			Decisions:        decisions,
 			ExecutionContext: executionContext,
 			Identity:         identity,
-			BinaryChecksum:   common.StringPtr("test-bad-binary"),
+			BinaryChecksum:   "test-bad-binary",
 		},
 	})
 	s.Nil(err, s.printHistory(msBuilder))

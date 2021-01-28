@@ -1112,7 +1112,7 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 	testResetPoints := types.ResetPoints{
 		Points: []*types.ResetPointInfo{
 			{
-				BinaryChecksum:           common.StringPtr("test-binary-checksum"),
+				BinaryChecksum:           "test-binary-checksum",
 				RunID:                    "test-runID",
 				FirstDecisionCompletedID: common.Int64Ptr(123),
 				CreatedTimeNano:          common.Int64Ptr(456),
@@ -3041,7 +3041,7 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 	testResetPoints := types.ResetPoints{
 		Points: []*types.ResetPointInfo{
 			{
-				BinaryChecksum:           common.StringPtr("test-binary-checksum"),
+				BinaryChecksum:           "test-binary-checksum",
 				RunID:                    "test-runID",
 				FirstDecisionCompletedID: common.Int64Ptr(123),
 				CreatedTimeNano:          common.Int64Ptr(456),

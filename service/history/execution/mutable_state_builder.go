@@ -1954,7 +1954,7 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 		resettable = false
 	}
 	info := &types.ResetPointInfo{
-		BinaryChecksum:           common.StringPtr(binChecksum),
+		BinaryChecksum:           binChecksum,
 		RunID:                    exeInfo.RunID,
 		FirstDecisionCompletedID: common.Int64Ptr(event.GetEventID()),
 		CreatedTimeNano:          common.Int64Ptr(e.timeSource.Now().UnixNano()),
