@@ -169,10 +169,10 @@ var describeDomainResponseServer = &types.DescribeDomainResponse{
 		ActiveClusterName: common.StringPtr("active"),
 		Clusters: []*types.ClusterReplicationConfiguration{
 			{
-				ClusterName: common.StringPtr("active"),
+				ClusterName: "active",
 			},
 			{
-				ClusterName: common.StringPtr("standby"),
+				ClusterName: "standby",
 			},
 		},
 	},

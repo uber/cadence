@@ -1437,7 +1437,7 @@ func registerDomainRequest(
 		EmitMetric:                             common.BoolPtr(true),
 		Clusters: []*types.ClusterReplicationConfiguration{
 			{
-				ClusterName: common.StringPtr(cluster.TestCurrentClusterName),
+				ClusterName: cluster.TestCurrentClusterName,
 			},
 		},
 		ActiveClusterName:        common.StringPtr(cluster.TestCurrentClusterName),

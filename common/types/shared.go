@@ -1162,13 +1162,13 @@ func (v *ClusterInfo) GetSupportedClientVersions() (o *SupportedClientVersions) 
 
 // ClusterReplicationConfiguration is an internal type (TBD...)
 type ClusterReplicationConfiguration struct {
-	ClusterName *string `json:"clusterName,omitempty"`
+	ClusterName string `json:"clusterName,omitempty"`
 }
 
 // GetClusterName is an internal getter (TBD...)
 func (v *ClusterReplicationConfiguration) GetClusterName() (o string) {
-	if v != nil && v.ClusterName != nil {
-		return *v.ClusterName
+	if v != nil {
+		return v.ClusterName
 	}
 	return
 }
@@ -2425,9 +2425,9 @@ func (v *DescribeHistoryHostResponse) GetAddress() (o string) {
 
 // DescribeQueueRequest is an internal type (TBD...)
 type DescribeQueueRequest struct {
-	ShardID     *int32  `json:"shardID,omitempty"`
-	ClusterName *string `json:"clusterName,omitempty"`
-	Type        *int32  `json:"type,omitempty"`
+	ShardID     *int32 `json:"shardID,omitempty"`
+	ClusterName string `json:"clusterName,omitempty"`
+	Type        *int32 `json:"type,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -2440,8 +2440,8 @@ func (v *DescribeQueueRequest) GetShardID() (o int32) {
 
 // GetClusterName is an internal getter (TBD...)
 func (v *DescribeQueueRequest) GetClusterName() (o string) {
-	if v != nil && v.ClusterName != nil {
-		return *v.ClusterName
+	if v != nil {
+		return v.ClusterName
 	}
 	return
 }
@@ -6383,9 +6383,9 @@ func (v *ResetPoints) GetPoints() (o []*ResetPointInfo) {
 
 // ResetQueueRequest is an internal type (TBD...)
 type ResetQueueRequest struct {
-	ShardID     *int32  `json:"shardID,omitempty"`
-	ClusterName *string `json:"clusterName,omitempty"`
-	Type        *int32  `json:"type,omitempty"`
+	ShardID     *int32 `json:"shardID,omitempty"`
+	ClusterName string `json:"clusterName,omitempty"`
+	Type        *int32 `json:"type,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -6398,8 +6398,8 @@ func (v *ResetQueueRequest) GetShardID() (o int32) {
 
 // GetClusterName is an internal getter (TBD...)
 func (v *ResetQueueRequest) GetClusterName() (o string) {
-	if v != nil && v.ClusterName != nil {
-		return *v.ClusterName
+	if v != nil {
+		return v.ClusterName
 	}
 	return
 }

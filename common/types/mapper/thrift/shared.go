@@ -782,7 +782,7 @@ func FromClusterReplicationConfiguration(t *types.ClusterReplicationConfiguratio
 		return nil
 	}
 	return &shared.ClusterReplicationConfiguration{
-		ClusterName: t.ClusterName,
+		ClusterName: &t.ClusterName,
 	}
 }
 
@@ -792,7 +792,7 @@ func ToClusterReplicationConfiguration(t *shared.ClusterReplicationConfiguration
 		return nil
 	}
 	return &types.ClusterReplicationConfiguration{
-		ClusterName: t.ClusterName,
+		ClusterName: t.GetClusterName(),
 	}
 }
 
@@ -1591,7 +1591,7 @@ func FromDescribeQueueRequest(t *types.DescribeQueueRequest) *shared.DescribeQue
 	}
 	return &shared.DescribeQueueRequest{
 		ShardID:     t.ShardID,
-		ClusterName: t.ClusterName,
+		ClusterName: &t.ClusterName,
 		Type:        t.Type,
 	}
 }
@@ -1603,7 +1603,7 @@ func ToDescribeQueueRequest(t *shared.DescribeQueueRequest) *types.DescribeQueue
 	}
 	return &types.DescribeQueueRequest{
 		ShardID:     t.ShardID,
-		ClusterName: t.ClusterName,
+		ClusterName: t.GetClusterName(),
 		Type:        t.Type,
 	}
 }
@@ -4109,7 +4109,7 @@ func FromResetQueueRequest(t *types.ResetQueueRequest) *shared.ResetQueueRequest
 	}
 	return &shared.ResetQueueRequest{
 		ShardID:     t.ShardID,
-		ClusterName: t.ClusterName,
+		ClusterName: &t.ClusterName,
 		Type:        t.Type,
 	}
 }
@@ -4121,7 +4121,7 @@ func ToResetQueueRequest(t *shared.ResetQueueRequest) *types.ResetQueueRequest {
 	}
 	return &types.ResetQueueRequest{
 		ShardID:     t.ShardID,
-		ClusterName: t.ClusterName,
+		ClusterName: t.GetClusterName(),
 		Type:        t.Type,
 	}
 }
