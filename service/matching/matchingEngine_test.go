@@ -367,7 +367,7 @@ func (s *matchingEngineSuite) AddTasksTest(taskType int, isForwarded bool) {
 				ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 			}
 			if isForwarded {
-				addRequest.ForwardedFrom = &forwardedFrom
+				addRequest.ForwardedFrom = forwardedFrom
 			}
 			_, err = s.matchingEngine.AddActivityTask(s.handlerContext, &addRequest)
 		} else {
@@ -379,7 +379,7 @@ func (s *matchingEngineSuite) AddTasksTest(taskType int, isForwarded bool) {
 				ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 			}
 			if isForwarded {
-				addRequest.ForwardedFrom = &forwardedFrom
+				addRequest.ForwardedFrom = forwardedFrom
 			}
 			_, err = s.matchingEngine.AddDecisionTask(s.handlerContext, &addRequest)
 		}
