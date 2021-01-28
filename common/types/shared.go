@@ -10121,14 +10121,12 @@ func (e ClientType) String() string {
 	case 0:
 		return "CLI"
 	case 1:
-		return "USER"
-	case 2:
 		return "WEB"
+	case 2:
+		return "WORKFLOW"
 	case 3:
-		return "WORKER"
+		return "SHADOW"
 	case 4:
-		return "SHADOW_WORKER"
-	case 5:
 		return "SYSTEM"
 	}
 	return fmt.Sprintf("ClientType(%d)", w)
@@ -10140,17 +10138,14 @@ func (e *ClientType) UnmarshalText(value []byte) error {
 	case "CLI":
 		*e = ClientTypeCli
 		return nil
-	case "USER":
-		*e = ClientTypeUser
-		return nil
 	case "WEB":
 		*e = ClientTypeWeb
 		return nil
-	case "WORKER":
-		*e = ClientTypeWorker
+	case "WORKFLOW":
+		*e = ClientTypeWorkflow
 		return nil
-	case "SHADOW_WORKER":
-		*e = ClientTypeShadowWorker
+	case "SHADOW":
+		*e = ClientTypeShadow
 		return nil
 	case "SYSTEM":
 		*e = ClientTypeSystem
@@ -10173,14 +10168,12 @@ func (e ClientType) MarshalText() ([]byte, error) {
 const (
 	// ClientTypeCli is an option for ClientType
 	ClientTypeCli ClientType = iota
-	// ClientTypeUser is an option for ClientType
-	ClientTypeUser
 	// ClientTypeWeb is an option for ClientType
 	ClientTypeWeb
-	// ClientTypeWorker is an option for ClientType
-	ClientTypeWorker
-	// ClientTypeShadowWorker is an option for ClientType
-	ClientTypeShadowWorker
+	// ClientTypeWorkflow is an option for ClientType
+	ClientTypeWorkflow
+	// ClientTypeShadow is an option for ClientType
+	ClientTypeShadow
 	// ClientTypeSystem is an option for ClientType
 	ClientTypeSystem
 )

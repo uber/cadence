@@ -76,6 +76,7 @@ func AggregateYarpcOptions(ctx context.Context, opts ...yarpc.CallOption) []yarp
 	return result
 }
 
+// ToInternalHeaders translates header keys and values to internal keys and values
 func ToInternalHeaders(ctx context.Context) context.Context {
 	if ctx != nil {
 		call := yarpc.CallFromContext(ctx)

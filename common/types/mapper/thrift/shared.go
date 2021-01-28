@@ -6794,14 +6794,12 @@ func FromClientType(t types.ClientType) shared.ClientType {
 	switch t {
 	case types.ClientTypeCli:
 		return shared.ClientTypeCli
-	case types.ClientTypeUser:
-		return shared.ClientTypeUser
 	case types.ClientTypeWeb:
 		return shared.ClientTypeWeb
-	case types.ClientTypeWorker:
-		return shared.ClientTypeWorker
-	case types.ClientTypeShadowWorker:
-		return shared.ClientTypeShadowWorker
+	case types.ClientTypeWorkflow:
+		return shared.ClientTypeWorkflow
+	case types.ClientTypeShadow:
+		return shared.ClientTypeShadow
 	case types.ClientTypeSystem:
 		return shared.ClientTypeSystem
 	}
@@ -6814,14 +6812,12 @@ func ToClientType(t shared.ClientType) types.ClientType {
 	switch t {
 	case shared.ClientTypeCli:
 		return types.ClientTypeCli
-	case shared.ClientTypeUser:
-		return types.ClientTypeUser
 	case shared.ClientTypeWeb:
 		return types.ClientTypeWeb
-	case shared.ClientTypeWorker:
-		return types.ClientTypeWorker
-	case shared.ClientTypeShadowWorker:
-		return types.ClientTypeShadowWorker
+	case shared.ClientTypeWorkflow:
+		return types.ClientTypeWorkflow
+	case shared.ClientTypeShadow:
+		return types.ClientTypeShadow
 	case shared.ClientTypeSystem:
 		return types.ClientTypeSystem
 	}
