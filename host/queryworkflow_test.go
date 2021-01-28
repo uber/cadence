@@ -45,7 +45,7 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 	queryType := "test-query"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -208,7 +208,7 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 	queryType := "test-query"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -356,7 +356,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	queryType := "test-query"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -563,7 +563,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 	queryType := "test-query"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -748,7 +748,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 	queryType := "test-query"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -909,7 +909,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 	queryType := "test-query"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -1094,7 +1094,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 	queryType := "test-query"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)
@@ -1311,7 +1311,7 @@ func (s *integrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
 	queryType := "test-query"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
 	taskList.Name = common.StringPtr(tl)

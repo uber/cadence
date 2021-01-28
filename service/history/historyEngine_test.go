@@ -1153,7 +1153,7 @@ func (s *engineSuite) TestValidateSignalRequest() {
 	input := []byte("input")
 	startRequest := &types.StartWorkflowExecutionRequest{
 		WorkflowID:                          "ID",
-		WorkflowType:                        &types.WorkflowType{Name: &workflowType},
+		WorkflowType:                        &types.WorkflowType{Name: workflowType},
 		TaskList:                            &types.TaskList{Name: common.StringPtr("taskptr")},
 		Input:                               input,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
@@ -2108,7 +2108,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithAban
 			Domain:     constants.TestDomainName,
 			WorkflowID: "child-workflow-id",
 			WorkflowType: &types.WorkflowType{
-				Name: common.StringPtr("child-workflow-type"),
+				Name: "child-workflow-type",
 			},
 			ParentClosePolicy: &abandon,
 		},
@@ -2177,7 +2177,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithTerm
 			Domain:     constants.TestDomainName,
 			WorkflowID: "child-workflow-id",
 			WorkflowType: &types.WorkflowType{
-				Name: common.StringPtr("child-workflow-type"),
+				Name: "child-workflow-type",
 			},
 			ParentClosePolicy: &terminate,
 		},

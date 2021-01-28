@@ -195,7 +195,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 	runID := "run1"
 	workflowID := "workflow1"
 	workflowType := types.WorkflowType{
-		Name: common.StringPtr("workflow"),
+		Name: "workflow",
 	}
 	execution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 	scheduleID := int64(0)
@@ -952,7 +952,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 		}()
 	}
 	workflowTypeName := "workflowType1"
-	workflowType := &types.WorkflowType{Name: &workflowTypeName}
+	workflowType := &types.WorkflowType{Name: workflowTypeName}
 
 	identity := "nobody"
 
@@ -1258,8 +1258,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 			}
 		}
 	}
-	workflowTypeName := "workflowType1"
-	workflowType := &types.WorkflowType{Name: &workflowTypeName}
+	workflowType := &types.WorkflowType{Name: "workflowType1"}
 
 	identity := "nobody"
 	var startedEventID int64 = 1412

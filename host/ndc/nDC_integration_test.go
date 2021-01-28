@@ -378,7 +378,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 				Version:   common.Int64Ptr(21),
 				EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 				WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
-					WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+					WorkflowType:                        &types.WorkflowType{Name: workflowType},
 					TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
 					Input:                               nil,
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1000),
@@ -683,7 +683,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				Version:   common.Int64Ptr(21),
 				EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 				WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
-					WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+					WorkflowType:                        &types.WorkflowType{Name: workflowType},
 					TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
 					Input:                               nil,
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1000),
@@ -877,7 +877,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				EventType: types.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
 				WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
 					NewExecutionRunID:                   uuid.New(),
-					WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+					WorkflowType:                        &types.WorkflowType{Name: workflowType},
 					TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
 					Input:                               nil,
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1000),
@@ -1150,7 +1150,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				Version:   common.Int64Ptr(21),
 				EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 				WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
-					WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+					WorkflowType:                        &types.WorkflowType{Name: workflowType},
 					TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
 					Input:                               nil,
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1000),
@@ -1621,7 +1621,7 @@ func (s *nDCIntegrationTestSuite) generateNewRunHistory(
 		Version:   common.Int64Ptr(version),
 		TaskID:    common.Int64Ptr(1),
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
-			WorkflowType:         &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			WorkflowType:         &types.WorkflowType{Name: workflowType},
 			ParentWorkflowDomain: common.StringPtr(domain),
 			ParentWorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: uuid.New(),

@@ -438,7 +438,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeoutSecond),
 			TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 		},
 	}
 
