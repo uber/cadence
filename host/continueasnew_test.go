@@ -43,7 +43,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	header := &types.Header{
 		Fields: map[string][]byte{"tracing": []byte("sample payload")},
@@ -92,7 +92,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 				DecisionType: types.DecisionTypeContinueAsNewWorkflowExecution.Ptr(),
 				ContinueAsNewWorkflowExecutionDecisionAttributes: &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
 					WorkflowType:                        workflowType,
-					TaskList:                            &types.TaskList{Name: &tl},
+					TaskList:                            &types.TaskList{Name: tl},
 					Input:                               buf.Bytes(),
 					Header:                              header,
 					Memo:                                memo,
@@ -149,7 +149,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -182,7 +182,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
 				DecisionType: types.DecisionTypeContinueAsNewWorkflowExecution.Ptr(),
 				ContinueAsNewWorkflowExecutionDecisionAttributes: &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
 					WorkflowType:                        workflowType,
-					TaskList:                            &types.TaskList{Name: &tl},
+					TaskList:                            &types.TaskList{Name: tl},
 					Input:                               buf.Bytes(),
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1), // set timeout to 1
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
@@ -254,7 +254,7 @@ func (s *integrationSuite) TestWorkflowContinueAsNew_TaskID() {
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -349,7 +349,7 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 	childWorkflowType.Name = wtChild
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),

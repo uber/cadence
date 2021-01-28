@@ -22,6 +22,7 @@ package config
 
 import (
 	"errors"
+
 	"github.com/uber/cadence/common"
 )
 

@@ -243,7 +243,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 		EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
 			WorkflowType:                        &types.WorkflowType{Name: "some random workflow type"},
-			TaskList:                            &types.TaskList{Name: common.StringPtr("some random workflow type")},
+			TaskList:                            &types.TaskList{Name: "some random workflow type"},
 			Input:                               []byte("some random input"),
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(123),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(233),

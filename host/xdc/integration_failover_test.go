@@ -190,7 +190,7 @@ func (s *integrationClustersTestSuite) TestDomainFailover() {
 	tl := "integration-domain-failover-test-tasklist"
 	identity := "worker1"
 	workflowType := &types.WorkflowType{Name: wt}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              domainName,
@@ -248,7 +248,7 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 	tl := "integration-simple-workflow-failover-test-tasklist"
 	identity := "worker1"
 	workflowType := &types.WorkflowType{Name: wt}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              domainName,
@@ -283,7 +283,7 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
 					ActivityType:                  &types.ActivityType{Name: activityName},
-					TaskList:                      &types.TaskList{Name: &tl},
+					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(30),
@@ -547,9 +547,9 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	identity2 := "worker2"
 
 	workflowType := &types.WorkflowType{Name: wt}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
-	stickyTaskList1 := &types.TaskList{Name: common.StringPtr(stl1)}
-	stickyTaskList2 := &types.TaskList{Name: common.StringPtr(stl2)}
+	taskList := &types.TaskList{Name: tl}
+	stickyTaskList1 := &types.TaskList{Name: stl1}
+	stickyTaskList2 := &types.TaskList{Name: stl2}
 	stickyTaskTimeout := common.Int32Ptr(100)
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -722,7 +722,7 @@ func (s *integrationClustersTestSuite) TestStartWorkflowExecution_Failover_Workf
 	tl := "integration-start-workflow-failover-ID-reuse-policy-test-tasklist"
 	identity := "worker1"
 	workflowType := &types.WorkflowType{Name: wt}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              domainName,
@@ -855,7 +855,7 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 	tl := "integration-terminate-workflow-failover-test-tasklist"
 	identity := "worker1"
 	workflowType := &types.WorkflowType{Name: wt}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              domainName,
@@ -886,7 +886,7 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
 					ActivityType:                  &types.ActivityType{Name: activityName},
-					TaskList:                      &types.TaskList{Name: &tl},
+					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
@@ -1040,7 +1040,7 @@ func (s *integrationClustersTestSuite) TestContinueAsNewFailover() {
 	tl := "integration-continueAsNew-workflow-failover-test-tasklist"
 	identity := "worker1"
 	workflowType := &types.WorkflowType{Name: wt}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              domainName,
@@ -1073,7 +1073,7 @@ func (s *integrationClustersTestSuite) TestContinueAsNewFailover() {
 				DecisionType: types.DecisionTypeContinueAsNewWorkflowExecution.Ptr(),
 				ContinueAsNewWorkflowExecutionDecisionAttributes: &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
 					WorkflowType:                        workflowType,
-					TaskList:                            &types.TaskList{Name: &tl},
+					TaskList:                            &types.TaskList{Name: tl},
 					Input:                               buf.Bytes(),
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
@@ -1178,7 +1178,7 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 	tl := "integration-signal-workflow-failover-test-tasklist"
 	identity := "worker1"
 	workflowType := &types.WorkflowType{Name: wt}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              domainName,
@@ -1359,7 +1359,7 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 	tl := "integration-user-timer-workflow-failover-test-tasklist"
 	identity := "worker1"
 	workflowType := &types.WorkflowType{Name: wt}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              domainName,
@@ -1532,7 +1532,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	identity1 := "worker1"
 	identity2 := "worker2"
 	workflowType := &types.WorkflowType{Name: wt}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              domainName,
@@ -1567,7 +1567,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(1)),
 					ActivityType:                  &types.ActivityType{Name: "some random activity type"},
-					TaskList:                      &types.TaskList{Name: &tl},
+					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         []byte("some random input"),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1000),
@@ -1741,7 +1741,7 @@ func (s *integrationClustersTestSuite) TestTransientDecisionFailover() {
 	tl := "integration-transient-decision-workflow-failover-test-tasklist"
 	identity := "worker1"
 	workflowType := &types.WorkflowType{Name: wt}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              domainName,
@@ -1862,7 +1862,7 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 	tl := "integration-cron-workflow-failover-test-tasklist"
 	identity := "worker1"
 	workflowType := &types.WorkflowType{Name: wt}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              domainName,
@@ -1962,7 +1962,7 @@ func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
 	tl := "integration-workflow-retry-failover-test-tasklist"
 	identity := "worker1"
 	workflowType := &types.WorkflowType{Name: wt}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
 		Domain:                              domainName,

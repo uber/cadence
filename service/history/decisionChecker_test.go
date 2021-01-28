@@ -510,7 +510,7 @@ func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_GlobalToGlobal_
 func (s *decisionAttrValidatorSuite) TestValidateTaskListName() {
 	taskList := func(name string) *types.TaskList {
 		kind := types.TaskListKindNormal
-		return &types.TaskList{Name: &name, Kind: &kind}
+		return &types.TaskList{Name: name, Kind: &kind}
 	}
 
 	testCases := []struct {
@@ -519,7 +519,7 @@ func (s *decisionAttrValidatorSuite) TestValidateTaskListName() {
 		output      *types.TaskList
 		isOutputErr bool
 	}{
-		{"tl-1", nil, &types.TaskList{Name: common.StringPtr("tl-1")}, false},
+		{"tl-1", nil, &types.TaskList{Name: "tl-1"}, false},
 		{"", taskList("tl-1"), taskList("tl-1"), false},
 		{"tl-1", taskList("tl-1"), taskList("tl-1"), false},
 		{"", taskList("/tl-1"), taskList("/tl-1"), false},
@@ -560,7 +560,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_NoRe
 		},
 		Domain: s.testDomainID,
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("some random task list"),
+			Name: "some random task list",
 		},
 		Input:                         []byte{1, 2, 3},
 		ScheduleToCloseTimeoutSeconds: nil, // not set
@@ -617,7 +617,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 		},
 		Domain: s.testDomainID,
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("some random task list"),
+			Name: "some random task list",
 		},
 		Input:                         []byte{1, 2, 3},
 		ScheduleToCloseTimeoutSeconds: nil, // not set
@@ -679,7 +679,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 		},
 		Domain: s.testDomainID,
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("some random task list"),
+			Name: "some random task list",
 		},
 		Input:                         []byte{1, 2, 3},
 		ScheduleToCloseTimeoutSeconds: nil, // not set

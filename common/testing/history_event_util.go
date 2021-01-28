@@ -135,7 +135,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.EventType = types.EventTypeDecisionTaskScheduled.Ptr()
 		historyEvent.DecisionTaskScheduledEventAttributes = &types.DecisionTaskScheduledEventAttributes{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(taskList),
+				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
 			StartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
@@ -232,7 +232,7 @@ func InitializeHistoryEventGenerator(
 				Name: workflowType,
 			},
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(taskList),
+				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
@@ -280,7 +280,7 @@ func InitializeHistoryEventGenerator(
 				Name: workflowType,
 			},
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(taskList),
+				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
@@ -390,7 +390,7 @@ func InitializeHistoryEventGenerator(
 			},
 			Domain: common.StringPtr(domain),
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(taskList),
+				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
 			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(timeout),
@@ -620,7 +620,7 @@ func InitializeHistoryEventGenerator(
 				Name: childWorkflowPrefix + workflowType,
 			},
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(taskList),
+				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(timeout),

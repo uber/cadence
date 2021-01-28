@@ -45,7 +45,7 @@ func AddWorkflowExecutionStartedEventWithParent(
 	startRequest := &types.StartWorkflowExecutionRequest{
 		WorkflowID:                          workflowExecution.WorkflowID,
 		WorkflowType:                        &types.WorkflowType{Name: workflowType},
-		TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
+		TaskList:                            &types.TaskList{Name: taskList},
 		Input:                               input,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
@@ -106,7 +106,7 @@ func AddDecisionTaskStartedEventWithRequestID(
 	identity string,
 ) *types.HistoryEvent {
 	event, _, _ := builder.AddDecisionTaskStartedEvent(scheduleID, requestID, &types.PollForDecisionTaskRequest{
-		TaskList: &types.TaskList{Name: common.StringPtr(taskList)},
+		TaskList: &types.TaskList{Name: taskList},
 		Identity: identity,
 	})
 
@@ -149,7 +149,7 @@ func AddActivityTaskScheduledEvent(
 	event, ai, _, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID:                    common.StringPtr(activityID),
 		ActivityType:                  &types.ActivityType{Name: activityType},
-		TaskList:                      &types.TaskList{Name: common.StringPtr(taskList)},
+		TaskList:                      &types.TaskList{Name: taskList},
 		Input:                         input,
 		ScheduleToCloseTimeoutSeconds: common.Int32Ptr(scheduleToCloseTimeout),
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
@@ -179,7 +179,7 @@ func AddActivityTaskScheduledEventWithRetry(
 	event, ai, _, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID:                    common.StringPtr(activityID),
 		ActivityType:                  &types.ActivityType{Name: activityType},
-		TaskList:                      &types.TaskList{Name: common.StringPtr(taskList)},
+		TaskList:                      &types.TaskList{Name: taskList},
 		Input:                         input,
 		ScheduleToCloseTimeoutSeconds: common.Int32Ptr(scheduleToCloseTimeout),
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
@@ -353,7 +353,7 @@ func AddStartChildWorkflowExecutionInitiatedEvent(
 			Domain:                              domain,
 			WorkflowID:                          workflowID,
 			WorkflowType:                        &types.WorkflowType{Name: workflowType},
-			TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
+			TaskList:                            &types.TaskList{Name: tasklist},
 			Input:                               input,
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),

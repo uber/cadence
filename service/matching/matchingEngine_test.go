@@ -112,7 +112,7 @@ func (s *matchingEngineSuite) SetupTest() {
 	s.handlerContext = newHandlerContext(
 		context.Background(),
 		matchingTestDomainName,
-		&types.TaskList{Name: common.StringPtr(matchingTestTaskList), Kind: &tlKindNormal},
+		&types.TaskList{Name: matchingTestTaskList, Kind: &tlKindNormal},
 		metrics.NewClient(tally.NoopScope, metrics.Matching),
 		metrics.MatchingTaskListMgrScope,
 		loggerimpl.NewDevelopmentForTest(s.Suite),
@@ -186,7 +186,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 	identity := "selfDrivingToaster"
 
 	stickyTaskList := &types.TaskList{}
-	stickyTaskList.Name = &stickyTl
+	stickyTaskList.Name = stickyTl
 	stickyTaskList.Kind = &stickyTlKind
 
 	s.matchingEngine.config.RangeSize = 2 // to test that range is not updated without tasks
@@ -212,7 +212,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 			response.Attempt = common.Int64Ptr(0)
 			response.StickyExecutionEnabled = common.BoolPtr(true)
 			response.WorkflowExecutionTaskList = &types.TaskList{
-				Name: &tl,
+				Name: tl,
 				Kind: &taskListKindNormal,
 			}
 			return response, nil
@@ -230,7 +230,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 	s.NoError(err)
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	resp, err := s.matchingEngine.PollForDecisionTask(s.handlerContext, &types.MatchingPollForDecisionTaskRequest{
 		DomainUUID: domainID,
@@ -248,7 +248,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 		BacklogCountHint:       common.Int64Ptr(1),
 		StickyExecutionEnabled: common.BoolPtr(true),
 		WorkflowExecutionTaskList: &types.TaskList{
-			Name: &tl,
+			Name: tl,
 			Kind: &tlKind,
 		},
 	}
@@ -268,7 +268,7 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(callContext context.Co
 	identity := "selfDrivingToaster"
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 	var taskListType types.TaskListType
 	tlID := newTestTaskListID(domainID, tl, taskType)
 	s.handlerContext.Context = callContext
@@ -346,7 +346,7 @@ func (s *matchingEngineSuite) AddTasksTest(taskType int, isForwarded bool) {
 	forwardedFrom := "/__cadence_sys/makeToast/1"
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	const taskCount = 111
 
@@ -407,7 +407,7 @@ func (s *matchingEngineSuite) TestTaskWriterShutdown() {
 	tl := "makeToast"
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	runID := "run1"
 	workflowID := "workflow1"
@@ -462,7 +462,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
@@ -592,7 +592,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 	s.NoError(mgr.Start())
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 	activityTypeName := "activity1"
 	activityID := "activityId1"
 	activityType := &types.ActivityType{Name: activityTypeName}
@@ -786,7 +786,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 	s.NoError(mgr.Start())
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 	var wg sync.WaitGroup
 	wg.Add(2 * workerCount)
 
@@ -927,7 +927,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	var wg sync.WaitGroup
 	wg.Add(2 * workerCount)
@@ -1026,7 +1026,7 @@ func (s *matchingEngineSuite) TestPollWithExpiredContext() {
 	tl := "makeToast"
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	// Try with cancelled context
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -1074,7 +1074,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	var engines []*matchingEngineImpl
 
@@ -1224,7 +1224,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	var engines []*matchingEngineImpl
 
@@ -1352,7 +1352,7 @@ func (s *matchingEngineSuite) TestAddTaskAfterStartFailure() {
 	tlKind := types.TaskListKindNormal
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	scheduleID := int64(0)
 	addRequest := types.AddActivityTaskRequest{
@@ -1395,7 +1395,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 	tlID := newTestTaskListID(domainID, tl, persistence.TaskListTypeActivity)
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	const taskCount = 1200
 	const rangeSize = 10
@@ -1525,7 +1525,7 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 	tlID := newTestTaskListID(domainID, tl, persistence.TaskListTypeActivity)
 
 	taskList := &types.TaskList{}
-	taskList.Name = &tl
+	taskList.Name = tl
 
 	const taskCount = 20
 	const rangeSize = 10
@@ -1610,7 +1610,7 @@ func (s *matchingEngineSuite) setupRecordActivityTaskStartedMock(tlName string) 
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
 						ActivityID:                    &activityID,
-						TaskList:                      &types.TaskList{Name: &tlName},
+						TaskList:                      &types.TaskList{Name: tlName},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),

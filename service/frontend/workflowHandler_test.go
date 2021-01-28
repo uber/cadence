@@ -243,7 +243,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_RequestIdNotSet
 			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
@@ -281,7 +281,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_DomainNotSet() 
 			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
@@ -310,7 +310,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowIdNotSe
 			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
@@ -340,7 +340,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowTypeNot
 			Name: "",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
@@ -370,7 +370,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_TaskListNotSet(
 			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr(""),
+			Name: "",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
@@ -400,7 +400,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidExecutio
 			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(0),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
@@ -430,7 +430,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStar
 			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(0),

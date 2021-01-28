@@ -644,7 +644,7 @@ func (v *decisionAttrValidator) validatedTaskList(
 		if defaultVal == "" {
 			return taskList, &types.BadRequestError{Message: "missing task list name"}
 		}
-		taskList.Name = &defaultVal
+		taskList.Name = defaultVal
 		return taskList, nil
 	}
 

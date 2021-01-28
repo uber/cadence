@@ -173,7 +173,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	tl := "xdc-search-attr-test-tasklist"
 	identity := "worker1"
 	workflowType := &types.WorkflowType{Name: wt}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	taskList := &types.TaskList{Name: tl}
 	attrValBytes, _ := json.Marshal(s.testSearchAttributeVal)
 	searchAttr := &types.SearchAttributes{
 		IndexedFields: map[string][]byte{

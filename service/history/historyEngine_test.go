@@ -1090,7 +1090,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 		ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 			ActivityID:                    common.StringPtr(activity3ID),
 			ActivityType:                  &types.ActivityType{Name: activity3Type},
-			TaskList:                      &types.TaskList{Name: &tl},
+			TaskList:                      &types.TaskList{Name: tl},
 			Input:                         activity3Input,
 			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
@@ -1136,7 +1136,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 	s.Equal(activity3ID, *activity3Attributes.ActivityID)
 	s.Equal(activity3Type, activity3Attributes.ActivityType.Name)
 	s.Equal(int64(12), *activity3Attributes.DecisionTaskCompletedEventID)
-	s.Equal(tl, *activity3Attributes.TaskList.Name)
+	s.Equal(tl, activity3Attributes.TaskList.Name)
 	s.Equal(activity3Input, activity3Attributes.Input)
 	s.Equal(int32(100), *activity3Attributes.ScheduleToCloseTimeoutSeconds)
 	s.Equal(int32(10), *activity3Attributes.ScheduleToStartTimeoutSeconds)
@@ -1154,7 +1154,7 @@ func (s *engineSuite) TestValidateSignalRequest() {
 	startRequest := &types.StartWorkflowExecutionRequest{
 		WorkflowID:                          "ID",
 		WorkflowType:                        &types.WorkflowType{Name: workflowType},
-		TaskList:                            &types.TaskList{Name: common.StringPtr("taskptr")},
+		TaskList:                            &types.TaskList{Name: "taskptr"},
 		Input:                               input,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
@@ -1195,7 +1195,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 		ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 			ActivityID:                    common.StringPtr("activity1"),
 			ActivityType:                  &types.ActivityType{Name: "activity_type1"},
-			TaskList:                      &types.TaskList{Name: &tl},
+			TaskList:                      &types.TaskList{Name: tl},
 			Input:                         input,
 			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
@@ -1556,7 +1556,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 			ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 				ActivityID:                    common.StringPtr("activity1"),
 				ActivityType:                  &types.ActivityType{Name: "activity_type1"},
-				TaskList:                      &types.TaskList{Name: &tl},
+				TaskList:                      &types.TaskList{Name: tl},
 				Input:                         input,
 				ScheduleToCloseTimeoutSeconds: iVar.scheduleToClose,
 				ScheduleToStartTimeoutSeconds: iVar.scheduleToStart,
@@ -1708,7 +1708,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 		ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 			ActivityID:                    common.StringPtr("activity1"),
 			ActivityType:                  &types.ActivityType{Name: "activity_type1"},
-			TaskList:                      &types.TaskList{Name: &tl},
+			TaskList:                      &types.TaskList{Name: tl},
 			Input:                         input,
 			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
@@ -1745,7 +1745,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 	s.Equal("activity1", *activity1Attributes.ActivityID)
 	s.Equal("activity_type1", activity1Attributes.ActivityType.Name)
 	s.Equal(int64(4), *activity1Attributes.DecisionTaskCompletedEventID)
-	s.Equal(tl, *activity1Attributes.TaskList.Name)
+	s.Equal(tl, activity1Attributes.TaskList.Name)
 	s.Equal(input, activity1Attributes.Input)
 	s.Equal(int32(100), *activity1Attributes.ScheduleToCloseTimeoutSeconds)
 	s.Equal(int32(10), *activity1Attributes.ScheduleToStartTimeoutSeconds)

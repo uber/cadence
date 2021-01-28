@@ -1693,7 +1693,7 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	}
 	matchingRequest := &types.MatchingRespondQueryTaskCompletedRequest{
 		DomainUUID:       queryTaskToken.DomainID,
-		TaskList:         &types.TaskList{Name: common.StringPtr(queryTaskToken.TaskList)},
+		TaskList:         &types.TaskList{Name: queryTaskToken.TaskList},
 		TaskID:           common.StringPtr(queryTaskToken.TaskID),
 		CompletedRequest: completeRequest,
 	}
@@ -3547,7 +3547,7 @@ func (wh *WorkflowHandler) validateTaskListType(t *types.TaskListType, scope met
 }
 
 func (wh *WorkflowHandler) validateTaskList(t *types.TaskList, scope metrics.Scope, domain string) error {
-	if t == nil || t.Name == nil || t.GetName() == "" {
+	if t == nil || t.GetName() == "" {
 		return wh.error(errTaskListNotSet, scope)
 	}
 	if !wh.validIDLength(t.GetName(), scope, domain) {

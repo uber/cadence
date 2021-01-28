@@ -199,7 +199,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
 
 		return nil, []*types.Decision{upsertDecision}, nil
 	}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	taskList := &types.TaskList{Name: tl}
 	poller := &TaskPoller{
 		Engine:          s.engine,
 		Domain:          s.domainName,
@@ -671,7 +671,7 @@ func (s *elasticsearchIntegrationSuite) TestScanWorkflow() {
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -721,7 +721,7 @@ func (s *elasticsearchIntegrationSuite) TestScanWorkflow_PageToken() {
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		Domain:                              s.domainName,
@@ -785,7 +785,7 @@ func (s *elasticsearchIntegrationSuite) createStartWorkflowExecutionRequest(id, 
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -811,7 +811,7 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution() {
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -1012,7 +1012,7 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey()
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),

@@ -1354,8 +1354,8 @@ func (e *historyEngineImpl) getMutableState(
 		LastFirstEventID:                     common.Int64Ptr(mutableState.GetLastFirstEventID()),
 		NextEventID:                          common.Int64Ptr(mutableState.GetNextEventID()),
 		PreviousStartedEventID:               common.Int64Ptr(mutableState.GetPreviousStartedEventID()),
-		TaskList:                             &types.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
-		StickyTaskList:                       &types.TaskList{Name: common.StringPtr(executionInfo.StickyTaskList)},
+		TaskList:                             &types.TaskList{Name: executionInfo.TaskList},
+		StickyTaskList:                       &types.TaskList{Name: executionInfo.StickyTaskList},
 		ClientLibraryVersion:                 common.StringPtr(executionInfo.ClientLibraryVersion),
 		ClientFeatureVersion:                 common.StringPtr(executionInfo.ClientFeatureVersion),
 		ClientImpl:                           common.StringPtr(executionInfo.ClientImpl),
@@ -1489,7 +1489,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 
 	result := &types.DescribeWorkflowExecutionResponse{
 		ExecutionConfiguration: &types.WorkflowExecutionConfiguration{
-			TaskList:                            &types.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
+			TaskList:                            &types.TaskList{Name: executionInfo.TaskList},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionInfo.WorkflowTimeout),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(executionInfo.DecisionStartToCloseTimeout),
 		},
@@ -2872,7 +2872,7 @@ func validateStartWorkflowExecutionRequest(
 	if request.TaskStartToCloseTimeoutSeconds == nil || request.GetTaskStartToCloseTimeoutSeconds() <= 0 {
 		return &types.BadRequestError{Message: "Missing or invalid TaskStartToCloseTimeoutSeconds."}
 	}
-	if request.TaskList == nil || request.TaskList.Name == nil || request.TaskList.GetName() == "" {
+	if request.TaskList == nil || request.TaskList.GetName() == "" {
 		return &types.BadRequestError{Message: "Missing Tasklist."}
 	}
 	if request.WorkflowType == nil || request.WorkflowType.GetName() == "" {

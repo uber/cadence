@@ -41,11 +41,11 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{
-		Name: common.StringPtr(tl),
+		Name: tl,
 		Kind: types.TaskListKindNormal.Ptr(),
 	}
 	stikyTaskList := &types.TaskList{
-		Name: common.StringPtr("test-sticky-tasklist"),
+		Name: "test-sticky-tasklist",
 		Kind: types.TaskListKindSticky.Ptr(),
 	}
 
@@ -148,11 +148,11 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{
-		Name: common.StringPtr(tl),
+		Name: tl,
 		Kind: types.TaskListKindNormal.Ptr(),
 	}
 	stikyTaskList := &types.TaskList{
-		Name: common.StringPtr("test-sticky-tasklist"),
+		Name: "test-sticky-tasklist",
 		Kind: types.TaskListKindSticky.Ptr(),
 	}
 
@@ -292,7 +292,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionSta
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -367,7 +367,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -442,7 +442,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -529,7 +529,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -634,7 +634,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -736,7 +736,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),

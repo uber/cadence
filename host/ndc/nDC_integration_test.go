@@ -379,7 +379,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 				EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 				WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
 					WorkflowType:                        &types.WorkflowType{Name: workflowType},
-					TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                            &types.TaskList{Name: tasklist},
 					Input:                               nil,
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1000),
@@ -391,7 +391,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 				Version:   common.Int64Ptr(21),
 				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
-					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                   &types.TaskList{Name: tasklist},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					Attempt:                    common.Int64Ptr(0),
 				},
@@ -438,7 +438,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 					DecisionTaskCompletedEventID:  common.Int64Ptr(4),
 					ActivityID:                    common.StringPtr("0"),
 					ActivityType:                  &types.ActivityType{Name: "activity-type"},
-					TaskList:                      &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                      &types.TaskList{Name: tasklist},
 					Input:                         nil,
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(20),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(20),
@@ -476,7 +476,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 				Version:   common.Int64Ptr(21),
 				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
-					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                   &types.TaskList{Name: tasklist},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					Attempt:                    common.Int64Ptr(0),
 				},
@@ -520,7 +520,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 				Version:   common.Int64Ptr(21),
 				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
-					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                   &types.TaskList{Name: tasklist},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					Attempt:                    common.Int64Ptr(0),
 				},
@@ -578,7 +578,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 				Version:   common.Int64Ptr(30),
 				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
-					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                   &types.TaskList{Name: tasklist},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					Attempt:                    common.Int64Ptr(0),
 				},
@@ -684,7 +684,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 				WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
 					WorkflowType:                        &types.WorkflowType{Name: workflowType},
-					TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                            &types.TaskList{Name: tasklist},
 					Input:                               nil,
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1000),
@@ -696,7 +696,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				Version:   common.Int64Ptr(21),
 				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
-					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                   &types.TaskList{Name: tasklist},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					Attempt:                    common.Int64Ptr(0),
 				},
@@ -743,7 +743,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 					DecisionTaskCompletedEventID:  common.Int64Ptr(4),
 					ActivityID:                    common.StringPtr("0"),
 					ActivityType:                  &types.ActivityType{Name: "activity-type"},
-					TaskList:                      &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                      &types.TaskList{Name: tasklist},
 					Input:                         nil,
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(20),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(20),
@@ -781,7 +781,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				Version:   common.Int64Ptr(21),
 				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
-					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                   &types.TaskList{Name: tasklist},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					Attempt:                    common.Int64Ptr(0),
 				},
@@ -825,7 +825,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				Version:   common.Int64Ptr(21),
 				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
-					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                   &types.TaskList{Name: tasklist},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					Attempt:                    common.Int64Ptr(0),
 				},
@@ -878,7 +878,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
 					NewExecutionRunID:                   uuid.New(),
 					WorkflowType:                        &types.WorkflowType{Name: workflowType},
-					TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                            &types.TaskList{Name: tasklist},
 					Input:                               nil,
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1000),
@@ -1151,7 +1151,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 				WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
 					WorkflowType:                        &types.WorkflowType{Name: workflowType},
-					TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                            &types.TaskList{Name: tasklist},
 					Input:                               nil,
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1000),
@@ -1163,7 +1163,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				Version:   common.Int64Ptr(21),
 				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
-					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                   &types.TaskList{Name: tasklist},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					Attempt:                    common.Int64Ptr(0),
 				},
@@ -1210,7 +1210,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 					DecisionTaskCompletedEventID:  common.Int64Ptr(4),
 					ActivityID:                    common.StringPtr("0"),
 					ActivityType:                  &types.ActivityType{Name: "activity-type"},
-					TaskList:                      &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                      &types.TaskList{Name: tasklist},
 					Input:                         nil,
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(20),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(20),
@@ -1248,7 +1248,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				Version:   common.Int64Ptr(21),
 				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
-					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                   &types.TaskList{Name: tasklist},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					Attempt:                    common.Int64Ptr(0),
 				},
@@ -1292,7 +1292,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				Version:   common.Int64Ptr(21),
 				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
-					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                   &types.TaskList{Name: tasklist},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					Attempt:                    common.Int64Ptr(0),
 				},
@@ -1330,7 +1330,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 					DecisionTaskCompletedEventID:  common.Int64Ptr(4),
 					ActivityID:                    common.StringPtr("0"),
 					ActivityType:                  &types.ActivityType{Name: "activity-type"},
-					TaskList:                      &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                      &types.TaskList{Name: tasklist},
 					Input:                         nil,
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(20),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(20),
@@ -1368,7 +1368,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				Version:   common.Int64Ptr(30),
 				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 				DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
-					TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
+					TaskList:                   &types.TaskList{Name: tasklist},
 					StartToCloseTimeoutSeconds: common.Int32Ptr(1000),
 					Attempt:                    common.Int64Ptr(0),
 				},
@@ -1629,7 +1629,7 @@ func (s *nDCIntegrationTestSuite) generateNewRunHistory(
 			},
 			ParentInitiatedEventID: common.Int64Ptr(event.GetEventID()),
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(taskList),
+				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),

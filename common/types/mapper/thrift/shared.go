@@ -5158,7 +5158,7 @@ func FromTaskList(t *types.TaskList) *shared.TaskList {
 		return nil
 	}
 	return &shared.TaskList{
-		Name: t.Name,
+		Name: &t.Name,
 		Kind: FromTaskListKind(t.Kind),
 	}
 }
@@ -5169,7 +5169,7 @@ func ToTaskList(t *shared.TaskList) *types.TaskList {
 		return nil
 	}
 	return &types.TaskList{
-		Name: t.Name,
+		Name: t.GetName(),
 		Kind: ToTaskListKind(t.Kind),
 	}
 }

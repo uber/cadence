@@ -233,7 +233,7 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 	// the correct logic should check whether the decision task is a sticky decision
 	// task or not.
 	taskList := &types.TaskList{
-		Name: &task.TaskList,
+		Name: task.TaskList,
 	}
 	if mutableState.GetExecutionInfo().TaskList != task.TaskList {
 		// this decision is an sticky decision

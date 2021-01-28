@@ -48,7 +48,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	header := &types.Header{
 		Fields: map[string][]byte{"tracing": []byte("sample data")},
@@ -88,7 +88,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
 					ActivityType:                  &types.ActivityType{Name: activityName},
-					TaskList:                      &types.TaskList{Name: &tl},
+					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
 					Header:                        header,
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(15),
@@ -174,7 +174,7 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -206,7 +206,7 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 					ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 						ActivityID:                    common.StringPtr("0"),
 						ActivityType:                  &types.ActivityType{Name: activityName},
-						TaskList:                      &types.TaskList{Name: &tl},
+						TaskList:                      &types.TaskList{Name: tl},
 						Input:                         nil,
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(4),
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(4),
@@ -350,7 +350,7 @@ func (s *integrationSuite) TestActivityRetry() {
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -384,7 +384,7 @@ func (s *integrationSuite) TestActivityRetry() {
 					ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 						ActivityID:                    common.StringPtr("A"),
 						ActivityType:                  &types.ActivityType{Name: activityName},
-						TaskList:                      &types.TaskList{Name: &tl},
+						TaskList:                      &types.TaskList{Name: tl},
 						Input:                         []byte("1"),
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(4),
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(4),
@@ -405,7 +405,7 @@ func (s *integrationSuite) TestActivityRetry() {
 					ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 						ActivityID:                    common.StringPtr("B"),
 						ActivityType:                  &types.ActivityType{Name: timeoutActivityName},
-						TaskList:                      &types.TaskList{Name: common.StringPtr("no_worker_tasklist")},
+						TaskList:                      &types.TaskList{Name: "no_worker_tasklist"},
 						Input:                         []byte("2"),
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(5),
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
@@ -563,7 +563,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -601,7 +601,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
 					ActivityType:                  &types.ActivityType{Name: activityName},
-					TaskList:                      &types.TaskList{Name: &tl},
+					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(15),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
@@ -666,7 +666,7 @@ func (s *integrationSuite) TestActivityTimeouts() {
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -701,7 +701,7 @@ func (s *integrationSuite) TestActivityTimeouts() {
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr("A"),
 					ActivityType:                  &types.ActivityType{Name: activityName},
-					TaskList:                      &types.TaskList{Name: common.StringPtr("NoWorker")},
+					TaskList:                      &types.TaskList{Name: "NoWorker"},
 					Input:                         []byte("ScheduleToStart"),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(35),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(3), // ActivityID A is expected to timeout using ScheduleToStart
@@ -713,7 +713,7 @@ func (s *integrationSuite) TestActivityTimeouts() {
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr("B"),
 					ActivityType:                  &types.ActivityType{Name: activityName},
-					TaskList:                      &types.TaskList{Name: &tl},
+					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         []byte("ScheduleToClose"),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(7), // ActivityID B is expected to timeout using ScheduleClose
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
@@ -725,7 +725,7 @@ func (s *integrationSuite) TestActivityTimeouts() {
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr("C"),
 					ActivityType:                  &types.ActivityType{Name: activityName},
-					TaskList:                      &types.TaskList{Name: &tl},
+					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         []byte("StartToClose"),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(15),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
@@ -743,7 +743,7 @@ func (s *integrationSuite) TestActivityTimeouts() {
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr("D"),
 					ActivityType:                  &types.ActivityType{Name: activityName},
-					TaskList:                      &types.TaskList{Name: &tl},
+					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         []byte("Heartbeat"),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(35),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(20),
@@ -908,7 +908,7 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -946,7 +946,7 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 					ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 						ActivityID:                    common.StringPtr(aID),
 						ActivityType:                  &types.ActivityType{Name: activityName},
-						TaskList:                      &types.TaskList{Name: &tl},
+						TaskList:                      &types.TaskList{Name: tl},
 						Input:                         []byte("Heartbeat"),
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(60),
 						ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
@@ -1099,7 +1099,7 @@ func (s *integrationSuite) TestActivityCancellation() {
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -1134,7 +1134,7 @@ func (s *integrationSuite) TestActivityCancellation() {
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
 					ActivityType:                  &types.ActivityType{Name: activityName},
-					TaskList:                      &types.TaskList{Name: &tl},
+					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(15),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
@@ -1226,7 +1226,7 @@ func (s *integrationSuite) TestActivityCancellationNotStarted() {
 	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           common.StringPtr(uuid.New()),
@@ -1261,7 +1261,7 @@ func (s *integrationSuite) TestActivityCancellationNotStarted() {
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
 					ActivityType:                  &types.ActivityType{Name: activityName},
-					TaskList:                      &types.TaskList{Name: &tl},
+					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(15),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
