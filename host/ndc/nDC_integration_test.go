@@ -240,7 +240,7 @@ func (s *nDCIntegrationTestSuite) verifyEventHistory(
 				WorkflowID: workflowID,
 				RunID:      runID,
 			},
-			MaximumPageSize:        common.Int32Ptr(1000),
+			MaximumPageSize:        1000,
 			NextPageToken:          nil,
 			WaitForNewEvent:        common.BoolPtr(false),
 			HistoryEventFilterType: types.HistoryEventFilterTypeAllEvent.Ptr(),

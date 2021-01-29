@@ -338,7 +338,7 @@ func (d *domainCLIImpl) getAllDomains(c *cli.Context) []*types.DescribeDomainRes
 	defer cancel()
 	for more := true; more; more = len(token) > 0 {
 		listRequest := &types.ListDomainsRequest{
-			PageSize:      common.Int32Ptr(pagesize),
+			PageSize:      pagesize,
 			NextPageToken: token,
 		}
 		listResp, err := d.listDomains(ctx, listRequest)

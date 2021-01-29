@@ -2344,7 +2344,7 @@ func FromGetWorkflowExecutionHistoryRequest(t *types.GetWorkflowExecutionHistory
 	return &shared.GetWorkflowExecutionHistoryRequest{
 		Domain:                 &t.Domain,
 		Execution:              FromWorkflowExecution(t.Execution),
-		MaximumPageSize:        t.MaximumPageSize,
+		MaximumPageSize:        &t.MaximumPageSize,
 		NextPageToken:          t.NextPageToken,
 		WaitForNewEvent:        t.WaitForNewEvent,
 		HistoryEventFilterType: FromHistoryEventFilterType(t.HistoryEventFilterType),
@@ -2360,7 +2360,7 @@ func ToGetWorkflowExecutionHistoryRequest(t *shared.GetWorkflowExecutionHistoryR
 	return &types.GetWorkflowExecutionHistoryRequest{
 		Domain:                 t.GetDomain(),
 		Execution:              ToWorkflowExecution(t.Execution),
-		MaximumPageSize:        t.MaximumPageSize,
+		MaximumPageSize:        t.GetMaximumPageSize(),
 		NextPageToken:          t.NextPageToken,
 		WaitForNewEvent:        t.WaitForNewEvent,
 		HistoryEventFilterType: ToHistoryEventFilterType(t.HistoryEventFilterType),
@@ -2733,7 +2733,7 @@ func FromListArchivedWorkflowExecutionsRequest(t *types.ListArchivedWorkflowExec
 	}
 	return &shared.ListArchivedWorkflowExecutionsRequest{
 		Domain:        &t.Domain,
-		PageSize:      t.PageSize,
+		PageSize:      &t.PageSize,
 		NextPageToken: t.NextPageToken,
 		Query:         t.Query,
 	}
@@ -2746,7 +2746,7 @@ func ToListArchivedWorkflowExecutionsRequest(t *shared.ListArchivedWorkflowExecu
 	}
 	return &types.ListArchivedWorkflowExecutionsRequest{
 		Domain:        t.GetDomain(),
-		PageSize:      t.PageSize,
+		PageSize:      t.GetPageSize(),
 		NextPageToken: t.NextPageToken,
 		Query:         t.Query,
 	}
@@ -2781,7 +2781,7 @@ func FromListClosedWorkflowExecutionsRequest(t *types.ListClosedWorkflowExecutio
 	}
 	return &shared.ListClosedWorkflowExecutionsRequest{
 		Domain:          &t.Domain,
-		MaximumPageSize: t.MaximumPageSize,
+		MaximumPageSize: &t.MaximumPageSize,
 		NextPageToken:   t.NextPageToken,
 		StartTimeFilter: FromStartTimeFilter(t.StartTimeFilter),
 		ExecutionFilter: FromWorkflowExecutionFilter(t.ExecutionFilter),
@@ -2797,7 +2797,7 @@ func ToListClosedWorkflowExecutionsRequest(t *shared.ListClosedWorkflowExecution
 	}
 	return &types.ListClosedWorkflowExecutionsRequest{
 		Domain:          t.GetDomain(),
-		MaximumPageSize: t.MaximumPageSize,
+		MaximumPageSize: t.GetMaximumPageSize(),
 		NextPageToken:   t.NextPageToken,
 		StartTimeFilter: ToStartTimeFilter(t.StartTimeFilter),
 		ExecutionFilter: ToWorkflowExecutionFilter(t.ExecutionFilter),
@@ -2834,7 +2834,7 @@ func FromListDomainsRequest(t *types.ListDomainsRequest) *shared.ListDomainsRequ
 		return nil
 	}
 	return &shared.ListDomainsRequest{
-		PageSize:      t.PageSize,
+		PageSize:      &t.PageSize,
 		NextPageToken: t.NextPageToken,
 	}
 }
@@ -2845,7 +2845,7 @@ func ToListDomainsRequest(t *shared.ListDomainsRequest) *types.ListDomainsReques
 		return nil
 	}
 	return &types.ListDomainsRequest{
-		PageSize:      t.PageSize,
+		PageSize:      t.GetPageSize(),
 		NextPageToken: t.NextPageToken,
 	}
 }
@@ -2879,7 +2879,7 @@ func FromListOpenWorkflowExecutionsRequest(t *types.ListOpenWorkflowExecutionsRe
 	}
 	return &shared.ListOpenWorkflowExecutionsRequest{
 		Domain:          &t.Domain,
-		MaximumPageSize: t.MaximumPageSize,
+		MaximumPageSize: &t.MaximumPageSize,
 		NextPageToken:   t.NextPageToken,
 		StartTimeFilter: FromStartTimeFilter(t.StartTimeFilter),
 		ExecutionFilter: FromWorkflowExecutionFilter(t.ExecutionFilter),
@@ -2894,7 +2894,7 @@ func ToListOpenWorkflowExecutionsRequest(t *shared.ListOpenWorkflowExecutionsReq
 	}
 	return &types.ListOpenWorkflowExecutionsRequest{
 		Domain:          t.GetDomain(),
-		MaximumPageSize: t.MaximumPageSize,
+		MaximumPageSize: t.GetMaximumPageSize(),
 		NextPageToken:   t.NextPageToken,
 		StartTimeFilter: ToStartTimeFilter(t.StartTimeFilter),
 		ExecutionFilter: ToWorkflowExecutionFilter(t.ExecutionFilter),
@@ -2975,7 +2975,7 @@ func FromListWorkflowExecutionsRequest(t *types.ListWorkflowExecutionsRequest) *
 	}
 	return &shared.ListWorkflowExecutionsRequest{
 		Domain:        &t.Domain,
-		PageSize:      t.PageSize,
+		PageSize:      &t.PageSize,
 		NextPageToken: t.NextPageToken,
 		Query:         t.Query,
 	}
@@ -2988,7 +2988,7 @@ func ToListWorkflowExecutionsRequest(t *shared.ListWorkflowExecutionsRequest) *t
 	}
 	return &types.ListWorkflowExecutionsRequest{
 		Domain:        t.GetDomain(),
-		PageSize:      t.PageSize,
+		PageSize:      t.GetPageSize(),
 		NextPageToken: t.NextPageToken,
 		Query:         t.Query,
 	}

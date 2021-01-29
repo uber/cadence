@@ -1187,7 +1187,7 @@ func (s *workflowHandlerSuite) TestListWorkflowExecutions() {
 
 	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   s.testDomain,
-		PageSize: common.Int32Ptr(int32(config.ESIndexMaxResultWindow())),
+		PageSize: int32(config.ESIndexMaxResultWindow()),
 	}
 	ctx := context.Background()
 
@@ -1202,7 +1202,7 @@ func (s *workflowHandlerSuite) TestListWorkflowExecutions() {
 	_, err = wh.ListWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 
-	listRequest.PageSize = common.Int32Ptr(int32(config.ESIndexMaxResultWindow() + 1))
+	listRequest.PageSize = int32(config.ESIndexMaxResultWindow() + 1)
 	_, err = wh.ListWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 }
@@ -1216,7 +1216,7 @@ func (s *workflowHandlerSuite) TestScantWorkflowExecutions() {
 
 	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   s.testDomain,
-		PageSize: common.Int32Ptr(int32(config.ESIndexMaxResultWindow())),
+		PageSize: int32(config.ESIndexMaxResultWindow()),
 	}
 	ctx := context.Background()
 
@@ -1231,7 +1231,7 @@ func (s *workflowHandlerSuite) TestScantWorkflowExecutions() {
 	_, err = wh.ScanWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 
-	listRequest.PageSize = common.Int32Ptr(int32(config.ESIndexMaxResultWindow() + 1))
+	listRequest.PageSize = int32(config.ESIndexMaxResultWindow() + 1)
 	_, err = wh.ListWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 }
@@ -1464,7 +1464,7 @@ func getHistoryRequest(nextPageToken []byte) *types.GetWorkflowExecutionHistoryR
 func listArchivedWorkflowExecutionsTestRequest() *types.ListArchivedWorkflowExecutionsRequest {
 	return &types.ListArchivedWorkflowExecutionsRequest{
 		Domain:   "some random domain name",
-		PageSize: common.Int32Ptr(10),
+		PageSize: 10,
 		Query:    common.StringPtr("some random query string"),
 	}
 }

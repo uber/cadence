@@ -1826,7 +1826,7 @@ func isLastEventDecisionTaskFailedWithNonDeterminism(ctx context.Context, domain
 			WorkflowID: wid,
 			RunID:      rid,
 		},
-		MaximumPageSize: common.Int32Ptr(1000),
+		MaximumPageSize: 1000,
 		NextPageToken:   nil,
 	}
 
@@ -1939,7 +1939,7 @@ func getFirstDecisionTaskByType(
 			WorkflowID: workflowID,
 			RunID:      runID,
 		},
-		MaximumPageSize: common.Int32Ptr(1000),
+		MaximumPageSize: 1000,
 		NextPageToken:   nil,
 	}
 
@@ -2023,7 +2023,7 @@ func getLastDecisionTaskByType(
 			WorkflowID: workflowID,
 			RunID:      runID,
 		},
-		MaximumPageSize: common.Int32Ptr(1000),
+		MaximumPageSize: 1000,
 		NextPageToken:   nil,
 	}
 
@@ -2059,7 +2059,7 @@ func getLastContinueAsNewID(ctx context.Context, domain, wid, rid string, fronte
 			WorkflowID: wid,
 			RunID:      rid,
 		},
-		MaximumPageSize: common.Int32Ptr(1),
+		MaximumPageSize: 1,
 		NextPageToken:   nil,
 	}
 	resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
@@ -2078,7 +2078,7 @@ func getLastContinueAsNewID(ctx context.Context, domain, wid, rid string, fronte
 			WorkflowID: wid,
 			RunID:      resetBaseRunID,
 		},
-		MaximumPageSize: common.Int32Ptr(1000),
+		MaximumPageSize: 1000,
 		NextPageToken:   nil,
 	}
 	for {
@@ -2191,7 +2191,7 @@ func getEarliestDecisionID(
 			WorkflowID: wid,
 			RunID:      rid,
 		},
-		MaximumPageSize: common.Int32Ptr(1000),
+		MaximumPageSize: 1000,
 		NextPageToken:   nil,
 	}
 

@@ -204,7 +204,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
 	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   domainName,
-		PageSize: common.Int32Ptr(5),
+		PageSize: 5,
 		Query:    common.StringPtr(query),
 	}
 
@@ -268,7 +268,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 
 	listRequest = &types.ListWorkflowExecutionsRequest{
 		Domain:   domainName,
-		PageSize: common.Int32Ptr(int32(2)),
+		PageSize: int32(2),
 		Query:    common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt)),
 	}
 
