@@ -193,9 +193,9 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(stickyTl),
+				Name: stickyTl,
 			},
-			Identity: common.StringPtr(identity),
+			Identity: identity,
 		},
 	}
 
@@ -211,7 +211,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	expectedResponse.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID() + 1)
 	expectedResponse.Attempt = common.Int64Ptr(di.Attempt)
 	expectedResponse.WorkflowExecutionTaskList = &types.TaskList{
-		Name: &executionInfo.TaskList,
+		Name: executionInfo.TaskList,
 		Kind: types.TaskListKindNormal.Ptr(),
 	}
 	expectedResponse.BranchToken = msBuilder.GetExecutionInfo().BranchToken
@@ -248,11 +248,11 @@ func (s *engine3Suite) TestStartWorkflowExecution_BrandNew() {
 		StartRequest: &types.StartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-			Identity:                            common.StringPtr(identity),
+			Identity:                            identity,
 			RequestID:                           requestID,
 		},
 	})
@@ -283,7 +283,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:     domainID,
 			WorkflowID: workflowID,
-			Identity:   common.StringPtr(identity),
+			Identity:   identity,
 			SignalName: common.StringPtr(signalName),
 			Input:      input,
 		},
@@ -336,11 +336,11 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-			Identity:                            common.StringPtr(identity),
+			Identity:                            identity,
 			SignalName:                          common.StringPtr(signalName),
 			Input:                               input,
 			RequestID:                           requestID,

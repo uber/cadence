@@ -39,9 +39,9 @@ func (s *integrationSuite) TestResetWorkflow() {
 	tl := "integration-reset-workflow-test-taskqueue"
 	identity := "worker1"
 
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 
-	tasklist := &types.TaskList{Name: common.StringPtr(tl)}
+	tasklist := &types.TaskList{Name: tl}
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
@@ -53,7 +53,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -83,7 +83,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 					DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 					ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 						ActivityID:                    common.StringPtr(strconv.Itoa(i)),
-						ActivityType:                  &types.ActivityType{Name: common.StringPtr("ResetActivity")},
+						ActivityType:                  &types.ActivityType{Name: "ResetActivity"},
 						TaskList:                      tasklist,
 						Input:                         buf.Bytes(),
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -253,9 +253,9 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 	tl := "integration-reset-workflow-test-taskqueue-no-decision-completed"
 	identity := "worker1"
 
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 
-	tasklist := &types.TaskList{Name: common.StringPtr(tl)}
+	tasklist := &types.TaskList{Name: tl}
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
@@ -267,7 +267,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -342,7 +342,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr("1"),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr("ResetActivity")},
+					ActivityType:                  &types.ActivityType{Name: "ResetActivity"},
 					TaskList:                      tasklist,
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),

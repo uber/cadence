@@ -47,7 +47,7 @@ func AdminDescribeTaskList(c *cli.Context) {
 	defer cancel()
 	request := &types.DescribeTaskListRequest{
 		Domain:                domain,
-		TaskList:              &types.TaskList{Name: common.StringPtr(taskList)},
+		TaskList:              &types.TaskList{Name: taskList},
 		TaskListType:          &taskListType,
 		IncludeTaskListStatus: common.BoolPtr(true),
 	}

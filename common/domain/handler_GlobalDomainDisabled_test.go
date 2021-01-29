@@ -128,8 +128,8 @@ func (s *domainHandlerGlobalDomainDisabledSuite) TestRegisterGetDomain_InvalidGl
 	emitMetric := true
 	activeClusterName := cluster.TestCurrentClusterName
 	clusters := []*types.ClusterReplicationConfiguration{
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(activeClusterName),
+		{
+			ClusterName: activeClusterName,
 		},
 	}
 	data := map[string]string{"some random key": "some random value"}
@@ -158,8 +158,8 @@ func (s *domainHandlerGlobalDomainDisabledSuite) TestRegisterGetDomain_InvalidCl
 	emitMetric := true
 	activeClusterName := cluster.TestAlternativeClusterName
 	clusters := []*types.ClusterReplicationConfiguration{
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(activeClusterName),
+		{
+			ClusterName: activeClusterName,
 		},
 	}
 	data := map[string]string{"some random key": "some random value"}
@@ -184,7 +184,7 @@ func (s *domainHandlerGlobalDomainDisabledSuite) TestRegisterGetDomain_AllDefaul
 	var clusters []*types.ClusterReplicationConfiguration
 	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(replicationConfig.ClusterName),
+			ClusterName: replicationConfig.ClusterName,
 		})
 	}
 
@@ -235,8 +235,8 @@ func (s *domainHandlerGlobalDomainDisabledSuite) TestRegisterGetDomain_NoDefault
 	emitMetric := true
 	activeClusterName := cluster.TestCurrentClusterName
 	clusters := []*types.ClusterReplicationConfiguration{
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(activeClusterName),
+		{
+			ClusterName: activeClusterName,
 		},
 	}
 	data := map[string]string{"some random key": "some random value"}
@@ -245,7 +245,7 @@ func (s *domainHandlerGlobalDomainDisabledSuite) TestRegisterGetDomain_NoDefault
 	var expectedClusters []*types.ClusterReplicationConfiguration
 	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		expectedClusters = append(expectedClusters, &types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(replicationConfig.ClusterName),
+			ClusterName: replicationConfig.ClusterName,
 		})
 	}
 
@@ -304,7 +304,7 @@ func (s *domainHandlerGlobalDomainDisabledSuite) TestUpdateGetDomain_NoAttrSet()
 	var clusters []*types.ClusterReplicationConfiguration
 	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(replicationConfig.ClusterName),
+			ClusterName: replicationConfig.ClusterName,
 		})
 	}
 
@@ -388,8 +388,8 @@ func (s *domainHandlerGlobalDomainDisabledSuite) TestUpdateGetDomain_AllAttrSet(
 	emitMetric := true
 	activeClusterName := cluster.TestCurrentClusterName
 	clusters := []*types.ClusterReplicationConfiguration{
-		&types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(activeClusterName),
+		{
+			ClusterName: activeClusterName,
 		},
 	}
 	data := map[string]string{"some random key": "some random value"}
@@ -397,7 +397,7 @@ func (s *domainHandlerGlobalDomainDisabledSuite) TestUpdateGetDomain_AllAttrSet(
 	var expectedClusters []*types.ClusterReplicationConfiguration
 	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		expectedClusters = append(expectedClusters, &types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(replicationConfig.ClusterName),
+			ClusterName: replicationConfig.ClusterName,
 		})
 	}
 

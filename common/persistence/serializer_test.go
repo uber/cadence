@@ -76,7 +76,7 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			Result:           []byte("result-1-event-1"),
 			ScheduledEventID: common.Int64Ptr(4),
 			StartedEventID:   common.Int64Ptr(5),
-			Identity:         common.StringPtr("event-1"),
+			Identity:         "event-1",
 		},
 	}
 

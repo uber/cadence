@@ -81,10 +81,10 @@ var (
 	clusterNameES              = []string{"active-es", "standby-es"}
 	clusterReplicationConfigES = []*types.ClusterReplicationConfiguration{
 		{
-			ClusterName: common.StringPtr(clusterNameES[0]),
+			ClusterName: clusterNameES[0],
 		},
 		{
-			ClusterName: common.StringPtr(clusterNameES[1]),
+			ClusterName: clusterNameES[1],
 		},
 	}
 )
@@ -172,8 +172,8 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	wt := "xdc-search-attr-test-type"
 	tl := "xdc-search-attr-test-tasklist"
 	identity := "worker1"
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	workflowType := &types.WorkflowType{Name: wt}
+	taskList := &types.TaskList{Name: tl}
 	attrValBytes, _ := json.Marshal(s.testSearchAttributeVal)
 	searchAttr := &types.SearchAttributes{
 		IndexedFields: map[string][]byte{
@@ -189,7 +189,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 		SearchAttributes:                    searchAttr,
 	}
 	startTime := time.Now().UnixNano()
@@ -314,7 +314,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 		},
 		Reason:   common.StringPtr(terminateReason),
 		Details:  terminateDetails,
-		Identity: common.StringPtr(identity),
+		Identity: identity,
 	})
 	s.Nil(err)
 
@@ -342,7 +342,7 @@ GetHistoryLoop:
 		terminateEventAttributes := lastEvent.WorkflowExecutionTerminatedEventAttributes
 		s.Equal(terminateReason, *terminateEventAttributes.Reason)
 		s.Equal(terminateDetails, terminateEventAttributes.Details)
-		s.Equal(identity, *terminateEventAttributes.Identity)
+		s.Equal(identity, terminateEventAttributes.Identity)
 		executionTerminated = true
 		break GetHistoryLoop
 	}
@@ -361,7 +361,7 @@ GetHistoryLoop2:
 				terminateEventAttributes := lastEvent.WorkflowExecutionTerminatedEventAttributes
 				s.Equal(terminateReason, *terminateEventAttributes.Reason)
 				s.Equal(terminateDetails, terminateEventAttributes.Details)
-				s.Equal(identity, *terminateEventAttributes.Identity)
+				s.Equal(identity, terminateEventAttributes.Identity)
 				eventsReplicated = true
 				break GetHistoryLoop2
 			}

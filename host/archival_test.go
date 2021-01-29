@@ -213,10 +213,10 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 	identity := "worker1"
 	activityName := "activity_type1"
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(wt),
+		Name: wt,
 	}
 	taskList := &types.TaskList{
-		Name: common.StringPtr(tl),
+		Name: tl,
 	}
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           uuid.New(),
@@ -227,7 +227,7 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 	we, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
@@ -256,8 +256,8 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityName)},
-					TaskList:                      &types.TaskList{Name: &tl},
+					ActivityType:                  &types.ActivityType{Name: activityName},
+					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
@@ -275,7 +275,7 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 				DecisionType: types.DecisionTypeContinueAsNewWorkflowExecution.Ptr(),
 				ContinueAsNewWorkflowExecutionDecisionAttributes: &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
 					WorkflowType:                        workflowType,
-					TaskList:                            &types.TaskList{Name: &tl},
+					TaskList:                            &types.TaskList{Name: tl},
 					Input:                               nil,
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
@@ -300,7 +300,7 @@ func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID s
 		taskToken []byte,
 	) ([]byte, bool, error) {
 		s.Equal(id, execution.WorkflowID)
-		s.Equal(activityName, *activityType.Name)
+		s.Equal(activityName, activityType.Name)
 		id, _ := strconv.Atoi(activityID)
 		s.Equal(int(expectedActivityID), id)
 		buf := bytes.NewReader(input)

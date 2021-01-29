@@ -736,7 +736,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 		queryRequest := task.query.request
 		taskToken := &common.QueryTaskToken{
 			DomainID: queryRequest.DomainUUID,
-			TaskList: *queryRequest.TaskList.Name,
+			TaskList: queryRequest.TaskList.Name,
 			TaskID:   task.query.taskID,
 		}
 		token, _ = e.tokenSerializer.SerializeQueryTaskToken(taskToken)
