@@ -468,7 +468,7 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 		WorkflowID: task.WorkflowID,
 		RunID:      task.RunID}
 	taskList := &types.TaskList{
-		Name: common.StringPtr(activityInfo.TaskList),
+		Name: activityInfo.TaskList,
 	}
 	scheduleToStartTimeout := activityInfo.ScheduleToStartTimeout
 

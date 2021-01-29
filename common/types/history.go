@@ -3659,7 +3659,7 @@ type RecordActivityTaskStartedRequest struct {
 	WorkflowExecution *WorkflowExecution          `json:"workflowExecution,omitempty"`
 	ScheduleID        *int64                      `json:"scheduleId,omitempty"`
 	TaskID            *int64                      `json:"taskId,omitempty"`
-	RequestID         *string                     `json:"requestId,omitempty"`
+	RequestID         string                      `json:"requestId,omitempty"`
 	PollRequest       *PollForActivityTaskRequest `json:"pollRequest,omitempty"`
 }
 
@@ -3697,8 +3697,8 @@ func (v *RecordActivityTaskStartedRequest) GetTaskID() (o int64) {
 
 // GetRequestID is an internal getter (TBD...)
 func (v *RecordActivityTaskStartedRequest) GetRequestID() (o string) {
-	if v != nil && v.RequestID != nil {
-		return *v.RequestID
+	if v != nil {
+		return v.RequestID
 	}
 	return
 }
@@ -3833,7 +3833,7 @@ type RecordDecisionTaskStartedRequest struct {
 	WorkflowExecution *WorkflowExecution          `json:"workflowExecution,omitempty"`
 	ScheduleID        *int64                      `json:"scheduleId,omitempty"`
 	TaskID            *int64                      `json:"taskId,omitempty"`
-	RequestID         *string                     `json:"requestId,omitempty"`
+	RequestID         string                      `json:"requestId,omitempty"`
 	PollRequest       *PollForDecisionTaskRequest `json:"pollRequest,omitempty"`
 }
 
@@ -3871,8 +3871,8 @@ func (v *RecordDecisionTaskStartedRequest) GetTaskID() (o int64) {
 
 // GetRequestID is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedRequest) GetRequestID() (o string) {
-	if v != nil && v.RequestID != nil {
-		return *v.RequestID
+	if v != nil {
+		return v.RequestID
 	}
 	return
 }
@@ -4041,7 +4041,7 @@ func (v *HistoryRefreshWorkflowTasksRequest) GetRequest() (o *RefreshWorkflowTas
 type RemoveSignalMutableStateRequest struct {
 	DomainUUID        string             `json:"domainUUID,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
-	RequestID         *string            `json:"requestId,omitempty"`
+	RequestID         string             `json:"requestId,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4062,8 +4062,8 @@ func (v *RemoveSignalMutableStateRequest) GetWorkflowExecution() (o *WorkflowExe
 
 // GetRequestID is an internal getter (TBD...)
 func (v *RemoveSignalMutableStateRequest) GetRequestID() (o string) {
-	if v != nil && v.RequestID != nil {
-		return *v.RequestID
+	if v != nil {
+		return v.RequestID
 	}
 	return
 }
@@ -4569,7 +4569,7 @@ type SyncActivityRequest struct {
 	Details            []byte          `json:"details,omitempty"`
 	Attempt            *int32          `json:"attempt,omitempty"`
 	LastFailureReason  *string         `json:"lastFailureReason,omitempty"`
-	LastWorkerIdentity *string         `json:"lastWorkerIdentity,omitempty"`
+	LastWorkerIdentity string          `json:"lastWorkerIdentity,omitempty"`
 	LastFailureDetails []byte          `json:"lastFailureDetails,omitempty"`
 	VersionHistory     *VersionHistory `json:"versionHistory,omitempty"`
 }
@@ -4672,8 +4672,8 @@ func (v *SyncActivityRequest) GetLastFailureReason() (o string) {
 
 // GetLastWorkerIdentity is an internal getter (TBD...)
 func (v *SyncActivityRequest) GetLastWorkerIdentity() (o string) {
-	if v != nil && v.LastWorkerIdentity != nil {
-		return *v.LastWorkerIdentity
+	if v != nil {
+		return v.LastWorkerIdentity
 	}
 	return
 }

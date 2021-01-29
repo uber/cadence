@@ -173,6 +173,13 @@ func (handler *decisionHandlerImpl) handleDecisionTaskStarted(
 			// some extreme cassandra failure cases.
 			if !isRunning && scheduleID >= mutableState.GetNextEventID() {
 				handler.metricsClient.IncCounter(metrics.HistoryRecordDecisionTaskStartedScope, metrics.StaleMutableStateCounter)
+				handler.logger.Error("Encounter stale mutable state in RecordDecisionTaskStarted",
+					tag.WorkflowDomainName(domainEntry.GetInfo().Name),
+					tag.WorkflowID(workflowExecution.GetWorkflowID()),
+					tag.WorkflowRunID(workflowExecution.GetRunID()),
+					tag.WorkflowScheduleID(scheduleID),
+					tag.WorkflowNextEventID(mutableState.GetNextEventID()),
+				)
 				// Reload workflow execution history
 				// ErrStaleState will trigger updateWorkflowExecutionWithAction function to reload the mutable state
 				return nil, ErrStaleState
@@ -319,6 +326,13 @@ Update_History_Loop:
 		// some extreme cassandra failure cases.
 		if !isRunning && scheduleID >= msBuilder.GetNextEventID() {
 			handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.StaleMutableStateCounter)
+			handler.logger.Error("Encounter stale mutable state in RespondDecisionTaskCompleted",
+				tag.WorkflowDomainName(domainEntry.GetInfo().Name),
+				tag.WorkflowID(workflowExecution.GetWorkflowID()),
+				tag.WorkflowRunID(workflowExecution.GetRunID()),
+				tag.WorkflowScheduleID(scheduleID),
+				tag.WorkflowNextEventID(msBuilder.GetNextEventID()),
+			)
 			// Reload workflow execution history
 			wfContext.Clear()
 			continue Update_History_Loop
@@ -487,7 +501,7 @@ Update_History_Loop:
 				// start the new decision task if request asked to do so
 				// TODO: replace the poll request
 				_, _, err := msBuilder.AddDecisionTaskStartedEvent(newDecision.ScheduleID, "request-from-RespondDecisionTaskCompleted", &types.PollForDecisionTaskRequest{
-					TaskList: &types.TaskList{Name: common.StringPtr(newDecision.TaskList)},
+					TaskList: &types.TaskList{Name: newDecision.TaskList},
 					Identity: request.Identity,
 				})
 				if err != nil {
@@ -620,7 +634,7 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 	response.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID())
 	response.Attempt = common.Int64Ptr(decision.Attempt)
 	response.WorkflowExecutionTaskList = &types.TaskList{
-		Name: &executionInfo.TaskList,
+		Name: executionInfo.TaskList,
 		Kind: types.TaskListKindNormal.Ptr(),
 	}
 	response.ScheduledTimestamp = common.Int64Ptr(decision.ScheduledTimestamp)

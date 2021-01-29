@@ -130,7 +130,7 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) erro
 			DomainUUID: task.event.DomainID,
 			Execution:  task.workflowExecution(),
 			TaskList: &types.TaskList{
-				Name: &name,
+				Name: name,
 				Kind: &fwdr.taskListKind,
 			},
 			ScheduleID:                    &task.event.ScheduleID,
@@ -144,7 +144,7 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) erro
 			SourceDomainUUID: task.event.DomainID,
 			Execution:        task.workflowExecution(),
 			TaskList: &types.TaskList{
-				Name: &name,
+				Name: name,
 				Kind: &fwdr.taskListKind,
 			},
 			ScheduleID:                    &task.event.ScheduleID,
@@ -177,7 +177,7 @@ func (fwdr *Forwarder) ForwardQueryTask(
 	resp, err := fwdr.client.QueryWorkflow(ctx, &types.MatchingQueryWorkflowRequest{
 		DomainUUID: task.query.request.DomainUUID,
 		TaskList: &types.TaskList{
-			Name: &name,
+			Name: name,
 			Kind: &fwdr.taskListKind,
 		},
 		QueryRequest:  task.query.request.QueryRequest,
@@ -208,10 +208,10 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 			PollerID:   &pollerID,
 			PollRequest: &types.PollForDecisionTaskRequest{
 				TaskList: &types.TaskList{
-					Name: &name,
+					Name: name,
 					Kind: &fwdr.taskListKind,
 				},
-				Identity: &identity,
+				Identity: identity,
 			},
 			ForwardedFrom: &fwdr.taskListID.name,
 		})
@@ -225,10 +225,10 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 			PollerID:   &pollerID,
 			PollRequest: &types.PollForActivityTaskRequest{
 				TaskList: &types.TaskList{
-					Name: &name,
+					Name: name,
 					Kind: &fwdr.taskListKind,
 				},
-				Identity: &identity,
+				Identity: identity,
 			},
 			ForwardedFrom: &fwdr.taskListID.name,
 		})

@@ -994,7 +994,7 @@ type pendingActivityInfo struct {
 	MaximumAttempts        *int32  `json:",omitempty"`
 	ExpirationTimestamp    *string `json:",omitempty"` // change from *int64
 	LastFailureReason      *string `json:",omitempty"`
-	LastWorkerIdentity     *string `json:",omitempty"`
+	LastWorkerIdentity     string  `json:",omitempty"`
 	LastFailureDetails     *string `json:",omitempty"` // change from []byte
 }
 
@@ -1538,7 +1538,7 @@ func ResetWorkflow(c *cli.Context) {
 		},
 		Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), reason)),
 		DecisionFinishEventID: common.Int64Ptr(decisionFinishID),
-		RequestID:             common.StringPtr(uuid.New()),
+		RequestID:             uuid.New(),
 		SkipSignalReapply:     common.BoolPtr(c.Bool(FlagSkipSignalReapply)),
 	})
 	if err != nil {
@@ -1805,7 +1805,7 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 				RunID:      resetBaseRunID,
 			},
 			DecisionFinishEventID: common.Int64Ptr(decisionFinishID),
-			RequestID:             common.StringPtr(uuid.New()),
+			RequestID:             uuid.New(),
 			Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), params.reason)),
 			SkipSignalReapply:     common.BoolPtr(params.skipSignalReapply),
 		})
@@ -2124,7 +2124,7 @@ func CompleteActivity(c *cli.Context) {
 		RunID:      rid,
 		ActivityID: common.StringPtr(activityID),
 		Result:     []byte(result),
-		Identity:   common.StringPtr(identity),
+		Identity:   identity,
 	})
 	if err != nil {
 		ErrorAndExit("Completing activity failed", err)
@@ -2156,7 +2156,7 @@ func FailActivity(c *cli.Context) {
 		ActivityID: common.StringPtr(activityID),
 		Reason:     common.StringPtr(reason),
 		Details:    []byte(detail),
-		Identity:   common.StringPtr(identity),
+		Identity:   identity,
 	})
 	if err != nil {
 		ErrorAndExit("Failing activity failed", err)

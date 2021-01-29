@@ -360,7 +360,7 @@ func startTaskProcessor(
 								RunID:      runID,
 							},
 							Reason:   common.StringPtr(batchParams.Reason),
-							Identity: common.StringPtr(BatchWFTypeName),
+							Identity: BatchWFTypeName,
 						}, yarpcCallOptions...)
 					})
 			case BatchTypeCancel:
@@ -373,8 +373,8 @@ func startTaskProcessor(
 								WorkflowID: workflowID,
 								RunID:      runID,
 							},
-							Identity:  common.StringPtr(BatchWFTypeName),
-							RequestID: common.StringPtr(requestID),
+							Identity:  BatchWFTypeName,
+							RequestID: requestID,
 						}, yarpcCallOptions...)
 					})
 			case BatchTypeSignal:
@@ -386,8 +386,8 @@ func startTaskProcessor(
 								WorkflowID: workflowID,
 								RunID:      runID,
 							},
-							Identity:   common.StringPtr(BatchWFTypeName),
-							RequestID:  common.StringPtr(requestID),
+							Identity:   BatchWFTypeName,
+							RequestID:  requestID,
 							SignalName: common.StringPtr(batchParams.SignalParams.SignalName),
 							Input:      []byte(batchParams.SignalParams.Input),
 						}, yarpcCallOptions...)
