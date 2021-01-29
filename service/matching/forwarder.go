@@ -205,7 +205,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 	case persistence.TaskListTypeDecision:
 		resp, err := fwdr.client.PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{
 			DomainUUID: fwdr.taskListID.domainID,
-			PollerID:   &pollerID,
+			PollerID:   pollerID,
 			PollRequest: &types.PollForDecisionTaskRequest{
 				TaskList: &types.TaskList{
 					Name: name,
@@ -222,7 +222,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*internalTask, error) {
 	case persistence.TaskListTypeActivity:
 		resp, err := fwdr.client.PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
 			DomainUUID: fwdr.taskListID.domainID,
-			PollerID:   &pollerID,
+			PollerID:   pollerID,
 			PollRequest: &types.PollForActivityTaskRequest{
 				TaskList: &types.TaskList{
 					Name: name,
