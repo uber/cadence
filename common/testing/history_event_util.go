@@ -557,7 +557,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent := getDefaultHistoryEvent(EventID, version)
 		historyEvent.EventType = types.EventTypeTimerStarted.Ptr()
 		historyEvent.TimerStartedEventAttributes = &types.TimerStartedEventAttributes{
-			TimerID:                      common.StringPtr(uuid.New()),
+			TimerID:                      uuid.New(),
 			StartToFireTimeoutSeconds:    common.Int64Ptr(10),
 			DecisionTaskCompletedEventID: lastEvent.EventID,
 		}

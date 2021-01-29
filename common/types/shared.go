@@ -643,20 +643,20 @@ const (
 
 // CancelTimerDecisionAttributes is an internal type (TBD...)
 type CancelTimerDecisionAttributes struct {
-	TimerID *string `json:"timerId,omitempty"`
+	TimerID string `json:"timerId,omitempty"`
 }
 
 // GetTimerID is an internal getter (TBD...)
 func (v *CancelTimerDecisionAttributes) GetTimerID() (o string) {
-	if v != nil && v.TimerID != nil {
-		return *v.TimerID
+	if v != nil {
+		return v.TimerID
 	}
 	return
 }
 
 // CancelTimerFailedEventAttributes is an internal type (TBD...)
 type CancelTimerFailedEventAttributes struct {
-	TimerID                      *string `json:"timerId,omitempty"`
+	TimerID                      string  `json:"timerId,omitempty"`
 	Cause                        *string `json:"cause,omitempty"`
 	DecisionTaskCompletedEventID *int64  `json:"decisionTaskCompletedEventId,omitempty"`
 	Identity                     string  `json:"identity,omitempty"`
@@ -664,8 +664,8 @@ type CancelTimerFailedEventAttributes struct {
 
 // GetTimerID is an internal getter (TBD...)
 func (v *CancelTimerFailedEventAttributes) GetTimerID() (o string) {
-	if v != nil && v.TimerID != nil {
-		return *v.TimerID
+	if v != nil {
+		return v.TimerID
 	}
 	return
 }
@@ -8109,14 +8109,14 @@ func (v *StartTimeFilter) GetLatestTime() (o int64) {
 
 // StartTimerDecisionAttributes is an internal type (TBD...)
 type StartTimerDecisionAttributes struct {
-	TimerID                   *string `json:"timerId,omitempty"`
-	StartToFireTimeoutSeconds *int64  `json:"startToFireTimeoutSeconds,omitempty"`
+	TimerID                   string `json:"timerId,omitempty"`
+	StartToFireTimeoutSeconds *int64 `json:"startToFireTimeoutSeconds,omitempty"`
 }
 
 // GetTimerID is an internal getter (TBD...)
 func (v *StartTimerDecisionAttributes) GetTimerID() (o string) {
-	if v != nil && v.TimerID != nil {
-		return *v.TimerID
+	if v != nil {
+		return v.TimerID
 	}
 	return
 }
@@ -8671,7 +8671,7 @@ const (
 
 // TimerCanceledEventAttributes is an internal type (TBD...)
 type TimerCanceledEventAttributes struct {
-	TimerID                      *string `json:"timerId,omitempty"`
+	TimerID                      string  `json:"timerId,omitempty"`
 	StartedEventID               *int64  `json:"startedEventId,omitempty"`
 	DecisionTaskCompletedEventID *int64  `json:"decisionTaskCompletedEventId,omitempty"`
 	Identity                     string  `json:"identity,omitempty"`
@@ -8679,8 +8679,8 @@ type TimerCanceledEventAttributes struct {
 
 // GetTimerID is an internal getter (TBD...)
 func (v *TimerCanceledEventAttributes) GetTimerID() (o string) {
-	if v != nil && v.TimerID != nil {
-		return *v.TimerID
+	if v != nil {
+		return v.TimerID
 	}
 	return
 }
@@ -8711,14 +8711,14 @@ func (v *TimerCanceledEventAttributes) GetIdentity() (o string) {
 
 // TimerFiredEventAttributes is an internal type (TBD...)
 type TimerFiredEventAttributes struct {
-	TimerID        *string `json:"timerId,omitempty"`
-	StartedEventID *int64  `json:"startedEventId,omitempty"`
+	TimerID        string `json:"timerId,omitempty"`
+	StartedEventID *int64 `json:"startedEventId,omitempty"`
 }
 
 // GetTimerID is an internal getter (TBD...)
 func (v *TimerFiredEventAttributes) GetTimerID() (o string) {
-	if v != nil && v.TimerID != nil {
-		return *v.TimerID
+	if v != nil {
+		return v.TimerID
 	}
 	return
 }
@@ -8733,15 +8733,15 @@ func (v *TimerFiredEventAttributes) GetStartedEventID() (o int64) {
 
 // TimerStartedEventAttributes is an internal type (TBD...)
 type TimerStartedEventAttributes struct {
-	TimerID                      *string `json:"timerId,omitempty"`
-	StartToFireTimeoutSeconds    *int64  `json:"startToFireTimeoutSeconds,omitempty"`
-	DecisionTaskCompletedEventID *int64  `json:"decisionTaskCompletedEventId,omitempty"`
+	TimerID                      string `json:"timerId,omitempty"`
+	StartToFireTimeoutSeconds    *int64 `json:"startToFireTimeoutSeconds,omitempty"`
+	DecisionTaskCompletedEventID *int64 `json:"decisionTaskCompletedEventId,omitempty"`
 }
 
 // GetTimerID is an internal getter (TBD...)
 func (v *TimerStartedEventAttributes) GetTimerID() (o string) {
-	if v != nil && v.TimerID != nil {
-		return *v.TimerID
+	if v != nil {
+		return v.TimerID
 	}
 	return
 }

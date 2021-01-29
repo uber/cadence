@@ -1271,7 +1271,7 @@ func (s *integrationSuite) TestCronWorkflowTimeout() {
 				DecisionType: types.DecisionTypeStartTimer.Ptr(),
 
 				StartTimerDecisionAttributes: &types.StartTimerDecisionAttributes{
-					TimerID:                   common.StringPtr("timer-id"),
+					TimerID:                   "timer-id",
 					StartToFireTimeoutSeconds: common.Int64Ptr(5),
 				},
 			}}, nil
@@ -1364,7 +1364,7 @@ func (s *integrationSuite) TestSequential_UserTimers() {
 			return []byte(strconv.Itoa(int(timerCounter))), []*types.Decision{{
 				DecisionType: types.DecisionTypeStartTimer.Ptr(),
 				StartTimerDecisionAttributes: &types.StartTimerDecisionAttributes{
-					TimerID:                   common.StringPtr(fmt.Sprintf("timer-id-%d", timerCounter)),
+					TimerID:                   fmt.Sprintf("timer-id-%d", timerCounter),
 					StartToFireTimeoutSeconds: common.Int64Ptr(1),
 				},
 			}}, nil
@@ -3026,7 +3026,7 @@ func (s *integrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeStartTimer.Ptr(),
 				StartTimerDecisionAttributes: &types.StartTimerDecisionAttributes{
-					TimerID:                   common.StringPtr("timer-id-1"),
+					TimerID:                   "timer-id-1",
 					StartToFireTimeoutSeconds: common.Int64Ptr(5),
 				},
 			}}, nil
@@ -3708,7 +3708,7 @@ func (s *integrationSuite) TestCancelTimer() {
 		RunID:      creatResp.GetRunID(),
 	}
 
-	TimerID := 1
+	TimerID := "1"
 	timerScheduled := false
 	signalDelivered := false
 	timerCancelled := false
@@ -3722,7 +3722,7 @@ func (s *integrationSuite) TestCancelTimer() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeStartTimer.Ptr(),
 				StartTimerDecisionAttributes: &types.StartTimerDecisionAttributes{
-					TimerID:                   common.StringPtr(fmt.Sprintf("%v", TimerID)),
+					TimerID:                   TimerID,
 					StartToFireTimeoutSeconds: common.Int64Ptr(timer),
 				},
 			}}, nil
@@ -3751,7 +3751,7 @@ func (s *integrationSuite) TestCancelTimer() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeCancelTimer.Ptr(),
 				CancelTimerDecisionAttributes: &types.CancelTimerDecisionAttributes{
-					TimerID: common.StringPtr(fmt.Sprintf("%v", TimerID)),
+					TimerID: TimerID,
 				},
 			}}, nil
 		}
@@ -3859,7 +3859,7 @@ func (s *integrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeStartTimer.Ptr(),
 				StartTimerDecisionAttributes: &types.StartTimerDecisionAttributes{
-					TimerID:                   common.StringPtr(fmt.Sprintf("%v", TimerID)),
+					TimerID:                   fmt.Sprintf("%v", TimerID),
 					StartToFireTimeoutSeconds: common.Int64Ptr(timer),
 				},
 			}}, nil
@@ -3889,7 +3889,7 @@ func (s *integrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeCancelTimer.Ptr(),
 				CancelTimerDecisionAttributes: &types.CancelTimerDecisionAttributes{
-					TimerID: common.StringPtr(fmt.Sprintf("%v", TimerID)),
+					TimerID: fmt.Sprintf("%v", TimerID),
 				},
 			}}, nil
 		}
