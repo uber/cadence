@@ -488,7 +488,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	op := func() error {
 		resp, err = wh.GetMatchingClient().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
 			DomainUUID:  domainID,
-			PollerID:    common.StringPtr(pollerID),
+			PollerID:    pollerID,
 			PollRequest: pollRequest,
 		})
 		return err
@@ -580,7 +580,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	op := func() error {
 		matchingResp, err = wh.GetMatchingClient().PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{
 			DomainUUID:  domainID,
-			PollerID:    common.StringPtr(pollerID),
+			PollerID:    pollerID,
 			PollRequest: pollRequest,
 		})
 		return err
@@ -641,7 +641,7 @@ func (wh *WorkflowHandler) cancelOutstandingPoll(ctx context.Context, err error,
 			DomainUUID:   domainID,
 			TaskListType: common.Int32Ptr(taskListType),
 			TaskList:     taskList,
-			PollerID:     common.StringPtr(pollerID),
+			PollerID:     pollerID,
 		})
 		// We can not do much if this call fails.  Just log the error and move on
 		if err != nil {
