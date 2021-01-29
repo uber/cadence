@@ -1871,7 +1871,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	}
 
 	if getRequest.GetMaximumPageSize() <= 0 {
-		getRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.HistoryMaxPageSize(getRequest.GetDomain())))
+		getRequest.MaximumPageSize = int32(wh.config.HistoryMaxPageSize(getRequest.GetDomain()))
 	}
 	// force limit page size if exceed
 	if getRequest.GetMaximumPageSize() > common.GetHistoryMaxPageSize {
@@ -1880,7 +1880,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 			tag.WorkflowRunID(getRequest.Execution.GetRunID()),
 			tag.WorkflowDomainID(domainID),
 			tag.WorkflowSize(int64(getRequest.GetMaximumPageSize())))
-		getRequest.MaximumPageSize = common.Int32Ptr(common.GetHistoryMaxPageSize)
+		getRequest.MaximumPageSize = common.GetHistoryMaxPageSize
 	}
 
 	if !getRequest.GetSkipArchival() {
@@ -2527,7 +2527,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 	}
 
 	if listRequest.GetMaximumPageSize() <= 0 {
-		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
+		listRequest.MaximumPageSize = int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain()))
 	}
 
 	if wh.isListRequestPageSizeTooLarge(listRequest.GetMaximumPageSize(), listRequest.GetDomain()) {
@@ -2623,7 +2623,7 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 	}
 
 	if listRequest.GetPageSize() <= 0 {
-		listRequest.PageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
+		listRequest.PageSize = int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain()))
 	}
 
 	maxPageSize := wh.config.VisibilityArchivalQueryMaxPageSize()
@@ -2744,7 +2744,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 	} // If ExecutionFilter is provided with one of TypeFilter or StatusFilter, use ExecutionFilter and ignore other filter
 
 	if listRequest.GetMaximumPageSize() <= 0 {
-		listRequest.MaximumPageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
+		listRequest.MaximumPageSize = int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain()))
 	}
 
 	if wh.isListRequestPageSizeTooLarge(listRequest.GetMaximumPageSize(), listRequest.GetDomain()) {
@@ -2855,7 +2855,7 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 	}
 
 	if listRequest.GetPageSize() <= 0 {
-		listRequest.PageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
+		listRequest.PageSize = int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain()))
 	}
 
 	if wh.isListRequestPageSizeTooLarge(listRequest.GetPageSize(), listRequest.GetDomain()) {
@@ -2923,7 +2923,7 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 	}
 
 	if listRequest.GetPageSize() <= 0 {
-		listRequest.PageSize = common.Int32Ptr(int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain())))
+		listRequest.PageSize = int32(wh.config.VisibilityMaxPageSize(listRequest.GetDomain()))
 	}
 
 	if wh.isListRequestPageSizeTooLarge(listRequest.GetPageSize(), listRequest.GetDomain()) {

@@ -228,7 +228,7 @@ func FromActivityTaskStartedEventAttributes(t *types.ActivityTaskStartedEventAtt
 	return &shared.ActivityTaskStartedEventAttributes{
 		ScheduledEventId:   t.ScheduledEventID,
 		Identity:           &t.Identity,
-		RequestId:          t.RequestID,
+		RequestId:          &t.RequestID,
 		Attempt:            t.Attempt,
 		LastFailureReason:  t.LastFailureReason,
 		LastFailureDetails: t.LastFailureDetails,
@@ -243,7 +243,7 @@ func ToActivityTaskStartedEventAttributes(t *shared.ActivityTaskStartedEventAttr
 	return &types.ActivityTaskStartedEventAttributes{
 		ScheduledEventID:   t.ScheduledEventId,
 		Identity:           t.GetIdentity(),
-		RequestID:          t.RequestId,
+		RequestID:          t.GetRequestId(),
 		Attempt:            t.Attempt,
 		LastFailureReason:  t.LastFailureReason,
 		LastFailureDetails: t.LastFailureDetails,
@@ -428,7 +428,7 @@ func FromCancelTimerDecisionAttributes(t *types.CancelTimerDecisionAttributes) *
 		return nil
 	}
 	return &shared.CancelTimerDecisionAttributes{
-		TimerId: t.TimerID,
+		TimerId: &t.TimerID,
 	}
 }
 
@@ -438,7 +438,7 @@ func ToCancelTimerDecisionAttributes(t *shared.CancelTimerDecisionAttributes) *t
 		return nil
 	}
 	return &types.CancelTimerDecisionAttributes{
-		TimerID: t.TimerId,
+		TimerID: t.GetTimerId(),
 	}
 }
 
@@ -448,7 +448,7 @@ func FromCancelTimerFailedEventAttributes(t *types.CancelTimerFailedEventAttribu
 		return nil
 	}
 	return &shared.CancelTimerFailedEventAttributes{
-		TimerId:                      t.TimerID,
+		TimerId:                      &t.TimerID,
 		Cause:                        t.Cause,
 		DecisionTaskCompletedEventId: t.DecisionTaskCompletedEventID,
 		Identity:                     &t.Identity,
@@ -461,7 +461,7 @@ func ToCancelTimerFailedEventAttributes(t *shared.CancelTimerFailedEventAttribut
 		return nil
 	}
 	return &types.CancelTimerFailedEventAttributes{
-		TimerID:                      t.TimerId,
+		TimerID:                      t.GetTimerId(),
 		Cause:                        t.Cause,
 		DecisionTaskCompletedEventID: t.DecisionTaskCompletedEventId,
 		Identity:                     t.GetIdentity(),
@@ -871,7 +871,7 @@ func FromContinueAsNewWorkflowExecutionDecisionAttributes(t *types.ContinueAsNew
 		FailureReason:                       t.FailureReason,
 		FailureDetails:                      t.FailureDetails,
 		LastCompletionResult:                t.LastCompletionResult,
-		CronSchedule:                        t.CronSchedule,
+		CronSchedule:                        &t.CronSchedule,
 		Header:                              FromHeader(t.Header),
 		Memo:                                FromMemo(t.Memo),
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
@@ -895,7 +895,7 @@ func ToContinueAsNewWorkflowExecutionDecisionAttributes(t *shared.ContinueAsNewW
 		FailureReason:                       t.FailureReason,
 		FailureDetails:                      t.FailureDetails,
 		LastCompletionResult:                t.LastCompletionResult,
-		CronSchedule:                        t.CronSchedule,
+		CronSchedule:                        t.GetCronSchedule(),
 		Header:                              ToHeader(t.Header),
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
@@ -1290,7 +1290,7 @@ func FromDecisionTaskStartedEventAttributes(t *types.DecisionTaskStartedEventAtt
 	return &shared.DecisionTaskStartedEventAttributes{
 		ScheduledEventId: t.ScheduledEventID,
 		Identity:         &t.Identity,
-		RequestId:        t.RequestID,
+		RequestId:        &t.RequestID,
 	}
 }
 
@@ -1302,7 +1302,7 @@ func ToDecisionTaskStartedEventAttributes(t *shared.DecisionTaskStartedEventAttr
 	return &types.DecisionTaskStartedEventAttributes{
 		ScheduledEventID: t.ScheduledEventId,
 		Identity:         t.GetIdentity(),
-		RequestID:        t.RequestId,
+		RequestID:        t.GetRequestId(),
 	}
 }
 
@@ -2344,7 +2344,7 @@ func FromGetWorkflowExecutionHistoryRequest(t *types.GetWorkflowExecutionHistory
 	return &shared.GetWorkflowExecutionHistoryRequest{
 		Domain:                 &t.Domain,
 		Execution:              FromWorkflowExecution(t.Execution),
-		MaximumPageSize:        t.MaximumPageSize,
+		MaximumPageSize:        &t.MaximumPageSize,
 		NextPageToken:          t.NextPageToken,
 		WaitForNewEvent:        t.WaitForNewEvent,
 		HistoryEventFilterType: FromHistoryEventFilterType(t.HistoryEventFilterType),
@@ -2360,7 +2360,7 @@ func ToGetWorkflowExecutionHistoryRequest(t *shared.GetWorkflowExecutionHistoryR
 	return &types.GetWorkflowExecutionHistoryRequest{
 		Domain:                 t.GetDomain(),
 		Execution:              ToWorkflowExecution(t.Execution),
-		MaximumPageSize:        t.MaximumPageSize,
+		MaximumPageSize:        t.GetMaximumPageSize(),
 		NextPageToken:          t.NextPageToken,
 		WaitForNewEvent:        t.WaitForNewEvent,
 		HistoryEventFilterType: ToHistoryEventFilterType(t.HistoryEventFilterType),
@@ -2733,7 +2733,7 @@ func FromListArchivedWorkflowExecutionsRequest(t *types.ListArchivedWorkflowExec
 	}
 	return &shared.ListArchivedWorkflowExecutionsRequest{
 		Domain:        &t.Domain,
-		PageSize:      t.PageSize,
+		PageSize:      &t.PageSize,
 		NextPageToken: t.NextPageToken,
 		Query:         t.Query,
 	}
@@ -2746,7 +2746,7 @@ func ToListArchivedWorkflowExecutionsRequest(t *shared.ListArchivedWorkflowExecu
 	}
 	return &types.ListArchivedWorkflowExecutionsRequest{
 		Domain:        t.GetDomain(),
-		PageSize:      t.PageSize,
+		PageSize:      t.GetPageSize(),
 		NextPageToken: t.NextPageToken,
 		Query:         t.Query,
 	}
@@ -2781,7 +2781,7 @@ func FromListClosedWorkflowExecutionsRequest(t *types.ListClosedWorkflowExecutio
 	}
 	return &shared.ListClosedWorkflowExecutionsRequest{
 		Domain:          &t.Domain,
-		MaximumPageSize: t.MaximumPageSize,
+		MaximumPageSize: &t.MaximumPageSize,
 		NextPageToken:   t.NextPageToken,
 		StartTimeFilter: FromStartTimeFilter(t.StartTimeFilter),
 		ExecutionFilter: FromWorkflowExecutionFilter(t.ExecutionFilter),
@@ -2797,7 +2797,7 @@ func ToListClosedWorkflowExecutionsRequest(t *shared.ListClosedWorkflowExecution
 	}
 	return &types.ListClosedWorkflowExecutionsRequest{
 		Domain:          t.GetDomain(),
-		MaximumPageSize: t.MaximumPageSize,
+		MaximumPageSize: t.GetMaximumPageSize(),
 		NextPageToken:   t.NextPageToken,
 		StartTimeFilter: ToStartTimeFilter(t.StartTimeFilter),
 		ExecutionFilter: ToWorkflowExecutionFilter(t.ExecutionFilter),
@@ -2834,7 +2834,7 @@ func FromListDomainsRequest(t *types.ListDomainsRequest) *shared.ListDomainsRequ
 		return nil
 	}
 	return &shared.ListDomainsRequest{
-		PageSize:      t.PageSize,
+		PageSize:      &t.PageSize,
 		NextPageToken: t.NextPageToken,
 	}
 }
@@ -2845,7 +2845,7 @@ func ToListDomainsRequest(t *shared.ListDomainsRequest) *types.ListDomainsReques
 		return nil
 	}
 	return &types.ListDomainsRequest{
-		PageSize:      t.PageSize,
+		PageSize:      t.GetPageSize(),
 		NextPageToken: t.NextPageToken,
 	}
 }
@@ -2879,7 +2879,7 @@ func FromListOpenWorkflowExecutionsRequest(t *types.ListOpenWorkflowExecutionsRe
 	}
 	return &shared.ListOpenWorkflowExecutionsRequest{
 		Domain:          &t.Domain,
-		MaximumPageSize: t.MaximumPageSize,
+		MaximumPageSize: &t.MaximumPageSize,
 		NextPageToken:   t.NextPageToken,
 		StartTimeFilter: FromStartTimeFilter(t.StartTimeFilter),
 		ExecutionFilter: FromWorkflowExecutionFilter(t.ExecutionFilter),
@@ -2894,7 +2894,7 @@ func ToListOpenWorkflowExecutionsRequest(t *shared.ListOpenWorkflowExecutionsReq
 	}
 	return &types.ListOpenWorkflowExecutionsRequest{
 		Domain:          t.GetDomain(),
-		MaximumPageSize: t.MaximumPageSize,
+		MaximumPageSize: t.GetMaximumPageSize(),
 		NextPageToken:   t.NextPageToken,
 		StartTimeFilter: ToStartTimeFilter(t.StartTimeFilter),
 		ExecutionFilter: ToWorkflowExecutionFilter(t.ExecutionFilter),
@@ -2975,7 +2975,7 @@ func FromListWorkflowExecutionsRequest(t *types.ListWorkflowExecutionsRequest) *
 	}
 	return &shared.ListWorkflowExecutionsRequest{
 		Domain:        &t.Domain,
-		PageSize:      t.PageSize,
+		PageSize:      &t.PageSize,
 		NextPageToken: t.NextPageToken,
 		Query:         t.Query,
 	}
@@ -2988,7 +2988,7 @@ func ToListWorkflowExecutionsRequest(t *shared.ListWorkflowExecutionsRequest) *t
 	}
 	return &types.ListWorkflowExecutionsRequest{
 		Domain:        t.GetDomain(),
-		PageSize:      t.PageSize,
+		PageSize:      t.GetPageSize(),
 		NextPageToken: t.NextPageToken,
 		Query:         t.Query,
 	}
@@ -4035,7 +4035,7 @@ func FromRequestCancelWorkflowExecutionRequest(t *types.RequestCancelWorkflowExe
 		Domain:            &t.Domain,
 		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
 		Identity:          &t.Identity,
-		RequestId:         t.RequestID,
+		RequestId:         &t.RequestID,
 	}
 }
 
@@ -4048,7 +4048,7 @@ func ToRequestCancelWorkflowExecutionRequest(t *shared.RequestCancelWorkflowExec
 		Domain:            t.GetDomain(),
 		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
 		Identity:          t.GetIdentity(),
-		RequestID:         t.RequestId,
+		RequestID:         t.GetRequestId(),
 	}
 }
 
@@ -4174,7 +4174,7 @@ func FromResetWorkflowExecutionRequest(t *types.ResetWorkflowExecutionRequest) *
 		WorkflowExecution:     FromWorkflowExecution(t.WorkflowExecution),
 		Reason:                t.Reason,
 		DecisionFinishEventId: t.DecisionFinishEventID,
-		RequestId:             t.RequestID,
+		RequestId:             &t.RequestID,
 		SkipSignalReapply:     t.SkipSignalReapply,
 	}
 }
@@ -4189,7 +4189,7 @@ func ToResetWorkflowExecutionRequest(t *shared.ResetWorkflowExecutionRequest) *t
 		WorkflowExecution:     ToWorkflowExecution(t.WorkflowExecution),
 		Reason:                t.Reason,
 		DecisionFinishEventID: t.DecisionFinishEventId,
-		RequestID:             t.RequestId,
+		RequestID:             t.GetRequestId(),
 		SkipSignalReapply:     t.SkipSignalReapply,
 	}
 }
@@ -4772,13 +4772,13 @@ func FromSignalWithStartWorkflowExecutionRequest(t *types.SignalWithStartWorkflo
 		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
 		Identity:                            &t.Identity,
-		RequestId:                           t.RequestID,
+		RequestId:                           &t.RequestID,
 		WorkflowIdReusePolicy:               FromWorkflowIDReusePolicy(t.WorkflowIDReusePolicy),
 		SignalName:                          t.SignalName,
 		SignalInput:                         t.SignalInput,
 		Control:                             t.Control,
 		RetryPolicy:                         FromRetryPolicy(t.RetryPolicy),
-		CronSchedule:                        t.CronSchedule,
+		CronSchedule:                        &t.CronSchedule,
 		Memo:                                FromMemo(t.Memo),
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
 		Header:                              FromHeader(t.Header),
@@ -4799,13 +4799,13 @@ func ToSignalWithStartWorkflowExecutionRequest(t *shared.SignalWithStartWorkflow
 		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
 		Identity:                            t.GetIdentity(),
-		RequestID:                           t.RequestId,
+		RequestID:                           t.GetRequestId(),
 		WorkflowIDReusePolicy:               ToWorkflowIDReusePolicy(t.WorkflowIdReusePolicy),
 		SignalName:                          t.SignalName,
 		SignalInput:                         t.SignalInput,
 		Control:                             t.Control,
 		RetryPolicy:                         ToRetryPolicy(t.RetryPolicy),
-		CronSchedule:                        t.CronSchedule,
+		CronSchedule:                        t.GetCronSchedule(),
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		Header:                              ToHeader(t.Header),
@@ -4823,7 +4823,7 @@ func FromSignalWorkflowExecutionRequest(t *types.SignalWorkflowExecutionRequest)
 		SignalName:        t.SignalName,
 		Input:             t.Input,
 		Identity:          &t.Identity,
-		RequestId:         t.RequestID,
+		RequestId:         &t.RequestID,
 		Control:           t.Control,
 	}
 }
@@ -4839,7 +4839,7 @@ func ToSignalWorkflowExecutionRequest(t *shared.SignalWorkflowExecutionRequest) 
 		SignalName:        t.SignalName,
 		Input:             t.Input,
 		Identity:          t.GetIdentity(),
-		RequestID:         t.RequestId,
+		RequestID:         t.GetRequestId(),
 		Control:           t.Control,
 	}
 }
@@ -4861,7 +4861,7 @@ func FromStartChildWorkflowExecutionDecisionAttributes(t *types.StartChildWorkfl
 		Control:                             t.Control,
 		WorkflowIdReusePolicy:               FromWorkflowIDReusePolicy(t.WorkflowIDReusePolicy),
 		RetryPolicy:                         FromRetryPolicy(t.RetryPolicy),
-		CronSchedule:                        t.CronSchedule,
+		CronSchedule:                        &t.CronSchedule,
 		Header:                              FromHeader(t.Header),
 		Memo:                                FromMemo(t.Memo),
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
@@ -4885,7 +4885,7 @@ func ToStartChildWorkflowExecutionDecisionAttributes(t *shared.StartChildWorkflo
 		Control:                             t.Control,
 		WorkflowIDReusePolicy:               ToWorkflowIDReusePolicy(t.WorkflowIdReusePolicy),
 		RetryPolicy:                         ToRetryPolicy(t.RetryPolicy),
-		CronSchedule:                        t.CronSchedule,
+		CronSchedule:                        t.GetCronSchedule(),
 		Header:                              ToHeader(t.Header),
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
@@ -4942,7 +4942,7 @@ func FromStartChildWorkflowExecutionInitiatedEventAttributes(t *types.StartChild
 		DecisionTaskCompletedEventId:        t.DecisionTaskCompletedEventID,
 		WorkflowIdReusePolicy:               FromWorkflowIDReusePolicy(t.WorkflowIDReusePolicy),
 		RetryPolicy:                         FromRetryPolicy(t.RetryPolicy),
-		CronSchedule:                        t.CronSchedule,
+		CronSchedule:                        &t.CronSchedule,
 		Header:                              FromHeader(t.Header),
 		Memo:                                FromMemo(t.Memo),
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
@@ -4967,7 +4967,7 @@ func ToStartChildWorkflowExecutionInitiatedEventAttributes(t *shared.StartChildW
 		DecisionTaskCompletedEventID:        t.DecisionTaskCompletedEventId,
 		WorkflowIDReusePolicy:               ToWorkflowIDReusePolicy(t.WorkflowIdReusePolicy),
 		RetryPolicy:                         ToRetryPolicy(t.RetryPolicy),
-		CronSchedule:                        t.CronSchedule,
+		CronSchedule:                        t.GetCronSchedule(),
 		Header:                              ToHeader(t.Header),
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
@@ -5002,7 +5002,7 @@ func FromStartTimerDecisionAttributes(t *types.StartTimerDecisionAttributes) *sh
 		return nil
 	}
 	return &shared.StartTimerDecisionAttributes{
-		TimerId:                   t.TimerID,
+		TimerId:                   &t.TimerID,
 		StartToFireTimeoutSeconds: t.StartToFireTimeoutSeconds,
 	}
 }
@@ -5013,7 +5013,7 @@ func ToStartTimerDecisionAttributes(t *shared.StartTimerDecisionAttributes) *typ
 		return nil
 	}
 	return &types.StartTimerDecisionAttributes{
-		TimerID:                   t.TimerId,
+		TimerID:                   t.GetTimerId(),
 		StartToFireTimeoutSeconds: t.StartToFireTimeoutSeconds,
 	}
 }
@@ -5032,10 +5032,10 @@ func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *
 		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
 		Identity:                            &t.Identity,
-		RequestId:                           t.RequestID,
+		RequestId:                           &t.RequestID,
 		WorkflowIdReusePolicy:               FromWorkflowIDReusePolicy(t.WorkflowIDReusePolicy),
 		RetryPolicy:                         FromRetryPolicy(t.RetryPolicy),
-		CronSchedule:                        t.CronSchedule,
+		CronSchedule:                        &t.CronSchedule,
 		Memo:                                FromMemo(t.Memo),
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
 		Header:                              FromHeader(t.Header),
@@ -5056,10 +5056,10 @@ func ToStartWorkflowExecutionRequest(t *shared.StartWorkflowExecutionRequest) *t
 		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
 		Identity:                            t.GetIdentity(),
-		RequestID:                           t.RequestId,
+		RequestID:                           t.GetRequestId(),
 		WorkflowIDReusePolicy:               ToWorkflowIDReusePolicy(t.WorkflowIdReusePolicy),
 		RetryPolicy:                         ToRetryPolicy(t.RetryPolicy),
-		CronSchedule:                        t.CronSchedule,
+		CronSchedule:                        t.GetCronSchedule(),
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		Header:                              ToHeader(t.Header),
@@ -5386,7 +5386,7 @@ func FromTimerCanceledEventAttributes(t *types.TimerCanceledEventAttributes) *sh
 		return nil
 	}
 	return &shared.TimerCanceledEventAttributes{
-		TimerId:                      t.TimerID,
+		TimerId:                      &t.TimerID,
 		StartedEventId:               t.StartedEventID,
 		DecisionTaskCompletedEventId: t.DecisionTaskCompletedEventID,
 		Identity:                     &t.Identity,
@@ -5399,7 +5399,7 @@ func ToTimerCanceledEventAttributes(t *shared.TimerCanceledEventAttributes) *typ
 		return nil
 	}
 	return &types.TimerCanceledEventAttributes{
-		TimerID:                      t.TimerId,
+		TimerID:                      t.GetTimerId(),
 		StartedEventID:               t.StartedEventId,
 		DecisionTaskCompletedEventID: t.DecisionTaskCompletedEventId,
 		Identity:                     t.GetIdentity(),
@@ -5412,7 +5412,7 @@ func FromTimerFiredEventAttributes(t *types.TimerFiredEventAttributes) *shared.T
 		return nil
 	}
 	return &shared.TimerFiredEventAttributes{
-		TimerId:        t.TimerID,
+		TimerId:        &t.TimerID,
 		StartedEventId: t.StartedEventID,
 	}
 }
@@ -5423,7 +5423,7 @@ func ToTimerFiredEventAttributes(t *shared.TimerFiredEventAttributes) *types.Tim
 		return nil
 	}
 	return &types.TimerFiredEventAttributes{
-		TimerID:        t.TimerId,
+		TimerID:        t.GetTimerId(),
 		StartedEventID: t.StartedEventId,
 	}
 }
@@ -5434,7 +5434,7 @@ func FromTimerStartedEventAttributes(t *types.TimerStartedEventAttributes) *shar
 		return nil
 	}
 	return &shared.TimerStartedEventAttributes{
-		TimerId:                      t.TimerID,
+		TimerId:                      &t.TimerID,
 		StartToFireTimeoutSeconds:    t.StartToFireTimeoutSeconds,
 		DecisionTaskCompletedEventId: t.DecisionTaskCompletedEventID,
 	}
@@ -5446,7 +5446,7 @@ func ToTimerStartedEventAttributes(t *shared.TimerStartedEventAttributes) *types
 		return nil
 	}
 	return &types.TimerStartedEventAttributes{
-		TimerID:                      t.TimerId,
+		TimerID:                      t.GetTimerId(),
 		StartToFireTimeoutSeconds:    t.StartToFireTimeoutSeconds,
 		DecisionTaskCompletedEventID: t.DecisionTaskCompletedEventId,
 	}
@@ -5717,7 +5717,7 @@ func FromWorkflowExecutionAlreadyStartedError(t *types.WorkflowExecutionAlreadyS
 	}
 	return &shared.WorkflowExecutionAlreadyStartedError{
 		Message:        t.Message,
-		StartRequestId: t.StartRequestID,
+		StartRequestId: &t.StartRequestID,
 		RunId:          &t.RunID,
 	}
 }
@@ -5729,7 +5729,7 @@ func ToWorkflowExecutionAlreadyStartedError(t *shared.WorkflowExecutionAlreadySt
 	}
 	return &types.WorkflowExecutionAlreadyStartedError{
 		Message:        t.Message,
-		StartRequestID: t.StartRequestId,
+		StartRequestID: t.GetStartRequestId(),
 		RunID:          t.GetRunId(),
 	}
 }
@@ -6071,7 +6071,7 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		RetryPolicy:                         FromRetryPolicy(t.RetryPolicy),
 		Attempt:                             t.Attempt,
 		ExpirationTimestamp:                 t.ExpirationTimestamp,
-		CronSchedule:                        t.CronSchedule,
+		CronSchedule:                        &t.CronSchedule,
 		FirstDecisionTaskBackoffSeconds:     t.FirstDecisionTaskBackoffSeconds,
 		Memo:                                FromMemo(t.Memo),
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
@@ -6105,7 +6105,7 @@ func ToWorkflowExecutionStartedEventAttributes(t *shared.WorkflowExecutionStarte
 		RetryPolicy:                         ToRetryPolicy(t.RetryPolicy),
 		Attempt:                             t.Attempt,
 		ExpirationTimestamp:                 t.ExpirationTimestamp,
-		CronSchedule:                        t.CronSchedule,
+		CronSchedule:                        t.GetCronSchedule(),
 		FirstDecisionTaskBackoffSeconds:     t.FirstDecisionTaskBackoffSeconds,
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),

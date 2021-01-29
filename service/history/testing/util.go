@@ -246,7 +246,7 @@ func AddTimerStartedEvent(
 ) (*types.HistoryEvent, *persistence.TimerInfo) {
 	event, ti, _ := builder.AddTimerStartedEvent(decisionCompletedEventID,
 		&types.StartTimerDecisionAttributes{
-			TimerID:                   common.StringPtr(timerID),
+			TimerID:                   timerID,
 			StartToFireTimeoutSeconds: common.Int64Ptr(timeOut),
 		})
 	return event, ti
