@@ -644,7 +644,7 @@ func (d *handlerImpl) createResponse(
 	clusters := []*types.ClusterReplicationConfiguration{}
 	for _, cluster := range replicationConfig.Clusters {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(cluster.ClusterName),
+			ClusterName: cluster.ClusterName,
 		})
 	}
 

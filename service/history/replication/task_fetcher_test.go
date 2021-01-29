@@ -99,7 +99,7 @@ func (s *taskFetcherSuite) TestGetMessages() {
 		Tokens: []*types.ReplicationToken{
 			token,
 		},
-		ClusterName: common.StringPtr("active"),
+		ClusterName: "active",
 	}
 	messageByShared := make(map[int32]*types.ReplicationMessages)
 	messageByShared[0] = &types.ReplicationMessages{}
@@ -128,7 +128,7 @@ func (s *taskFetcherSuite) TestFetchAndDistributeTasks() {
 		Tokens: []*types.ReplicationToken{
 			token,
 		},
-		ClusterName: common.StringPtr("active"),
+		ClusterName: "active",
 	}
 	messageByShared := make(map[int32]*types.ReplicationMessages)
 	messageByShared[0] = &types.ReplicationMessages{}

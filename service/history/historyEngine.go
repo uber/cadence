@@ -1350,12 +1350,12 @@ func (e *historyEngineImpl) getMutableState(
 	workflowState, workflowCloseState := mutableState.GetWorkflowStateCloseStatus()
 	retResp = &types.GetMutableStateResponse{
 		Execution:                            &execution,
-		WorkflowType:                         &types.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
+		WorkflowType:                         &types.WorkflowType{Name: executionInfo.WorkflowTypeName},
 		LastFirstEventID:                     common.Int64Ptr(mutableState.GetLastFirstEventID()),
 		NextEventID:                          common.Int64Ptr(mutableState.GetNextEventID()),
 		PreviousStartedEventID:               common.Int64Ptr(mutableState.GetPreviousStartedEventID()),
-		TaskList:                             &types.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
-		StickyTaskList:                       &types.TaskList{Name: common.StringPtr(executionInfo.StickyTaskList)},
+		TaskList:                             &types.TaskList{Name: executionInfo.TaskList},
+		StickyTaskList:                       &types.TaskList{Name: executionInfo.StickyTaskList},
 		ClientLibraryVersion:                 common.StringPtr(executionInfo.ClientLibraryVersion),
 		ClientFeatureVersion:                 common.StringPtr(executionInfo.ClientFeatureVersion),
 		ClientImpl:                           common.StringPtr(executionInfo.ClientImpl),
@@ -1489,7 +1489,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 
 	result := &types.DescribeWorkflowExecutionResponse{
 		ExecutionConfiguration: &types.WorkflowExecutionConfiguration{
-			TaskList:                            &types.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
+			TaskList:                            &types.TaskList{Name: executionInfo.TaskList},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionInfo.WorkflowTimeout),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(executionInfo.DecisionStartToCloseTimeout),
 		},
@@ -1498,7 +1498,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 				WorkflowID: executionInfo.WorkflowID,
 				RunID:      executionInfo.RunID,
 			},
-			Type:             &types.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
+			Type:             &types.WorkflowType{Name: executionInfo.WorkflowTypeName},
 			StartTime:        common.Int64Ptr(executionInfo.StartTimestamp.UnixNano()),
 			HistoryLength:    common.Int64Ptr(mutableState.GetNextEventID() - common.FirstEventID),
 			AutoResetPoints:  executionInfo.AutoResetPoints,
@@ -1586,7 +1586,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			p := &types.PendingChildExecutionInfo{
 				WorkflowID:        ch.StartedWorkflowID,
 				RunID:             ch.StartedRunID,
-				WorkflowTypName:   common.StringPtr(ch.WorkflowTypeName),
+				WorkflowTypName:   ch.WorkflowTypeName,
 				InitiatedID:       common.Int64Ptr(ch.InitiatedID),
 				ParentClosePolicy: &ch.ParentClosePolicy,
 			}
@@ -2119,11 +2119,8 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 			isCancelRequested, cancelRequestID := mutableState.IsCancelRequested()
 			if isCancelRequested {
 				cancelRequest := req.CancelRequest
-				if cancelRequest.RequestID != nil {
-					requestID := *cancelRequest.RequestID
-					if requestID != "" && cancelRequestID == requestID {
-						return updateWorkflowWithNewDecision, nil
-					}
+				if cancelRequest.RequestID != "" && cancelRequest.RequestID == cancelRequestID {
+					return updateWorkflowWithNewDecision, nil
 				}
 				// if we consider workflow cancellation idempotent, then this error is redundant
 				// this error maybe useful if this API is invoked by external, not decision from transfer queue
@@ -2872,10 +2869,10 @@ func validateStartWorkflowExecutionRequest(
 	if request.TaskStartToCloseTimeoutSeconds == nil || request.GetTaskStartToCloseTimeoutSeconds() <= 0 {
 		return &types.BadRequestError{Message: "Missing or invalid TaskStartToCloseTimeoutSeconds."}
 	}
-	if request.TaskList == nil || request.TaskList.Name == nil || request.TaskList.GetName() == "" {
+	if request.TaskList == nil || request.TaskList.GetName() == "" {
 		return &types.BadRequestError{Message: "Missing Tasklist."}
 	}
-	if request.WorkflowType == nil || request.WorkflowType.Name == nil || request.WorkflowType.GetName() == "" {
+	if request.WorkflowType == nil || request.WorkflowType.GetName() == "" {
 		return &types.BadRequestError{Message: "Missing WorkflowType."}
 	}
 	if len(request.GetDomain()) > maxIDLengthLimit {
@@ -3080,7 +3077,7 @@ func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(
 func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workflowID string, runID string) error {
 	return &types.WorkflowExecutionAlreadyStartedError{
 		Message:        common.StringPtr(fmt.Sprintf(errMsg, workflowID, runID)),
-		StartRequestID: common.StringPtr(fmt.Sprintf("%v", createRequestID)),
+		StartRequestID: createRequestID,
 		RunID:          runID,
 	}
 }

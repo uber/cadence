@@ -38,19 +38,19 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{
-		Name: common.StringPtr(tl),
+		Name: tl,
 		Kind: types.TaskListKindNormal.Ptr(),
 	}
 	stikyTaskList := &types.TaskList{
-		Name: common.StringPtr("test-sticky-tasklist"),
+		Name: "test-sticky-tasklist",
 		Kind: types.TaskListKindSticky.Ptr(),
 	}
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -145,19 +145,19 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{
-		Name: common.StringPtr(tl),
+		Name: tl,
 		Kind: types.TaskListKindNormal.Ptr(),
 	}
 	stikyTaskList := &types.TaskList{
-		Name: common.StringPtr("test-sticky-tasklist"),
+		Name: "test-sticky-tasklist",
 		Kind: types.TaskListKindSticky.Ptr(),
 	}
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -289,13 +289,13 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionSta
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -322,7 +322,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionSta
 		SignalName:        common.StringPtr("sig-for-integ-test"),
 		Input:             []byte(""),
 		Identity:          "integ test",
-		RequestID:         common.StringPtr(uuid.New()),
+		RequestID:         uuid.New(),
 	})
 	s.Nil(err0)
 	s.assertLastHistoryEvent(we, 3, types.EventTypeWorkflowExecutionSignaled)
@@ -364,13 +364,13 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -408,7 +408,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 		SignalName:        common.StringPtr("sig-for-integ-test"),
 		Input:             []byte(""),
 		Identity:          "integ test",
-		RequestID:         common.StringPtr(uuid.New()),
+		RequestID:         uuid.New(),
 	})
 	s.Nil(err0)
 	s.assertLastHistoryEvent(we, 3, types.EventTypeDecisionTaskStarted)
@@ -439,13 +439,13 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -485,7 +485,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 		SignalName:        common.StringPtr("sig-for-integ-test"),
 		Input:             []byte(""),
 		Identity:          "integ test",
-		RequestID:         common.StringPtr(uuid.New()),
+		RequestID:         uuid.New(),
 	})
 	s.Nil(err0)
 	s.assertLastHistoryEvent(we, 3, types.EventTypeDecisionTaskStarted)
@@ -526,13 +526,13 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -586,7 +586,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 		SignalName:        common.StringPtr("sig-for-integ-test"),
 		Input:             []byte(""),
 		Identity:          "integ test",
-		RequestID:         common.StringPtr(uuid.New()),
+		RequestID:         uuid.New(),
 	})
 	s.Nil(err0)
 	s.assertLastHistoryEvent(we, 5, types.EventTypeWorkflowExecutionSignaled)
@@ -631,13 +631,13 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -702,7 +702,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 		SignalName:        common.StringPtr("sig-for-integ-test"),
 		Input:             []byte(""),
 		Identity:          "integ test",
-		RequestID:         common.StringPtr(uuid.New()),
+		RequestID:         uuid.New(),
 	})
 	s.Nil(err0)
 	s.assertLastHistoryEvent(we, 4, types.EventTypeDecisionTaskFailed)
@@ -733,13 +733,13 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -804,7 +804,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 		SignalName:        common.StringPtr("sig-for-integ-test"),
 		Input:             []byte(""),
 		Identity:          "integ test",
-		RequestID:         common.StringPtr(uuid.New()),
+		RequestID:         uuid.New(),
 	})
 	s.Nil(err0)
 	s.assertLastHistoryEvent(we, 4, types.EventTypeDecisionTaskFailed)
