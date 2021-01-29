@@ -197,16 +197,16 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID,
 		return nil, err
 	}
 	e.taskLists[*taskList] = mgr
+	e.metricsClient.Scope(metrics.MatchingTaskListMgrScope).UpdateGauge(
+		metrics.TaskListManagersGauge,
+		float64(len(e.taskLists)),
+	)
 	e.taskListsLock.Unlock()
 	err = mgr.Start()
 	if err != nil {
 		logger.Info("Task list manager state changed", tag.LifeCycleStartFailed, tag.Error(err))
 		return nil, err
 	}
-	e.metricsClient.Scope(metrics.MatchingTaskListMgrScope).UpdateGauge(
-		metrics.TaskListManagersGauge,
-		float64(len(e.taskLists)),
-	)
 	logger.Info("Task list manager state changed", tag.LifeCycleStarted)
 	return mgr, nil
 }
