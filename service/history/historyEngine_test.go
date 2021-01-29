@@ -4966,7 +4966,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest() {
 			Identity:          identity,
 			SignalName:        common.StringPtr(signalName),
 			Input:             input,
-			RequestID:         common.StringPtr(requestID),
+			RequestID:         requestID,
 		},
 	}
 
@@ -5049,7 +5049,7 @@ func (s *engineSuite) TestRemoveSignalMutableState() {
 	removeRequest = &types.RemoveSignalMutableStateRequest{
 		DomainUUID:        constants.TestDomainID,
 		WorkflowExecution: &workflowExecution,
-		RequestID:         common.StringPtr(requestID),
+		RequestID:         requestID,
 	}
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(

@@ -292,7 +292,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_DomainNotSet() 
 			MaximumAttempts:             common.Int32Ptr(1),
 			ExpirationIntervalInSeconds: common.Int32Ptr(1),
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -321,7 +321,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowIdNotSe
 			MaximumAttempts:             common.Int32Ptr(1),
 			ExpirationIntervalInSeconds: common.Int32Ptr(1),
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -351,7 +351,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowTypeNot
 			MaximumAttempts:             common.Int32Ptr(1),
 			ExpirationIntervalInSeconds: common.Int32Ptr(1),
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -381,7 +381,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_TaskListNotSet(
 			MaximumAttempts:             common.Int32Ptr(1),
 			ExpirationIntervalInSeconds: common.Int32Ptr(1),
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -411,7 +411,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidExecutio
 			MaximumAttempts:             common.Int32Ptr(1),
 			ExpirationIntervalInSeconds: common.Int32Ptr(1),
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -441,7 +441,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStar
 			MaximumAttempts:             common.Int32Ptr(1),
 			ExpirationIntervalInSeconds: common.Int32Ptr(1),
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)

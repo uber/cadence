@@ -45,7 +45,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -171,7 +171,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 		},
 		Reason:                common.StringPtr("reset execution from test"),
 		DecisionFinishEventID: common.Int64Ptr(lastDecisionCompleted.GetEventID()),
-		RequestID:             common.StringPtr(uuid.New()),
+		RequestID:             uuid.New(),
 	})
 	s.NoError(err)
 
@@ -209,7 +209,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 		},
 		Reason:                common.StringPtr("reset execution from test"),
 		DecisionFinishEventID: common.Int64Ptr(lastDecisionCompleted.GetEventID()),
-		RequestID:             common.StringPtr(uuid.New()),
+		RequestID:             uuid.New(),
 	})
 	s.NoError(err)
 	newRunID := resp.GetRunID()
@@ -242,7 +242,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 		},
 		Reason:                common.StringPtr("reset execution from test"),
 		DecisionFinishEventID: common.Int64Ptr(lastDecisionCompleted.GetEventID()),
-		RequestID:             common.StringPtr(uuid.New()),
+		RequestID:             uuid.New(),
 	})
 	s.NoError(err)
 }
@@ -259,7 +259,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -294,7 +294,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 		},
 		Reason:                common.StringPtr("reset execution from test"),
 		DecisionFinishEventID: common.Int64Ptr(lastDecisionScheduled.GetEventID() + 1),
-		RequestID:             common.StringPtr(uuid.New()),
+		RequestID:             uuid.New(),
 	})
 	s.NoError(err)
 
@@ -319,7 +319,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 		},
 		Reason:                common.StringPtr("reset execution from test"),
 		DecisionFinishEventID: common.Int64Ptr(lastDecisionScheduled.GetEventID() + 1),
-		RequestID:             common.StringPtr(uuid.New()),
+		RequestID:             uuid.New(),
 	})
 	s.NoError(err)
 

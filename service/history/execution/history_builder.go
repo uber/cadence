@@ -691,7 +691,7 @@ func (b *HistoryBuilder) newActivityTaskStartedEvent(
 	attributes.ScheduledEventID = common.Int64Ptr(ScheduledEventID)
 	attributes.Attempt = common.Int32Ptr(attempt)
 	attributes.Identity = identity
-	attributes.RequestID = common.StringPtr(requestID)
+	attributes.RequestID = requestID
 	attributes.LastFailureReason = common.StringPtr(lastFailureReason)
 	attributes.LastFailureDetails = lastFailureDetails
 	historyEvent.ActivityTaskStartedEventAttributes = attributes
@@ -1165,7 +1165,7 @@ func setDecisionTaskStartedEventInfo(historyEvent *types.HistoryEvent, Scheduled
 	attributes := &types.DecisionTaskStartedEventAttributes{}
 	attributes.ScheduledEventID = common.Int64Ptr(ScheduledEventID)
 	attributes.Identity = identity
-	attributes.RequestID = common.StringPtr(requestID)
+	attributes.RequestID = requestID
 	historyEvent.DecisionTaskStartedEventAttributes = attributes
 
 	return historyEvent

@@ -192,7 +192,7 @@ func (s *integrationClustersTestSuite) TestDomainFailover() {
 	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -250,7 +250,7 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -552,7 +552,7 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	stickyTaskList2 := &types.TaskList{Name: stl2}
 	stickyTaskTimeout := common.Int32Ptr(100)
 	startReq := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -724,7 +724,7 @@ func (s *integrationClustersTestSuite) TestStartWorkflowExecution_Failover_Workf
 	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -798,21 +798,21 @@ func (s *integrationClustersTestSuite) TestStartWorkflowExecution_Failover_Workf
 	time.Sleep(cacheRefreshInterval)
 
 	// start the same workflow in cluster 2 is not allowed if policy is AllowDuplicateFailedOnly
-	startReq.RequestID = common.StringPtr(uuid.New())
+	startReq.RequestID = uuid.New()
 	startReq.WorkflowIDReusePolicy = types.WorkflowIDReusePolicyAllowDuplicateFailedOnly.Ptr()
 	we, err = client2.StartWorkflowExecution(createContext(), startReq)
 	s.IsType(&types.WorkflowExecutionAlreadyStartedError{}, err)
 	s.Nil(we)
 
 	// start the same workflow in cluster 2 is not allowed if policy is RejectDuplicate
-	startReq.RequestID = common.StringPtr(uuid.New())
+	startReq.RequestID = uuid.New()
 	startReq.WorkflowIDReusePolicy = types.WorkflowIDReusePolicyRejectDuplicate.Ptr()
 	we, err = client2.StartWorkflowExecution(createContext(), startReq)
 	s.IsType(&types.WorkflowExecutionAlreadyStartedError{}, err)
 	s.Nil(we)
 
 	// start the workflow in cluster 2
-	startReq.RequestID = common.StringPtr(uuid.New())
+	startReq.RequestID = uuid.New()
 	startReq.WorkflowIDReusePolicy = types.WorkflowIDReusePolicyAllowDuplicate.Ptr()
 	we, err = client2.StartWorkflowExecution(createContext(), startReq)
 	s.Nil(err)
@@ -857,7 +857,7 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1042,7 +1042,7 @@ func (s *integrationClustersTestSuite) TestContinueAsNewFailover() {
 	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1180,7 +1180,7 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1361,7 +1361,7 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1534,7 +1534,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1743,7 +1743,7 @@ func (s *integrationClustersTestSuite) TestTransientDecisionFailover() {
 	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1864,7 +1864,7 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1964,7 +1964,7 @@ func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
 	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: tl}
 	startReq := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,

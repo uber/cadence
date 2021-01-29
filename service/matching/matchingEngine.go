@@ -823,7 +823,7 @@ func (e *matchingEngineImpl) recordDecisionTaskStarted(
 		WorkflowExecution: task.workflowExecution(),
 		ScheduleID:        &task.event.ScheduleID,
 		TaskID:            &task.event.TaskID,
-		RequestID:         common.StringPtr(uuid.New()),
+		RequestID:         uuid.New(),
 		PollRequest:       pollReq,
 	}
 	var resp *types.RecordDecisionTaskStartedResponse
@@ -852,7 +852,7 @@ func (e *matchingEngineImpl) recordActivityTaskStarted(
 		WorkflowExecution: task.workflowExecution(),
 		ScheduleID:        &task.event.ScheduleID,
 		TaskID:            &task.event.TaskID,
-		RequestID:         common.StringPtr(uuid.New()),
+		RequestID:         uuid.New(),
 		PollRequest:       pollReq,
 	}
 	var resp *types.RecordActivityTaskStartedResponse

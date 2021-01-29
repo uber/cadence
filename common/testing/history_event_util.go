@@ -155,7 +155,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.DecisionTaskStartedEventAttributes = &types.DecisionTaskStartedEventAttributes{
 			ScheduledEventID: lastEvent.EventID,
 			Identity:         identity,
-			RequestID:        common.StringPtr(uuid.New()),
+			RequestID:        uuid.New(),
 		}
 		return historyEvent
 	})
@@ -411,7 +411,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.ActivityTaskStartedEventAttributes = &types.ActivityTaskStartedEventAttributes{
 			ScheduledEventID: lastEvent.EventID,
 			Identity:         identity,
-			RequestID:        common.StringPtr(uuid.New()),
+			RequestID:        uuid.New(),
 			Attempt:          common.Int32Ptr(0),
 		}
 		return historyEvent

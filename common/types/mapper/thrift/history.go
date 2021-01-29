@@ -2486,7 +2486,7 @@ func FromRecordActivityTaskStartedRequest(t *types.RecordActivityTaskStartedRequ
 		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
 		ScheduleId:        t.ScheduleID,
 		TaskId:            t.TaskID,
-		RequestId:         t.RequestID,
+		RequestId:         &t.RequestID,
 		PollRequest:       FromPollForActivityTaskRequest(t.PollRequest),
 	}
 }
@@ -2501,7 +2501,7 @@ func ToRecordActivityTaskStartedRequest(t *history.RecordActivityTaskStartedRequ
 		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
 		ScheduleID:        t.ScheduleId,
 		TaskID:            t.TaskId,
-		RequestID:         t.RequestId,
+		RequestID:         t.GetRequestId(),
 		PollRequest:       ToPollForActivityTaskRequest(t.PollRequest),
 	}
 }
@@ -2576,7 +2576,7 @@ func FromRecordDecisionTaskStartedRequest(t *types.RecordDecisionTaskStartedRequ
 		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
 		ScheduleId:        t.ScheduleID,
 		TaskId:            t.TaskID,
-		RequestId:         t.RequestID,
+		RequestId:         &t.RequestID,
 		PollRequest:       FromPollForDecisionTaskRequest(t.PollRequest),
 	}
 }
@@ -2591,7 +2591,7 @@ func ToRecordDecisionTaskStartedRequest(t *history.RecordDecisionTaskStartedRequ
 		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
 		ScheduleID:        t.ScheduleId,
 		TaskID:            t.TaskId,
-		RequestID:         t.RequestId,
+		RequestID:         t.GetRequestId(),
 		PollRequest:       ToPollForDecisionTaskRequest(t.PollRequest),
 	}
 }
@@ -2672,7 +2672,7 @@ func FromRemoveSignalMutableStateRequest(t *types.RemoveSignalMutableStateReques
 	return &history.RemoveSignalMutableStateRequest{
 		DomainUUID:        &t.DomainUUID,
 		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
-		RequestId:         t.RequestID,
+		RequestId:         &t.RequestID,
 	}
 }
 
@@ -2684,7 +2684,7 @@ func ToRemoveSignalMutableStateRequest(t *history.RemoveSignalMutableStateReques
 	return &types.RemoveSignalMutableStateRequest{
 		DomainUUID:        t.GetDomainUUID(),
 		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
-		RequestID:         t.RequestId,
+		RequestID:         t.GetRequestId(),
 	}
 }
 

@@ -288,14 +288,14 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrQuery() {
 	we1, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
 
-	request.RequestID = common.StringPtr(uuid.New())
+	request.RequestID = uuid.New()
 	request.WorkflowID = id + "-2"
 	attrValBytes, _ = json.Marshal(2)
 	searchAttr.IndexedFields[key] = attrValBytes
 	we2, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
 
-	request.RequestID = common.StringPtr(uuid.New())
+	request.RequestID = uuid.New()
 	request.WorkflowID = id + "-3"
 	attrValBytes, _ = json.Marshal(3)
 	searchAttr.IndexedFields[key] = attrValBytes
@@ -385,7 +385,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 	startRequest := s.createStartWorkflowExecutionRequest(id, wt, tl)
 
 	for i := 0; i < defaultTestValueOfESIndexMaxResultWindow; i++ {
-		startRequest.RequestID = common.StringPtr(uuid.New())
+		startRequest.RequestID = uuid.New()
 		startRequest.WorkflowID = id + strconv.Itoa(i)
 		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
 		s.Nil(err)
@@ -430,7 +430,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrderBy() {
 	startRequest := s.createStartWorkflowExecutionRequest(id, wt, tl)
 
 	for i := 0; i < defaultTestValueOfESIndexMaxResultWindow+1; i++ { // start 6
-		startRequest.RequestID = common.StringPtr(uuid.New())
+		startRequest.RequestID = uuid.New()
 		startRequest.WorkflowID = id + strconv.Itoa(i)
 
 		if i < defaultTestValueOfESIndexMaxResultWindow-1 { // 4 workflow has search attr
@@ -561,7 +561,7 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 
 	// start enough number of workflows
 	for i := 0; i < numOfWorkflows; i++ {
-		startRequest.RequestID = common.StringPtr(uuid.New())
+		startRequest.RequestID = uuid.New()
 		startRequest.WorkflowID = wid + strconv.Itoa(i)
 		_, err := s.engine.StartWorkflowExecution(createContext(), startRequest)
 		s.Nil(err)
@@ -674,7 +674,7 @@ func (s *elasticsearchIntegrationSuite) TestScanWorkflow() {
 	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -788,7 +788,7 @@ func (s *elasticsearchIntegrationSuite) createStartWorkflowExecutionRequest(id, 
 	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -814,7 +814,7 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution() {
 	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1015,7 +1015,7 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey()
 	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
