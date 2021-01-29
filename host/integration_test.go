@@ -86,7 +86,7 @@ func (s *integrationSuite) TestStartWorkflowExecution() {
 	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -105,7 +105,7 @@ func (s *integrationSuite) TestStartWorkflowExecution() {
 	s.Equal(we0.RunID, we1.RunID)
 
 	newRequest := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -136,7 +136,7 @@ func (s *integrationSuite) TestStartWorkflowExecution_IDReusePolicy() {
 
 	createStartRequest := func(policy types.WorkflowIDReusePolicy) *types.StartWorkflowExecutionRequest {
 		return &types.StartWorkflowExecutionRequest{
-			RequestID:                           common.StringPtr(uuid.New()),
+			RequestID:                           uuid.New(),
 			Domain:                              s.domainName,
 			WorkflowID:                          id,
 			WorkflowType:                        workflowType,
@@ -296,7 +296,7 @@ func (s *integrationSuite) TestTerminateWorkflow() {
 	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -413,7 +413,7 @@ GetHistoryLoop:
 StartNewExecutionLoop:
 	for i := 0; i < 10; i++ {
 		request := &types.StartWorkflowExecutionRequest{
-			RequestID:                           common.StringPtr(uuid.New()),
+			RequestID:                           uuid.New(),
 			Domain:                              s.domainName,
 			WorkflowID:                          id,
 			WorkflowType:                        workflowType,
@@ -454,7 +454,7 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -563,7 +563,7 @@ func (s *integrationSuite) TestCompleteDecisionTaskAndCreateNewOne() {
 	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -648,7 +648,7 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -773,7 +773,7 @@ func (s *integrationSuite) TestWorkflowRetry() {
 	backoffCoefficient := 1.5
 	maximumAttempts := 5
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -911,7 +911,7 @@ func (s *integrationSuite) TestWorkflowRetryFailures() {
 
 	// Fail using attempt
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -967,7 +967,7 @@ func (s *integrationSuite) TestWorkflowRetryFailures() {
 
 	// Fail error reason
 	request = &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1035,7 +1035,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	}
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1044,7 +1044,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
-		CronSchedule:                        common.StringPtr(cronSchedule), //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
+		CronSchedule:                        cronSchedule, //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
 		Memo:                                memo,
 		SearchAttributes:                    searchAttr,
 	}
@@ -1101,7 +1101,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	time.Sleep(2 * time.Second)
 	resp, err := s.engine.ListOpenWorkflowExecutions(createContext(), &types.ListOpenWorkflowExecutionsRequest{
 		Domain:          s.domainName,
-		MaximumPageSize: common.Int32Ptr(100),
+		MaximumPageSize: 100,
 		StartTimeFilter: startFilter,
 		ExecutionFilter: &types.WorkflowExecutionFilter{
 			WorkflowID: common.StringPtr(id),
@@ -1171,7 +1171,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 	for i := 0; i < 10; i++ {
 		resp, err := s.engine.ListClosedWorkflowExecutions(createContext(), &types.ListClosedWorkflowExecutionsRequest{
 			Domain:          s.domainName,
-			MaximumPageSize: common.Int32Ptr(100),
+			MaximumPageSize: 100,
 			StartTimeFilter: startFilter,
 			ExecutionFilter: &types.WorkflowExecutionFilter{
 				WorkflowID: common.StringPtr(id),
@@ -1242,7 +1242,7 @@ func (s *integrationSuite) TestCronWorkflowTimeout() {
 	}
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1251,7 +1251,7 @@ func (s *integrationSuite) TestCronWorkflowTimeout() {
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1), // set workflow timeout to 1s
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
-		CronSchedule:                        common.StringPtr(cronSchedule), //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
+		CronSchedule:                        cronSchedule, //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
 		Memo:                                memo,
 		SearchAttributes:                    searchAttr,
 	}
@@ -1271,7 +1271,7 @@ func (s *integrationSuite) TestCronWorkflowTimeout() {
 				DecisionType: types.DecisionTypeStartTimer.Ptr(),
 
 				StartTimerDecisionAttributes: &types.StartTimerDecisionAttributes{
-					TimerID:                   common.StringPtr("timer-id"),
+					TimerID:                   "timer-id",
 					StartToFireTimeoutSeconds: common.Int64Ptr(5),
 				},
 			}}, nil
@@ -1336,7 +1336,7 @@ func (s *integrationSuite) TestSequential_UserTimers() {
 	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1364,7 +1364,7 @@ func (s *integrationSuite) TestSequential_UserTimers() {
 			return []byte(strconv.Itoa(int(timerCounter))), []*types.Decision{{
 				DecisionType: types.DecisionTypeStartTimer.Ptr(),
 				StartTimerDecisionAttributes: &types.StartTimerDecisionAttributes{
-					TimerID:                   common.StringPtr(fmt.Sprintf("timer-id-%d", timerCounter)),
+					TimerID:                   fmt.Sprintf("timer-id-%d", timerCounter),
 					StartToFireTimeoutSeconds: common.Int64Ptr(1),
 				},
 			}}, nil
@@ -1416,7 +1416,7 @@ func (s *integrationSuite) TestRateLimitBufferedEvents() {
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1514,7 +1514,7 @@ func (s *integrationSuite) TestBufferedEvents() {
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1633,7 +1633,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -1763,7 +1763,7 @@ func (s *integrationSuite) TestVisibility() {
 	taskList.Name = tl
 
 	startRequest := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id1,
 		WorkflowType:                        workflowType,
@@ -1825,7 +1825,7 @@ func (s *integrationSuite) TestVisibility() {
 	}
 
 	startRequest = &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id2,
 		WorkflowType:                        workflowType,
@@ -1850,7 +1850,7 @@ func (s *integrationSuite) TestVisibility() {
 	for i := 0; i < 10; i++ {
 		resp, err3 := s.engine.ListClosedWorkflowExecutions(createContext(), &types.ListClosedWorkflowExecutionsRequest{
 			Domain:          s.domainName,
-			MaximumPageSize: common.Int32Ptr(100),
+			MaximumPageSize: 100,
 			StartTimeFilter: startFilter,
 		})
 		s.Nil(err3)
@@ -1868,7 +1868,7 @@ func (s *integrationSuite) TestVisibility() {
 	for i := 0; i < 10; i++ {
 		resp, err4 := s.engine.ListOpenWorkflowExecutions(createContext(), &types.ListOpenWorkflowExecutionsRequest{
 			Domain:          s.domainName,
-			MaximumPageSize: common.Int32Ptr(100),
+			MaximumPageSize: 100,
 			StartTimeFilter: startFilter,
 		})
 		s.Nil(err4)
@@ -1907,7 +1907,7 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	}
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          parentID,
 		WorkflowType:                        parentWorkflowType,
@@ -2093,7 +2093,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	taskListChild.Name = tlChild
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          parentID,
 		WorkflowType:                        parentWorkflowType,
@@ -2132,7 +2132,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(200),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 					Control:                             nil,
-					CronSchedule:                        common.StringPtr(cronSchedule),
+					CronSchedule:                        cronSchedule,
 				},
 			}}, nil
 		}
@@ -2201,7 +2201,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 		startFilter.LatestTime = common.Int64Ptr(time.Now().UnixNano())
 		resp, err := s.engine.ListOpenWorkflowExecutions(createContext(), &types.ListOpenWorkflowExecutionsRequest{
 			Domain:          s.domainName,
-			MaximumPageSize: common.Int32Ptr(100),
+			MaximumPageSize: 100,
 			StartTimeFilter: startFilter,
 			ExecutionFilter: &types.WorkflowExecutionFilter{
 				WorkflowID: common.StringPtr(childID),
@@ -2244,7 +2244,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	for i := 0; i < 10; i++ {
 		resp, err := s.engine.ListClosedWorkflowExecutions(createContext(), &types.ListClosedWorkflowExecutionsRequest{
 			Domain:          s.domainName,
-			MaximumPageSize: common.Int32Ptr(100),
+			MaximumPageSize: 100,
 			StartTimeFilter: startFilter,
 		})
 		s.Nil(err)
@@ -2290,7 +2290,7 @@ func (s *integrationSuite) TestWorkflowTimeout() {
 	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -2343,7 +2343,7 @@ ListClosedLoop:
 	for i := 0; i < 10; i++ {
 		resp, err3 := s.engine.ListClosedWorkflowExecutions(createContext(), &types.ListClosedWorkflowExecutionsRequest{
 			Domain:          s.domainName,
-			MaximumPageSize: common.Int32Ptr(100),
+			MaximumPageSize: 100,
 			StartTimeFilter: startFilter,
 		})
 		s.Nil(err3)
@@ -2373,7 +2373,7 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -2576,7 +2576,7 @@ func (s *integrationSuite) TestDescribeTaskList() {
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          WorkflowID,
 		WorkflowType:                        workflowType,
@@ -2701,7 +2701,7 @@ func (s *integrationSuite) TestTransientDecisionTimeout() {
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -2794,7 +2794,7 @@ func (s *integrationSuite) TestNoTransientDecisionAfterFlushBufferedEvents() {
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -2891,7 +2891,7 @@ func (s *integrationSuite) TestRelayDecisionTimeout() {
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -2993,7 +2993,7 @@ func (s *integrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -3026,7 +3026,7 @@ func (s *integrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeStartTimer.Ptr(),
 				StartTimerDecisionAttributes: &types.StartTimerDecisionAttributes{
-					TimerID:                   common.StringPtr("timer-id-1"),
+					TimerID:                   "timer-id-1",
 					StartToFireTimeoutSeconds: common.Int64Ptr(5),
 				},
 			}}, nil
@@ -3115,7 +3115,7 @@ func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -3162,7 +3162,7 @@ func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
 					SignalName:        common.StringPtr("signalB"),
 					Input:             []byte("signal input"),
 					Identity:          identity,
-					RequestID:         common.StringPtr(uuid.New()),
+					RequestID:         uuid.New(),
 				})
 				s.Nil(err)
 			}*/
@@ -3200,7 +3200,7 @@ func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
 		SignalName:        common.StringPtr("signalA"),
 		Input:             []byte("signal input"),
 		Identity:          identity,
-		RequestID:         common.StringPtr(uuid.New()),
+		RequestID:         uuid.New(),
 	})
 
 	// Wait for decision timeout
@@ -3231,7 +3231,7 @@ WaitForStickyTimeoutLoop:
 		SignalName:        common.StringPtr("signalB"),
 		Input:             []byte("signal input"),
 		Identity:          identity,
-		RequestID:         common.StringPtr(uuid.New()),
+		RequestID:         uuid.New(),
 	})
 	s.Nil(err)
 
@@ -3289,7 +3289,7 @@ func (s *integrationSuite) TestStickyTasklistResetThenTimeout() {
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -3362,7 +3362,7 @@ func (s *integrationSuite) TestStickyTasklistResetThenTimeout() {
 		SignalName:        common.StringPtr("signalA"),
 		Input:             []byte("signal input"),
 		Identity:          identity,
-		RequestID:         common.StringPtr(uuid.New()),
+		RequestID:         uuid.New(),
 	})
 
 	//Reset sticky tasklist before sticky decision task starts
@@ -3399,7 +3399,7 @@ WaitForStickyTimeoutLoop:
 		SignalName:        common.StringPtr("signalB"),
 		Input:             []byte("signal input"),
 		Identity:          identity,
-		RequestID:         common.StringPtr(uuid.New()),
+		RequestID:         uuid.New(),
 	})
 	s.Nil(err)
 
@@ -3449,7 +3449,7 @@ func (s *integrationSuite) TestBufferedEventsOutOfOrder() {
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -3617,7 +3617,7 @@ func (s *integrationSuite) TestStartWithMemo() {
 	}
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -3657,7 +3657,7 @@ func (s *integrationSuite) TestSignalWithStartWithMemo() {
 	signalName := "my signal"
 	signalInput := []byte("my signal input.")
 	request := &types.SignalWithStartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -3690,7 +3690,7 @@ func (s *integrationSuite) TestCancelTimer() {
 	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -3708,7 +3708,7 @@ func (s *integrationSuite) TestCancelTimer() {
 		RunID:      creatResp.GetRunID(),
 	}
 
-	TimerID := 1
+	TimerID := "1"
 	timerScheduled := false
 	signalDelivered := false
 	timerCancelled := false
@@ -3722,7 +3722,7 @@ func (s *integrationSuite) TestCancelTimer() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeStartTimer.Ptr(),
 				StartTimerDecisionAttributes: &types.StartTimerDecisionAttributes{
-					TimerID:                   common.StringPtr(fmt.Sprintf("%v", TimerID)),
+					TimerID:                   TimerID,
 					StartToFireTimeoutSeconds: common.Int64Ptr(timer),
 				},
 			}}, nil
@@ -3731,7 +3731,7 @@ func (s *integrationSuite) TestCancelTimer() {
 		resp, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 			Domain:          s.domainName,
 			Execution:       workflowExecution,
-			MaximumPageSize: common.Int32Ptr(200),
+			MaximumPageSize: 200,
 		})
 		s.Nil(err)
 		for _, event := range resp.History.Events {
@@ -3751,7 +3751,7 @@ func (s *integrationSuite) TestCancelTimer() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeCancelTimer.Ptr(),
 				CancelTimerDecisionAttributes: &types.CancelTimerDecisionAttributes{
-					TimerID: common.StringPtr(fmt.Sprintf("%v", TimerID)),
+					TimerID: TimerID,
 				},
 			}}, nil
 		}
@@ -3799,7 +3799,7 @@ func (s *integrationSuite) TestCancelTimer() {
 	resp, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 		Domain:          s.domainName,
 		Execution:       workflowExecution,
-		MaximumPageSize: common.Int32Ptr(200),
+		MaximumPageSize: 200,
 	})
 	s.Nil(err)
 	for _, event := range resp.History.Events {
@@ -3827,7 +3827,7 @@ func (s *integrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
 	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -3859,7 +3859,7 @@ func (s *integrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeStartTimer.Ptr(),
 				StartTimerDecisionAttributes: &types.StartTimerDecisionAttributes{
-					TimerID:                   common.StringPtr(fmt.Sprintf("%v", TimerID)),
+					TimerID:                   fmt.Sprintf("%v", TimerID),
 					StartToFireTimeoutSeconds: common.Int64Ptr(timer),
 				},
 			}}, nil
@@ -3868,7 +3868,7 @@ func (s *integrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
 		resp, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 			Domain:          s.domainName,
 			Execution:       workflowExecution,
-			MaximumPageSize: common.Int32Ptr(200),
+			MaximumPageSize: 200,
 		})
 		s.Nil(err)
 		for _, event := range resp.History.Events {
@@ -3889,7 +3889,7 @@ func (s *integrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeCancelTimer.Ptr(),
 				CancelTimerDecisionAttributes: &types.CancelTimerDecisionAttributes{
-					TimerID: common.StringPtr(fmt.Sprintf("%v", TimerID)),
+					TimerID: fmt.Sprintf("%v", TimerID),
 				},
 			}}, nil
 		}
@@ -3937,7 +3937,7 @@ func (s *integrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
 	resp, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 		Domain:          s.domainName,
 		Execution:       workflowExecution,
-		MaximumPageSize: common.Int32Ptr(200),
+		MaximumPageSize: 200,
 	})
 	s.Nil(err)
 	for _, event := range resp.History.Events {
@@ -3986,7 +3986,7 @@ func (s *integrationSuite) startWithMemoHelper(startFn startFunc, id string, tas
 	for i := 0; i < 10; i++ {
 		resp, err1 := s.engine.ListOpenWorkflowExecutions(createContext(), &types.ListOpenWorkflowExecutionsRequest{
 			Domain:          s.domainName,
-			MaximumPageSize: common.Int32Ptr(100),
+			MaximumPageSize: 100,
 			StartTimeFilter: &types.StartTimeFilter{
 				EarliestTime: common.Int64Ptr(0),
 				LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
@@ -4041,7 +4041,7 @@ func (s *integrationSuite) startWithMemoHelper(startFn startFunc, id string, tas
 	for i := 0; i < 10; i++ {
 		resp, err1 := s.engine.ListClosedWorkflowExecutions(createContext(), &types.ListClosedWorkflowExecutionsRequest{
 			Domain:          s.domainName,
-			MaximumPageSize: common.Int32Ptr(100),
+			MaximumPageSize: 100,
 			StartTimeFilter: &types.StartTimeFilter{
 				EarliestTime: common.Int64Ptr(0),
 				LatestTime:   common.Int64Ptr(time.Now().UnixNano()),

@@ -1538,7 +1538,7 @@ func ResetWorkflow(c *cli.Context) {
 		},
 		Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), reason)),
 		DecisionFinishEventID: common.Int64Ptr(decisionFinishID),
-		RequestID:             common.StringPtr(uuid.New()),
+		RequestID:             uuid.New(),
 		SkipSignalReapply:     common.BoolPtr(c.Bool(FlagSkipSignalReapply)),
 	})
 	if err != nil {
@@ -1805,7 +1805,7 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 				RunID:      resetBaseRunID,
 			},
 			DecisionFinishEventID: common.Int64Ptr(decisionFinishID),
-			RequestID:             common.StringPtr(uuid.New()),
+			RequestID:             uuid.New(),
 			Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), params.reason)),
 			SkipSignalReapply:     common.BoolPtr(params.skipSignalReapply),
 		})
@@ -1826,7 +1826,7 @@ func isLastEventDecisionTaskFailedWithNonDeterminism(ctx context.Context, domain
 			WorkflowID: wid,
 			RunID:      rid,
 		},
-		MaximumPageSize: common.Int32Ptr(1000),
+		MaximumPageSize: 1000,
 		NextPageToken:   nil,
 	}
 
@@ -1939,7 +1939,7 @@ func getFirstDecisionTaskByType(
 			WorkflowID: workflowID,
 			RunID:      runID,
 		},
-		MaximumPageSize: common.Int32Ptr(1000),
+		MaximumPageSize: 1000,
 		NextPageToken:   nil,
 	}
 
@@ -2023,7 +2023,7 @@ func getLastDecisionTaskByType(
 			WorkflowID: workflowID,
 			RunID:      runID,
 		},
-		MaximumPageSize: common.Int32Ptr(1000),
+		MaximumPageSize: 1000,
 		NextPageToken:   nil,
 	}
 
@@ -2059,7 +2059,7 @@ func getLastContinueAsNewID(ctx context.Context, domain, wid, rid string, fronte
 			WorkflowID: wid,
 			RunID:      rid,
 		},
-		MaximumPageSize: common.Int32Ptr(1),
+		MaximumPageSize: 1,
 		NextPageToken:   nil,
 	}
 	resp, err := frontendClient.GetWorkflowExecutionHistory(ctx, req)
@@ -2078,7 +2078,7 @@ func getLastContinueAsNewID(ctx context.Context, domain, wid, rid string, fronte
 			WorkflowID: wid,
 			RunID:      resetBaseRunID,
 		},
-		MaximumPageSize: common.Int32Ptr(1000),
+		MaximumPageSize: 1000,
 		NextPageToken:   nil,
 	}
 	for {
@@ -2191,7 +2191,7 @@ func getEarliestDecisionID(
 			WorkflowID: wid,
 			RunID:      rid,
 		},
-		MaximumPageSize: common.Int32Ptr(1000),
+		MaximumPageSize: 1000,
 		NextPageToken:   nil,
 	}
 
