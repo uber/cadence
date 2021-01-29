@@ -614,7 +614,7 @@ func (s *integrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
-		CronSchedule:                        &cronSpec,
+		CronSchedule:                        cronSpec,
 	}
 	now := time.Now()
 

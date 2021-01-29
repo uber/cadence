@@ -1044,7 +1044,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
-		CronSchedule:                        common.StringPtr(cronSchedule), //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
+		CronSchedule:                        cronSchedule, //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
 		Memo:                                memo,
 		SearchAttributes:                    searchAttr,
 	}
@@ -1251,7 +1251,7 @@ func (s *integrationSuite) TestCronWorkflowTimeout() {
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1), // set workflow timeout to 1s
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
-		CronSchedule:                        common.StringPtr(cronSchedule), //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
+		CronSchedule:                        cronSchedule, //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
 		Memo:                                memo,
 		SearchAttributes:                    searchAttr,
 	}
@@ -2132,7 +2132,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(200),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 					Control:                             nil,
-					CronSchedule:                        common.StringPtr(cronSchedule),
+					CronSchedule:                        cronSchedule,
 				},
 			}}, nil
 		}
