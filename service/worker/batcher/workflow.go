@@ -374,7 +374,7 @@ func startTaskProcessor(
 								RunID:      runID,
 							},
 							Identity:  BatchWFTypeName,
-							RequestID: common.StringPtr(requestID),
+							RequestID: requestID,
 						}, yarpcCallOptions...)
 					})
 			case BatchTypeSignal:
@@ -387,7 +387,7 @@ func startTaskProcessor(
 								RunID:      runID,
 							},
 							Identity:   BatchWFTypeName,
-							RequestID:  common.StringPtr(requestID),
+							RequestID:  requestID,
 							SignalName: common.StringPtr(batchParams.SignalParams.SignalName),
 							Input:      []byte(batchParams.SignalParams.Input),
 						}, yarpcCallOptions...)

@@ -81,10 +81,10 @@ var (
 	clusterNameES              = []string{"active-es", "standby-es"}
 	clusterReplicationConfigES = []*types.ClusterReplicationConfiguration{
 		{
-			ClusterName: common.StringPtr(clusterNameES[0]),
+			ClusterName: clusterNameES[0],
 		},
 		{
-			ClusterName: common.StringPtr(clusterNameES[1]),
+			ClusterName: clusterNameES[1],
 		},
 	}
 )
@@ -172,8 +172,8 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	wt := "xdc-search-attr-test-type"
 	tl := "xdc-search-attr-test-tasklist"
 	identity := "worker1"
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
-	taskList := &types.TaskList{Name: common.StringPtr(tl)}
+	workflowType := &types.WorkflowType{Name: wt}
+	taskList := &types.TaskList{Name: tl}
 	attrValBytes, _ := json.Marshal(s.testSearchAttributeVal)
 	searchAttr := &types.SearchAttributes{
 		IndexedFields: map[string][]byte{
@@ -181,7 +181,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 		},
 	}
 	startReq := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,

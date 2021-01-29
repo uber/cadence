@@ -240,10 +240,10 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_RequestIdNotSet
 		Domain:     "test-domain",
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
@@ -278,10 +278,10 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_DomainNotSet() 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
@@ -292,7 +292,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_DomainNotSet() 
 			MaximumAttempts:             common.Int32Ptr(1),
 			ExpirationIntervalInSeconds: common.Int32Ptr(1),
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -307,10 +307,10 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowIdNotSe
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
 		Domain: "test-domain",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
@@ -321,7 +321,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowIdNotSe
 			MaximumAttempts:             common.Int32Ptr(1),
 			ExpirationIntervalInSeconds: common.Int32Ptr(1),
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -337,10 +337,10 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowTypeNot
 		Domain:     "test-domain",
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr(""),
+			Name: "",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
@@ -351,7 +351,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowTypeNot
 			MaximumAttempts:             common.Int32Ptr(1),
 			ExpirationIntervalInSeconds: common.Int32Ptr(1),
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -367,10 +367,10 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_TaskListNotSet(
 		Domain:     "test-domain",
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr(""),
+			Name: "",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
@@ -381,7 +381,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_TaskListNotSet(
 			MaximumAttempts:             common.Int32Ptr(1),
 			ExpirationIntervalInSeconds: common.Int32Ptr(1),
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -397,10 +397,10 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidExecutio
 		Domain:     "test-domain",
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(0),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
@@ -411,7 +411,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidExecutio
 			MaximumAttempts:             common.Int32Ptr(1),
 			ExpirationIntervalInSeconds: common.Int32Ptr(1),
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -427,10 +427,10 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStar
 		Domain:     "test-domain",
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(0),
@@ -441,7 +441,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStar
 			MaximumAttempts:             common.Int32Ptr(1),
 			ExpirationIntervalInSeconds: common.Int32Ptr(1),
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -1437,7 +1437,7 @@ func registerDomainRequest(
 		EmitMetric:                             common.BoolPtr(true),
 		Clusters: []*types.ClusterReplicationConfiguration{
 			{
-				ClusterName: common.StringPtr(cluster.TestCurrentClusterName),
+				ClusterName: cluster.TestCurrentClusterName,
 			},
 		},
 		ActiveClusterName:        common.StringPtr(cluster.TestCurrentClusterName),

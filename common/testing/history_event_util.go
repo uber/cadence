@@ -135,7 +135,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.EventType = types.EventTypeDecisionTaskScheduled.Ptr()
 		historyEvent.DecisionTaskScheduledEventAttributes = &types.DecisionTaskScheduledEventAttributes{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(taskList),
+				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
 			StartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
@@ -155,7 +155,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.DecisionTaskStartedEventAttributes = &types.DecisionTaskStartedEventAttributes{
 			ScheduledEventID: lastEvent.EventID,
 			Identity:         identity,
-			RequestID:        common.StringPtr(uuid.New()),
+			RequestID:        uuid.New(),
 		}
 		return historyEvent
 	})
@@ -229,10 +229,10 @@ func InitializeHistoryEventGenerator(
 		historyEvent.EventType = types.EventTypeWorkflowExecutionStarted.Ptr()
 		historyEvent.WorkflowExecutionStartedEventAttributes = &types.WorkflowExecutionStartedEventAttributes{
 			WorkflowType: &types.WorkflowType{
-				Name: common.StringPtr(workflowType),
+				Name: workflowType,
 			},
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(taskList),
+				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
@@ -277,10 +277,10 @@ func InitializeHistoryEventGenerator(
 		historyEvent.WorkflowExecutionContinuedAsNewEventAttributes = &types.WorkflowExecutionContinuedAsNewEventAttributes{
 			NewExecutionRunID: uuid.New(),
 			WorkflowType: &types.WorkflowType{
-				Name: common.StringPtr(workflowType),
+				Name: workflowType,
 			},
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(taskList),
+				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
@@ -386,11 +386,11 @@ func InitializeHistoryEventGenerator(
 		historyEvent.ActivityTaskScheduledEventAttributes = &types.ActivityTaskScheduledEventAttributes{
 			ActivityID: common.StringPtr(uuid.New()),
 			ActivityType: &types.ActivityType{
-				Name: common.StringPtr("activity"),
+				Name: "activity",
 			},
 			Domain: common.StringPtr(domain),
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(taskList),
+				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
 			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(timeout),
@@ -411,7 +411,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.ActivityTaskStartedEventAttributes = &types.ActivityTaskStartedEventAttributes{
 			ScheduledEventID: lastEvent.EventID,
 			Identity:         identity,
-			RequestID:        common.StringPtr(uuid.New()),
+			RequestID:        uuid.New(),
 			Attempt:          common.Int32Ptr(0),
 		}
 		return historyEvent
@@ -557,7 +557,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent := getDefaultHistoryEvent(EventID, version)
 		historyEvent.EventType = types.EventTypeTimerStarted.Ptr()
 		historyEvent.TimerStartedEventAttributes = &types.TimerStartedEventAttributes{
-			TimerID:                      common.StringPtr(uuid.New()),
+			TimerID:                      uuid.New(),
 			StartToFireTimeoutSeconds:    common.Int64Ptr(10),
 			DecisionTaskCompletedEventID: lastEvent.EventID,
 		}
@@ -617,10 +617,10 @@ func InitializeHistoryEventGenerator(
 			Domain:     domain,
 			WorkflowID: childWorkflowID,
 			WorkflowType: &types.WorkflowType{
-				Name: common.StringPtr(childWorkflowPrefix + workflowType),
+				Name: childWorkflowPrefix + workflowType,
 			},
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(taskList),
+				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
@@ -642,7 +642,7 @@ func InitializeHistoryEventGenerator(
 			Domain:     domain,
 			WorkflowID: childWorkflowID,
 			WorkflowType: &types.WorkflowType{
-				Name: common.StringPtr(childWorkflowPrefix + workflowType),
+				Name: childWorkflowPrefix + workflowType,
 			},
 			Cause:                        types.ChildWorkflowExecutionFailedCauseWorkflowAlreadyRunning.Ptr(),
 			InitiatedEventID:             lastEvent.EventID,
@@ -661,7 +661,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.ChildWorkflowExecutionStartedEventAttributes = &types.ChildWorkflowExecutionStartedEventAttributes{
 			Domain: domain,
 			WorkflowType: &types.WorkflowType{
-				Name: common.StringPtr(childWorkflowPrefix + workflowType),
+				Name: childWorkflowPrefix + workflowType,
 			},
 			InitiatedEventID: lastEvent.EventID,
 			WorkflowExecution: &types.WorkflowExecution{
@@ -682,7 +682,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.ChildWorkflowExecutionCanceledEventAttributes = &types.ChildWorkflowExecutionCanceledEventAttributes{
 			Domain: domain,
 			WorkflowType: &types.WorkflowType{
-				Name: common.StringPtr(childWorkflowPrefix + workflowType),
+				Name: childWorkflowPrefix + workflowType,
 			},
 			InitiatedEventID: lastEvent.GetChildWorkflowExecutionStartedEventAttributes().InitiatedEventID,
 			WorkflowExecution: &types.WorkflowExecution{
@@ -704,7 +704,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.ChildWorkflowExecutionCompletedEventAttributes = &types.ChildWorkflowExecutionCompletedEventAttributes{
 			Domain: domain,
 			WorkflowType: &types.WorkflowType{
-				Name: common.StringPtr(childWorkflowPrefix + workflowType),
+				Name: childWorkflowPrefix + workflowType,
 			},
 			InitiatedEventID: lastEvent.GetChildWorkflowExecutionStartedEventAttributes().InitiatedEventID,
 			WorkflowExecution: &types.WorkflowExecution{
@@ -726,7 +726,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.ChildWorkflowExecutionFailedEventAttributes = &types.ChildWorkflowExecutionFailedEventAttributes{
 			Domain: domain,
 			WorkflowType: &types.WorkflowType{
-				Name: common.StringPtr(childWorkflowPrefix + workflowType),
+				Name: childWorkflowPrefix + workflowType,
 			},
 			InitiatedEventID: lastEvent.GetChildWorkflowExecutionStartedEventAttributes().InitiatedEventID,
 			WorkflowExecution: &types.WorkflowExecution{
@@ -748,7 +748,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.ChildWorkflowExecutionTerminatedEventAttributes = &types.ChildWorkflowExecutionTerminatedEventAttributes{
 			Domain: domain,
 			WorkflowType: &types.WorkflowType{
-				Name: common.StringPtr(childWorkflowPrefix + workflowType),
+				Name: childWorkflowPrefix + workflowType,
 			},
 			InitiatedEventID: lastEvent.GetChildWorkflowExecutionStartedEventAttributes().InitiatedEventID,
 			WorkflowExecution: &types.WorkflowExecution{
@@ -770,7 +770,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.ChildWorkflowExecutionTimedOutEventAttributes = &types.ChildWorkflowExecutionTimedOutEventAttributes{
 			Domain: domain,
 			WorkflowType: &types.WorkflowType{
-				Name: common.StringPtr(childWorkflowPrefix + workflowType),
+				Name: childWorkflowPrefix + workflowType,
 			},
 			InitiatedEventID: lastEvent.GetChildWorkflowExecutionStartedEventAttributes().InitiatedEventID,
 			WorkflowExecution: &types.WorkflowExecution{

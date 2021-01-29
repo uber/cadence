@@ -3265,7 +3265,7 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 			EventType: types.EventTypeTimerStarted.Ptr(),
 			Version:   common.Int64Ptr(11),
 			TimerStartedEventAttributes: &types.TimerStartedEventAttributes{
-				TimerID:                      common.StringPtr("ID1"),
+				TimerID:                      "ID1",
 				StartToFireTimeoutSeconds:    common.Int64Ptr(101),
 				DecisionTaskCompletedEventID: common.Int64Ptr(5),
 			},
@@ -3278,7 +3278,7 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 			EventType: types.EventTypeTimerFired.Ptr(),
 			Version:   common.Int64Ptr(12),
 			TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
-				TimerID:        common.StringPtr("2"),
+				TimerID:        "2",
 				StartedEventID: common.Int64Ptr(3),
 			},
 		},
@@ -3402,7 +3402,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 			EventType: types.EventTypeTimerStarted.Ptr(),
 			Version:   common.Int64Ptr(11),
 			TimerStartedEventAttributes: &types.TimerStartedEventAttributes{
-				TimerID:                      common.StringPtr("ID1"),
+				TimerID:                      "ID1",
 				StartToFireTimeoutSeconds:    common.Int64Ptr(101),
 				DecisionTaskCompletedEventID: common.Int64Ptr(5),
 			},
@@ -3415,7 +3415,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 			EventType: types.EventTypeTimerFired.Ptr(),
 			Version:   common.Int64Ptr(12),
 			TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
-				TimerID:        common.StringPtr("2"),
+				TimerID:        "2",
 				StartedEventID: common.Int64Ptr(3),
 			},
 		},

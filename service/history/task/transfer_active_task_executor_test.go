@@ -219,8 +219,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessActivityTask_Success() {
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -279,8 +279,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessActivityTask_Duplication() 
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -343,8 +343,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_FirstDecision(
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -395,8 +395,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_NonFirstDecisi
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -456,8 +456,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_Sticky_NonFirs
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -521,8 +521,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_DecisionNotSti
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -584,8 +584,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_Duplication() 
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -646,8 +646,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent() 
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -717,8 +717,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent() {
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -776,8 +776,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -803,9 +803,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 				StartChildWorkflowExecutionDecisionAttributes: &types.StartChildWorkflowExecutionDecisionAttributes{
 					WorkflowID: "child workflow1",
 					WorkflowType: &types.WorkflowType{
-						Name: common.StringPtr("child workflow type"),
+						Name: "child workflow type",
 					},
-					TaskList:          &types.TaskList{Name: common.StringPtr(taskListName)},
+					TaskList:          &types.TaskList{Name: taskListName},
 					Input:             []byte("random input"),
 					ParentClosePolicy: &parentClosePolicy1,
 				},
@@ -815,9 +815,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 				StartChildWorkflowExecutionDecisionAttributes: &types.StartChildWorkflowExecutionDecisionAttributes{
 					WorkflowID: "child workflow2",
 					WorkflowType: &types.WorkflowType{
-						Name: common.StringPtr("child workflow type"),
+						Name: "child workflow type",
 					},
-					TaskList:          &types.TaskList{Name: common.StringPtr(taskListName)},
+					TaskList:          &types.TaskList{Name: taskListName},
 					Input:             []byte("random input"),
 					ParentClosePolicy: &parentClosePolicy2,
 				},
@@ -827,9 +827,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 				StartChildWorkflowExecutionDecisionAttributes: &types.StartChildWorkflowExecutionDecisionAttributes{
 					WorkflowID: "child workflow3",
 					WorkflowType: &types.WorkflowType{
-						Name: common.StringPtr("child workflow type"),
+						Name: "child workflow type",
 					},
-					TaskList:          &types.TaskList{Name: common.StringPtr(taskListName)},
+					TaskList:          &types.TaskList{Name: taskListName},
 					Input:             []byte("random input"),
 					ParentClosePolicy: &parentClosePolicy3,
 				},
@@ -840,9 +840,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventID(), uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
 		WorkflowID: "child workflow1",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("child workflow type"),
+			Name: "child workflow type",
 		},
-		TaskList:          &types.TaskList{Name: common.StringPtr(taskListName)},
+		TaskList:          &types.TaskList{Name: taskListName},
 		Input:             []byte("random input"),
 		ParentClosePolicy: &parentClosePolicy1,
 	})
@@ -850,9 +850,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventID(), uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
 		WorkflowID: "child workflow2",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("child workflow type"),
+			Name: "child workflow type",
 		},
-		TaskList:          &types.TaskList{Name: common.StringPtr(taskListName)},
+		TaskList:          &types.TaskList{Name: taskListName},
 		Input:             []byte("random input"),
 		ParentClosePolicy: &parentClosePolicy2,
 	})
@@ -860,9 +860,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventID(), uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
 		WorkflowID: "child workflow3",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("child workflow type"),
+			Name: "child workflow type",
 		},
-		TaskList:          &types.TaskList{Name: common.StringPtr(taskListName)},
+		TaskList:          &types.TaskList{Name: taskListName},
 		Input:             []byte("random input"),
 		ParentClosePolicy: &parentClosePolicy3,
 	})
@@ -922,8 +922,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -944,9 +944,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 			StartChildWorkflowExecutionDecisionAttributes: &types.StartChildWorkflowExecutionDecisionAttributes{
 				WorkflowID: "child workflow" + string(i),
 				WorkflowType: &types.WorkflowType{
-					Name: common.StringPtr("child workflow type"),
+					Name: "child workflow type",
 				},
-				TaskList:          &types.TaskList{Name: common.StringPtr(taskListName)},
+				TaskList:          &types.TaskList{Name: taskListName},
 				Input:             []byte("random input"),
 				ParentClosePolicy: &parentClosePolicy,
 			},
@@ -963,9 +963,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 		_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventID(), uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
 			WorkflowID: "child workflow" + string(i),
 			WorkflowType: &types.WorkflowType{
-				Name: common.StringPtr("child workflow type"),
+				Name: "child workflow type",
 			},
-			TaskList:          &types.TaskList{Name: common.StringPtr(taskListName)},
+			TaskList:          &types.TaskList{Name: taskListName},
 			Input:             []byte("random input"),
 			ParentClosePolicy: &parentClosePolicy,
 		})
@@ -1019,8 +1019,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1041,9 +1041,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 			StartChildWorkflowExecutionDecisionAttributes: &types.StartChildWorkflowExecutionDecisionAttributes{
 				WorkflowID: "child workflow" + string(i),
 				WorkflowType: &types.WorkflowType{
-					Name: common.StringPtr("child workflow type"),
+					Name: "child workflow type",
 				},
-				TaskList:          &types.TaskList{Name: common.StringPtr(taskListName)},
+				TaskList:          &types.TaskList{Name: taskListName},
 				Input:             []byte("random input"),
 				ParentClosePolicy: &parentClosePolicy,
 			},
@@ -1060,9 +1060,9 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 		_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventID(), uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
 			WorkflowID: "child workflow" + string(i),
 			WorkflowType: &types.WorkflowType{
-				Name: common.StringPtr("child workflow type"),
+				Name: "child workflow type",
 			},
-			TaskList:          &types.TaskList{Name: common.StringPtr(taskListName)},
+			TaskList:          &types.TaskList{Name: taskListName},
 			Input:             []byte("random input"),
 			ParentClosePolicy: &parentClosePolicy,
 		})
@@ -1120,8 +1120,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_Success() {
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1188,8 +1188,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_Failure() {
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1257,8 +1257,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_Duplication
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1327,8 +1327,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Success() {
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1372,7 +1372,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Success() {
 			WorkflowID: transferTask.TargetWorkflowID,
 			RunID:      transferTask.TargetRunID,
 		},
-		RequestID: common.StringPtr(si.SignalRequestID),
+		RequestID: si.SignalRequestID,
 	}).Return(nil).Times(1)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
@@ -1408,8 +1408,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Failure() {
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1480,8 +1480,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Duplication
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1548,8 +1548,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1633,8 +1633,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_WithRet
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1727,8 +1727,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Failure
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1815,8 +1815,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1906,8 +1906,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Duplica
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1989,8 +1989,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask()
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 				CronSchedule:                        common.StringPtr(cronSchedule),
@@ -2044,8 +2044,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttribu
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -2099,7 +2099,7 @@ func (s *transferActiveTaskExecutorSuite) createAddActivityTaskRequest(
 		WorkflowID: task.WorkflowID,
 		RunID:      task.RunID,
 	}
-	taskList := &types.TaskList{Name: &task.TaskList}
+	taskList := &types.TaskList{Name: task.TaskList}
 
 	return &types.AddActivityTaskRequest{
 		DomainUUID:                    task.TargetDomainID,
@@ -2120,7 +2120,7 @@ func (s *transferActiveTaskExecutorSuite) createAddDecisionTaskRequest(
 		WorkflowID: task.WorkflowID,
 		RunID:      task.RunID,
 	}
-	taskList := &types.TaskList{Name: &task.TaskList}
+	taskList := &types.TaskList{Name: task.TaskList}
 	executionInfo := mutableState.GetExecutionInfo()
 	timeout := executionInfo.WorkflowTimeout
 	if mutableState.GetExecutionInfo().TaskList != task.TaskList {
@@ -2187,7 +2187,7 @@ func (s *transferActiveTaskExecutorSuite) createRequestCancelWorkflowExecutionRe
 			WorkflowExecution: &targetExecution,
 			Identity:          identityHistoryService,
 			// Use the same request ID to dedupe RequestCancelWorkflowExecution calls
-			RequestID: common.StringPtr(rci.CancelRequestID),
+			RequestID: rci.CancelRequestID,
 		},
 		ExternalInitiatedEventID:  common.Int64Ptr(task.ScheduleID),
 		ExternalWorkflowExecution: &sourceExecution,
@@ -2218,7 +2218,7 @@ func (s *transferActiveTaskExecutorSuite) createSignalWorkflowExecutionRequest(
 			Identity:          identityHistoryService,
 			SignalName:        common.StringPtr(si.SignalName),
 			Input:             si.Input,
-			RequestID:         common.StringPtr(si.SignalRequestID),
+			RequestID:         si.SignalRequestID,
 			Control:           si.Control,
 		},
 		ExternalWorkflowExecution: &sourceExecution,
@@ -2251,7 +2251,7 @@ func (s *transferActiveTaskExecutorSuite) createChildWorkflowExecutionRequest(
 		ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      attributes.TaskStartToCloseTimeoutSeconds,
 		// Use the same request ID to dedupe StartWorkflowExecution calls
-		RequestID:             common.StringPtr(ci.CreateRequestID),
+		RequestID:             ci.CreateRequestID,
 		WorkflowIDReusePolicy: attributes.WorkflowIDReusePolicy,
 		RetryPolicy:           attributes.RetryPolicy,
 	}

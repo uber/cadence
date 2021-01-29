@@ -233,7 +233,7 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 	// the correct logic should check whether the decision task is a sticky decision
 	// task or not.
 	taskList := &types.TaskList{
-		Name: &task.TaskList,
+		Name: task.TaskList,
 	}
 	if mutableState.GetExecutionInfo().TaskList != task.TaskList {
 		// this decision is an sticky decision
@@ -574,7 +574,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 			WorkflowID: task.TargetWorkflowID,
 			RunID:      task.TargetRunID,
 		},
-		RequestID: common.StringPtr(signalInfo.SignalRequestID),
+		RequestID: signalInfo.SignalRequestID,
 	})
 }
 
@@ -1212,7 +1212,7 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionWithRetry(
 			},
 			Identity: identityHistoryService,
 			// Use the same request ID to dedupe RequestCancelWorkflowExecution calls
-			RequestID: common.StringPtr(requestCancelInfo.CancelRequestID),
+			RequestID: requestCancelInfo.CancelRequestID,
 		},
 		ExternalInitiatedEventID: common.Int64Ptr(task.ScheduleID),
 		ExternalWorkflowExecution: &types.WorkflowExecution{
@@ -1258,7 +1258,7 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionWithRetry(
 			SignalName: common.StringPtr(signalInfo.SignalName),
 			Input:      signalInfo.Input,
 			// Use same request ID to deduplicate SignalWorkflowExecution calls
-			RequestID: common.StringPtr(signalInfo.SignalRequestID),
+			RequestID: signalInfo.SignalRequestID,
 			Control:   signalInfo.Control,
 		},
 		ExternalWorkflowExecution: &types.WorkflowExecution{
@@ -1296,7 +1296,7 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 		ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      attributes.TaskStartToCloseTimeoutSeconds,
 		// Use the same request ID to dedupe StartWorkflowExecution calls
-		RequestID:             common.StringPtr(childInfo.CreateRequestID),
+		RequestID:             childInfo.CreateRequestID,
 		WorkflowIDReusePolicy: attributes.WorkflowIDReusePolicy,
 		RetryPolicy:           attributes.RetryPolicy,
 		CronSchedule:          attributes.CronSchedule,
