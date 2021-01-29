@@ -3708,7 +3708,7 @@ func (s *integrationSuite) TestCancelTimer() {
 		RunID:      creatResp.GetRunID(),
 	}
 
-	TimerID := 1
+	TimerID := "1"
 	timerScheduled := false
 	signalDelivered := false
 	timerCancelled := false
@@ -3722,7 +3722,7 @@ func (s *integrationSuite) TestCancelTimer() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeStartTimer.Ptr(),
 				StartTimerDecisionAttributes: &types.StartTimerDecisionAttributes{
-					TimerID:                   fmt.Sprintf("%v", TimerID),
+					TimerID:                   TimerID,
 					StartToFireTimeoutSeconds: common.Int64Ptr(timer),
 				},
 			}}, nil
@@ -3751,7 +3751,7 @@ func (s *integrationSuite) TestCancelTimer() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeCancelTimer.Ptr(),
 				CancelTimerDecisionAttributes: &types.CancelTimerDecisionAttributes{
-					TimerID: fmt.Sprintf("%v", TimerID),
+					TimerID: TimerID,
 				},
 			}}, nil
 		}
