@@ -29,7 +29,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/olivere/elastic"
+	aws "github.com/olivere/elastic/aws/v4"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -98,6 +100,16 @@ func NewV6Client(
 	}
 	if connectConfig.DisableHealthCheck {
 		clientOptFuncs = append(clientOptFuncs, elastic.SetHealthcheck(false))
+	}
+	if connectConfig.AWSSigning.Enable {
+		// Refer to https://github.com/olivere/elastic/blob/release-branch.v6/recipes/aws-connect-v4/main.go
+		awsCredentials := credentials.NewStaticCredentials(
+			connectConfig.AWSSigning.AccessKey,
+			connectConfig.AWSSigning.SecretKey,
+			connectConfig.AWSSigning.SessionToken,
+		)
+		signingClient := aws.NewV4SigningClient(awsCredentials, connectConfig.AWSSigning.Region)
+		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(signingClient))
 	}
 	client, err := elastic.NewClient(clientOptFuncs...)
 	if err != nil {

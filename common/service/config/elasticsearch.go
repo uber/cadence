@@ -42,6 +42,21 @@ type (
 		DisableSniff bool `yaml:"disableSniff"`
 		// optional to disable health check
 		DisableHealthCheck bool `yaml:"disableHealthCheck"`
+		// optional to use AWS signing client
+		// See more info https://github.com/olivere/elastic/wiki/Using-with-AWS-Elasticsearch-Service
+		AWSSigning AWSSigning `yaml:"awsSigning"`
+	}
+
+	// AWSSigning contains config to create a static credentials value provider.
+	// SessionToken is only required for temporary security credentials retrieved via STS,
+	// otherwise an empty string can be passed for this parameter.
+	// See more in https://github.com/aws/aws-sdk-go/blob/master/aws/credentials/static_provider.go#L21
+	AWSSigning struct {
+		Enable       bool   `yaml:"enable"`
+		AccessKey    string `yaml:"accessKey"`
+		SecretKey    string `yaml:"secretKey"`
+		Region       string `yaml:"region"`
+		SessionToken string `yaml:"sessionToken"`
 	}
 )
 
