@@ -29,6 +29,15 @@ warningCode = 0
 
 #### higher value stuff
 
+# general defer gotchas.
+#
+# in particular: "recover" warns about unsafe use of recover().
+# this has caught bugs that can allow crashes while seemingly safe, and are *extremely* hard to catch in review.
+#
+# the arguments are excluding only "call-chain", which would disallow `defer someFn(...)()` which is both useful and in use.
+[rule.defer]
+arguments=[["loop","method-call","recover","return"]]
+
 # string(int) is almost always a bug.
 # go vet considers this a fatal error, but only in 1.15 or newer, and go.mod currently targets 1.13
 [rule.string-of-int]
