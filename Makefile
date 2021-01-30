@@ -71,8 +71,8 @@ $(BIN)/enumer: go.mod | $(BIN)
 $(BIN)/goimports: go.mod | $(BIN)
 	$(call get_tool,golang.org/x/tools/cmd/goimports)
 
-$(BIN)/golint: go.mod | $(BIN)
-	$(call get_tool,golang.org/x/lint/golint)
+$(BIN)/revive: go.mod | $(BIN)
+	$(call get_tool,github.com/mgechev/revive)
 
 $(BIN)/protoc-gen-go: go.mod | $(BIN)
 	$(call get_tool,google.golang.org/protobuf/cmd/protoc-gen-go)
@@ -270,13 +270,8 @@ go-generate: $(BIN)/mockgen $(BIN)/enumer
 	@echo "updating copyright headers"
 	@$(MAKE) --no-print-directory copyright
 
-lint: $(BIN)/golint fmt
-	@echo "running linter"
-	@lintFail=0; for file in $(sort $(LINT_SRC)); do \
-		$(BIN)/golint "$$file"; \
-		if [ $$? -eq 1 ]; then lintFail=1; fi; \
-	done; \
-	if [ $$lintFail -eq 1 ]; then exit 1; fi;
+lint: $(BIN)/revive
+	$(BIN)/revive -config revive.toml -exclude './canary/...' -exclude './vendor/...' -formatter unix ./... | sort
 
 fmt: $(BIN)/goimports $(ALL_SRC)
 	@echo "running goimports"

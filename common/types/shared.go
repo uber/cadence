@@ -8671,10 +8671,10 @@ const (
 
 // TimerCanceledEventAttributes is an internal type (TBD...)
 type TimerCanceledEventAttributes struct {
-	TimerID                      string  `json:"timerId,omitempty"`
-	StartedEventID               *int64  `json:"startedEventId,omitempty"`
-	DecisionTaskCompletedEventID *int64  `json:"decisionTaskCompletedEventId,omitempty"`
-	Identity                     string  `json:"identity,omitempty"`
+	TimerID                      string `json:"timerId,omitempty"`
+	StartedEventID               *int64 `json:"startedEventId,omitempty"`
+	DecisionTaskCompletedEventID *int64 `json:"decisionTaskCompletedEventId,omitempty"`
+	Identity                     string `json:"identity,omitempty"`
 }
 
 // GetTimerID is an internal getter (TBD...)

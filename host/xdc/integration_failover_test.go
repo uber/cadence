@@ -1873,7 +1873,7 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
-		CronSchedule:                        common.StringPtr("@every 5s"),
+		CronSchedule:                        "@every 5s",
 	}
 	we, err := client1.StartWorkflowExecution(createContext(), startReq)
 	s.NoError(err)
