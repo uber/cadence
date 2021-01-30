@@ -15,7 +15,7 @@ warningCode = 0
 [rule.error-return]
 [rule.error-strings]
 [rule.errorf]
-[rule.exported]
+# [rule.exported] # disabled due to lack of value / encouraging bad habits
 [rule.if-return]
 [rule.increment-decrement]
 [rule.indent-error-flow]
