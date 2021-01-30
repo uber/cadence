@@ -29,6 +29,10 @@ warningCode = 0
 
 #### higher value stuff
 
+# this is basically errcheck, warns on errs that are not checked.
+# strongly desired, but disabled due to 300 failures (to be tackled incrementally).
+# [rule.unhandled-error]
+
 # general defer gotchas.
 #
 # in particular: "recover" warns about unsafe use of recover().
@@ -55,3 +59,40 @@ arguments=[["loop","method-call","recover","return"]]
 [rule.unconditional-recursion] # probably a good idea
 [rule.unreachable-code] # code simplifier
 [rule.waitgroup-by-value] # correct use of sync code, important
+
+#### unused utilities
+
+# [rule.file-header] # could possibly replace `copyright -verifyOnly`?
+# [rule.imports-blacklist] # simple way to ban imports / enforce wrappers, likely useful
+
+#### disabled but maybe desirable
+
+# [rule.bare-return] # probably beneficial as it's slightly error-prone, but 2,000 failures
+# [rule.bool-literal-in-expr] # minor code simplifier, few failures
+# [rule.confusing-results] # maybe beneficial, only a few failures
+# [rule.deep-exit] # probably a good idea in most code, some failures, but not trivial to adopt
+# [rule.duplicated-imports] # minor, but may be worthwhile.  failures are weird but harmless
+# [rule.early-return] # minor code simplifier, a handful of failures
+# [rule.get-return] # existing failures are intentional + desirable, but in principle it's a fine idea
+# [rule.import-shadowing] # probably beneficial, but 750 failures
+# [rule.redefines-builtin-id] # probably beneficial, few failures
+# [rule.struct-tag] # probably beneficial, a few failures
+# [rule.superfluous-else] # minor code simplifier, a few failures
+# [rule.unexported-naming] # probably beneficial, but 300 failures
+# [rule.unused-parameter] # minor code simplifier / clarifier, but 250 failures
+# [rule.unused-receiver] # minor code simplifier / clarifier, but 500 failures
+
+#### probably undesirable
+
+# [rule.add-constant] # extremely noisy.  18,000 failures, overwhelmingly for tests or 0/1 which seem totally fine
+# [rule.argument-limit] # too arbitrary
+# [rule.cognitive-complexity] # dubious value, but possibly interesting
+# [rule.confusing-naming] # dubious value, ~50 failures
+# [rule.cyclomatic] # dubious value, but possibly interesting
+# [rule.empty-block] # easily noticed in code review, but also warns on documented no-op branches, which seem fine
+# [rule.empty-lines] # low value, many failures
+# [rule.flag-parameter] # interesting, but very noisy
+# [rule.function-result-limit] # too arbitrary, easily noticed in code review
+# [rule.line-length-limit] # too arbitrary
+# [rule.max-public-structs] # too arbitrary
+# [rule.unnecessary-stmt] # dubious value
