@@ -23,6 +23,7 @@ package task
 import (
 	"context"
 	"math/rand"
+	"strconv"
 	"testing"
 	"time"
 
@@ -942,7 +943,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 		decisions = append(decisions, &types.Decision{
 			DecisionType: &dt,
 			StartChildWorkflowExecutionDecisionAttributes: &types.StartChildWorkflowExecutionDecisionAttributes{
-				WorkflowID: "child workflow" + string(i),
+				WorkflowID: "child workflow" + strconv.Itoa(i),
 				WorkflowType: &types.WorkflowType{
 					Name: "child workflow type",
 				},
@@ -961,7 +962,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 
 	for i := 0; i < 10; i++ {
 		_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventID(), uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
-			WorkflowID: "child workflow" + string(i),
+			WorkflowID: "child workflow" + strconv.Itoa(i),
 			WorkflowType: &types.WorkflowType{
 				Name: "child workflow type",
 			},
@@ -1039,7 +1040,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 		decisions = append(decisions, &types.Decision{
 			DecisionType: &dt,
 			StartChildWorkflowExecutionDecisionAttributes: &types.StartChildWorkflowExecutionDecisionAttributes{
-				WorkflowID: "child workflow" + string(i),
+				WorkflowID: "child workflow" + strconv.Itoa(i),
 				WorkflowType: &types.WorkflowType{
 					Name: "child workflow type",
 				},
@@ -1058,7 +1059,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 
 	for i := 0; i < 10; i++ {
 		_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventID(), uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
-			WorkflowID: "child workflow" + string(i),
+			WorkflowID: "child workflow" + strconv.Itoa(i),
 			WorkflowType: &types.WorkflowType{
 				Name: "child workflow type",
 			},

@@ -27,3 +27,8 @@ warningCode = 0
 [rule.var-declaration]
 [rule.var-naming]
 
+#### higher value stuff
+
+# string(int) is almost always a bug.
+# go vet considers this a fatal error, but only in 1.15 or newer, and go.mod currently targets 1.13
+[rule.string-of-int]
