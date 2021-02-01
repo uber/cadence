@@ -55,7 +55,7 @@ type (
 	AWSSigning struct {
 		Enable                bool                      `yaml:"enable"`
 		StaticCredential      *AWSStaticCredential      `yaml:"staticCredential"`
-		EnvironmentCredential *AWSEnvironmentCredential `yaml:"defaultCredential"`
+		EnvironmentCredential *AWSEnvironmentCredential `yaml:"environmentCredential"`
 	}
 
 	// AWSStaticCredential to create a static credentials value provider.
