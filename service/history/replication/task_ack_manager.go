@@ -526,7 +526,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 					StartedTime:        startedTime,
 					LastHeartbeatTime:  heartbeatTime,
 					Details:            activityInfo.Details,
-					Attempt:            common.Int32Ptr(activityInfo.Attempt),
+					Attempt:            activityInfo.Attempt,
 					LastFailureReason:  common.StringPtr(activityInfo.LastFailureReason),
 					LastWorkerIdentity: activityInfo.LastWorkerIdentity,
 					LastFailureDetails: activityInfo.LastFailureDetails,

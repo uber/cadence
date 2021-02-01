@@ -3715,7 +3715,7 @@ func (v *RecordActivityTaskStartedRequest) GetPollRequest() (o *PollForActivityT
 type RecordActivityTaskStartedResponse struct {
 	ScheduledEvent                  *HistoryEvent `json:"scheduledEvent,omitempty"`
 	StartedTimestamp                *int64        `json:"startedTimestamp,omitempty"`
-	Attempt                         *int64        `json:"attempt,omitempty"`
+	Attempt                         int64         `json:"attempt,omitempty"`
 	ScheduledTimestampOfThisAttempt *int64        `json:"scheduledTimestampOfThisAttempt,omitempty"`
 	HeartbeatDetails                []byte        `json:"heartbeatDetails,omitempty"`
 	WorkflowType                    *WorkflowType `json:"workflowType,omitempty"`
@@ -3740,8 +3740,8 @@ func (v *RecordActivityTaskStartedResponse) GetStartedTimestamp() (o int64) {
 
 // GetAttempt is an internal getter (TBD...)
 func (v *RecordActivityTaskStartedResponse) GetAttempt() (o int64) {
-	if v != nil && v.Attempt != nil {
-		return *v.Attempt
+	if v != nil {
+		return v.Attempt
 	}
 	return
 }
@@ -3892,7 +3892,7 @@ type RecordDecisionTaskStartedResponse struct {
 	ScheduledEventID          *int64                    `json:"scheduledEventId,omitempty"`
 	StartedEventID            *int64                    `json:"startedEventId,omitempty"`
 	NextEventID               *int64                    `json:"nextEventId,omitempty"`
-	Attempt                   *int64                    `json:"attempt,omitempty"`
+	Attempt                   int64                     `json:"attempt,omitempty"`
 	StickyExecutionEnabled    *bool                     `json:"stickyExecutionEnabled,omitempty"`
 	DecisionInfo              *TransientDecisionInfo    `json:"decisionInfo,omitempty"`
 	WorkflowExecutionTaskList *TaskList                 `json:"WorkflowExecutionTaskList,omitempty"`
@@ -3945,8 +3945,8 @@ func (v *RecordDecisionTaskStartedResponse) GetNextEventID() (o int64) {
 
 // GetAttempt is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedResponse) GetAttempt() (o int64) {
-	if v != nil && v.Attempt != nil {
-		return *v.Attempt
+	if v != nil {
+		return v.Attempt
 	}
 	return
 }
@@ -4466,7 +4466,7 @@ type HistoryStartWorkflowExecutionRequest struct {
 	DomainUUID                      string                         `json:"domainUUID,omitempty"`
 	StartRequest                    *StartWorkflowExecutionRequest `json:"startRequest,omitempty"`
 	ParentExecutionInfo             *ParentExecutionInfo           `json:"parentExecutionInfo,omitempty"`
-	Attempt                         *int32                         `json:"attempt,omitempty"`
+	Attempt                         int32                          `json:"attempt,omitempty"`
 	ExpirationTimestamp             *int64                         `json:"expirationTimestamp,omitempty"`
 	ContinueAsNewInitiator          *ContinueAsNewInitiator        `json:"continueAsNewInitiator,omitempty"`
 	ContinuedFailureReason          *string                        `json:"continuedFailureReason,omitempty"`
@@ -4501,8 +4501,8 @@ func (v *HistoryStartWorkflowExecutionRequest) GetParentExecutionInfo() (o *Pare
 
 // GetAttempt is an internal getter (TBD...)
 func (v *HistoryStartWorkflowExecutionRequest) GetAttempt() (o int32) {
-	if v != nil && v.Attempt != nil {
-		return *v.Attempt
+	if v != nil {
+		return v.Attempt
 	}
 	return
 }
@@ -4567,7 +4567,7 @@ type SyncActivityRequest struct {
 	StartedTime        *int64          `json:"startedTime,omitempty"`
 	LastHeartbeatTime  *int64          `json:"lastHeartbeatTime,omitempty"`
 	Details            []byte          `json:"details,omitempty"`
-	Attempt            *int32          `json:"attempt,omitempty"`
+	Attempt            int32           `json:"attempt,omitempty"`
 	LastFailureReason  *string         `json:"lastFailureReason,omitempty"`
 	LastWorkerIdentity string          `json:"lastWorkerIdentity,omitempty"`
 	LastFailureDetails []byte          `json:"lastFailureDetails,omitempty"`
@@ -4656,8 +4656,8 @@ func (v *SyncActivityRequest) GetDetails() (o []byte) {
 
 // GetAttempt is an internal getter (TBD...)
 func (v *SyncActivityRequest) GetAttempt() (o int32) {
-	if v != nil && v.Attempt != nil {
-		return *v.Attempt
+	if v != nil {
+		return v.Attempt
 	}
 	return
 }

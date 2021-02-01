@@ -806,7 +806,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 	}
 
 	response.TaskToken, _ = e.tokenSerializer.Serialize(token)
-	response.Attempt = common.Int32Ptr(int32(token.ScheduleAttempt))
+	response.Attempt = int32(token.ScheduleAttempt)
 	response.HeartbeatDetails = historyResponse.HeartbeatDetails
 	response.WorkflowType = historyResponse.WorkflowType
 	response.WorkflowDomain = historyResponse.WorkflowDomain

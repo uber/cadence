@@ -959,7 +959,7 @@ type SyncActivityTaskAttributes struct {
 	StartedTime        *int64          `json:"startedTime,omitempty"`
 	LastHeartbeatTime  *int64          `json:"lastHeartbeatTime,omitempty"`
 	Details            []byte          `json:"details,omitempty"`
-	Attempt            *int32          `json:"attempt,omitempty"`
+	Attempt            int32           `json:"attempt,omitempty"`
 	LastFailureReason  *string         `json:"lastFailureReason,omitempty"`
 	LastWorkerIdentity string          `json:"lastWorkerIdentity,omitempty"`
 	LastFailureDetails []byte          `json:"lastFailureDetails,omitempty"`
@@ -1048,8 +1048,8 @@ func (v *SyncActivityTaskAttributes) GetDetails() (o []byte) {
 
 // GetAttempt is an internal getter (TBD...)
 func (v *SyncActivityTaskAttributes) GetAttempt() (o int32) {
-	if v != nil && v.Attempt != nil {
-		return *v.Attempt
+	if v != nil {
+		return v.Attempt
 	}
 	return
 }

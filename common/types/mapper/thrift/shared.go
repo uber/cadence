@@ -229,7 +229,7 @@ func FromActivityTaskStartedEventAttributes(t *types.ActivityTaskStartedEventAtt
 		ScheduledEventId:   t.ScheduledEventID,
 		Identity:           &t.Identity,
 		RequestId:          &t.RequestID,
-		Attempt:            t.Attempt,
+		Attempt:            &t.Attempt,
 		LastFailureReason:  t.LastFailureReason,
 		LastFailureDetails: t.LastFailureDetails,
 	}
@@ -244,7 +244,7 @@ func ToActivityTaskStartedEventAttributes(t *shared.ActivityTaskStartedEventAttr
 		ScheduledEventID:   t.ScheduledEventId,
 		Identity:           t.GetIdentity(),
 		RequestID:          t.GetRequestId(),
-		Attempt:            t.Attempt,
+		Attempt:            t.GetAttempt(),
 		LastFailureReason:  t.LastFailureReason,
 		LastFailureDetails: t.LastFailureDetails,
 	}
@@ -1266,7 +1266,7 @@ func FromDecisionTaskScheduledEventAttributes(t *types.DecisionTaskScheduledEven
 	return &shared.DecisionTaskScheduledEventAttributes{
 		TaskList:                   FromTaskList(t.TaskList),
 		StartToCloseTimeoutSeconds: t.StartToCloseTimeoutSeconds,
-		Attempt:                    t.Attempt,
+		Attempt:                    &t.Attempt,
 	}
 }
 
@@ -1278,7 +1278,7 @@ func ToDecisionTaskScheduledEventAttributes(t *shared.DecisionTaskScheduledEvent
 	return &types.DecisionTaskScheduledEventAttributes{
 		TaskList:                   ToTaskList(t.TaskList),
 		StartToCloseTimeoutSeconds: t.StartToCloseTimeoutSeconds,
-		Attempt:                    t.Attempt,
+		Attempt:                    t.GetAttempt(),
 	}
 }
 
@@ -3112,8 +3112,8 @@ func FromPendingActivityInfo(t *types.PendingActivityInfo) *shared.PendingActivi
 		HeartbeatDetails:       t.HeartbeatDetails,
 		LastHeartbeatTimestamp: t.LastHeartbeatTimestamp,
 		LastStartedTimestamp:   t.LastStartedTimestamp,
-		Attempt:                t.Attempt,
-		MaximumAttempts:        t.MaximumAttempts,
+		Attempt:                &t.Attempt,
+		MaximumAttempts:        &t.MaximumAttempts,
 		ScheduledTimestamp:     t.ScheduledTimestamp,
 		ExpirationTimestamp:    t.ExpirationTimestamp,
 		LastFailureReason:      t.LastFailureReason,
@@ -3134,8 +3134,8 @@ func ToPendingActivityInfo(t *shared.PendingActivityInfo) *types.PendingActivity
 		HeartbeatDetails:       t.HeartbeatDetails,
 		LastHeartbeatTimestamp: t.LastHeartbeatTimestamp,
 		LastStartedTimestamp:   t.LastStartedTimestamp,
-		Attempt:                t.Attempt,
-		MaximumAttempts:        t.MaximumAttempts,
+		Attempt:                t.GetAttempt(),
+		MaximumAttempts:        t.GetMaximumAttempts(),
 		ScheduledTimestamp:     t.ScheduledTimestamp,
 		ExpirationTimestamp:    t.ExpirationTimestamp,
 		LastFailureReason:      t.LastFailureReason,
@@ -3219,7 +3219,7 @@ func FromPendingDecisionInfo(t *types.PendingDecisionInfo) *shared.PendingDecisi
 		State:                      FromPendingDecisionState(t.State),
 		ScheduledTimestamp:         t.ScheduledTimestamp,
 		StartedTimestamp:           t.StartedTimestamp,
-		Attempt:                    t.Attempt,
+		Attempt:                    &t.Attempt,
 		OriginalScheduledTimestamp: t.OriginalScheduledTimestamp,
 	}
 }
@@ -3233,7 +3233,7 @@ func ToPendingDecisionInfo(t *shared.PendingDecisionInfo) *types.PendingDecision
 		State:                      ToPendingDecisionState(t.State),
 		ScheduledTimestamp:         t.ScheduledTimestamp,
 		StartedTimestamp:           t.StartedTimestamp,
-		Attempt:                    t.Attempt,
+		Attempt:                    t.GetAttempt(),
 		OriginalScheduledTimestamp: t.OriginalScheduledTimestamp,
 	}
 }
@@ -3312,7 +3312,7 @@ func FromPollForActivityTaskResponse(t *types.PollForActivityTaskResponse) *shar
 		StartedTimestamp:                t.StartedTimestamp,
 		StartToCloseTimeoutSeconds:      t.StartToCloseTimeoutSeconds,
 		HeartbeatTimeoutSeconds:         t.HeartbeatTimeoutSeconds,
-		Attempt:                         t.Attempt,
+		Attempt:                         &t.Attempt,
 		ScheduledTimestampOfThisAttempt: t.ScheduledTimestampOfThisAttempt,
 		HeartbeatDetails:                t.HeartbeatDetails,
 		WorkflowType:                    FromWorkflowType(t.WorkflowType),
@@ -3337,7 +3337,7 @@ func ToPollForActivityTaskResponse(t *shared.PollForActivityTaskResponse) *types
 		StartedTimestamp:                t.StartedTimestamp,
 		StartToCloseTimeoutSeconds:      t.StartToCloseTimeoutSeconds,
 		HeartbeatTimeoutSeconds:         t.HeartbeatTimeoutSeconds,
-		Attempt:                         t.Attempt,
+		Attempt:                         t.GetAttempt(),
 		ScheduledTimestampOfThisAttempt: t.ScheduledTimestampOfThisAttempt,
 		HeartbeatDetails:                t.HeartbeatDetails,
 		WorkflowType:                    ToWorkflowType(t.WorkflowType),
@@ -3383,7 +3383,7 @@ func FromPollForDecisionTaskResponse(t *types.PollForDecisionTaskResponse) *shar
 		WorkflowType:              FromWorkflowType(t.WorkflowType),
 		PreviousStartedEventId:    t.PreviousStartedEventID,
 		StartedEventId:            t.StartedEventID,
-		Attempt:                   t.Attempt,
+		Attempt:                   &t.Attempt,
 		BacklogCountHint:          t.BacklogCountHint,
 		History:                   FromHistory(t.History),
 		NextPageToken:             t.NextPageToken,
@@ -3406,7 +3406,7 @@ func ToPollForDecisionTaskResponse(t *shared.PollForDecisionTaskResponse) *types
 		WorkflowType:              ToWorkflowType(t.WorkflowType),
 		PreviousStartedEventID:    t.PreviousStartedEventId,
 		StartedEventID:            t.StartedEventId,
-		Attempt:                   t.Attempt,
+		Attempt:                   t.GetAttempt(),
 		BacklogCountHint:          t.BacklogCountHint,
 		History:                   ToHistory(t.History),
 		NextPageToken:             t.NextPageToken,
@@ -6069,7 +6069,7 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		Identity:                            &t.Identity,
 		FirstExecutionRunId:                 &t.FirstExecutionRunID,
 		RetryPolicy:                         FromRetryPolicy(t.RetryPolicy),
-		Attempt:                             t.Attempt,
+		Attempt:                             &t.Attempt,
 		ExpirationTimestamp:                 t.ExpirationTimestamp,
 		CronSchedule:                        &t.CronSchedule,
 		FirstDecisionTaskBackoffSeconds:     t.FirstDecisionTaskBackoffSeconds,
@@ -6103,7 +6103,7 @@ func ToWorkflowExecutionStartedEventAttributes(t *shared.WorkflowExecutionStarte
 		Identity:                            t.GetIdentity(),
 		FirstExecutionRunID:                 t.GetFirstExecutionRunId(),
 		RetryPolicy:                         ToRetryPolicy(t.RetryPolicy),
-		Attempt:                             t.Attempt,
+		Attempt:                             t.GetAttempt(),
 		ExpirationTimestamp:                 t.ExpirationTimestamp,
 		CronSchedule:                        t.GetCronSchedule(),
 		FirstDecisionTaskBackoffSeconds:     t.FirstDecisionTaskBackoffSeconds,

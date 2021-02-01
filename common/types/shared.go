@@ -365,7 +365,7 @@ type ActivityTaskStartedEventAttributes struct {
 	ScheduledEventID   *int64  `json:"scheduledEventId,omitempty"`
 	Identity           string  `json:"identity,omitempty"`
 	RequestID          string  `json:"requestId,omitempty"`
-	Attempt            *int32  `json:"attempt,omitempty"`
+	Attempt            int32   `json:"attempt,omitempty"`
 	LastFailureReason  *string `json:"lastFailureReason,omitempty"`
 	LastFailureDetails []byte  `json:"lastFailureDetails,omitempty"`
 }
@@ -396,8 +396,8 @@ func (v *ActivityTaskStartedEventAttributes) GetRequestID() (o string) {
 
 // GetAttempt is an internal getter (TBD...)
 func (v *ActivityTaskStartedEventAttributes) GetAttempt() (o int32) {
-	if v != nil && v.Attempt != nil {
-		return *v.Attempt
+	if v != nil {
+		return v.Attempt
 	}
 	return
 }
@@ -1937,7 +1937,7 @@ func (v *DecisionTaskFailedEventAttributes) GetBinaryChecksum() (o string) {
 type DecisionTaskScheduledEventAttributes struct {
 	TaskList                   *TaskList `json:"taskList,omitempty"`
 	StartToCloseTimeoutSeconds *int32    `json:"startToCloseTimeoutSeconds,omitempty"`
-	Attempt                    *int64    `json:"attempt,omitempty"`
+	Attempt                    int64     `json:"attempt,omitempty"`
 }
 
 // GetTaskList is an internal getter (TBD...)
@@ -1958,8 +1958,8 @@ func (v *DecisionTaskScheduledEventAttributes) GetStartToCloseTimeoutSeconds() (
 
 // GetAttempt is an internal getter (TBD...)
 func (v *DecisionTaskScheduledEventAttributes) GetAttempt() (o int64) {
-	if v != nil && v.Attempt != nil {
-		return *v.Attempt
+	if v != nil {
+		return v.Attempt
 	}
 	return
 }
@@ -4690,8 +4690,8 @@ type PendingActivityInfo struct {
 	HeartbeatDetails       []byte                `json:"heartbeatDetails,omitempty"`
 	LastHeartbeatTimestamp *int64                `json:"lastHeartbeatTimestamp,omitempty"`
 	LastStartedTimestamp   *int64                `json:"lastStartedTimestamp,omitempty"`
-	Attempt                *int32                `json:"attempt,omitempty"`
-	MaximumAttempts        *int32                `json:"maximumAttempts,omitempty"`
+	Attempt                int32                 `json:"attempt,omitempty"`
+	MaximumAttempts        int32                 `json:"maximumAttempts,omitempty"`
 	ScheduledTimestamp     *int64                `json:"scheduledTimestamp,omitempty"`
 	ExpirationTimestamp    *int64                `json:"expirationTimestamp,omitempty"`
 	LastFailureReason      *string               `json:"lastFailureReason,omitempty"`
@@ -4749,16 +4749,16 @@ func (v *PendingActivityInfo) GetLastStartedTimestamp() (o int64) {
 
 // GetAttempt is an internal getter (TBD...)
 func (v *PendingActivityInfo) GetAttempt() (o int32) {
-	if v != nil && v.Attempt != nil {
-		return *v.Attempt
+	if v != nil {
+		return v.Attempt
 	}
 	return
 }
 
 // GetMaximumAttempts is an internal getter (TBD...)
 func (v *PendingActivityInfo) GetMaximumAttempts() (o int32) {
-	if v != nil && v.MaximumAttempts != nil {
-		return *v.MaximumAttempts
+	if v != nil {
+		return v.MaximumAttempts
 	}
 	return
 }
@@ -4915,7 +4915,7 @@ type PendingDecisionInfo struct {
 	State                      *PendingDecisionState `json:"state,omitempty"`
 	ScheduledTimestamp         *int64                `json:"scheduledTimestamp,omitempty"`
 	StartedTimestamp           *int64                `json:"startedTimestamp,omitempty"`
-	Attempt                    *int64                `json:"attempt,omitempty"`
+	Attempt                    int64                 `json:"attempt,omitempty"`
 	OriginalScheduledTimestamp *int64                `json:"originalScheduledTimestamp,omitempty"`
 }
 
@@ -4945,8 +4945,8 @@ func (v *PendingDecisionInfo) GetStartedTimestamp() (o int64) {
 
 // GetAttempt is an internal getter (TBD...)
 func (v *PendingDecisionInfo) GetAttempt() (o int64) {
-	if v != nil && v.Attempt != nil {
-		return *v.Attempt
+	if v != nil {
+		return v.Attempt
 	}
 	return
 }
@@ -5062,7 +5062,7 @@ type PollForActivityTaskResponse struct {
 	StartedTimestamp                *int64             `json:"startedTimestamp,omitempty"`
 	StartToCloseTimeoutSeconds      *int32             `json:"startToCloseTimeoutSeconds,omitempty"`
 	HeartbeatTimeoutSeconds         *int32             `json:"heartbeatTimeoutSeconds,omitempty"`
-	Attempt                         *int32             `json:"attempt,omitempty"`
+	Attempt                         int32              `json:"attempt,omitempty"`
 	ScheduledTimestampOfThisAttempt *int64             `json:"scheduledTimestampOfThisAttempt,omitempty"`
 	HeartbeatDetails                []byte             `json:"heartbeatDetails,omitempty"`
 	WorkflowType                    *WorkflowType      `json:"workflowType,omitempty"`
@@ -5152,8 +5152,8 @@ func (v *PollForActivityTaskResponse) GetHeartbeatTimeoutSeconds() (o int32) {
 
 // GetAttempt is an internal getter (TBD...)
 func (v *PollForActivityTaskResponse) GetAttempt() (o int32) {
-	if v != nil && v.Attempt != nil {
-		return *v.Attempt
+	if v != nil {
+		return v.Attempt
 	}
 	return
 }
@@ -5245,7 +5245,7 @@ type PollForDecisionTaskResponse struct {
 	WorkflowType              *WorkflowType             `json:"workflowType,omitempty"`
 	PreviousStartedEventID    *int64                    `json:"previousStartedEventId,omitempty"`
 	StartedEventID            *int64                    `json:"startedEventId,omitempty"`
-	Attempt                   *int64                    `json:"attempt,omitempty"`
+	Attempt                   int64                     `json:"attempt,omitempty"`
 	BacklogCountHint          *int64                    `json:"backlogCountHint,omitempty"`
 	History                   *History                  `json:"history,omitempty"`
 	NextPageToken             []byte                    `json:"nextPageToken,omitempty"`
@@ -5298,8 +5298,8 @@ func (v *PollForDecisionTaskResponse) GetStartedEventID() (o int64) {
 
 // GetAttempt is an internal getter (TBD...)
 func (v *PollForDecisionTaskResponse) GetAttempt() (o int64) {
-	if v != nil && v.Attempt != nil {
-		return *v.Attempt
+	if v != nil {
+		return v.Attempt
 	}
 	return
 }
@@ -8671,10 +8671,10 @@ const (
 
 // TimerCanceledEventAttributes is an internal type (TBD...)
 type TimerCanceledEventAttributes struct {
-	TimerID                      string  `json:"timerId,omitempty"`
-	StartedEventID               *int64  `json:"startedEventId,omitempty"`
-	DecisionTaskCompletedEventID *int64  `json:"decisionTaskCompletedEventId,omitempty"`
-	Identity                     string  `json:"identity,omitempty"`
+	TimerID                      string `json:"timerId,omitempty"`
+	StartedEventID               *int64 `json:"startedEventId,omitempty"`
+	DecisionTaskCompletedEventID *int64 `json:"decisionTaskCompletedEventId,omitempty"`
+	Identity                     string `json:"identity,omitempty"`
 }
 
 // GetTimerID is an internal getter (TBD...)
@@ -9664,7 +9664,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 	Identity                            string                  `json:"identity,omitempty"`
 	FirstExecutionRunID                 string                  `json:"firstExecutionRunId,omitempty"`
 	RetryPolicy                         *RetryPolicy            `json:"retryPolicy,omitempty"`
-	Attempt                             *int32                  `json:"attempt,omitempty"`
+	Attempt                             int32                   `json:"attempt,omitempty"`
 	ExpirationTimestamp                 *int64                  `json:"expirationTimestamp,omitempty"`
 	CronSchedule                        string                  `json:"cronSchedule,omitempty"`
 	FirstDecisionTaskBackoffSeconds     *int32                  `json:"firstDecisionTaskBackoffSeconds,omitempty"`
@@ -9812,8 +9812,8 @@ func (v *WorkflowExecutionStartedEventAttributes) GetRetryPolicy() (o *RetryPoli
 
 // GetAttempt is an internal getter (TBD...)
 func (v *WorkflowExecutionStartedEventAttributes) GetAttempt() (o int32) {
-	if v != nil && v.Attempt != nil {
-		return *v.Attempt
+	if v != nil {
+		return v.Attempt
 	}
 	return
 }

@@ -137,13 +137,13 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("PollForActivityTask", func(t *testing.T) {
 		h.EXPECT().PollForActivityTask(ctx, &types.PollForActivityTaskRequest{}).Return(&types.PollForActivityTaskResponse{}, internalErr).Times(1)
 		resp, err := th.PollForActivityTask(ctx, &shared.PollForActivityTaskRequest{})
-		assert.Equal(t, shared.PollForActivityTaskResponse{WorkflowDomain: common.StringPtr("")}, *resp)
+		assert.Equal(t, shared.PollForActivityTaskResponse{WorkflowDomain: common.StringPtr(""), Attempt: common.Int32Ptr(0)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("PollForDecisionTask", func(t *testing.T) {
 		h.EXPECT().PollForDecisionTask(ctx, &types.PollForDecisionTaskRequest{}).Return(&types.PollForDecisionTaskResponse{}, internalErr).Times(1)
 		resp, err := th.PollForDecisionTask(ctx, &shared.PollForDecisionTaskRequest{})
-		assert.Equal(t, shared.PollForDecisionTaskResponse{}, *resp)
+		assert.Equal(t, shared.PollForDecisionTaskResponse{Attempt: common.Int64Ptr(0)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("QueryWorkflow", func(t *testing.T) {

@@ -209,7 +209,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 			response.WorkflowType = &workflowType
 			response.PreviousStartedEventID = common.Int64Ptr(scheduleID)
 			response.ScheduledEventID = common.Int64Ptr(scheduleID + 1)
-			response.Attempt = common.Int64Ptr(0)
+			response.Attempt = 0
 			response.StickyExecutionEnabled = common.BoolPtr(true)
 			response.WorkflowExecutionTaskList = &types.TaskList{
 				Name: tl,
@@ -244,7 +244,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 		WorkflowExecution:      &execution,
 		WorkflowType:           &workflowType,
 		PreviousStartedEventID: common.Int64Ptr(scheduleID),
-		Attempt:                common.Int64Ptr(0),
+		Attempt:                0,
 		BacklogCountHint:       common.Int64Ptr(1),
 		StickyExecutionEnabled: common.BoolPtr(true),
 		WorkflowExecutionTaskList: &types.TaskList{
