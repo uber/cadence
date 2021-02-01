@@ -783,12 +783,12 @@ func (s *integrationSuite) TestWorkflowRetry() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
 		RetryPolicy: &types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(int32(initialIntervalInSeconds)),
-			MaximumAttempts:             common.Int32Ptr(int32(maximumAttempts)),
-			MaximumIntervalInSeconds:    common.Int32Ptr(1),
+			InitialIntervalInSeconds:    int32(initialIntervalInSeconds),
+			MaximumAttempts:             int32(maximumAttempts),
+			MaximumIntervalInSeconds:    1,
 			NonRetriableErrorReasons:    []string{"bad-bug"},
-			BackoffCoefficient:          common.Float64Ptr(backoffCoefficient),
-			ExpirationIntervalInSeconds: common.Int32Ptr(100),
+			BackoffCoefficient:          backoffCoefficient,
+			ExpirationIntervalInSeconds: 100,
 		},
 	}
 
@@ -921,12 +921,12 @@ func (s *integrationSuite) TestWorkflowRetryFailures() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
 		RetryPolicy: &types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			MaximumAttempts:             common.Int32Ptr(3),
-			MaximumIntervalInSeconds:    common.Int32Ptr(1),
+			InitialIntervalInSeconds:    1,
+			MaximumAttempts:             3,
+			MaximumIntervalInSeconds:    1,
 			NonRetriableErrorReasons:    []string{"bad-bug"},
-			BackoffCoefficient:          common.Float64Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(100),
+			BackoffCoefficient:          1,
+			ExpirationIntervalInSeconds: 100,
 		},
 	}
 
@@ -977,12 +977,12 @@ func (s *integrationSuite) TestWorkflowRetryFailures() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
 		RetryPolicy: &types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			MaximumAttempts:             common.Int32Ptr(3),
-			MaximumIntervalInSeconds:    common.Int32Ptr(1),
+			InitialIntervalInSeconds:    1,
+			MaximumAttempts:             3,
+			MaximumIntervalInSeconds:    1,
 			NonRetriableErrorReasons:    []string{"bad-bug"},
-			BackoffCoefficient:          common.Float64Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(100),
+			BackoffCoefficient:          1,
+			ExpirationIntervalInSeconds: 100,
 		},
 	}
 

@@ -1650,11 +1650,11 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_WithRet
 	taskID := int64(59)
 
 	retryPolicy := &types.RetryPolicy{
-		ExpirationIntervalInSeconds: common.Int32Ptr(100),
-		MaximumAttempts:             common.Int32Ptr(3),
-		InitialIntervalInSeconds:    common.Int32Ptr(1),
-		MaximumIntervalInSeconds:    common.Int32Ptr(2),
-		BackoffCoefficient:          common.Float64Ptr(1),
+		ExpirationIntervalInSeconds: 100,
+		MaximumAttempts:             3,
+		InitialIntervalInSeconds:    1,
+		MaximumIntervalInSeconds:    2,
+		BackoffCoefficient:          1,
 	}
 
 	event, ci := test.AddStartChildWorkflowExecutionInitiatedEvent(mutableState, event.GetEventID(), uuid.New(),
