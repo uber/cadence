@@ -90,7 +90,7 @@ func (s *eventsCacheSuite) TestEventsCacheHitSuccess() {
 	runID := "events-cache-hit-success-run-id"
 	eventID := int64(23)
 	event := &types.HistoryEvent{
-		EventID:                            &eventID,
+		EventID:                            eventID,
 		EventType:                          types.EventTypeActivityTaskStarted.Ptr(),
 		ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{},
 	}
@@ -106,32 +106,32 @@ func (s *eventsCacheSuite) TestEventsCacheMissMultiEventsBatchV2Success() {
 	workflowID := "events-cache-miss-multi-events-batch-v2-success-workflow-id"
 	runID := "events-cache-miss-multi-events-batch-v2-success-run-id"
 	event1 := &types.HistoryEvent{
-		EventID:                              common.Int64Ptr(11),
+		EventID:                              11,
 		EventType:                            types.EventTypeDecisionTaskCompleted.Ptr(),
 		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{},
 	}
 	event2 := &types.HistoryEvent{
-		EventID:                              common.Int64Ptr(12),
+		EventID:                              12,
 		EventType:                            types.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
 	}
 	event3 := &types.HistoryEvent{
-		EventID:                              common.Int64Ptr(13),
+		EventID:                              13,
 		EventType:                            types.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
 	}
 	event4 := &types.HistoryEvent{
-		EventID:                              common.Int64Ptr(14),
+		EventID:                              14,
 		EventType:                            types.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
 	}
 	event5 := &types.HistoryEvent{
-		EventID:                              common.Int64Ptr(15),
+		EventID:                              15,
 		EventType:                            types.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
 	}
 	event6 := &types.HistoryEvent{
-		EventID:                              common.Int64Ptr(16),
+		EventID:                              16,
 		EventType:                            types.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
 	}
@@ -183,12 +183,12 @@ func (s *eventsCacheSuite) TestEventsCacheDisableSuccess() {
 	runID := "events-cache-disable-success-run-id"
 	shardID := common.IntPtr(10)
 	event1 := &types.HistoryEvent{
-		EventID:                            common.Int64Ptr(23),
+		EventID:                            23,
 		EventType:                          types.EventTypeActivityTaskStarted.Ptr(),
 		ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{},
 	}
 	event2 := &types.HistoryEvent{
-		EventID:                            common.Int64Ptr(32),
+		EventID:                            32,
 		EventType:                          types.EventTypeActivityTaskStarted.Ptr(),
 		ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{},
 	}

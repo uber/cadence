@@ -166,7 +166,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_No
 
 	event := &types.HistoryEvent{
 		Version:                                 common.Int64Ptr(version),
-		EventID:                                 common.Int64Ptr(1),
+		EventID:                                 1,
 		Timestamp:                               common.Int64Ptr(now.UnixNano()),
 		EventType:                               &evenType,
 		WorkflowExecutionStartedEventAttributes: startWorkflowAttribute,
@@ -217,7 +217,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_Wi
 
 	event := &types.HistoryEvent{
 		Version:                                 common.Int64Ptr(version),
-		EventID:                                 common.Int64Ptr(1),
+		EventID:                                 1,
 		Timestamp:                               common.Int64Ptr(now.UnixNano()),
 		EventType:                               &evenType,
 		WorkflowExecutionStartedEventAttributes: startWorkflowAttribute,
@@ -258,7 +258,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTimedOut()
 	evenType := types.EventTypeWorkflowExecutionTimedOut
 	event := &types.HistoryEvent{
 		Version:                                  common.Int64Ptr(version),
-		EventID:                                  common.Int64Ptr(130),
+		EventID:                                  130,
 		Timestamp:                                common.Int64Ptr(now.UnixNano()),
 		EventType:                                &evenType,
 		WorkflowExecutionTimedOutEventAttributes: &types.WorkflowExecutionTimedOutEventAttributes{},
@@ -288,7 +288,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTerminated
 	evenType := types.EventTypeWorkflowExecutionTerminated
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		WorkflowExecutionTerminatedEventAttributes: &types.WorkflowExecutionTerminatedEventAttributes{},
@@ -317,7 +317,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionFailed() {
 	evenType := types.EventTypeWorkflowExecutionFailed
 	event := &types.HistoryEvent{
 		Version:                                common.Int64Ptr(version),
-		EventID:                                common.Int64Ptr(130),
+		EventID:                                130,
 		Timestamp:                              common.Int64Ptr(now.UnixNano()),
 		EventType:                              &evenType,
 		WorkflowExecutionFailedEventAttributes: &types.WorkflowExecutionFailedEventAttributes{},
@@ -347,7 +347,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCompleted(
 	evenType := types.EventTypeWorkflowExecutionCompleted
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		WorkflowExecutionCompletedEventAttributes: &types.WorkflowExecutionCompletedEventAttributes{},
@@ -377,7 +377,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCanceled()
 	evenType := types.EventTypeWorkflowExecutionCanceled
 	event := &types.HistoryEvent{
 		Version:                                  common.Int64Ptr(version),
-		EventID:                                  common.Int64Ptr(130),
+		EventID:                                  130,
 		Timestamp:                                common.Int64Ptr(now.UnixNano()),
 		EventType:                                &evenType,
 		WorkflowExecutionCanceledEventAttributes: &types.WorkflowExecutionCanceledEventAttributes{},
@@ -415,7 +415,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 
 	continueAsNewEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: types.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
 		WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
@@ -425,7 +425,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 
 	newRunStartedEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(1),
+		EventID:   1,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
@@ -444,7 +444,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 
 	newRunSignalEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(2),
+		EventID:   2,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
@@ -457,7 +457,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	newRunDecisionAttempt := int64(123)
 	newRunDecisionEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(3),
+		EventID:   3,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
@@ -524,7 +524,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 
 	continueAsNewEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: types.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
 		WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
@@ -565,7 +565,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionSignaled()
 	evenType := types.EventTypeWorkflowExecutionSignaled
 	event := &types.HistoryEvent{
 		Version:                                  common.Int64Ptr(version),
-		EventID:                                  common.Int64Ptr(130),
+		EventID:                                  130,
 		Timestamp:                                common.Int64Ptr(now.UnixNano()),
 		EventType:                                &evenType,
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{},
@@ -591,7 +591,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCancelRequ
 	evenType := types.EventTypeWorkflowExecutionCancelRequested
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		WorkflowExecutionCancelRequestedEventAttributes: &types.WorkflowExecutionCancelRequestedEventAttributes{},
@@ -619,7 +619,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeUpsertWorkflowSearchAttribu
 	evenType := types.EventTypeUpsertWorkflowSearchAttributes
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		UpsertWorkflowSearchAttributesEventAttributes: &types.UpsertWorkflowSearchAttributesEventAttributes{},
@@ -649,7 +649,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeMarkerRecorded() {
 	evenType := types.EventTypeMarkerRecorded
 	event := &types.HistoryEvent{
 		Version:                       common.Int64Ptr(version),
-		EventID:                       common.Int64Ptr(130),
+		EventID:                       130,
 		Timestamp:                     common.Int64Ptr(now.UnixNano()),
 		EventType:                     &evenType,
 		MarkerRecordedEventAttributes: &types.MarkerRecordedEventAttributes{},
@@ -680,7 +680,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskScheduled() {
 	decisionAttempt := int64(111)
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
@@ -732,11 +732,11 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskStarted() {
 	evenType := types.EventTypeDecisionTaskStarted
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
-			ScheduledEventID: common.Int64Ptr(scheduleID),
+			ScheduledEventID: scheduleID,
 			RequestID:        decisionRequestID,
 		},
 	}
@@ -779,12 +779,12 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskTimedOut() {
 	evenType := types.EventTypeDecisionTaskTimedOut
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		DecisionTaskTimedOutEventAttributes: &types.DecisionTaskTimedOutEventAttributes{
-			ScheduledEventID: common.Int64Ptr(scheduleID),
-			StartedEventID:   common.Int64Ptr(startedID),
+			ScheduledEventID: scheduleID,
+			StartedEventID:   startedID,
 			TimeoutType:      types.TimeoutTypeStartToClose.Ptr(),
 		},
 	}
@@ -826,12 +826,12 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskFailed() {
 	evenType := types.EventTypeDecisionTaskFailed
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		DecisionTaskFailedEventAttributes: &types.DecisionTaskFailedEventAttributes{
-			ScheduledEventID: common.Int64Ptr(scheduleID),
-			StartedEventID:   common.Int64Ptr(startedID),
+			ScheduledEventID: scheduleID,
+			StartedEventID:   startedID,
 		},
 	}
 	s.mockMutableState.EXPECT().ReplicateDecisionTaskFailedEvent().Return(nil).Times(1)
@@ -872,12 +872,12 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskCompleted() {
 	evenType := types.EventTypeDecisionTaskCompleted
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
-			ScheduledEventID: common.Int64Ptr(scheduleID),
-			StartedEventID:   common.Int64Ptr(startedID),
+			ScheduledEventID: scheduleID,
+			StartedEventID:   startedID,
 		},
 	}
 	s.mockMutableState.EXPECT().ReplicateDecisionTaskCompletedEvent(event).Return(nil).Times(1)
@@ -906,7 +906,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerStarted() {
 	evenType := types.EventTypeTimerStarted
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		TimerStartedEventAttributes: &types.TimerStartedEventAttributes{
@@ -945,7 +945,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerFired() {
 	evenType := types.EventTypeTimerFired
 	event := &types.HistoryEvent{
 		Version:                   common.Int64Ptr(version),
-		EventID:                   common.Int64Ptr(130),
+		EventID:                   130,
 		Timestamp:                 common.Int64Ptr(now.UnixNano()),
 		EventType:                 &evenType,
 		TimerFiredEventAttributes: &types.TimerFiredEventAttributes{},
@@ -975,7 +975,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeCancelTimerFailed() {
 	evenType := types.EventTypeCancelTimerFailed
 	event := &types.HistoryEvent{
 		Version:                          common.Int64Ptr(version),
-		EventID:                          common.Int64Ptr(130),
+		EventID:                          130,
 		Timestamp:                        common.Int64Ptr(now.UnixNano()),
 		EventType:                        &evenType,
 		CancelTimerFailedEventAttributes: &types.CancelTimerFailedEventAttributes{},
@@ -1003,7 +1003,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerCanceled() {
 	evenType := types.EventTypeTimerCanceled
 	event := &types.HistoryEvent{
 		Version:                      common.Int64Ptr(version),
-		EventID:                      common.Int64Ptr(130),
+		EventID:                      130,
 		Timestamp:                    common.Int64Ptr(now.UnixNano()),
 		EventType:                    &evenType,
 		TimerCanceledEventAttributes: &types.TimerCanceledEventAttributes{},
@@ -1037,7 +1037,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskScheduled() {
 	evenType := types.EventTypeActivityTaskScheduled
 	event := &types.HistoryEvent{
 		Version:                              common.Int64Ptr(version),
-		EventID:                              common.Int64Ptr(130),
+		EventID:                              130,
 		Timestamp:                            common.Int64Ptr(now.UnixNano()),
 		EventType:                            &evenType,
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
@@ -1094,7 +1094,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskStarted() {
 	evenType := types.EventTypeActivityTaskScheduled
 	scheduledEvent := &types.HistoryEvent{
 		Version:                              common.Int64Ptr(version),
-		EventID:                              common.Int64Ptr(130),
+		EventID:                              130,
 		Timestamp:                            common.Int64Ptr(now.UnixNano()),
 		EventType:                            &evenType,
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
@@ -1103,7 +1103,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskStarted() {
 	evenType = types.EventTypeActivityTaskStarted
 	startedEvent := &types.HistoryEvent{
 		Version:                            common.Int64Ptr(version),
-		EventID:                            common.Int64Ptr(scheduledEvent.GetEventID() + 1),
+		EventID:                            scheduledEvent.GetEventID() + 1,
 		Timestamp:                          common.Int64Ptr(scheduledEvent.GetTimestamp() + 1000),
 		EventType:                          &evenType,
 		ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{},
@@ -1136,7 +1136,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskTimedOut() {
 	evenType := types.EventTypeActivityTaskTimedOut
 	event := &types.HistoryEvent{
 		Version:                             common.Int64Ptr(version),
-		EventID:                             common.Int64Ptr(130),
+		EventID:                             130,
 		Timestamp:                           common.Int64Ptr(now.UnixNano()),
 		EventType:                           &evenType,
 		ActivityTaskTimedOutEventAttributes: &types.ActivityTaskTimedOutEventAttributes{},
@@ -1167,7 +1167,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskFailed() {
 	evenType := types.EventTypeActivityTaskFailed
 	event := &types.HistoryEvent{
 		Version:                           common.Int64Ptr(version),
-		EventID:                           common.Int64Ptr(130),
+		EventID:                           130,
 		Timestamp:                         common.Int64Ptr(now.UnixNano()),
 		EventType:                         &evenType,
 		ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{},
@@ -1197,7 +1197,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCompleted() {
 	evenType := types.EventTypeActivityTaskCompleted
 	event := &types.HistoryEvent{
 		Version:                              common.Int64Ptr(version),
-		EventID:                              common.Int64Ptr(130),
+		EventID:                              130,
 		Timestamp:                            common.Int64Ptr(now.UnixNano()),
 		EventType:                            &evenType,
 		ActivityTaskCompletedEventAttributes: &types.ActivityTaskCompletedEventAttributes{},
@@ -1227,7 +1227,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCancelRequested
 	evenType := types.EventTypeActivityTaskCancelRequested
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		ActivityTaskCancelRequestedEventAttributes: &types.ActivityTaskCancelRequestedEventAttributes{},
@@ -1254,7 +1254,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelActivityTaskFa
 	evenType := types.EventTypeRequestCancelActivityTaskFailed
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		RequestCancelActivityTaskFailedEventAttributes: &types.RequestCancelActivityTaskFailedEventAttributes{},
@@ -1280,7 +1280,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskCanceled() {
 	evenType := types.EventTypeActivityTaskCanceled
 	event := &types.HistoryEvent{
 		Version:                             common.Int64Ptr(version),
-		EventID:                             common.Int64Ptr(130),
+		EventID:                             130,
 		Timestamp:                           common.Int64Ptr(now.UnixNano()),
 		EventType:                           &evenType,
 		ActivityTaskCanceledEventAttributes: &types.ActivityTaskCanceledEventAttributes{},
@@ -1314,7 +1314,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 	evenType := types.EventTypeStartChildWorkflowExecutionInitiated
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		StartChildWorkflowExecutionInitiatedEventAttributes: &types.StartChildWorkflowExecutionInitiatedEventAttributes{
@@ -1361,7 +1361,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 	evenType := types.EventTypeStartChildWorkflowExecutionFailed
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		StartChildWorkflowExecutionFailedEventAttributes: &types.StartChildWorkflowExecutionFailedEventAttributes{},
@@ -1388,7 +1388,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionStart
 	evenType := types.EventTypeChildWorkflowExecutionStarted
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		ChildWorkflowExecutionStartedEventAttributes: &types.ChildWorkflowExecutionStartedEventAttributes{},
@@ -1415,7 +1415,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionTimed
 	evenType := types.EventTypeChildWorkflowExecutionTimedOut
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		ChildWorkflowExecutionTimedOutEventAttributes: &types.ChildWorkflowExecutionTimedOutEventAttributes{},
@@ -1442,7 +1442,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionTermi
 	evenType := types.EventTypeChildWorkflowExecutionTerminated
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		ChildWorkflowExecutionTerminatedEventAttributes: &types.ChildWorkflowExecutionTerminatedEventAttributes{},
@@ -1469,7 +1469,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionFaile
 	evenType := types.EventTypeChildWorkflowExecutionFailed
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		ChildWorkflowExecutionFailedEventAttributes: &types.ChildWorkflowExecutionFailedEventAttributes{},
@@ -1496,7 +1496,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionCompl
 	evenType := types.EventTypeChildWorkflowExecutionCompleted
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		ChildWorkflowExecutionCompletedEventAttributes: &types.ChildWorkflowExecutionCompletedEventAttributes{},
@@ -1531,7 +1531,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkfl
 	evenType := types.EventTypeRequestCancelExternalWorkflowExecutionInitiated
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		RequestCancelExternalWorkflowExecutionInitiatedEventAttributes: &types.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes{
@@ -1579,7 +1579,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkfl
 	evenType := types.EventTypeRequestCancelExternalWorkflowExecutionFailed
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		RequestCancelExternalWorkflowExecutionFailedEventAttributes: &types.RequestCancelExternalWorkflowExecutionFailedEventAttributes{},
@@ -1606,7 +1606,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeExternalWorkflowExecutionCa
 	evenType := types.EventTypeExternalWorkflowExecutionCancelRequested
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		ExternalWorkflowExecutionCancelRequestedEventAttributes: &types.ExternalWorkflowExecutionCancelRequestedEventAttributes{},
@@ -1633,7 +1633,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeChildWorkflowExecutionCance
 	evenType := types.EventTypeChildWorkflowExecutionCanceled
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		ChildWorkflowExecutionCanceledEventAttributes: &types.ChildWorkflowExecutionCanceledEventAttributes{},
@@ -1668,7 +1668,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecu
 	evenType := types.EventTypeSignalExternalWorkflowExecutionInitiated
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		SignalExternalWorkflowExecutionInitiatedEventAttributes: &types.SignalExternalWorkflowExecutionInitiatedEventAttributes{
@@ -1720,7 +1720,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecu
 	evenType := types.EventTypeSignalExternalWorkflowExecutionFailed
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		SignalExternalWorkflowExecutionFailedEventAttributes: &types.SignalExternalWorkflowExecutionFailedEventAttributes{},
@@ -1747,7 +1747,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeExternalWorkflowExecutionSi
 	evenType := types.EventTypeExternalWorkflowExecutionSignaled
 	event := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(130),
+		EventID:   130,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		ExternalWorkflowExecutionSignaledEventAttributes: &types.ExternalWorkflowExecutionSignaledEventAttributes{},

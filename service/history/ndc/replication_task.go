@@ -267,7 +267,7 @@ func (t *replicationTaskImpl) splitTask(
 	newVersionHistory := persistence.NewVersionHistoryFromInternalType(&types.VersionHistory{
 		BranchToken: nil,
 		Items: []*types.VersionHistoryItem{{
-			EventID: common.Int64Ptr(newLastEvent.GetEventID()),
+			EventID: newLastEvent.GetEventID(),
 			Version: common.Int64Ptr(newLastEvent.GetVersion()),
 		}},
 	})

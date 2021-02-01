@@ -479,7 +479,7 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 		SourceDomainUUID:              domainID,
 		Execution:                     &execution,
 		TaskList:                      taskList,
-		ScheduleID:                    common.Int64Ptr(scheduledID),
+		ScheduleID:                    scheduledID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
 	})
 }

@@ -345,7 +345,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 				WorkflowID: parentWorkflowID,
 				RunID:      parentRunID,
 			},
-			InitiatedID: common.Int64Ptr(initiatedID),
+			InitiatedID: initiatedID,
 			CompletedExecution: &types.WorkflowExecution{
 				WorkflowID: task.WorkflowID,
 				RunID:      task.RunID,

@@ -135,13 +135,13 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 	pageSize := defaultPageSize
 	eventBatch := []*types.HistoryEvent{
 		{
-			EventID:   common.Int64Ptr(2),
+			EventID:   2,
 			Version:   common.Int64Ptr(123),
 			Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 			EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 		},
 		{
-			EventID:   common.Int64Ptr(3),
+			EventID:   3,
 			Version:   common.Int64Ptr(123),
 			Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 			EventType: types.EventTypeDecisionTaskStarted.Ptr(),
@@ -150,7 +150,7 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 	blob := s.serializeEvents(eventBatch)
 	versionHistoryItems := []*types.VersionHistoryItem{
 		{
-			EventID: common.Int64Ptr(1),
+			EventID: 1,
 			Version: common.Int64Ptr(1),
 		},
 	}
@@ -229,7 +229,7 @@ func (s *historyResenderSuite) TestCreateReplicateRawEventsRequest() {
 	}
 	versionHistoryItems := []*types.VersionHistoryItem{
 		{
-			EventID: common.Int64Ptr(1),
+			EventID: 1,
 			Version: common.Int64Ptr(1),
 		},
 	}
@@ -254,7 +254,7 @@ func (s *historyResenderSuite) TestSendReplicationRawRequest() {
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	item := &types.VersionHistoryItem{
-		EventID: common.Int64Ptr(1),
+		EventID: 1,
 		Version: common.Int64Ptr(1),
 	}
 	request := &types.ReplicateEventsV2Request{
@@ -279,7 +279,7 @@ func (s *historyResenderSuite) TestSendReplicationRawRequest_Err() {
 	workflowID := "some random workflow ID"
 	runID := uuid.New()
 	item := &types.VersionHistoryItem{
-		EventID: common.Int64Ptr(1),
+		EventID: 1,
 		Version: common.Int64Ptr(1),
 	}
 	request := &types.ReplicateEventsV2Request{

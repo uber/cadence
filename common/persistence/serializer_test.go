@@ -69,13 +69,13 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 	serializer := NewPayloadSerializer()
 
 	event0 := &types.HistoryEvent{
-		EventID:   common.Int64Ptr(999),
+		EventID:   999,
 		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 		EventType: types.EventTypeActivityTaskCompleted.Ptr(),
 		ActivityTaskCompletedEventAttributes: &types.ActivityTaskCompletedEventAttributes{
 			Result:           []byte("result-1-event-1"),
-			ScheduledEventID: common.Int64Ptr(4),
-			StartedEventID:   common.Int64Ptr(5),
+			ScheduledEventID: 4,
+			StartedEventID:   5,
 			Identity:         "event-1",
 		},
 	}
@@ -92,7 +92,7 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			{
 				BinaryChecksum:           "bad-binary-cs",
 				RunID:                    "test-run-id",
-				FirstDecisionCompletedID: common.Int64Ptr(123),
+				FirstDecisionCompletedID: 123,
 				CreatedTimeNano:          common.Int64Ptr(456),
 				ExpiringTimeNano:         common.Int64Ptr(789),
 				Resettable:               common.BoolPtr(true),
@@ -116,11 +116,11 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 				BranchToken: []byte{1},
 				Items: []*types.VersionHistoryItem{
 					{
-						EventID: common.Int64Ptr(1),
+						EventID: 1,
 						Version: common.Int64Ptr(0),
 					},
 					{
-						EventID: common.Int64Ptr(2),
+						EventID: 2,
 						Version: common.Int64Ptr(1),
 					},
 				},
@@ -129,11 +129,11 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 				BranchToken: []byte{2},
 				Items: []*types.VersionHistoryItem{
 					{
-						EventID: common.Int64Ptr(2),
+						EventID: 2,
 						Version: common.Int64Ptr(0),
 					},
 					{
-						EventID: common.Int64Ptr(3),
+						EventID: 3,
 						Version: common.Int64Ptr(1),
 					},
 				},

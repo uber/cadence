@@ -118,12 +118,12 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 
 	newDecisionCompletedEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(newDecisionStartedEvent.GetEventID() + 1),
+		EventID:   newDecisionStartedEvent.GetEventID() + 1,
 		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 		EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
 		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
-			ScheduledEventID: common.Int64Ptr(newDecisionScheduleEvent.GetEventID()),
-			StartedEventID:   common.Int64Ptr(newDecisionStartedEvent.GetEventID()),
+			ScheduledEventID: newDecisionScheduleEvent.GetEventID(),
+			StartedEventID:   newDecisionStartedEvent.GetEventID(),
 			Identity:         "some random identity",
 		},
 	}
@@ -298,22 +298,22 @@ func (s *mutableStateSuite) TestReorderEvents() {
 
 	bufferedEvents := []*types.HistoryEvent{
 		&types.HistoryEvent{
-			EventID:   common.Int64Ptr(common.BufferedEventID),
+			EventID:   common.BufferedEventID,
 			EventType: types.EventTypeActivityTaskCompleted.Ptr(),
 			Version:   common.Int64Ptr(1),
 			ActivityTaskCompletedEventAttributes: &types.ActivityTaskCompletedEventAttributes{
 				Result:           []byte(activityResult),
-				ScheduledEventID: common.Int64Ptr(5),
-				StartedEventID:   common.Int64Ptr(common.BufferedEventID),
+				ScheduledEventID: 5,
+				StartedEventID:   common.BufferedEventID,
 			},
 		},
 
 		&types.HistoryEvent{
-			EventID:   common.Int64Ptr(common.BufferedEventID),
+			EventID:   common.BufferedEventID,
 			EventType: types.EventTypeActivityTaskStarted.Ptr(),
 			Version:   common.Int64Ptr(1),
 			ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
-				ScheduledEventID: common.Int64Ptr(5),
+				ScheduledEventID: 5,
 			},
 		},
 	}
@@ -550,7 +550,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	eventID := int64(1)
 	workflowStartEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(eventID),
+		EventID:   eventID,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
@@ -565,7 +565,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 
 	decisionScheduleEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(eventID),
+		EventID:   eventID,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
@@ -578,11 +578,11 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 
 	decisionStartedEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(eventID),
+		EventID:   eventID,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: types.EventTypeDecisionTaskStarted.Ptr(),
 		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
-			ScheduledEventID: common.Int64Ptr(decisionScheduleEvent.GetEventID()),
+			ScheduledEventID: decisionScheduleEvent.GetEventID(),
 			RequestID:        uuid.New(),
 		},
 	}
@@ -590,12 +590,12 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 
 	_ = &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(eventID),
+		EventID:   eventID,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: types.EventTypeDecisionTaskFailed.Ptr(),
 		DecisionTaskFailedEventAttributes: &types.DecisionTaskFailedEventAttributes{
-			ScheduledEventID: common.Int64Ptr(decisionScheduleEvent.GetEventID()),
-			StartedEventID:   common.Int64Ptr(decisionStartedEvent.GetEventID()),
+			ScheduledEventID: decisionScheduleEvent.GetEventID(),
+			StartedEventID:   decisionStartedEvent.GetEventID(),
 		},
 	}
 	eventID++
@@ -641,7 +641,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	decisionAttempt = int64(123)
 	newDecisionScheduleEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(eventID),
+		EventID:   eventID,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
@@ -654,11 +654,11 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 
 	newDecisionStartedEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(eventID),
+		EventID:   eventID,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: types.EventTypeDecisionTaskStarted.Ptr(),
 		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
-			ScheduledEventID: common.Int64Ptr(decisionScheduleEvent.GetEventID()),
+			ScheduledEventID: decisionScheduleEvent.GetEventID(),
 			RequestID:        uuid.New(),
 		},
 	}
@@ -783,7 +783,7 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 
 	bufferedEvents := []*types.HistoryEvent{
 		&types.HistoryEvent{
-			EventID:   common.Int64Ptr(common.BufferedEventID),
+			EventID:   common.BufferedEventID,
 			EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 			Version:   common.Int64Ptr(failoverVersion),
 			WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{

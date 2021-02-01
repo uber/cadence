@@ -187,9 +187,9 @@ func (v *GetMutableStateRequest) GetCurrentBranchToken() (o []byte) {
 type GetMutableStateResponse struct {
 	Execution                            *WorkflowExecution `json:"execution,omitempty"`
 	WorkflowType                         *WorkflowType      `json:"workflowType,omitempty"`
-	NextEventID                          *int64             `json:"NextEventId,omitempty"`
+	NextEventID                          int64              `json:"NextEventId,omitempty"`
 	PreviousStartedEventID               *int64             `json:"PreviousStartedEventId,omitempty"`
-	LastFirstEventID                     *int64             `json:"LastFirstEventId,omitempty"`
+	LastFirstEventID                     int64              `json:"LastFirstEventId,omitempty"`
 	TaskList                             *TaskList          `json:"taskList,omitempty"`
 	StickyTaskList                       *TaskList          `json:"stickyTaskList,omitempty"`
 	ClientLibraryVersion                 *string            `json:"clientLibraryVersion,omitempty"`
@@ -223,8 +223,8 @@ func (v *GetMutableStateResponse) GetWorkflowType() (o *WorkflowType) {
 
 // GetNextEventID is an internal getter (TBD...)
 func (v *GetMutableStateResponse) GetNextEventID() (o int64) {
-	if v != nil && v.NextEventID != nil {
-		return *v.NextEventID
+	if v != nil {
+		return v.NextEventID
 	}
 	return
 }
@@ -239,8 +239,8 @@ func (v *GetMutableStateResponse) GetPreviousStartedEventID() (o int64) {
 
 // GetLastFirstEventID is an internal getter (TBD...)
 func (v *GetMutableStateResponse) GetLastFirstEventID() (o int64) {
-	if v != nil && v.LastFirstEventID != nil {
-		return *v.LastFirstEventID
+	if v != nil {
+		return v.LastFirstEventID
 	}
 	return
 }
@@ -3386,9 +3386,9 @@ func (v *PollMutableStateRequest) GetCurrentBranchToken() (o []byte) {
 type PollMutableStateResponse struct {
 	Execution                            *WorkflowExecution `json:"execution,omitempty"`
 	WorkflowType                         *WorkflowType      `json:"workflowType,omitempty"`
-	NextEventID                          *int64             `json:"NextEventId,omitempty"`
+	NextEventID                          int64              `json:"NextEventId,omitempty"`
 	PreviousStartedEventID               *int64             `json:"PreviousStartedEventId,omitempty"`
-	LastFirstEventID                     *int64             `json:"LastFirstEventId,omitempty"`
+	LastFirstEventID                     int64              `json:"LastFirstEventId,omitempty"`
 	TaskList                             *TaskList          `json:"taskList,omitempty"`
 	StickyTaskList                       *TaskList          `json:"stickyTaskList,omitempty"`
 	ClientLibraryVersion                 *string            `json:"clientLibraryVersion,omitempty"`
@@ -3419,8 +3419,8 @@ func (v *PollMutableStateResponse) GetWorkflowType() (o *WorkflowType) {
 
 // GetNextEventID is an internal getter (TBD...)
 func (v *PollMutableStateResponse) GetNextEventID() (o int64) {
-	if v != nil && v.NextEventID != nil {
-		return *v.NextEventID
+	if v != nil {
+		return v.NextEventID
 	}
 	return
 }
@@ -3435,8 +3435,8 @@ func (v *PollMutableStateResponse) GetPreviousStartedEventID() (o int64) {
 
 // GetLastFirstEventID is an internal getter (TBD...)
 func (v *PollMutableStateResponse) GetLastFirstEventID() (o int64) {
-	if v != nil && v.LastFirstEventID != nil {
-		return *v.LastFirstEventID
+	if v != nil {
+		return v.LastFirstEventID
 	}
 	return
 }
@@ -3782,7 +3782,7 @@ func (v *RecordActivityTaskStartedResponse) GetWorkflowDomain() (o string) {
 type RecordChildExecutionCompletedRequest struct {
 	DomainUUID         string             `json:"domainUUID,omitempty"`
 	WorkflowExecution  *WorkflowExecution `json:"workflowExecution,omitempty"`
-	InitiatedID        *int64             `json:"initiatedId,omitempty"`
+	InitiatedID        int64              `json:"initiatedId,omitempty"`
 	CompletedExecution *WorkflowExecution `json:"completedExecution,omitempty"`
 	CompletionEvent    *HistoryEvent      `json:"completionEvent,omitempty"`
 }
@@ -3805,8 +3805,8 @@ func (v *RecordChildExecutionCompletedRequest) GetWorkflowExecution() (o *Workfl
 
 // GetInitiatedID is an internal getter (TBD...)
 func (v *RecordChildExecutionCompletedRequest) GetInitiatedID() (o int64) {
-	if v != nil && v.InitiatedID != nil {
-		return *v.InitiatedID
+	if v != nil {
+		return v.InitiatedID
 	}
 	return
 }
@@ -3889,9 +3889,9 @@ func (v *RecordDecisionTaskStartedRequest) GetPollRequest() (o *PollForDecisionT
 type RecordDecisionTaskStartedResponse struct {
 	WorkflowType              *WorkflowType             `json:"workflowType,omitempty"`
 	PreviousStartedEventID    *int64                    `json:"previousStartedEventId,omitempty"`
-	ScheduledEventID          *int64                    `json:"scheduledEventId,omitempty"`
-	StartedEventID            *int64                    `json:"startedEventId,omitempty"`
-	NextEventID               *int64                    `json:"nextEventId,omitempty"`
+	ScheduledEventID          int64                     `json:"scheduledEventId,omitempty"`
+	StartedEventID            int64                     `json:"startedEventId,omitempty"`
+	NextEventID               int64                     `json:"nextEventId,omitempty"`
 	Attempt                   int64                     `json:"attempt,omitempty"`
 	StickyExecutionEnabled    *bool                     `json:"stickyExecutionEnabled,omitempty"`
 	DecisionInfo              *TransientDecisionInfo    `json:"decisionInfo,omitempty"`
@@ -3921,24 +3921,24 @@ func (v *RecordDecisionTaskStartedResponse) GetPreviousStartedEventID() (o int64
 
 // GetScheduledEventID is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedResponse) GetScheduledEventID() (o int64) {
-	if v != nil && v.ScheduledEventID != nil {
-		return *v.ScheduledEventID
+	if v != nil {
+		return v.ScheduledEventID
 	}
 	return
 }
 
 // GetStartedEventID is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedResponse) GetStartedEventID() (o int64) {
-	if v != nil && v.StartedEventID != nil {
-		return *v.StartedEventID
+	if v != nil {
+		return v.StartedEventID
 	}
 	return
 }
 
 // GetNextEventID is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedResponse) GetNextEventID() (o int64) {
-	if v != nil && v.NextEventID != nil {
-		return *v.NextEventID
+	if v != nil {
+		return v.NextEventID
 	}
 	return
 }
@@ -4561,9 +4561,9 @@ type SyncActivityRequest struct {
 	WorkflowID         string          `json:"workflowId,omitempty"`
 	RunID              string          `json:"runId,omitempty"`
 	Version            *int64          `json:"version,omitempty"`
-	ScheduledID        *int64          `json:"scheduledId,omitempty"`
+	ScheduledID        int64           `json:"scheduledId,omitempty"`
 	ScheduledTime      *int64          `json:"scheduledTime,omitempty"`
-	StartedID          *int64          `json:"startedId,omitempty"`
+	StartedID          int64           `json:"startedId,omitempty"`
 	StartedTime        *int64          `json:"startedTime,omitempty"`
 	LastHeartbeatTime  *int64          `json:"lastHeartbeatTime,omitempty"`
 	Details            []byte          `json:"details,omitempty"`
@@ -4608,8 +4608,8 @@ func (v *SyncActivityRequest) GetVersion() (o int64) {
 
 // GetScheduledID is an internal getter (TBD...)
 func (v *SyncActivityRequest) GetScheduledID() (o int64) {
-	if v != nil && v.ScheduledID != nil {
-		return *v.ScheduledID
+	if v != nil {
+		return v.ScheduledID
 	}
 	return
 }
@@ -4624,8 +4624,8 @@ func (v *SyncActivityRequest) GetScheduledTime() (o int64) {
 
 // GetStartedID is an internal getter (TBD...)
 func (v *SyncActivityRequest) GetStartedID() (o int64) {
-	if v != nil && v.StartedID != nil {
-		return *v.StartedID
+	if v != nil {
+		return v.StartedID
 	}
 	return
 }

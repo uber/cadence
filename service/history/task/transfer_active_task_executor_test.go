@@ -685,7 +685,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent() 
 	s.mockHistoryClient.EXPECT().RecordChildExecutionCompleted(gomock.Any(), &types.RecordChildExecutionCompletedRequest{
 		DomainUUID:         parentDomainID,
 		WorkflowExecution:  &parentExecution,
-		InitiatedID:        common.Int64Ptr(parentInitiatedID),
+		InitiatedID:        parentInitiatedID,
 		CompletedExecution: &workflowExecution,
 		CompletionEvent:    event,
 	}).Return(nil).AnyTimes()
@@ -1954,7 +1954,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Duplica
 	ci.StartedID = event.GetEventID()
 	event = test.AddChildWorkflowExecutionCompletedEvent(mutableState, ci.InitiatedID, &childExecution, &types.WorkflowExecutionCompletedEventAttributes{
 		Result:                       []byte("some random child workflow execution result"),
-		DecisionTaskCompletedEventID: common.Int64Ptr(transferTask.ScheduleID),
+		DecisionTaskCompletedEventID: transferTask.ScheduleID,
 	})
 	mutableState.FlushBufferedEvents()
 
@@ -2106,7 +2106,7 @@ func (s *transferActiveTaskExecutorSuite) createAddActivityTaskRequest(
 		SourceDomainUUID:              task.DomainID,
 		Execution:                     &workflowExecution,
 		TaskList:                      taskList,
-		ScheduleID:                    &task.ScheduleID,
+		ScheduleID:                    task.ScheduleID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(ai.ScheduleToStartTimeout),
 	}
 }
@@ -2133,7 +2133,7 @@ func (s *transferActiveTaskExecutorSuite) createAddDecisionTaskRequest(
 		DomainUUID:                    task.DomainID,
 		Execution:                     &workflowExecution,
 		TaskList:                      taskList,
-		ScheduleID:                    common.Int64Ptr(task.ScheduleID),
+		ScheduleID:                    task.ScheduleID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(timeout),
 	}
 }

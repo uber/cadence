@@ -127,7 +127,7 @@ func (s *taskAckManagerSuite) TestGetPaginationFunc() {
 
 	pageToken := []byte{1}
 	event := &types.HistoryEvent{
-		EventID: common.Int64Ptr(1),
+		EventID: 1,
 	}
 	s.mockHistoryMgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents:    []*types.HistoryEvent{event},
@@ -148,7 +148,7 @@ func (s *taskAckManagerSuite) TestGetAllHistory_OK() {
 	nextEventID := int64(1)
 	var branchToken []byte
 	event := &types.HistoryEvent{
-		EventID: common.Int64Ptr(1),
+		EventID: 1,
 	}
 
 	s.mockHistoryMgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadHistoryBranchResponse{

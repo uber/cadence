@@ -198,7 +198,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(
 		}
 	}
 	version := *request.Events[0].Version
-	nodeID := *request.Events[0].EventID
+	nodeID := request.Events[0].EventID
 	lastID := nodeID - 1
 
 	if nodeID <= 0 {
@@ -212,7 +212,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(
 				Msg: fmt.Sprintf("event version must be the same inside a batch"),
 			}
 		}
-		if *e.EventID != lastID+1 {
+		if e.EventID != lastID+1 {
 			return nil, &InvalidPersistenceRequestError{
 				Msg: fmt.Sprintf("event ID must be continuous"),
 			}

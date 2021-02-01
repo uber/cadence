@@ -346,7 +346,7 @@ CheckHistoryLoopForCancelSent:
 		}
 
 		externalWorkflowExecutionCancelRequestedEvent := lastEvent.ExternalWorkflowExecutionCancelRequestedEventAttributes
-		s.Equal(int64(intiatedEventID), *externalWorkflowExecutionCancelRequestedEvent.InitiatedEventID)
+		s.Equal(int64(intiatedEventID), externalWorkflowExecutionCancelRequestedEvent.InitiatedEventID)
 		s.Equal(id, externalWorkflowExecutionCancelRequestedEvent.WorkflowExecution.WorkflowID)
 		s.Equal(we2.RunID, externalWorkflowExecutionCancelRequestedEvent.WorkflowExecution.RunID)
 
@@ -514,7 +514,7 @@ CheckHistoryLoopForCancelSent:
 		}
 
 		requestCancelExternalWorkflowExecutionFailedEvetn := lastEvent.RequestCancelExternalWorkflowExecutionFailedEventAttributes
-		s.Equal(int64(intiatedEventID), *requestCancelExternalWorkflowExecutionFailedEvetn.InitiatedEventID)
+		s.Equal(int64(intiatedEventID), requestCancelExternalWorkflowExecutionFailedEvetn.InitiatedEventID)
 		s.Equal("workflow_not_exist", requestCancelExternalWorkflowExecutionFailedEvetn.WorkflowExecution.WorkflowID)
 		s.Equal(we.RunID, requestCancelExternalWorkflowExecutionFailedEvetn.WorkflowExecution.RunID)
 

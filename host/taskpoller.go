@@ -233,7 +233,7 @@ Loop:
 		}
 
 		executionCtx, decisions, err := p.DecisionHandler(response.WorkflowExecution, response.WorkflowType,
-			common.Int64Default(response.PreviousStartedEventID), common.Int64Default(response.StartedEventID), response.History)
+			common.Int64Default(response.PreviousStartedEventID), response.StartedEventID, response.History)
 		if err != nil {
 			p.Logger.Info("Failing Decision. Decision handler failed with error", tag.Error(err))
 			return isQueryTask, nil, p.Engine.RespondDecisionTaskFailed(createContext(), &types.RespondDecisionTaskFailedRequest{
@@ -305,7 +305,7 @@ func (p *TaskPoller) HandlePartialDecision(response *types.PollForDecisionTaskRe
 	}
 
 	executionCtx, decisions, err := p.DecisionHandler(response.WorkflowExecution, response.WorkflowType,
-		common.Int64Default(response.PreviousStartedEventID), common.Int64Default(response.StartedEventID), response.History)
+		common.Int64Default(response.PreviousStartedEventID), response.StartedEventID, response.History)
 	if err != nil {
 		p.Logger.Info("Failing Decision. Decision handler failed with error: %v", tag.Error(err))
 		return nil, p.Engine.RespondDecisionTaskFailed(createContext(), &types.RespondDecisionTaskFailedRequest{

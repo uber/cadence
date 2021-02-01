@@ -1031,8 +1031,8 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 		for {
 			select {
 			case event := <-channel:
-				response.LastFirstEventID = common.Int64Ptr(event.LastFirstEventID)
-				response.NextEventID = common.Int64Ptr(event.NextEventID)
+				response.LastFirstEventID = event.LastFirstEventID
+				response.NextEventID = event.NextEventID
 				response.IsWorkflowRunning = common.BoolPtr(event.WorkflowCloseState == persistence.WorkflowCloseStatusNone)
 				response.PreviousStartedEventID = common.Int64Ptr(event.PreviousStartedEventID)
 				response.WorkflowState = common.Int32Ptr(int32(event.WorkflowState))
@@ -1351,8 +1351,8 @@ func (e *historyEngineImpl) getMutableState(
 	retResp = &types.GetMutableStateResponse{
 		Execution:                            &execution,
 		WorkflowType:                         &types.WorkflowType{Name: executionInfo.WorkflowTypeName},
-		LastFirstEventID:                     common.Int64Ptr(mutableState.GetLastFirstEventID()),
-		NextEventID:                          common.Int64Ptr(mutableState.GetNextEventID()),
+		LastFirstEventID:                     mutableState.GetLastFirstEventID(),
+		NextEventID:                          mutableState.GetNextEventID(),
 		PreviousStartedEventID:               common.Int64Ptr(mutableState.GetPreviousStartedEventID()),
 		TaskList:                             &types.TaskList{Name: executionInfo.TaskList},
 		StickyTaskList:                       &types.TaskList{Name: executionInfo.StickyTaskList},
@@ -2412,7 +2412,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 				return ErrWorkflowCompleted
 			}
 
-			initiatedID := *completionRequest.InitiatedID
+			initiatedID := completionRequest.InitiatedID
 			completedExecution := completionRequest.CompletedExecution
 			completionEvent := completionRequest.CompletionEvent
 

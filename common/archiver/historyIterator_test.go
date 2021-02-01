@@ -665,7 +665,7 @@ func (s *HistoryIteratorSuite) constructHistoryBatches(batchInfo []int, page pag
 		events := []*types.HistoryEvent{}
 		for i := 0; i < numEvents; i++ {
 			event := &types.HistoryEvent{
-				EventID: common.Int64Ptr(eventsID),
+				EventID: eventsID,
 				Version: common.Int64Ptr(page.firstEventFailoverVersion),
 			}
 			eventsID++

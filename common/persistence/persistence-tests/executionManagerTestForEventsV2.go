@@ -631,7 +631,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 		ScheduleID:     111,
 		StartedID:      112,
 		ActivityID:     uuid.New(),
-		ScheduledEvent: &types.HistoryEvent{EventID: int64Ptr(1)},
+		ScheduledEvent: &types.HistoryEvent{EventID: 1},
 	}}
 
 	insertRequestCancelInfos := []*p.RequestCancelInfo{{
@@ -645,7 +645,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetWithCurrWithReplicat
 		InitiatedID:     131,
 		StartedID:       132,
 		CreateRequestID: uuid.New(),
-		InitiatedEvent:  &types.HistoryEvent{EventID: int64Ptr(1)},
+		InitiatedEvent:  &types.HistoryEvent{EventID: 1},
 	}}
 
 	insertSignalInfos := []*p.SignalInfo{{
@@ -949,7 +949,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 		ScheduleID:     111,
 		StartedID:      112,
 		ActivityID:     uuid.New(),
-		ScheduledEvent: &types.HistoryEvent{EventID: int64Ptr(1)},
+		ScheduledEvent: &types.HistoryEvent{EventID: 1},
 	}}
 
 	insertRequestCancelInfos := []*p.RequestCancelInfo{{
@@ -963,7 +963,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrWithReplicate(
 		InitiatedID:     131,
 		StartedID:       132,
 		CreateRequestID: uuid.New(),
-		InitiatedEvent:  &types.HistoryEvent{EventID: int64Ptr(1)},
+		InitiatedEvent:  &types.HistoryEvent{EventID: 1},
 	}}
 
 	insertSignalInfos := []*p.SignalInfo{{
@@ -1200,7 +1200,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowResetNoCurrNoReplicate() 
 		ScheduleID:     111,
 		StartedID:      112,
 		ActivityID:     uuid.New(),
-		ScheduledEvent: &types.HistoryEvent{EventID: int64Ptr(1)},
+		ScheduledEvent: &types.HistoryEvent{EventID: 1},
 	}}
 
 	insertRequestCancelInfos := []*p.RequestCancelInfo{{

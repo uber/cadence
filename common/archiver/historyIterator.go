@@ -159,8 +159,8 @@ func (i *historyIterator) Next() (*HistoryBlob, error) {
 		IsLast:               common.BoolPtr(i.FinishedIteration),
 		FirstFailoverVersion: firstEvent.Version,
 		LastFailoverVersion:  lastEvent.Version,
-		FirstEventID:         firstEvent.EventID,
-		LastEventID:          lastEvent.EventID,
+		FirstEventID:         common.Int64Ptr(firstEvent.EventID),
+		LastEventID:          common.Int64Ptr(lastEvent.EventID),
 		EventCount:           common.Int64Ptr(eventCount),
 	}
 
@@ -201,7 +201,7 @@ func (i *historyIterator) readHistoryBatches(ctx context.Context, firstEventID i
 			}
 			size += historyBatchSize
 			historyBatches = append(historyBatches, batch)
-			firstEventID = *batch.Events[len(batch.Events)-1].EventID + 1
+			firstEventID = batch.Events[len(batch.Events)-1].EventID + 1
 
 			// In case targetSize is satisfied before reaching the end of current set of batches, return immediately.
 			// Otherwise, we need to look ahead to see if there's more history batches.
