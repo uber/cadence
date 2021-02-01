@@ -99,7 +99,7 @@ func (t *transferTaskExecutorBase) pushActivity(
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
 		},
-		TaskList:                      &types.TaskList{Name: &task.TaskList},
+		TaskList:                      &types.TaskList{Name: task.TaskList},
 		ScheduleID:                    &task.ScheduleID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(activityScheduleToStartTimeout),
 	})

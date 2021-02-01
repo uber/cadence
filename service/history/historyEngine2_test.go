@@ -193,10 +193,10 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyExpired() {
 		WorkflowExecution: &we,
 		ScheduleID:        common.Int64Ptr(2),
 		TaskID:            common.Int64Ptr(100),
-		RequestID:         common.StringPtr("reqId"),
+		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(stickyTl),
+				Name: stickyTl,
 			},
 			Identity: identity,
 		},
@@ -214,7 +214,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyExpired() {
 	expectedResponse.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID() + 1)
 	expectedResponse.Attempt = di.Attempt
 	expectedResponse.WorkflowExecutionTaskList = &types.TaskList{
-		Name: &executionInfo.TaskList,
+		Name: executionInfo.TaskList,
 		Kind: types.TaskListKindNormal.Ptr(),
 	}
 	expectedResponse.BranchToken, _ = msBuilder.GetCurrentBranchToken()
@@ -266,10 +266,10 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 		WorkflowExecution: &we,
 		ScheduleID:        common.Int64Ptr(2),
 		TaskID:            common.Int64Ptr(100),
-		RequestID:         common.StringPtr("reqId"),
+		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(stickyTl),
+				Name: stickyTl,
 			},
 			Identity: identity,
 		},
@@ -287,7 +287,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	expectedResponse.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID() + 1)
 	expectedResponse.Attempt = di.Attempt
 	expectedResponse.WorkflowExecutionTaskList = &types.TaskList{
-		Name: &executionInfo.TaskList,
+		Name: executionInfo.TaskList,
 		Kind: types.TaskListKindNormal.Ptr(),
 	}
 	currentBranchTokken, err := msBuilder.GetCurrentBranchToken()
@@ -320,10 +320,10 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfNoExecution() {
 		WorkflowExecution: workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
 		TaskID:            common.Int64Ptr(100),
-		RequestID:         common.StringPtr("reqId"),
+		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(tl),
+				Name: tl,
 			},
 			Identity: identity,
 		},
@@ -350,10 +350,10 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfGetExecutionFailed() {
 		WorkflowExecution: workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
 		TaskID:            common.Int64Ptr(100),
-		RequestID:         common.StringPtr("reqId"),
+		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(tl),
+				Name: tl,
 			},
 			Identity: identity,
 		},
@@ -383,10 +383,10 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyStarted() {
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
 		TaskID:            common.Int64Ptr(100),
-		RequestID:         common.StringPtr("reqId"),
+		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(tl),
+				Name: tl,
 			},
 			Identity: identity,
 		},
@@ -420,10 +420,10 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyCompleted() {
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
 		TaskID:            common.Int64Ptr(100),
-		RequestID:         common.StringPtr("reqId"),
+		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(tl),
+				Name: tl,
 			},
 			Identity: identity,
 		},
@@ -467,17 +467,17 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedConflictOnUpdate() {
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
 		TaskID:            common.Int64Ptr(100),
-		RequestID:         common.StringPtr("reqId"),
+		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(tl),
+				Name: tl,
 			},
 			Identity: identity,
 		},
 	})
 	s.Nil(err)
 	s.NotNil(response)
-	s.Equal("wType", *response.WorkflowType.Name)
+	s.Equal("wType", response.WorkflowType.Name)
 	s.True(response.PreviousStartedEventID == nil)
 	s.Equal(int64(3), *response.StartedEventID)
 }
@@ -511,10 +511,10 @@ func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
 		TaskID:            common.Int64Ptr(100),
-		RequestID:         common.StringPtr(requestID),
+		RequestID:         requestID,
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(tl),
+				Name: tl,
 			},
 			Identity: identity,
 		},
@@ -522,7 +522,7 @@ func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
 
 	s.Nil(err)
 	s.NotNil(response)
-	s.Equal("wType", *response.WorkflowType.Name)
+	s.Equal("wType", response.WorkflowType.Name)
 	s.True(response.PreviousStartedEventID == nil)
 	s.Equal(startedEventID.EventID, response.StartedEventID)
 }
@@ -556,10 +556,10 @@ func (s *engine2Suite) TestRecordDecisionTaskRetryDifferentRequest() {
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
 		TaskID:            common.Int64Ptr(100),
-		RequestID:         common.StringPtr(requestID),
+		RequestID:         requestID,
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(tl),
+				Name: tl,
 			},
 			Identity: identity,
 		},
@@ -599,10 +599,10 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedMaxAttemptsExceeded() {
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
 		TaskID:            common.Int64Ptr(100),
-		RequestID:         common.StringPtr("reqId"),
+		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(tl),
+				Name: tl,
 			},
 			Identity: identity,
 		},
@@ -650,10 +650,10 @@ func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
 		TaskID:            common.Int64Ptr(100),
-		RequestID:         common.StringPtr("reqId"),
+		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(tl),
+				Name: tl,
 			},
 			Identity: identity,
 		},
@@ -661,7 +661,7 @@ func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 
 	s.Nil(err)
 	s.NotNil(response)
-	s.Equal("wType", *response.WorkflowType.Name)
+	s.Equal("wType", response.WorkflowType.Name)
 	s.True(response.PreviousStartedEventID == nil)
 	s.Equal(int64(3), *response.StartedEventID)
 	expectedQueryMap := map[string]*types.WorkflowQuery{
@@ -689,10 +689,10 @@ func (s *engine2Suite) TestRecordActivityTaskStartedIfNoExecution() {
 		WorkflowExecution: workflowExecution,
 		ScheduleID:        common.Int64Ptr(5),
 		TaskID:            common.Int64Ptr(100),
-		RequestID:         common.StringPtr("reqId"),
+		RequestID:         "reqId",
 		PollRequest: &types.PollForActivityTaskRequest{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(tl),
+				Name: tl,
 			},
 			Identity: identity,
 		},
@@ -742,10 +742,10 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        common.Int64Ptr(5),
 		TaskID:            common.Int64Ptr(100),
-		RequestID:         common.StringPtr("reqId"),
+		RequestID:         "reqId",
 		PollRequest: &types.PollForActivityTaskRequest{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(tl),
+				Name: tl,
 			},
 			Identity: identity,
 		},
@@ -921,12 +921,12 @@ func (s *engine2Suite) TestStartWorkflowExecution_BrandNew() {
 		StartRequest: &types.StartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            identity,
-			RequestID:                           common.StringPtr(requestID),
+			RequestID:                           requestID,
 		},
 	})
 	s.Nil(err)
@@ -958,12 +958,12 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_Dedup() {
 		StartRequest: &types.StartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            identity,
-			RequestID:                           common.StringPtr(requestID),
+			RequestID:                           requestID,
 		},
 	})
 	s.Nil(err)
@@ -994,12 +994,12 @@ func (s *engine2Suite) TestStartWorkflowExecution_StillRunning_NonDeDup() {
 		StartRequest: &types.StartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            identity,
-			RequestID:                           common.StringPtr("newRequestID"),
+			RequestID:                           "newRequestID",
 		},
 	})
 	if _, ok := err.(*types.WorkflowExecutionAlreadyStartedError); !ok {
@@ -1059,12 +1059,12 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				Domain:                              domainID,
 				WorkflowID:                          workflowID,
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskList},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 				Identity:                            identity,
-				RequestID:                           common.StringPtr("newRequestID"),
+				RequestID:                           "newRequestID",
 				WorkflowIDReusePolicy:               &option,
 			},
 		})
@@ -1142,12 +1142,12 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 				StartRequest: &types.StartWorkflowExecutionRequest{
 					Domain:                              domainID,
 					WorkflowID:                          workflowID,
-					WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-					TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
+					WorkflowType:                        &types.WorkflowType{Name: workflowType},
+					TaskList:                            &types.TaskList{Name: taskList},
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 					Identity:                            identity,
-					RequestID:                           common.StringPtr("newRequestID"),
+					RequestID:                           "newRequestID",
 					WorkflowIDReusePolicy:               &option,
 				},
 			})
@@ -1228,14 +1228,14 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            identity,
 			SignalName:                          common.StringPtr(signalName),
 			Input:                               input,
-			RequestID:                           common.StringPtr(requestID),
+			RequestID:                           requestID,
 		},
 	}
 
@@ -1269,14 +1269,14 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_CreateTimeout() {
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            identity,
 			SignalName:                          common.StringPtr(signalName),
 			Input:                               input,
-			RequestID:                           common.StringPtr(requestID),
+			RequestID:                           requestID,
 		},
 	}
 
@@ -1311,14 +1311,14 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            identity,
 			SignalName:                          common.StringPtr(signalName),
 			Input:                               input,
-			RequestID:                           common.StringPtr(requestID),
+			RequestID:                           requestID,
 			WorkflowIDReusePolicy:               &policy,
 		},
 	}
@@ -1361,14 +1361,14 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_DuplicateReque
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            identity,
 			SignalName:                          common.StringPtr(signalName),
 			Input:                               input,
-			RequestID:                           common.StringPtr(requestID),
+			RequestID:                           requestID,
 			WorkflowIDReusePolicy:               &policy,
 		},
 	}
@@ -1419,14 +1419,14 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_WorkflowAlread
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            identity,
 			SignalName:                          common.StringPtr(signalName),
 			Input:                               input,
-			RequestID:                           common.StringPtr(requestID),
+			RequestID:                           requestID,
 			WorkflowIDReusePolicy:               &policy,
 		},
 	}

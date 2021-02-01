@@ -354,7 +354,7 @@ func getAllDomains(ctx context.Context, targetDomains []string) ([]*types.Descri
 	var token []byte
 	for more := true; more; more = len(token) > 0 {
 		listRequest := &types.ListDomainsRequest{
-			PageSize:      common.Int32Ptr(pagesize),
+			PageSize:      pagesize,
 			NextPageToken: token,
 		}
 		listResp, err := feClient.ListDomains(ctx, listRequest)

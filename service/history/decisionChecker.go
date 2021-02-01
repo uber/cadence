@@ -529,7 +529,7 @@ func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes
 
 	// Inherit workflow type from previous execution if not provided on decision
 	if attributes.WorkflowType == nil || attributes.WorkflowType.GetName() == "" {
-		attributes.WorkflowType = &types.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)}
+		attributes.WorkflowType = &types.WorkflowType{Name: executionInfo.WorkflowTypeName}
 	}
 
 	if len(attributes.WorkflowType.GetName()) > v.maxIDLengthLimit {
@@ -644,7 +644,7 @@ func (v *decisionAttrValidator) validatedTaskList(
 		if defaultVal == "" {
 			return taskList, &types.BadRequestError{Message: "missing task list name"}
 		}
-		taskList.Name = &defaultVal
+		taskList.Name = defaultVal
 		return taskList, nil
 	}
 

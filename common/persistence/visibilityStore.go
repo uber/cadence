@@ -359,7 +359,7 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 			RunID:      execution.RunID,
 		},
 		Type: &types.WorkflowType{
-			Name: common.StringPtr(execution.TypeName),
+			Name: execution.TypeName,
 		},
 		StartTime:        common.Int64Ptr(execution.StartTime.UnixNano()),
 		ExecutionTime:    common.Int64Ptr(execution.ExecutionTime.UnixNano()),

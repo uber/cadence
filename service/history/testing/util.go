@@ -44,8 +44,8 @@ func AddWorkflowExecutionStartedEventWithParent(
 
 	startRequest := &types.StartWorkflowExecutionRequest{
 		WorkflowID:                          workflowExecution.WorkflowID,
-		WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-		TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
+		WorkflowType:                        &types.WorkflowType{Name: workflowType},
+		TaskList:                            &types.TaskList{Name: taskList},
 		Input:                               input,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
@@ -106,7 +106,7 @@ func AddDecisionTaskStartedEventWithRequestID(
 	identity string,
 ) *types.HistoryEvent {
 	event, _, _ := builder.AddDecisionTaskStartedEvent(scheduleID, requestID, &types.PollForDecisionTaskRequest{
-		TaskList: &types.TaskList{Name: common.StringPtr(taskList)},
+		TaskList: &types.TaskList{Name: taskList},
 		Identity: identity,
 	})
 
@@ -148,8 +148,8 @@ func AddActivityTaskScheduledEvent(
 
 	event, ai, _, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID:                    common.StringPtr(activityID),
-		ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityType)},
-		TaskList:                      &types.TaskList{Name: common.StringPtr(taskList)},
+		ActivityType:                  &types.ActivityType{Name: activityType},
+		TaskList:                      &types.TaskList{Name: taskList},
 		Input:                         input,
 		ScheduleToCloseTimeoutSeconds: common.Int32Ptr(scheduleToCloseTimeout),
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
@@ -178,8 +178,8 @@ func AddActivityTaskScheduledEventWithRetry(
 
 	event, ai, _, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID:                    common.StringPtr(activityID),
-		ActivityType:                  &types.ActivityType{Name: common.StringPtr(activityType)},
-		TaskList:                      &types.TaskList{Name: common.StringPtr(taskList)},
+		ActivityType:                  &types.ActivityType{Name: activityType},
+		TaskList:                      &types.TaskList{Name: taskList},
 		Input:                         input,
 		ScheduleToCloseTimeoutSeconds: common.Int32Ptr(scheduleToCloseTimeout),
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
@@ -246,7 +246,7 @@ func AddTimerStartedEvent(
 ) (*types.HistoryEvent, *persistence.TimerInfo) {
 	event, ti, _ := builder.AddTimerStartedEvent(decisionCompletedEventID,
 		&types.StartTimerDecisionAttributes{
-			TimerID:                   common.StringPtr(timerID),
+			TimerID:                   timerID,
 			StartToFireTimeoutSeconds: common.Int64Ptr(timeOut),
 		})
 	return event, ti
@@ -352,8 +352,8 @@ func AddStartChildWorkflowExecutionInitiatedEvent(
 		&types.StartChildWorkflowExecutionDecisionAttributes{
 			Domain:                              domain,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: tasklist},
 			Input:                               input,
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
@@ -378,7 +378,7 @@ func AddChildWorkflowExecutionStartedEvent(
 			WorkflowID: workflowID,
 			RunID:      runID,
 		},
-		&types.WorkflowType{Name: common.StringPtr(workflowType)},
+		&types.WorkflowType{Name: workflowType},
 		initiatedID,
 		&types.Header{},
 	)

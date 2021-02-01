@@ -94,7 +94,7 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) 
 			InitialIntervalInSeconds:    Int32Ptr(60),
 			ExpirationIntervalInSeconds: Int32Ptr(60),
 		},
-		CronSchedule: StringPtr("@every 300s"),
+		CronSchedule: "@every 300s",
 	}
 	now := time.Now()
 	startRequest := CreateHistoryStartWorkflowRequest(domainID, request, now)

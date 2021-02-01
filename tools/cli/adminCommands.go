@@ -585,7 +585,7 @@ func AdminResetQueue(c *cli.Context) {
 
 	req := &types.ResetQueueRequest{
 		ShardID:     common.Int32Ptr(int32(shardID)),
-		ClusterName: common.StringPtr(clusterName),
+		ClusterName: clusterName,
 		Type:        common.Int32Ptr(int32(typeID)),
 	}
 
@@ -609,7 +609,7 @@ func AdminDescribeQueue(c *cli.Context) {
 
 	req := &types.DescribeQueueRequest{
 		ShardID:     common.Int32Ptr(int32(shardID)),
-		ClusterName: common.StringPtr(clusterName),
+		ClusterName: clusterName,
 		Type:        common.Int32Ptr(int32(typeID)),
 	}
 

@@ -119,11 +119,11 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 	if c.IsSet(FlagClusters) {
 		clusterStr := c.String(FlagClusters)
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
-			ClusterName: common.StringPtr(clusterStr),
+			ClusterName: clusterStr,
 		})
 		for _, clusterStr := range c.Args() {
 			clusters = append(clusters, &types.ClusterReplicationConfiguration{
-				ClusterName: common.StringPtr(clusterStr),
+				ClusterName: clusterStr,
 			})
 		}
 	}
@@ -223,11 +223,11 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 		if c.IsSet(FlagClusters) {
 			clusterStr := c.String(FlagClusters)
 			clusters = append(clusters, &types.ClusterReplicationConfiguration{
-				ClusterName: common.StringPtr(clusterStr),
+				ClusterName: clusterStr,
 			})
 			for _, clusterStr := range c.Args() {
 				clusters = append(clusters, &types.ClusterReplicationConfiguration{
-					ClusterName: common.StringPtr(clusterStr),
+					ClusterName: clusterStr,
 				})
 			}
 		}
@@ -338,7 +338,7 @@ func (d *domainCLIImpl) getAllDomains(c *cli.Context) []*types.DescribeDomainRes
 	defer cancel()
 	for more := true; more; more = len(token) > 0 {
 		listRequest := &types.ListDomainsRequest{
-			PageSize:      common.Int32Ptr(pagesize),
+			PageSize:      pagesize,
 			NextPageToken: token,
 		}
 		listResp, err := d.listDomains(ctx, listRequest)

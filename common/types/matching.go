@@ -35,7 +35,7 @@ type AddActivityTaskRequest struct {
 	ScheduleID                    *int64             `json:"scheduleId,omitempty"`
 	ScheduleToStartTimeoutSeconds *int32             `json:"scheduleToStartTimeoutSeconds,omitempty"`
 	Source                        *TaskSource        `json:"source,omitempty"`
-	ForwardedFrom                 *string            `json:"forwardedFrom,omitempty"`
+	ForwardedFrom                 string             `json:"forwardedFrom,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -96,8 +96,8 @@ func (v *AddActivityTaskRequest) GetSource() (o TaskSource) {
 
 // GetForwardedFrom is an internal getter (TBD...)
 func (v *AddActivityTaskRequest) GetForwardedFrom() (o string) {
-	if v != nil && v.ForwardedFrom != nil {
-		return *v.ForwardedFrom
+	if v != nil {
+		return v.ForwardedFrom
 	}
 	return
 }
@@ -110,7 +110,7 @@ type AddDecisionTaskRequest struct {
 	ScheduleID                    *int64             `json:"scheduleId,omitempty"`
 	ScheduleToStartTimeoutSeconds *int32             `json:"scheduleToStartTimeoutSeconds,omitempty"`
 	Source                        *TaskSource        `json:"source,omitempty"`
-	ForwardedFrom                 *string            `json:"forwardedFrom,omitempty"`
+	ForwardedFrom                 string             `json:"forwardedFrom,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -163,8 +163,8 @@ func (v *AddDecisionTaskRequest) GetSource() (o TaskSource) {
 
 // GetForwardedFrom is an internal getter (TBD...)
 func (v *AddDecisionTaskRequest) GetForwardedFrom() (o string) {
-	if v != nil && v.ForwardedFrom != nil {
-		return *v.ForwardedFrom
+	if v != nil {
+		return v.ForwardedFrom
 	}
 	return
 }
@@ -174,7 +174,7 @@ type CancelOutstandingPollRequest struct {
 	DomainUUID   string    `json:"domainUUID,omitempty"`
 	TaskListType *int32    `json:"taskListType,omitempty"`
 	TaskList     *TaskList `json:"taskList,omitempty"`
-	PollerID     *string   `json:"pollerID,omitempty"`
+	PollerID     string    `json:"pollerID,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -203,8 +203,8 @@ func (v *CancelOutstandingPollRequest) GetTaskList() (o *TaskList) {
 
 // GetPollerID is an internal getter (TBD...)
 func (v *CancelOutstandingPollRequest) GetPollerID() (o string) {
-	if v != nil && v.PollerID != nil {
-		return *v.PollerID
+	if v != nil {
+		return v.PollerID
 	}
 	return
 }
@@ -823,9 +823,9 @@ func (v *MatchingServiceRespondQueryTaskCompletedResult) GetServiceBusyError() (
 // MatchingPollForActivityTaskRequest is an internal type (TBD...)
 type MatchingPollForActivityTaskRequest struct {
 	DomainUUID    string                      `json:"domainUUID,omitempty"`
-	PollerID      *string                     `json:"pollerID,omitempty"`
+	PollerID      string                      `json:"pollerID,omitempty"`
 	PollRequest   *PollForActivityTaskRequest `json:"pollRequest,omitempty"`
-	ForwardedFrom *string                     `json:"forwardedFrom,omitempty"`
+	ForwardedFrom string                      `json:"forwardedFrom,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -838,8 +838,8 @@ func (v *MatchingPollForActivityTaskRequest) GetDomainUUID() (o string) {
 
 // GetPollerID is an internal getter (TBD...)
 func (v *MatchingPollForActivityTaskRequest) GetPollerID() (o string) {
-	if v != nil && v.PollerID != nil {
-		return *v.PollerID
+	if v != nil {
+		return v.PollerID
 	}
 	return
 }
@@ -854,8 +854,8 @@ func (v *MatchingPollForActivityTaskRequest) GetPollRequest() (o *PollForActivit
 
 // GetForwardedFrom is an internal getter (TBD...)
 func (v *MatchingPollForActivityTaskRequest) GetForwardedFrom() (o string) {
-	if v != nil && v.ForwardedFrom != nil {
-		return *v.ForwardedFrom
+	if v != nil {
+		return v.ForwardedFrom
 	}
 	return
 }
@@ -863,9 +863,9 @@ func (v *MatchingPollForActivityTaskRequest) GetForwardedFrom() (o string) {
 // MatchingPollForDecisionTaskRequest is an internal type (TBD...)
 type MatchingPollForDecisionTaskRequest struct {
 	DomainUUID    string                      `json:"domainUUID,omitempty"`
-	PollerID      *string                     `json:"pollerID,omitempty"`
+	PollerID      string                      `json:"pollerID,omitempty"`
 	PollRequest   *PollForDecisionTaskRequest `json:"pollRequest,omitempty"`
-	ForwardedFrom *string                     `json:"forwardedFrom,omitempty"`
+	ForwardedFrom string                      `json:"forwardedFrom,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -878,8 +878,8 @@ func (v *MatchingPollForDecisionTaskRequest) GetDomainUUID() (o string) {
 
 // GetPollerID is an internal getter (TBD...)
 func (v *MatchingPollForDecisionTaskRequest) GetPollerID() (o string) {
-	if v != nil && v.PollerID != nil {
-		return *v.PollerID
+	if v != nil {
+		return v.PollerID
 	}
 	return
 }
@@ -894,8 +894,8 @@ func (v *MatchingPollForDecisionTaskRequest) GetPollRequest() (o *PollForDecisio
 
 // GetForwardedFrom is an internal getter (TBD...)
 func (v *MatchingPollForDecisionTaskRequest) GetForwardedFrom() (o string) {
-	if v != nil && v.ForwardedFrom != nil {
-		return *v.ForwardedFrom
+	if v != nil {
+		return v.ForwardedFrom
 	}
 	return
 }
@@ -1062,7 +1062,7 @@ type MatchingQueryWorkflowRequest struct {
 	DomainUUID    string                `json:"domainUUID,omitempty"`
 	TaskList      *TaskList             `json:"taskList,omitempty"`
 	QueryRequest  *QueryWorkflowRequest `json:"queryRequest,omitempty"`
-	ForwardedFrom *string               `json:"forwardedFrom,omitempty"`
+	ForwardedFrom string                `json:"forwardedFrom,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -1091,8 +1091,8 @@ func (v *MatchingQueryWorkflowRequest) GetQueryRequest() (o *QueryWorkflowReques
 
 // GetForwardedFrom is an internal getter (TBD...)
 func (v *MatchingQueryWorkflowRequest) GetForwardedFrom() (o string) {
-	if v != nil && v.ForwardedFrom != nil {
-		return *v.ForwardedFrom
+	if v != nil {
+		return v.ForwardedFrom
 	}
 	return
 }

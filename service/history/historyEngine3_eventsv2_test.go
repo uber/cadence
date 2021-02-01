@@ -190,10 +190,10 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 		WorkflowExecution: &we,
 		ScheduleID:        common.Int64Ptr(2),
 		TaskID:            common.Int64Ptr(100),
-		RequestID:         common.StringPtr("reqId"),
+		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(stickyTl),
+				Name: stickyTl,
 			},
 			Identity: identity,
 		},
@@ -211,7 +211,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	expectedResponse.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID() + 1)
 	expectedResponse.Attempt = di.Attempt
 	expectedResponse.WorkflowExecutionTaskList = &types.TaskList{
-		Name: &executionInfo.TaskList,
+		Name: executionInfo.TaskList,
 		Kind: types.TaskListKindNormal.Ptr(),
 	}
 	expectedResponse.BranchToken = msBuilder.GetExecutionInfo().BranchToken
@@ -248,12 +248,12 @@ func (s *engine3Suite) TestStartWorkflowExecution_BrandNew() {
 		StartRequest: &types.StartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            identity,
-			RequestID:                           common.StringPtr(requestID),
+			RequestID:                           requestID,
 		},
 	})
 	s.Nil(err)
@@ -336,14 +336,14 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 		SignalWithStartRequest: &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              domainID,
 			WorkflowID:                          workflowID,
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-			TaskList:                            &types.TaskList{Name: common.StringPtr(taskList)},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
+			TaskList:                            &types.TaskList{Name: taskList},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            identity,
 			SignalName:                          common.StringPtr(signalName),
 			Input:                               input,
-			RequestID:                           common.StringPtr(requestID),
+			RequestID:                           requestID,
 		},
 	}
 

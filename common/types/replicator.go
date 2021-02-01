@@ -276,9 +276,9 @@ func (v *GetDLQReplicationMessagesResponse) GetReplicationTasks() (o []*Replicat
 
 // GetDomainReplicationMessagesRequest is an internal type (TBD...)
 type GetDomainReplicationMessagesRequest struct {
-	LastRetrievedMessageID *int64  `json:"lastRetrievedMessageId,omitempty"`
-	LastProcessedMessageID *int64  `json:"lastProcessedMessageId,omitempty"`
-	ClusterName            *string `json:"clusterName,omitempty"`
+	LastRetrievedMessageID *int64 `json:"lastRetrievedMessageId,omitempty"`
+	LastProcessedMessageID *int64 `json:"lastProcessedMessageId,omitempty"`
+	ClusterName            string `json:"clusterName,omitempty"`
 }
 
 // GetLastRetrievedMessageID is an internal getter (TBD...)
@@ -299,8 +299,8 @@ func (v *GetDomainReplicationMessagesRequest) GetLastProcessedMessageID() (o int
 
 // GetClusterName is an internal getter (TBD...)
 func (v *GetDomainReplicationMessagesRequest) GetClusterName() (o string) {
-	if v != nil && v.ClusterName != nil {
-		return *v.ClusterName
+	if v != nil {
+		return v.ClusterName
 	}
 	return
 }
@@ -321,7 +321,7 @@ func (v *GetDomainReplicationMessagesResponse) GetMessages() (o *ReplicationMess
 // GetReplicationMessagesRequest is an internal type (TBD...)
 type GetReplicationMessagesRequest struct {
 	Tokens      []*ReplicationToken `json:"tokens,omitempty"`
-	ClusterName *string             `json:"clusterName,omitempty"`
+	ClusterName string              `json:"clusterName,omitempty"`
 }
 
 // GetTokens is an internal getter (TBD...)
@@ -334,8 +334,8 @@ func (v *GetReplicationMessagesRequest) GetTokens() (o []*ReplicationToken) {
 
 // GetClusterName is an internal getter (TBD...)
 func (v *GetReplicationMessagesRequest) GetClusterName() (o string) {
-	if v != nil && v.ClusterName != nil {
-		return *v.ClusterName
+	if v != nil {
+		return v.ClusterName
 	}
 	return
 }

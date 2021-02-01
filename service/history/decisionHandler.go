@@ -501,7 +501,7 @@ Update_History_Loop:
 				// start the new decision task if request asked to do so
 				// TODO: replace the poll request
 				_, _, err := msBuilder.AddDecisionTaskStartedEvent(newDecision.ScheduleID, "request-from-RespondDecisionTaskCompleted", &types.PollForDecisionTaskRequest{
-					TaskList: &types.TaskList{Name: common.StringPtr(newDecision.TaskList)},
+					TaskList: &types.TaskList{Name: newDecision.TaskList},
 					Identity: request.Identity,
 				})
 				if err != nil {
@@ -634,7 +634,7 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 	response.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID())
 	response.Attempt = decision.Attempt
 	response.WorkflowExecutionTaskList = &types.TaskList{
-		Name: &executionInfo.TaskList,
+		Name: executionInfo.TaskList,
 		Kind: types.TaskListKindNormal.Ptr(),
 	}
 	response.ScheduledTimestamp = common.Int64Ptr(decision.ScheduledTimestamp)
