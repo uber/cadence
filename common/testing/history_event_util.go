@@ -203,7 +203,7 @@ func InitializeHistoryEventGenerator(
 			ScheduledEventID: lastEvent.GetDecisionTaskStartedEventAttributes().ScheduledEventID,
 			StartedEventID:   lastEvent.EventID,
 			Identity:         identity,
-			BinaryChecksum:   common.StringPtr(checksum),
+			BinaryChecksum:   checksum,
 		}
 		return historyEvent
 	})

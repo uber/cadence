@@ -560,7 +560,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskFailedEvent(
 		Details:          details,
 		Identity:         identity,
 		Reason:           common.StringPtr(reason),
-		BinaryChecksum:   common.StringPtr(binChecksum),
+		BinaryChecksum:   binChecksum,
 		BaseRunID:        baseRunID,
 		NewRunID:         newRunID,
 		ForkEventVersion: common.Int64Ptr(forkEventVersion),

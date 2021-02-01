@@ -1044,7 +1044,7 @@ func FromDecisionTaskCompletedEventAttributes(t *types.DecisionTaskCompletedEven
 		ScheduledEventId: t.ScheduledEventID,
 		StartedEventId:   t.StartedEventID,
 		Identity:         &t.Identity,
-		BinaryChecksum:   t.BinaryChecksum,
+		BinaryChecksum:   &t.BinaryChecksum,
 	}
 }
 
@@ -1058,7 +1058,7 @@ func ToDecisionTaskCompletedEventAttributes(t *shared.DecisionTaskCompletedEvent
 		ScheduledEventID: t.ScheduledEventId,
 		StartedEventID:   t.StartedEventId,
 		Identity:         t.GetIdentity(),
-		BinaryChecksum:   t.BinaryChecksum,
+		BinaryChecksum:   t.GetBinaryChecksum(),
 	}
 }
 
@@ -1235,7 +1235,7 @@ func FromDecisionTaskFailedEventAttributes(t *types.DecisionTaskFailedEventAttri
 		BaseRunId:        &t.BaseRunID,
 		NewRunId:         &t.NewRunID,
 		ForkEventVersion: t.ForkEventVersion,
-		BinaryChecksum:   t.BinaryChecksum,
+		BinaryChecksum:   &t.BinaryChecksum,
 	}
 }
 
@@ -1254,7 +1254,7 @@ func ToDecisionTaskFailedEventAttributes(t *shared.DecisionTaskFailedEventAttrib
 		BaseRunID:        t.GetBaseRunId(),
 		NewRunID:         t.GetNewRunId(),
 		ForkEventVersion: t.ForkEventVersion,
-		BinaryChecksum:   t.BinaryChecksum,
+		BinaryChecksum:   t.GetBinaryChecksum(),
 	}
 }
 
@@ -3355,7 +3355,7 @@ func FromPollForDecisionTaskRequest(t *types.PollForDecisionTaskRequest) *shared
 		Domain:         &t.Domain,
 		TaskList:       FromTaskList(t.TaskList),
 		Identity:       &t.Identity,
-		BinaryChecksum: t.BinaryChecksum,
+		BinaryChecksum: &t.BinaryChecksum,
 	}
 }
 
@@ -3368,7 +3368,7 @@ func ToPollForDecisionTaskRequest(t *shared.PollForDecisionTaskRequest) *types.P
 		Domain:         t.GetDomain(),
 		TaskList:       ToTaskList(t.TaskList),
 		Identity:       t.GetIdentity(),
-		BinaryChecksum: t.BinaryChecksum,
+		BinaryChecksum: t.GetBinaryChecksum(),
 	}
 }
 
@@ -4058,7 +4058,7 @@ func FromResetPointInfo(t *types.ResetPointInfo) *shared.ResetPointInfo {
 		return nil
 	}
 	return &shared.ResetPointInfo{
-		BinaryChecksum:           t.BinaryChecksum,
+		BinaryChecksum:           &t.BinaryChecksum,
 		RunId:                    &t.RunID,
 		FirstDecisionCompletedId: t.FirstDecisionCompletedID,
 		CreatedTimeNano:          t.CreatedTimeNano,
@@ -4073,7 +4073,7 @@ func ToResetPointInfo(t *shared.ResetPointInfo) *types.ResetPointInfo {
 		return nil
 	}
 	return &types.ResetPointInfo{
-		BinaryChecksum:           t.BinaryChecksum,
+		BinaryChecksum:           t.GetBinaryChecksum(),
 		RunID:                    t.GetRunId(),
 		FirstDecisionCompletedID: t.FirstDecisionCompletedId,
 		CreatedTimeNano:          t.CreatedTimeNano,
@@ -4393,7 +4393,7 @@ func FromRespondDecisionTaskCompletedRequest(t *types.RespondDecisionTaskComplet
 		StickyAttributes:           FromStickyExecutionAttributes(t.StickyAttributes),
 		ReturnNewDecisionTask:      t.ReturnNewDecisionTask,
 		ForceCreateNewDecisionTask: t.ForceCreateNewDecisionTask,
-		BinaryChecksum:             t.BinaryChecksum,
+		BinaryChecksum:             &t.BinaryChecksum,
 		QueryResults:               FromWorkflowQueryResultMap(t.QueryResults),
 	}
 }
@@ -4411,7 +4411,7 @@ func ToRespondDecisionTaskCompletedRequest(t *shared.RespondDecisionTaskComplete
 		StickyAttributes:           ToStickyExecutionAttributes(t.StickyAttributes),
 		ReturnNewDecisionTask:      t.ReturnNewDecisionTask,
 		ForceCreateNewDecisionTask: t.ForceCreateNewDecisionTask,
-		BinaryChecksum:             t.BinaryChecksum,
+		BinaryChecksum:             t.GetBinaryChecksum(),
 		QueryResults:               ToWorkflowQueryResultMap(t.QueryResults),
 	}
 }
@@ -4448,7 +4448,7 @@ func FromRespondDecisionTaskFailedRequest(t *types.RespondDecisionTaskFailedRequ
 		Cause:          FromDecisionTaskFailedCause(t.Cause),
 		Details:        t.Details,
 		Identity:       &t.Identity,
-		BinaryChecksum: t.BinaryChecksum,
+		BinaryChecksum: &t.BinaryChecksum,
 	}
 }
 
@@ -4462,7 +4462,7 @@ func ToRespondDecisionTaskFailedRequest(t *shared.RespondDecisionTaskFailedReque
 		Cause:          ToDecisionTaskFailedCause(t.Cause),
 		Details:        t.Details,
 		Identity:       t.GetIdentity(),
-		BinaryChecksum: t.BinaryChecksum,
+		BinaryChecksum: t.GetBinaryChecksum(),
 	}
 }
 
