@@ -23,7 +23,6 @@ package persistencetests
 import (
 	"context"
 	"os"
-	"runtime/debug"
 	"testing"
 	"time"
 
@@ -47,17 +46,8 @@ type (
 	}
 )
 
-func failOnPanic(t *testing.T) {
-	r := recover()
-	if r != nil {
-		t.Errorf("test panicked: %v %s", r, debug.Stack())
-		t.FailNow()
-	}
-}
-
 // SetupSuite implementation
 func (s *ExecutionManagerSuiteForEventsV2) SetupSuite() {
-	defer failOnPanic(s.T())
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
@@ -65,13 +55,11 @@ func (s *ExecutionManagerSuiteForEventsV2) SetupSuite() {
 
 // TearDownSuite implementation
 func (s *ExecutionManagerSuiteForEventsV2) TearDownSuite() {
-	defer failOnPanic(s.T())
 	s.TearDownWorkflowStore()
 }
 
 // SetupTest implementation
 func (s *ExecutionManagerSuiteForEventsV2) SetupTest() {
-	defer failOnPanic(s.T())
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 	s.ClearTasks()
@@ -99,7 +87,6 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	defer failOnPanic(s.T())
 	domainID := uuid.New()
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: "test-eventsv2-workflow",
@@ -205,7 +192,6 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreationWithVersionHistor
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	defer failOnPanic(s.T())
 	domainID := uuid.New()
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: "test-eventsv2-workflow-version-history",
