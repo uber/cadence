@@ -774,7 +774,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 		panic("GetActivityTaskScheduledEventAttributes is not set")
 	}
 	attributes := scheduledEvent.ActivityTaskScheduledEventAttributes
-	if attributes.ActivityID == nil {
+	if attributes.ActivityID == "" {
 		panic("ActivityTaskScheduledEventAttributes.ActivityID is not set")
 	}
 	if task.responseC == nil {

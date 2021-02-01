@@ -284,7 +284,7 @@ func (b *HistoryBuilder) AddActivityTaskCancelRequestedEvent(decisionCompletedEv
 	ActivityID string) *types.HistoryEvent {
 
 	attributes := &types.ActivityTaskCancelRequestedEventAttributes{}
-	attributes.ActivityID = common.StringPtr(ActivityID)
+	attributes.ActivityID = ActivityID
 	attributes.DecisionTaskCompletedEventID = common.Int64Ptr(decisionCompletedEventID)
 
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeActivityTaskCancelRequested)
@@ -298,7 +298,7 @@ func (b *HistoryBuilder) AddRequestCancelActivityTaskFailedEvent(decisionComplet
 	ActivityID string, cause string) *types.HistoryEvent {
 
 	attributes := &types.RequestCancelActivityTaskFailedEventAttributes{}
-	attributes.ActivityID = common.StringPtr(ActivityID)
+	attributes.ActivityID = ActivityID
 	attributes.DecisionTaskCompletedEventID = common.Int64Ptr(decisionCompletedEventID)
 	attributes.Cause = common.StringPtr(cause)
 
@@ -662,7 +662,7 @@ func (b *HistoryBuilder) newActivityTaskScheduledEvent(DecisionTaskCompletedEven
 	scheduleAttributes *types.ScheduleActivityTaskDecisionAttributes) *types.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(types.EventTypeActivityTaskScheduled)
 	attributes := &types.ActivityTaskScheduledEventAttributes{}
-	attributes.ActivityID = common.StringPtr(common.StringDefault(scheduleAttributes.ActivityID))
+	attributes.ActivityID = scheduleAttributes.ActivityID
 	attributes.ActivityType = scheduleAttributes.ActivityType
 	attributes.TaskList = scheduleAttributes.TaskList
 	attributes.Header = scheduleAttributes.Header

@@ -147,7 +147,7 @@ func AddActivityTaskScheduledEvent(
 	*persistence.ActivityInfo) {
 
 	event, ai, _, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &types.ScheduleActivityTaskDecisionAttributes{
-		ActivityID:                    common.StringPtr(activityID),
+		ActivityID:                    activityID,
 		ActivityType:                  &types.ActivityType{Name: activityType},
 		TaskList:                      &types.TaskList{Name: taskList},
 		Input:                         input,
@@ -177,7 +177,7 @@ func AddActivityTaskScheduledEventWithRetry(
 ) (*types.HistoryEvent, *persistence.ActivityInfo) {
 
 	event, ai, _, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &types.ScheduleActivityTaskDecisionAttributes{
-		ActivityID:                    common.StringPtr(activityID),
+		ActivityID:                    activityID,
 		ActivityType:                  &types.ActivityType{Name: activityType},
 		TaskList:                      &types.TaskList{Name: taskList},
 		Input:                         input,

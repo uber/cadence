@@ -2133,7 +2133,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	}
 	if e.config.EnableActivityLocalDispatchByDomain(e.domainEntry.GetInfo().Name) &&
 		common.BoolDefault(attributes.RequestLocalDispatch) {
-		return event, ai, &types.ActivityLocalDispatchInfo{ActivityID: common.StringPtr(ai.ActivityID)}, nil
+		return event, ai, &types.ActivityLocalDispatchInfo{ActivityID: ai.ActivityID}, nil
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateActivityTransferTasks(
@@ -2171,7 +2171,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 		ScheduledTime:            time.Unix(0, event.GetTimestamp()),
 		StartedID:                common.EmptyEventID,
 		StartedTime:              time.Time{},
-		ActivityID:               common.StringDefault(attributes.ActivityID),
+		ActivityID:               attributes.ActivityID,
 		DomainID:                 targetDomainID,
 		ScheduleToStartTimeout:   attributes.GetScheduleToStartTimeoutSeconds(),
 		ScheduleToCloseTimeout:   scheduleToCloseTimeout,
