@@ -245,8 +245,8 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_RequestIdNotSet
 		TaskList: &types.TaskList{
 			Name: "task-list",
 		},
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 1,
+		TaskStartToCloseTimeoutSeconds:      1,
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    1,
 			BackoffCoefficient:          2,
@@ -283,8 +283,8 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_DomainNotSet() 
 		TaskList: &types.TaskList{
 			Name: "task-list",
 		},
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 1,
+		TaskStartToCloseTimeoutSeconds:      1,
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    1,
 			BackoffCoefficient:          2,
@@ -312,8 +312,8 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowIdNotSe
 		TaskList: &types.TaskList{
 			Name: "task-list",
 		},
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 1,
+		TaskStartToCloseTimeoutSeconds:      1,
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    1,
 			BackoffCoefficient:          2,
@@ -342,8 +342,8 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowTypeNot
 		TaskList: &types.TaskList{
 			Name: "task-list",
 		},
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 1,
+		TaskStartToCloseTimeoutSeconds:      1,
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    1,
 			BackoffCoefficient:          2,
@@ -372,8 +372,8 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_TaskListNotSet(
 		TaskList: &types.TaskList{
 			Name: "",
 		},
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 1,
+		TaskStartToCloseTimeoutSeconds:      1,
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    1,
 			BackoffCoefficient:          2,
@@ -402,8 +402,8 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidExecutio
 		TaskList: &types.TaskList{
 			Name: "task-list",
 		},
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(0),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 0,
+		TaskStartToCloseTimeoutSeconds:      1,
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    1,
 			BackoffCoefficient:          2,
@@ -432,8 +432,8 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStar
 		TaskList: &types.TaskList{
 			Name: "task-list",
 		},
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(0),
+		ExecutionStartToCloseTimeoutSeconds: 1,
+		TaskStartToCloseTimeoutSeconds:      0,
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    1,
 			BackoffCoefficient:          2,

@@ -223,7 +223,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 		Execution:                     &execution,
 		ScheduleID:                    &scheduleID,
 		TaskList:                      stickyTaskList,
-		ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
+		ScheduleToStartTimeoutSeconds: 1,
 	}
 
 	_, err := s.matchingEngine.AddDecisionTask(s.handlerContext, &addRequest)
@@ -364,7 +364,7 @@ func (s *matchingEngineSuite) AddTasksTest(taskType int, isForwarded bool) {
 				Execution:                     &execution,
 				ScheduleID:                    &scheduleID,
 				TaskList:                      taskList,
-				ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
+				ScheduleToStartTimeoutSeconds: 1,
 			}
 			if isForwarded {
 				addRequest.ForwardedFrom = forwardedFrom
@@ -376,7 +376,7 @@ func (s *matchingEngineSuite) AddTasksTest(taskType int, isForwarded bool) {
 				Execution:                     &execution,
 				ScheduleID:                    &scheduleID,
 				TaskList:                      taskList,
-				ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
+				ScheduleToStartTimeoutSeconds: 1,
 			}
 			if isForwarded {
 				addRequest.ForwardedFrom = forwardedFrom
@@ -423,7 +423,7 @@ func (s *matchingEngineSuite) TestTaskWriterShutdown() {
 		DomainUUID:                    domainID,
 		Execution:                     &execution,
 		TaskList:                      taskList,
-		ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
+		ScheduleToStartTimeoutSeconds: 1,
 	}
 
 	// stop the task writer explicitly
@@ -472,7 +472,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 			Execution:                     &workflowExecution,
 			ScheduleID:                    &scheduleID,
 			TaskList:                      taskList,
-			ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
+			ScheduleToStartTimeoutSeconds: 1,
 		}
 
 		_, err := s.matchingEngine.AddActivityTask(s.handlerContext, &addRequest)
@@ -498,10 +498,10 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 						TaskList:                      &types.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-						ScheduleToStartTimeoutSeconds: common.Int32Ptr(50),
-						StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-						HeartbeatTimeoutSeconds:       common.Int32Ptr(10),
+						ScheduleToCloseTimeoutSeconds: 100,
+						ScheduleToStartTimeoutSeconds: 50,
+						StartToCloseTimeoutSeconds:    50,
+						HeartbeatTimeoutSeconds:       10,
 					}),
 			}
 			resp.StartedTimestamp = common.Int64Ptr(time.Now().UnixNano())
@@ -529,10 +529,10 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 		s.EqualValues(activityInput, result.Input)
 		s.EqualValues(workflowExecution, *result.WorkflowExecution)
 		s.Equal(true, validateTimeRange(time.Unix(0, *result.ScheduledTimestamp), time.Minute))
-		s.Equal(int32(100), *result.ScheduleToCloseTimeoutSeconds)
+		s.Equal(int32(100), result.ScheduleToCloseTimeoutSeconds)
 		s.Equal(true, validateTimeRange(time.Unix(0, *result.StartedTimestamp), time.Minute))
-		s.Equal(int32(50), *result.StartToCloseTimeoutSeconds)
-		s.Equal(int32(10), *result.HeartbeatTimeoutSeconds)
+		s.Equal(int32(50), result.StartToCloseTimeoutSeconds)
+		s.Equal(int32(10), result.HeartbeatTimeoutSeconds)
 		token := &common.TaskToken{
 			DomainID:     domainID,
 			WorkflowID:   workflowID,
@@ -611,10 +611,10 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 						TaskList:                      &types.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
-						ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(2),
-						StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
-						HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
+						ScheduleToStartTimeoutSeconds: 1,
+						ScheduleToCloseTimeoutSeconds: 2,
+						StartToCloseTimeoutSeconds:    1,
+						HeartbeatTimeoutSeconds:       1,
 					}),
 			}, nil
 		}).AnyTimes()
@@ -652,7 +652,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 			Execution:                     &workflowExecution,
 			ScheduleID:                    &scheduleID,
 			TaskList:                      taskList,
-			ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
+			ScheduleToStartTimeoutSeconds: 1,
 		}
 		_, err := s.matchingEngine.AddActivityTask(s.handlerContext, &addRequest)
 		wg.Wait()
@@ -800,7 +800,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 					Execution:                     &workflowExecution,
 					ScheduleID:                    &scheduleID,
 					TaskList:                      taskList,
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
+					ScheduleToStartTimeoutSeconds: 1,
 				}
 
 				_, err := s.matchingEngine.AddActivityTask(s.handlerContext, &addRequest)
@@ -834,10 +834,10 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 						ActivityType:                  activityType,
 						Input:                         activityInput,
 						Header:                        activityHeader,
-						ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(2),
-						StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
-						HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
+						ScheduleToStartTimeoutSeconds: 1,
+						ScheduleToCloseTimeoutSeconds: 2,
+						StartToCloseTimeoutSeconds:    1,
+						HeartbeatTimeoutSeconds:       1,
 					}),
 			}, nil
 		}).AnyTimes()
@@ -940,7 +940,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 					Execution:                     &workflowExecution,
 					ScheduleID:                    &scheduleID,
 					TaskList:                      taskList,
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
+					ScheduleToStartTimeoutSeconds: 1,
 				}
 
 				_, err := s.matchingEngine.AddDecisionTask(s.handlerContext, &addRequest)
@@ -1095,7 +1095,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 					Execution:                     &workflowExecution,
 					ScheduleID:                    &scheduleID,
 					TaskList:                      taskList,
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(600),
+					ScheduleToStartTimeoutSeconds: 600,
 				}
 
 				_, err := engine.AddActivityTask(s.handlerContext, &addRequest)
@@ -1138,10 +1138,10 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 						TaskList:                      &types.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
-						ScheduleToStartTimeoutSeconds: common.Int32Ptr(600),
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(2),
-						StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
-						HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
+						ScheduleToStartTimeoutSeconds: 600,
+						ScheduleToCloseTimeoutSeconds: 2,
+						StartToCloseTimeoutSeconds:    1,
+						HeartbeatTimeoutSeconds:       1,
 					}),
 			}, nil
 		}).AnyTimes()
@@ -1244,7 +1244,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 					Execution:                     &workflowExecution,
 					ScheduleID:                    &scheduleID,
 					TaskList:                      taskList,
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(600),
+					ScheduleToStartTimeoutSeconds: 600,
 				}
 
 				_, err := engine.AddDecisionTask(s.handlerContext, &addRequest)
@@ -1361,7 +1361,7 @@ func (s *matchingEngineSuite) TestAddTaskAfterStartFailure() {
 		Execution:                     &workflowExecution,
 		ScheduleID:                    &scheduleID,
 		TaskList:                      taskList,
-		ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
+		ScheduleToStartTimeoutSeconds: 1,
 	}
 
 	_, err := s.matchingEngine.AddActivityTask(s.handlerContext, &addRequest)
@@ -1410,7 +1410,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 			Execution:                     &workflowExecution,
 			ScheduleID:                    &scheduleID,
 			TaskList:                      taskList,
-			ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
+			ScheduleToStartTimeoutSeconds: 1,
 		}
 
 		_, err := s.matchingEngine.AddActivityTask(s.handlerContext, &addRequest)
@@ -1552,11 +1552,11 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 				Execution:                     &workflowExecution,
 				ScheduleID:                    &scheduleID,
 				TaskList:                      taskList,
-				ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
+				ScheduleToStartTimeoutSeconds: 5,
 			}
 			if i%2 == 0 {
 				// simulates creating a task whose scheduledToStartTimeout is already expired
-				addRequest.ScheduleToStartTimeoutSeconds = common.Int32Ptr(-5)
+				addRequest.ScheduleToStartTimeoutSeconds = -5
 			}
 			_, err := s.matchingEngine.AddActivityTask(s.handlerContext, &addRequest)
 			s.NoError(err)
@@ -1613,10 +1613,10 @@ func (s *matchingEngineSuite) setupRecordActivityTaskStartedMock(tlName string) 
 						TaskList:                      &types.TaskList{Name: tlName},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-						ScheduleToStartTimeoutSeconds: common.Int32Ptr(50),
-						StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-						HeartbeatTimeoutSeconds:       common.Int32Ptr(10),
+						ScheduleToCloseTimeoutSeconds: 100,
+						ScheduleToStartTimeoutSeconds: 50,
+						StartToCloseTimeoutSeconds:    50,
+						HeartbeatTimeoutSeconds:       10,
 					}),
 			}, nil
 		}).AnyTimes()
@@ -1642,10 +1642,10 @@ func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID i
 	attributes.TaskList = scheduleAttributes.TaskList
 	attributes.Input = scheduleAttributes.Input
 	attributes.Header = scheduleAttributes.Header
-	attributes.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.ScheduleToCloseTimeoutSeconds)
-	attributes.ScheduleToStartTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.ScheduleToStartTimeoutSeconds)
-	attributes.StartToCloseTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.StartToCloseTimeoutSeconds)
-	attributes.HeartbeatTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.HeartbeatTimeoutSeconds)
+	attributes.ScheduleToCloseTimeoutSeconds = scheduleAttributes.ScheduleToCloseTimeoutSeconds
+	attributes.ScheduleToStartTimeoutSeconds = scheduleAttributes.ScheduleToStartTimeoutSeconds
+	attributes.StartToCloseTimeoutSeconds = scheduleAttributes.StartToCloseTimeoutSeconds
+	attributes.HeartbeatTimeoutSeconds = scheduleAttributes.HeartbeatTimeoutSeconds
 	attributes.DecisionTaskCompletedEventID = common.Int64Ptr(decisionTaskCompletedEventID)
 	historyEvent.ActivityTaskScheduledEventAttributes = attributes
 

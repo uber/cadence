@@ -189,10 +189,10 @@ func FromActivityTaskScheduledEventAttributes(t *types.ActivityTaskScheduledEven
 		Domain:                        t.Domain,
 		TaskList:                      FromTaskList(t.TaskList),
 		Input:                         t.Input,
-		ScheduleToCloseTimeoutSeconds: t.ScheduleToCloseTimeoutSeconds,
-		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
-		StartToCloseTimeoutSeconds:    t.StartToCloseTimeoutSeconds,
-		HeartbeatTimeoutSeconds:       t.HeartbeatTimeoutSeconds,
+		ScheduleToCloseTimeoutSeconds: &t.ScheduleToCloseTimeoutSeconds,
+		ScheduleToStartTimeoutSeconds: &t.ScheduleToStartTimeoutSeconds,
+		StartToCloseTimeoutSeconds:    &t.StartToCloseTimeoutSeconds,
+		HeartbeatTimeoutSeconds:       &t.HeartbeatTimeoutSeconds,
 		DecisionTaskCompletedEventId:  t.DecisionTaskCompletedEventID,
 		RetryPolicy:                   FromRetryPolicy(t.RetryPolicy),
 		Header:                        FromHeader(t.Header),
@@ -210,10 +210,10 @@ func ToActivityTaskScheduledEventAttributes(t *shared.ActivityTaskScheduledEvent
 		Domain:                        t.Domain,
 		TaskList:                      ToTaskList(t.TaskList),
 		Input:                         t.Input,
-		ScheduleToCloseTimeoutSeconds: t.ScheduleToCloseTimeoutSeconds,
-		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
-		StartToCloseTimeoutSeconds:    t.StartToCloseTimeoutSeconds,
-		HeartbeatTimeoutSeconds:       t.HeartbeatTimeoutSeconds,
+		ScheduleToCloseTimeoutSeconds: t.GetScheduleToCloseTimeoutSeconds(),
+		ScheduleToStartTimeoutSeconds: t.GetScheduleToStartTimeoutSeconds(),
+		StartToCloseTimeoutSeconds:    t.GetStartToCloseTimeoutSeconds(),
+		HeartbeatTimeoutSeconds:       t.GetHeartbeatTimeoutSeconds(),
 		DecisionTaskCompletedEventID:  t.DecisionTaskCompletedEventId,
 		RetryPolicy:                   ToRetryPolicy(t.RetryPolicy),
 		Header:                        ToHeader(t.Header),
@@ -863,9 +863,9 @@ func FromContinueAsNewWorkflowExecutionDecisionAttributes(t *types.ContinueAsNew
 		WorkflowType:                        FromWorkflowType(t.WorkflowType),
 		TaskList:                            FromTaskList(t.TaskList),
 		Input:                               t.Input,
-		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
-		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
-		BackoffStartIntervalInSeconds:       t.BackoffStartIntervalInSeconds,
+		ExecutionStartToCloseTimeoutSeconds: &t.ExecutionStartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      &t.TaskStartToCloseTimeoutSeconds,
+		BackoffStartIntervalInSeconds:       &t.BackoffStartIntervalInSeconds,
 		RetryPolicy:                         FromRetryPolicy(t.RetryPolicy),
 		Initiator:                           FromContinueAsNewInitiator(t.Initiator),
 		FailureReason:                       t.FailureReason,
@@ -887,9 +887,9 @@ func ToContinueAsNewWorkflowExecutionDecisionAttributes(t *shared.ContinueAsNewW
 		WorkflowType:                        ToWorkflowType(t.WorkflowType),
 		TaskList:                            ToTaskList(t.TaskList),
 		Input:                               t.Input,
-		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
-		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
-		BackoffStartIntervalInSeconds:       t.BackoffStartIntervalInSeconds,
+		ExecutionStartToCloseTimeoutSeconds: t.GetExecutionStartToCloseTimeoutSeconds(),
+		TaskStartToCloseTimeoutSeconds:      t.GetTaskStartToCloseTimeoutSeconds(),
+		BackoffStartIntervalInSeconds:       t.GetBackoffStartIntervalInSeconds(),
 		RetryPolicy:                         ToRetryPolicy(t.RetryPolicy),
 		Initiator:                           ToContinueAsNewInitiator(t.Initiator),
 		FailureReason:                       t.FailureReason,
@@ -1265,7 +1265,7 @@ func FromDecisionTaskScheduledEventAttributes(t *types.DecisionTaskScheduledEven
 	}
 	return &shared.DecisionTaskScheduledEventAttributes{
 		TaskList:                   FromTaskList(t.TaskList),
-		StartToCloseTimeoutSeconds: t.StartToCloseTimeoutSeconds,
+		StartToCloseTimeoutSeconds: &t.StartToCloseTimeoutSeconds,
 		Attempt:                    &t.Attempt,
 	}
 }
@@ -1277,7 +1277,7 @@ func ToDecisionTaskScheduledEventAttributes(t *shared.DecisionTaskScheduledEvent
 	}
 	return &types.DecisionTaskScheduledEventAttributes{
 		TaskList:                   ToTaskList(t.TaskList),
-		StartToCloseTimeoutSeconds: t.StartToCloseTimeoutSeconds,
+		StartToCloseTimeoutSeconds: t.GetStartToCloseTimeoutSeconds(),
 		Attempt:                    t.GetAttempt(),
 	}
 }
@@ -3308,10 +3308,10 @@ func FromPollForActivityTaskResponse(t *types.PollForActivityTaskResponse) *shar
 		ActivityType:                    FromActivityType(t.ActivityType),
 		Input:                           t.Input,
 		ScheduledTimestamp:              t.ScheduledTimestamp,
-		ScheduleToCloseTimeoutSeconds:   t.ScheduleToCloseTimeoutSeconds,
+		ScheduleToCloseTimeoutSeconds:   &t.ScheduleToCloseTimeoutSeconds,
 		StartedTimestamp:                t.StartedTimestamp,
-		StartToCloseTimeoutSeconds:      t.StartToCloseTimeoutSeconds,
-		HeartbeatTimeoutSeconds:         t.HeartbeatTimeoutSeconds,
+		StartToCloseTimeoutSeconds:      &t.StartToCloseTimeoutSeconds,
+		HeartbeatTimeoutSeconds:         &t.HeartbeatTimeoutSeconds,
 		Attempt:                         &t.Attempt,
 		ScheduledTimestampOfThisAttempt: t.ScheduledTimestampOfThisAttempt,
 		HeartbeatDetails:                t.HeartbeatDetails,
@@ -3333,10 +3333,10 @@ func ToPollForActivityTaskResponse(t *shared.PollForActivityTaskResponse) *types
 		ActivityType:                    ToActivityType(t.ActivityType),
 		Input:                           t.Input,
 		ScheduledTimestamp:              t.ScheduledTimestamp,
-		ScheduleToCloseTimeoutSeconds:   t.ScheduleToCloseTimeoutSeconds,
+		ScheduleToCloseTimeoutSeconds:   t.GetScheduleToCloseTimeoutSeconds(),
 		StartedTimestamp:                t.StartedTimestamp,
-		StartToCloseTimeoutSeconds:      t.StartToCloseTimeoutSeconds,
-		HeartbeatTimeoutSeconds:         t.HeartbeatTimeoutSeconds,
+		StartToCloseTimeoutSeconds:      t.GetStartToCloseTimeoutSeconds(),
+		HeartbeatTimeoutSeconds:         t.GetHeartbeatTimeoutSeconds(),
 		Attempt:                         t.GetAttempt(),
 		ScheduledTimestampOfThisAttempt: t.ScheduledTimestampOfThisAttempt,
 		HeartbeatDetails:                t.HeartbeatDetails,
@@ -4569,10 +4569,10 @@ func FromScheduleActivityTaskDecisionAttributes(t *types.ScheduleActivityTaskDec
 		Domain:                        &t.Domain,
 		TaskList:                      FromTaskList(t.TaskList),
 		Input:                         t.Input,
-		ScheduleToCloseTimeoutSeconds: t.ScheduleToCloseTimeoutSeconds,
-		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
-		StartToCloseTimeoutSeconds:    t.StartToCloseTimeoutSeconds,
-		HeartbeatTimeoutSeconds:       t.HeartbeatTimeoutSeconds,
+		ScheduleToCloseTimeoutSeconds: &t.ScheduleToCloseTimeoutSeconds,
+		ScheduleToStartTimeoutSeconds: &t.ScheduleToStartTimeoutSeconds,
+		StartToCloseTimeoutSeconds:    &t.StartToCloseTimeoutSeconds,
+		HeartbeatTimeoutSeconds:       &t.HeartbeatTimeoutSeconds,
 		RetryPolicy:                   FromRetryPolicy(t.RetryPolicy),
 		Header:                        FromHeader(t.Header),
 		RequestLocalDispatch:          t.RequestLocalDispatch,
@@ -4590,10 +4590,10 @@ func ToScheduleActivityTaskDecisionAttributes(t *shared.ScheduleActivityTaskDeci
 		Domain:                        t.GetDomain(),
 		TaskList:                      ToTaskList(t.TaskList),
 		Input:                         t.Input,
-		ScheduleToCloseTimeoutSeconds: t.ScheduleToCloseTimeoutSeconds,
-		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
-		StartToCloseTimeoutSeconds:    t.StartToCloseTimeoutSeconds,
-		HeartbeatTimeoutSeconds:       t.HeartbeatTimeoutSeconds,
+		ScheduleToCloseTimeoutSeconds: t.GetScheduleToCloseTimeoutSeconds(),
+		ScheduleToStartTimeoutSeconds: t.GetScheduleToStartTimeoutSeconds(),
+		StartToCloseTimeoutSeconds:    t.GetStartToCloseTimeoutSeconds(),
+		HeartbeatTimeoutSeconds:       t.GetHeartbeatTimeoutSeconds(),
 		RetryPolicy:                   ToRetryPolicy(t.RetryPolicy),
 		Header:                        ToHeader(t.Header),
 		RequestLocalDispatch:          t.RequestLocalDispatch,
@@ -4769,8 +4769,8 @@ func FromSignalWithStartWorkflowExecutionRequest(t *types.SignalWithStartWorkflo
 		WorkflowType:                        FromWorkflowType(t.WorkflowType),
 		TaskList:                            FromTaskList(t.TaskList),
 		Input:                               t.Input,
-		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
-		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
+		ExecutionStartToCloseTimeoutSeconds: &t.ExecutionStartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      &t.TaskStartToCloseTimeoutSeconds,
 		Identity:                            &t.Identity,
 		RequestId:                           &t.RequestID,
 		WorkflowIdReusePolicy:               FromWorkflowIDReusePolicy(t.WorkflowIDReusePolicy),
@@ -4796,8 +4796,8 @@ func ToSignalWithStartWorkflowExecutionRequest(t *shared.SignalWithStartWorkflow
 		WorkflowType:                        ToWorkflowType(t.WorkflowType),
 		TaskList:                            ToTaskList(t.TaskList),
 		Input:                               t.Input,
-		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
-		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
+		ExecutionStartToCloseTimeoutSeconds: t.GetExecutionStartToCloseTimeoutSeconds(),
+		TaskStartToCloseTimeoutSeconds:      t.GetTaskStartToCloseTimeoutSeconds(),
 		Identity:                            t.GetIdentity(),
 		RequestID:                           t.GetRequestId(),
 		WorkflowIDReusePolicy:               ToWorkflowIDReusePolicy(t.WorkflowIdReusePolicy),
@@ -4855,8 +4855,8 @@ func FromStartChildWorkflowExecutionDecisionAttributes(t *types.StartChildWorkfl
 		WorkflowType:                        FromWorkflowType(t.WorkflowType),
 		TaskList:                            FromTaskList(t.TaskList),
 		Input:                               t.Input,
-		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
-		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
+		ExecutionStartToCloseTimeoutSeconds: &t.ExecutionStartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      &t.TaskStartToCloseTimeoutSeconds,
 		ParentClosePolicy:                   FromParentClosePolicy(t.ParentClosePolicy),
 		Control:                             t.Control,
 		WorkflowIdReusePolicy:               FromWorkflowIDReusePolicy(t.WorkflowIDReusePolicy),
@@ -4879,8 +4879,8 @@ func ToStartChildWorkflowExecutionDecisionAttributes(t *shared.StartChildWorkflo
 		WorkflowType:                        ToWorkflowType(t.WorkflowType),
 		TaskList:                            ToTaskList(t.TaskList),
 		Input:                               t.Input,
-		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
-		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
+		ExecutionStartToCloseTimeoutSeconds: t.GetExecutionStartToCloseTimeoutSeconds(),
+		TaskStartToCloseTimeoutSeconds:      t.GetTaskStartToCloseTimeoutSeconds(),
 		ParentClosePolicy:                   ToParentClosePolicy(t.ParentClosePolicy),
 		Control:                             t.Control,
 		WorkflowIDReusePolicy:               ToWorkflowIDReusePolicy(t.WorkflowIdReusePolicy),
@@ -4935,8 +4935,8 @@ func FromStartChildWorkflowExecutionInitiatedEventAttributes(t *types.StartChild
 		WorkflowType:                        FromWorkflowType(t.WorkflowType),
 		TaskList:                            FromTaskList(t.TaskList),
 		Input:                               t.Input,
-		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
-		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
+		ExecutionStartToCloseTimeoutSeconds: &t.ExecutionStartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      &t.TaskStartToCloseTimeoutSeconds,
 		ParentClosePolicy:                   FromParentClosePolicy(t.ParentClosePolicy),
 		Control:                             t.Control,
 		DecisionTaskCompletedEventId:        t.DecisionTaskCompletedEventID,
@@ -4960,8 +4960,8 @@ func ToStartChildWorkflowExecutionInitiatedEventAttributes(t *shared.StartChildW
 		WorkflowType:                        ToWorkflowType(t.WorkflowType),
 		TaskList:                            ToTaskList(t.TaskList),
 		Input:                               t.Input,
-		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
-		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
+		ExecutionStartToCloseTimeoutSeconds: t.GetExecutionStartToCloseTimeoutSeconds(),
+		TaskStartToCloseTimeoutSeconds:      t.GetTaskStartToCloseTimeoutSeconds(),
 		ParentClosePolicy:                   ToParentClosePolicy(t.ParentClosePolicy),
 		Control:                             t.Control,
 		DecisionTaskCompletedEventID:        t.DecisionTaskCompletedEventId,
@@ -5003,7 +5003,7 @@ func FromStartTimerDecisionAttributes(t *types.StartTimerDecisionAttributes) *sh
 	}
 	return &shared.StartTimerDecisionAttributes{
 		TimerId:                   &t.TimerID,
-		StartToFireTimeoutSeconds: t.StartToFireTimeoutSeconds,
+		StartToFireTimeoutSeconds: &t.StartToFireTimeoutSeconds,
 	}
 }
 
@@ -5014,7 +5014,7 @@ func ToStartTimerDecisionAttributes(t *shared.StartTimerDecisionAttributes) *typ
 	}
 	return &types.StartTimerDecisionAttributes{
 		TimerID:                   t.GetTimerId(),
-		StartToFireTimeoutSeconds: t.StartToFireTimeoutSeconds,
+		StartToFireTimeoutSeconds: t.GetStartToFireTimeoutSeconds(),
 	}
 }
 
@@ -5029,8 +5029,8 @@ func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *
 		WorkflowType:                        FromWorkflowType(t.WorkflowType),
 		TaskList:                            FromTaskList(t.TaskList),
 		Input:                               t.Input,
-		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
-		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
+		ExecutionStartToCloseTimeoutSeconds: &t.ExecutionStartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      &t.TaskStartToCloseTimeoutSeconds,
 		Identity:                            &t.Identity,
 		RequestId:                           &t.RequestID,
 		WorkflowIdReusePolicy:               FromWorkflowIDReusePolicy(t.WorkflowIDReusePolicy),
@@ -5053,8 +5053,8 @@ func ToStartWorkflowExecutionRequest(t *shared.StartWorkflowExecutionRequest) *t
 		WorkflowType:                        ToWorkflowType(t.WorkflowType),
 		TaskList:                            ToTaskList(t.TaskList),
 		Input:                               t.Input,
-		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
-		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
+		ExecutionStartToCloseTimeoutSeconds: t.GetExecutionStartToCloseTimeoutSeconds(),
+		TaskStartToCloseTimeoutSeconds:      t.GetTaskStartToCloseTimeoutSeconds(),
 		Identity:                            t.GetIdentity(),
 		RequestID:                           t.GetRequestId(),
 		WorkflowIDReusePolicy:               ToWorkflowIDReusePolicy(t.WorkflowIdReusePolicy),
@@ -5093,7 +5093,7 @@ func FromStickyExecutionAttributes(t *types.StickyExecutionAttributes) *shared.S
 	}
 	return &shared.StickyExecutionAttributes{
 		WorkerTaskList:                FromTaskList(t.WorkerTaskList),
-		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
+		ScheduleToStartTimeoutSeconds: &t.ScheduleToStartTimeoutSeconds,
 	}
 }
 
@@ -5104,7 +5104,7 @@ func ToStickyExecutionAttributes(t *shared.StickyExecutionAttributes) *types.Sti
 	}
 	return &types.StickyExecutionAttributes{
 		WorkerTaskList:                ToTaskList(t.WorkerTaskList),
-		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
+		ScheduleToStartTimeoutSeconds: t.GetScheduleToStartTimeoutSeconds(),
 	}
 }
 
@@ -5435,7 +5435,7 @@ func FromTimerStartedEventAttributes(t *types.TimerStartedEventAttributes) *shar
 	}
 	return &shared.TimerStartedEventAttributes{
 		TimerId:                      &t.TimerID,
-		StartToFireTimeoutSeconds:    t.StartToFireTimeoutSeconds,
+		StartToFireTimeoutSeconds:    &t.StartToFireTimeoutSeconds,
 		DecisionTaskCompletedEventId: t.DecisionTaskCompletedEventID,
 	}
 }
@@ -5447,7 +5447,7 @@ func ToTimerStartedEventAttributes(t *shared.TimerStartedEventAttributes) *types
 	}
 	return &types.TimerStartedEventAttributes{
 		TimerID:                      t.GetTimerId(),
-		StartToFireTimeoutSeconds:    t.StartToFireTimeoutSeconds,
+		StartToFireTimeoutSeconds:    t.GetStartToFireTimeoutSeconds(),
 		DecisionTaskCompletedEventID: t.DecisionTaskCompletedEventId,
 	}
 }
@@ -5867,8 +5867,8 @@ func FromWorkflowExecutionConfiguration(t *types.WorkflowExecutionConfiguration)
 	}
 	return &shared.WorkflowExecutionConfiguration{
 		TaskList:                            FromTaskList(t.TaskList),
-		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
-		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
+		ExecutionStartToCloseTimeoutSeconds: &t.ExecutionStartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      &t.TaskStartToCloseTimeoutSeconds,
 	}
 }
 
@@ -5879,8 +5879,8 @@ func ToWorkflowExecutionConfiguration(t *shared.WorkflowExecutionConfiguration) 
 	}
 	return &types.WorkflowExecutionConfiguration{
 		TaskList:                            ToTaskList(t.TaskList),
-		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
-		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
+		ExecutionStartToCloseTimeoutSeconds: t.GetExecutionStartToCloseTimeoutSeconds(),
+		TaskStartToCloseTimeoutSeconds:      t.GetTaskStartToCloseTimeoutSeconds(),
 	}
 }
 
@@ -5894,10 +5894,10 @@ func FromWorkflowExecutionContinuedAsNewEventAttributes(t *types.WorkflowExecuti
 		WorkflowType:                        FromWorkflowType(t.WorkflowType),
 		TaskList:                            FromTaskList(t.TaskList),
 		Input:                               t.Input,
-		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
-		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
+		ExecutionStartToCloseTimeoutSeconds: &t.ExecutionStartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      &t.TaskStartToCloseTimeoutSeconds,
 		DecisionTaskCompletedEventId:        t.DecisionTaskCompletedEventID,
-		BackoffStartIntervalInSeconds:       t.BackoffStartIntervalInSeconds,
+		BackoffStartIntervalInSeconds:       &t.BackoffStartIntervalInSeconds,
 		Initiator:                           FromContinueAsNewInitiator(t.Initiator),
 		FailureReason:                       t.FailureReason,
 		FailureDetails:                      t.FailureDetails,
@@ -5918,10 +5918,10 @@ func ToWorkflowExecutionContinuedAsNewEventAttributes(t *shared.WorkflowExecutio
 		WorkflowType:                        ToWorkflowType(t.WorkflowType),
 		TaskList:                            ToTaskList(t.TaskList),
 		Input:                               t.Input,
-		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
-		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
+		ExecutionStartToCloseTimeoutSeconds: t.GetExecutionStartToCloseTimeoutSeconds(),
+		TaskStartToCloseTimeoutSeconds:      t.GetTaskStartToCloseTimeoutSeconds(),
 		DecisionTaskCompletedEventID:        t.DecisionTaskCompletedEventId,
-		BackoffStartIntervalInSeconds:       t.BackoffStartIntervalInSeconds,
+		BackoffStartIntervalInSeconds:       t.GetBackoffStartIntervalInSeconds(),
 		Initiator:                           ToContinueAsNewInitiator(t.Initiator),
 		FailureReason:                       t.FailureReason,
 		FailureDetails:                      t.FailureDetails,
@@ -6058,8 +6058,8 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		ParentInitiatedEventId:              t.ParentInitiatedEventID,
 		TaskList:                            FromTaskList(t.TaskList),
 		Input:                               t.Input,
-		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
-		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
+		ExecutionStartToCloseTimeoutSeconds: &t.ExecutionStartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      &t.TaskStartToCloseTimeoutSeconds,
 		ContinuedExecutionRunId:             t.ContinuedExecutionRunID,
 		Initiator:                           FromContinueAsNewInitiator(t.Initiator),
 		ContinuedFailureReason:              t.ContinuedFailureReason,
@@ -6072,7 +6072,7 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		Attempt:                             &t.Attempt,
 		ExpirationTimestamp:                 t.ExpirationTimestamp,
 		CronSchedule:                        &t.CronSchedule,
-		FirstDecisionTaskBackoffSeconds:     t.FirstDecisionTaskBackoffSeconds,
+		FirstDecisionTaskBackoffSeconds:     &t.FirstDecisionTaskBackoffSeconds,
 		Memo:                                FromMemo(t.Memo),
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
 		PrevAutoResetPoints:                 FromResetPoints(t.PrevAutoResetPoints),
@@ -6092,8 +6092,8 @@ func ToWorkflowExecutionStartedEventAttributes(t *shared.WorkflowExecutionStarte
 		ParentInitiatedEventID:              t.ParentInitiatedEventId,
 		TaskList:                            ToTaskList(t.TaskList),
 		Input:                               t.Input,
-		ExecutionStartToCloseTimeoutSeconds: t.ExecutionStartToCloseTimeoutSeconds,
-		TaskStartToCloseTimeoutSeconds:      t.TaskStartToCloseTimeoutSeconds,
+		ExecutionStartToCloseTimeoutSeconds: t.GetExecutionStartToCloseTimeoutSeconds(),
+		TaskStartToCloseTimeoutSeconds:      t.GetTaskStartToCloseTimeoutSeconds(),
 		ContinuedExecutionRunID:             t.ContinuedExecutionRunId,
 		Initiator:                           ToContinueAsNewInitiator(t.Initiator),
 		ContinuedFailureReason:              t.ContinuedFailureReason,
@@ -6106,7 +6106,7 @@ func ToWorkflowExecutionStartedEventAttributes(t *shared.WorkflowExecutionStarte
 		Attempt:                             t.GetAttempt(),
 		ExpirationTimestamp:                 t.ExpirationTimestamp,
 		CronSchedule:                        t.GetCronSchedule(),
-		FirstDecisionTaskBackoffSeconds:     t.FirstDecisionTaskBackoffSeconds,
+		FirstDecisionTaskBackoffSeconds:     t.GetFirstDecisionTaskBackoffSeconds(),
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		PrevAutoResetPoints:                 ToResetPoints(t.PrevAutoResetPoints),

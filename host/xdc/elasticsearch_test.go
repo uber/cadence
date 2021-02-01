@@ -187,8 +187,8 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      1,
 		Identity:                            identity,
 		SearchAttributes:                    searchAttr,
 	}

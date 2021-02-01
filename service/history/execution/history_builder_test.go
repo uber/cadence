@@ -436,8 +436,8 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowStartFailures() {
 				WorkflowType:                        &types.WorkflowType{Name: wt},
 				TaskList:                            &types.TaskList{Name: tl},
 				Input:                               input,
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(execTimeout),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskTimeout),
+				ExecutionStartToCloseTimeoutSeconds: execTimeout,
+				TaskStartToCloseTimeoutSeconds:      taskTimeout,
 				Identity:                            identity,
 			},
 		})
@@ -941,8 +941,8 @@ func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we types.Workflow
 		WorkflowType:                        &types.WorkflowType{Name: workflowType},
 		TaskList:                            &types.TaskList{Name: taskList},
 		Input:                               input,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
+		ExecutionStartToCloseTimeoutSeconds: executionStartToCloseTimeout,
+		TaskStartToCloseTimeoutSeconds:      taskStartToCloseTimeout,
 		Identity:                            identity,
 	}
 
@@ -1023,10 +1023,10 @@ func (s *historyBuilderSuite) addActivityTaskScheduledEvent(decisionCompletedID 
 			ActivityType:                  &types.ActivityType{Name: activityType},
 			TaskList:                      &types.TaskList{Name: taskList},
 			Input:                         input,
-			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(timeout),
-			ScheduleToStartTimeoutSeconds: common.Int32Ptr(queueTimeout),
-			HeartbeatTimeoutSeconds:       common.Int32Ptr(hearbeatTimeout),
-			StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
+			ScheduleToCloseTimeoutSeconds: timeout,
+			ScheduleToStartTimeoutSeconds: queueTimeout,
+			HeartbeatTimeoutSeconds:       hearbeatTimeout,
+			StartToCloseTimeoutSeconds:    1,
 			RetryPolicy:                   retryPolicy,
 			RequestLocalDispatch:          &requestLocalDispatch,
 		},
@@ -1130,8 +1130,8 @@ func (s *historyBuilderSuite) validateWorkflowExecutionStartedEvent(event *types
 	s.Equal(workflowType, attributes.WorkflowType.Name)
 	s.Equal(taskList, attributes.TaskList.Name)
 	s.Equal(input, attributes.Input)
-	s.Equal(executionStartToCloseTimeout, *attributes.ExecutionStartToCloseTimeoutSeconds)
-	s.Equal(taskStartToCloseTimeout, *attributes.TaskStartToCloseTimeoutSeconds)
+	s.Equal(executionStartToCloseTimeout, attributes.ExecutionStartToCloseTimeoutSeconds)
+	s.Equal(taskStartToCloseTimeout, attributes.TaskStartToCloseTimeoutSeconds)
 	s.Equal(identity, attributes.Identity)
 }
 
@@ -1179,9 +1179,9 @@ func (s *historyBuilderSuite) validateActivityTaskScheduledEvent(event *types.Hi
 	s.Equal(activityType, attributes.ActivityType.Name)
 	s.Equal(taskList, attributes.TaskList.Name)
 	s.Equal(input, attributes.Input)
-	s.Equal(timeout, *attributes.ScheduleToCloseTimeoutSeconds)
-	s.Equal(queueTimeout, *attributes.ScheduleToStartTimeoutSeconds)
-	s.Equal(hearbeatTimeout, *attributes.HeartbeatTimeoutSeconds)
+	s.Equal(timeout, attributes.ScheduleToCloseTimeoutSeconds)
+	s.Equal(queueTimeout, attributes.ScheduleToStartTimeoutSeconds)
+	s.Equal(hearbeatTimeout, attributes.HeartbeatTimeoutSeconds)
 	if requestLocalDispatch {
 		s.NotNil(activityDispatchInfo)
 	} else {

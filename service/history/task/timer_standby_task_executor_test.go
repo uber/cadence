@@ -178,8 +178,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Pending() {
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: workflowType},
 				TaskList:                            &types.TaskList{Name: taskListName},
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+				ExecutionStartToCloseTimeoutSeconds: 2,
+				TaskStartToCloseTimeoutSeconds:      1,
 			},
 		},
 	)
@@ -262,8 +262,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Success() {
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: workflowType},
 				TaskList:                            &types.TaskList{Name: taskListName},
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+				ExecutionStartToCloseTimeoutSeconds: 2,
+				TaskStartToCloseTimeoutSeconds:      1,
 			},
 		},
 	)
@@ -330,8 +330,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Multiple() {
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: workflowType},
 				TaskList:                            &types.TaskList{Name: taskListName},
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+				ExecutionStartToCloseTimeoutSeconds: 2,
+				TaskStartToCloseTimeoutSeconds:      1,
 			},
 		},
 	)
@@ -402,8 +402,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Pending() {
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: workflowType},
 				TaskList:                            &types.TaskList{Name: taskListName},
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+				ExecutionStartToCloseTimeoutSeconds: 2,
+				TaskStartToCloseTimeoutSeconds:      1,
 			},
 		},
 	)
@@ -488,8 +488,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Success() {
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: workflowType},
 				TaskList:                            &types.TaskList{Name: taskListName},
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+				ExecutionStartToCloseTimeoutSeconds: 2,
+				TaskStartToCloseTimeoutSeconds:      1,
 			},
 		},
 	)
@@ -560,8 +560,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noo
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: workflowType},
 				TaskList:                            &types.TaskList{Name: taskListName},
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+				ExecutionStartToCloseTimeoutSeconds: 2,
+				TaskStartToCloseTimeoutSeconds:      1,
 			},
 		},
 	)
@@ -633,8 +633,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Multiple_CanU
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: workflowType},
 				TaskList:                            &types.TaskList{Name: taskListName},
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+				ExecutionStartToCloseTimeoutSeconds: 2,
+				TaskStartToCloseTimeoutSeconds:      1,
 			},
 		},
 	)
@@ -752,8 +752,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Pending() {
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: workflowType},
 				TaskList:                            &types.TaskList{Name: taskListName},
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+				ExecutionStartToCloseTimeoutSeconds: 2,
+				TaskStartToCloseTimeoutSeconds:      1,
 			},
 		},
 	)
@@ -849,8 +849,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessDecisionTimeout_Success() {
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: workflowType},
 				TaskList:                            &types.TaskList{Name: taskListName},
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+				ExecutionStartToCloseTimeoutSeconds: 2,
+				TaskStartToCloseTimeoutSeconds:      1,
 			},
 		},
 	)
@@ -904,8 +904,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowBackoffTimer_Pending(
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: workflowType},
 				TaskList:                            &types.TaskList{Name: taskListName},
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+				ExecutionStartToCloseTimeoutSeconds: 2,
+				TaskStartToCloseTimeoutSeconds:      1,
 			},
 		},
 	)
@@ -971,8 +971,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowBackoffTimer_Success(
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: workflowType},
 				TaskList:                            &types.TaskList{Name: taskListName},
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+				ExecutionStartToCloseTimeoutSeconds: 2,
+				TaskStartToCloseTimeoutSeconds:      1,
 			},
 		},
 	)
@@ -1021,8 +1021,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Pending() {
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: workflowType},
 				TaskList:                            &types.TaskList{Name: taskListName},
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+				ExecutionStartToCloseTimeoutSeconds: 2,
+				TaskStartToCloseTimeoutSeconds:      1,
 			},
 		},
 	)
@@ -1094,8 +1094,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessWorkflowTimeout_Success() {
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: workflowType},
 				TaskList:                            &types.TaskList{Name: taskListName},
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+				ExecutionStartToCloseTimeoutSeconds: 2,
+				TaskStartToCloseTimeoutSeconds:      1,
 			},
 		},
 	)
@@ -1149,8 +1149,8 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessRetryTimeout() {
 			StartRequest: &types.StartWorkflowExecutionRequest{
 				WorkflowType:                        &types.WorkflowType{Name: workflowType},
 				TaskList:                            &types.TaskList{Name: taskListName},
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
-				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+				ExecutionStartToCloseTimeoutSeconds: 2,
+				TaskStartToCloseTimeoutSeconds:      1,
 			},
 		},
 	)

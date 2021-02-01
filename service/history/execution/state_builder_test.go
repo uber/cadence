@@ -208,11 +208,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_Wi
 	now := time.Now()
 	evenType := types.EventTypeWorkflowExecutionStarted
 	startWorkflowAttribute := &types.WorkflowExecutionStartedEventAttributes{
-		ParentWorkflowDomain: common.StringPtr(constants.TestParentDomainName),
-		Initiator:            types.ContinueAsNewInitiatorCronSchedule.Ptr(),
-		FirstDecisionTaskBackoffSeconds: common.Int32Ptr(
-			int32(backoff.GetBackoffForNextSchedule(cronSchedule, now, now).Seconds()),
-		),
+		ParentWorkflowDomain:            common.StringPtr(constants.TestParentDomainName),
+		Initiator:                       types.ContinueAsNewInitiatorCronSchedule.Ptr(),
+		FirstDecisionTaskBackoffSeconds: int32(backoff.GetBackoffForNextSchedule(cronSchedule, now, now).Seconds()),
 	}
 
 	event := &types.HistoryEvent{
@@ -435,8 +433,8 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 				RunID:      parentRunID,
 			},
 			ParentInitiatedEventID:              common.Int64Ptr(parentInitiatedEventID),
-			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
-			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeoutSecond),
+			ExecutionStartToCloseTimeoutSeconds: workflowTimeoutSecond,
+			TaskStartToCloseTimeoutSeconds:      decisionTimeoutSecond,
 			TaskList:                            &types.TaskList{Name: tasklist},
 			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 		},
@@ -462,7 +460,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 			TaskList:                   &types.TaskList{Name: tasklist},
-			StartToCloseTimeoutSeconds: common.Int32Ptr(decisionTimeoutSecond),
+			StartToCloseTimeoutSeconds: decisionTimeoutSecond,
 			Attempt:                    newRunDecisionAttempt,
 		},
 	}
@@ -685,7 +683,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskScheduled() {
 		EventType: &evenType,
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 			TaskList:                   &types.TaskList{Name: tasklist},
-			StartToCloseTimeoutSeconds: common.Int32Ptr(timeoutSecond),
+			StartToCloseTimeoutSeconds: timeoutSecond,
 			Attempt:                    decisionAttempt,
 		},
 	}
@@ -911,7 +909,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerStarted() {
 		EventType: &evenType,
 		TimerStartedEventAttributes: &types.TimerStartedEventAttributes{
 			TimerID:                   timerID,
-			StartToFireTimeoutSeconds: common.Int64Ptr(timeoutSecond),
+			StartToFireTimeoutSeconds: timeoutSecond,
 		},
 	}
 	ti := &persistence.TimerInfo{

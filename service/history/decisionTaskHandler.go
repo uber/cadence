@@ -968,7 +968,7 @@ func (handler *decisionTaskHandlerImpl) retryCronContinueAsNew(
 		ExecutionStartToCloseTimeoutSeconds: attr.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      attr.TaskStartToCloseTimeoutSeconds,
 		CronSchedule:                        attr.CronSchedule,
-		BackoffStartIntervalInSeconds:       common.Int32Ptr(backoffInterval),
+		BackoffStartIntervalInSeconds:       backoffInterval,
 		Initiator:                           continueAsNewIter,
 		FailureReason:                       failureReason,
 		FailureDetails:                      failureDetails,

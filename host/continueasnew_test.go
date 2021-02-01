@@ -28,7 +28,6 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
 )
@@ -65,8 +64,8 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 		Header:                              header,
 		Memo:                                memo,
 		SearchAttributes:                    searchAttr,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      10,
 		Identity:                            identity,
 	}
 
@@ -97,8 +96,8 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 					Header:                              header,
 					Memo:                                memo,
 					SearchAttributes:                    searchAttr,
-					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+					ExecutionStartToCloseTimeoutSeconds: 100,
+					TaskStartToCloseTimeoutSeconds:      10,
 				},
 			}}, nil
 		}
@@ -158,8 +157,8 @@ func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      10,
 		Identity:                            identity,
 	}
 
@@ -184,8 +183,8 @@ func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
 					WorkflowType:                        workflowType,
 					TaskList:                            &types.TaskList{Name: tl},
 					Input:                               buf.Bytes(),
-					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1), // set timeout to 1
-					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+					ExecutionStartToCloseTimeoutSeconds: 1, // set timeout to 1
+					TaskStartToCloseTimeoutSeconds:      1,
 				},
 			}}, nil
 		}
@@ -263,8 +262,8 @@ func (s *integrationSuite) TestWorkflowContinueAsNew_TaskID() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      1,
 		Identity:                            identity,
 	}
 
@@ -289,8 +288,8 @@ func (s *integrationSuite) TestWorkflowContinueAsNew_TaskID() {
 					WorkflowType:                        workflowType,
 					TaskList:                            taskList,
 					Input:                               nil,
-					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+					ExecutionStartToCloseTimeoutSeconds: 100,
+					TaskStartToCloseTimeoutSeconds:      1,
 				},
 			}}, nil
 		}
@@ -358,8 +357,8 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 		WorkflowType:                        parentWorkflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      1,
 		Identity:                            identity,
 	}
 

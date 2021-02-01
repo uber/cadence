@@ -199,7 +199,7 @@ func FromGetMutableStateResponse(t *types.GetMutableStateResponse) *history.GetM
 		ClientFeatureVersion:                 t.ClientFeatureVersion,
 		ClientImpl:                           t.ClientImpl,
 		IsWorkflowRunning:                    t.IsWorkflowRunning,
-		StickyTaskListScheduleToStartTimeout: t.StickyTaskListScheduleToStartTimeout,
+		StickyTaskListScheduleToStartTimeout: &t.StickyTaskListScheduleToStartTimeout,
 		EventStoreVersion:                    t.EventStoreVersion,
 		CurrentBranchToken:                   t.CurrentBranchToken,
 		WorkflowState:                        t.WorkflowState,
@@ -226,7 +226,7 @@ func ToGetMutableStateResponse(t *history.GetMutableStateResponse) *types.GetMut
 		ClientFeatureVersion:                 t.ClientFeatureVersion,
 		ClientImpl:                           t.ClientImpl,
 		IsWorkflowRunning:                    t.IsWorkflowRunning,
-		StickyTaskListScheduleToStartTimeout: t.StickyTaskListScheduleToStartTimeout,
+		StickyTaskListScheduleToStartTimeout: t.GetStickyTaskListScheduleToStartTimeout(),
 		EventStoreVersion:                    t.EventStoreVersion,
 		CurrentBranchToken:                   t.CurrentBranchToken,
 		WorkflowState:                        t.WorkflowState,
@@ -2312,7 +2312,7 @@ func FromPollMutableStateResponse(t *types.PollMutableStateResponse) *history.Po
 		ClientLibraryVersion:                 t.ClientLibraryVersion,
 		ClientFeatureVersion:                 t.ClientFeatureVersion,
 		ClientImpl:                           t.ClientImpl,
-		StickyTaskListScheduleToStartTimeout: t.StickyTaskListScheduleToStartTimeout,
+		StickyTaskListScheduleToStartTimeout: &t.StickyTaskListScheduleToStartTimeout,
 		CurrentBranchToken:                   t.CurrentBranchToken,
 		VersionHistories:                     FromVersionHistories(t.VersionHistories),
 		WorkflowState:                        t.WorkflowState,
@@ -2336,7 +2336,7 @@ func ToPollMutableStateResponse(t *history.PollMutableStateResponse) *types.Poll
 		ClientLibraryVersion:                 t.ClientLibraryVersion,
 		ClientFeatureVersion:                 t.ClientFeatureVersion,
 		ClientImpl:                           t.ClientImpl,
-		StickyTaskListScheduleToStartTimeout: t.StickyTaskListScheduleToStartTimeout,
+		StickyTaskListScheduleToStartTimeout: t.GetStickyTaskListScheduleToStartTimeout(),
 		CurrentBranchToken:                   t.CurrentBranchToken,
 		VersionHistories:                     ToVersionHistories(t.VersionHistories),
 		WorkflowState:                        t.WorkflowState,
@@ -3045,7 +3045,7 @@ func FromHistoryStartWorkflowExecutionRequest(t *types.HistoryStartWorkflowExecu
 		ContinuedFailureReason:          t.ContinuedFailureReason,
 		ContinuedFailureDetails:         t.ContinuedFailureDetails,
 		LastCompletionResult:            t.LastCompletionResult,
-		FirstDecisionTaskBackoffSeconds: t.FirstDecisionTaskBackoffSeconds,
+		FirstDecisionTaskBackoffSeconds: &t.FirstDecisionTaskBackoffSeconds,
 	}
 }
 
@@ -3064,7 +3064,7 @@ func ToHistoryStartWorkflowExecutionRequest(t *history.StartWorkflowExecutionReq
 		ContinuedFailureReason:          t.ContinuedFailureReason,
 		ContinuedFailureDetails:         t.ContinuedFailureDetails,
 		LastCompletionResult:            t.LastCompletionResult,
-		FirstDecisionTaskBackoffSeconds: t.FirstDecisionTaskBackoffSeconds,
+		FirstDecisionTaskBackoffSeconds: t.GetFirstDecisionTaskBackoffSeconds(),
 	}
 }
 

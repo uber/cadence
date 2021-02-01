@@ -480,7 +480,7 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 		Execution:                     &execution,
 		TaskList:                      taskList,
 		ScheduleID:                    common.Int64Ptr(scheduledID),
-		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
+		ScheduleToStartTimeoutSeconds: scheduleToStartTimeout,
 	})
 }
 
@@ -555,7 +555,7 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 		Input:                               startAttributes.Input,
 		ExecutionStartToCloseTimeoutSeconds: startAttributes.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      startAttributes.TaskStartToCloseTimeoutSeconds,
-		BackoffStartIntervalInSeconds:       common.Int32Ptr(int32(backoffInterval.Seconds())),
+		BackoffStartIntervalInSeconds:       int32(backoffInterval.Seconds()),
 		RetryPolicy:                         startAttributes.RetryPolicy,
 		Initiator:                           continueAsNewInitiator.Ptr(),
 		FailureReason:                       common.StringPtr(timeoutReason),

@@ -557,8 +557,8 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 			TaskList:                            &types.TaskList{Name: tasklist},
 			Input:                               nil,
-			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
-			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeoutSecond),
+			ExecutionStartToCloseTimeoutSeconds: workflowTimeoutSecond,
+			TaskStartToCloseTimeoutSeconds:      decisionTimeoutSecond,
 		},
 	}
 	eventID++
@@ -570,7 +570,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 			TaskList:                   &types.TaskList{Name: tasklist},
-			StartToCloseTimeoutSeconds: common.Int32Ptr(decisionTimeoutSecond),
+			StartToCloseTimeoutSeconds: decisionTimeoutSecond,
 			Attempt:                    decisionAttempt,
 		},
 	}
@@ -646,7 +646,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 			TaskList:                   &types.TaskList{Name: tasklist},
-			StartToCloseTimeoutSeconds: common.Int32Ptr(decisionTimeoutSecond),
+			StartToCloseTimeoutSeconds: decisionTimeoutSecond,
 			Attempt:                    decisionAttempt,
 		},
 	}

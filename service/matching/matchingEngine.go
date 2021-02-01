@@ -789,10 +789,10 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 	response.WorkflowExecution = task.workflowExecution()
 	response.ScheduledTimestampOfThisAttempt = historyResponse.ScheduledTimestampOfThisAttempt
 	response.ScheduledTimestamp = common.Int64Ptr(*scheduledEvent.Timestamp)
-	response.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(*attributes.ScheduleToCloseTimeoutSeconds)
+	response.ScheduleToCloseTimeoutSeconds = attributes.ScheduleToCloseTimeoutSeconds
 	response.StartedTimestamp = historyResponse.StartedTimestamp
-	response.StartToCloseTimeoutSeconds = common.Int32Ptr(*attributes.StartToCloseTimeoutSeconds)
-	response.HeartbeatTimeoutSeconds = common.Int32Ptr(*attributes.HeartbeatTimeoutSeconds)
+	response.StartToCloseTimeoutSeconds = attributes.StartToCloseTimeoutSeconds
+	response.HeartbeatTimeoutSeconds = attributes.HeartbeatTimeoutSeconds
 
 	token := &common.TaskToken{
 		DomainID:        task.event.DomainID,

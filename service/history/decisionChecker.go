@@ -239,16 +239,16 @@ func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 
 	// ensure activity timeout never larger than workflow timeout
 	if attributes.GetScheduleToCloseTimeoutSeconds() > wfTimeout {
-		attributes.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(wfTimeout)
+		attributes.ScheduleToCloseTimeoutSeconds = wfTimeout
 	}
 	if attributes.GetScheduleToStartTimeoutSeconds() > wfTimeout {
-		attributes.ScheduleToStartTimeoutSeconds = common.Int32Ptr(wfTimeout)
+		attributes.ScheduleToStartTimeoutSeconds = wfTimeout
 	}
 	if attributes.GetStartToCloseTimeoutSeconds() > wfTimeout {
-		attributes.StartToCloseTimeoutSeconds = common.Int32Ptr(wfTimeout)
+		attributes.StartToCloseTimeoutSeconds = wfTimeout
 	}
 	if attributes.GetHeartbeatTimeoutSeconds() > wfTimeout {
-		attributes.HeartbeatTimeoutSeconds = common.Int32Ptr(wfTimeout)
+		attributes.HeartbeatTimeoutSeconds = wfTimeout
 	}
 
 	validScheduleToClose := attributes.GetScheduleToCloseTimeoutSeconds() > 0
@@ -257,15 +257,15 @@ func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 
 	if validScheduleToClose {
 		if !validScheduleToStart {
-			attributes.ScheduleToStartTimeoutSeconds = common.Int32Ptr(attributes.GetScheduleToCloseTimeoutSeconds())
+			attributes.ScheduleToStartTimeoutSeconds = attributes.GetScheduleToCloseTimeoutSeconds()
 		}
 		if !validStartToClose {
-			attributes.StartToCloseTimeoutSeconds = common.Int32Ptr(attributes.GetScheduleToCloseTimeoutSeconds())
+			attributes.StartToCloseTimeoutSeconds = attributes.GetScheduleToCloseTimeoutSeconds()
 		}
 	} else if validScheduleToStart && validStartToClose {
-		attributes.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(attributes.GetScheduleToStartTimeoutSeconds() + attributes.GetStartToCloseTimeoutSeconds())
+		attributes.ScheduleToCloseTimeoutSeconds = attributes.GetScheduleToStartTimeoutSeconds() + attributes.GetStartToCloseTimeoutSeconds()
 		if attributes.GetScheduleToCloseTimeoutSeconds() > wfTimeout {
-			attributes.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(wfTimeout)
+			attributes.ScheduleToCloseTimeoutSeconds = wfTimeout
 		}
 	} else {
 		// Deduction failed as there's not enough information to fill in missing timeouts.
@@ -305,7 +305,7 @@ func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 			maximumScheduleToStartTimeoutForRetryInSeconds := int32(v.config.ActivityMaxScheduleToStartTimeoutForRetry(domainName).Seconds())
 			scheduleToStartExpiration := common.MinInt32(expiration, maximumScheduleToStartTimeoutForRetryInSeconds)
 			if attributes.GetScheduleToStartTimeoutSeconds() < scheduleToStartExpiration {
-				attributes.ScheduleToStartTimeoutSeconds = common.Int32Ptr(scheduleToStartExpiration)
+				attributes.ScheduleToStartTimeoutSeconds = scheduleToStartExpiration
 			}
 
 			// TODO: uncomment the following code when the client side bug for calculating scheduleToClose deadline is fixed and
@@ -313,12 +313,12 @@ func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 			//
 			// scheduleToCloseExpiration := common.MinInt32(expiration, scheduleToStartExpiration+attributes.GetStartToCloseTimeoutSeconds())
 			// if attributes.GetScheduleToCloseTimeoutSeconds() < scheduleToCloseExpiration {
-			// 	attributes.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(scheduleToCloseExpiration)
+			// 	attributes.ScheduleToCloseTimeoutSeconds = scheduleToCloseExpiration
 			// }
 		}
 
 		if attributes.GetScheduleToCloseTimeoutSeconds() < expiration {
-			attributes.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(expiration)
+			attributes.ScheduleToCloseTimeoutSeconds = expiration
 		}
 	}
 	return nil
@@ -545,12 +545,12 @@ func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes
 
 	// Inherit workflow timeout from previous execution if not provided on decision
 	if attributes.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
-		attributes.ExecutionStartToCloseTimeoutSeconds = common.Int32Ptr(executionInfo.WorkflowTimeout)
+		attributes.ExecutionStartToCloseTimeoutSeconds = executionInfo.WorkflowTimeout
 	}
 
 	// Inherit decision task timeout from previous execution if not provided on decision
 	if attributes.GetTaskStartToCloseTimeoutSeconds() <= 0 {
-		attributes.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(executionInfo.DecisionStartToCloseTimeout)
+		attributes.TaskStartToCloseTimeoutSeconds = executionInfo.DecisionStartToCloseTimeout
 	}
 
 	// Check next run decision task delay
@@ -620,12 +620,12 @@ func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
 
 	// Inherit workflow timeout from parent workflow execution if not provided on decision
 	if attributes.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
-		attributes.ExecutionStartToCloseTimeoutSeconds = common.Int32Ptr(parentInfo.WorkflowTimeout)
+		attributes.ExecutionStartToCloseTimeoutSeconds = parentInfo.WorkflowTimeout
 	}
 
 	// Inherit decision task timeout from parent workflow execution if not provided on decision
 	if attributes.GetTaskStartToCloseTimeoutSeconds() <= 0 {
-		attributes.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(parentInfo.DecisionStartToCloseTimeout)
+		attributes.TaskStartToCloseTimeoutSeconds = parentInfo.DecisionStartToCloseTimeout
 	}
 
 	return nil

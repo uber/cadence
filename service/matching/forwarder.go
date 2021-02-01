@@ -134,7 +134,7 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) erro
 				Kind: &fwdr.taskListKind,
 			},
 			ScheduleID:                    &task.event.ScheduleID,
-			ScheduleToStartTimeoutSeconds: &task.event.ScheduleToStartTimeout,
+			ScheduleToStartTimeoutSeconds: task.event.ScheduleToStartTimeout,
 			Source:                        &task.source,
 			ForwardedFrom:                 fwdr.taskListID.name,
 		})
@@ -148,7 +148,7 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *internalTask) erro
 				Kind: &fwdr.taskListKind,
 			},
 			ScheduleID:                    &task.event.ScheduleID,
-			ScheduleToStartTimeoutSeconds: &task.event.ScheduleToStartTimeout,
+			ScheduleToStartTimeoutSeconds: task.event.ScheduleToStartTimeout,
 			Source:                        &task.source,
 			ForwardedFrom:                 fwdr.taskListID.name,
 		})

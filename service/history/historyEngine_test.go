@@ -1092,10 +1092,10 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 			ActivityType:                  &types.ActivityType{Name: activity3Type},
 			TaskList:                      &types.TaskList{Name: tl},
 			Input:                         activity3Input,
-			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-			ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
-			StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-			HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+			ScheduleToCloseTimeoutSeconds: 100,
+			ScheduleToStartTimeoutSeconds: 10,
+			StartToCloseTimeoutSeconds:    50,
+			HeartbeatTimeoutSeconds:       5,
 		},
 	}}
 
@@ -1138,10 +1138,10 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 	s.Equal(int64(12), *activity3Attributes.DecisionTaskCompletedEventID)
 	s.Equal(tl, activity3Attributes.TaskList.Name)
 	s.Equal(activity3Input, activity3Attributes.Input)
-	s.Equal(int32(100), *activity3Attributes.ScheduleToCloseTimeoutSeconds)
-	s.Equal(int32(10), *activity3Attributes.ScheduleToStartTimeoutSeconds)
-	s.Equal(int32(50), *activity3Attributes.StartToCloseTimeoutSeconds)
-	s.Equal(int32(5), *activity3Attributes.HeartbeatTimeoutSeconds)
+	s.Equal(int32(100), activity3Attributes.ScheduleToCloseTimeoutSeconds)
+	s.Equal(int32(10), activity3Attributes.ScheduleToStartTimeoutSeconds)
+	s.Equal(int32(50), activity3Attributes.StartToCloseTimeoutSeconds)
+	s.Equal(int32(5), activity3Attributes.HeartbeatTimeoutSeconds)
 
 	di, ok := executionBuilder.GetDecisionInfo(15)
 	s.True(ok)
@@ -1156,8 +1156,8 @@ func (s *engineSuite) TestValidateSignalRequest() {
 		WorkflowType:                        &types.WorkflowType{Name: workflowType},
 		TaskList:                            &types.TaskList{Name: "taskptr"},
 		Input:                               input,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		ExecutionStartToCloseTimeoutSeconds: 10,
+		TaskStartToCloseTimeoutSeconds:      10,
 		Identity:                            "identity",
 	}
 	err := validateStartWorkflowExecutionRequest(startRequest, 999)
@@ -1197,10 +1197,10 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 			ActivityType:                  &types.ActivityType{Name: "activity_type1"},
 			TaskList:                      &types.TaskList{Name: tl},
 			Input:                         input,
-			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-			ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
-			StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-			HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+			ScheduleToCloseTimeoutSeconds: 100,
+			ScheduleToStartTimeoutSeconds: 10,
+			StartToCloseTimeoutSeconds:    50,
+			HeartbeatTimeoutSeconds:       5,
 		},
 	}}
 
@@ -1558,10 +1558,10 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 				ActivityType:                  &types.ActivityType{Name: "activity_type1"},
 				TaskList:                      &types.TaskList{Name: tl},
 				Input:                         input,
-				ScheduleToCloseTimeoutSeconds: iVar.scheduleToClose,
-				ScheduleToStartTimeoutSeconds: iVar.scheduleToStart,
-				StartToCloseTimeoutSeconds:    iVar.startToClose,
-				HeartbeatTimeoutSeconds:       iVar.heartbeat,
+				ScheduleToCloseTimeoutSeconds: common.Int32Default(iVar.scheduleToClose),
+				ScheduleToStartTimeoutSeconds: common.Int32Default(iVar.scheduleToStart),
+				StartToCloseTimeoutSeconds:    common.Int32Default(iVar.startToClose),
+				HeartbeatTimeoutSeconds:       common.Int32Default(iVar.heartbeat),
 			},
 		}}
 
@@ -1710,10 +1710,10 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 			ActivityType:                  &types.ActivityType{Name: "activity_type1"},
 			TaskList:                      &types.TaskList{Name: tl},
 			Input:                         input,
-			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-			ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
-			StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-			HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+			ScheduleToCloseTimeoutSeconds: 100,
+			ScheduleToStartTimeoutSeconds: 10,
+			StartToCloseTimeoutSeconds:    50,
+			HeartbeatTimeoutSeconds:       5,
 		},
 	}}
 
@@ -1747,10 +1747,10 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 	s.Equal(int64(4), *activity1Attributes.DecisionTaskCompletedEventID)
 	s.Equal(tl, activity1Attributes.TaskList.Name)
 	s.Equal(input, activity1Attributes.Input)
-	s.Equal(int32(100), *activity1Attributes.ScheduleToCloseTimeoutSeconds)
-	s.Equal(int32(10), *activity1Attributes.ScheduleToStartTimeoutSeconds)
-	s.Equal(int32(50), *activity1Attributes.StartToCloseTimeoutSeconds)
-	s.Equal(int32(5), *activity1Attributes.HeartbeatTimeoutSeconds)
+	s.Equal(int32(100), activity1Attributes.ScheduleToCloseTimeoutSeconds)
+	s.Equal(int32(10), activity1Attributes.ScheduleToStartTimeoutSeconds)
+	s.Equal(int32(50), activity1Attributes.StartToCloseTimeoutSeconds)
+	s.Equal(int32(5), activity1Attributes.HeartbeatTimeoutSeconds)
 }
 
 func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatTimeout() {

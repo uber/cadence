@@ -51,8 +51,8 @@ func (s *integrationSuite) TestResetWorkflow() {
 		WorkflowType:                        workflowType,
 		TaskList:                            tasklist,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      2,
 		Identity:                            identity,
 	}
 
@@ -86,10 +86,10 @@ func (s *integrationSuite) TestResetWorkflow() {
 						ActivityType:                  &types.ActivityType{Name: "ResetActivity"},
 						TaskList:                      tasklist,
 						Input:                         buf.Bytes(),
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-						ScheduleToStartTimeoutSeconds: common.Int32Ptr(100),
-						StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-						HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+						ScheduleToCloseTimeoutSeconds: 100,
+						ScheduleToStartTimeoutSeconds: 100,
+						StartToCloseTimeoutSeconds:    50,
+						HeartbeatTimeoutSeconds:       5,
 					},
 				})
 			}
@@ -265,8 +265,8 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 		WorkflowType:                        workflowType,
 		TaskList:                            tasklist,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      2,
 		Identity:                            identity,
 	}
 
@@ -345,10 +345,10 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 					ActivityType:                  &types.ActivityType{Name: "ResetActivity"},
 					TaskList:                      tasklist,
 					Input:                         buf.Bytes(),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(100),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+					ScheduleToCloseTimeoutSeconds: 100,
+					ScheduleToStartTimeoutSeconds: 100,
+					StartToCloseTimeoutSeconds:    50,
+					HeartbeatTimeoutSeconds:       5,
 				},
 			})
 

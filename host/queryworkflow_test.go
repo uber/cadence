@@ -52,7 +52,7 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 
 	stickyTaskList := &types.TaskList{}
 	stickyTaskList.Name = stl
-	stickyScheduleToStartTimeoutSeconds := common.Int32Ptr(10)
+	stickyScheduleToStartTimeoutSeconds := int32(10)
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
@@ -62,8 +62,8 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      1,
 		Identity:                            identity,
 	}
 
@@ -90,10 +90,10 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+					ScheduleToCloseTimeoutSeconds: 100,
+					ScheduleToStartTimeoutSeconds: 2,
+					StartToCloseTimeoutSeconds:    50,
+					HeartbeatTimeoutSeconds:       5,
 				},
 			}}, nil
 		}
@@ -215,7 +215,7 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 
 	stickyTaskList := &types.TaskList{}
 	stickyTaskList.Name = stl
-	stickyScheduleToStartTimeoutSeconds := common.Int32Ptr(10)
+	stickyScheduleToStartTimeoutSeconds := int32(10)
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
@@ -225,8 +225,8 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      1,
 		Identity:                            identity,
 	}
 
@@ -253,10 +253,10 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+					ScheduleToCloseTimeoutSeconds: 100,
+					ScheduleToStartTimeoutSeconds: 2,
+					StartToCloseTimeoutSeconds:    50,
+					HeartbeatTimeoutSeconds:       5,
 				},
 			}}, nil
 		}
@@ -369,8 +369,8 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      1,
 		Identity:                            identity,
 	}
 
@@ -397,10 +397,10 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+					ScheduleToCloseTimeoutSeconds: 100,
+					ScheduleToStartTimeoutSeconds: 2,
+					StartToCloseTimeoutSeconds:    50,
+					HeartbeatTimeoutSeconds:       5,
 				},
 			}}, nil
 		}
@@ -576,8 +576,8 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      1,
 		Identity:                            identity,
 	}
 
@@ -605,10 +605,10 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+					ScheduleToCloseTimeoutSeconds: 100,
+					ScheduleToStartTimeoutSeconds: 2,
+					StartToCloseTimeoutSeconds:    50,
+					HeartbeatTimeoutSeconds:       5,
 				},
 			}}, nil
 		} else if previousStartedEventID > 0 {
@@ -761,8 +761,8 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10), // ensure longer than time takes to handle signal
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      10, // ensure longer than time takes to handle signal
 		Identity:                            identity,
 	}
 
@@ -789,10 +789,10 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(10), // ensure longer than time it takes to handle signal
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(50), // ensure longer than time takes to handle signal
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+					ScheduleToCloseTimeoutSeconds: 100,
+					ScheduleToStartTimeoutSeconds: 10, // ensure longer than time it takes to handle signal
+					StartToCloseTimeoutSeconds:    50, // ensure longer than time takes to handle signal
+					HeartbeatTimeoutSeconds:       5,
 				},
 			}}, nil
 		} else if previousStartedEventID > 0 {
@@ -922,8 +922,8 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10), // ensure longer than time takes to handle signal
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      10, // ensure longer than time takes to handle signal
 		Identity:                            identity,
 	}
 
@@ -951,10 +951,10 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(10), // ensure longer than time it takes to handle signal
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(50), // ensure longer than time takes to handle signal
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+					ScheduleToCloseTimeoutSeconds: 100,
+					ScheduleToStartTimeoutSeconds: 10, // ensure longer than time it takes to handle signal
+					StartToCloseTimeoutSeconds:    50, // ensure longer than time takes to handle signal
+					HeartbeatTimeoutSeconds:       5,
 				},
 			}}, nil
 		} else if previousStartedEventID > 0 {
@@ -1101,7 +1101,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 
 	stickyTaskList := &types.TaskList{}
 	stickyTaskList.Name = stl
-	stickyScheduleToStartTimeoutSeconds := common.Int32Ptr(10)
+	stickyScheduleToStartTimeoutSeconds := int32(10)
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
@@ -1111,8 +1111,8 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10), // ensure longer than time takes to handle signal
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      10, // ensure longer than time takes to handle signal
 		Identity:                            identity,
 	}
 
@@ -1139,10 +1139,10 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(10), // ensure longer than time it takes to handle signal
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(50), // ensure longer than time takes to handle signal
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+					ScheduleToCloseTimeoutSeconds: 100,
+					ScheduleToStartTimeoutSeconds: 10, // ensure longer than time it takes to handle signal
+					StartToCloseTimeoutSeconds:    50, // ensure longer than time takes to handle signal
+					HeartbeatTimeoutSeconds:       5,
 				},
 			}}, nil
 		} else if previousStartedEventID > 0 {
@@ -1324,8 +1324,8 @@ func (s *integrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      1,
 		Identity:                            identity,
 	}
 

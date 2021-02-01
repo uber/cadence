@@ -196,7 +196,7 @@ type GetMutableStateResponse struct {
 	ClientFeatureVersion                 *string            `json:"clientFeatureVersion,omitempty"`
 	ClientImpl                           *string            `json:"clientImpl,omitempty"`
 	IsWorkflowRunning                    *bool              `json:"isWorkflowRunning,omitempty"`
-	StickyTaskListScheduleToStartTimeout *int32             `json:"stickyTaskListScheduleToStartTimeout,omitempty"`
+	StickyTaskListScheduleToStartTimeout int32              `json:"stickyTaskListScheduleToStartTimeout,omitempty"`
 	EventStoreVersion                    *int32             `json:"eventStoreVersion,omitempty"`
 	CurrentBranchToken                   []byte             `json:"currentBranchToken,omitempty"`
 	WorkflowState                        *int32             `json:"workflowState,omitempty"`
@@ -295,8 +295,8 @@ func (v *GetMutableStateResponse) GetIsWorkflowRunning() (o bool) {
 
 // GetStickyTaskListScheduleToStartTimeout is an internal getter (TBD...)
 func (v *GetMutableStateResponse) GetStickyTaskListScheduleToStartTimeout() (o int32) {
-	if v != nil && v.StickyTaskListScheduleToStartTimeout != nil {
-		return *v.StickyTaskListScheduleToStartTimeout
+	if v != nil {
+		return v.StickyTaskListScheduleToStartTimeout
 	}
 	return
 }
@@ -3394,7 +3394,7 @@ type PollMutableStateResponse struct {
 	ClientLibraryVersion                 *string            `json:"clientLibraryVersion,omitempty"`
 	ClientFeatureVersion                 *string            `json:"clientFeatureVersion,omitempty"`
 	ClientImpl                           *string            `json:"clientImpl,omitempty"`
-	StickyTaskListScheduleToStartTimeout *int32             `json:"stickyTaskListScheduleToStartTimeout,omitempty"`
+	StickyTaskListScheduleToStartTimeout int32              `json:"stickyTaskListScheduleToStartTimeout,omitempty"`
 	CurrentBranchToken                   []byte             `json:"currentBranchToken,omitempty"`
 	VersionHistories                     *VersionHistories  `json:"versionHistories,omitempty"`
 	WorkflowState                        *int32             `json:"workflowState,omitempty"`
@@ -3483,8 +3483,8 @@ func (v *PollMutableStateResponse) GetClientImpl() (o string) {
 
 // GetStickyTaskListScheduleToStartTimeout is an internal getter (TBD...)
 func (v *PollMutableStateResponse) GetStickyTaskListScheduleToStartTimeout() (o int32) {
-	if v != nil && v.StickyTaskListScheduleToStartTimeout != nil {
-		return *v.StickyTaskListScheduleToStartTimeout
+	if v != nil {
+		return v.StickyTaskListScheduleToStartTimeout
 	}
 	return
 }
@@ -4472,7 +4472,7 @@ type HistoryStartWorkflowExecutionRequest struct {
 	ContinuedFailureReason          *string                        `json:"continuedFailureReason,omitempty"`
 	ContinuedFailureDetails         []byte                         `json:"continuedFailureDetails,omitempty"`
 	LastCompletionResult            []byte                         `json:"lastCompletionResult,omitempty"`
-	FirstDecisionTaskBackoffSeconds *int32                         `json:"firstDecisionTaskBackoffSeconds,omitempty"`
+	FirstDecisionTaskBackoffSeconds int32                          `json:"firstDecisionTaskBackoffSeconds,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4549,8 +4549,8 @@ func (v *HistoryStartWorkflowExecutionRequest) GetLastCompletionResult() (o []by
 
 // GetFirstDecisionTaskBackoffSeconds is an internal getter (TBD...)
 func (v *HistoryStartWorkflowExecutionRequest) GetFirstDecisionTaskBackoffSeconds() (o int32) {
-	if v != nil && v.FirstDecisionTaskBackoffSeconds != nil {
-		return *v.FirstDecisionTaskBackoffSeconds
+	if v != nil {
+		return v.FirstDecisionTaskBackoffSeconds
 	}
 	return
 }

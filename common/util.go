@@ -436,7 +436,7 @@ func CreateHistoryStartWorkflowRequest(
 		StartRequest: startRequest,
 	}
 	firstDecisionTaskBackoffSeconds := backoff.GetBackoffForNextScheduleInSeconds(startRequest.GetCronSchedule(), now, now)
-	histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(firstDecisionTaskBackoffSeconds)
+	histRequest.FirstDecisionTaskBackoffSeconds = firstDecisionTaskBackoffSeconds
 
 	if startRequest.RetryPolicy != nil && startRequest.RetryPolicy.GetExpirationIntervalInSeconds() > 0 {
 		expirationInSeconds := startRequest.RetryPolicy.GetExpirationIntervalInSeconds() + firstDecisionTaskBackoffSeconds

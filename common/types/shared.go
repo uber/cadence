@@ -255,10 +255,10 @@ type ActivityTaskScheduledEventAttributes struct {
 	Domain                        *string       `json:"domain,omitempty"`
 	TaskList                      *TaskList     `json:"taskList,omitempty"`
 	Input                         []byte        `json:"input,omitempty"`
-	ScheduleToCloseTimeoutSeconds *int32        `json:"scheduleToCloseTimeoutSeconds,omitempty"`
-	ScheduleToStartTimeoutSeconds *int32        `json:"scheduleToStartTimeoutSeconds,omitempty"`
-	StartToCloseTimeoutSeconds    *int32        `json:"startToCloseTimeoutSeconds,omitempty"`
-	HeartbeatTimeoutSeconds       *int32        `json:"heartbeatTimeoutSeconds,omitempty"`
+	ScheduleToCloseTimeoutSeconds int32         `json:"scheduleToCloseTimeoutSeconds,omitempty"`
+	ScheduleToStartTimeoutSeconds int32         `json:"scheduleToStartTimeoutSeconds,omitempty"`
+	StartToCloseTimeoutSeconds    int32         `json:"startToCloseTimeoutSeconds,omitempty"`
+	HeartbeatTimeoutSeconds       int32         `json:"heartbeatTimeoutSeconds,omitempty"`
 	DecisionTaskCompletedEventID  *int64        `json:"decisionTaskCompletedEventId,omitempty"`
 	RetryPolicy                   *RetryPolicy  `json:"retryPolicy,omitempty"`
 	Header                        *Header       `json:"header,omitempty"`
@@ -306,32 +306,32 @@ func (v *ActivityTaskScheduledEventAttributes) GetInput() (o []byte) {
 
 // GetScheduleToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *ActivityTaskScheduledEventAttributes) GetScheduleToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.ScheduleToCloseTimeoutSeconds != nil {
-		return *v.ScheduleToCloseTimeoutSeconds
+	if v != nil {
+		return v.ScheduleToCloseTimeoutSeconds
 	}
 	return
 }
 
 // GetScheduleToStartTimeoutSeconds is an internal getter (TBD...)
 func (v *ActivityTaskScheduledEventAttributes) GetScheduleToStartTimeoutSeconds() (o int32) {
-	if v != nil && v.ScheduleToStartTimeoutSeconds != nil {
-		return *v.ScheduleToStartTimeoutSeconds
+	if v != nil {
+		return v.ScheduleToStartTimeoutSeconds
 	}
 	return
 }
 
 // GetStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *ActivityTaskScheduledEventAttributes) GetStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.StartToCloseTimeoutSeconds != nil {
-		return *v.StartToCloseTimeoutSeconds
+	if v != nil {
+		return v.StartToCloseTimeoutSeconds
 	}
 	return
 }
 
 // GetHeartbeatTimeoutSeconds is an internal getter (TBD...)
 func (v *ActivityTaskScheduledEventAttributes) GetHeartbeatTimeoutSeconds() (o int32) {
-	if v != nil && v.HeartbeatTimeoutSeconds != nil {
-		return *v.HeartbeatTimeoutSeconds
+	if v != nil {
+		return v.HeartbeatTimeoutSeconds
 	}
 	return
 }
@@ -1249,9 +1249,9 @@ type ContinueAsNewWorkflowExecutionDecisionAttributes struct {
 	WorkflowType                        *WorkflowType           `json:"workflowType,omitempty"`
 	TaskList                            *TaskList               `json:"taskList,omitempty"`
 	Input                               []byte                  `json:"input,omitempty"`
-	ExecutionStartToCloseTimeoutSeconds *int32                  `json:"executionStartToCloseTimeoutSeconds,omitempty"`
-	TaskStartToCloseTimeoutSeconds      *int32                  `json:"taskStartToCloseTimeoutSeconds,omitempty"`
-	BackoffStartIntervalInSeconds       *int32                  `json:"backoffStartIntervalInSeconds,omitempty"`
+	ExecutionStartToCloseTimeoutSeconds int32                   `json:"executionStartToCloseTimeoutSeconds,omitempty"`
+	TaskStartToCloseTimeoutSeconds      int32                   `json:"taskStartToCloseTimeoutSeconds,omitempty"`
+	BackoffStartIntervalInSeconds       int32                   `json:"backoffStartIntervalInSeconds,omitempty"`
 	RetryPolicy                         *RetryPolicy            `json:"retryPolicy,omitempty"`
 	Initiator                           *ContinueAsNewInitiator `json:"initiator,omitempty"`
 	FailureReason                       *string                 `json:"failureReason,omitempty"`
@@ -1289,24 +1289,24 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetInput() (o []byte)
 
 // GetExecutionStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetExecutionStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.ExecutionStartToCloseTimeoutSeconds != nil {
-		return *v.ExecutionStartToCloseTimeoutSeconds
+	if v != nil {
+		return v.ExecutionStartToCloseTimeoutSeconds
 	}
 	return
 }
 
 // GetTaskStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetTaskStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.TaskStartToCloseTimeoutSeconds != nil {
-		return *v.TaskStartToCloseTimeoutSeconds
+	if v != nil {
+		return v.TaskStartToCloseTimeoutSeconds
 	}
 	return
 }
 
 // GetBackoffStartIntervalInSeconds is an internal getter (TBD...)
 func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetBackoffStartIntervalInSeconds() (o int32) {
-	if v != nil && v.BackoffStartIntervalInSeconds != nil {
-		return *v.BackoffStartIntervalInSeconds
+	if v != nil {
+		return v.BackoffStartIntervalInSeconds
 	}
 	return
 }
@@ -1936,7 +1936,7 @@ func (v *DecisionTaskFailedEventAttributes) GetBinaryChecksum() (o string) {
 // DecisionTaskScheduledEventAttributes is an internal type (TBD...)
 type DecisionTaskScheduledEventAttributes struct {
 	TaskList                   *TaskList `json:"taskList,omitempty"`
-	StartToCloseTimeoutSeconds *int32    `json:"startToCloseTimeoutSeconds,omitempty"`
+	StartToCloseTimeoutSeconds int32     `json:"startToCloseTimeoutSeconds,omitempty"`
 	Attempt                    int64     `json:"attempt,omitempty"`
 }
 
@@ -1950,8 +1950,8 @@ func (v *DecisionTaskScheduledEventAttributes) GetTaskList() (o *TaskList) {
 
 // GetStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *DecisionTaskScheduledEventAttributes) GetStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.StartToCloseTimeoutSeconds != nil {
-		return *v.StartToCloseTimeoutSeconds
+	if v != nil {
+		return v.StartToCloseTimeoutSeconds
 	}
 	return
 }
@@ -5058,10 +5058,10 @@ type PollForActivityTaskResponse struct {
 	ActivityType                    *ActivityType      `json:"activityType,omitempty"`
 	Input                           []byte             `json:"input,omitempty"`
 	ScheduledTimestamp              *int64             `json:"scheduledTimestamp,omitempty"`
-	ScheduleToCloseTimeoutSeconds   *int32             `json:"scheduleToCloseTimeoutSeconds,omitempty"`
+	ScheduleToCloseTimeoutSeconds   int32              `json:"scheduleToCloseTimeoutSeconds,omitempty"`
 	StartedTimestamp                *int64             `json:"startedTimestamp,omitempty"`
-	StartToCloseTimeoutSeconds      *int32             `json:"startToCloseTimeoutSeconds,omitempty"`
-	HeartbeatTimeoutSeconds         *int32             `json:"heartbeatTimeoutSeconds,omitempty"`
+	StartToCloseTimeoutSeconds      int32              `json:"startToCloseTimeoutSeconds,omitempty"`
+	HeartbeatTimeoutSeconds         int32              `json:"heartbeatTimeoutSeconds,omitempty"`
 	Attempt                         int32              `json:"attempt,omitempty"`
 	ScheduledTimestampOfThisAttempt *int64             `json:"scheduledTimestampOfThisAttempt,omitempty"`
 	HeartbeatDetails                []byte             `json:"heartbeatDetails,omitempty"`
@@ -5120,8 +5120,8 @@ func (v *PollForActivityTaskResponse) GetScheduledTimestamp() (o int64) {
 
 // GetScheduleToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *PollForActivityTaskResponse) GetScheduleToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.ScheduleToCloseTimeoutSeconds != nil {
-		return *v.ScheduleToCloseTimeoutSeconds
+	if v != nil {
+		return v.ScheduleToCloseTimeoutSeconds
 	}
 	return
 }
@@ -5136,16 +5136,16 @@ func (v *PollForActivityTaskResponse) GetStartedTimestamp() (o int64) {
 
 // GetStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *PollForActivityTaskResponse) GetStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.StartToCloseTimeoutSeconds != nil {
-		return *v.StartToCloseTimeoutSeconds
+	if v != nil {
+		return v.StartToCloseTimeoutSeconds
 	}
 	return
 }
 
 // GetHeartbeatTimeoutSeconds is an internal getter (TBD...)
 func (v *PollForActivityTaskResponse) GetHeartbeatTimeoutSeconds() (o int32) {
-	if v != nil && v.HeartbeatTimeoutSeconds != nil {
-		return *v.HeartbeatTimeoutSeconds
+	if v != nil {
+		return v.HeartbeatTimeoutSeconds
 	}
 	return
 }
@@ -7140,10 +7140,10 @@ type ScheduleActivityTaskDecisionAttributes struct {
 	Domain                        string        `json:"domain,omitempty"`
 	TaskList                      *TaskList     `json:"taskList,omitempty"`
 	Input                         []byte        `json:"input,omitempty"`
-	ScheduleToCloseTimeoutSeconds *int32        `json:"scheduleToCloseTimeoutSeconds,omitempty"`
-	ScheduleToStartTimeoutSeconds *int32        `json:"scheduleToStartTimeoutSeconds,omitempty"`
-	StartToCloseTimeoutSeconds    *int32        `json:"startToCloseTimeoutSeconds,omitempty"`
-	HeartbeatTimeoutSeconds       *int32        `json:"heartbeatTimeoutSeconds,omitempty"`
+	ScheduleToCloseTimeoutSeconds int32         `json:"scheduleToCloseTimeoutSeconds,omitempty"`
+	ScheduleToStartTimeoutSeconds int32         `json:"scheduleToStartTimeoutSeconds,omitempty"`
+	StartToCloseTimeoutSeconds    int32         `json:"startToCloseTimeoutSeconds,omitempty"`
+	HeartbeatTimeoutSeconds       int32         `json:"heartbeatTimeoutSeconds,omitempty"`
 	RetryPolicy                   *RetryPolicy  `json:"retryPolicy,omitempty"`
 	Header                        *Header       `json:"header,omitempty"`
 	RequestLocalDispatch          *bool         `json:"requestLocalDispatch,omitempty"`
@@ -7191,32 +7191,32 @@ func (v *ScheduleActivityTaskDecisionAttributes) GetInput() (o []byte) {
 
 // GetScheduleToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *ScheduleActivityTaskDecisionAttributes) GetScheduleToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.ScheduleToCloseTimeoutSeconds != nil {
-		return *v.ScheduleToCloseTimeoutSeconds
+	if v != nil {
+		return v.ScheduleToCloseTimeoutSeconds
 	}
 	return
 }
 
 // GetScheduleToStartTimeoutSeconds is an internal getter (TBD...)
 func (v *ScheduleActivityTaskDecisionAttributes) GetScheduleToStartTimeoutSeconds() (o int32) {
-	if v != nil && v.ScheduleToStartTimeoutSeconds != nil {
-		return *v.ScheduleToStartTimeoutSeconds
+	if v != nil {
+		return v.ScheduleToStartTimeoutSeconds
 	}
 	return
 }
 
 // GetStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *ScheduleActivityTaskDecisionAttributes) GetStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.StartToCloseTimeoutSeconds != nil {
-		return *v.StartToCloseTimeoutSeconds
+	if v != nil {
+		return v.StartToCloseTimeoutSeconds
 	}
 	return
 }
 
 // GetHeartbeatTimeoutSeconds is an internal getter (TBD...)
 func (v *ScheduleActivityTaskDecisionAttributes) GetHeartbeatTimeoutSeconds() (o int32) {
-	if v != nil && v.HeartbeatTimeoutSeconds != nil {
-		return *v.HeartbeatTimeoutSeconds
+	if v != nil {
+		return v.HeartbeatTimeoutSeconds
 	}
 	return
 }
@@ -7505,8 +7505,8 @@ type SignalWithStartWorkflowExecutionRequest struct {
 	WorkflowType                        *WorkflowType          `json:"workflowType,omitempty"`
 	TaskList                            *TaskList              `json:"taskList,omitempty"`
 	Input                               []byte                 `json:"input,omitempty"`
-	ExecutionStartToCloseTimeoutSeconds *int32                 `json:"executionStartToCloseTimeoutSeconds,omitempty"`
-	TaskStartToCloseTimeoutSeconds      *int32                 `json:"taskStartToCloseTimeoutSeconds,omitempty"`
+	ExecutionStartToCloseTimeoutSeconds int32                  `json:"executionStartToCloseTimeoutSeconds,omitempty"`
+	TaskStartToCloseTimeoutSeconds      int32                  `json:"taskStartToCloseTimeoutSeconds,omitempty"`
 	Identity                            string                 `json:"identity,omitempty"`
 	RequestID                           string                 `json:"requestId,omitempty"`
 	WorkflowIDReusePolicy               *WorkflowIDReusePolicy `json:"workflowIdReusePolicy,omitempty"`
@@ -7562,16 +7562,16 @@ func (v *SignalWithStartWorkflowExecutionRequest) GetInput() (o []byte) {
 
 // GetExecutionStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *SignalWithStartWorkflowExecutionRequest) GetExecutionStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.ExecutionStartToCloseTimeoutSeconds != nil {
-		return *v.ExecutionStartToCloseTimeoutSeconds
+	if v != nil {
+		return v.ExecutionStartToCloseTimeoutSeconds
 	}
 	return
 }
 
 // GetTaskStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *SignalWithStartWorkflowExecutionRequest) GetTaskStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.TaskStartToCloseTimeoutSeconds != nil {
-		return *v.TaskStartToCloseTimeoutSeconds
+	if v != nil {
+		return v.TaskStartToCloseTimeoutSeconds
 	}
 	return
 }
@@ -7738,8 +7738,8 @@ type StartChildWorkflowExecutionDecisionAttributes struct {
 	WorkflowType                        *WorkflowType          `json:"workflowType,omitempty"`
 	TaskList                            *TaskList              `json:"taskList,omitempty"`
 	Input                               []byte                 `json:"input,omitempty"`
-	ExecutionStartToCloseTimeoutSeconds *int32                 `json:"executionStartToCloseTimeoutSeconds,omitempty"`
-	TaskStartToCloseTimeoutSeconds      *int32                 `json:"taskStartToCloseTimeoutSeconds,omitempty"`
+	ExecutionStartToCloseTimeoutSeconds int32                  `json:"executionStartToCloseTimeoutSeconds,omitempty"`
+	TaskStartToCloseTimeoutSeconds      int32                  `json:"taskStartToCloseTimeoutSeconds,omitempty"`
 	ParentClosePolicy                   *ParentClosePolicy     `json:"parentClosePolicy,omitempty"`
 	Control                             []byte                 `json:"control,omitempty"`
 	WorkflowIDReusePolicy               *WorkflowIDReusePolicy `json:"workflowIdReusePolicy,omitempty"`
@@ -7792,16 +7792,16 @@ func (v *StartChildWorkflowExecutionDecisionAttributes) GetInput() (o []byte) {
 
 // GetExecutionStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *StartChildWorkflowExecutionDecisionAttributes) GetExecutionStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.ExecutionStartToCloseTimeoutSeconds != nil {
-		return *v.ExecutionStartToCloseTimeoutSeconds
+	if v != nil {
+		return v.ExecutionStartToCloseTimeoutSeconds
 	}
 	return
 }
 
 // GetTaskStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *StartChildWorkflowExecutionDecisionAttributes) GetTaskStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.TaskStartToCloseTimeoutSeconds != nil {
-		return *v.TaskStartToCloseTimeoutSeconds
+	if v != nil {
+		return v.TaskStartToCloseTimeoutSeconds
 	}
 	return
 }
@@ -7944,8 +7944,8 @@ type StartChildWorkflowExecutionInitiatedEventAttributes struct {
 	WorkflowType                        *WorkflowType          `json:"workflowType,omitempty"`
 	TaskList                            *TaskList              `json:"taskList,omitempty"`
 	Input                               []byte                 `json:"input,omitempty"`
-	ExecutionStartToCloseTimeoutSeconds *int32                 `json:"executionStartToCloseTimeoutSeconds,omitempty"`
-	TaskStartToCloseTimeoutSeconds      *int32                 `json:"taskStartToCloseTimeoutSeconds,omitempty"`
+	ExecutionStartToCloseTimeoutSeconds int32                  `json:"executionStartToCloseTimeoutSeconds,omitempty"`
+	TaskStartToCloseTimeoutSeconds      int32                  `json:"taskStartToCloseTimeoutSeconds,omitempty"`
 	ParentClosePolicy                   *ParentClosePolicy     `json:"parentClosePolicy,omitempty"`
 	Control                             []byte                 `json:"control,omitempty"`
 	DecisionTaskCompletedEventID        *int64                 `json:"decisionTaskCompletedEventId,omitempty"`
@@ -7999,16 +7999,16 @@ func (v *StartChildWorkflowExecutionInitiatedEventAttributes) GetInput() (o []by
 
 // GetExecutionStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *StartChildWorkflowExecutionInitiatedEventAttributes) GetExecutionStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.ExecutionStartToCloseTimeoutSeconds != nil {
-		return *v.ExecutionStartToCloseTimeoutSeconds
+	if v != nil {
+		return v.ExecutionStartToCloseTimeoutSeconds
 	}
 	return
 }
 
 // GetTaskStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *StartChildWorkflowExecutionInitiatedEventAttributes) GetTaskStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.TaskStartToCloseTimeoutSeconds != nil {
-		return *v.TaskStartToCloseTimeoutSeconds
+	if v != nil {
+		return v.TaskStartToCloseTimeoutSeconds
 	}
 	return
 }
@@ -8110,7 +8110,7 @@ func (v *StartTimeFilter) GetLatestTime() (o int64) {
 // StartTimerDecisionAttributes is an internal type (TBD...)
 type StartTimerDecisionAttributes struct {
 	TimerID                   string `json:"timerId,omitempty"`
-	StartToFireTimeoutSeconds *int64 `json:"startToFireTimeoutSeconds,omitempty"`
+	StartToFireTimeoutSeconds int64  `json:"startToFireTimeoutSeconds,omitempty"`
 }
 
 // GetTimerID is an internal getter (TBD...)
@@ -8123,8 +8123,8 @@ func (v *StartTimerDecisionAttributes) GetTimerID() (o string) {
 
 // GetStartToFireTimeoutSeconds is an internal getter (TBD...)
 func (v *StartTimerDecisionAttributes) GetStartToFireTimeoutSeconds() (o int64) {
-	if v != nil && v.StartToFireTimeoutSeconds != nil {
-		return *v.StartToFireTimeoutSeconds
+	if v != nil {
+		return v.StartToFireTimeoutSeconds
 	}
 	return
 }
@@ -8136,8 +8136,8 @@ type StartWorkflowExecutionRequest struct {
 	WorkflowType                        *WorkflowType          `json:"workflowType,omitempty"`
 	TaskList                            *TaskList              `json:"taskList,omitempty"`
 	Input                               []byte                 `json:"input,omitempty"`
-	ExecutionStartToCloseTimeoutSeconds *int32                 `json:"executionStartToCloseTimeoutSeconds,omitempty"`
-	TaskStartToCloseTimeoutSeconds      *int32                 `json:"taskStartToCloseTimeoutSeconds,omitempty"`
+	ExecutionStartToCloseTimeoutSeconds int32                  `json:"executionStartToCloseTimeoutSeconds,omitempty"`
+	TaskStartToCloseTimeoutSeconds      int32                  `json:"taskStartToCloseTimeoutSeconds,omitempty"`
 	Identity                            string                 `json:"identity,omitempty"`
 	RequestID                           string                 `json:"requestId,omitempty"`
 	WorkflowIDReusePolicy               *WorkflowIDReusePolicy `json:"workflowIdReusePolicy,omitempty"`
@@ -8190,16 +8190,16 @@ func (v *StartWorkflowExecutionRequest) GetInput() (o []byte) {
 
 // GetExecutionStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *StartWorkflowExecutionRequest) GetExecutionStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.ExecutionStartToCloseTimeoutSeconds != nil {
-		return *v.ExecutionStartToCloseTimeoutSeconds
+	if v != nil {
+		return v.ExecutionStartToCloseTimeoutSeconds
 	}
 	return
 }
 
 // GetTaskStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *StartWorkflowExecutionRequest) GetTaskStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.TaskStartToCloseTimeoutSeconds != nil {
-		return *v.TaskStartToCloseTimeoutSeconds
+	if v != nil {
+		return v.TaskStartToCloseTimeoutSeconds
 	}
 	return
 }
@@ -8284,7 +8284,7 @@ func (v *StartWorkflowExecutionResponse) GetRunID() (o string) {
 // StickyExecutionAttributes is an internal type (TBD...)
 type StickyExecutionAttributes struct {
 	WorkerTaskList                *TaskList `json:"workerTaskList,omitempty"`
-	ScheduleToStartTimeoutSeconds *int32    `json:"scheduleToStartTimeoutSeconds,omitempty"`
+	ScheduleToStartTimeoutSeconds int32     `json:"scheduleToStartTimeoutSeconds,omitempty"`
 }
 
 // GetWorkerTaskList is an internal getter (TBD...)
@@ -8297,8 +8297,8 @@ func (v *StickyExecutionAttributes) GetWorkerTaskList() (o *TaskList) {
 
 // GetScheduleToStartTimeoutSeconds is an internal getter (TBD...)
 func (v *StickyExecutionAttributes) GetScheduleToStartTimeoutSeconds() (o int32) {
-	if v != nil && v.ScheduleToStartTimeoutSeconds != nil {
-		return *v.ScheduleToStartTimeoutSeconds
+	if v != nil {
+		return v.ScheduleToStartTimeoutSeconds
 	}
 	return
 }
@@ -8734,7 +8734,7 @@ func (v *TimerFiredEventAttributes) GetStartedEventID() (o int64) {
 // TimerStartedEventAttributes is an internal type (TBD...)
 type TimerStartedEventAttributes struct {
 	TimerID                      string `json:"timerId,omitempty"`
-	StartToFireTimeoutSeconds    *int64 `json:"startToFireTimeoutSeconds,omitempty"`
+	StartToFireTimeoutSeconds    int64  `json:"startToFireTimeoutSeconds,omitempty"`
 	DecisionTaskCompletedEventID *int64 `json:"decisionTaskCompletedEventId,omitempty"`
 }
 
@@ -8748,8 +8748,8 @@ func (v *TimerStartedEventAttributes) GetTimerID() (o string) {
 
 // GetStartToFireTimeoutSeconds is an internal getter (TBD...)
 func (v *TimerStartedEventAttributes) GetStartToFireTimeoutSeconds() (o int64) {
-	if v != nil && v.StartToFireTimeoutSeconds != nil {
-		return *v.StartToFireTimeoutSeconds
+	if v != nil {
+		return v.StartToFireTimeoutSeconds
 	}
 	return
 }
@@ -9273,8 +9273,8 @@ func (v *WorkflowExecutionCompletedEventAttributes) GetDecisionTaskCompletedEven
 // WorkflowExecutionConfiguration is an internal type (TBD...)
 type WorkflowExecutionConfiguration struct {
 	TaskList                            *TaskList `json:"taskList,omitempty"`
-	ExecutionStartToCloseTimeoutSeconds *int32    `json:"executionStartToCloseTimeoutSeconds,omitempty"`
-	TaskStartToCloseTimeoutSeconds      *int32    `json:"taskStartToCloseTimeoutSeconds,omitempty"`
+	ExecutionStartToCloseTimeoutSeconds int32     `json:"executionStartToCloseTimeoutSeconds,omitempty"`
+	TaskStartToCloseTimeoutSeconds      int32     `json:"taskStartToCloseTimeoutSeconds,omitempty"`
 }
 
 // GetTaskList is an internal getter (TBD...)
@@ -9287,16 +9287,16 @@ func (v *WorkflowExecutionConfiguration) GetTaskList() (o *TaskList) {
 
 // GetExecutionStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *WorkflowExecutionConfiguration) GetExecutionStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.ExecutionStartToCloseTimeoutSeconds != nil {
-		return *v.ExecutionStartToCloseTimeoutSeconds
+	if v != nil {
+		return v.ExecutionStartToCloseTimeoutSeconds
 	}
 	return
 }
 
 // GetTaskStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *WorkflowExecutionConfiguration) GetTaskStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.TaskStartToCloseTimeoutSeconds != nil {
-		return *v.TaskStartToCloseTimeoutSeconds
+	if v != nil {
+		return v.TaskStartToCloseTimeoutSeconds
 	}
 	return
 }
@@ -9307,10 +9307,10 @@ type WorkflowExecutionContinuedAsNewEventAttributes struct {
 	WorkflowType                        *WorkflowType           `json:"workflowType,omitempty"`
 	TaskList                            *TaskList               `json:"taskList,omitempty"`
 	Input                               []byte                  `json:"input,omitempty"`
-	ExecutionStartToCloseTimeoutSeconds *int32                  `json:"executionStartToCloseTimeoutSeconds,omitempty"`
-	TaskStartToCloseTimeoutSeconds      *int32                  `json:"taskStartToCloseTimeoutSeconds,omitempty"`
+	ExecutionStartToCloseTimeoutSeconds int32                   `json:"executionStartToCloseTimeoutSeconds,omitempty"`
+	TaskStartToCloseTimeoutSeconds      int32                   `json:"taskStartToCloseTimeoutSeconds,omitempty"`
 	DecisionTaskCompletedEventID        *int64                  `json:"decisionTaskCompletedEventId,omitempty"`
-	BackoffStartIntervalInSeconds       *int32                  `json:"backoffStartIntervalInSeconds,omitempty"`
+	BackoffStartIntervalInSeconds       int32                   `json:"backoffStartIntervalInSeconds,omitempty"`
 	Initiator                           *ContinueAsNewInitiator `json:"initiator,omitempty"`
 	FailureReason                       *string                 `json:"failureReason,omitempty"`
 	FailureDetails                      []byte                  `json:"failureDetails,omitempty"`
@@ -9354,16 +9354,16 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetInput() (o []byte) {
 
 // GetExecutionStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetExecutionStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.ExecutionStartToCloseTimeoutSeconds != nil {
-		return *v.ExecutionStartToCloseTimeoutSeconds
+	if v != nil {
+		return v.ExecutionStartToCloseTimeoutSeconds
 	}
 	return
 }
 
 // GetTaskStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetTaskStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.TaskStartToCloseTimeoutSeconds != nil {
-		return *v.TaskStartToCloseTimeoutSeconds
+	if v != nil {
+		return v.TaskStartToCloseTimeoutSeconds
 	}
 	return
 }
@@ -9378,8 +9378,8 @@ func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetDecisionTaskComplete
 
 // GetBackoffStartIntervalInSeconds is an internal getter (TBD...)
 func (v *WorkflowExecutionContinuedAsNewEventAttributes) GetBackoffStartIntervalInSeconds() (o int32) {
-	if v != nil && v.BackoffStartIntervalInSeconds != nil {
-		return *v.BackoffStartIntervalInSeconds
+	if v != nil {
+		return v.BackoffStartIntervalInSeconds
 	}
 	return
 }
@@ -9653,8 +9653,8 @@ type WorkflowExecutionStartedEventAttributes struct {
 	ParentInitiatedEventID              *int64                  `json:"parentInitiatedEventId,omitempty"`
 	TaskList                            *TaskList               `json:"taskList,omitempty"`
 	Input                               []byte                  `json:"input,omitempty"`
-	ExecutionStartToCloseTimeoutSeconds *int32                  `json:"executionStartToCloseTimeoutSeconds,omitempty"`
-	TaskStartToCloseTimeoutSeconds      *int32                  `json:"taskStartToCloseTimeoutSeconds,omitempty"`
+	ExecutionStartToCloseTimeoutSeconds int32                   `json:"executionStartToCloseTimeoutSeconds,omitempty"`
+	TaskStartToCloseTimeoutSeconds      int32                   `json:"taskStartToCloseTimeoutSeconds,omitempty"`
 	ContinuedExecutionRunID             *string                 `json:"continuedExecutionRunId,omitempty"`
 	Initiator                           *ContinueAsNewInitiator `json:"initiator,omitempty"`
 	ContinuedFailureReason              *string                 `json:"continuedFailureReason,omitempty"`
@@ -9667,7 +9667,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 	Attempt                             int32                   `json:"attempt,omitempty"`
 	ExpirationTimestamp                 *int64                  `json:"expirationTimestamp,omitempty"`
 	CronSchedule                        string                  `json:"cronSchedule,omitempty"`
-	FirstDecisionTaskBackoffSeconds     *int32                  `json:"firstDecisionTaskBackoffSeconds,omitempty"`
+	FirstDecisionTaskBackoffSeconds     int32                   `json:"firstDecisionTaskBackoffSeconds,omitempty"`
 	Memo                                *Memo                   `json:"memo,omitempty"`
 	SearchAttributes                    *SearchAttributes       `json:"searchAttributes,omitempty"`
 	PrevAutoResetPoints                 *ResetPoints            `json:"prevAutoResetPoints,omitempty"`
@@ -9724,16 +9724,16 @@ func (v *WorkflowExecutionStartedEventAttributes) GetInput() (o []byte) {
 
 // GetExecutionStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *WorkflowExecutionStartedEventAttributes) GetExecutionStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.ExecutionStartToCloseTimeoutSeconds != nil {
-		return *v.ExecutionStartToCloseTimeoutSeconds
+	if v != nil {
+		return v.ExecutionStartToCloseTimeoutSeconds
 	}
 	return
 }
 
 // GetTaskStartToCloseTimeoutSeconds is an internal getter (TBD...)
 func (v *WorkflowExecutionStartedEventAttributes) GetTaskStartToCloseTimeoutSeconds() (o int32) {
-	if v != nil && v.TaskStartToCloseTimeoutSeconds != nil {
-		return *v.TaskStartToCloseTimeoutSeconds
+	if v != nil {
+		return v.TaskStartToCloseTimeoutSeconds
 	}
 	return
 }
@@ -9835,10 +9835,9 @@ func (v *WorkflowExecutionStartedEventAttributes) GetCronSchedule() (o string) {
 }
 
 // GetFirstDecisionTaskBackoffSeconds is an internal getter (TBD...)
-// GetFirstDecisionTaskBackoffSeconds is an internal getter (TBD...)
 func (v *WorkflowExecutionStartedEventAttributes) GetFirstDecisionTaskBackoffSeconds() (o int32) {
-	if v != nil && v.FirstDecisionTaskBackoffSeconds != nil {
-		return *v.FirstDecisionTaskBackoffSeconds
+	if v != nil {
+		return v.FirstDecisionTaskBackoffSeconds
 	}
 	return
 }

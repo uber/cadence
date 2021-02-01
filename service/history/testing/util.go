@@ -47,8 +47,8 @@ func AddWorkflowExecutionStartedEventWithParent(
 		WorkflowType:                        &types.WorkflowType{Name: workflowType},
 		TaskList:                            &types.TaskList{Name: taskList},
 		Input:                               input,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
+		ExecutionStartToCloseTimeoutSeconds: executionStartToCloseTimeout,
+		TaskStartToCloseTimeoutSeconds:      taskStartToCloseTimeout,
 		Identity:                            identity,
 	}
 
@@ -151,10 +151,10 @@ func AddActivityTaskScheduledEvent(
 		ActivityType:                  &types.ActivityType{Name: activityType},
 		TaskList:                      &types.TaskList{Name: taskList},
 		Input:                         input,
-		ScheduleToCloseTimeoutSeconds: common.Int32Ptr(scheduleToCloseTimeout),
-		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
-		StartToCloseTimeoutSeconds:    common.Int32Ptr(startToCloseTimeout),
-		HeartbeatTimeoutSeconds:       common.Int32Ptr(heartbeatTimeout),
+		ScheduleToCloseTimeoutSeconds: scheduleToCloseTimeout,
+		ScheduleToStartTimeoutSeconds: scheduleToStartTimeout,
+		StartToCloseTimeoutSeconds:    startToCloseTimeout,
+		HeartbeatTimeoutSeconds:       heartbeatTimeout,
 	},
 	)
 
@@ -181,10 +181,10 @@ func AddActivityTaskScheduledEventWithRetry(
 		ActivityType:                  &types.ActivityType{Name: activityType},
 		TaskList:                      &types.TaskList{Name: taskList},
 		Input:                         input,
-		ScheduleToCloseTimeoutSeconds: common.Int32Ptr(scheduleToCloseTimeout),
-		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
-		StartToCloseTimeoutSeconds:    common.Int32Ptr(startToCloseTimeout),
-		HeartbeatTimeoutSeconds:       common.Int32Ptr(heartbeatTimeout),
+		ScheduleToCloseTimeoutSeconds: scheduleToCloseTimeout,
+		ScheduleToStartTimeoutSeconds: scheduleToStartTimeout,
+		StartToCloseTimeoutSeconds:    startToCloseTimeout,
+		HeartbeatTimeoutSeconds:       heartbeatTimeout,
 		RetryPolicy:                   retryPolicy,
 	},
 	)
@@ -247,7 +247,7 @@ func AddTimerStartedEvent(
 	event, ti, _ := builder.AddTimerStartedEvent(decisionCompletedEventID,
 		&types.StartTimerDecisionAttributes{
 			TimerID:                   timerID,
-			StartToFireTimeoutSeconds: common.Int64Ptr(timeOut),
+			StartToFireTimeoutSeconds: timeOut,
 		})
 	return event, ti
 }
@@ -355,8 +355,8 @@ func AddStartChildWorkflowExecutionInitiatedEvent(
 			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 			TaskList:                            &types.TaskList{Name: tasklist},
 			Input:                               input,
-			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionStartToCloseTimeout),
-			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(taskStartToCloseTimeout),
+			ExecutionStartToCloseTimeoutSeconds: executionStartToCloseTimeout,
+			TaskStartToCloseTimeoutSeconds:      taskStartToCloseTimeout,
 			Control:                             nil,
 			RetryPolicy:                         retryPolicy,
 		})

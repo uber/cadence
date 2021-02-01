@@ -51,7 +51,7 @@ type (
 		Domain                              string
 		TaskList                            *types.TaskList
 		StickyTaskList                      *types.TaskList
-		StickyScheduleToStartTimeoutSeconds *int32
+		StickyScheduleToStartTimeoutSeconds int32
 		Identity                            string
 		DecisionHandler                     decisionTaskHandler
 		ActivityHandler                     activityTaskHandler

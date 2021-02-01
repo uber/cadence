@@ -1360,7 +1360,7 @@ func (e *historyEngineImpl) getMutableState(
 		ClientFeatureVersion:                 common.StringPtr(executionInfo.ClientFeatureVersion),
 		ClientImpl:                           common.StringPtr(executionInfo.ClientImpl),
 		IsWorkflowRunning:                    common.BoolPtr(mutableState.IsWorkflowExecutionRunning()),
-		StickyTaskListScheduleToStartTimeout: common.Int32Ptr(executionInfo.StickyScheduleToStartTimeout),
+		StickyTaskListScheduleToStartTimeout: executionInfo.StickyScheduleToStartTimeout,
 		CurrentBranchToken:                   currentBranchToken,
 		WorkflowState:                        common.Int32Ptr(int32(workflowState)),
 		WorkflowCloseState:                   common.Int32Ptr(int32(workflowCloseState)),
@@ -1490,8 +1490,8 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	result := &types.DescribeWorkflowExecutionResponse{
 		ExecutionConfiguration: &types.WorkflowExecutionConfiguration{
 			TaskList:                            &types.TaskList{Name: executionInfo.TaskList},
-			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionInfo.WorkflowTimeout),
-			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(executionInfo.DecisionStartToCloseTimeout),
+			ExecutionStartToCloseTimeoutSeconds: executionInfo.WorkflowTimeout,
+			TaskStartToCloseTimeoutSeconds:      executionInfo.DecisionStartToCloseTimeout,
 		},
 		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{
 			Execution: &types.WorkflowExecution{
@@ -2863,10 +2863,10 @@ func validateStartWorkflowExecutionRequest(
 	if len(request.GetRequestID()) == 0 {
 		return &types.BadRequestError{Message: "Missing request ID."}
 	}
-	if request.ExecutionStartToCloseTimeoutSeconds == nil || request.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
+	if request.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
 		return &types.BadRequestError{Message: "Missing or invalid ExecutionStartToCloseTimeoutSeconds."}
 	}
-	if request.TaskStartToCloseTimeoutSeconds == nil || request.GetTaskStartToCloseTimeoutSeconds() <= 0 {
+	if request.GetTaskStartToCloseTimeoutSeconds() <= 0 {
 		return &types.BadRequestError{Message: "Missing or invalid TaskStartToCloseTimeoutSeconds."}
 	}
 	if request.TaskList == nil || request.TaskList.GetName() == "" {
@@ -2905,7 +2905,7 @@ func (e *historyEngineImpl) overrideStartWorkflowExecutionRequest(
 	taskStartToCloseTimeoutSecs = common.MinInt32(taskStartToCloseTimeoutSecs, request.GetExecutionStartToCloseTimeoutSeconds())
 
 	if taskStartToCloseTimeoutSecs != request.GetTaskStartToCloseTimeoutSeconds() {
-		request.TaskStartToCloseTimeoutSeconds = &taskStartToCloseTimeoutSecs
+		request.TaskStartToCloseTimeoutSeconds = taskStartToCloseTimeoutSecs
 		e.metricsClient.Scope(
 			metricsScope,
 			metrics.DomainTag(domainName),

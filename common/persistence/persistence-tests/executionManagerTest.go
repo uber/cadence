@@ -3266,7 +3266,7 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 			Version:   common.Int64Ptr(11),
 			TimerStartedEventAttributes: &types.TimerStartedEventAttributes{
 				TimerID:                      "ID1",
-				StartToFireTimeoutSeconds:    common.Int64Ptr(101),
+				StartToFireTimeoutSeconds:    101,
 				DecisionTaskCompletedEventID: common.Int64Ptr(5),
 			},
 		},
@@ -3403,7 +3403,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 			Version:   common.Int64Ptr(11),
 			TimerStartedEventAttributes: &types.TimerStartedEventAttributes{
 				TimerID:                      "ID1",
-				StartToFireTimeoutSeconds:    common.Int64Ptr(101),
+				StartToFireTimeoutSeconds:    101,
 				DecisionTaskCompletedEventID: common.Int64Ptr(5),
 			},
 		},

@@ -138,7 +138,7 @@ func InitializeHistoryEventGenerator(
 				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
-			StartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
+			StartToCloseTimeoutSeconds: timeout,
 			Attempt:                    decisionTaskAttempts,
 		}
 		return historyEvent
@@ -235,8 +235,8 @@ func InitializeHistoryEventGenerator(
 				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
-			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
-			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(timeout),
+			ExecutionStartToCloseTimeoutSeconds: timeout,
+			TaskStartToCloseTimeoutSeconds:      timeout,
 			Identity:                            identity,
 			FirstExecutionRunID:                 uuid.New(),
 		}
@@ -283,8 +283,8 @@ func InitializeHistoryEventGenerator(
 				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
-			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
-			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(timeout),
+			ExecutionStartToCloseTimeoutSeconds: timeout,
+			TaskStartToCloseTimeoutSeconds:      timeout,
 			DecisionTaskCompletedEventID:        common.Int64Ptr(EventID - 1),
 			Initiator:                           types.ContinueAsNewInitiatorDecider.Ptr(),
 		}
@@ -393,9 +393,9 @@ func InitializeHistoryEventGenerator(
 				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
-			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(timeout),
-			ScheduleToStartTimeoutSeconds: common.Int32Ptr(timeout),
-			StartToCloseTimeoutSeconds:    common.Int32Ptr(timeout),
+			ScheduleToCloseTimeoutSeconds: timeout,
+			ScheduleToStartTimeoutSeconds: timeout,
+			StartToCloseTimeoutSeconds:    timeout,
 			DecisionTaskCompletedEventID:  lastEvent.EventID,
 		}
 		return historyEvent
@@ -558,7 +558,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.EventType = types.EventTypeTimerStarted.Ptr()
 		historyEvent.TimerStartedEventAttributes = &types.TimerStartedEventAttributes{
 			TimerID:                      uuid.New(),
-			StartToFireTimeoutSeconds:    common.Int64Ptr(10),
+			StartToFireTimeoutSeconds:    10,
 			DecisionTaskCompletedEventID: lastEvent.EventID,
 		}
 		return historyEvent
@@ -623,8 +623,8 @@ func InitializeHistoryEventGenerator(
 				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
-			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
-			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(timeout),
+			ExecutionStartToCloseTimeoutSeconds: timeout,
+			TaskStartToCloseTimeoutSeconds:      timeout,
 			DecisionTaskCompletedEventID:        lastEvent.EventID,
 			WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyRejectDuplicate.Ptr(),
 		}

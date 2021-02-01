@@ -62,8 +62,8 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 		TaskList:                            taskList,
 		Input:                               nil,
 		Header:                              header,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      1,
 		Identity:                            identity,
 	}
 
@@ -91,10 +91,10 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
 					Header:                        header,
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(15),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(15),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
+					ScheduleToCloseTimeoutSeconds: 15,
+					ScheduleToStartTimeoutSeconds: 1,
+					StartToCloseTimeoutSeconds:    15,
+					HeartbeatTimeoutSeconds:       1,
 				},
 			}}, nil
 		}
@@ -183,8 +183,8 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      1,
 		Identity:                            identity,
 	}
 
@@ -208,10 +208,10 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 						ActivityType:                  &types.ActivityType{Name: activityName},
 						TaskList:                      &types.TaskList{Name: tl},
 						Input:                         nil,
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(4),
-						ScheduleToStartTimeoutSeconds: common.Int32Ptr(4),
-						StartToCloseTimeoutSeconds:    common.Int32Ptr(4),
-						HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
+						ScheduleToCloseTimeoutSeconds: 4,
+						ScheduleToStartTimeoutSeconds: 4,
+						StartToCloseTimeoutSeconds:    4,
+						HeartbeatTimeoutSeconds:       1,
 						RetryPolicy: &types.RetryPolicy{
 							InitialIntervalInSeconds:    1,
 							MaximumAttempts:             3,
@@ -359,8 +359,8 @@ func (s *integrationSuite) TestActivityRetry() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      1,
 		Identity:                            identity,
 	}
 
@@ -386,10 +386,10 @@ func (s *integrationSuite) TestActivityRetry() {
 						ActivityType:                  &types.ActivityType{Name: activityName},
 						TaskList:                      &types.TaskList{Name: tl},
 						Input:                         []byte("1"),
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(4),
-						ScheduleToStartTimeoutSeconds: common.Int32Ptr(4),
-						StartToCloseTimeoutSeconds:    common.Int32Ptr(4),
-						HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
+						ScheduleToCloseTimeoutSeconds: 4,
+						ScheduleToStartTimeoutSeconds: 4,
+						StartToCloseTimeoutSeconds:    4,
+						HeartbeatTimeoutSeconds:       1,
 						RetryPolicy: &types.RetryPolicy{
 							InitialIntervalInSeconds:    1,
 							MaximumAttempts:             3,
@@ -407,10 +407,10 @@ func (s *integrationSuite) TestActivityRetry() {
 						ActivityType:                  &types.ActivityType{Name: timeoutActivityName},
 						TaskList:                      &types.TaskList{Name: "no_worker_tasklist"},
 						Input:                         []byte("2"),
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(5),
-						ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
-						StartToCloseTimeoutSeconds:    common.Int32Ptr(5),
-						HeartbeatTimeoutSeconds:       common.Int32Ptr(0),
+						ScheduleToCloseTimeoutSeconds: 5,
+						ScheduleToStartTimeoutSeconds: 5,
+						StartToCloseTimeoutSeconds:    5,
+						HeartbeatTimeoutSeconds:       0,
 					},
 				}}, nil
 		} else if previousStartedEventID > 0 {
@@ -572,8 +572,8 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      1,
 		Identity:                            identity,
 	}
 
@@ -603,10 +603,10 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(15),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(15),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
+					ScheduleToCloseTimeoutSeconds: 15,
+					ScheduleToStartTimeoutSeconds: 1,
+					StartToCloseTimeoutSeconds:    15,
+					HeartbeatTimeoutSeconds:       1,
 				},
 			}}, nil
 		}
@@ -675,8 +675,8 @@ func (s *integrationSuite) TestActivityTimeouts() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(300),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+		ExecutionStartToCloseTimeoutSeconds: 300,
+		TaskStartToCloseTimeoutSeconds:      2,
 		Identity:                            identity,
 	}
 
@@ -703,10 +703,10 @@ func (s *integrationSuite) TestActivityTimeouts() {
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: "NoWorker"},
 					Input:                         []byte("ScheduleToStart"),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(35),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(3), // ActivityID A is expected to timeout using ScheduleToStart
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(30),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(0),
+					ScheduleToCloseTimeoutSeconds: 35,
+					ScheduleToStartTimeoutSeconds: 3, // ActivityID A is expected to timeout using ScheduleToStart
+					StartToCloseTimeoutSeconds:    30,
+					HeartbeatTimeoutSeconds:       0,
 				},
 			}, {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
@@ -715,10 +715,10 @@ func (s *integrationSuite) TestActivityTimeouts() {
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         []byte("ScheduleToClose"),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(7), // ActivityID B is expected to timeout using ScheduleClose
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(10),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(0),
+					ScheduleToCloseTimeoutSeconds: 7, // ActivityID B is expected to timeout using ScheduleClose
+					ScheduleToStartTimeoutSeconds: 5,
+					StartToCloseTimeoutSeconds:    10,
+					HeartbeatTimeoutSeconds:       0,
 				},
 			}, {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
@@ -727,10 +727,10 @@ func (s *integrationSuite) TestActivityTimeouts() {
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         []byte("StartToClose"),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(15),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(5), // ActivityID C is expected to timeout using StartToClose
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(0),
+					ScheduleToCloseTimeoutSeconds: 15,
+					ScheduleToStartTimeoutSeconds: 1,
+					StartToCloseTimeoutSeconds:    5, // ActivityID C is expected to timeout using StartToClose
+					HeartbeatTimeoutSeconds:       0,
 					RetryPolicy: &types.RetryPolicy{
 						InitialIntervalInSeconds:    1,
 						MaximumIntervalInSeconds:    1,
@@ -745,10 +745,10 @@ func (s *integrationSuite) TestActivityTimeouts() {
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         []byte("Heartbeat"),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(35),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(20),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(15),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(3), // ActivityID D is expected to timeout using Heartbeat
+					ScheduleToCloseTimeoutSeconds: 35,
+					ScheduleToStartTimeoutSeconds: 20,
+					StartToCloseTimeoutSeconds:    15,
+					HeartbeatTimeoutSeconds:       3, // ActivityID D is expected to timeout using Heartbeat
 				},
 			}}, nil
 		} else if previousStartedEventID > 0 {
@@ -917,8 +917,8 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(70),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+		ExecutionStartToCloseTimeoutSeconds: 70,
+		TaskStartToCloseTimeoutSeconds:      2,
 		Identity:                            identity,
 	}
 
@@ -948,10 +948,10 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 						ActivityType:                  &types.ActivityType{Name: activityName},
 						TaskList:                      &types.TaskList{Name: tl},
 						Input:                         []byte("Heartbeat"),
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(60),
-						ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
-						StartToCloseTimeoutSeconds:    common.Int32Ptr(60),
-						HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+						ScheduleToCloseTimeoutSeconds: 60,
+						ScheduleToStartTimeoutSeconds: 5,
+						StartToCloseTimeoutSeconds:    60,
+						HeartbeatTimeoutSeconds:       5,
 					},
 				}
 
@@ -1108,8 +1108,8 @@ func (s *integrationSuite) TestActivityCancellation() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      1,
 		Identity:                            identity,
 	}
 
@@ -1136,10 +1136,10 @@ func (s *integrationSuite) TestActivityCancellation() {
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(15),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(15),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(0),
+					ScheduleToCloseTimeoutSeconds: 15,
+					ScheduleToStartTimeoutSeconds: 10,
+					StartToCloseTimeoutSeconds:    15,
+					HeartbeatTimeoutSeconds:       0,
 				},
 			}}, nil
 		}
@@ -1235,8 +1235,8 @@ func (s *integrationSuite) TestActivityCancellationNotStarted() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		ExecutionStartToCloseTimeoutSeconds: 100,
+		TaskStartToCloseTimeoutSeconds:      1,
 		Identity:                            identity,
 	}
 
@@ -1263,10 +1263,10 @@ func (s *integrationSuite) TestActivityCancellationNotStarted() {
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(15),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(15),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(0),
+					ScheduleToCloseTimeoutSeconds: 15,
+					ScheduleToStartTimeoutSeconds: 2,
+					StartToCloseTimeoutSeconds:    15,
+					HeartbeatTimeoutSeconds:       0,
 				},
 			}}, nil
 		}

@@ -1616,7 +1616,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 	wType.Name = workflowType
 
 	decisionTimeout := previousExecutionInfo.DecisionStartToCloseTimeout
-	if attributes.TaskStartToCloseTimeoutSeconds != nil {
+	if attributes.TaskStartToCloseTimeoutSeconds > 0 {
 		decisionTimeout = attributes.GetTaskStartToCloseTimeoutSeconds()
 	}
 
@@ -1626,7 +1626,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		WorkflowID:                          execution.WorkflowID,
 		TaskList:                            tl,
 		WorkflowType:                        wType,
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeout),
+		TaskStartToCloseTimeoutSeconds:      decisionTimeout,
 		ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
 		Input:                               attributes.Input,
 		Header:                              attributes.Header,

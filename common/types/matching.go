@@ -33,7 +33,7 @@ type AddActivityTaskRequest struct {
 	SourceDomainUUID              string             `json:"sourceDomainUUID,omitempty"`
 	TaskList                      *TaskList          `json:"taskList,omitempty"`
 	ScheduleID                    *int64             `json:"scheduleId,omitempty"`
-	ScheduleToStartTimeoutSeconds *int32             `json:"scheduleToStartTimeoutSeconds,omitempty"`
+	ScheduleToStartTimeoutSeconds int32              `json:"scheduleToStartTimeoutSeconds,omitempty"`
 	Source                        *TaskSource        `json:"source,omitempty"`
 	ForwardedFrom                 string             `json:"forwardedFrom,omitempty"`
 }
@@ -80,8 +80,8 @@ func (v *AddActivityTaskRequest) GetScheduleID() (o int64) {
 
 // GetScheduleToStartTimeoutSeconds is an internal getter (TBD...)
 func (v *AddActivityTaskRequest) GetScheduleToStartTimeoutSeconds() (o int32) {
-	if v != nil && v.ScheduleToStartTimeoutSeconds != nil {
-		return *v.ScheduleToStartTimeoutSeconds
+	if v != nil {
+		return v.ScheduleToStartTimeoutSeconds
 	}
 	return
 }
@@ -108,7 +108,7 @@ type AddDecisionTaskRequest struct {
 	Execution                     *WorkflowExecution `json:"execution,omitempty"`
 	TaskList                      *TaskList          `json:"taskList,omitempty"`
 	ScheduleID                    *int64             `json:"scheduleId,omitempty"`
-	ScheduleToStartTimeoutSeconds *int32             `json:"scheduleToStartTimeoutSeconds,omitempty"`
+	ScheduleToStartTimeoutSeconds int32              `json:"scheduleToStartTimeoutSeconds,omitempty"`
 	Source                        *TaskSource        `json:"source,omitempty"`
 	ForwardedFrom                 string             `json:"forwardedFrom,omitempty"`
 }
@@ -147,8 +147,8 @@ func (v *AddDecisionTaskRequest) GetScheduleID() (o int64) {
 
 // GetScheduleToStartTimeoutSeconds is an internal getter (TBD...)
 func (v *AddDecisionTaskRequest) GetScheduleToStartTimeoutSeconds() (o int32) {
-	if v != nil && v.ScheduleToStartTimeoutSeconds != nil {
-		return *v.ScheduleToStartTimeoutSeconds
+	if v != nil {
+		return v.ScheduleToStartTimeoutSeconds
 	}
 	return
 }

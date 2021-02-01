@@ -254,7 +254,7 @@ func (b *HistoryBuilder) AddTimerStartedEvent(decisionCompletedEventID int64,
 
 	attributes := &types.TimerStartedEventAttributes{}
 	attributes.TimerID = request.TimerID
-	attributes.StartToFireTimeoutSeconds = common.Int64Ptr(*request.StartToFireTimeoutSeconds)
+	attributes.StartToFireTimeoutSeconds = request.StartToFireTimeoutSeconds
 	attributes.DecisionTaskCompletedEventID = common.Int64Ptr(decisionCompletedEventID)
 
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeTimerStarted)
@@ -555,8 +555,8 @@ func (b *HistoryBuilder) newWorkflowExecutionStartedEvent(
 	attributes.TaskList = request.TaskList
 	attributes.Header = request.Header
 	attributes.Input = request.Input
-	attributes.ExecutionStartToCloseTimeoutSeconds = common.Int32Ptr(*request.ExecutionStartToCloseTimeoutSeconds)
-	attributes.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(*request.TaskStartToCloseTimeoutSeconds)
+	attributes.ExecutionStartToCloseTimeoutSeconds = request.ExecutionStartToCloseTimeoutSeconds
+	attributes.TaskStartToCloseTimeoutSeconds = request.TaskStartToCloseTimeoutSeconds
 	attributes.ContinuedExecutionRunID = prevRunID
 	attributes.PrevAutoResetPoints = resetPoints
 	attributes.Identity = request.Identity
@@ -667,10 +667,10 @@ func (b *HistoryBuilder) newActivityTaskScheduledEvent(DecisionTaskCompletedEven
 	attributes.TaskList = scheduleAttributes.TaskList
 	attributes.Header = scheduleAttributes.Header
 	attributes.Input = scheduleAttributes.Input
-	attributes.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(common.Int32Default(scheduleAttributes.ScheduleToCloseTimeoutSeconds))
-	attributes.ScheduleToStartTimeoutSeconds = common.Int32Ptr(common.Int32Default(scheduleAttributes.ScheduleToStartTimeoutSeconds))
-	attributes.StartToCloseTimeoutSeconds = common.Int32Ptr(common.Int32Default(scheduleAttributes.StartToCloseTimeoutSeconds))
-	attributes.HeartbeatTimeoutSeconds = common.Int32Ptr(common.Int32Default(scheduleAttributes.HeartbeatTimeoutSeconds))
+	attributes.ScheduleToCloseTimeoutSeconds = scheduleAttributes.ScheduleToCloseTimeoutSeconds
+	attributes.ScheduleToStartTimeoutSeconds = scheduleAttributes.ScheduleToStartTimeoutSeconds
+	attributes.StartToCloseTimeoutSeconds = scheduleAttributes.StartToCloseTimeoutSeconds
+	attributes.HeartbeatTimeoutSeconds = scheduleAttributes.HeartbeatTimeoutSeconds
 	attributes.DecisionTaskCompletedEventID = common.Int64Ptr(DecisionTaskCompletedEventID)
 	attributes.RetryPolicy = scheduleAttributes.RetryPolicy
 	historyEvent.ActivityTaskScheduledEventAttributes = attributes
@@ -966,10 +966,10 @@ func (b *HistoryBuilder) newWorkflowExecutionContinuedAsNewEvent(decisionTaskCom
 	attributes.TaskList = request.TaskList
 	attributes.Header = request.Header
 	attributes.Input = request.Input
-	attributes.ExecutionStartToCloseTimeoutSeconds = common.Int32Ptr(*request.ExecutionStartToCloseTimeoutSeconds)
-	attributes.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(*request.TaskStartToCloseTimeoutSeconds)
+	attributes.ExecutionStartToCloseTimeoutSeconds = request.ExecutionStartToCloseTimeoutSeconds
+	attributes.TaskStartToCloseTimeoutSeconds = request.TaskStartToCloseTimeoutSeconds
 	attributes.DecisionTaskCompletedEventID = common.Int64Ptr(decisionTaskCompletedEventID)
-	attributes.BackoffStartIntervalInSeconds = common.Int32Ptr(request.GetBackoffStartIntervalInSeconds())
+	attributes.BackoffStartIntervalInSeconds = request.GetBackoffStartIntervalInSeconds()
 	attributes.Initiator = request.Initiator
 	if attributes.Initiator == nil {
 		attributes.Initiator = types.ContinueAsNewInitiatorDecider.Ptr()
@@ -1153,7 +1153,7 @@ func setDecisionTaskScheduledEventInfo(historyEvent *types.HistoryEvent, taskLis
 	attributes := &types.DecisionTaskScheduledEventAttributes{}
 	attributes.TaskList = &types.TaskList{}
 	attributes.TaskList.Name = taskList
-	attributes.StartToCloseTimeoutSeconds = common.Int32Ptr(startToCloseTimeoutSeconds)
+	attributes.StartToCloseTimeoutSeconds = startToCloseTimeoutSeconds
 	attributes.Attempt = attempt
 	historyEvent.DecisionTaskScheduledEventAttributes = attributes
 

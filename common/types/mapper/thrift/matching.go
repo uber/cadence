@@ -37,7 +37,7 @@ func FromAddActivityTaskRequest(t *types.AddActivityTaskRequest) *matching.AddAc
 		SourceDomainUUID:              &t.SourceDomainUUID,
 		TaskList:                      FromTaskList(t.TaskList),
 		ScheduleId:                    t.ScheduleID,
-		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
+		ScheduleToStartTimeoutSeconds: &t.ScheduleToStartTimeoutSeconds,
 		Source:                        FromTaskSource(t.Source),
 		ForwardedFrom:                 &t.ForwardedFrom,
 	}
@@ -54,7 +54,7 @@ func ToAddActivityTaskRequest(t *matching.AddActivityTaskRequest) *types.AddActi
 		SourceDomainUUID:              t.GetSourceDomainUUID(),
 		TaskList:                      ToTaskList(t.TaskList),
 		ScheduleID:                    t.ScheduleId,
-		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
+		ScheduleToStartTimeoutSeconds: t.GetScheduleToStartTimeoutSeconds(),
 		Source:                        ToTaskSource(t.Source),
 		ForwardedFrom:                 t.GetForwardedFrom(),
 	}
@@ -70,7 +70,7 @@ func FromAddDecisionTaskRequest(t *types.AddDecisionTaskRequest) *matching.AddDe
 		Execution:                     FromWorkflowExecution(t.Execution),
 		TaskList:                      FromTaskList(t.TaskList),
 		ScheduleId:                    t.ScheduleID,
-		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
+		ScheduleToStartTimeoutSeconds: &t.ScheduleToStartTimeoutSeconds,
 		Source:                        FromTaskSource(t.Source),
 		ForwardedFrom:                 &t.ForwardedFrom,
 	}
@@ -86,7 +86,7 @@ func ToAddDecisionTaskRequest(t *matching.AddDecisionTaskRequest) *types.AddDeci
 		Execution:                     ToWorkflowExecution(t.Execution),
 		TaskList:                      ToTaskList(t.TaskList),
 		ScheduleID:                    t.ScheduleId,
-		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
+		ScheduleToStartTimeoutSeconds: t.GetScheduleToStartTimeoutSeconds(),
 		Source:                        ToTaskSource(t.Source),
 		ForwardedFrom:                 t.GetForwardedFrom(),
 	}

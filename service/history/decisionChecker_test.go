@@ -563,10 +563,10 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_NoRe
 			Name: "some random task list",
 		},
 		Input:                         []byte{1, 2, 3},
-		ScheduleToCloseTimeoutSeconds: nil, // not set
-		ScheduleToStartTimeoutSeconds: common.Int32Ptr(3),
-		StartToCloseTimeoutSeconds:    common.Int32Ptr(3),  // ScheduleToStart + StartToClose > wfTimeout
-		HeartbeatTimeoutSeconds:       common.Int32Ptr(10), // larger then wfTimeout
+		ScheduleToCloseTimeoutSeconds: 0, // not set
+		ScheduleToStartTimeoutSeconds: 3,
+		StartToCloseTimeoutSeconds:    3,  // ScheduleToStart + StartToClose > wfTimeout
+		HeartbeatTimeoutSeconds:       10, // larger then wfTimeout
 	}
 
 	expectedAttributesAfterValidation := &types.ScheduleActivityTaskDecisionAttributes{
@@ -575,10 +575,10 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_NoRe
 		Domain:                        attributes.Domain,
 		TaskList:                      attributes.TaskList,
 		Input:                         attributes.Input,
-		ScheduleToCloseTimeoutSeconds: common.Int32Ptr(wfTimeout),
+		ScheduleToCloseTimeoutSeconds: wfTimeout,
 		ScheduleToStartTimeoutSeconds: attributes.ScheduleToStartTimeoutSeconds,
 		StartToCloseTimeoutSeconds:    attributes.StartToCloseTimeoutSeconds,
-		HeartbeatTimeoutSeconds:       common.Int32Ptr(wfTimeout),
+		HeartbeatTimeoutSeconds:       wfTimeout,
 	}
 
 	domainEntry := cache.NewLocalDomainCacheEntryForTest(
@@ -620,10 +620,10 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 			Name: "some random task list",
 		},
 		Input:                         []byte{1, 2, 3},
-		ScheduleToCloseTimeoutSeconds: nil, // not set
-		ScheduleToStartTimeoutSeconds: common.Int32Ptr(3),
-		StartToCloseTimeoutSeconds:    common.Int32Ptr(500), // extended ScheduleToStart + StartToClose > wfTimeout
-		HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
+		ScheduleToCloseTimeoutSeconds: 0, // not set
+		ScheduleToStartTimeoutSeconds: 3,
+		StartToCloseTimeoutSeconds:    500, // extended ScheduleToStart + StartToClose > wfTimeout
+		HeartbeatTimeoutSeconds:       1,
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    1,
 			BackoffCoefficient:          1.1,
@@ -638,8 +638,8 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 		Domain:                        attributes.Domain,
 		TaskList:                      attributes.TaskList,
 		Input:                         attributes.Input,
-		ScheduleToCloseTimeoutSeconds: common.Int32Ptr(attributes.RetryPolicy.ExpirationIntervalInSeconds),
-		ScheduleToStartTimeoutSeconds: common.Int32Ptr(s.testActivityMaxScheduleToStartTimeoutForRetryInSeconds),
+		ScheduleToCloseTimeoutSeconds: attributes.RetryPolicy.ExpirationIntervalInSeconds,
+		ScheduleToStartTimeoutSeconds: s.testActivityMaxScheduleToStartTimeoutForRetryInSeconds,
 		StartToCloseTimeoutSeconds:    attributes.StartToCloseTimeoutSeconds,
 		HeartbeatTimeoutSeconds:       attributes.HeartbeatTimeoutSeconds,
 		RetryPolicy:                   attributes.RetryPolicy,
@@ -682,10 +682,10 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 			Name: "some random task list",
 		},
 		Input:                         []byte{1, 2, 3},
-		ScheduleToCloseTimeoutSeconds: nil, // not set
-		ScheduleToStartTimeoutSeconds: common.Int32Ptr(3),
-		StartToCloseTimeoutSeconds:    common.Int32Ptr(500), // extended ScheduleToStart + StartToClose > wfTimeout
-		HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
+		ScheduleToCloseTimeoutSeconds: 0, // not set
+		ScheduleToStartTimeoutSeconds: 3,
+		StartToCloseTimeoutSeconds:    500, // extended ScheduleToStart + StartToClose > wfTimeout
+		HeartbeatTimeoutSeconds:       1,
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    1,
 			BackoffCoefficient:          1.1,
@@ -700,7 +700,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 		Domain:                        attributes.Domain,
 		TaskList:                      attributes.TaskList,
 		Input:                         attributes.Input,
-		ScheduleToCloseTimeoutSeconds: common.Int32Ptr(wfTimeout),
+		ScheduleToCloseTimeoutSeconds: wfTimeout,
 		ScheduleToStartTimeoutSeconds: attributes.ScheduleToStartTimeoutSeconds,
 		StartToCloseTimeoutSeconds:    attributes.StartToCloseTimeoutSeconds,
 		HeartbeatTimeoutSeconds:       attributes.HeartbeatTimeoutSeconds,

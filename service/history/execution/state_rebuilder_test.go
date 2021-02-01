@@ -245,8 +245,8 @@ func (s *stateRebuilderSuite) TestRebuild() {
 			WorkflowType:                        &types.WorkflowType{Name: "some random workflow type"},
 			TaskList:                            &types.TaskList{Name: "some random workflow type"},
 			Input:                               []byte("some random input"),
-			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(123),
-			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(233),
+			ExecutionStartToCloseTimeoutSeconds: 123,
+			TaskStartToCloseTimeoutSeconds:      233,
 			Identity:                            "some random identity",
 		},
 	}}

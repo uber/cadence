@@ -56,8 +56,8 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(20),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(3),
+		ExecutionStartToCloseTimeoutSeconds: 20,
+		TaskStartToCloseTimeoutSeconds:      3,
 		Identity:                            identity,
 	}
 
@@ -90,7 +90,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 			Decisions: []*types.Decision{},
 			StickyAttributes: &types.StickyExecutionAttributes{
 				WorkerTaskList:                stikyTaskList,
-				ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
+				ScheduleToStartTimeoutSeconds: 5,
 			},
 			ReturnNewDecisionTask:      common.BoolPtr(true),
 			ForceCreateNewDecisionTask: common.BoolPtr(true),
@@ -127,7 +127,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 		},
 		StickyAttributes: &types.StickyExecutionAttributes{
 			WorkerTaskList:                stikyTaskList,
-			ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
+			ScheduleToStartTimeoutSeconds: 5,
 		},
 		ReturnNewDecisionTask:      common.BoolPtr(true),
 		ForceCreateNewDecisionTask: common.BoolPtr(false),
@@ -163,8 +163,8 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(20),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(5),
+		ExecutionStartToCloseTimeoutSeconds: 20,
+		TaskStartToCloseTimeoutSeconds:      5,
 		Identity:                            identity,
 	}
 
@@ -194,7 +194,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 		Decisions: []*types.Decision{},
 		StickyAttributes: &types.StickyExecutionAttributes{
 			WorkerTaskList:                stikyTaskList,
-			ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
+			ScheduleToStartTimeoutSeconds: 5,
 		},
 		ReturnNewDecisionTask:      common.BoolPtr(true),
 		ForceCreateNewDecisionTask: common.BoolPtr(true),
@@ -214,7 +214,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 		},
 		StickyAttributes: &types.StickyExecutionAttributes{
 			WorkerTaskList:                stikyTaskList,
-			ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
+			ScheduleToStartTimeoutSeconds: 5,
 		},
 		ReturnNewDecisionTask:      common.BoolPtr(true),
 		ForceCreateNewDecisionTask: common.BoolPtr(true),
@@ -234,7 +234,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 		},
 		StickyAttributes: &types.StickyExecutionAttributes{
 			WorkerTaskList:                stikyTaskList,
-			ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
+			ScheduleToStartTimeoutSeconds: 5,
 		},
 		ReturnNewDecisionTask:      common.BoolPtr(true),
 		ForceCreateNewDecisionTask: common.BoolPtr(true),
@@ -253,7 +253,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 		},
 		StickyAttributes: &types.StickyExecutionAttributes{
 			WorkerTaskList:                stikyTaskList,
-			ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
+			ScheduleToStartTimeoutSeconds: 5,
 		},
 		ReturnNewDecisionTask:      common.BoolPtr(true),
 		ForceCreateNewDecisionTask: common.BoolPtr(false),
@@ -301,8 +301,8 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionSta
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		ExecutionStartToCloseTimeoutSeconds: 3,
+		TaskStartToCloseTimeoutSeconds:      10,
 		Identity:                            identity,
 	}
 
@@ -376,8 +376,8 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		ExecutionStartToCloseTimeoutSeconds: 3,
+		TaskStartToCloseTimeoutSeconds:      10,
 		Identity:                            identity,
 	}
 
@@ -451,8 +451,8 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		ExecutionStartToCloseTimeoutSeconds: 3,
+		TaskStartToCloseTimeoutSeconds:      10,
 		Identity:                            identity,
 	}
 
@@ -538,8 +538,8 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		ExecutionStartToCloseTimeoutSeconds: 3,
+		TaskStartToCloseTimeoutSeconds:      10,
 		Identity:                            identity,
 	}
 
@@ -643,8 +643,8 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		ExecutionStartToCloseTimeoutSeconds: 3,
+		TaskStartToCloseTimeoutSeconds:      10,
 		Identity:                            identity,
 	}
 
@@ -745,8 +745,8 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(3),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
+		ExecutionStartToCloseTimeoutSeconds: 3,
+		TaskStartToCloseTimeoutSeconds:      10,
 		Identity:                            identity,
 	}
 
