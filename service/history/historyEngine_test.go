@@ -4638,7 +4638,7 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 	decisions := []*types.Decision{{
 		DecisionType: types.DecisionTypeStartTimer.Ptr(),
 		StartTimerDecisionAttributes: &types.StartTimerDecisionAttributes{
-			TimerID:                   common.StringPtr(timerID),
+			TimerID:                   timerID,
 			StartToFireTimeoutSeconds: common.Int64Ptr(1),
 		},
 	}}
@@ -4743,7 +4743,7 @@ func (s *engineSuite) TestUserTimer_RespondDecisionTaskCompleted() {
 	decisions := []*types.Decision{{
 		DecisionType: types.DecisionTypeCancelTimer.Ptr(),
 		CancelTimerDecisionAttributes: &types.CancelTimerDecisionAttributes{
-			TimerID: common.StringPtr(timerID),
+			TimerID: timerID,
 		},
 	}}
 
@@ -4801,7 +4801,7 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_NoStartTimer(
 	decisions := []*types.Decision{{
 		DecisionType: types.DecisionTypeCancelTimer.Ptr(),
 		CancelTimerDecisionAttributes: &types.CancelTimerDecisionAttributes{
-			TimerID: common.StringPtr(timerID),
+			TimerID: timerID,
 		},
 	}}
 
@@ -4868,7 +4868,7 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_TimerFired() 
 	decisions := []*types.Decision{{
 		DecisionType: types.DecisionTypeCancelTimer.Ptr(),
 		CancelTimerDecisionAttributes: &types.CancelTimerDecisionAttributes{
-			TimerID: common.StringPtr(timerID),
+			TimerID: timerID,
 		},
 	}}
 
@@ -4966,7 +4966,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest() {
 			Identity:          identity,
 			SignalName:        common.StringPtr(signalName),
 			Input:             input,
-			RequestID:         common.StringPtr(requestID),
+			RequestID:         requestID,
 		},
 	}
 
@@ -5049,7 +5049,7 @@ func (s *engineSuite) TestRemoveSignalMutableState() {
 	removeRequest = &types.RemoveSignalMutableStateRequest{
 		DomainUUID:        constants.TestDomainID,
 		WorkflowExecution: &workflowExecution,
-		RequestID:         common.StringPtr(requestID),
+		RequestID:         requestID,
 	}
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(

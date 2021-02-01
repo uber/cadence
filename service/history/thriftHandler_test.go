@@ -146,7 +146,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("RecordActivityTaskStarted", func(t *testing.T) {
 		h.EXPECT().RecordActivityTaskStarted(ctx, &types.RecordActivityTaskStartedRequest{}).Return(&types.RecordActivityTaskStartedResponse{}, internalErr).Times(1)
 		resp, err := th.RecordActivityTaskStarted(ctx, &hist.RecordActivityTaskStartedRequest{})
-		assert.Equal(t, hist.RecordActivityTaskStartedResponse{WorkflowDomain: common.StringPtr("")}, *resp)
+		assert.Equal(t, hist.RecordActivityTaskStartedResponse{WorkflowDomain: common.StringPtr(""), Attempt: common.Int64Ptr(0)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("RecordChildExecutionCompleted", func(t *testing.T) {
@@ -157,7 +157,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("RecordDecisionTaskStarted", func(t *testing.T) {
 		h.EXPECT().RecordDecisionTaskStarted(ctx, &types.RecordDecisionTaskStartedRequest{}).Return(&types.RecordDecisionTaskStartedResponse{}, internalErr).Times(1)
 		resp, err := th.RecordDecisionTaskStarted(ctx, &hist.RecordDecisionTaskStartedRequest{})
-		assert.Equal(t, hist.RecordDecisionTaskStartedResponse{}, *resp)
+		assert.Equal(t, hist.RecordDecisionTaskStartedResponse{Attempt: common.Int64Ptr(0)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("RefreshWorkflowTasks", func(t *testing.T) {

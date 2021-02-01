@@ -139,7 +139,7 @@ func InitializeHistoryEventGenerator(
 				Kind: types.TaskListKindNormal.Ptr(),
 			},
 			StartToCloseTimeoutSeconds: common.Int32Ptr(timeout),
-			Attempt:                    common.Int64Ptr(decisionTaskAttempts),
+			Attempt:                    decisionTaskAttempts,
 		}
 		return historyEvent
 	})
@@ -155,7 +155,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent.DecisionTaskStartedEventAttributes = &types.DecisionTaskStartedEventAttributes{
 			ScheduledEventID: lastEvent.EventID,
 			Identity:         identity,
-			RequestID:        common.StringPtr(uuid.New()),
+			RequestID:        uuid.New(),
 		}
 		return historyEvent
 	})
@@ -411,8 +411,8 @@ func InitializeHistoryEventGenerator(
 		historyEvent.ActivityTaskStartedEventAttributes = &types.ActivityTaskStartedEventAttributes{
 			ScheduledEventID: lastEvent.EventID,
 			Identity:         identity,
-			RequestID:        common.StringPtr(uuid.New()),
-			Attempt:          common.Int32Ptr(0),
+			RequestID:        uuid.New(),
+			Attempt:          0,
 		}
 		return historyEvent
 	})
@@ -557,7 +557,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent := getDefaultHistoryEvent(EventID, version)
 		historyEvent.EventType = types.EventTypeTimerStarted.Ptr()
 		historyEvent.TimerStartedEventAttributes = &types.TimerStartedEventAttributes{
-			TimerID:                      common.StringPtr(uuid.New()),
+			TimerID:                      uuid.New(),
 			StartToFireTimeoutSeconds:    common.Int64Ptr(10),
 			DecisionTaskCompletedEventID: lastEvent.EventID,
 		}
