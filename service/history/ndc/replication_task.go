@@ -268,7 +268,7 @@ func (t *replicationTaskImpl) splitTask(
 		BranchToken: nil,
 		Items: []*types.VersionHistoryItem{{
 			EventID: newLastEvent.GetEventID(),
-			Version: common.Int64Ptr(newLastEvent.GetVersion()),
+			Version: newLastEvent.GetVersion(),
 		}},
 	})
 

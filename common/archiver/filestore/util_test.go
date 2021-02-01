@@ -60,7 +60,7 @@ func (s *UtilSuite) TestEncodeDecodeHistoryBatches() {
 			Events: []*types.HistoryEvent{
 				{
 					EventID: common.FirstEventID,
-					Version: common.Int64Ptr(1),
+					Version: 1,
 				},
 			},
 		},
@@ -69,11 +69,11 @@ func (s *UtilSuite) TestEncodeDecodeHistoryBatches() {
 				{
 					EventID:   common.FirstEventID + 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-					Version:   common.Int64Ptr(1),
+					Version:   1,
 				},
 				{
 					EventID: common.FirstEventID + 2,
-					Version: common.Int64Ptr(2),
+					Version: 2,
 					DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
 						Identity: "some random identity",
 					},
@@ -207,7 +207,7 @@ func (s *UtilSuite) TestHistoryMutated() {
 				{
 					Events: []*types.HistoryEvent{
 						{
-							Version: common.Int64Ptr(15),
+							Version: 15,
 						},
 					},
 				},
@@ -223,7 +223,7 @@ func (s *UtilSuite) TestHistoryMutated() {
 					Events: []*types.HistoryEvent{
 						{
 							EventID: 33,
-							Version: common.Int64Ptr(10),
+							Version: 10,
 						},
 					},
 				},
@@ -231,11 +231,11 @@ func (s *UtilSuite) TestHistoryMutated() {
 					Events: []*types.HistoryEvent{
 						{
 							EventID: 49,
-							Version: common.Int64Ptr(10),
+							Version: 10,
 						},
 						{
 							EventID: 50,
-							Version: common.Int64Ptr(10),
+							Version: 10,
 						},
 					},
 				},
@@ -252,7 +252,7 @@ func (s *UtilSuite) TestHistoryMutated() {
 				{
 					Events: []*types.HistoryEvent{
 						{
-							Version: common.Int64Ptr(9),
+							Version: 9,
 						},
 					},
 				},
@@ -269,7 +269,7 @@ func (s *UtilSuite) TestHistoryMutated() {
 					Events: []*types.HistoryEvent{
 						{
 							EventID: 20,
-							Version: common.Int64Ptr(10),
+							Version: 10,
 						},
 					},
 				},
@@ -277,7 +277,7 @@ func (s *UtilSuite) TestHistoryMutated() {
 					Events: []*types.HistoryEvent{
 						{
 							EventID: 33,
-							Version: common.Int64Ptr(10),
+							Version: 10,
 						},
 					},
 				},

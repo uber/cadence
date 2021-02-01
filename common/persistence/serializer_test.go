@@ -117,11 +117,11 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 				Items: []*types.VersionHistoryItem{
 					{
 						EventID: 1,
-						Version: common.Int64Ptr(0),
+						Version: 0,
 					},
 					{
 						EventID: 2,
-						Version: common.Int64Ptr(1),
+						Version: 1,
 					},
 				},
 			},
@@ -130,11 +130,11 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 				Items: []*types.VersionHistoryItem{
 					{
 						EventID: 2,
-						Version: common.Int64Ptr(0),
+						Version: 0,
 					},
 					{
 						EventID: 3,
-						Version: common.Int64Ptr(1),
+						Version: 1,
 					},
 				},
 			},

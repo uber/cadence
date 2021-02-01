@@ -239,7 +239,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 	nextEventID := lastEventID + 1
 	events1 := []*types.HistoryEvent{{
 		EventID:   1,
-		Version:   common.Int64Ptr(version),
+		Version:   version,
 		EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
 			WorkflowType:                        &types.WorkflowType{Name: "some random workflow type"},
@@ -252,7 +252,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 	}}
 	events2 := []*types.HistoryEvent{{
 		EventID:   2,
-		Version:   common.Int64Ptr(version),
+		Version:   version,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			SignalName: common.StringPtr("some random signal name"),

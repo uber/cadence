@@ -3253,7 +3253,7 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 		{
 			EventID:   5,
 			EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
-			Version:   common.Int64Ptr(11),
+			Version:   11,
 			DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
 				ScheduledEventID: 2,
 				StartedEventID:   3,
@@ -3263,7 +3263,7 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 		{
 			EventID:   6,
 			EventType: types.EventTypeTimerStarted.Ptr(),
-			Version:   common.Int64Ptr(11),
+			Version:   11,
 			TimerStartedEventAttributes: &types.TimerStartedEventAttributes{
 				TimerID:                      "ID1",
 				StartToFireTimeoutSeconds:    common.Int64Ptr(101),
@@ -3276,7 +3276,7 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 		{
 			EventID:   21,
 			EventType: types.EventTypeTimerFired.Ptr(),
-			Version:   common.Int64Ptr(12),
+			Version:   12,
 			TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
 				TimerID:        "2",
 				StartedEventID: 3,
@@ -3390,7 +3390,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 		{
 			EventID:   5,
 			EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
-			Version:   common.Int64Ptr(11),
+			Version:   11,
 			DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
 				ScheduledEventID: 2,
 				StartedEventID:   3,
@@ -3400,7 +3400,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 		{
 			EventID:   6,
 			EventType: types.EventTypeTimerStarted.Ptr(),
-			Version:   common.Int64Ptr(11),
+			Version:   11,
 			TimerStartedEventAttributes: &types.TimerStartedEventAttributes{
 				TimerID:                      "ID1",
 				StartToFireTimeoutSeconds:    common.Int64Ptr(101),
@@ -3413,7 +3413,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 		{
 			EventID:   21,
 			EventType: types.EventTypeTimerFired.Ptr(),
-			Version:   common.Int64Ptr(12),
+			Version:   12,
 			TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
 				TimerID:        "2",
 				StartedEventID: 3,

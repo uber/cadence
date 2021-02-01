@@ -5080,7 +5080,7 @@ func (s *engineSuite) TestReapplyEvents_ReturnSuccess() {
 		{
 			EventID:   1,
 			EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
-			Version:   common.Int64Ptr(1),
+			Version:   1,
 		},
 	}
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
@@ -5115,7 +5115,7 @@ func (s *engineSuite) TestReapplyEvents_IgnoreSameVersionEvents() {
 		{
 			EventID:   1,
 			EventType: types.EventTypeTimerStarted.Ptr(),
-			Version:   common.Int64Ptr(common.EmptyVersion),
+			Version:   common.EmptyVersion,
 		},
 	}
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
@@ -5151,7 +5151,7 @@ func (s *engineSuite) TestReapplyEvents_ResetWorkflow() {
 		{
 			EventID:   1,
 			EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
-			Version:   common.Int64Ptr(100),
+			Version:   100,
 		},
 	}
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(

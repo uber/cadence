@@ -666,11 +666,11 @@ func (s *HistoryIteratorSuite) constructHistoryBatches(batchInfo []int, page pag
 		for i := 0; i < numEvents; i++ {
 			event := &types.HistoryEvent{
 				EventID: eventsID,
-				Version: common.Int64Ptr(page.firstEventFailoverVersion),
+				Version: page.firstEventFailoverVersion,
 			}
 			eventsID++
 			if batchIdx == page.numBatches-1 {
-				event.Version = common.Int64Ptr(page.lastEventFailoverVersion)
+				event.Version = page.lastEventFailoverVersion
 			}
 			events = append(events, event)
 		}

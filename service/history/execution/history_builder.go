@@ -644,7 +644,7 @@ func (b *HistoryBuilder) newDecisionTaskTimedOutEvent(
 	attributes.TimeoutType = timeoutType.Ptr()
 	attributes.BaseRunID = baseRunID
 	attributes.NewRunID = newRunID
-	attributes.ForkEventVersion = common.Int64Ptr(forkEventVersion)
+	attributes.ForkEventVersion = forkEventVersion
 	attributes.Reason = common.StringPtr(reason)
 	attributes.Cause = cause.Ptr()
 	historyEvent.DecisionTaskTimedOutEventAttributes = attributes

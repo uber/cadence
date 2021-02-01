@@ -199,7 +199,7 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTas
 	events := []*types.HistoryEvent{
 		{
 			EventID: 1,
-			Version: common.Int64Ptr(1),
+			Version: 1,
 		},
 	}
 	serializer := s.mockShard.GetPayloadSerializer()
@@ -241,7 +241,7 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeHistoryV2
 	events := []*types.HistoryEvent{
 		{
 			EventID: 1,
-			Version: common.Int64Ptr(1),
+			Version: 1,
 		},
 	}
 	serializer := s.mockShard.GetPayloadSerializer()

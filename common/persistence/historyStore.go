@@ -197,7 +197,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(
 			Msg: fmt.Sprintf("events to be appended cannot be empty"),
 		}
 	}
-	version := *request.Events[0].Version
+	version := request.Events[0].Version
 	nodeID := request.Events[0].EventID
 	lastID := nodeID - 1
 
@@ -207,7 +207,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(
 		}
 	}
 	for _, e := range request.Events {
-		if *e.Version != version {
+		if e.Version != version {
 			return nil, &InvalidPersistenceRequestError{
 				Msg: fmt.Sprintf("event version must be the same inside a batch"),
 			}

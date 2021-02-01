@@ -834,7 +834,7 @@ func (e *mutableStateBuilder) CreateNewHistoryEventWithTimestamp(
 	historyEvent.EventID = eventID
 	historyEvent.Timestamp = ts
 	historyEvent.EventType = &eventType
-	historyEvent.Version = common.Int64Ptr(e.GetCurrentVersion())
+	historyEvent.Version = e.GetCurrentVersion()
 	historyEvent.TaskID = common.Int64Ptr(common.EmptyEventTaskID)
 
 	return historyEvent

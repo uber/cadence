@@ -68,7 +68,7 @@ func (item *VersionHistoryItem) ToInternalType() *types.VersionHistoryItem {
 
 	return &types.VersionHistoryItem{
 		EventID: item.EventID,
-		Version: common.Int64Ptr(item.Version),
+		Version: item.Version,
 	}
 }
 

@@ -172,7 +172,7 @@ func InitializeHistoryEventGenerator(
 			StartedEventID:   lastEvent.EventID,
 			Cause:            types.DecisionTaskFailedCauseUnhandledDecision.Ptr(),
 			Identity:         identity,
-			ForkEventVersion: common.Int64Ptr(version),
+			ForkEventVersion: version,
 		}
 		return historyEvent
 	})
@@ -969,7 +969,7 @@ func getDefaultHistoryEvent(
 		EventID:   EventID,
 		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 		TaskID:    common.Int64Ptr(globalTaskID),
-		Version:   common.Int64Ptr(version),
+		Version:   version,
 	}
 }
 

@@ -136,13 +136,13 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 	eventBatch := []*types.HistoryEvent{
 		{
 			EventID:   2,
-			Version:   common.Int64Ptr(123),
+			Version:   123,
 			Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 			EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 		},
 		{
 			EventID:   3,
-			Version:   common.Int64Ptr(123),
+			Version:   123,
 			Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 			EventType: types.EventTypeDecisionTaskStarted.Ptr(),
 		},
@@ -151,7 +151,7 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 	versionHistoryItems := []*types.VersionHistoryItem{
 		{
 			EventID: 1,
-			Version: common.Int64Ptr(1),
+			Version: 1,
 		},
 	}
 
@@ -230,7 +230,7 @@ func (s *historyResenderSuite) TestCreateReplicateRawEventsRequest() {
 	versionHistoryItems := []*types.VersionHistoryItem{
 		{
 			EventID: 1,
-			Version: common.Int64Ptr(1),
+			Version: 1,
 		},
 	}
 
@@ -255,7 +255,7 @@ func (s *historyResenderSuite) TestSendReplicationRawRequest() {
 	runID := uuid.New()
 	item := &types.VersionHistoryItem{
 		EventID: 1,
-		Version: common.Int64Ptr(1),
+		Version: 1,
 	}
 	request := &types.ReplicateEventsV2Request{
 		DomainUUID: s.domainID,
@@ -280,7 +280,7 @@ func (s *historyResenderSuite) TestSendReplicationRawRequest_Err() {
 	runID := uuid.New()
 	item := &types.VersionHistoryItem{
 		EventID: 1,
-		Version: common.Int64Ptr(1),
+		Version: 1,
 	}
 	request := &types.ReplicateEventsV2Request{
 		DomainUUID: s.domainID,

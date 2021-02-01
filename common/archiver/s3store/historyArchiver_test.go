@@ -337,7 +337,7 @@ func (s *historyArchiverSuite) TestArchive_Fail_HistoryMutated() {
 				{
 					EventID:   common.FirstEventID + 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-					Version:   common.Int64Ptr(testCloseFailoverVersion + 1),
+					Version:   testCloseFailoverVersion + 1,
 				},
 			},
 		},
@@ -401,12 +401,12 @@ func (s *historyArchiverSuite) TestArchive_Success() {
 				{
 					EventID:   common.FirstEventID + 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-					Version:   common.Int64Ptr(testCloseFailoverVersion),
+					Version:   testCloseFailoverVersion,
 				},
 				{
 					EventID:   common.FirstEventID + 2,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-					Version:   common.Int64Ptr(testCloseFailoverVersion),
+					Version:   testCloseFailoverVersion,
 				},
 			},
 		},
@@ -415,7 +415,7 @@ func (s *historyArchiverSuite) TestArchive_Success() {
 				{
 					EventID:   testNextEventID - 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-					Version:   common.Int64Ptr(testCloseFailoverVersion),
+					Version:   testCloseFailoverVersion,
 				},
 			},
 		},
@@ -643,7 +643,7 @@ func (s *historyArchiverSuite) setupHistoryDirectory() {
 						{
 							EventID:   testNextEventID - 1,
 							Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-							Version:   common.Int64Ptr(1),
+							Version:   1,
 						},
 					},
 				},
@@ -662,12 +662,12 @@ func (s *historyArchiverSuite) setupHistoryDirectory() {
 						{
 							EventID:   common.FirstEventID + 1,
 							Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-							Version:   common.Int64Ptr(testCloseFailoverVersion),
+							Version:   testCloseFailoverVersion,
 						},
 						{
 							EventID:   common.FirstEventID + 1,
 							Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-							Version:   common.Int64Ptr(testCloseFailoverVersion),
+							Version:   testCloseFailoverVersion,
 						},
 					},
 				},
@@ -683,7 +683,7 @@ func (s *historyArchiverSuite) setupHistoryDirectory() {
 						{
 							EventID:   testNextEventID - 1,
 							Timestamp: common.Int64Ptr(time.Now().UnixNano()),
-							Version:   common.Int64Ptr(testCloseFailoverVersion),
+							Version:   testCloseFailoverVersion,
 						},
 					},
 				},

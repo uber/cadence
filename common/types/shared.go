@@ -1849,7 +1849,7 @@ type DecisionTaskFailedEventAttributes struct {
 	Reason           *string                  `json:"reason,omitempty"`
 	BaseRunID        string                   `json:"baseRunId,omitempty"`
 	NewRunID         string                   `json:"newRunId,omitempty"`
-	ForkEventVersion *int64                   `json:"forkEventVersion,omitempty"`
+	ForkEventVersion int64                    `json:"forkEventVersion,omitempty"`
 	BinaryChecksum   string                   `json:"binaryChecksum,omitempty"`
 }
 
@@ -1919,8 +1919,8 @@ func (v *DecisionTaskFailedEventAttributes) GetNewRunID() (o string) {
 
 // GetForkEventVersion is an internal getter (TBD...)
 func (v *DecisionTaskFailedEventAttributes) GetForkEventVersion() (o int64) {
-	if v != nil && v.ForkEventVersion != nil {
-		return *v.ForkEventVersion
+	if v != nil {
+		return v.ForkEventVersion
 	}
 	return
 }
@@ -2053,7 +2053,7 @@ type DecisionTaskTimedOutEventAttributes struct {
 	TimeoutType      *TimeoutType               `json:"timeoutType,omitempty"`
 	BaseRunID        string                     `json:"baseRunId,omitempty"`
 	NewRunID         string                     `json:"newRunId,omitempty"`
-	ForkEventVersion *int64                     `json:"forkEventVersion,omitempty"`
+	ForkEventVersion int64                      `json:"forkEventVersion,omitempty"`
 	Reason           *string                    `json:"reason,omitempty"`
 	Cause            *DecisionTaskTimedOutCause `json:"cause,omitempty"`
 }
@@ -2100,8 +2100,8 @@ func (v *DecisionTaskTimedOutEventAttributes) GetNewRunID() (o string) {
 
 // GetForkEventVersion is an internal getter (TBD...)
 func (v *DecisionTaskTimedOutEventAttributes) GetForkEventVersion() (o int64) {
-	if v != nil && v.ForkEventVersion != nil {
-		return *v.ForkEventVersion
+	if v != nil {
+		return v.ForkEventVersion
 	}
 	return
 }
@@ -3599,7 +3599,7 @@ type HistoryEvent struct {
 	EventID                                                        int64                                                           `json:"eventId,omitempty"`
 	Timestamp                                                      *int64                                                          `json:"timestamp,omitempty"`
 	EventType                                                      *EventType                                                      `json:"eventType,omitempty"`
-	Version                                                        *int64                                                          `json:"version,omitempty"`
+	Version                                                        int64                                                           `json:"version,omitempty"`
 	TaskID                                                         *int64                                                          `json:"taskId,omitempty"`
 	WorkflowExecutionStartedEventAttributes                        *WorkflowExecutionStartedEventAttributes                        `json:"workflowExecutionStartedEventAttributes,omitempty"`
 	WorkflowExecutionCompletedEventAttributes                      *WorkflowExecutionCompletedEventAttributes                      `json:"workflowExecutionCompletedEventAttributes,omitempty"`
@@ -3671,8 +3671,8 @@ func (v *HistoryEvent) GetEventType() (o EventType) {
 
 // GetVersion is an internal getter (TBD...)
 func (v *HistoryEvent) GetVersion() (o int64) {
-	if v != nil && v.Version != nil {
-		return *v.Version
+	if v != nil {
+		return v.Version
 	}
 	return
 }
@@ -9012,8 +9012,8 @@ func (v *VersionHistory) GetItems() (o []*VersionHistoryItem) {
 
 // VersionHistoryItem is an internal type (TBD...)
 type VersionHistoryItem struct {
-	EventID int64  `json:"eventID,omitempty"`
-	Version *int64 `json:"version,omitempty"`
+	EventID int64 `json:"eventID,omitempty"`
+	Version int64 `json:"version,omitempty"`
 }
 
 // GetEventID is an internal getter (TBD...)
@@ -9026,8 +9026,8 @@ func (v *VersionHistoryItem) GetEventID() (o int64) {
 
 // GetVersion is an internal getter (TBD...)
 func (v *VersionHistoryItem) GetVersion() (o int64) {
-	if v != nil && v.Version != nil {
-		return *v.Version
+	if v != nil {
+		return v.Version
 	}
 	return
 }

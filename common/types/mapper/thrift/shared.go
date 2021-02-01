@@ -1234,7 +1234,7 @@ func FromDecisionTaskFailedEventAttributes(t *types.DecisionTaskFailedEventAttri
 		Reason:           t.Reason,
 		BaseRunId:        &t.BaseRunID,
 		NewRunId:         &t.NewRunID,
-		ForkEventVersion: t.ForkEventVersion,
+		ForkEventVersion: &t.ForkEventVersion,
 		BinaryChecksum:   &t.BinaryChecksum,
 	}
 }
@@ -1253,7 +1253,7 @@ func ToDecisionTaskFailedEventAttributes(t *shared.DecisionTaskFailedEventAttrib
 		Reason:           t.Reason,
 		BaseRunID:        t.GetBaseRunId(),
 		NewRunID:         t.GetNewRunId(),
-		ForkEventVersion: t.ForkEventVersion,
+		ForkEventVersion: t.GetForkEventVersion(),
 		BinaryChecksum:   t.GetBinaryChecksum(),
 	}
 }
@@ -2491,7 +2491,7 @@ func FromHistoryEvent(t *types.HistoryEvent) *shared.HistoryEvent {
 		EventId:                                 &t.EventID,
 		Timestamp:                               t.Timestamp,
 		EventType:                               FromEventType(t.EventType),
-		Version:                                 t.Version,
+		Version:                                 &t.Version,
 		TaskId:                                  t.TaskID,
 		WorkflowExecutionStartedEventAttributes: FromWorkflowExecutionStartedEventAttributes(t.WorkflowExecutionStartedEventAttributes),
 		WorkflowExecutionCompletedEventAttributes:                      FromWorkflowExecutionCompletedEventAttributes(t.WorkflowExecutionCompletedEventAttributes),
@@ -2547,7 +2547,7 @@ func ToHistoryEvent(t *shared.HistoryEvent) *types.HistoryEvent {
 		EventID:                                 t.GetEventId(),
 		Timestamp:                               t.Timestamp,
 		EventType:                               ToEventType(t.EventType),
-		Version:                                 t.Version,
+		Version:                                 t.GetVersion(),
 		TaskID:                                  t.TaskId,
 		WorkflowExecutionStartedEventAttributes: ToWorkflowExecutionStartedEventAttributes(t.WorkflowExecutionStartedEventAttributes),
 		WorkflowExecutionCompletedEventAttributes:                      ToWorkflowExecutionCompletedEventAttributes(t.WorkflowExecutionCompletedEventAttributes),
@@ -5651,7 +5651,7 @@ func FromVersionHistoryItem(t *types.VersionHistoryItem) *shared.VersionHistoryI
 	}
 	return &shared.VersionHistoryItem{
 		EventID: &t.EventID,
-		Version: t.Version,
+		Version: &t.Version,
 	}
 }
 
@@ -5662,7 +5662,7 @@ func ToVersionHistoryItem(t *shared.VersionHistoryItem) *types.VersionHistoryIte
 	}
 	return &types.VersionHistoryItem{
 		EventID: t.GetEventID(),
-		Version: t.Version,
+		Version: t.GetVersion(),
 	}
 }
 
