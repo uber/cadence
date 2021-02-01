@@ -46,39 +46,3 @@ func ToHealthStatus(t *health.HealthStatus) *types.HealthStatus {
 		Msg: t.Msg,
 	}
 }
-
-// FromMetaHealthArgs converts internal Meta_Health_Args type to thrift
-func FromMetaHealthArgs(t *types.MetaHealthArgs) *health.Meta_Health_Args {
-	if t == nil {
-		return nil
-	}
-	return &health.Meta_Health_Args{}
-}
-
-// ToMetaHealthArgs converts thrift Meta_Health_Args type to internal
-func ToMetaHealthArgs(t *health.Meta_Health_Args) *types.MetaHealthArgs {
-	if t == nil {
-		return nil
-	}
-	return &types.MetaHealthArgs{}
-}
-
-// FromMetaHealthResult converts internal Meta_Health_Result type to thrift
-func FromMetaHealthResult(t *types.MetaHealthResult) *health.Meta_Health_Result {
-	if t == nil {
-		return nil
-	}
-	return &health.Meta_Health_Result{
-		Success: FromHealthStatus(t.Success),
-	}
-}
-
-// ToMetaHealthResult converts thrift Meta_Health_Result type to internal
-func ToMetaHealthResult(t *health.Meta_Health_Result) *types.MetaHealthResult {
-	if t == nil {
-		return nil
-	}
-	return &types.MetaHealthResult{
-		Success: ToHealthStatus(t.Success),
-	}
-}
