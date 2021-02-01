@@ -91,6 +91,7 @@ func (cfg *ElasticSearchConfig) SetUsernamePassword() {
 	}
 }
 
+// CheckAWSSigningConfig checks if the AWSSigning configuration is valid
 func CheckAWSSigningConfig(config AWSSigning) error {
 	if config.EnvironmentCredential == nil && config.StaticCredential == nil {
 		return errAWSSigningCredential
