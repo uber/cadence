@@ -111,7 +111,7 @@ func NewV6Client(
 		var signingClient *http.Client
 		var err error
 		if connectConfig.AWSSigning.EnvironmentCredential != nil {
-			signingClient, err = buildSigningHTTPClientFromDefaultCredentialV6(*connectConfig.AWSSigning.EnvironmentCredential)
+			signingClient, err = buildSigningHTTPClientFromEnvironmentCredentialV6(*connectConfig.AWSSigning.EnvironmentCredential)
 		} else {
 			signingClient, err = buildSigningHTTPClientFromStaticCredentialV6(*connectConfig.AWSSigning.StaticCredential)
 		}
@@ -142,7 +142,7 @@ func buildSigningHTTPClientFromStaticCredentialV6(credentialConfig config.AWSSta
 	return esaws.NewV4SigningClient(awsCredentials, credentialConfig.Region), nil
 }
 
-func buildSigningHTTPClientFromDefaultCredentialV6(credentialConfig config.AWSEnvironmentCredential) (*http.Client, error) {
+func buildSigningHTTPClientFromEnvironmentCredentialV6(credentialConfig config.AWSEnvironmentCredential) (*http.Client, error) {
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(credentialConfig.Region)},
 	)
