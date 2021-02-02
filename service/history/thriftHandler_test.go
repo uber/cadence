@@ -89,7 +89,9 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("GetMutableState", func(t *testing.T) {
 		h.EXPECT().GetMutableState(ctx, &types.GetMutableStateRequest{}).Return(&types.GetMutableStateResponse{}, internalErr).Times(1)
 		resp, err := th.GetMutableState(ctx, &hist.GetMutableStateRequest{})
-		assert.Equal(t, hist.GetMutableStateResponse{}, *resp)
+		assert.Equal(t, hist.GetMutableStateResponse{
+			StickyTaskListScheduleToStartTimeout: common.Int32Ptr(0),
+		}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("GetReplicationMessages", func(t *testing.T) {
@@ -112,7 +114,9 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("PollMutableState", func(t *testing.T) {
 		h.EXPECT().PollMutableState(ctx, &types.PollMutableStateRequest{}).Return(&types.PollMutableStateResponse{}, internalErr).Times(1)
 		resp, err := th.PollMutableState(ctx, &hist.PollMutableStateRequest{})
-		assert.Equal(t, hist.PollMutableStateResponse{}, *resp)
+		assert.Equal(t, hist.PollMutableStateResponse{
+			StickyTaskListScheduleToStartTimeout: common.Int32Ptr(0),
+		}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("PurgeDLQMessages", func(t *testing.T) {
