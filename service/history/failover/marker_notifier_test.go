@@ -137,7 +137,7 @@ func (s *markerNotifierSuite) TestNotifyPendingFailoverMarker() {
 	task := &types.FailoverMarkerAttributes{
 		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(1),
-		CreationTime:    common.Int64Ptr(1),
+		CreationTime:    1,
 	}
 	tasks := []*types.FailoverMarkerAttributes{task}
 	respCh := make(chan error, 1)

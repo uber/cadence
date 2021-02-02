@@ -442,7 +442,7 @@ func CreateHistoryStartWorkflowRequest(
 		expirationInSeconds := startRequest.RetryPolicy.GetExpirationIntervalInSeconds() + firstDecisionTaskBackoffSeconds
 		// expirationTime calculates from first decision task schedule to the end of the workflow
 		deadline := now.Add(time.Duration(expirationInSeconds) * time.Second)
-		histRequest.ExpirationTimestamp = Int64Ptr(deadline.Round(time.Millisecond).UnixNano())
+		histRequest.ExpirationTimestamp = deadline.Round(time.Millisecond).UnixNano()
 	}
 
 	return histRequest

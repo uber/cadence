@@ -80,13 +80,23 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("PollForActivityTask", func(t *testing.T) {
 		h.EXPECT().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{}).Return(&types.PollForActivityTaskResponse{}, internalErr).Times(1)
 		resp, err := th.PollForActivityTask(ctx, &m.PollForActivityTaskRequest{})
-		assert.Equal(t, s.PollForActivityTaskResponse{WorkflowDomain: common.StringPtr(""), Attempt: common.Int32Ptr(0)}, *resp)
+		assert.Equal(t, s.PollForActivityTaskResponse{
+			WorkflowDomain:                  common.StringPtr(""),
+			Attempt:                         common.Int32Ptr(0),
+			ScheduledTimestamp:              common.Int64Ptr(0),
+			StartedTimestamp:                common.Int64Ptr(0),
+			ScheduledTimestampOfThisAttempt: common.Int64Ptr(0),
+		}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("PollForDecisionTask", func(t *testing.T) {
 		h.EXPECT().PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{}).Return(&types.MatchingPollForDecisionTaskResponse{}, internalErr).Times(1)
 		resp, err := th.PollForDecisionTask(ctx, &m.PollForDecisionTaskRequest{})
-		assert.Equal(t, m.PollForDecisionTaskResponse{Attempt: common.Int64Ptr(0)}, *resp)
+		assert.Equal(t, m.PollForDecisionTaskResponse{
+			Attempt:            common.Int64Ptr(0),
+			ScheduledTimestamp: common.Int64Ptr(0),
+			StartedTimestamp:   common.Int64Ptr(0),
+		}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("QueryWorkflow", func(t *testing.T) {

@@ -668,8 +668,8 @@ func FromMatchingPollForDecisionTaskResponse(t *types.MatchingPollForDecisionTas
 		WorkflowExecutionTaskList: FromTaskList(t.WorkflowExecutionTaskList),
 		EventStoreVersion:         t.EventStoreVersion,
 		BranchToken:               t.BranchToken,
-		ScheduledTimestamp:        t.ScheduledTimestamp,
-		StartedTimestamp:          t.StartedTimestamp,
+		ScheduledTimestamp:        &t.ScheduledTimestamp,
+		StartedTimestamp:          &t.StartedTimestamp,
 		Queries:                   FromWorkflowQueryMap(t.Queries),
 	}
 }
@@ -694,8 +694,8 @@ func ToMatchingPollForDecisionTaskResponse(t *matching.PollForDecisionTaskRespon
 		WorkflowExecutionTaskList: ToTaskList(t.WorkflowExecutionTaskList),
 		EventStoreVersion:         t.EventStoreVersion,
 		BranchToken:               t.BranchToken,
-		ScheduledTimestamp:        t.ScheduledTimestamp,
-		StartedTimestamp:          t.StartedTimestamp,
+		ScheduledTimestamp:        t.GetScheduledTimestamp(),
+		StartedTimestamp:          t.GetStartedTimestamp(),
 		Queries:                   ToWorkflowQueryMap(t.Queries),
 	}
 }

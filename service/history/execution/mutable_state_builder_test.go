@@ -119,7 +119,7 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 	newDecisionCompletedEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
 		EventID:   common.Int64Ptr(newDecisionStartedEvent.GetEventID() + 1),
-		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+		Timestamp: time.Now().UnixNano(),
 		EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
 		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
 			ScheduledEventID: common.Int64Ptr(newDecisionScheduleEvent.GetEventID()),
@@ -551,7 +551,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	workflowStartEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
 		EventID:   common.Int64Ptr(eventID),
-		Timestamp: common.Int64Ptr(now.UnixNano()),
+		Timestamp: now.UnixNano(),
 		EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
 			WorkflowType:                        &types.WorkflowType{Name: workflowType},
@@ -566,7 +566,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	decisionScheduleEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
 		EventID:   common.Int64Ptr(eventID),
-		Timestamp: common.Int64Ptr(now.UnixNano()),
+		Timestamp: now.UnixNano(),
 		EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 			TaskList:                   &types.TaskList{Name: tasklist},
@@ -579,7 +579,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	decisionStartedEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
 		EventID:   common.Int64Ptr(eventID),
-		Timestamp: common.Int64Ptr(now.UnixNano()),
+		Timestamp: now.UnixNano(),
 		EventType: types.EventTypeDecisionTaskStarted.Ptr(),
 		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
 			ScheduledEventID: common.Int64Ptr(decisionScheduleEvent.GetEventID()),
@@ -591,7 +591,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	_ = &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
 		EventID:   common.Int64Ptr(eventID),
-		Timestamp: common.Int64Ptr(now.UnixNano()),
+		Timestamp: now.UnixNano(),
 		EventType: types.EventTypeDecisionTaskFailed.Ptr(),
 		DecisionTaskFailedEventAttributes: &types.DecisionTaskFailedEventAttributes{
 			ScheduledEventID: common.Int64Ptr(decisionScheduleEvent.GetEventID()),
@@ -642,7 +642,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	newDecisionScheduleEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
 		EventID:   common.Int64Ptr(eventID),
-		Timestamp: common.Int64Ptr(now.UnixNano()),
+		Timestamp: now.UnixNano(),
 		EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
 			TaskList:                   &types.TaskList{Name: tasklist},
@@ -655,7 +655,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	newDecisionStartedEvent := &types.HistoryEvent{
 		Version:   common.Int64Ptr(version),
 		EventID:   common.Int64Ptr(eventID),
-		Timestamp: common.Int64Ptr(now.UnixNano()),
+		Timestamp: now.UnixNano(),
 		EventType: types.EventTypeDecisionTaskStarted.Ptr(),
 		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
 			ScheduledEventID: common.Int64Ptr(decisionScheduleEvent.GetEventID()),

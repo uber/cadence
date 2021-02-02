@@ -1115,9 +1115,9 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 				BinaryChecksum:           "test-binary-checksum",
 				RunID:                    "test-runID",
 				FirstDecisionCompletedID: common.Int64Ptr(123),
-				CreatedTimeNano:          common.Int64Ptr(456),
+				CreatedTimeNano:          456,
 				Resettable:               common.BoolPtr(true),
-				ExpiringTimeNano:         common.Int64Ptr(789),
+				ExpiringTimeNano:         789,
 			},
 		},
 	}
@@ -3044,9 +3044,9 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 				BinaryChecksum:           "test-binary-checksum",
 				RunID:                    "test-runID",
 				FirstDecisionCompletedID: common.Int64Ptr(123),
-				CreatedTimeNano:          common.Int64Ptr(456),
+				CreatedTimeNano:          456,
 				Resettable:               common.BoolPtr(true),
-				ExpiringTimeNano:         common.Int64Ptr(789),
+				ExpiringTimeNano:         789,
 			},
 		},
 	}

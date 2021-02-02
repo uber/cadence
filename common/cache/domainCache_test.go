@@ -209,7 +209,7 @@ func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByName() {
 					"abc": {
 						Reason:          common.StringPtr("test reason"),
 						Operator:        common.StringPtr("test operator"),
-						CreatedTimeNano: common.Int64Ptr(123),
+						CreatedTimeNano: 123,
 					},
 				},
 			}},

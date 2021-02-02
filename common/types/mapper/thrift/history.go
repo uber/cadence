@@ -2513,9 +2513,9 @@ func FromRecordActivityTaskStartedResponse(t *types.RecordActivityTaskStartedRes
 	}
 	return &history.RecordActivityTaskStartedResponse{
 		ScheduledEvent:                  FromHistoryEvent(t.ScheduledEvent),
-		StartedTimestamp:                t.StartedTimestamp,
+		StartedTimestamp:                &t.StartedTimestamp,
 		Attempt:                         &t.Attempt,
-		ScheduledTimestampOfThisAttempt: t.ScheduledTimestampOfThisAttempt,
+		ScheduledTimestampOfThisAttempt: &t.ScheduledTimestampOfThisAttempt,
 		HeartbeatDetails:                t.HeartbeatDetails,
 		WorkflowType:                    FromWorkflowType(t.WorkflowType),
 		WorkflowDomain:                  &t.WorkflowDomain,
@@ -2529,9 +2529,9 @@ func ToRecordActivityTaskStartedResponse(t *history.RecordActivityTaskStartedRes
 	}
 	return &types.RecordActivityTaskStartedResponse{
 		ScheduledEvent:                  ToHistoryEvent(t.ScheduledEvent),
-		StartedTimestamp:                t.StartedTimestamp,
+		StartedTimestamp:                t.GetStartedTimestamp(),
 		Attempt:                         t.GetAttempt(),
-		ScheduledTimestampOfThisAttempt: t.ScheduledTimestampOfThisAttempt,
+		ScheduledTimestampOfThisAttempt: t.GetScheduledTimestampOfThisAttempt(),
 		HeartbeatDetails:                t.HeartbeatDetails,
 		WorkflowType:                    ToWorkflowType(t.WorkflowType),
 		WorkflowDomain:                  t.GetWorkflowDomain(),
@@ -2613,8 +2613,8 @@ func FromRecordDecisionTaskStartedResponse(t *types.RecordDecisionTaskStartedRes
 		WorkflowExecutionTaskList: FromTaskList(t.WorkflowExecutionTaskList),
 		EventStoreVersion:         t.EventStoreVersion,
 		BranchToken:               t.BranchToken,
-		ScheduledTimestamp:        t.ScheduledTimestamp,
-		StartedTimestamp:          t.StartedTimestamp,
+		ScheduledTimestamp:        &t.ScheduledTimestamp,
+		StartedTimestamp:          &t.StartedTimestamp,
 		Queries:                   FromWorkflowQueryMap(t.Queries),
 	}
 }
@@ -2636,8 +2636,8 @@ func ToRecordDecisionTaskStartedResponse(t *history.RecordDecisionTaskStartedRes
 		WorkflowExecutionTaskList: ToTaskList(t.WorkflowExecutionTaskList),
 		EventStoreVersion:         t.EventStoreVersion,
 		BranchToken:               t.BranchToken,
-		ScheduledTimestamp:        t.ScheduledTimestamp,
-		StartedTimestamp:          t.StartedTimestamp,
+		ScheduledTimestamp:        t.GetScheduledTimestamp(),
+		StartedTimestamp:          t.GetStartedTimestamp(),
 		Queries:                   ToWorkflowQueryMap(t.Queries),
 	}
 }
@@ -3040,7 +3040,7 @@ func FromHistoryStartWorkflowExecutionRequest(t *types.HistoryStartWorkflowExecu
 		StartRequest:                    FromStartWorkflowExecutionRequest(t.StartRequest),
 		ParentExecutionInfo:             FromParentExecutionInfo(t.ParentExecutionInfo),
 		Attempt:                         &t.Attempt,
-		ExpirationTimestamp:             t.ExpirationTimestamp,
+		ExpirationTimestamp:             &t.ExpirationTimestamp,
 		ContinueAsNewInitiator:          FromContinueAsNewInitiator(t.ContinueAsNewInitiator),
 		ContinuedFailureReason:          t.ContinuedFailureReason,
 		ContinuedFailureDetails:         t.ContinuedFailureDetails,
@@ -3059,7 +3059,7 @@ func ToHistoryStartWorkflowExecutionRequest(t *history.StartWorkflowExecutionReq
 		StartRequest:                    ToStartWorkflowExecutionRequest(t.StartRequest),
 		ParentExecutionInfo:             ToParentExecutionInfo(t.ParentExecutionInfo),
 		Attempt:                         t.GetAttempt(),
-		ExpirationTimestamp:             t.ExpirationTimestamp,
+		ExpirationTimestamp:             t.GetExpirationTimestamp(),
 		ContinueAsNewInitiator:          ToContinueAsNewInitiator(t.ContinueAsNewInitiator),
 		ContinuedFailureReason:          t.ContinuedFailureReason,
 		ContinuedFailureDetails:         t.ContinuedFailureDetails,
@@ -3079,10 +3079,10 @@ func FromSyncActivityRequest(t *types.SyncActivityRequest) *history.SyncActivity
 		RunId:              &t.RunID,
 		Version:            t.Version,
 		ScheduledId:        t.ScheduledID,
-		ScheduledTime:      t.ScheduledTime,
+		ScheduledTime:      &t.ScheduledTime,
 		StartedId:          t.StartedID,
-		StartedTime:        t.StartedTime,
-		LastHeartbeatTime:  t.LastHeartbeatTime,
+		StartedTime:        &t.StartedTime,
+		LastHeartbeatTime:  &t.LastHeartbeatTime,
 		Details:            t.Details,
 		Attempt:            &t.Attempt,
 		LastFailureReason:  t.LastFailureReason,
@@ -3103,10 +3103,10 @@ func ToSyncActivityRequest(t *history.SyncActivityRequest) *types.SyncActivityRe
 		RunID:              t.GetRunId(),
 		Version:            t.Version,
 		ScheduledID:        t.ScheduledId,
-		ScheduledTime:      t.ScheduledTime,
+		ScheduledTime:      t.GetScheduledTime(),
 		StartedID:          t.StartedId,
-		StartedTime:        t.StartedTime,
-		LastHeartbeatTime:  t.LastHeartbeatTime,
+		StartedTime:        t.GetStartedTime(),
+		LastHeartbeatTime:  t.GetLastHeartbeatTime(),
 		Details:            t.Details,
 		Attempt:            t.GetAttempt(),
 		LastFailureReason:  t.LastFailureReason,
@@ -3124,7 +3124,7 @@ func FromSyncShardStatusRequest(t *types.SyncShardStatusRequest) *history.SyncSh
 	return &history.SyncShardStatusRequest{
 		SourceCluster: t.SourceCluster,
 		ShardId:       t.ShardID,
-		Timestamp:     t.Timestamp,
+		Timestamp:     &t.Timestamp,
 	}
 }
 
@@ -3136,7 +3136,7 @@ func ToSyncShardStatusRequest(t *history.SyncShardStatusRequest) *types.SyncShar
 	return &types.SyncShardStatusRequest{
 		SourceCluster: t.SourceCluster,
 		ShardID:       t.ShardId,
-		Timestamp:     t.Timestamp,
+		Timestamp:     t.GetTimestamp(),
 	}
 }
 

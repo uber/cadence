@@ -473,7 +473,7 @@ func (t *taskAckManagerImpl) generateFailoverMarkerTask(
 			DomainID:        taskInfo.GetDomainID(),
 			FailoverVersion: common.Int64Ptr(taskInfo.GetVersion()),
 		},
-		CreationTime: common.Int64Ptr(taskInfo.CreationTime),
+		CreationTime: taskInfo.CreationTime,
 	}
 }
 
@@ -494,14 +494,14 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 				return nil, nil
 			}
 
-			var startedTime *int64
-			var heartbeatTime *int64
-			scheduledTime := common.Int64Ptr(activityInfo.ScheduledTime.UnixNano())
+			var startedTime int64
+			var heartbeatTime int64
+			scheduledTime := activityInfo.ScheduledTime.UnixNano()
 			if activityInfo.StartedID != common.EmptyEventID {
-				startedTime = common.Int64Ptr(activityInfo.StartedTime.UnixNano())
+				startedTime = activityInfo.StartedTime.UnixNano()
 			}
 			// LastHeartBeatUpdatedTime must be valid when getting the sync activity replication task
-			heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
+			heartbeatTime = activityInfo.LastHeartBeatUpdatedTime.UnixNano()
 
 			//Version history uses when replicate the sync activity task
 			var versionHistory *types.VersionHistory
@@ -532,7 +532,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 					LastFailureDetails: activityInfo.LastFailureDetails,
 					VersionHistory:     versionHistory,
 				},
-				CreationTime: common.Int64Ptr(taskInfo.CreationTime),
+				CreationTime: taskInfo.CreationTime,
 			}, nil
 		},
 	)
@@ -607,7 +607,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 					Events:              eventsBlob,
 					NewRunEvents:        newRunEventsBlob,
 				},
-				CreationTime: common.Int64Ptr(task.CreationTime),
+				CreationTime: task.CreationTime,
 			}
 			return replicationTask, nil
 		},

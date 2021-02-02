@@ -1530,7 +1530,7 @@ func (h *handlerImpl) SyncShardStatus(
 		return h.error(errShardIDNotSet, scope, "", "")
 	}
 
-	if syncShardStatusRequest.Timestamp == nil {
+	if syncShardStatusRequest.Timestamp == 0 {
 		return h.error(errTimestampNotSet, scope, "", "")
 	}
 

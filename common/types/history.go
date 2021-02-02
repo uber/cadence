@@ -3714,9 +3714,9 @@ func (v *RecordActivityTaskStartedRequest) GetPollRequest() (o *PollForActivityT
 // RecordActivityTaskStartedResponse is an internal type (TBD...)
 type RecordActivityTaskStartedResponse struct {
 	ScheduledEvent                  *HistoryEvent `json:"scheduledEvent,omitempty"`
-	StartedTimestamp                *int64        `json:"startedTimestamp,omitempty"`
+	StartedTimestamp                int64         `json:"startedTimestamp,omitempty"`
 	Attempt                         int64         `json:"attempt,omitempty"`
-	ScheduledTimestampOfThisAttempt *int64        `json:"scheduledTimestampOfThisAttempt,omitempty"`
+	ScheduledTimestampOfThisAttempt int64         `json:"scheduledTimestampOfThisAttempt,omitempty"`
 	HeartbeatDetails                []byte        `json:"heartbeatDetails,omitempty"`
 	WorkflowType                    *WorkflowType `json:"workflowType,omitempty"`
 	WorkflowDomain                  string        `json:"workflowDomain,omitempty"`
@@ -3732,8 +3732,8 @@ func (v *RecordActivityTaskStartedResponse) GetScheduledEvent() (o *HistoryEvent
 
 // GetStartedTimestamp is an internal getter (TBD...)
 func (v *RecordActivityTaskStartedResponse) GetStartedTimestamp() (o int64) {
-	if v != nil && v.StartedTimestamp != nil {
-		return *v.StartedTimestamp
+	if v != nil {
+		return v.StartedTimestamp
 	}
 	return
 }
@@ -3748,8 +3748,8 @@ func (v *RecordActivityTaskStartedResponse) GetAttempt() (o int64) {
 
 // GetScheduledTimestampOfThisAttempt is an internal getter (TBD...)
 func (v *RecordActivityTaskStartedResponse) GetScheduledTimestampOfThisAttempt() (o int64) {
-	if v != nil && v.ScheduledTimestampOfThisAttempt != nil {
-		return *v.ScheduledTimestampOfThisAttempt
+	if v != nil {
+		return v.ScheduledTimestampOfThisAttempt
 	}
 	return
 }
@@ -3898,8 +3898,8 @@ type RecordDecisionTaskStartedResponse struct {
 	WorkflowExecutionTaskList *TaskList                 `json:"WorkflowExecutionTaskList,omitempty"`
 	EventStoreVersion         *int32                    `json:"eventStoreVersion,omitempty"`
 	BranchToken               []byte                    `json:"branchToken,omitempty"`
-	ScheduledTimestamp        *int64                    `json:"scheduledTimestamp,omitempty"`
-	StartedTimestamp          *int64                    `json:"startedTimestamp,omitempty"`
+	ScheduledTimestamp        int64                     `json:"scheduledTimestamp,omitempty"`
+	StartedTimestamp          int64                     `json:"startedTimestamp,omitempty"`
 	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
 }
 
@@ -3993,16 +3993,16 @@ func (v *RecordDecisionTaskStartedResponse) GetBranchToken() (o []byte) {
 
 // GetScheduledTimestamp is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedResponse) GetScheduledTimestamp() (o int64) {
-	if v != nil && v.ScheduledTimestamp != nil {
-		return *v.ScheduledTimestamp
+	if v != nil {
+		return v.ScheduledTimestamp
 	}
 	return
 }
 
 // GetStartedTimestamp is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedResponse) GetStartedTimestamp() (o int64) {
-	if v != nil && v.StartedTimestamp != nil {
-		return *v.StartedTimestamp
+	if v != nil {
+		return v.StartedTimestamp
 	}
 	return
 }
@@ -4467,7 +4467,7 @@ type HistoryStartWorkflowExecutionRequest struct {
 	StartRequest                    *StartWorkflowExecutionRequest `json:"startRequest,omitempty"`
 	ParentExecutionInfo             *ParentExecutionInfo           `json:"parentExecutionInfo,omitempty"`
 	Attempt                         int32                          `json:"attempt,omitempty"`
-	ExpirationTimestamp             *int64                         `json:"expirationTimestamp,omitempty"`
+	ExpirationTimestamp             int64                          `json:"expirationTimestamp,omitempty"`
 	ContinueAsNewInitiator          *ContinueAsNewInitiator        `json:"continueAsNewInitiator,omitempty"`
 	ContinuedFailureReason          *string                        `json:"continuedFailureReason,omitempty"`
 	ContinuedFailureDetails         []byte                         `json:"continuedFailureDetails,omitempty"`
@@ -4509,8 +4509,8 @@ func (v *HistoryStartWorkflowExecutionRequest) GetAttempt() (o int32) {
 
 // GetExpirationTimestamp is an internal getter (TBD...)
 func (v *HistoryStartWorkflowExecutionRequest) GetExpirationTimestamp() (o int64) {
-	if v != nil && v.ExpirationTimestamp != nil {
-		return *v.ExpirationTimestamp
+	if v != nil {
+		return v.ExpirationTimestamp
 	}
 	return
 }
@@ -4562,10 +4562,10 @@ type SyncActivityRequest struct {
 	RunID              string          `json:"runId,omitempty"`
 	Version            *int64          `json:"version,omitempty"`
 	ScheduledID        *int64          `json:"scheduledId,omitempty"`
-	ScheduledTime      *int64          `json:"scheduledTime,omitempty"`
+	ScheduledTime      int64           `json:"scheduledTime,omitempty"`
 	StartedID          *int64          `json:"startedId,omitempty"`
-	StartedTime        *int64          `json:"startedTime,omitempty"`
-	LastHeartbeatTime  *int64          `json:"lastHeartbeatTime,omitempty"`
+	StartedTime        int64           `json:"startedTime,omitempty"`
+	LastHeartbeatTime  int64           `json:"lastHeartbeatTime,omitempty"`
 	Details            []byte          `json:"details,omitempty"`
 	Attempt            int32           `json:"attempt,omitempty"`
 	LastFailureReason  *string         `json:"lastFailureReason,omitempty"`
@@ -4616,8 +4616,8 @@ func (v *SyncActivityRequest) GetScheduledID() (o int64) {
 
 // GetScheduledTime is an internal getter (TBD...)
 func (v *SyncActivityRequest) GetScheduledTime() (o int64) {
-	if v != nil && v.ScheduledTime != nil {
-		return *v.ScheduledTime
+	if v != nil {
+		return v.ScheduledTime
 	}
 	return
 }
@@ -4632,16 +4632,16 @@ func (v *SyncActivityRequest) GetStartedID() (o int64) {
 
 // GetStartedTime is an internal getter (TBD...)
 func (v *SyncActivityRequest) GetStartedTime() (o int64) {
-	if v != nil && v.StartedTime != nil {
-		return *v.StartedTime
+	if v != nil {
+		return v.StartedTime
 	}
 	return
 }
 
 // GetLastHeartbeatTime is an internal getter (TBD...)
 func (v *SyncActivityRequest) GetLastHeartbeatTime() (o int64) {
-	if v != nil && v.LastHeartbeatTime != nil {
-		return *v.LastHeartbeatTime
+	if v != nil {
+		return v.LastHeartbeatTime
 	}
 	return
 }
@@ -4698,7 +4698,7 @@ func (v *SyncActivityRequest) GetVersionHistory() (o *VersionHistory) {
 type SyncShardStatusRequest struct {
 	SourceCluster *string `json:"sourceCluster,omitempty"`
 	ShardID       *int64  `json:"shardId,omitempty"`
-	Timestamp     *int64  `json:"timestamp,omitempty"`
+	Timestamp     int64   `json:"timestamp,omitempty"`
 }
 
 // GetSourceCluster is an internal getter (TBD...)
@@ -4719,8 +4719,8 @@ func (v *SyncShardStatusRequest) GetShardID() (o int64) {
 
 // GetTimestamp is an internal getter (TBD...)
 func (v *SyncShardStatusRequest) GetTimestamp() (o int64) {
-	if v != nil && v.Timestamp != nil {
-		return *v.Timestamp
+	if v != nil {
+		return v.Timestamp
 	}
 	return
 }

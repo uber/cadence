@@ -132,7 +132,7 @@ func FromFailoverMarkerAttributes(t *types.FailoverMarkerAttributes) *replicator
 	return &replicator.FailoverMarkerAttributes{
 		DomainID:        &t.DomainID,
 		FailoverVersion: t.FailoverVersion,
-		CreationTime:    t.CreationTime,
+		CreationTime:    &t.CreationTime,
 	}
 }
 
@@ -144,7 +144,7 @@ func ToFailoverMarkerAttributes(t *replicator.FailoverMarkerAttributes) *types.F
 	return &types.FailoverMarkerAttributes{
 		DomainID:        t.GetDomainID(),
 		FailoverVersion: t.FailoverVersion,
-		CreationTime:    t.CreationTime,
+		CreationTime:    t.GetCreationTime(),
 	}
 }
 
@@ -497,7 +497,7 @@ func FromReplicationTask(t *types.ReplicationTask) *replicator.ReplicationTask {
 		SyncActivityTaskAttributes:    FromSyncActivityTaskAttributes(t.SyncActivityTaskAttributes),
 		HistoryTaskV2Attributes:       FromHistoryTaskV2Attributes(t.HistoryTaskV2Attributes),
 		FailoverMarkerAttributes:      FromFailoverMarkerAttributes(t.FailoverMarkerAttributes),
-		CreationTime:                  t.CreationTime,
+		CreationTime:                  &t.CreationTime,
 	}
 }
 
@@ -514,7 +514,7 @@ func ToReplicationTask(t *replicator.ReplicationTask) *types.ReplicationTask {
 		SyncActivityTaskAttributes:    ToSyncActivityTaskAttributes(t.SyncActivityTaskAttributes),
 		HistoryTaskV2Attributes:       ToHistoryTaskV2Attributes(t.HistoryTaskV2Attributes),
 		FailoverMarkerAttributes:      ToFailoverMarkerAttributes(t.FailoverMarkerAttributes),
-		CreationTime:                  t.CreationTime,
+		CreationTime:                  t.GetCreationTime(),
 	}
 }
 
@@ -651,10 +651,10 @@ func FromSyncActivityTaskAttributes(t *types.SyncActivityTaskAttributes) *replic
 		RunId:              &t.RunID,
 		Version:            t.Version,
 		ScheduledId:        t.ScheduledID,
-		ScheduledTime:      t.ScheduledTime,
+		ScheduledTime:      &t.ScheduledTime,
 		StartedId:          t.StartedID,
-		StartedTime:        t.StartedTime,
-		LastHeartbeatTime:  t.LastHeartbeatTime,
+		StartedTime:        &t.StartedTime,
+		LastHeartbeatTime:  &t.LastHeartbeatTime,
 		Details:            t.Details,
 		Attempt:            &t.Attempt,
 		LastFailureReason:  t.LastFailureReason,
@@ -675,10 +675,10 @@ func ToSyncActivityTaskAttributes(t *replicator.SyncActivityTaskAttributes) *typ
 		RunID:              t.GetRunId(),
 		Version:            t.Version,
 		ScheduledID:        t.ScheduledId,
-		ScheduledTime:      t.ScheduledTime,
+		ScheduledTime:      t.GetScheduledTime(),
 		StartedID:          t.StartedId,
-		StartedTime:        t.StartedTime,
-		LastHeartbeatTime:  t.LastHeartbeatTime,
+		StartedTime:        t.GetStartedTime(),
+		LastHeartbeatTime:  t.GetLastHeartbeatTime(),
 		Details:            t.Details,
 		Attempt:            t.GetAttempt(),
 		LastFailureReason:  t.LastFailureReason,
@@ -694,7 +694,7 @@ func FromSyncShardStatus(t *types.SyncShardStatus) *replicator.SyncShardStatus {
 		return nil
 	}
 	return &replicator.SyncShardStatus{
-		Timestamp: t.Timestamp,
+		Timestamp: &t.Timestamp,
 	}
 }
 
@@ -704,7 +704,7 @@ func ToSyncShardStatus(t *replicator.SyncShardStatus) *types.SyncShardStatus {
 		return nil
 	}
 	return &types.SyncShardStatus{
-		Timestamp: t.Timestamp,
+		Timestamp: t.GetTimestamp(),
 	}
 }
 
@@ -716,7 +716,7 @@ func FromSyncShardStatusTaskAttributes(t *types.SyncShardStatusTaskAttributes) *
 	return &replicator.SyncShardStatusTaskAttributes{
 		SourceCluster: t.SourceCluster,
 		ShardId:       t.ShardID,
-		Timestamp:     t.Timestamp,
+		Timestamp:     &t.Timestamp,
 	}
 }
 
@@ -728,7 +728,7 @@ func ToSyncShardStatusTaskAttributes(t *replicator.SyncShardStatusTaskAttributes
 	return &types.SyncShardStatusTaskAttributes{
 		SourceCluster: t.SourceCluster,
 		ShardID:       t.ShardId,
-		Timestamp:     t.Timestamp,
+		Timestamp:     t.GetTimestamp(),
 	}
 }
 

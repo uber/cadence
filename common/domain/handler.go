@@ -666,7 +666,7 @@ func (d *handlerImpl) mergeBadBinaries(
 		old = map[string]*types.BadBinaryInfo{}
 	}
 	for k, v := range new {
-		v.CreatedTimeNano = common.Int64Ptr(createTimeNano)
+		v.CreatedTimeNano = createTimeNano
 		old[k] = v
 	}
 	return types.BadBinaries{

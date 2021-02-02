@@ -157,11 +157,11 @@ func (s *taskProcessorSuite) TestHandleSyncShardStatus() {
 	s.mockEngine.EXPECT().SyncShardStatus(gomock.Any(), &types.SyncShardStatusRequest{
 		SourceCluster: common.StringPtr("standby"),
 		ShardID:       common.Int64Ptr(0),
-		Timestamp:     common.Int64Ptr(now.UnixNano()),
+		Timestamp:     now.UnixNano(),
 	}).Return(nil).Times(1)
 
 	err := s.taskProcessor.handleSyncShardStatus(&types.SyncShardStatus{
-		Timestamp: common.Int64Ptr(now.UnixNano()),
+		Timestamp: now.UnixNano(),
 	})
 	s.NoError(err)
 }

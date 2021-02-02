@@ -99,7 +99,7 @@ func (s *coordinatorSuite) TestNotifyFailoverMarkers() {
 	attributes := &types.FailoverMarkerAttributes{
 		DomainID:        uuid.New(),
 		FailoverVersion: common.Int64Ptr(1),
-		CreationTime:    common.Int64Ptr(1),
+		CreationTime:    1,
 	}
 	s.historyClient.EXPECT().NotifyFailoverMarkers(
 		context.Background(), &types.NotifyFailoverMarkersRequest{
@@ -138,7 +138,7 @@ func (s *coordinatorSuite) TestNotifyRemoteCoordinator() {
 	attributes := &types.FailoverMarkerAttributes{
 		DomainID:        uuid.New(),
 		FailoverVersion: common.Int64Ptr(1),
-		CreationTime:    common.Int64Ptr(1),
+		CreationTime:    1,
 	}
 	requestByMarker[attributes] = &receiveRequest{
 		shardIDs: []int32{1, 2, 3},
@@ -164,12 +164,12 @@ func (s *coordinatorSuite) TestAggregateNotificationRequests() {
 	attributes1 := &types.FailoverMarkerAttributes{
 		DomainID:        uuid.New(),
 		FailoverVersion: common.Int64Ptr(1),
-		CreationTime:    common.Int64Ptr(1),
+		CreationTime:    1,
 	}
 	attributes2 := &types.FailoverMarkerAttributes{
 		DomainID:        uuid.New(),
 		FailoverVersion: common.Int64Ptr(2),
-		CreationTime:    common.Int64Ptr(2),
+		CreationTime:    2,
 	}
 	request1 := &notificationRequest{
 		shardID: 1,
@@ -195,12 +195,12 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_DeleteExpiredFailoverMarker
 	attributes1 := &types.FailoverMarkerAttributes{
 		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(1),
-		CreationTime:    common.Int64Ptr(1),
+		CreationTime:    1,
 	}
 	attributes2 := &types.FailoverMarkerAttributes{
 		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(2),
-		CreationTime:    common.Int64Ptr(1),
+		CreationTime:    1,
 	}
 	request1 := &receiveRequest{
 		shardIDs: []int32{1},
@@ -221,12 +221,12 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_IgnoreExpiredFailoverMarker
 	attributes1 := &types.FailoverMarkerAttributes{
 		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(1),
-		CreationTime:    common.Int64Ptr(1),
+		CreationTime:    1,
 	}
 	attributes2 := &types.FailoverMarkerAttributes{
 		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(2),
-		CreationTime:    common.Int64Ptr(1),
+		CreationTime:    1,
 	}
 	request1 := &receiveRequest{
 		shardIDs: []int32{1},
@@ -247,12 +247,12 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Suc
 	attributes1 := &types.FailoverMarkerAttributes{
 		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(2),
-		CreationTime:    common.Int64Ptr(1),
+		CreationTime:    1,
 	}
 	attributes2 := &types.FailoverMarkerAttributes{
 		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(2),
-		CreationTime:    common.Int64Ptr(1),
+		CreationTime:    1,
 	}
 	request1 := &receiveRequest{
 		shardIDs: []int32{1},
@@ -320,12 +320,12 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Err
 	attributes1 := &types.FailoverMarkerAttributes{
 		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(2),
-		CreationTime:    common.Int64Ptr(1),
+		CreationTime:    1,
 	}
 	attributes2 := &types.FailoverMarkerAttributes{
 		DomainID:        domainID,
 		FailoverVersion: common.Int64Ptr(2),
-		CreationTime:    common.Int64Ptr(1),
+		CreationTime:    1,
 	}
 	request1 := &receiveRequest{
 		shardIDs: []int32{1},

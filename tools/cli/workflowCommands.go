@@ -986,13 +986,13 @@ type pendingActivityInfo struct {
 	ActivityID             *string
 	ActivityType           *types.ActivityType
 	State                  *types.PendingActivityState
-	ScheduledTimestamp     *string `json:",omitempty"` // change from *int64
-	LastStartedTimestamp   *string `json:",omitempty"` // change from *int64
+	ScheduledTimestamp     string  `json:",omitempty"` // change from *int64
+	LastStartedTimestamp   string  `json:",omitempty"` // change from *int64
 	HeartbeatDetails       *string `json:",omitempty"` // change from []byte
-	LastHeartbeatTimestamp *string `json:",omitempty"` // change from *int64
+	LastHeartbeatTimestamp string  `json:",omitempty"` // change from *int64
 	Attempt                int32   `json:",omitempty"`
 	MaximumAttempts        int32   `json:",omitempty"`
-	ExpirationTimestamp    *string `json:",omitempty"` // change from *int64
+	ExpirationTimestamp    string  `json:",omitempty"` // change from *int64
 	LastFailureReason      *string `json:",omitempty"`
 	LastWorkerIdentity     string  `json:",omitempty"`
 	LastFailureDetails     *string `json:",omitempty"` // change from []byte
@@ -1001,8 +1001,8 @@ type pendingActivityInfo struct {
 type pendingDecisionInfo struct {
 	State                      *types.PendingDecisionState
 	OriginalScheduledTimestamp *string `json:",omitempty"` // change from *int64
-	ScheduledTimestamp         *string `json:",omitempty"` // change from *int64
-	StartedTimestamp           *string `json:",omitempty"` // change from *int64
+	ScheduledTimestamp         string  `json:",omitempty"` // change from *int64
+	StartedTimestamp           string  `json:",omitempty"` // change from *int64
 	Attempt                    int64   `json:",omitempty"`
 }
 
@@ -1031,12 +1031,12 @@ func convertDescribeWorkflowExecutionResponse(resp *types.DescribeWorkflowExecut
 			ActivityID:             pa.ActivityID,
 			ActivityType:           pa.ActivityType,
 			State:                  pa.State,
-			ScheduledTimestamp:     timestampPtrToStringPtr(pa.ScheduledTimestamp, false),
-			LastStartedTimestamp:   timestampPtrToStringPtr(pa.LastStartedTimestamp, false),
-			LastHeartbeatTimestamp: timestampPtrToStringPtr(pa.LastHeartbeatTimestamp, false),
+			ScheduledTimestamp:     timestampToString(pa.ScheduledTimestamp, false),
+			LastStartedTimestamp:   timestampToString(pa.LastStartedTimestamp, false),
+			LastHeartbeatTimestamp: timestampToString(pa.LastHeartbeatTimestamp, false),
 			Attempt:                pa.Attempt,
 			MaximumAttempts:        pa.MaximumAttempts,
-			ExpirationTimestamp:    timestampPtrToStringPtr(pa.ExpirationTimestamp, false),
+			ExpirationTimestamp:    timestampToString(pa.ExpirationTimestamp, false),
 			LastFailureReason:      pa.LastFailureReason,
 			LastWorkerIdentity:     pa.LastWorkerIdentity,
 		}
@@ -1053,8 +1053,8 @@ func convertDescribeWorkflowExecutionResponse(resp *types.DescribeWorkflowExecut
 	if resp.PendingDecision != nil {
 		pendingDecision = &pendingDecisionInfo{
 			State:              resp.PendingDecision.State,
-			ScheduledTimestamp: timestampPtrToStringPtr(resp.PendingDecision.ScheduledTimestamp, false),
-			StartedTimestamp:   timestampPtrToStringPtr(resp.PendingDecision.StartedTimestamp, false),
+			ScheduledTimestamp: timestampToString(resp.PendingDecision.ScheduledTimestamp, false),
+			StartedTimestamp:   timestampToString(resp.PendingDecision.StartedTimestamp, false),
 			Attempt:            resp.PendingDecision.Attempt,
 		}
 		// TODO: Idea here is only display decision task original scheduled timestamp if user are

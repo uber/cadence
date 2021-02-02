@@ -240,7 +240,7 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 			"abc": &types.BadBinaryInfo{
 				Reason:          common.StringPtr("test-reason"),
 				Operator:        common.StringPtr("test-operator"),
-				CreatedTimeNano: common.Int64Ptr(123),
+				CreatedTimeNano: 123,
 			},
 		},
 	}
@@ -408,7 +408,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 			"abc": &types.BadBinaryInfo{
 				Reason:          common.StringPtr("test-reason"),
 				Operator:        common.StringPtr("test-operator"),
-				CreatedTimeNano: common.Int64Ptr(123),
+				CreatedTimeNano: 123,
 			},
 		},
 	}
@@ -562,7 +562,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 			"abc": &types.BadBinaryInfo{
 				Reason:          common.StringPtr("test-reason"),
 				Operator:        common.StringPtr("test-operator"),
-				CreatedTimeNano: common.Int64Ptr(123),
+				CreatedTimeNano: 123,
 			},
 		},
 	}
@@ -756,7 +756,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 			"abc": &types.BadBinaryInfo{
 				Reason:          common.StringPtr("test-reason"),
 				Operator:        common.StringPtr("test-operator"),
-				CreatedTimeNano: common.Int64Ptr(123),
+				CreatedTimeNano: 123,
 			},
 		},
 	}
@@ -1069,7 +1069,7 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 			"abc": &types.BadBinaryInfo{
 				Reason:          common.StringPtr("test-reason1"),
 				Operator:        common.StringPtr("test-operator1"),
-				CreatedTimeNano: common.Int64Ptr(123),
+				CreatedTimeNano: 123,
 			},
 		},
 	}
@@ -1078,7 +1078,7 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 			"efg": &types.BadBinaryInfo{
 				Reason:          common.StringPtr("test-reason2"),
 				Operator:        common.StringPtr("test-operator2"),
-				CreatedTimeNano: common.Int64Ptr(456),
+				CreatedTimeNano: 456,
 			},
 		},
 	}

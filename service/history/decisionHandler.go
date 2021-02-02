@@ -637,8 +637,8 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 		Name: executionInfo.TaskList,
 		Kind: types.TaskListKindNormal.Ptr(),
 	}
-	response.ScheduledTimestamp = common.Int64Ptr(decision.ScheduledTimestamp)
-	response.StartedTimestamp = common.Int64Ptr(decision.StartedTimestamp)
+	response.ScheduledTimestamp = decision.ScheduledTimestamp
+	response.StartedTimestamp = decision.StartedTimestamp
 
 	if decision.Attempt > 0 {
 		// This decision is retried from mutable state

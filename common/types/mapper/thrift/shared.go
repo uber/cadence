@@ -53,9 +53,9 @@ func FromActivityLocalDispatchInfo(t *types.ActivityLocalDispatchInfo) *shared.A
 	}
 	return &shared.ActivityLocalDispatchInfo{
 		ActivityId:                      t.ActivityID,
-		ScheduledTimestamp:              t.ScheduledTimestamp,
-		StartedTimestamp:                t.StartedTimestamp,
-		ScheduledTimestampOfThisAttempt: t.ScheduledTimestampOfThisAttempt,
+		ScheduledTimestamp:              &t.ScheduledTimestamp,
+		StartedTimestamp:                &t.StartedTimestamp,
+		ScheduledTimestampOfThisAttempt: &t.ScheduledTimestampOfThisAttempt,
 		TaskToken:                       t.TaskToken,
 	}
 }
@@ -67,9 +67,9 @@ func ToActivityLocalDispatchInfo(t *shared.ActivityLocalDispatchInfo) *types.Act
 	}
 	return &types.ActivityLocalDispatchInfo{
 		ActivityID:                      t.ActivityId,
-		ScheduledTimestamp:              t.ScheduledTimestamp,
-		StartedTimestamp:                t.StartedTimestamp,
-		ScheduledTimestampOfThisAttempt: t.ScheduledTimestampOfThisAttempt,
+		ScheduledTimestamp:              t.GetScheduledTimestamp(),
+		StartedTimestamp:                t.GetStartedTimestamp(),
+		ScheduledTimestampOfThisAttempt: t.GetScheduledTimestampOfThisAttempt(),
 		TaskToken:                       t.TaskToken,
 	}
 }
@@ -360,7 +360,7 @@ func FromBadBinaryInfo(t *types.BadBinaryInfo) *shared.BadBinaryInfo {
 	return &shared.BadBinaryInfo{
 		Reason:          t.Reason,
 		Operator:        t.Operator,
-		CreatedTimeNano: t.CreatedTimeNano,
+		CreatedTimeNano: &t.CreatedTimeNano,
 	}
 }
 
@@ -372,7 +372,7 @@ func ToBadBinaryInfo(t *shared.BadBinaryInfo) *types.BadBinaryInfo {
 	return &types.BadBinaryInfo{
 		Reason:          t.Reason,
 		Operator:        t.Operator,
-		CreatedTimeNano: t.CreatedTimeNano,
+		CreatedTimeNano: t.GetCreatedTimeNano(),
 	}
 }
 
@@ -2489,7 +2489,7 @@ func FromHistoryEvent(t *types.HistoryEvent) *shared.HistoryEvent {
 	}
 	return &shared.HistoryEvent{
 		EventId:                                 t.EventID,
-		Timestamp:                               t.Timestamp,
+		Timestamp:                               &t.Timestamp,
 		EventType:                               FromEventType(t.EventType),
 		Version:                                 t.Version,
 		TaskId:                                  t.TaskID,
@@ -2545,7 +2545,7 @@ func ToHistoryEvent(t *shared.HistoryEvent) *types.HistoryEvent {
 	}
 	return &types.HistoryEvent{
 		EventID:                                 t.EventId,
-		Timestamp:                               t.Timestamp,
+		Timestamp:                               t.GetTimestamp(),
 		EventType:                               ToEventType(t.EventType),
 		Version:                                 t.Version,
 		TaskID:                                  t.TaskId,
@@ -3110,12 +3110,12 @@ func FromPendingActivityInfo(t *types.PendingActivityInfo) *shared.PendingActivi
 		ActivityType:           FromActivityType(t.ActivityType),
 		State:                  FromPendingActivityState(t.State),
 		HeartbeatDetails:       t.HeartbeatDetails,
-		LastHeartbeatTimestamp: t.LastHeartbeatTimestamp,
-		LastStartedTimestamp:   t.LastStartedTimestamp,
+		LastHeartbeatTimestamp: &t.LastHeartbeatTimestamp,
+		LastStartedTimestamp:   &t.LastStartedTimestamp,
 		Attempt:                &t.Attempt,
 		MaximumAttempts:        &t.MaximumAttempts,
-		ScheduledTimestamp:     t.ScheduledTimestamp,
-		ExpirationTimestamp:    t.ExpirationTimestamp,
+		ScheduledTimestamp:     &t.ScheduledTimestamp,
+		ExpirationTimestamp:    &t.ExpirationTimestamp,
 		LastFailureReason:      t.LastFailureReason,
 		LastWorkerIdentity:     &t.LastWorkerIdentity,
 		LastFailureDetails:     t.LastFailureDetails,
@@ -3132,12 +3132,12 @@ func ToPendingActivityInfo(t *shared.PendingActivityInfo) *types.PendingActivity
 		ActivityType:           ToActivityType(t.ActivityType),
 		State:                  ToPendingActivityState(t.State),
 		HeartbeatDetails:       t.HeartbeatDetails,
-		LastHeartbeatTimestamp: t.LastHeartbeatTimestamp,
-		LastStartedTimestamp:   t.LastStartedTimestamp,
+		LastHeartbeatTimestamp: t.GetLastHeartbeatTimestamp(),
+		LastStartedTimestamp:   t.GetLastStartedTimestamp(),
 		Attempt:                t.GetAttempt(),
 		MaximumAttempts:        t.GetMaximumAttempts(),
-		ScheduledTimestamp:     t.ScheduledTimestamp,
-		ExpirationTimestamp:    t.ExpirationTimestamp,
+		ScheduledTimestamp:     t.GetScheduledTimestamp(),
+		ExpirationTimestamp:    t.GetExpirationTimestamp(),
 		LastFailureReason:      t.LastFailureReason,
 		LastWorkerIdentity:     t.GetLastWorkerIdentity(),
 		LastFailureDetails:     t.LastFailureDetails,
@@ -3217,10 +3217,10 @@ func FromPendingDecisionInfo(t *types.PendingDecisionInfo) *shared.PendingDecisi
 	}
 	return &shared.PendingDecisionInfo{
 		State:                      FromPendingDecisionState(t.State),
-		ScheduledTimestamp:         t.ScheduledTimestamp,
-		StartedTimestamp:           t.StartedTimestamp,
+		ScheduledTimestamp:         &t.ScheduledTimestamp,
+		StartedTimestamp:           &t.StartedTimestamp,
 		Attempt:                    &t.Attempt,
-		OriginalScheduledTimestamp: t.OriginalScheduledTimestamp,
+		OriginalScheduledTimestamp: &t.OriginalScheduledTimestamp,
 	}
 }
 
@@ -3231,10 +3231,10 @@ func ToPendingDecisionInfo(t *shared.PendingDecisionInfo) *types.PendingDecision
 	}
 	return &types.PendingDecisionInfo{
 		State:                      ToPendingDecisionState(t.State),
-		ScheduledTimestamp:         t.ScheduledTimestamp,
-		StartedTimestamp:           t.StartedTimestamp,
+		ScheduledTimestamp:         t.GetScheduledTimestamp(),
+		StartedTimestamp:           t.GetStartedTimestamp(),
 		Attempt:                    t.GetAttempt(),
-		OriginalScheduledTimestamp: t.OriginalScheduledTimestamp,
+		OriginalScheduledTimestamp: t.GetOriginalScheduledTimestamp(),
 	}
 }
 
@@ -3307,13 +3307,13 @@ func FromPollForActivityTaskResponse(t *types.PollForActivityTaskResponse) *shar
 		ActivityId:                      t.ActivityID,
 		ActivityType:                    FromActivityType(t.ActivityType),
 		Input:                           t.Input,
-		ScheduledTimestamp:              t.ScheduledTimestamp,
+		ScheduledTimestamp:              &t.ScheduledTimestamp,
 		ScheduleToCloseTimeoutSeconds:   t.ScheduleToCloseTimeoutSeconds,
-		StartedTimestamp:                t.StartedTimestamp,
+		StartedTimestamp:                &t.StartedTimestamp,
 		StartToCloseTimeoutSeconds:      t.StartToCloseTimeoutSeconds,
 		HeartbeatTimeoutSeconds:         t.HeartbeatTimeoutSeconds,
 		Attempt:                         &t.Attempt,
-		ScheduledTimestampOfThisAttempt: t.ScheduledTimestampOfThisAttempt,
+		ScheduledTimestampOfThisAttempt: &t.ScheduledTimestampOfThisAttempt,
 		HeartbeatDetails:                t.HeartbeatDetails,
 		WorkflowType:                    FromWorkflowType(t.WorkflowType),
 		WorkflowDomain:                  &t.WorkflowDomain,
@@ -3332,13 +3332,13 @@ func ToPollForActivityTaskResponse(t *shared.PollForActivityTaskResponse) *types
 		ActivityID:                      t.ActivityId,
 		ActivityType:                    ToActivityType(t.ActivityType),
 		Input:                           t.Input,
-		ScheduledTimestamp:              t.ScheduledTimestamp,
+		ScheduledTimestamp:              t.GetScheduledTimestamp(),
 		ScheduleToCloseTimeoutSeconds:   t.ScheduleToCloseTimeoutSeconds,
-		StartedTimestamp:                t.StartedTimestamp,
+		StartedTimestamp:                t.GetStartedTimestamp(),
 		StartToCloseTimeoutSeconds:      t.StartToCloseTimeoutSeconds,
 		HeartbeatTimeoutSeconds:         t.HeartbeatTimeoutSeconds,
 		Attempt:                         t.GetAttempt(),
-		ScheduledTimestampOfThisAttempt: t.ScheduledTimestampOfThisAttempt,
+		ScheduledTimestampOfThisAttempt: t.GetScheduledTimestampOfThisAttempt(),
 		HeartbeatDetails:                t.HeartbeatDetails,
 		WorkflowType:                    ToWorkflowType(t.WorkflowType),
 		WorkflowDomain:                  t.GetWorkflowDomain(),
@@ -3389,8 +3389,8 @@ func FromPollForDecisionTaskResponse(t *types.PollForDecisionTaskResponse) *shar
 		NextPageToken:             t.NextPageToken,
 		Query:                     FromWorkflowQuery(t.Query),
 		WorkflowExecutionTaskList: FromTaskList(t.WorkflowExecutionTaskList),
-		ScheduledTimestamp:        t.ScheduledTimestamp,
-		StartedTimestamp:          t.StartedTimestamp,
+		ScheduledTimestamp:        &t.ScheduledTimestamp,
+		StartedTimestamp:          &t.StartedTimestamp,
 		Queries:                   FromWorkflowQueryMap(t.Queries),
 	}
 }
@@ -3412,8 +3412,8 @@ func ToPollForDecisionTaskResponse(t *shared.PollForDecisionTaskResponse) *types
 		NextPageToken:             t.NextPageToken,
 		Query:                     ToWorkflowQuery(t.Query),
 		WorkflowExecutionTaskList: ToTaskList(t.WorkflowExecutionTaskList),
-		ScheduledTimestamp:        t.ScheduledTimestamp,
-		StartedTimestamp:          t.StartedTimestamp,
+		ScheduledTimestamp:        t.GetScheduledTimestamp(),
+		StartedTimestamp:          t.GetStartedTimestamp(),
 		Queries:                   ToWorkflowQueryMap(t.Queries),
 	}
 }
@@ -3424,7 +3424,7 @@ func FromPollerInfo(t *types.PollerInfo) *shared.PollerInfo {
 		return nil
 	}
 	return &shared.PollerInfo{
-		LastAccessTime: t.LastAccessTime,
+		LastAccessTime: &t.LastAccessTime,
 		Identity:       &t.Identity,
 		RatePerSecond:  t.RatePerSecond,
 	}
@@ -3436,7 +3436,7 @@ func ToPollerInfo(t *shared.PollerInfo) *types.PollerInfo {
 		return nil
 	}
 	return &types.PollerInfo{
-		LastAccessTime: t.LastAccessTime,
+		LastAccessTime: t.GetLastAccessTime(),
 		Identity:       t.GetIdentity(),
 		RatePerSecond:  t.RatePerSecond,
 	}
@@ -3879,7 +3879,7 @@ func FromRemoveTaskRequest(t *types.RemoveTaskRequest) *shared.RemoveTaskRequest
 		ShardID:             t.ShardID,
 		Type:                t.Type,
 		TaskID:              t.TaskID,
-		VisibilityTimestamp: t.VisibilityTimestamp,
+		VisibilityTimestamp: &t.VisibilityTimestamp,
 	}
 }
 
@@ -3892,7 +3892,7 @@ func ToRemoveTaskRequest(t *shared.RemoveTaskRequest) *types.RemoveTaskRequest {
 		ShardID:             t.ShardID,
 		Type:                t.Type,
 		TaskID:              t.TaskID,
-		VisibilityTimestamp: t.VisibilityTimestamp,
+		VisibilityTimestamp: t.GetVisibilityTimestamp(),
 	}
 }
 
@@ -4061,8 +4061,8 @@ func FromResetPointInfo(t *types.ResetPointInfo) *shared.ResetPointInfo {
 		BinaryChecksum:           &t.BinaryChecksum,
 		RunId:                    &t.RunID,
 		FirstDecisionCompletedId: t.FirstDecisionCompletedID,
-		CreatedTimeNano:          t.CreatedTimeNano,
-		ExpiringTimeNano:         t.ExpiringTimeNano,
+		CreatedTimeNano:          &t.CreatedTimeNano,
+		ExpiringTimeNano:         &t.ExpiringTimeNano,
 		Resettable:               t.Resettable,
 	}
 }
@@ -4076,8 +4076,8 @@ func ToResetPointInfo(t *shared.ResetPointInfo) *types.ResetPointInfo {
 		BinaryChecksum:           t.GetBinaryChecksum(),
 		RunID:                    t.GetRunId(),
 		FirstDecisionCompletedID: t.FirstDecisionCompletedId,
-		CreatedTimeNano:          t.CreatedTimeNano,
-		ExpiringTimeNano:         t.ExpiringTimeNano,
+		CreatedTimeNano:          t.GetCreatedTimeNano(),
+		ExpiringTimeNano:         t.GetExpiringTimeNano(),
 		Resettable:               t.Resettable,
 	}
 }
@@ -5986,13 +5986,13 @@ func FromWorkflowExecutionInfo(t *types.WorkflowExecutionInfo) *shared.WorkflowE
 	return &shared.WorkflowExecutionInfo{
 		Execution:        FromWorkflowExecution(t.Execution),
 		Type:             FromWorkflowType(t.Type),
-		StartTime:        t.StartTime,
+		StartTime:        &t.StartTime,
 		CloseTime:        t.CloseTime,
 		CloseStatus:      FromWorkflowExecutionCloseStatus(t.CloseStatus),
 		HistoryLength:    t.HistoryLength,
 		ParentDomainId:   t.ParentDomainID,
 		ParentExecution:  FromWorkflowExecution(t.ParentExecution),
-		ExecutionTime:    t.ExecutionTime,
+		ExecutionTime:    &t.ExecutionTime,
 		Memo:             FromMemo(t.Memo),
 		SearchAttributes: FromSearchAttributes(t.SearchAttributes),
 		AutoResetPoints:  FromResetPoints(t.AutoResetPoints),
@@ -6008,13 +6008,13 @@ func ToWorkflowExecutionInfo(t *shared.WorkflowExecutionInfo) *types.WorkflowExe
 	return &types.WorkflowExecutionInfo{
 		Execution:        ToWorkflowExecution(t.Execution),
 		Type:             ToWorkflowType(t.Type),
-		StartTime:        t.StartTime,
+		StartTime:        t.GetStartTime(),
 		CloseTime:        t.CloseTime,
 		CloseStatus:      ToWorkflowExecutionCloseStatus(t.CloseStatus),
 		HistoryLength:    t.HistoryLength,
 		ParentDomainID:   t.ParentDomainId,
 		ParentExecution:  ToWorkflowExecution(t.ParentExecution),
-		ExecutionTime:    t.ExecutionTime,
+		ExecutionTime:    t.GetExecutionTime(),
 		Memo:             ToMemo(t.Memo),
 		SearchAttributes: ToSearchAttributes(t.SearchAttributes),
 		AutoResetPoints:  ToResetPoints(t.AutoResetPoints),
@@ -6070,7 +6070,7 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		FirstExecutionRunId:                 &t.FirstExecutionRunID,
 		RetryPolicy:                         FromRetryPolicy(t.RetryPolicy),
 		Attempt:                             &t.Attempt,
-		ExpirationTimestamp:                 t.ExpirationTimestamp,
+		ExpirationTimestamp:                 &t.ExpirationTimestamp,
 		CronSchedule:                        &t.CronSchedule,
 		FirstDecisionTaskBackoffSeconds:     t.FirstDecisionTaskBackoffSeconds,
 		Memo:                                FromMemo(t.Memo),
@@ -6104,7 +6104,7 @@ func ToWorkflowExecutionStartedEventAttributes(t *shared.WorkflowExecutionStarte
 		FirstExecutionRunID:                 t.GetFirstExecutionRunId(),
 		RetryPolicy:                         ToRetryPolicy(t.RetryPolicy),
 		Attempt:                             t.GetAttempt(),
-		ExpirationTimestamp:                 t.ExpirationTimestamp,
+		ExpirationTimestamp:                 t.GetExpirationTimestamp(),
 		CronSchedule:                        t.GetCronSchedule(),
 		FirstDecisionTaskBackoffSeconds:     t.FirstDecisionTaskBackoffSeconds,
 		Memo:                                ToMemo(t.Memo),

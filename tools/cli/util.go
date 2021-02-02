@@ -590,11 +590,11 @@ func getRequiredGlobalOption(c *cli.Context, optionName string) string {
 	return value
 }
 
-func timestampPtrToStringPtr(unixNanoPtr *int64, onlyTime bool) *string {
-	if unixNanoPtr == nil {
-		return nil
+func timestampToString(unixNanoPtr int64, onlyTime bool) string {
+	if unixNanoPtr == 0 {
+		return ""
 	}
-	return common.StringPtr(convertTime(*unixNanoPtr, onlyTime))
+	return convertTime(unixNanoPtr, onlyTime)
 }
 
 func convertTime(unixNano int64, onlyTime bool) string {

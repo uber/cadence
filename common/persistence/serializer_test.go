@@ -70,7 +70,7 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 
 	event0 := &types.HistoryEvent{
 		EventID:   common.Int64Ptr(999),
-		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+		Timestamp: time.Now().UnixNano(),
 		EventType: types.EventTypeActivityTaskCompleted.Ptr(),
 		ActivityTaskCompletedEventAttributes: &types.ActivityTaskCompletedEventAttributes{
 			Result:           []byte("result-1-event-1"),
@@ -93,8 +93,8 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 				BinaryChecksum:           "bad-binary-cs",
 				RunID:                    "test-run-id",
 				FirstDecisionCompletedID: common.Int64Ptr(123),
-				CreatedTimeNano:          common.Int64Ptr(456),
-				ExpiringTimeNano:         common.Int64Ptr(789),
+				CreatedTimeNano:          456,
+				ExpiringTimeNano:         789,
 				Resettable:               common.BoolPtr(true),
 			},
 		},
@@ -103,7 +103,7 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 	badBinaries0 := &types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
 			"bad-binary-cs": {
-				CreatedTimeNano: common.Int64Ptr(456),
+				CreatedTimeNano: 456,
 				Operator:        common.StringPtr("test-operattor"),
 				Reason:          common.StringPtr("test-reason"),
 			},

@@ -829,10 +829,9 @@ func (e *mutableStateBuilder) CreateNewHistoryEventWithTimestamp(
 		e.executionInfo.IncreaseNextEventID()
 	}
 
-	ts := common.Int64Ptr(timestamp)
 	historyEvent := &types.HistoryEvent{}
 	historyEvent.EventID = common.Int64Ptr(eventID)
-	historyEvent.Timestamp = ts
+	historyEvent.Timestamp = timestamp
 	historyEvent.EventType = &eventType
 	historyEvent.Version = common.Int64Ptr(e.GetCurrentVersion())
 	historyEvent.TaskID = common.Int64Ptr(common.EmptyEventTaskID)
@@ -1650,7 +1649,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		req.Attempt = previousExecutionState.GetExecutionInfo().Attempt + 1
 		expirationTime := previousExecutionState.GetExecutionInfo().ExpirationTime
 		if !expirationTime.IsZero() {
-			req.ExpirationTimestamp = common.Int64Ptr(expirationTime.UnixNano())
+			req.ExpirationTimestamp = expirationTime.UnixNano()
 		}
 	} else {
 		// ContinueAsNew by decider or cron
@@ -1659,7 +1658,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 			// has retry policy and expiration time.
 			expirationSeconds := attributes.RetryPolicy.GetExpirationIntervalInSeconds() + req.GetFirstDecisionTaskBackoffSeconds()
 			expirationTime := e.timeSource.Now().Add(time.Second * time.Duration(expirationSeconds))
-			req.ExpirationTimestamp = common.Int64Ptr(expirationTime.UnixNano())
+			req.ExpirationTimestamp = expirationTime.UnixNano()
 		}
 	}
 
@@ -1957,7 +1956,7 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 		BinaryChecksum:           binChecksum,
 		RunID:                    exeInfo.RunID,
 		FirstDecisionCompletedID: common.Int64Ptr(event.GetEventID()),
-		CreatedTimeNano:          common.Int64Ptr(e.timeSource.Now().UnixNano()),
+		CreatedTimeNano:          e.timeSource.Now().UnixNano(),
 		Resettable:               common.BoolPtr(resettable),
 	}
 	currResetPoints = append(currResetPoints, info)
@@ -2217,7 +2216,7 @@ func (e *mutableStateBuilder) addTransientActivityStartedEvent(
 		ai.LastFailureReason, ai.LastFailureDetails)
 	if !ai.StartedTime.IsZero() {
 		// overwrite started event time to the one recorded in ActivityInfo
-		event.Timestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
+		event.Timestamp = ai.StartedTime.UnixNano()
 	}
 	return e.ReplicateActivityTaskStartedEvent(event)
 }
@@ -3365,7 +3364,7 @@ func rolloverAutoResetPointsWithExpiringTime(
 	expiringTimeNano := nowNano + int64(time.Duration(domainRetentionDays)*time.Hour*24)
 	for _, rp := range resetPoints.Points {
 		if rp.GetRunID() == prevRunID {
-			rp.ExpiringTimeNano = common.Int64Ptr(expiringTimeNano)
+			rp.ExpiringTimeNano = expiringTimeNano
 		}
 		newPoints = append(newPoints, rp)
 	}

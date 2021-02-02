@@ -137,13 +137,13 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 		{
 			EventID:   common.Int64Ptr(2),
 			Version:   common.Int64Ptr(123),
-			Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+			Timestamp: time.Now().UnixNano(),
 			EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 		},
 		{
 			EventID:   common.Int64Ptr(3),
 			Version:   common.Int64Ptr(123),
-			Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+			Timestamp: time.Now().UnixNano(),
 			EventType: types.EventTypeDecisionTaskStarted.Ptr(),
 		},
 	}

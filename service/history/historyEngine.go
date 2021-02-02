@@ -1499,7 +1499,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 				RunID:      executionInfo.RunID,
 			},
 			Type:             &types.WorkflowType{Name: executionInfo.WorkflowTypeName},
-			StartTime:        common.Int64Ptr(executionInfo.StartTimestamp.UnixNano()),
+			StartTime:        executionInfo.StartTimestamp.UnixNano(),
 			HistoryLength:    common.Int64Ptr(mutableState.GetNextEventID() - common.FirstEventID),
 			AutoResetPoints:  executionInfo.AutoResetPoints,
 			Memo:             &types.Memo{Fields: executionInfo.Memo},
@@ -1515,7 +1515,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 		return nil, err
 	}
 	backoffDuration := time.Duration(startEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstDecisionTaskBackoffSeconds()) * time.Second
-	result.WorkflowExecutionInfo.ExecutionTime = common.Int64Ptr(result.WorkflowExecutionInfo.GetStartTime() + backoffDuration.Nanoseconds())
+	result.WorkflowExecutionInfo.ExecutionTime = result.WorkflowExecutionInfo.GetStartTime() + backoffDuration.Nanoseconds()
 
 	if executionInfo.ParentRunID != "" {
 		result.WorkflowExecutionInfo.ParentExecution = &types.WorkflowExecution{
@@ -1549,7 +1549,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			p.State = &state
 			lastHeartbeatUnixNano := ai.LastHeartBeatUpdatedTime.UnixNano()
 			if lastHeartbeatUnixNano > 0 {
-				p.LastHeartbeatTimestamp = common.Int64Ptr(lastHeartbeatUnixNano)
+				p.LastHeartbeatTimestamp = lastHeartbeatUnixNano
 				p.HeartbeatDetails = ai.Details
 			}
 			// TODO: move to mutable state instead of loading it from event
@@ -1559,13 +1559,13 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			}
 			p.ActivityType = scheduledEvent.ActivityTaskScheduledEventAttributes.ActivityType
 			if state == types.PendingActivityStateScheduled {
-				p.ScheduledTimestamp = common.Int64Ptr(ai.ScheduledTime.UnixNano())
+				p.ScheduledTimestamp = ai.ScheduledTime.UnixNano()
 			} else {
-				p.LastStartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
+				p.LastStartedTimestamp = ai.StartedTime.UnixNano()
 			}
 			if ai.HasRetryPolicy {
 				p.Attempt = ai.Attempt
-				p.ExpirationTimestamp = common.Int64Ptr(ai.ExpirationTime.UnixNano())
+				p.ExpirationTimestamp = ai.ExpirationTime.UnixNano()
 				if ai.MaximumAttempts != 0 {
 					p.MaximumAttempts = ai.MaximumAttempts
 				}
@@ -1597,13 +1597,13 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	if di, ok := mutableState.GetPendingDecision(); ok {
 		pendingDecision := &types.PendingDecisionInfo{
 			State:                      types.PendingDecisionStateScheduled.Ptr(),
-			ScheduledTimestamp:         common.Int64Ptr(di.ScheduledTimestamp),
+			ScheduledTimestamp:         di.ScheduledTimestamp,
 			Attempt:                    di.Attempt,
-			OriginalScheduledTimestamp: common.Int64Ptr(di.OriginalScheduledTimestamp),
+			OriginalScheduledTimestamp: di.OriginalScheduledTimestamp,
 		}
 		if di.StartedID != common.EmptyEventID {
 			pendingDecision.State = types.PendingDecisionStateStarted.Ptr()
-			pendingDecision.StartedTimestamp = common.Int64Ptr(di.StartedTimestamp)
+			pendingDecision.StartedTimestamp = di.StartedTimestamp
 		}
 		result.PendingDecision = pendingDecision
 	}
@@ -1670,7 +1670,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 				return err
 			}
 			response.ScheduledEvent = scheduledEvent
-			response.ScheduledTimestampOfThisAttempt = common.Int64Ptr(ai.ScheduledTime.UnixNano())
+			response.ScheduledTimestampOfThisAttempt = ai.ScheduledTime.UnixNano()
 
 			response.Attempt = int64(ai.Attempt)
 			response.HeartbeatDetails = ai.Details
@@ -1681,7 +1681,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			if ai.StartedID != common.EmptyEventID {
 				// If activity is started as part of the current request scope then return a positive response
 				if ai.RequestID == requestID {
-					response.StartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
+					response.StartedTimestamp = ai.StartedTime.UnixNano()
 					return nil
 				}
 
@@ -1697,7 +1697,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 				return err
 			}
 
-			response.StartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
+			response.StartedTimestamp = ai.StartedTime.UnixNano()
 
 			return nil
 		})
@@ -3104,7 +3104,7 @@ func (e *historyEngineImpl) GetReplicationMessages(
 
 	//Set cluster status for sync shard info
 	replicationMessages.SyncShardStatus = &types.SyncShardStatus{
-		Timestamp: common.Int64Ptr(e.timeSource.Now().UnixNano()),
+		Timestamp: e.timeSource.Now().UnixNano(),
 	}
 	e.logger.Debug("Successfully fetched replication messages.", tag.Counter(len(replicationMessages.ReplicationTasks)))
 	return replicationMessages, nil

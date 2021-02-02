@@ -268,9 +268,9 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 			if err != nil {
 				return nil, ErrSerializingToken
 			}
-			activityDispatchInfo.ScheduledTimestamp = common.Int64Ptr(ai.ScheduledTime.UnixNano())
-			activityDispatchInfo.ScheduledTimestampOfThisAttempt = common.Int64Ptr(ai.ScheduledTime.UnixNano())
-			activityDispatchInfo.StartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
+			activityDispatchInfo.ScheduledTimestamp = ai.ScheduledTime.UnixNano()
+			activityDispatchInfo.ScheduledTimestampOfThisAttempt = ai.ScheduledTime.UnixNano()
+			activityDispatchInfo.StartedTimestamp = ai.StartedTime.UnixNano()
 			return &decisionResult{activityDispatchInfo: activityDispatchInfo}, nil
 		}
 		return nil, nil

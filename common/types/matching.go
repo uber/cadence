@@ -916,8 +916,8 @@ type MatchingPollForDecisionTaskResponse struct {
 	WorkflowExecutionTaskList *TaskList                 `json:"WorkflowExecutionTaskList,omitempty"`
 	EventStoreVersion         *int32                    `json:"eventStoreVersion,omitempty"`
 	BranchToken               []byte                    `json:"branchToken,omitempty"`
-	ScheduledTimestamp        *int64                    `json:"scheduledTimestamp,omitempty"`
-	StartedTimestamp          *int64                    `json:"startedTimestamp,omitempty"`
+	ScheduledTimestamp        int64                     `json:"scheduledTimestamp,omitempty"`
+	StartedTimestamp          int64                     `json:"startedTimestamp,omitempty"`
 	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
 }
 
@@ -1035,16 +1035,16 @@ func (v *MatchingPollForDecisionTaskResponse) GetBranchToken() (o []byte) {
 
 // GetScheduledTimestamp is an internal getter (TBD...)
 func (v *MatchingPollForDecisionTaskResponse) GetScheduledTimestamp() (o int64) {
-	if v != nil && v.ScheduledTimestamp != nil {
-		return *v.ScheduledTimestamp
+	if v != nil {
+		return v.ScheduledTimestamp
 	}
 	return
 }
 
 // GetStartedTimestamp is an internal getter (TBD...)
 func (v *MatchingPollForDecisionTaskResponse) GetStartedTimestamp() (o int64) {
-	if v != nil && v.StartedTimestamp != nil {
-		return *v.StartedTimestamp
+	if v != nil {
+		return v.StartedTimestamp
 	}
 	return
 }

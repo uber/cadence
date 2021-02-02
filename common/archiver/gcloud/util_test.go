@@ -57,7 +57,7 @@ func (s *utilSuite) TestEncodeDecodeHistoryBatches() {
 			Events: []*types.HistoryEvent{
 				{
 					EventID:   common.Int64Ptr(common.FirstEventID + 1),
-					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+					Timestamp: time.Now().UnixNano(),
 					Version:   common.Int64Ptr(1),
 				},
 				{

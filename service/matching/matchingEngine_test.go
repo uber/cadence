@@ -504,7 +504,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 						HeartbeatTimeoutSeconds:       common.Int32Ptr(10),
 					}),
 			}
-			resp.StartedTimestamp = common.Int64Ptr(time.Now().UnixNano())
+			resp.StartedTimestamp = time.Now().UnixNano()
 			return resp, nil
 		}).AnyTimes()
 
@@ -528,9 +528,9 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 		s.EqualValues(activityType, result.ActivityType)
 		s.EqualValues(activityInput, result.Input)
 		s.EqualValues(workflowExecution, *result.WorkflowExecution)
-		s.Equal(true, validateTimeRange(time.Unix(0, *result.ScheduledTimestamp), time.Minute))
+		s.Equal(true, validateTimeRange(time.Unix(0, result.ScheduledTimestamp), time.Minute))
 		s.Equal(int32(100), *result.ScheduleToCloseTimeoutSeconds)
-		s.Equal(true, validateTimeRange(time.Unix(0, *result.StartedTimestamp), time.Minute))
+		s.Equal(true, validateTimeRange(time.Unix(0, result.StartedTimestamp), time.Minute))
 		s.Equal(int32(50), *result.StartToCloseTimeoutSeconds)
 		s.Equal(int32(10), *result.HeartbeatTimeoutSeconds)
 		token := &common.TaskToken{
@@ -1653,7 +1653,7 @@ func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID i
 }
 
 func newHistoryEvent(eventID int64, eventType types.EventType) *types.HistoryEvent {
-	ts := common.Int64Ptr(time.Now().UnixNano())
+	ts := time.Now().UnixNano()
 	historyEvent := &types.HistoryEvent{}
 	historyEvent.EventID = common.Int64Ptr(eventID)
 	historyEvent.Timestamp = ts

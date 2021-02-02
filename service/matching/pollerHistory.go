@@ -83,7 +83,7 @@ func (pollers *pollerHistory) getAllPollerInfo() []*types.PollerInfo {
 		lastAccessTime := entry.CreateTime()
 		result = append(result, &types.PollerInfo{
 			Identity:       string(key),
-			LastAccessTime: common.Int64Ptr(lastAccessTime.UnixNano()),
+			LastAccessTime: lastAccessTime.UnixNano(),
 			RatePerSecond:  common.Float64Ptr(value.ratePerSecond),
 		})
 	}

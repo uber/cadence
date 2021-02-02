@@ -60,13 +60,13 @@ func TestFindAutoResetPoint(t *testing.T) {
 	pt4 := &types.ResetPointInfo{
 		BinaryChecksum:   "expired",
 		Resettable:       common.BoolPtr(true),
-		ExpiringTimeNano: common.Int64Ptr(expiredNowNano),
+		ExpiringTimeNano: expiredNowNano,
 	}
 
 	pt5 := &types.ResetPointInfo{
 		BinaryChecksum:   "notExpired",
 		Resettable:       common.BoolPtr(true),
-		ExpiringTimeNano: common.Int64Ptr(notExpiredNowNano),
+		ExpiringTimeNano: notExpiredNowNano,
 	}
 
 	// case 3: two intersection

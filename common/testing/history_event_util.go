@@ -967,7 +967,7 @@ func getDefaultHistoryEvent(
 	globalTaskID++
 	return &types.HistoryEvent{
 		EventID:   common.Int64Ptr(EventID),
-		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
+		Timestamp: time.Now().UnixNano(),
 		TaskID:    common.Int64Ptr(globalTaskID),
 		Version:   common.Int64Ptr(version),
 	}

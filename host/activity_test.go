@@ -323,8 +323,8 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 			s.NotNil(lastHeartbeatTS)
 			s.NotNil(expirationTS)
 			s.Nil(pendingActivity.LastStartedTimestamp)
-			s.True(*scheduledTS > *lastHeartbeatTS)
-			s.True(*expirationTS > *scheduledTS)
+			s.True(scheduledTS > lastHeartbeatTS)
+			s.True(expirationTS > scheduledTS)
 
 			s.Equal(heartbeatDetails, pendingActivity.GetHeartbeatDetails())
 		}

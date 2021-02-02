@@ -208,7 +208,7 @@ func (v *DomainTaskAttributes) GetPreviousFailoverVersion() (o int64) {
 type FailoverMarkerAttributes struct {
 	DomainID        string `json:"domainID,omitempty"`
 	FailoverVersion *int64 `json:"failoverVersion,omitempty"`
-	CreationTime    *int64 `json:"creationTime,omitempty"`
+	CreationTime    int64  `json:"creationTime,omitempty"`
 }
 
 // GetDomainID is an internal getter (TBD...)
@@ -229,8 +229,8 @@ func (v *FailoverMarkerAttributes) GetFailoverVersion() (o int64) {
 
 // GetCreationTime is an internal getter (TBD...)
 func (v *FailoverMarkerAttributes) GetCreationTime() (o int64) {
-	if v != nil && v.CreationTime != nil {
-		return *v.CreationTime
+	if v != nil {
+		return v.CreationTime
 	}
 	return
 }
@@ -678,7 +678,7 @@ type ReplicationTask struct {
 	SyncActivityTaskAttributes    *SyncActivityTaskAttributes    `json:"syncActivityTaskAttributes,omitempty"`
 	HistoryTaskV2Attributes       *HistoryTaskV2Attributes       `json:"historyTaskV2Attributes,omitempty"`
 	FailoverMarkerAttributes      *FailoverMarkerAttributes      `json:"failoverMarkerAttributes,omitempty"`
-	CreationTime                  *int64                         `json:"creationTime,omitempty"`
+	CreationTime                  int64                          `json:"creationTime,omitempty"`
 }
 
 // GetTaskType is an internal getter (TBD...)
@@ -739,8 +739,8 @@ func (v *ReplicationTask) GetFailoverMarkerAttributes() (o *FailoverMarkerAttrib
 
 // GetCreationTime is an internal getter (TBD...)
 func (v *ReplicationTask) GetCreationTime() (o int64) {
-	if v != nil && v.CreationTime != nil {
-		return *v.CreationTime
+	if v != nil {
+		return v.CreationTime
 	}
 	return
 }
@@ -954,10 +954,10 @@ type SyncActivityTaskAttributes struct {
 	RunID              string          `json:"runId,omitempty"`
 	Version            *int64          `json:"version,omitempty"`
 	ScheduledID        *int64          `json:"scheduledId,omitempty"`
-	ScheduledTime      *int64          `json:"scheduledTime,omitempty"`
+	ScheduledTime      int64           `json:"scheduledTime,omitempty"`
 	StartedID          *int64          `json:"startedId,omitempty"`
-	StartedTime        *int64          `json:"startedTime,omitempty"`
-	LastHeartbeatTime  *int64          `json:"lastHeartbeatTime,omitempty"`
+	StartedTime        int64           `json:"startedTime,omitempty"`
+	LastHeartbeatTime  int64           `json:"lastHeartbeatTime,omitempty"`
 	Details            []byte          `json:"details,omitempty"`
 	Attempt            int32           `json:"attempt,omitempty"`
 	LastFailureReason  *string         `json:"lastFailureReason,omitempty"`
@@ -1008,8 +1008,8 @@ func (v *SyncActivityTaskAttributes) GetScheduledID() (o int64) {
 
 // GetScheduledTime is an internal getter (TBD...)
 func (v *SyncActivityTaskAttributes) GetScheduledTime() (o int64) {
-	if v != nil && v.ScheduledTime != nil {
-		return *v.ScheduledTime
+	if v != nil {
+		return v.ScheduledTime
 	}
 	return
 }
@@ -1024,16 +1024,16 @@ func (v *SyncActivityTaskAttributes) GetStartedID() (o int64) {
 
 // GetStartedTime is an internal getter (TBD...)
 func (v *SyncActivityTaskAttributes) GetStartedTime() (o int64) {
-	if v != nil && v.StartedTime != nil {
-		return *v.StartedTime
+	if v != nil {
+		return v.StartedTime
 	}
 	return
 }
 
 // GetLastHeartbeatTime is an internal getter (TBD...)
 func (v *SyncActivityTaskAttributes) GetLastHeartbeatTime() (o int64) {
-	if v != nil && v.LastHeartbeatTime != nil {
-		return *v.LastHeartbeatTime
+	if v != nil {
+		return v.LastHeartbeatTime
 	}
 	return
 }
@@ -1088,13 +1088,13 @@ func (v *SyncActivityTaskAttributes) GetVersionHistory() (o *VersionHistory) {
 
 // SyncShardStatus is an internal type (TBD...)
 type SyncShardStatus struct {
-	Timestamp *int64 `json:"timestamp,omitempty"`
+	Timestamp int64 `json:"timestamp,omitempty"`
 }
 
 // GetTimestamp is an internal getter (TBD...)
 func (v *SyncShardStatus) GetTimestamp() (o int64) {
-	if v != nil && v.Timestamp != nil {
-		return *v.Timestamp
+	if v != nil {
+		return v.Timestamp
 	}
 	return
 }
@@ -1103,7 +1103,7 @@ func (v *SyncShardStatus) GetTimestamp() (o int64) {
 type SyncShardStatusTaskAttributes struct {
 	SourceCluster *string `json:"sourceCluster,omitempty"`
 	ShardID       *int64  `json:"shardId,omitempty"`
-	Timestamp     *int64  `json:"timestamp,omitempty"`
+	Timestamp     int64   `json:"timestamp,omitempty"`
 }
 
 // GetSourceCluster is an internal getter (TBD...)
@@ -1124,8 +1124,8 @@ func (v *SyncShardStatusTaskAttributes) GetShardID() (o int64) {
 
 // GetTimestamp is an internal getter (TBD...)
 func (v *SyncShardStatusTaskAttributes) GetTimestamp() (o int64) {
-	if v != nil && v.Timestamp != nil {
-		return *v.Timestamp
+	if v != nil {
+		return v.Timestamp
 	}
 	return
 }
