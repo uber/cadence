@@ -4639,7 +4639,7 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 		DecisionType: types.DecisionTypeStartTimer.Ptr(),
 		StartTimerDecisionAttributes: &types.StartTimerDecisionAttributes{
 			TimerID:                   timerID,
-			StartToFireTimeoutSeconds: common.Int64Ptr(1),
+			StartToFireTimeoutSeconds: 1,
 		},
 	}}
 
