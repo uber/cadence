@@ -213,11 +213,11 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(4),
 						HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
 						RetryPolicy: &types.RetryPolicy{
-							InitialIntervalInSeconds:    common.Int32Ptr(1),
-							MaximumAttempts:             common.Int32Ptr(3),
-							MaximumIntervalInSeconds:    common.Int32Ptr(1),
-							BackoffCoefficient:          common.Float64Ptr(1),
-							ExpirationIntervalInSeconds: common.Int32Ptr(100),
+							InitialIntervalInSeconds:    1,
+							MaximumAttempts:             3,
+							MaximumIntervalInSeconds:    1,
+							BackoffCoefficient:          1,
+							ExpirationIntervalInSeconds: 100,
 						},
 					},
 				},
@@ -391,12 +391,12 @@ func (s *integrationSuite) TestActivityRetry() {
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(4),
 						HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
 						RetryPolicy: &types.RetryPolicy{
-							InitialIntervalInSeconds:    common.Int32Ptr(1),
-							MaximumAttempts:             common.Int32Ptr(3),
-							MaximumIntervalInSeconds:    common.Int32Ptr(1),
+							InitialIntervalInSeconds:    1,
+							MaximumAttempts:             3,
+							MaximumIntervalInSeconds:    1,
 							NonRetriableErrorReasons:    []string{"bad-bug"},
-							BackoffCoefficient:          common.Float64Ptr(1),
-							ExpirationIntervalInSeconds: common.Int32Ptr(100),
+							BackoffCoefficient:          1,
+							ExpirationIntervalInSeconds: 100,
 						},
 					},
 				},
@@ -732,10 +732,10 @@ func (s *integrationSuite) TestActivityTimeouts() {
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(5), // ActivityID C is expected to timeout using StartToClose
 					HeartbeatTimeoutSeconds:       common.Int32Ptr(0),
 					RetryPolicy: &types.RetryPolicy{
-						InitialIntervalInSeconds:    common.Int32Ptr(1),
-						MaximumIntervalInSeconds:    common.Int32Ptr(1),
-						BackoffCoefficient:          common.Float64Ptr(1),
-						ExpirationIntervalInSeconds: common.Int32Ptr(3), // activity expiration time will not be extended, so it won't retry
+						InitialIntervalInSeconds:    1,
+						MaximumIntervalInSeconds:    1,
+						BackoffCoefficient:          1,
+						ExpirationIntervalInSeconds: 3, // activity expiration time will not be extended, so it won't retry
 					},
 				},
 			}, {

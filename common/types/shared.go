@@ -7001,42 +7001,42 @@ func (v *RespondQueryTaskCompletedRequest) GetWorkerVersionInfo() (o *WorkerVers
 
 // RetryPolicy is an internal type (TBD...)
 type RetryPolicy struct {
-	InitialIntervalInSeconds    *int32   `json:"initialIntervalInSeconds,omitempty"`
-	BackoffCoefficient          *float64 `json:"backoffCoefficient,omitempty"`
-	MaximumIntervalInSeconds    *int32   `json:"maximumIntervalInSeconds,omitempty"`
-	MaximumAttempts             *int32   `json:"maximumAttempts,omitempty"`
+	InitialIntervalInSeconds    int32    `json:"initialIntervalInSeconds,omitempty"`
+	BackoffCoefficient          float64  `json:"backoffCoefficient,omitempty"`
+	MaximumIntervalInSeconds    int32    `json:"maximumIntervalInSeconds,omitempty"`
+	MaximumAttempts             int32    `json:"maximumAttempts,omitempty"`
 	NonRetriableErrorReasons    []string `json:"nonRetriableErrorReasons,omitempty"`
-	ExpirationIntervalInSeconds *int32   `json:"expirationIntervalInSeconds,omitempty"`
+	ExpirationIntervalInSeconds int32    `json:"expirationIntervalInSeconds,omitempty"`
 }
 
 // GetInitialIntervalInSeconds is an internal getter (TBD...)
 func (v *RetryPolicy) GetInitialIntervalInSeconds() (o int32) {
-	if v != nil && v.InitialIntervalInSeconds != nil {
-		return *v.InitialIntervalInSeconds
+	if v != nil {
+		return v.InitialIntervalInSeconds
 	}
 	return
 }
 
 // GetBackoffCoefficient is an internal getter (TBD...)
 func (v *RetryPolicy) GetBackoffCoefficient() (o float64) {
-	if v != nil && v.BackoffCoefficient != nil {
-		return *v.BackoffCoefficient
+	if v != nil {
+		return v.BackoffCoefficient
 	}
 	return
 }
 
 // GetMaximumIntervalInSeconds is an internal getter (TBD...)
 func (v *RetryPolicy) GetMaximumIntervalInSeconds() (o int32) {
-	if v != nil && v.MaximumIntervalInSeconds != nil {
-		return *v.MaximumIntervalInSeconds
+	if v != nil {
+		return v.MaximumIntervalInSeconds
 	}
 	return
 }
 
 // GetMaximumAttempts is an internal getter (TBD...)
 func (v *RetryPolicy) GetMaximumAttempts() (o int32) {
-	if v != nil && v.MaximumAttempts != nil {
-		return *v.MaximumAttempts
+	if v != nil {
+		return v.MaximumAttempts
 	}
 	return
 }
@@ -7051,8 +7051,8 @@ func (v *RetryPolicy) GetNonRetriableErrorReasons() (o []string) {
 
 // GetExpirationIntervalInSeconds is an internal getter (TBD...)
 func (v *RetryPolicy) GetExpirationIntervalInSeconds() (o int32) {
-	if v != nil && v.ExpirationIntervalInSeconds != nil {
-		return *v.ExpirationIntervalInSeconds
+	if v != nil {
+		return v.ExpirationIntervalInSeconds
 	}
 	return
 }
