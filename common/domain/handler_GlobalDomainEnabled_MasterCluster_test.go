@@ -710,10 +710,10 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 	}
 
 	updateResp, err := s.handler.UpdateDomain(context.Background(), &types.UpdateDomainRequest{
-		Name: domainName,
-		Description: common.StringPtr(description),
-		OwnerEmail:  common.StringPtr(email),
-		Data:        data,
+		Name:                                   domainName,
+		Description:                            common.StringPtr(description),
+		OwnerEmail:                             common.StringPtr(email),
+		Data:                                   data,
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
 		EmitMetric:                             common.BoolPtr(emitMetric),
 		HistoryArchivalStatus:                  types.ArchivalStatusDisabled.Ptr(),
@@ -721,8 +721,8 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 		VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
 		VisibilityArchivalURI:                  common.StringPtr(""),
 		BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
-		ActiveClusterName: nil,
-		Clusters:          clusters,
+		ActiveClusterName:                      nil,
+		Clusters:                               clusters,
 	})
 	s.Nil(err)
 	fnTest(
@@ -816,7 +816,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 	}
 
 	updateResp, err := s.handler.UpdateDomain(context.Background(), &types.UpdateDomainRequest{
-		Name: domainName,
+		Name:              domainName,
 		ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
 	})
 	s.Nil(err)
@@ -909,7 +909,7 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateDomain_Co
 	s.Equal(isGlobalDomain, resp.GetIsGlobalDomain())
 
 	_, err = s.handler.UpdateDomain(context.Background(), &types.UpdateDomainRequest{
-		Name: domainName,
+		Name:        domainName,
 		Description: common.StringPtr("test1"),
 	})
 	s.Error(err)

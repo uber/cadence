@@ -1379,7 +1379,7 @@ func updateRequest(
 	visibilityArchivalStatus *types.ArchivalStatus,
 ) *types.UpdateDomainRequest {
 	return &types.UpdateDomainRequest{
-		Name: "test-name",
+		Name:                     "test-name",
 		HistoryArchivalStatus:    historyArchivalStatus,
 		HistoryArchivalURI:       historyArchivalURI,
 		VisibilityArchivalStatus: visibilityArchivalStatus,

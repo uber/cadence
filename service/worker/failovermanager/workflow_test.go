@@ -407,11 +407,11 @@ func (s *failoverWorkflowTestSuite) TestFailoverActivity_Error() {
 	domains := []string{"d1", "d2"}
 	targetCluster := "c2"
 	updateRequest1 := &types.UpdateDomainRequest{
-		Name:                     "d1",
+		Name:              "d1",
 		ActiveClusterName: common.StringPtr(targetCluster),
 	}
 	updateRequest2 := &types.UpdateDomainRequest{
-		Name:                     "d2",
+		Name:              "d2",
 		ActiveClusterName: common.StringPtr(targetCluster),
 	}
 	mockResource.FrontendClient.EXPECT().UpdateDomain(gomock.Any(), updateRequest1).Return(nil, nil)
