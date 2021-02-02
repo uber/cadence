@@ -248,7 +248,7 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	}
 
 	shardID := common.WorkflowIDToHistoryShard(request.Execution.WorkflowID, adh.numberOfHistoryShards)
-	shardIDstr := string(shardID)
+	shardIDstr := string(rune(shardID)) // originally `string(int_shard_id)`, but changing it will change the ring hashing
 	shardIDForOutput := strconv.Itoa(shardID)
 
 	historyHost, err := adh.GetMembershipMonitor().Lookup(common.HistoryServiceName, shardIDstr)

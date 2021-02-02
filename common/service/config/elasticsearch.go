@@ -21,10 +21,13 @@
 package config
 
 import (
+	"fmt"
 	"net/url"
 
 	"github.com/uber/cadence/common"
 )
+
+var errAWSSigningCredential = fmt.Errorf("must provide exactly one type of credential, EnvironmentCredential or StaticCredential")
 
 // ElasticSearchConfig for connecting to ElasticSearch
 type (
@@ -42,6 +45,35 @@ type (
 		DisableSniff bool `yaml:"disableSniff"`
 		// optional to disable health check
 		DisableHealthCheck bool `yaml:"disableHealthCheck"`
+		// optional to use AWS signing client
+		// See more info https://github.com/olivere/elastic/wiki/Using-with-AWS-Elasticsearch-Service
+		AWSSigning AWSSigning `yaml:"awsSigning"`
+	}
+
+	// AWSSigning contains config to enable signing,
+	// Must provide either StaticCredential or EnvironmentCredential
+	AWSSigning struct {
+		Enable                bool                      `yaml:"enable"`
+		StaticCredential      *AWSStaticCredential      `yaml:"staticCredential"`
+		EnvironmentCredential *AWSEnvironmentCredential `yaml:"environmentCredential"`
+	}
+
+	// AWSStaticCredential to create a static credentials value provider.
+	// SessionToken is only required for temporary security credentials retrieved via STS,
+	// otherwise an empty string can be passed for this parameter.
+	// See more in https://github.com/aws/aws-sdk-go/blob/master/aws/credentials/static_provider.go#L21
+	AWSStaticCredential struct {
+		AccessKey    string `yaml:"accessKey"`
+		SecretKey    string `yaml:"secretKey"`
+		Region       string `yaml:"region"`
+		SessionToken string `yaml:"sessionToken"`
+	}
+
+	// AWSEnvironmentCredential will make a new Session created from SDK defaults, config files,
+	// environment, and user provided config files.
+	// See more in https://github.com/aws/aws-sdk-go/blob/3974dd034387fbc7cf09c8cd2400787ce07f3285/aws/session/session.go#L147
+	AWSEnvironmentCredential struct {
+		Region string `yaml:"region"`
 	}
 )
 
@@ -57,4 +89,15 @@ func (cfg *ElasticSearchConfig) SetUsernamePassword() {
 	if cfg.Username != "" {
 		cfg.URL.User = url.UserPassword(cfg.Username, cfg.Password)
 	}
+}
+
+// CheckAWSSigningConfig checks if the AWSSigning configuration is valid
+func CheckAWSSigningConfig(config AWSSigning) error {
+	if config.EnvironmentCredential == nil && config.StaticCredential == nil {
+		return errAWSSigningCredential
+	}
+	if config.EnvironmentCredential != nil && config.StaticCredential != nil {
+		return errAWSSigningCredential
+	}
+	return nil
 }
