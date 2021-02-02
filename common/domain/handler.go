@@ -395,7 +395,7 @@ func (d *handlerImpl) UpdateDomain(
 	// Update history archival state
 	historyArchivalState, historyArchivalConfigChanged, err := d.getHistoryArchivalState(
 		config,
-		updateRequest.Configuration,
+		updateRequest,
 	)
 	if err != nil {
 		return nil, err
@@ -408,7 +408,7 @@ func (d *handlerImpl) UpdateDomain(
 	// Update visibility archival state
 	visibilityArchivalState, visibilityArchivalConfigChanged, err := d.getVisibilityArchivalState(
 		config,
-		updateRequest.Configuration,
+		updateRequest,
 	)
 	if err != nil {
 		return nil, err
@@ -420,14 +420,14 @@ func (d *handlerImpl) UpdateDomain(
 
 	// Update domain info
 	info, domainInfoChanged := d.updateDomainInfo(
-		updateRequest.UpdatedInfo,
+		updateRequest,
 		info,
 	)
 	// Update domain config
 	config, domainConfigChanged, err := d.updateDomainConfiguration(
 		updateRequest.GetName(),
 		config,
-		updateRequest.Configuration,
+		updateRequest,
 	)
 	if err != nil {
 		return nil, err
@@ -445,7 +445,7 @@ func (d *handlerImpl) UpdateDomain(
 	// Update replication config
 	replicationConfig, replicationConfigChanged, activeClusterChanged, err := d.updateReplicationConfig(
 		replicationConfig,
-		updateRequest.ReplicationConfiguration,
+		updateRequest,
 	)
 	if err != nil {
 		return nil, err
@@ -756,7 +756,7 @@ func (d *handlerImpl) validateVisibilityArchivalURI(URIString string) error {
 
 func (d *handlerImpl) getHistoryArchivalState(
 	config *persistence.DomainConfig,
-	requestedConfig *types.DomainConfiguration,
+	updateRequest *types.UpdateDomainRequest,
 ) (*ArchivalState, bool, error) {
 
 	currentHistoryArchivalState := &ArchivalState{
@@ -765,10 +765,10 @@ func (d *handlerImpl) getHistoryArchivalState(
 	}
 	clusterHistoryArchivalConfig := d.archivalMetadata.GetHistoryConfig()
 
-	if requestedConfig != nil && clusterHistoryArchivalConfig.ClusterConfiguredForArchival() {
+	if clusterHistoryArchivalConfig.ClusterConfiguredForArchival() {
 		archivalEvent, err := d.toArchivalUpdateEvent(
-			requestedConfig.HistoryArchivalStatus,
-			requestedConfig.GetHistoryArchivalURI(),
+			updateRequest.HistoryArchivalStatus,
+			updateRequest.GetHistoryArchivalURI(),
 			clusterHistoryArchivalConfig.GetDomainDefaultURI(),
 		)
 		if err != nil {
@@ -781,17 +781,17 @@ func (d *handlerImpl) getHistoryArchivalState(
 
 func (d *handlerImpl) getVisibilityArchivalState(
 	config *persistence.DomainConfig,
-	requestedConfig *types.DomainConfiguration,
+	updateRequest *types.UpdateDomainRequest,
 ) (*ArchivalState, bool, error) {
 	currentVisibilityArchivalState := &ArchivalState{
 		Status: config.VisibilityArchivalStatus,
 		URI:    config.VisibilityArchivalURI,
 	}
 	clusterVisibilityArchivalConfig := d.archivalMetadata.GetVisibilityConfig()
-	if requestedConfig != nil && clusterVisibilityArchivalConfig.ClusterConfiguredForArchival() {
+	if clusterVisibilityArchivalConfig.ClusterConfiguredForArchival() {
 		archivalEvent, err := d.toArchivalUpdateEvent(
-			requestedConfig.VisibilityArchivalStatus,
-			requestedConfig.GetVisibilityArchivalURI(),
+			updateRequest.VisibilityArchivalStatus,
+			updateRequest.GetVisibilityArchivalURI(),
 			clusterVisibilityArchivalConfig.GetDomainDefaultURI(),
 		)
 		if err != nil {
@@ -803,25 +803,23 @@ func (d *handlerImpl) getVisibilityArchivalState(
 }
 
 func (d *handlerImpl) updateDomainInfo(
-	updatedDomainInfo *types.UpdateDomainInfo,
+	updateRequest *types.UpdateDomainRequest,
 	currentDomainInfo *persistence.DomainInfo,
 ) (*persistence.DomainInfo, bool) {
 
 	isDomainUpdated := false
-	if updatedDomainInfo != nil {
-		if updatedDomainInfo.Description != nil {
-			isDomainUpdated = true
-			currentDomainInfo.Description = updatedDomainInfo.GetDescription()
-		}
-		if updatedDomainInfo.OwnerEmail != nil {
-			isDomainUpdated = true
-			currentDomainInfo.OwnerEmail = updatedDomainInfo.GetOwnerEmail()
-		}
-		if updatedDomainInfo.Data != nil {
-			isDomainUpdated = true
-			// only do merging
-			currentDomainInfo.Data = d.mergeDomainData(currentDomainInfo.Data, updatedDomainInfo.Data)
-		}
+	if updateRequest.Description != nil {
+		isDomainUpdated = true
+		currentDomainInfo.Description = *updateRequest.Description
+	}
+	if updateRequest.OwnerEmail != nil {
+		isDomainUpdated = true
+		currentDomainInfo.OwnerEmail = *updateRequest.OwnerEmail
+	}
+	if updateRequest.Data != nil {
+		isDomainUpdated = true
+		// only do merging
+		currentDomainInfo.Data = d.mergeDomainData(currentDomainInfo.Data, updateRequest.Data)
 	}
 	return currentDomainInfo, isDomainUpdated
 }
@@ -829,27 +827,25 @@ func (d *handlerImpl) updateDomainInfo(
 func (d *handlerImpl) updateDomainConfiguration(
 	domainName string,
 	config *persistence.DomainConfig,
-	domainConfig *types.DomainConfiguration,
+	updateRequest *types.UpdateDomainRequest,
 ) (*persistence.DomainConfig, bool, error) {
 
 	isConfigChanged := false
-	if domainConfig != nil {
-		if domainConfig.EmitMetric != nil {
-			isConfigChanged = true
-			config.EmitMetric = domainConfig.GetEmitMetric()
-		}
-		if domainConfig.WorkflowExecutionRetentionPeriodInDays != nil {
-			isConfigChanged = true
-			config.Retention = domainConfig.GetWorkflowExecutionRetentionPeriodInDays()
-		}
-		if domainConfig.BadBinaries != nil {
-			maxLength := d.config.MaxBadBinaryCount(domainName)
-			// only do merging
-			config.BadBinaries = d.mergeBadBinaries(config.BadBinaries.Binaries, domainConfig.BadBinaries.Binaries, time.Now().UnixNano())
-			if len(config.BadBinaries.Binaries) > maxLength {
-				return config, isConfigChanged, &types.BadRequestError{
-					Message: fmt.Sprintf("Total resetBinaries cannot exceed the max limit: %v", maxLength),
-				}
+	if updateRequest.EmitMetric != nil {
+		isConfigChanged = true
+		config.EmitMetric = *updateRequest.EmitMetric
+	}
+	if updateRequest.WorkflowExecutionRetentionPeriodInDays != nil {
+		isConfigChanged = true
+		config.Retention = *updateRequest.WorkflowExecutionRetentionPeriodInDays
+	}
+	if updateRequest.BadBinaries != nil {
+		maxLength := d.config.MaxBadBinaryCount(domainName)
+		// only do merging
+		config.BadBinaries = d.mergeBadBinaries(config.BadBinaries.Binaries, updateRequest.BadBinaries.Binaries, time.Now().UnixNano())
+		if len(config.BadBinaries.Binaries) > maxLength {
+			return config, isConfigChanged, &types.BadRequestError{
+				Message: fmt.Sprintf("Total resetBinaries cannot exceed the max limit: %v", maxLength),
 			}
 		}
 	}
@@ -876,34 +872,32 @@ func (d *handlerImpl) updateDeleteBadBinary(
 
 func (d *handlerImpl) updateReplicationConfig(
 	config *persistence.DomainReplicationConfig,
-	replicationConfig *types.DomainReplicationConfiguration,
+	updateRequest *types.UpdateDomainRequest,
 ) (*persistence.DomainReplicationConfig, bool, bool, error) {
 
 	clusterUpdated := false
 	activeClusterUpdated := false
-	if replicationConfig != nil {
-		if len(replicationConfig.GetClusters()) != 0 {
-			clusterUpdated = true
-			clustersNew := []*persistence.ClusterReplicationConfig{}
-			for _, clusterConfig := range replicationConfig.Clusters {
-				clustersNew = append(clustersNew, &persistence.ClusterReplicationConfig{
-					ClusterName: clusterConfig.GetClusterName(),
-				})
-			}
-
-			if err := d.domainAttrValidator.validateDomainReplicationConfigClustersDoesNotRemove(
-				config.Clusters,
-				clustersNew,
-			); err != nil {
-				return config, clusterUpdated, activeClusterUpdated, err
-			}
-			config.Clusters = clustersNew
+	if len(updateRequest.Clusters) != 0 {
+		clusterUpdated = true
+		clustersNew := []*persistence.ClusterReplicationConfig{}
+		for _, clusterConfig := range updateRequest.Clusters {
+			clustersNew = append(clustersNew, &persistence.ClusterReplicationConfig{
+				ClusterName: clusterConfig.GetClusterName(),
+			})
 		}
 
-		if replicationConfig.ActiveClusterName != nil {
-			activeClusterUpdated = true
-			config.ActiveClusterName = replicationConfig.GetActiveClusterName()
+		if err := d.domainAttrValidator.validateDomainReplicationConfigClustersDoesNotRemove(
+			config.Clusters,
+			clustersNew,
+		); err != nil {
+			return config, clusterUpdated, activeClusterUpdated, err
 		}
+		config.Clusters = clustersNew
+	}
+
+	if updateRequest.ActiveClusterName != nil {
+		activeClusterUpdated = true
+		config.ActiveClusterName = *updateRequest.ActiveClusterName
 	}
 	return config, clusterUpdated, activeClusterUpdated, nil
 }

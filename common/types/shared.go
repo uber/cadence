@@ -8784,76 +8784,30 @@ func (v *TransientDecisionInfo) GetStartedEvent() (o *HistoryEvent) {
 	return
 }
 
-// UpdateDomainInfo is an internal type (TBD...)
-type UpdateDomainInfo struct {
-	Description *string           `json:"description,omitempty"`
-	OwnerEmail  *string           `json:"ownerEmail,omitempty"`
-	Data        map[string]string `json:"data,omitempty"`
-}
-
-// GetDescription is an internal getter (TBD...)
-func (v *UpdateDomainInfo) GetDescription() (o string) {
-	if v != nil && v.Description != nil {
-		return *v.Description
-	}
-	return
-}
-
-// GetOwnerEmail is an internal getter (TBD...)
-func (v *UpdateDomainInfo) GetOwnerEmail() (o string) {
-	if v != nil && v.OwnerEmail != nil {
-		return *v.OwnerEmail
-	}
-	return
-}
-
-// GetData is an internal getter (TBD...)
-func (v *UpdateDomainInfo) GetData() (o map[string]string) {
-	if v != nil && v.Data != nil {
-		return v.Data
-	}
-	return
-}
-
 // UpdateDomainRequest is an internal type (TBD...)
 type UpdateDomainRequest struct {
-	Name                     *string                         `json:"name,omitempty"`
-	UpdatedInfo              *UpdateDomainInfo               `json:"updatedInfo,omitempty"`
-	Configuration            *DomainConfiguration            `json:"configuration,omitempty"`
-	ReplicationConfiguration *DomainReplicationConfiguration `json:"replicationConfiguration,omitempty"`
-	SecurityToken            *string                         `json:"securityToken,omitempty"`
-	DeleteBadBinary          *string                         `json:"deleteBadBinary,omitempty"`
-	FailoverTimeoutInSeconds *int32                          `json:"failoverTimeoutInSeconds,omitempty"`
+	Name                                   string                             `json:"name,omitempty"`
+	Description                            *string                            `json:"description,omitempty"`
+	OwnerEmail                             *string                            `json:"ownerEmail,omitempty"`
+	Data                                   map[string]string                  `json:"data,omitempty"`
+	WorkflowExecutionRetentionPeriodInDays *int32                             `json:"workflowExecutionRetentionPeriodInDays,omitempty"`
+	EmitMetric                             *bool                              `json:"emitMetric,omitempty"`
+	BadBinaries                            *BadBinaries                       `json:"badBinaries,omitempty"`
+	HistoryArchivalStatus                  *ArchivalStatus                    `json:"historyArchivalStatus,omitempty"`
+	HistoryArchivalURI                     *string                            `json:"historyArchivalURI,omitempty"`
+	VisibilityArchivalStatus               *ArchivalStatus                    `json:"visibilityArchivalStatus,omitempty"`
+	VisibilityArchivalURI                  *string                            `json:"visibilityArchivalURI,omitempty"`
+	ActiveClusterName                      *string                            `json:"activeClusterName,omitempty"`
+	Clusters                               []*ClusterReplicationConfiguration `json:"clusters,omitempty"`
+	SecurityToken                          *string                            `json:"securityToken,omitempty"`
+	DeleteBadBinary                        *string                            `json:"deleteBadBinary,omitempty"`
+	FailoverTimeoutInSeconds               *int32                             `json:"failoverTimeoutInSeconds,omitempty"`
 }
 
 // GetName is an internal getter (TBD...)
 func (v *UpdateDomainRequest) GetName() (o string) {
-	if v != nil && v.Name != nil {
-		return *v.Name
-	}
-	return
-}
-
-// GetUpdatedInfo is an internal getter (TBD...)
-func (v *UpdateDomainRequest) GetUpdatedInfo() (o *UpdateDomainInfo) {
-	if v != nil && v.UpdatedInfo != nil {
-		return v.UpdatedInfo
-	}
-	return
-}
-
-// GetConfiguration is an internal getter (TBD...)
-func (v *UpdateDomainRequest) GetConfiguration() (o *DomainConfiguration) {
-	if v != nil && v.Configuration != nil {
-		return v.Configuration
-	}
-	return
-}
-
-// GetReplicationConfiguration is an internal getter (TBD...)
-func (v *UpdateDomainRequest) GetReplicationConfiguration() (o *DomainReplicationConfiguration) {
-	if v != nil && v.ReplicationConfiguration != nil {
-		return v.ReplicationConfiguration
+	if v != nil {
+		return v.Name
 	}
 	return
 }
@@ -8878,6 +8832,22 @@ func (v *UpdateDomainRequest) GetDeleteBadBinary() (o string) {
 func (v *UpdateDomainRequest) GetFailoverTimeoutInSeconds() (o int32) {
 	if v != nil && v.FailoverTimeoutInSeconds != nil {
 		return *v.FailoverTimeoutInSeconds
+	}
+	return
+}
+
+// GetHistoryArchivalURI is an internal getter (TBD...)
+func (v *UpdateDomainRequest) GetHistoryArchivalURI() (o string) {
+	if v != nil && v.HistoryArchivalURI != nil {
+		return *v.HistoryArchivalURI
+	}
+	return
+}
+
+// GetVisibilityArchivalURI is an internal getter (TBD...)
+func (v *UpdateDomainRequest) GetVisibilityArchivalURI() (o string) {
+	if v != nil && v.VisibilityArchivalURI != nil {
+		return *v.VisibilityArchivalURI
 	}
 	return
 }

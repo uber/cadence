@@ -169,9 +169,6 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 	if c.IsSet(FlagActiveClusterName) {
 		activeCluster := c.String(FlagActiveClusterName)
 		fmt.Printf("Will set active cluster name to: %s, other flag will be omitted.\n", activeCluster)
-		replicationConfig := &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(activeCluster),
-		}
 
 		var failoverTimeout *int32
 		if c.String(FlagFailoverType) == gracefulFailoverType {
@@ -180,8 +177,8 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 		}
 
 		updateRequest = &types.UpdateDomainRequest{
-			Name:                     common.StringPtr(domainName),
-			ReplicationConfiguration: replicationConfig,
+			Name:                     domainName,
+			ActiveClusterName:        common.StringPtr(activeCluster),
 			FailoverTimeoutInSeconds: failoverTimeout,
 		}
 	} else {
@@ -255,12 +252,11 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 			badBinaryToDelete = common.StringPtr(c.String(FlagRemoveBadBinary))
 		}
 
-		updateInfo := &types.UpdateDomainInfo{
-			Description: common.StringPtr(description),
-			OwnerEmail:  common.StringPtr(ownerEmail),
-			Data:        domainData,
-		}
-		updateConfig := &types.DomainConfiguration{
+		updateRequest = &types.UpdateDomainRequest{
+			Name:                                   domainName,
+			Description:                            common.StringPtr(description),
+			OwnerEmail:                             common.StringPtr(ownerEmail),
+			Data:                                   domainData,
 			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retentionDays),
 			EmitMetric:                             common.BoolPtr(emitMetric),
 			HistoryArchivalStatus:                  archivalStatus(c, FlagHistoryArchivalStatus),
@@ -268,16 +264,8 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 			VisibilityArchivalStatus:               archivalStatus(c, FlagVisibilityArchivalStatus),
 			VisibilityArchivalURI:                  common.StringPtr(c.String(FlagVisibilityArchivalURI)),
 			BadBinaries:                            binBinaries,
-		}
-		replicationConfig := &types.DomainReplicationConfiguration{
-			Clusters: clusters,
-		}
-		updateRequest = &types.UpdateDomainRequest{
-			Name:                     common.StringPtr(domainName),
-			UpdatedInfo:              updateInfo,
-			Configuration:            updateConfig,
-			ReplicationConfiguration: replicationConfig,
-			DeleteBadBinary:          badBinaryToDelete,
+			Clusters:                               clusters,
+			DeleteBadBinary:                        badBinaryToDelete,
 		}
 	}
 
@@ -357,12 +345,9 @@ func isDomainFailoverManagedByCadence(domain *types.DescribeDomainResponse) bool
 }
 
 func (d *domainCLIImpl) failover(c *cli.Context, domainName string, targetCluster string) error {
-	replicationConfig := &types.DomainReplicationConfiguration{
-		ActiveClusterName: common.StringPtr(targetCluster),
-	}
 	updateRequest := &types.UpdateDomainRequest{
-		Name:                     common.StringPtr(domainName),
-		ReplicationConfiguration: replicationConfig,
+		Name:              domainName,
+		ActiveClusterName: common.StringPtr(targetCluster),
 	}
 	ctx, cancel := newContext(c)
 	defer cancel()
