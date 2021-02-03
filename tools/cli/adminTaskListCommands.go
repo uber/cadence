@@ -29,7 +29,6 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -49,7 +48,7 @@ func AdminDescribeTaskList(c *cli.Context) {
 		Domain:                domain,
 		TaskList:              &types.TaskList{Name: taskList},
 		TaskListType:          &taskListType,
-		IncludeTaskListStatus: common.BoolPtr(true),
+		IncludeTaskListStatus: true,
 	}
 
 	response, err := frontendClient.DescribeTaskList(ctx, request)

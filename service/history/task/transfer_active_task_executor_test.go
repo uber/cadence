@@ -1601,7 +1601,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 			WorkflowID: childWorkflowID,
 			RunID:      childRunID,
 		},
-		IsFirstDecision: common.BoolPtr(true),
+		IsFirstDecision: true,
 	}).Return(nil).Times(1)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
@@ -1696,7 +1696,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_WithRet
 			WorkflowID: childWorkflowID,
 			RunID:      childRunID,
 		},
-		IsFirstDecision: common.BoolPtr(true),
+		IsFirstDecision: true,
 	}).Return(nil).Times(1)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
@@ -1872,7 +1872,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 			WorkflowID: childWorkflowID,
 			RunID:      childRunID,
 		},
-		IsFirstDecision: common.BoolPtr(true),
+		IsFirstDecision: true,
 	}).Return(nil).Times(1)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
@@ -2192,7 +2192,7 @@ func (s *transferActiveTaskExecutorSuite) createRequestCancelWorkflowExecutionRe
 		},
 		ExternalInitiatedEventID:  common.Int64Ptr(task.ScheduleID),
 		ExternalWorkflowExecution: &sourceExecution,
-		ChildWorkflowOnly:         common.BoolPtr(task.TargetChildWorkflowOnly),
+		ChildWorkflowOnly:         task.TargetChildWorkflowOnly,
 	}
 }
 
@@ -2223,7 +2223,7 @@ func (s *transferActiveTaskExecutorSuite) createSignalWorkflowExecutionRequest(
 			Control:           si.Control,
 		},
 		ExternalWorkflowExecution: &sourceExecution,
-		ChildWorkflowOnly:         common.BoolPtr(task.TargetChildWorkflowOnly),
+		ChildWorkflowOnly:         task.TargetChildWorkflowOnly,
 	}
 }
 

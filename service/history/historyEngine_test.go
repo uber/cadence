@@ -1791,7 +1791,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatTimeout(
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &types.HistoryRespondDecisionTaskCompletedRequest{
 		DomainUUID: constants.TestDomainID,
 		CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
-			ForceCreateNewDecisionTask: common.BoolPtr(true),
+			ForceCreateNewDecisionTask: true,
 			TaskToken:                  taskToken,
 			Decisions:                  decisions,
 			ExecutionContext:           executionContext,
@@ -1839,7 +1839,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &types.HistoryRespondDecisionTaskCompletedRequest{
 		DomainUUID: constants.TestDomainID,
 		CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
-			ForceCreateNewDecisionTask: common.BoolPtr(true),
+			ForceCreateNewDecisionTask: true,
 			TaskToken:                  taskToken,
 			Decisions:                  decisions,
 			ExecutionContext:           executionContext,
@@ -1887,7 +1887,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &types.HistoryRespondDecisionTaskCompletedRequest{
 		DomainUUID: constants.TestDomainID,
 		CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
-			ForceCreateNewDecisionTask: common.BoolPtr(true),
+			ForceCreateNewDecisionTask: true,
 			TaskToken:                  taskToken,
 			Decisions:                  decisions,
 			ExecutionContext:           executionContext,
@@ -4238,7 +4238,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 	})
 	s.Nil(err)
 	s.NotNil(hbResponse)
-	s.True(*hbResponse.CancelRequested)
+	s.True(hbResponse.CancelRequested)
 
 	// Try cancelling the request.
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
@@ -4345,7 +4345,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 	})
 	s.Nil(err)
 	s.NotNil(hbResponse)
-	s.True(*hbResponse.CancelRequested)
+	s.True(hbResponse.CancelRequested)
 
 	// Try cancelling the request.
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
@@ -4492,7 +4492,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	})
 	s.Nil(err)
 	s.NotNil(hbResponse)
-	s.True(*hbResponse.CancelRequested)
+	s.True(hbResponse.CancelRequested)
 
 	// Try cancelling the request.
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()

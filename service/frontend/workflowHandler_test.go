@@ -1149,7 +1149,7 @@ func (s *workflowHandlerSuite) getWorkflowExecutionHistory(nextEventID int64, tr
 			WorkflowID: testWorkflowID,
 			RunID:      testRunID,
 		},
-		SkipArchival:  common.BoolPtr(true),
+		SkipArchival:  true,
 		NextPageToken: token,
 	})
 	s.NoError(err)

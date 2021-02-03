@@ -633,7 +633,7 @@ func (v *ReadDLQMessagesResponse) GetNextPageToken() (o []byte) {
 type ReplicationMessages struct {
 	ReplicationTasks       []*ReplicationTask `json:"replicationTasks,omitempty"`
 	LastRetrievedMessageID *int64             `json:"lastRetrievedMessageId,omitempty"`
-	HasMore                *bool              `json:"hasMore,omitempty"`
+	HasMore                bool               `json:"hasMore,omitempty"`
 	SyncShardStatus        *SyncShardStatus   `json:"syncShardStatus,omitempty"`
 }
 
@@ -655,8 +655,8 @@ func (v *ReplicationMessages) GetLastRetrievedMessageID() (o int64) {
 
 // GetHasMore is an internal getter (TBD...)
 func (v *ReplicationMessages) GetHasMore() (o bool) {
-	if v != nil && v.HasMore != nil {
-		return *v.HasMore
+	if v != nil {
+		return v.HasMore
 	}
 	return
 }

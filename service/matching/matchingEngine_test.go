@@ -210,7 +210,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 			response.PreviousStartedEventID = common.Int64Ptr(scheduleID)
 			response.ScheduledEventID = common.Int64Ptr(scheduleID + 1)
 			response.Attempt = 0
-			response.StickyExecutionEnabled = common.BoolPtr(true)
+			response.StickyExecutionEnabled = true
 			response.WorkflowExecutionTaskList = &types.TaskList{
 				Name: tl,
 				Kind: &taskListKindNormal,
@@ -246,7 +246,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 		PreviousStartedEventID: common.Int64Ptr(scheduleID),
 		Attempt:                0,
 		BacklogCountHint:       common.Int64Ptr(1),
-		StickyExecutionEnabled: common.BoolPtr(true),
+		StickyExecutionEnabled: true,
 		WorkflowExecutionTaskList: &types.TaskList{
 			Name: tl,
 			Kind: &tlKind,
@@ -310,7 +310,7 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(callContext context.Co
 			DescRequest: &types.DescribeTaskListRequest{
 				TaskList:              taskList,
 				TaskListType:          &taskListType,
-				IncludeTaskListStatus: common.BoolPtr(false),
+				IncludeTaskListStatus: false,
 			},
 		})
 		s.NoError(err)
@@ -716,7 +716,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 		DescRequest: &types.DescribeTaskListRequest{
 			TaskList:              taskList,
 			TaskListType:          &tlType,
-			IncludeTaskListStatus: common.BoolPtr(true),
+			IncludeTaskListStatus: true,
 		},
 	})
 	s.NoError(err)

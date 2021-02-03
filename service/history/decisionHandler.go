@@ -603,7 +603,7 @@ Update_History_Loop:
 				return nil, err
 			}
 			// sticky is always enabled when worker request for new decision task from RespondDecisionTaskCompleted
-			resp.StartedResponse.StickyExecutionEnabled = common.BoolPtr(true)
+			resp.StartedResponse.StickyExecutionEnabled = true
 		}
 
 		return resp, nil
@@ -630,7 +630,7 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 	// before it was started.
 	response.ScheduledEventID = common.Int64Ptr(decision.ScheduleID)
 	response.StartedEventID = common.Int64Ptr(decision.StartedID)
-	response.StickyExecutionEnabled = common.BoolPtr(msBuilder.IsStickyTaskListEnabled())
+	response.StickyExecutionEnabled = msBuilder.IsStickyTaskListEnabled()
 	response.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID())
 	response.Attempt = decision.Attempt
 	response.WorkflowExecutionTaskList = &types.TaskList{

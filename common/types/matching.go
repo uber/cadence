@@ -910,7 +910,7 @@ type MatchingPollForDecisionTaskResponse struct {
 	Attempt                   int64                     `json:"attempt,omitempty"`
 	NextEventID               *int64                    `json:"nextEventId,omitempty"`
 	BacklogCountHint          *int64                    `json:"backlogCountHint,omitempty"`
-	StickyExecutionEnabled    *bool                     `json:"stickyExecutionEnabled,omitempty"`
+	StickyExecutionEnabled    bool                      `json:"stickyExecutionEnabled,omitempty"`
 	Query                     *WorkflowQuery            `json:"query,omitempty"`
 	DecisionInfo              *TransientDecisionInfo    `json:"decisionInfo,omitempty"`
 	WorkflowExecutionTaskList *TaskList                 `json:"WorkflowExecutionTaskList,omitempty"`
@@ -987,8 +987,8 @@ func (v *MatchingPollForDecisionTaskResponse) GetBacklogCountHint() (o int64) {
 
 // GetStickyExecutionEnabled is an internal getter (TBD...)
 func (v *MatchingPollForDecisionTaskResponse) GetStickyExecutionEnabled() (o bool) {
-	if v != nil && v.StickyExecutionEnabled != nil {
-		return *v.StickyExecutionEnabled
+	if v != nil {
+		return v.StickyExecutionEnabled
 	}
 	return
 }

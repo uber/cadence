@@ -1514,7 +1514,7 @@ func FromDescribeDomainResponse(t *types.DescribeDomainResponse) *shared.Describ
 		Configuration:            FromDomainConfiguration(t.Configuration),
 		ReplicationConfiguration: FromDomainReplicationConfiguration(t.ReplicationConfiguration),
 		FailoverVersion:          t.FailoverVersion,
-		IsGlobalDomain:           t.IsGlobalDomain,
+		IsGlobalDomain:           &t.IsGlobalDomain,
 	}
 }
 
@@ -1528,7 +1528,7 @@ func ToDescribeDomainResponse(t *shared.DescribeDomainResponse) *types.DescribeD
 		Configuration:            ToDomainConfiguration(t.Configuration),
 		ReplicationConfiguration: ToDomainReplicationConfiguration(t.ReplicationConfiguration),
 		FailoverVersion:          t.FailoverVersion,
-		IsGlobalDomain:           t.IsGlobalDomain,
+		IsGlobalDomain:           t.GetIsGlobalDomain(),
 	}
 }
 
@@ -1637,7 +1637,7 @@ func FromDescribeTaskListRequest(t *types.DescribeTaskListRequest) *shared.Descr
 		Domain:                &t.Domain,
 		TaskList:              FromTaskList(t.TaskList),
 		TaskListType:          FromTaskListType(t.TaskListType),
-		IncludeTaskListStatus: t.IncludeTaskListStatus,
+		IncludeTaskListStatus: &t.IncludeTaskListStatus,
 	}
 }
 
@@ -1650,7 +1650,7 @@ func ToDescribeTaskListRequest(t *shared.DescribeTaskListRequest) *types.Describ
 		Domain:                t.GetDomain(),
 		TaskList:              ToTaskList(t.TaskList),
 		TaskListType:          ToTaskListType(t.TaskListType),
-		IncludeTaskListStatus: t.IncludeTaskListStatus,
+		IncludeTaskListStatus: t.GetIncludeTaskListStatus(),
 	}
 }
 
@@ -2346,9 +2346,9 @@ func FromGetWorkflowExecutionHistoryRequest(t *types.GetWorkflowExecutionHistory
 		Execution:              FromWorkflowExecution(t.Execution),
 		MaximumPageSize:        &t.MaximumPageSize,
 		NextPageToken:          t.NextPageToken,
-		WaitForNewEvent:        t.WaitForNewEvent,
+		WaitForNewEvent:        &t.WaitForNewEvent,
 		HistoryEventFilterType: FromHistoryEventFilterType(t.HistoryEventFilterType),
-		SkipArchival:           t.SkipArchival,
+		SkipArchival:           &t.SkipArchival,
 	}
 }
 
@@ -2362,9 +2362,9 @@ func ToGetWorkflowExecutionHistoryRequest(t *shared.GetWorkflowExecutionHistoryR
 		Execution:              ToWorkflowExecution(t.Execution),
 		MaximumPageSize:        t.GetMaximumPageSize(),
 		NextPageToken:          t.NextPageToken,
-		WaitForNewEvent:        t.WaitForNewEvent,
+		WaitForNewEvent:        t.GetWaitForNewEvent(),
 		HistoryEventFilterType: ToHistoryEventFilterType(t.HistoryEventFilterType),
-		SkipArchival:           t.SkipArchival,
+		SkipArchival:           t.GetSkipArchival(),
 	}
 }
 
@@ -2377,7 +2377,7 @@ func FromGetWorkflowExecutionHistoryResponse(t *types.GetWorkflowExecutionHistor
 		History:       FromHistory(t.History),
 		RawHistory:    FromDataBlobArray(t.RawHistory),
 		NextPageToken: t.NextPageToken,
-		Archived:      t.Archived,
+		Archived:      &t.Archived,
 	}
 }
 
@@ -2390,7 +2390,7 @@ func ToGetWorkflowExecutionHistoryResponse(t *shared.GetWorkflowExecutionHistory
 		History:       ToHistory(t.History),
 		RawHistory:    ToDataBlobArray(t.RawHistory),
 		NextPageToken: t.NextPageToken,
-		Archived:      t.Archived,
+		Archived:      t.GetArchived(),
 	}
 }
 
@@ -3744,7 +3744,7 @@ func FromRecordActivityTaskHeartbeatResponse(t *types.RecordActivityTaskHeartbea
 		return nil
 	}
 	return &shared.RecordActivityTaskHeartbeatResponse{
-		CancelRequested: t.CancelRequested,
+		CancelRequested: &t.CancelRequested,
 	}
 }
 
@@ -3754,7 +3754,7 @@ func ToRecordActivityTaskHeartbeatResponse(t *shared.RecordActivityTaskHeartbeat
 		return nil
 	}
 	return &types.RecordActivityTaskHeartbeatResponse{
-		CancelRequested: t.CancelRequested,
+		CancelRequested: t.GetCancelRequested(),
 	}
 }
 
@@ -3950,7 +3950,7 @@ func FromRequestCancelExternalWorkflowExecutionDecisionAttributes(t *types.Reque
 		WorkflowId:        &t.WorkflowID,
 		RunId:             &t.RunID,
 		Control:           t.Control,
-		ChildWorkflowOnly: t.ChildWorkflowOnly,
+		ChildWorkflowOnly: &t.ChildWorkflowOnly,
 	}
 }
 
@@ -3964,7 +3964,7 @@ func ToRequestCancelExternalWorkflowExecutionDecisionAttributes(t *shared.Reques
 		WorkflowID:        t.GetWorkflowId(),
 		RunID:             t.GetRunId(),
 		Control:           t.Control,
-		ChildWorkflowOnly: t.ChildWorkflowOnly,
+		ChildWorkflowOnly: t.GetChildWorkflowOnly(),
 	}
 }
 
@@ -4008,7 +4008,7 @@ func FromRequestCancelExternalWorkflowExecutionInitiatedEventAttributes(t *types
 		Domain:                       &t.Domain,
 		WorkflowExecution:            FromWorkflowExecution(t.WorkflowExecution),
 		Control:                      t.Control,
-		ChildWorkflowOnly:            t.ChildWorkflowOnly,
+		ChildWorkflowOnly:            &t.ChildWorkflowOnly,
 	}
 }
 
@@ -4022,7 +4022,7 @@ func ToRequestCancelExternalWorkflowExecutionInitiatedEventAttributes(t *shared.
 		Domain:                       t.GetDomain(),
 		WorkflowExecution:            ToWorkflowExecution(t.WorkflowExecution),
 		Control:                      t.Control,
-		ChildWorkflowOnly:            t.ChildWorkflowOnly,
+		ChildWorkflowOnly:            t.GetChildWorkflowOnly(),
 	}
 }
 
@@ -4063,7 +4063,7 @@ func FromResetPointInfo(t *types.ResetPointInfo) *shared.ResetPointInfo {
 		FirstDecisionCompletedId: t.FirstDecisionCompletedID,
 		CreatedTimeNano:          t.CreatedTimeNano,
 		ExpiringTimeNano:         t.ExpiringTimeNano,
-		Resettable:               t.Resettable,
+		Resettable:               &t.Resettable,
 	}
 }
 
@@ -4078,7 +4078,7 @@ func ToResetPointInfo(t *shared.ResetPointInfo) *types.ResetPointInfo {
 		FirstDecisionCompletedID: t.FirstDecisionCompletedId,
 		CreatedTimeNano:          t.CreatedTimeNano,
 		ExpiringTimeNano:         t.ExpiringTimeNano,
-		Resettable:               t.Resettable,
+		Resettable:               t.GetResettable(),
 	}
 }
 
@@ -4175,7 +4175,7 @@ func FromResetWorkflowExecutionRequest(t *types.ResetWorkflowExecutionRequest) *
 		Reason:                t.Reason,
 		DecisionFinishEventId: t.DecisionFinishEventID,
 		RequestId:             &t.RequestID,
-		SkipSignalReapply:     t.SkipSignalReapply,
+		SkipSignalReapply:     &t.SkipSignalReapply,
 	}
 }
 
@@ -4190,7 +4190,7 @@ func ToResetWorkflowExecutionRequest(t *shared.ResetWorkflowExecutionRequest) *t
 		Reason:                t.Reason,
 		DecisionFinishEventID: t.DecisionFinishEventId,
 		RequestID:             t.GetRequestId(),
-		SkipSignalReapply:     t.SkipSignalReapply,
+		SkipSignalReapply:     t.GetSkipSignalReapply(),
 	}
 }
 
@@ -4391,8 +4391,8 @@ func FromRespondDecisionTaskCompletedRequest(t *types.RespondDecisionTaskComplet
 		ExecutionContext:           t.ExecutionContext,
 		Identity:                   &t.Identity,
 		StickyAttributes:           FromStickyExecutionAttributes(t.StickyAttributes),
-		ReturnNewDecisionTask:      t.ReturnNewDecisionTask,
-		ForceCreateNewDecisionTask: t.ForceCreateNewDecisionTask,
+		ReturnNewDecisionTask:      &t.ReturnNewDecisionTask,
+		ForceCreateNewDecisionTask: &t.ForceCreateNewDecisionTask,
 		BinaryChecksum:             &t.BinaryChecksum,
 		QueryResults:               FromWorkflowQueryResultMap(t.QueryResults),
 	}
@@ -4409,8 +4409,8 @@ func ToRespondDecisionTaskCompletedRequest(t *shared.RespondDecisionTaskComplete
 		ExecutionContext:           t.ExecutionContext,
 		Identity:                   t.GetIdentity(),
 		StickyAttributes:           ToStickyExecutionAttributes(t.StickyAttributes),
-		ReturnNewDecisionTask:      t.ReturnNewDecisionTask,
-		ForceCreateNewDecisionTask: t.ForceCreateNewDecisionTask,
+		ReturnNewDecisionTask:      t.GetReturnNewDecisionTask(),
+		ForceCreateNewDecisionTask: t.GetForceCreateNewDecisionTask(),
 		BinaryChecksum:             t.GetBinaryChecksum(),
 		QueryResults:               ToWorkflowQueryResultMap(t.QueryResults),
 	}
@@ -4575,7 +4575,7 @@ func FromScheduleActivityTaskDecisionAttributes(t *types.ScheduleActivityTaskDec
 		HeartbeatTimeoutSeconds:       t.HeartbeatTimeoutSeconds,
 		RetryPolicy:                   FromRetryPolicy(t.RetryPolicy),
 		Header:                        FromHeader(t.Header),
-		RequestLocalDispatch:          t.RequestLocalDispatch,
+		RequestLocalDispatch:          &t.RequestLocalDispatch,
 	}
 }
 
@@ -4596,7 +4596,7 @@ func ToScheduleActivityTaskDecisionAttributes(t *shared.ScheduleActivityTaskDeci
 		HeartbeatTimeoutSeconds:       t.HeartbeatTimeoutSeconds,
 		RetryPolicy:                   ToRetryPolicy(t.RetryPolicy),
 		Header:                        ToHeader(t.Header),
-		RequestLocalDispatch:          t.RequestLocalDispatch,
+		RequestLocalDispatch:          t.GetRequestLocalDispatch(),
 	}
 }
 
@@ -4651,7 +4651,7 @@ func FromSignalExternalWorkflowExecutionDecisionAttributes(t *types.SignalExtern
 		SignalName:        t.SignalName,
 		Input:             t.Input,
 		Control:           t.Control,
-		ChildWorkflowOnly: t.ChildWorkflowOnly,
+		ChildWorkflowOnly: &t.ChildWorkflowOnly,
 	}
 }
 
@@ -4666,7 +4666,7 @@ func ToSignalExternalWorkflowExecutionDecisionAttributes(t *shared.SignalExterna
 		SignalName:        t.SignalName,
 		Input:             t.Input,
 		Control:           t.Control,
-		ChildWorkflowOnly: t.ChildWorkflowOnly,
+		ChildWorkflowOnly: t.GetChildWorkflowOnly(),
 	}
 }
 
@@ -4738,7 +4738,7 @@ func FromSignalExternalWorkflowExecutionInitiatedEventAttributes(t *types.Signal
 		SignalName:                   t.SignalName,
 		Input:                        t.Input,
 		Control:                      t.Control,
-		ChildWorkflowOnly:            t.ChildWorkflowOnly,
+		ChildWorkflowOnly:            &t.ChildWorkflowOnly,
 	}
 }
 
@@ -4754,7 +4754,7 @@ func ToSignalExternalWorkflowExecutionInitiatedEventAttributes(t *shared.SignalE
 		SignalName:                   t.SignalName,
 		Input:                        t.Input,
 		Control:                      t.Control,
-		ChildWorkflowOnly:            t.ChildWorkflowOnly,
+		ChildWorkflowOnly:            t.GetChildWorkflowOnly(),
 	}
 }
 
@@ -5540,7 +5540,7 @@ func FromUpdateDomainResponse(t *types.UpdateDomainResponse) *shared.UpdateDomai
 		Configuration:            FromDomainConfiguration(t.Configuration),
 		ReplicationConfiguration: FromDomainReplicationConfiguration(t.ReplicationConfiguration),
 		FailoverVersion:          t.FailoverVersion,
-		IsGlobalDomain:           t.IsGlobalDomain,
+		IsGlobalDomain:           &t.IsGlobalDomain,
 	}
 }
 
@@ -5554,7 +5554,7 @@ func ToUpdateDomainResponse(t *shared.UpdateDomainResponse) *types.UpdateDomainR
 		Configuration:            ToDomainConfiguration(t.Configuration),
 		ReplicationConfiguration: ToDomainReplicationConfiguration(t.ReplicationConfiguration),
 		FailoverVersion:          t.FailoverVersion,
-		IsGlobalDomain:           t.IsGlobalDomain,
+		IsGlobalDomain:           t.GetIsGlobalDomain(),
 	}
 }
 

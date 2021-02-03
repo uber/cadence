@@ -89,7 +89,7 @@ func (v *HistoryDescribeWorkflowExecutionRequest) GetRequest() (o *DescribeWorkf
 // DomainFilter is an internal type (TBD...)
 type DomainFilter struct {
 	DomainIDs    []string `json:"domainIDs,omitempty"`
-	ReverseMatch *bool    `json:"reverseMatch,omitempty"`
+	ReverseMatch bool     `json:"reverseMatch,omitempty"`
 }
 
 // GetDomainIDs is an internal getter (TBD...)
@@ -102,8 +102,8 @@ func (v *DomainFilter) GetDomainIDs() (o []string) {
 
 // GetReverseMatch is an internal getter (TBD...)
 func (v *DomainFilter) GetReverseMatch() (o bool) {
-	if v != nil && v.ReverseMatch != nil {
-		return *v.ReverseMatch
+	if v != nil {
+		return v.ReverseMatch
 	}
 	return
 }
@@ -195,14 +195,14 @@ type GetMutableStateResponse struct {
 	ClientLibraryVersion                 *string            `json:"clientLibraryVersion,omitempty"`
 	ClientFeatureVersion                 *string            `json:"clientFeatureVersion,omitempty"`
 	ClientImpl                           *string            `json:"clientImpl,omitempty"`
-	IsWorkflowRunning                    *bool              `json:"isWorkflowRunning,omitempty"`
+	IsWorkflowRunning                    bool               `json:"isWorkflowRunning,omitempty"`
 	StickyTaskListScheduleToStartTimeout *int32             `json:"stickyTaskListScheduleToStartTimeout,omitempty"`
 	EventStoreVersion                    *int32             `json:"eventStoreVersion,omitempty"`
 	CurrentBranchToken                   []byte             `json:"currentBranchToken,omitempty"`
 	WorkflowState                        *int32             `json:"workflowState,omitempty"`
 	WorkflowCloseState                   *int32             `json:"workflowCloseState,omitempty"`
 	VersionHistories                     *VersionHistories  `json:"versionHistories,omitempty"`
-	IsStickyTaskListEnabled              *bool              `json:"isStickyTaskListEnabled,omitempty"`
+	IsStickyTaskListEnabled              bool               `json:"isStickyTaskListEnabled,omitempty"`
 }
 
 // GetExecution is an internal getter (TBD...)
@@ -287,8 +287,8 @@ func (v *GetMutableStateResponse) GetClientImpl() (o string) {
 
 // GetIsWorkflowRunning is an internal getter (TBD...)
 func (v *GetMutableStateResponse) GetIsWorkflowRunning() (o bool) {
-	if v != nil && v.IsWorkflowRunning != nil {
-		return *v.IsWorkflowRunning
+	if v != nil {
+		return v.IsWorkflowRunning
 	}
 	return
 }
@@ -343,8 +343,8 @@ func (v *GetMutableStateResponse) GetVersionHistories() (o *VersionHistories) {
 
 // GetIsStickyTaskListEnabled is an internal getter (TBD...)
 func (v *GetMutableStateResponse) GetIsStickyTaskListEnabled() (o bool) {
-	if v != nil && v.IsStickyTaskListEnabled != nil {
-		return *v.IsStickyTaskListEnabled
+	if v != nil {
+		return v.IsStickyTaskListEnabled
 	}
 	return
 }
@@ -3893,7 +3893,7 @@ type RecordDecisionTaskStartedResponse struct {
 	StartedEventID            *int64                    `json:"startedEventId,omitempty"`
 	NextEventID               *int64                    `json:"nextEventId,omitempty"`
 	Attempt                   int64                     `json:"attempt,omitempty"`
-	StickyExecutionEnabled    *bool                     `json:"stickyExecutionEnabled,omitempty"`
+	StickyExecutionEnabled    bool                      `json:"stickyExecutionEnabled,omitempty"`
 	DecisionInfo              *TransientDecisionInfo    `json:"decisionInfo,omitempty"`
 	WorkflowExecutionTaskList *TaskList                 `json:"WorkflowExecutionTaskList,omitempty"`
 	EventStoreVersion         *int32                    `json:"eventStoreVersion,omitempty"`
@@ -3953,8 +3953,8 @@ func (v *RecordDecisionTaskStartedResponse) GetAttempt() (o int64) {
 
 // GetStickyExecutionEnabled is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedResponse) GetStickyExecutionEnabled() (o bool) {
-	if v != nil && v.StickyExecutionEnabled != nil {
-		return *v.StickyExecutionEnabled
+	if v != nil {
+		return v.StickyExecutionEnabled
 	}
 	return
 }
@@ -4123,7 +4123,7 @@ type HistoryRequestCancelWorkflowExecutionRequest struct {
 	CancelRequest             *RequestCancelWorkflowExecutionRequest `json:"cancelRequest,omitempty"`
 	ExternalInitiatedEventID  *int64                                 `json:"externalInitiatedEventId,omitempty"`
 	ExternalWorkflowExecution *WorkflowExecution                     `json:"externalWorkflowExecution,omitempty"`
-	ChildWorkflowOnly         *bool                                  `json:"childWorkflowOnly,omitempty"`
+	ChildWorkflowOnly         bool                                   `json:"childWorkflowOnly,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4160,8 +4160,8 @@ func (v *HistoryRequestCancelWorkflowExecutionRequest) GetExternalWorkflowExecut
 
 // GetChildWorkflowOnly is an internal getter (TBD...)
 func (v *HistoryRequestCancelWorkflowExecutionRequest) GetChildWorkflowOnly() (o bool) {
-	if v != nil && v.ChildWorkflowOnly != nil {
-		return *v.ChildWorkflowOnly
+	if v != nil {
+		return v.ChildWorkflowOnly
 	}
 	return
 }
@@ -4350,7 +4350,7 @@ func (v *HistoryRespondDecisionTaskFailedRequest) GetFailedRequest() (o *Respond
 type ScheduleDecisionTaskRequest struct {
 	DomainUUID        string             `json:"domainUUID,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
-	IsFirstDecision   *bool              `json:"isFirstDecision,omitempty"`
+	IsFirstDecision   bool               `json:"isFirstDecision,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4371,8 +4371,8 @@ func (v *ScheduleDecisionTaskRequest) GetWorkflowExecution() (o *WorkflowExecuti
 
 // GetIsFirstDecision is an internal getter (TBD...)
 func (v *ScheduleDecisionTaskRequest) GetIsFirstDecision() (o bool) {
-	if v != nil && v.IsFirstDecision != nil {
-		return *v.IsFirstDecision
+	if v != nil {
+		return v.IsFirstDecision
 	}
 	return
 }
@@ -4426,7 +4426,7 @@ type HistorySignalWorkflowExecutionRequest struct {
 	DomainUUID                string                          `json:"domainUUID,omitempty"`
 	SignalRequest             *SignalWorkflowExecutionRequest `json:"signalRequest,omitempty"`
 	ExternalWorkflowExecution *WorkflowExecution              `json:"externalWorkflowExecution,omitempty"`
-	ChildWorkflowOnly         *bool                           `json:"childWorkflowOnly,omitempty"`
+	ChildWorkflowOnly         bool                            `json:"childWorkflowOnly,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -4455,8 +4455,8 @@ func (v *HistorySignalWorkflowExecutionRequest) GetExternalWorkflowExecution() (
 
 // GetChildWorkflowOnly is an internal getter (TBD...)
 func (v *HistorySignalWorkflowExecutionRequest) GetChildWorkflowOnly() (o bool) {
-	if v != nil && v.ChildWorkflowOnly != nil {
-		return *v.ChildWorkflowOnly
+	if v != nil {
+		return v.ChildWorkflowOnly
 	}
 	return
 }

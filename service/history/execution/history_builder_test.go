@@ -1028,7 +1028,7 @@ func (s *historyBuilderSuite) addActivityTaskScheduledEvent(decisionCompletedID 
 			HeartbeatTimeoutSeconds:       common.Int32Ptr(hearbeatTimeout),
 			StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
 			RetryPolicy:                   retryPolicy,
-			RequestLocalDispatch:          &requestLocalDispatch,
+			RequestLocalDispatch:          requestLocalDispatch,
 		},
 	)
 	s.Nil(err)
@@ -1092,7 +1092,7 @@ func (s *historyBuilderSuite) addRequestCancelExternalWorkflowExecutionInitiated
 			Domain:            targetDomain,
 			WorkflowID:        targetExecution.WorkflowID,
 			RunID:             targetExecution.RunID,
-			ChildWorkflowOnly: common.BoolPtr(childWorkflowOnly),
+			ChildWorkflowOnly: childWorkflowOnly,
 		},
 	)
 	s.Nil(err)
@@ -1271,7 +1271,7 @@ func (s *historyBuilderSuite) validateRequestCancelExternalWorkflowExecutionInit
 	s.Equal(domain, attributes.GetDomain())
 	s.Equal(execution.GetWorkflowID(), attributes.WorkflowExecution.GetWorkflowID())
 	s.Equal(execution.GetRunID(), attributes.WorkflowExecution.GetRunID())
-	s.Equal(childWorkflowOnly, *attributes.ChildWorkflowOnly)
+	s.Equal(childWorkflowOnly, attributes.ChildWorkflowOnly)
 }
 
 func (s *historyBuilderSuite) validateExternalWorkflowExecutionCancelRequested(

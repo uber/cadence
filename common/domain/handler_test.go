@@ -359,7 +359,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				Clusters:          cluster1,
 			},
 			FailoverVersion: common.Int64Ptr(common.EmptyVersion),
-			IsGlobalDomain:  common.BoolPtr(isGlobalDomain1),
+			IsGlobalDomain:  isGlobalDomain1,
 		},
 		domainName2: &types.DescribeDomainResponse{
 			DomainInfo: &types.DomainInfo{
@@ -384,7 +384,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				Clusters:          cluster2,
 			},
 			FailoverVersion: common.Int64Ptr(s.ClusterMetadata.GetNextFailoverVersion(activeClusterName2, 0)),
-			IsGlobalDomain:  common.BoolPtr(isGlobalDomain2),
+			IsGlobalDomain:  isGlobalDomain2,
 		},
 	}, domains)
 }
