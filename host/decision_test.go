@@ -92,8 +92,8 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 				WorkerTaskList:                stikyTaskList,
 				ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 			},
-			ReturnNewDecisionTask:      common.BoolPtr(true),
-			ForceCreateNewDecisionTask: common.BoolPtr(true),
+			ReturnNewDecisionTask:      true,
+			ForceCreateNewDecisionTask: true,
 		})
 		if _, ok := err2.(*types.EntityNotExistsError); ok {
 			hbTimeout++
@@ -129,8 +129,8 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 			WorkerTaskList:                stikyTaskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 		},
-		ReturnNewDecisionTask:      common.BoolPtr(true),
-		ForceCreateNewDecisionTask: common.BoolPtr(false),
+		ReturnNewDecisionTask:      true,
+		ForceCreateNewDecisionTask: false,
 	})
 	s.Nil(err5)
 	s.Nil(resp5.DecisionTask)
@@ -196,8 +196,8 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 			WorkerTaskList:                stikyTaskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 		},
-		ReturnNewDecisionTask:      common.BoolPtr(true),
-		ForceCreateNewDecisionTask: common.BoolPtr(true),
+		ReturnNewDecisionTask:      true,
+		ForceCreateNewDecisionTask: true,
 	})
 	s.Nil(err2)
 
@@ -216,8 +216,8 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 			WorkerTaskList:                stikyTaskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 		},
-		ReturnNewDecisionTask:      common.BoolPtr(true),
-		ForceCreateNewDecisionTask: common.BoolPtr(true),
+		ReturnNewDecisionTask:      true,
+		ForceCreateNewDecisionTask: true,
 	})
 	s.Nil(err3)
 
@@ -236,8 +236,8 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 			WorkerTaskList:                stikyTaskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 		},
-		ReturnNewDecisionTask:      common.BoolPtr(true),
-		ForceCreateNewDecisionTask: common.BoolPtr(true),
+		ReturnNewDecisionTask:      true,
+		ForceCreateNewDecisionTask: true,
 	})
 	s.Nil(err4)
 
@@ -255,8 +255,8 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 			WorkerTaskList:                stikyTaskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 		},
-		ReturnNewDecisionTask:      common.BoolPtr(true),
-		ForceCreateNewDecisionTask: common.BoolPtr(false),
+		ReturnNewDecisionTask:      true,
+		ForceCreateNewDecisionTask: false,
 	})
 	s.Nil(err5)
 	s.Nil(resp5.DecisionTask)

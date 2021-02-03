@@ -157,7 +157,7 @@ func (s *nDCIntegrationTestSuite) GetReplicationMessagesMock(
 		replicationMessage := &types.ReplicationMessages{
 			ReplicationTasks:       tasks,
 			LastRetrievedMessageID: tasks[len(tasks)-1].SourceTaskID,
-			HasMore:                common.BoolPtr(true),
+			HasMore:                true,
 		}
 
 		return &types.GetReplicationMessagesResponse{
@@ -242,7 +242,7 @@ func (s *nDCIntegrationTestSuite) verifyEventHistory(
 			},
 			MaximumPageSize:        1000,
 			NextPageToken:          nil,
-			WaitForNewEvent:        common.BoolPtr(false),
+			WaitForNewEvent:        false,
 			HistoryEventFilterType: types.HistoryEventFilterTypeAllEvent.Ptr(),
 		},
 	)
