@@ -994,7 +994,7 @@ func (t *transferActiveTaskExecutor) createFirstDecisionTask(
 	err := t.historyClient.ScheduleDecisionTask(scheduleDecisionCtx, &types.ScheduleDecisionTaskRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: execution,
-		IsFirstDecision:   common.BoolPtr(true),
+		IsFirstDecision:   true,
 	})
 
 	if err != nil {
@@ -1219,7 +1219,7 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionWithRetry(
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
 		},
-		ChildWorkflowOnly: common.BoolPtr(task.TargetChildWorkflowOnly),
+		ChildWorkflowOnly: task.TargetChildWorkflowOnly,
 	}
 
 	requestCancelCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
@@ -1265,7 +1265,7 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionWithRetry(
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
 		},
-		ChildWorkflowOnly: common.BoolPtr(task.TargetChildWorkflowOnly),
+		ChildWorkflowOnly: task.TargetChildWorkflowOnly,
 	}
 
 	signalCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)

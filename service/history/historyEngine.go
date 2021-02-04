@@ -1033,7 +1033,7 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 			case event := <-channel:
 				response.LastFirstEventID = common.Int64Ptr(event.LastFirstEventID)
 				response.NextEventID = common.Int64Ptr(event.NextEventID)
-				response.IsWorkflowRunning = common.BoolPtr(event.WorkflowCloseState == persistence.WorkflowCloseStatusNone)
+				response.IsWorkflowRunning = event.WorkflowCloseState == persistence.WorkflowCloseStatusNone
 				response.PreviousStartedEventID = common.Int64Ptr(event.PreviousStartedEventID)
 				response.WorkflowState = common.Int32Ptr(int32(event.WorkflowState))
 				response.WorkflowCloseState = common.Int32Ptr(int32(event.WorkflowCloseState))
@@ -1359,12 +1359,12 @@ func (e *historyEngineImpl) getMutableState(
 		ClientLibraryVersion:                 common.StringPtr(executionInfo.ClientLibraryVersion),
 		ClientFeatureVersion:                 common.StringPtr(executionInfo.ClientFeatureVersion),
 		ClientImpl:                           common.StringPtr(executionInfo.ClientImpl),
-		IsWorkflowRunning:                    common.BoolPtr(mutableState.IsWorkflowExecutionRunning()),
+		IsWorkflowRunning:                    mutableState.IsWorkflowExecutionRunning(),
 		StickyTaskListScheduleToStartTimeout: common.Int32Ptr(executionInfo.StickyScheduleToStartTimeout),
 		CurrentBranchToken:                   currentBranchToken,
 		WorkflowState:                        common.Int32Ptr(int32(workflowState)),
 		WorkflowCloseState:                   common.Int32Ptr(int32(workflowCloseState)),
-		IsStickyTaskListEnabled:              common.BoolPtr(mutableState.IsStickyTaskListEnabled()),
+		IsStickyTaskListEnabled:              mutableState.IsStickyTaskListEnabled(),
 	}
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories != nil {
@@ -2077,7 +2077,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 		return &types.RecordActivityTaskHeartbeatResponse{}, err
 	}
 
-	return &types.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(cancelRequested)}, nil
+	return &types.RecordActivityTaskHeartbeatResponse{CancelRequested: cancelRequested}, nil
 }
 
 // RequestCancelWorkflowExecution records request cancellation event for workflow execution

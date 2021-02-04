@@ -79,11 +79,11 @@ func (s *queueProcessorUtilSuite) TestConvertFromPersistenceTransferProcessingQu
 	domainFilters := []*types.DomainFilter{
 		{
 			DomainIDs:    nil,
-			ReverseMatch: common.BoolPtr(true),
+			ReverseMatch: true,
 		},
 		{
 			DomainIDs:    []string{"domain 1", "domain 2"},
-			ReverseMatch: common.BoolPtr(false),
+			ReverseMatch: false,
 		},
 	}
 	pStates := []*types.ProcessingQueueState{}
@@ -135,11 +135,11 @@ func (s *queueProcessorUtilSuite) TestConvertFromPersistenceTimerProcessingQueue
 	domainFilters := []*types.DomainFilter{
 		{
 			DomainIDs:    nil,
-			ReverseMatch: common.BoolPtr(true),
+			ReverseMatch: true,
 		},
 		{
 			DomainIDs:    []string{"domain 1", "domain 2"},
-			ReverseMatch: common.BoolPtr(false),
+			ReverseMatch: false,
 		},
 	}
 	pStates := []*types.ProcessingQueueState{}

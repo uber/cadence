@@ -312,7 +312,7 @@ func (d *handlerImpl) ListDomains(
 	domains := []*types.DescribeDomainResponse{}
 	for _, domain := range resp.Domains {
 		desc := &types.DescribeDomainResponse{
-			IsGlobalDomain:  common.BoolPtr(domain.IsGlobalDomain),
+			IsGlobalDomain:  domain.IsGlobalDomain,
 			FailoverVersion: common.Int64Ptr(domain.FailoverVersion),
 		}
 		desc.DomainInfo, desc.Configuration, desc.ReplicationConfiguration = d.createResponse(domain.Info, domain.Config, domain.ReplicationConfig)
@@ -344,7 +344,7 @@ func (d *handlerImpl) DescribeDomain(
 	}
 
 	response := &types.DescribeDomainResponse{
-		IsGlobalDomain:  common.BoolPtr(resp.IsGlobalDomain),
+		IsGlobalDomain:  resp.IsGlobalDomain,
 		FailoverVersion: common.Int64Ptr(resp.FailoverVersion),
 	}
 	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = d.createResponse(resp.Info, resp.Config, resp.ReplicationConfig)
@@ -560,7 +560,7 @@ func (d *handlerImpl) UpdateDomain(
 	}
 
 	response := &types.UpdateDomainResponse{
-		IsGlobalDomain:  common.BoolPtr(isGlobalDomain),
+		IsGlobalDomain:  isGlobalDomain,
 		FailoverVersion: common.Int64Ptr(failoverVersion),
 	}
 	response.DomainInfo, response.Configuration, response.ReplicationConfiguration = d.createResponse(info, config, replicationConfig)

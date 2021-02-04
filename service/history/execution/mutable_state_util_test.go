@@ -44,28 +44,28 @@ func TestFindAutoResetPoint(t *testing.T) {
 
 	pt0 := &types.ResetPointInfo{
 		BinaryChecksum: "abc",
-		Resettable:     common.BoolPtr(true),
+		Resettable:     true,
 	}
 	pt1 := &types.ResetPointInfo{
 		BinaryChecksum: "def",
-		Resettable:     common.BoolPtr(true),
+		Resettable:     true,
 	}
 	pt3 := &types.ResetPointInfo{
 		BinaryChecksum: "ghi",
-		Resettable:     common.BoolPtr(false),
+		Resettable:     false,
 	}
 
 	expiredNowNano := time.Now().UnixNano() - int64(time.Hour)
 	notExpiredNowNano := time.Now().UnixNano() + int64(time.Hour)
 	pt4 := &types.ResetPointInfo{
 		BinaryChecksum:   "expired",
-		Resettable:       common.BoolPtr(true),
+		Resettable:       true,
 		ExpiringTimeNano: common.Int64Ptr(expiredNowNano),
 	}
 
 	pt5 := &types.ResetPointInfo{
 		BinaryChecksum:   "notExpired",
-		Resettable:       common.BoolPtr(true),
+		Resettable:       true,
 		ExpiringTimeNano: common.Int64Ptr(notExpiredNowNano),
 	}
 

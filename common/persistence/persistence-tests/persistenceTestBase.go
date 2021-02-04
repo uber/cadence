@@ -217,7 +217,7 @@ func (s *TestBase) Setup() {
 
 	domainFilter := &types.DomainFilter{
 		DomainIDs:    []string{},
-		ReverseMatch: common.BoolPtr(true),
+		ReverseMatch: true,
 	}
 	transferPQSMap := map[string][]*types.ProcessingQueueState{
 		s.ClusterMetadata.GetCurrentClusterName(): {

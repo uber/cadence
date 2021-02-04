@@ -1173,7 +1173,7 @@ func (s *integrationSuite) TestActivityCancellation() {
 			response, err := s.engine.RecordActivityTaskHeartbeat(createContext(),
 				&types.RecordActivityTaskHeartbeatRequest{
 					TaskToken: taskToken, Details: []byte("details")})
-			if *response.CancelRequested {
+			if response.CancelRequested {
 				return []byte("Activity Cancelled."), true, nil
 			}
 			s.Nil(err)

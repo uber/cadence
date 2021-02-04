@@ -285,7 +285,7 @@ func (s *contextImpl) GetTransferProcessingQueueStates(cluster string) []*types.
 			AckLevel: common.Int64Ptr(ackLevel),
 			MaxLevel: common.Int64Ptr(math.MaxInt64),
 			DomainFilter: &types.DomainFilter{
-				ReverseMatch: common.BoolPtr(true),
+				ReverseMatch: true,
 			},
 		},
 	}
@@ -452,7 +452,7 @@ func (s *contextImpl) GetTimerProcessingQueueStates(cluster string) []*types.Pro
 			AckLevel: common.Int64Ptr(ackLevel.UnixNano()),
 			MaxLevel: common.Int64Ptr(math.MaxInt64),
 			DomainFilter: &types.DomainFilter{
-				ReverseMatch: common.BoolPtr(true),
+				ReverseMatch: true,
 			},
 		},
 	}

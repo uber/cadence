@@ -132,7 +132,7 @@ func NewV6Client(
 	}, nil
 }
 
-// Refer to https://github.com/olivere/elastic/blob/release-branch.v6/recipes/aws-connect-v4/main.go 
+// Refer to https://github.com/olivere/elastic/blob/release-branch.v6/recipes/aws-connect-v4/main.go
 func buildSigningHTTPClientFromStaticCredentialV6(credentialConfig config.AWSStaticCredential) (*http.Client, error) {
 	awsCredentials := credentials.NewStaticCredentials(
 		credentialConfig.AccessKey,

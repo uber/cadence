@@ -1812,7 +1812,7 @@ func (s *integrationSuite) TestVisibility() {
 				WorkflowID: startRequest.WorkflowID,
 				RunID:      startResponse.RunID,
 			},
-			WaitForNewEvent:        common.BoolPtr(true),
+			WaitForNewEvent:        true,
 			HistoryEventFilterType: &historyEventFilterType,
 			NextPageToken:          nextToken,
 		})
