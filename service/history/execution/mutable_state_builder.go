@@ -2170,7 +2170,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 		ScheduledTime:            time.Unix(0, event.GetTimestamp()),
 		StartedID:                common.EmptyEventID,
 		StartedTime:              time.Time{},
-		ActivityID:               common.StringDefault(attributes.ActivityID),
+		ActivityID:               attributes.ActivityID,
 		DomainID:                 targetDomainID,
 		ScheduleToStartTimeout:   attributes.GetScheduleToStartTimeoutSeconds(),
 		ScheduleToCloseTimeout:   scheduleToCloseTimeout,
