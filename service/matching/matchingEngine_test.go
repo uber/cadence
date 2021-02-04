@@ -494,7 +494,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 			resp := &types.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    &activityID,
+						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
@@ -524,7 +524,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 			s.logger.Debug(fmt.Sprintf("empty poll returned"))
 			continue
 		}
-		s.EqualValues(activityID, *result.ActivityID)
+		s.EqualValues(activityID, result.ActivityID)
 		s.EqualValues(activityType, result.ActivityType)
 		s.EqualValues(activityInput, result.Input)
 		s.EqualValues(workflowExecution, *result.WorkflowExecution)
@@ -607,7 +607,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 			return &types.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    &activityID,
+						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
@@ -678,7 +678,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 			s.True(len(result.TaskToken) > 0)
 		}
 
-		s.EqualValues(activityID, *result.ActivityID)
+		s.EqualValues(activityID, result.ActivityID)
 		s.EqualValues(activityType, result.ActivityType)
 		s.EqualValues(activityInput, result.Input)
 		s.EqualValues(workflowExecution, *result.WorkflowExecution)
@@ -829,7 +829,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 			return &types.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    &activityID,
+						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
@@ -861,7 +861,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 					s.logger.Debug(fmt.Sprintf("empty poll returned"))
 					continue
 				}
-				s.EqualValues(activityID, *result.ActivityID)
+				s.EqualValues(activityID, result.ActivityID)
 				s.EqualValues(activityType, result.ActivityType)
 				s.EqualValues(activityInput, result.Input)
 				s.EqualValues(activityHeader, result.Header)
@@ -1134,7 +1134,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 			return &types.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    &activityID,
+						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
@@ -1163,7 +1163,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 					s.logger.Debug(fmt.Sprintf("empty poll returned"))
 					continue
 				}
-				s.EqualValues(activityID, *result.ActivityID)
+				s.EqualValues(activityID, result.ActivityID)
 				s.EqualValues(activityType, result.ActivityType)
 				s.EqualValues(activityInput, result.Input)
 				s.EqualValues(workflowExecution, *result.WorkflowExecution)
@@ -1609,7 +1609,7 @@ func (s *matchingEngineSuite) setupRecordActivityTaskStartedMock(tlName string) 
 			return &types.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    &activityID,
+						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: tlName},
 						ActivityType:                  activityType,
 						Input:                         activityInput,

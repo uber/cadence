@@ -1538,7 +1538,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	if len(mutableState.GetPendingActivityInfos()) > 0 {
 		for _, ai := range mutableState.GetPendingActivityInfos() {
 			p := &types.PendingActivityInfo{
-				ActivityID: common.StringPtr(ai.ActivityID),
+				ActivityID: ai.ActivityID,
 			}
 			state := types.PendingActivityStateScheduled
 			if ai.CancelRequested {

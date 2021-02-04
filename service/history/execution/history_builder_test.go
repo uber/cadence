@@ -1019,7 +1019,7 @@ func (s *historyBuilderSuite) addActivityTaskScheduledEvent(decisionCompletedID 
 	*persistence.ActivityInfo, *types.ActivityLocalDispatchInfo) {
 	event, ai, activityDispatchInfo, err := s.msBuilder.AddActivityTaskScheduledEvent(decisionCompletedID,
 		&types.ScheduleActivityTaskDecisionAttributes{
-			ActivityID:                    common.StringPtr(activityID),
+			ActivityID:                    activityID,
 			ActivityType:                  &types.ActivityType{Name: activityType},
 			TaskList:                      &types.TaskList{Name: taskList},
 			Input:                         input,
@@ -1175,7 +1175,7 @@ func (s *historyBuilderSuite) validateActivityTaskScheduledEvent(event *types.Hi
 	attributes := event.ActivityTaskScheduledEventAttributes
 	s.NotNil(attributes)
 	s.Equal(decisionID, *attributes.DecisionTaskCompletedEventID)
-	s.Equal(activityID, *attributes.ActivityID)
+	s.Equal(activityID, attributes.ActivityID)
 	s.Equal(activityType, attributes.ActivityType.Name)
 	s.Equal(taskList, attributes.TaskList.Name)
 	s.Equal(input, attributes.Input)
