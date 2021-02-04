@@ -826,7 +826,7 @@ func InitializeHistoryEventGenerator(
 				RunID:      uuid.New(),
 			},
 			SignalName:        common.StringPtr("signal"),
-			ChildWorkflowOnly: common.BoolPtr(false),
+			ChildWorkflowOnly: false,
 		}
 		return historyEvent
 	})
@@ -884,7 +884,7 @@ func InitializeHistoryEventGenerator(
 					WorkflowID: externalWorkflowID,
 					RunID:      uuid.New(),
 				},
-				ChildWorkflowOnly: common.BoolPtr(false),
+				ChildWorkflowOnly: false,
 			}
 		return historyEvent
 	})

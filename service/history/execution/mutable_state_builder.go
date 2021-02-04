@@ -1958,7 +1958,7 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 		RunID:                    exeInfo.RunID,
 		FirstDecisionCompletedID: common.Int64Ptr(event.GetEventID()),
 		CreatedTimeNano:          common.Int64Ptr(e.timeSource.Now().UnixNano()),
-		Resettable:               common.BoolPtr(resettable),
+		Resettable:               resettable,
 	}
 	currResetPoints = append(currResetPoints, info)
 	exeInfo.AutoResetPoints = &types.ResetPoints{
@@ -2131,8 +2131,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if e.config.EnableActivityLocalDispatchByDomain(e.domainEntry.GetInfo().Name) &&
-		common.BoolDefault(attributes.RequestLocalDispatch) {
+	if e.config.EnableActivityLocalDispatchByDomain(e.domainEntry.GetInfo().Name) && attributes.RequestLocalDispatch {
 		return event, ai, &types.ActivityLocalDispatchInfo{ActivityID: ai.ActivityID}, nil
 	}
 	// TODO merge active & passive task generation

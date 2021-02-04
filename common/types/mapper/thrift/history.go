@@ -99,7 +99,7 @@ func FromDomainFilter(t *types.DomainFilter) *history.DomainFilter {
 	}
 	return &history.DomainFilter{
 		DomainIDs:    t.DomainIDs,
-		ReverseMatch: t.ReverseMatch,
+		ReverseMatch: &t.ReverseMatch,
 	}
 }
 
@@ -110,7 +110,7 @@ func ToDomainFilter(t *history.DomainFilter) *types.DomainFilter {
 	}
 	return &types.DomainFilter{
 		DomainIDs:    t.DomainIDs,
-		ReverseMatch: t.ReverseMatch,
+		ReverseMatch: t.GetReverseMatch(),
 	}
 }
 
@@ -198,14 +198,14 @@ func FromGetMutableStateResponse(t *types.GetMutableStateResponse) *history.GetM
 		ClientLibraryVersion:                 t.ClientLibraryVersion,
 		ClientFeatureVersion:                 t.ClientFeatureVersion,
 		ClientImpl:                           t.ClientImpl,
-		IsWorkflowRunning:                    t.IsWorkflowRunning,
+		IsWorkflowRunning:                    &t.IsWorkflowRunning,
 		StickyTaskListScheduleToStartTimeout: t.StickyTaskListScheduleToStartTimeout,
 		EventStoreVersion:                    t.EventStoreVersion,
 		CurrentBranchToken:                   t.CurrentBranchToken,
 		WorkflowState:                        t.WorkflowState,
 		WorkflowCloseState:                   t.WorkflowCloseState,
 		VersionHistories:                     FromVersionHistories(t.VersionHistories),
-		IsStickyTaskListEnabled:              t.IsStickyTaskListEnabled,
+		IsStickyTaskListEnabled:              &t.IsStickyTaskListEnabled,
 	}
 }
 
@@ -225,14 +225,14 @@ func ToGetMutableStateResponse(t *history.GetMutableStateResponse) *types.GetMut
 		ClientLibraryVersion:                 t.ClientLibraryVersion,
 		ClientFeatureVersion:                 t.ClientFeatureVersion,
 		ClientImpl:                           t.ClientImpl,
-		IsWorkflowRunning:                    t.IsWorkflowRunning,
+		IsWorkflowRunning:                    t.GetIsWorkflowRunning(),
 		StickyTaskListScheduleToStartTimeout: t.StickyTaskListScheduleToStartTimeout,
 		EventStoreVersion:                    t.EventStoreVersion,
 		CurrentBranchToken:                   t.CurrentBranchToken,
 		WorkflowState:                        t.WorkflowState,
 		WorkflowCloseState:                   t.WorkflowCloseState,
 		VersionHistories:                     ToVersionHistories(t.VersionHistories),
-		IsStickyTaskListEnabled:              t.IsStickyTaskListEnabled,
+		IsStickyTaskListEnabled:              t.GetIsStickyTaskListEnabled(),
 	}
 }
 
@@ -2608,7 +2608,7 @@ func FromRecordDecisionTaskStartedResponse(t *types.RecordDecisionTaskStartedRes
 		StartedEventId:            t.StartedEventID,
 		NextEventId:               t.NextEventID,
 		Attempt:                   &t.Attempt,
-		StickyExecutionEnabled:    t.StickyExecutionEnabled,
+		StickyExecutionEnabled:    &t.StickyExecutionEnabled,
 		DecisionInfo:              FromTransientDecisionInfo(t.DecisionInfo),
 		WorkflowExecutionTaskList: FromTaskList(t.WorkflowExecutionTaskList),
 		EventStoreVersion:         t.EventStoreVersion,
@@ -2631,7 +2631,7 @@ func ToRecordDecisionTaskStartedResponse(t *history.RecordDecisionTaskStartedRes
 		StartedEventID:            t.StartedEventId,
 		NextEventID:               t.NextEventId,
 		Attempt:                   t.GetAttempt(),
-		StickyExecutionEnabled:    t.StickyExecutionEnabled,
+		StickyExecutionEnabled:    t.GetStickyExecutionEnabled(),
 		DecisionInfo:              ToTransientDecisionInfo(t.DecisionInfo),
 		WorkflowExecutionTaskList: ToTaskList(t.WorkflowExecutionTaskList),
 		EventStoreVersion:         t.EventStoreVersion,
@@ -2726,7 +2726,7 @@ func FromHistoryRequestCancelWorkflowExecutionRequest(t *types.HistoryRequestCan
 		CancelRequest:             FromRequestCancelWorkflowExecutionRequest(t.CancelRequest),
 		ExternalInitiatedEventId:  t.ExternalInitiatedEventID,
 		ExternalWorkflowExecution: FromWorkflowExecution(t.ExternalWorkflowExecution),
-		ChildWorkflowOnly:         t.ChildWorkflowOnly,
+		ChildWorkflowOnly:         &t.ChildWorkflowOnly,
 	}
 }
 
@@ -2740,7 +2740,7 @@ func ToHistoryRequestCancelWorkflowExecutionRequest(t *history.RequestCancelWork
 		CancelRequest:             ToRequestCancelWorkflowExecutionRequest(t.CancelRequest),
 		ExternalInitiatedEventID:  t.ExternalInitiatedEventId,
 		ExternalWorkflowExecution: ToWorkflowExecution(t.ExternalWorkflowExecution),
-		ChildWorkflowOnly:         t.ChildWorkflowOnly,
+		ChildWorkflowOnly:         t.GetChildWorkflowOnly(),
 	}
 }
 
@@ -2944,7 +2944,7 @@ func FromScheduleDecisionTaskRequest(t *types.ScheduleDecisionTaskRequest) *hist
 	return &history.ScheduleDecisionTaskRequest{
 		DomainUUID:        &t.DomainUUID,
 		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
-		IsFirstDecision:   t.IsFirstDecision,
+		IsFirstDecision:   &t.IsFirstDecision,
 	}
 }
 
@@ -2956,7 +2956,7 @@ func ToScheduleDecisionTaskRequest(t *history.ScheduleDecisionTaskRequest) *type
 	return &types.ScheduleDecisionTaskRequest{
 		DomainUUID:        t.GetDomainUUID(),
 		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
-		IsFirstDecision:   t.IsFirstDecision,
+		IsFirstDecision:   t.GetIsFirstDecision(),
 	}
 }
 
@@ -3013,7 +3013,7 @@ func FromHistorySignalWorkflowExecutionRequest(t *types.HistorySignalWorkflowExe
 		DomainUUID:                &t.DomainUUID,
 		SignalRequest:             FromSignalWorkflowExecutionRequest(t.SignalRequest),
 		ExternalWorkflowExecution: FromWorkflowExecution(t.ExternalWorkflowExecution),
-		ChildWorkflowOnly:         t.ChildWorkflowOnly,
+		ChildWorkflowOnly:         &t.ChildWorkflowOnly,
 	}
 }
 
@@ -3026,7 +3026,7 @@ func ToHistorySignalWorkflowExecutionRequest(t *history.SignalWorkflowExecutionR
 		DomainUUID:                t.GetDomainUUID(),
 		SignalRequest:             ToSignalWorkflowExecutionRequest(t.SignalRequest),
 		ExternalWorkflowExecution: ToWorkflowExecution(t.ExternalWorkflowExecution),
-		ChildWorkflowOnly:         t.ChildWorkflowOnly,
+		ChildWorkflowOnly:         t.GetChildWorkflowOnly(),
 	}
 }
 

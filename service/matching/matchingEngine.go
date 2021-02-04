@@ -391,7 +391,7 @@ pollLoop:
 				PreviousStartedEventID:    mutableStateResp.PreviousStartedEventID,
 				NextEventID:               mutableStateResp.NextEventID,
 				WorkflowType:              mutableStateResp.WorkflowType,
-				StickyExecutionEnabled:    common.BoolPtr(isStickyEnabled),
+				StickyExecutionEnabled:    isStickyEnabled,
 				WorkflowExecutionTaskList: mutableStateResp.TaskList,
 				BranchToken:               mutableStateResp.CurrentBranchToken,
 			}

@@ -733,7 +733,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
-		resp = &types.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(true)}
+		resp = &types.RecordActivityTaskHeartbeatResponse{CancelRequested: true}
 	} else {
 		resp, err = wh.GetHistoryClient().RecordActivityTaskHeartbeat(ctx, &types.HistoryRecordActivityTaskHeartbeatRequest{
 			DomainUUID:       taskToken.DomainID,
@@ -839,7 +839,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
-		resp = &types.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(true)}
+		resp = &types.RecordActivityTaskHeartbeatResponse{CancelRequested: true}
 	} else {
 		req := &types.RecordActivityTaskHeartbeatRequest{
 			TaskToken: token,
@@ -2083,7 +2083,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		History:       history,
 		RawHistory:    historyBlob,
 		NextPageToken: nextToken,
-		Archived:      common.BoolPtr(false),
+		Archived:      false,
 	}, nil
 }
 
@@ -3897,7 +3897,7 @@ func (wh *WorkflowHandler) getArchivedHistory(
 	return &types.GetWorkflowExecutionHistoryResponse{
 		History:       history,
 		NextPageToken: resp.NextPageToken,
-		Archived:      common.BoolPtr(true),
+		Archived:      true,
 	}, nil
 }
 
