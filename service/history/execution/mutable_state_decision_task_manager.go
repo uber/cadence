@@ -646,7 +646,10 @@ func (m *mutableStateDecisionTaskManagerImpl) FailDecision(
 		TaskList:                   "",
 		OriginalScheduledTimestamp: 0,
 	}
-	if incrementAttempt {
+	currentDecisionVersion := m.msb.GetExecutionInfo().DecisionVersion
+	currentVersion := m.msb.GetCurrentVersion()
+	// If the mutable state current version is different to the decision version, generate non-transient decision
+	if incrementAttempt && currentDecisionVersion == currentVersion {
 		failDecisionInfo.Attempt = m.msb.executionInfo.DecisionAttempt + 1
 		failDecisionInfo.ScheduledTimestamp = m.msb.timeSource.Now().UnixNano()
 
