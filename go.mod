@@ -3,7 +3,8 @@ module github.com/uber/cadence
 go 1.12
 
 require (
-	cloud.google.com/go/storage v1.10.0
+	cloud.google.com/go/bigquery v1.4.0 // indirect
+	cloud.google.com/go/storage v1.5.0
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/Shopify/sarama v1.23.0
 	github.com/apache/thrift v0.0.0-20161221203622-b2a4d4ae21c7
@@ -14,14 +15,14 @@ require (
 	github.com/cch123/elasticsql v0.0.0-20190321073543-a1a440758eb9
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2
-	github.com/dmarkham/enumer v1.5.1
-	github.com/dmetzgar/goveralls v0.0.3
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/emirpasic/gods v0.0.0-20190624094223-e689965507ab
 	github.com/fatih/color v1.10.0
+	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gocql/gocql v0.0.0-20191126110522-1982a06ad6b9
 	github.com/golang/mock v1.4.4
+	github.com/google/go-cmp v0.5.4 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/hashicorp/go-version v1.2.0
 	github.com/iancoleman/strcase v0.0.0-20190422225806-e506e3ef7365
@@ -35,7 +36,6 @@ require (
 	github.com/m3db/prometheus_common v0.1.0 // indirect
 	github.com/m3db/prometheus_procfs v0.8.1 // indirect
 	github.com/mattn/go-sqlite3 v1.11.0 // indirect
-	github.com/mgechev/revive v1.0.3
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/olivere/elastic v6.2.21+incompatible
 	github.com/olivere/elastic/v7 v7.0.21
@@ -55,6 +55,7 @@ require (
 	github.com/valyala/fastjson v1.4.1
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
+	go.opencensus.io v0.22.5 // indirect
 	go.uber.org/atomic v1.5.1
 	go.uber.org/cadence v0.14.1
 	go.uber.org/multierr v1.3.0
@@ -63,16 +64,17 @@ require (
 	go.uber.org/yarpc v1.42.0
 	go.uber.org/zap v1.12.0
 	golang.org/x/net v0.0.0-20201031054903-ff519b6c9102
-	golang.org/x/oauth2 v0.0.0-20201109201403-9fd604954f58
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9 // indirect
+	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4 // indirect
+	golang.org/x/text v0.3.4 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
-	golang.org/x/tools v0.1.0
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gonum.org/v1/gonum v0.7.0
-	google.golang.org/api v0.36.0
-	google.golang.org/grpc v1.35.0 // indirect
-	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
-	google.golang.org/protobuf v1.25.0
+	google.golang.org/api v0.15.0
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
 	gopkg.in/jcmturner/gokrb5.v7 v7.3.0 // indirect
 	gopkg.in/validator.v2 v2.0.0-20180514200540-135c24b11c19
 	gopkg.in/yaml.v2 v2.2.2
+	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 )
