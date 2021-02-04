@@ -554,7 +554,7 @@ func (s *decisionAttrValidatorSuite) TestValidateTaskListName() {
 func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_NoRetryPolicy() {
 	wfTimeout := int32(5)
 	attributes := &types.ScheduleActivityTaskDecisionAttributes{
-		ActivityID: common.StringPtr("some random activityID"),
+		ActivityID: "some random activityID",
 		ActivityType: &types.ActivityType{
 			Name: "some random activity type",
 		},
@@ -611,7 +611,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 
 	wfTimeout := int32(3000)
 	attributes := &types.ScheduleActivityTaskDecisionAttributes{
-		ActivityID: common.StringPtr("some random activityID"),
+		ActivityID: "some random activityID",
 		ActivityType: &types.ActivityType{
 			Name: "some random activity type",
 		},
@@ -673,7 +673,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_WithRetryPolicy_ScheduleToStartNonRetryable() {
 	wfTimeout := int32(1000)
 	attributes := &types.ScheduleActivityTaskDecisionAttributes{
-		ActivityID: common.StringPtr("some random activityID"),
+		ActivityID: "some random activityID",
 		ActivityType: &types.ActivityType{
 			Name: "some random activity type",
 		},

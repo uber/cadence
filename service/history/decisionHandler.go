@@ -591,7 +591,7 @@ Update_History_Loop:
 		activitiesToDispatchLocally := make(map[string]*types.ActivityLocalDispatchInfo)
 		for _, dr := range decisionResults {
 			if dr.activityDispatchInfo != nil {
-				activitiesToDispatchLocally[*dr.activityDispatchInfo.ActivityID] = dr.activityDispatchInfo
+				activitiesToDispatchLocally[dr.activityDispatchInfo.ActivityID] = dr.activityDispatchInfo
 			}
 		}
 		resp.ActivitiesToDispatchLocally = activitiesToDispatchLocally
