@@ -4500,12 +4500,12 @@ func FromRetryPolicy(t *types.RetryPolicy) *shared.RetryPolicy {
 		return nil
 	}
 	return &shared.RetryPolicy{
-		InitialIntervalInSeconds:    t.InitialIntervalInSeconds,
-		BackoffCoefficient:          t.BackoffCoefficient,
-		MaximumIntervalInSeconds:    t.MaximumIntervalInSeconds,
-		MaximumAttempts:             t.MaximumAttempts,
+		InitialIntervalInSeconds:    &t.InitialIntervalInSeconds,
+		BackoffCoefficient:          &t.BackoffCoefficient,
+		MaximumIntervalInSeconds:    &t.MaximumIntervalInSeconds,
+		MaximumAttempts:             &t.MaximumAttempts,
 		NonRetriableErrorReasons:    t.NonRetriableErrorReasons,
-		ExpirationIntervalInSeconds: t.ExpirationIntervalInSeconds,
+		ExpirationIntervalInSeconds: &t.ExpirationIntervalInSeconds,
 	}
 }
 
@@ -4515,12 +4515,12 @@ func ToRetryPolicy(t *shared.RetryPolicy) *types.RetryPolicy {
 		return nil
 	}
 	return &types.RetryPolicy{
-		InitialIntervalInSeconds:    t.InitialIntervalInSeconds,
-		BackoffCoefficient:          t.BackoffCoefficient,
-		MaximumIntervalInSeconds:    t.MaximumIntervalInSeconds,
-		MaximumAttempts:             t.MaximumAttempts,
+		InitialIntervalInSeconds:    t.GetInitialIntervalInSeconds(),
+		BackoffCoefficient:          t.GetBackoffCoefficient(),
+		MaximumIntervalInSeconds:    t.GetMaximumIntervalInSeconds(),
+		MaximumAttempts:             t.GetMaximumAttempts(),
 		NonRetriableErrorReasons:    t.NonRetriableErrorReasons,
-		ExpirationIntervalInSeconds: t.ExpirationIntervalInSeconds,
+		ExpirationIntervalInSeconds: t.GetExpirationIntervalInSeconds(),
 	}
 }
 

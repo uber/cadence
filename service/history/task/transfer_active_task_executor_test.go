@@ -23,6 +23,7 @@ package task
 import (
 	"context"
 	"math/rand"
+	"strconv"
 	"testing"
 	"time"
 
@@ -942,7 +943,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 		decisions = append(decisions, &types.Decision{
 			DecisionType: &dt,
 			StartChildWorkflowExecutionDecisionAttributes: &types.StartChildWorkflowExecutionDecisionAttributes{
-				WorkflowID: "child workflow" + string(i),
+				WorkflowID: "child workflow" + strconv.Itoa(i),
 				WorkflowType: &types.WorkflowType{
 					Name: "child workflow type",
 				},
@@ -961,7 +962,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 
 	for i := 0; i < 10; i++ {
 		_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventID(), uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
-			WorkflowID: "child workflow" + string(i),
+			WorkflowID: "child workflow" + strconv.Itoa(i),
 			WorkflowType: &types.WorkflowType{
 				Name: "child workflow type",
 			},
@@ -1039,7 +1040,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 		decisions = append(decisions, &types.Decision{
 			DecisionType: &dt,
 			StartChildWorkflowExecutionDecisionAttributes: &types.StartChildWorkflowExecutionDecisionAttributes{
-				WorkflowID: "child workflow" + string(i),
+				WorkflowID: "child workflow" + strconv.Itoa(i),
 				WorkflowType: &types.WorkflowType{
 					Name: "child workflow type",
 				},
@@ -1058,7 +1059,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 
 	for i := 0; i < 10; i++ {
 		_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(event.GetEventID(), uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
-			WorkflowID: "child workflow" + string(i),
+			WorkflowID: "child workflow" + strconv.Itoa(i),
 			WorkflowType: &types.WorkflowType{
 				Name: "child workflow type",
 			},
@@ -1650,11 +1651,11 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_WithRet
 	taskID := int64(59)
 
 	retryPolicy := &types.RetryPolicy{
-		ExpirationIntervalInSeconds: common.Int32Ptr(100),
-		MaximumAttempts:             common.Int32Ptr(3),
-		InitialIntervalInSeconds:    common.Int32Ptr(1),
-		MaximumIntervalInSeconds:    common.Int32Ptr(2),
-		BackoffCoefficient:          common.Float64Ptr(1),
+		ExpirationIntervalInSeconds: 100,
+		MaximumAttempts:             3,
+		InitialIntervalInSeconds:    1,
+		MaximumIntervalInSeconds:    2,
+		BackoffCoefficient:          1,
 	}
 
 	event, ci := test.AddStartChildWorkflowExecutionInitiatedEvent(mutableState, event.GetEventID(), uuid.New(),
