@@ -91,8 +91,8 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) 
 	domainID := uuid.New()
 	request := &types.StartWorkflowExecutionRequest{
 		RetryPolicy: &types.RetryPolicy{
-			InitialIntervalInSeconds:    Int32Ptr(60),
-			ExpirationIntervalInSeconds: Int32Ptr(60),
+			InitialIntervalInSeconds:    60,
+			ExpirationIntervalInSeconds: 60,
 		},
 		CronSchedule: "@every 300s",
 	}
@@ -108,8 +108,8 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.
 	domainID := uuid.New()
 	request := &types.StartWorkflowExecutionRequest{
 		RetryPolicy: &types.RetryPolicy{
-			InitialIntervalInSeconds:    Int32Ptr(60),
-			ExpirationIntervalInSeconds: Int32Ptr(60),
+			InitialIntervalInSeconds:    60,
+			ExpirationIntervalInSeconds: 60,
 		},
 	}
 	now := time.Now()

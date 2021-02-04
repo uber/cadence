@@ -18,8 +18,7 @@ require (
 	github.com/dmetzgar/goveralls v0.0.3
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/emirpasic/gods v0.0.0-20190624094223-e689965507ab
-	github.com/fatih/color v0.0.0-20181010231311-3f9d52f7176a
-	github.com/fatih/structtag v1.1.0 // indirect
+	github.com/fatih/color v1.10.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gocql/gocql v0.0.0-20191126110522-1982a06ad6b9
 	github.com/golang/mock v1.4.4
@@ -35,11 +34,9 @@ require (
 	github.com/m3db/prometheus_client_model v0.1.0 // indirect
 	github.com/m3db/prometheus_common v0.1.0 // indirect
 	github.com/m3db/prometheus_procfs v0.8.1 // indirect
-	github.com/mattn/go-colorable v0.0.9 // indirect
-	github.com/mattn/go-isatty v0.0.8 // indirect
-	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mattn/go-sqlite3 v1.11.0 // indirect
-	github.com/olekukonko/tablewriter v0.0.1
+	github.com/mgechev/revive v1.0.3
+	github.com/olekukonko/tablewriter v0.0.4
 	github.com/olivere/elastic v6.2.21+incompatible
 	github.com/olivere/elastic/v7 v7.0.21
 	github.com/opentracing/opentracing-go v1.2.0
@@ -65,7 +62,6 @@ require (
 	go.uber.org/thriftrw v1.20.2
 	go.uber.org/yarpc v1.42.0
 	go.uber.org/zap v1.12.0
-	golang.org/x/lint v0.0.0-20200302205851-738671d3881b
 	golang.org/x/net v0.0.0-20201031054903-ff519b6c9102
 	golang.org/x/oauth2 v0.0.0-20201109201403-9fd604954f58
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0

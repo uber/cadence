@@ -179,12 +179,12 @@ func (s *historyBuilderSuite) TestHistoryBuilderDynamicSuccess() {
 	activity3Type := "dynamic-historybuilder-success-activity3-type"
 	activity3Input := []byte("dynamic-historybuilder-success-activity3-input")
 	activity3RetryPolicy := &types.RetryPolicy{
-		InitialIntervalInSeconds:    common.Int32Ptr(1),
-		MaximumAttempts:             common.Int32Ptr(3),
-		MaximumIntervalInSeconds:    common.Int32Ptr(1),
+		InitialIntervalInSeconds:    1,
+		MaximumAttempts:             3,
+		MaximumIntervalInSeconds:    1,
 		NonRetriableErrorReasons:    []string{"bad-bug"},
-		BackoffCoefficient:          common.Float64Ptr(1),
-		ExpirationIntervalInSeconds: common.Int32Ptr(100),
+		BackoffCoefficient:          1,
+		ExpirationIntervalInSeconds: 100,
 	}
 	activity3ScheduledEvent, _, activityDispatchInfo := s.addActivityTaskScheduledEvent(4, activity3ID, activity3Type,
 		activityTaskList, activity3Input, activityTimeout, queueTimeout, hearbeatTimeout, activity3RetryPolicy, false)
@@ -214,12 +214,12 @@ func (s *historyBuilderSuite) TestHistoryBuilderDynamicSuccess() {
 	activity5Type := "dynamic-historybuilder-success-activity5-type"
 	activity5Input := []byte("dynamic-historybuilder-success-activity5-input")
 	activity5RetryPolicy := &types.RetryPolicy{
-		InitialIntervalInSeconds:    common.Int32Ptr(1),
-		MaximumAttempts:             common.Int32Ptr(3),
-		MaximumIntervalInSeconds:    common.Int32Ptr(1),
+		InitialIntervalInSeconds:    1,
+		MaximumAttempts:             3,
+		MaximumIntervalInSeconds:    1,
 		NonRetriableErrorReasons:    []string{"bad-bug"},
-		BackoffCoefficient:          common.Float64Ptr(1),
-		ExpirationIntervalInSeconds: common.Int32Ptr(100),
+		BackoffCoefficient:          1,
+		ExpirationIntervalInSeconds: 100,
 	}
 	activity5ScheduledEvent, _, activityDispatchInfo := s.addActivityTaskScheduledEvent(4, activity5ID, activity5Type,
 		activityTaskList, activity5Input, activityTimeout, queueTimeout, hearbeatTimeout, activity5RetryPolicy, true)
@@ -1019,7 +1019,7 @@ func (s *historyBuilderSuite) addActivityTaskScheduledEvent(decisionCompletedID 
 	*persistence.ActivityInfo, *types.ActivityLocalDispatchInfo) {
 	event, ai, activityDispatchInfo, err := s.msBuilder.AddActivityTaskScheduledEvent(decisionCompletedID,
 		&types.ScheduleActivityTaskDecisionAttributes{
-			ActivityID:                    common.StringPtr(activityID),
+			ActivityID:                    activityID,
 			ActivityType:                  &types.ActivityType{Name: activityType},
 			TaskList:                      &types.TaskList{Name: taskList},
 			Input:                         input,
@@ -1175,7 +1175,7 @@ func (s *historyBuilderSuite) validateActivityTaskScheduledEvent(event *types.Hi
 	attributes := event.ActivityTaskScheduledEventAttributes
 	s.NotNil(attributes)
 	s.Equal(decisionID, *attributes.DecisionTaskCompletedEventID)
-	s.Equal(activityID, *attributes.ActivityID)
+	s.Equal(activityID, attributes.ActivityID)
 	s.Equal(activityType, attributes.ActivityType.Name)
 	s.Equal(taskList, attributes.TaskList.Name)
 	s.Equal(input, attributes.Input)

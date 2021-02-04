@@ -505,12 +505,12 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
 		&types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(1.2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(5),
-			MaximumAttempts:             common.Int32Ptr(5),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          1.2,
+			MaximumIntervalInSeconds:    5,
+			MaximumAttempts:             5,
 			NonRetriableErrorReasons:    []string{"（╯' - ')╯ ┻━┻ "},
-			ExpirationIntervalInSeconds: common.Int32Ptr(999),
+			ExpirationIntervalInSeconds: 999,
 		},
 	)
 	startedEvent := test.AddActivityTaskStartedEvent(mutableState, scheduledEvent.GetEventID(), identity)
@@ -601,12 +601,12 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
 		&types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(1.2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(5),
-			MaximumAttempts:             common.Int32Ptr(5),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          1.2,
+			MaximumIntervalInSeconds:    5,
+			MaximumAttempts:             5,
 			NonRetriableErrorReasons:    []string{"（╯' - ')╯ ┻━┻ "},
-			ExpirationIntervalInSeconds: common.Int32Ptr(999),
+			ExpirationIntervalInSeconds: 999,
 		},
 	)
 
@@ -695,12 +695,12 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_No
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
 		&types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(1.2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(5),
-			MaximumAttempts:             common.Int32Ptr(5),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          1.2,
+			MaximumIntervalInSeconds:    5,
+			MaximumAttempts:             5,
 			NonRetriableErrorReasons:    []string{"（╯' - ')╯ ┻━┻ "},
-			ExpirationIntervalInSeconds: common.Int32Ptr(999),
+			ExpirationIntervalInSeconds: 999,
 		},
 	)
 	startedEvent := test.AddActivityTaskStartedEvent(mutableState, scheduledEvent.GetEventID(), identity)
@@ -787,12 +787,12 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noop
 		int32(timerTimeout.Seconds()),
 		int32(heartbeatTimerTimeout.Seconds()),
 		&types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(1.2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(5),
-			MaximumAttempts:             common.Int32Ptr(5),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          1.2,
+			MaximumIntervalInSeconds:    5,
+			MaximumAttempts:             5,
 			NonRetriableErrorReasons:    []string{"（╯' - ')╯ ┻━┻ "},
-			ExpirationIntervalInSeconds: common.Int32Ptr(999),
+			ExpirationIntervalInSeconds: 999,
 		},
 	)
 	startedEvent := test.AddActivityTaskStartedEvent(mutableState, scheduledEvent.GetEventID(), identity)
@@ -1098,12 +1098,12 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Fire() {
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
 		&types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(1.2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(5),
-			MaximumAttempts:             common.Int32Ptr(5),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          1.2,
+			MaximumIntervalInSeconds:    5,
+			MaximumAttempts:             5,
 			NonRetriableErrorReasons:    []string{"（╯' - ')╯ ┻━┻ "},
-			ExpirationIntervalInSeconds: common.Int32Ptr(999),
+			ExpirationIntervalInSeconds: 999,
 		},
 	)
 	activityInfo.Attempt = 1
@@ -1193,12 +1193,12 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Noop() {
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
 		&types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(1.2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(5),
-			MaximumAttempts:             common.Int32Ptr(5),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          1.2,
+			MaximumIntervalInSeconds:    5,
+			MaximumAttempts:             5,
 			NonRetriableErrorReasons:    []string{"（╯' - ')╯ ┻━┻ "},
-			ExpirationIntervalInSeconds: common.Int32Ptr(999),
+			ExpirationIntervalInSeconds: 999,
 		},
 	)
 	startedEvent := test.AddActivityTaskStartedEvent(mutableState, scheduledEvent.GetEventID(), identity)

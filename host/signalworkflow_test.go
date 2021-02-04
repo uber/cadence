@@ -99,7 +99,7 @@ func (s *integrationSuite) TestSignalWorkflow() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr(strconv.Itoa(int(1))),
+					ActivityID:                    "1",
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
@@ -275,7 +275,7 @@ func (s *integrationSuite) TestSignalWorkflow_DuplicateRequest() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr(strconv.Itoa(int(1))),
+					ActivityID:                    "1",
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
@@ -430,7 +430,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision() {
 			return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityID:                    strconv.Itoa(int(activityCounter)),
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
@@ -486,7 +486,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision() {
 			return []byte(strconv.Itoa(int(foreignActivityCounter))), []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr(strconv.Itoa(int(foreignActivityCounter))),
+					ActivityID:                    strconv.Itoa(int(foreignActivityCounter)),
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
@@ -727,7 +727,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_WithoutRunID() {
 			return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityID:                    strconv.Itoa(int(activityCounter)),
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
@@ -783,7 +783,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_WithoutRunID() {
 			return []byte(strconv.Itoa(int(foreignActivityCounter))), []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr(strconv.Itoa(int(foreignActivityCounter))),
+					ActivityID:                    strconv.Itoa(int(foreignActivityCounter)),
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
@@ -928,7 +928,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_UnKnownTarget() {
 			return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityID:                    strconv.Itoa(int(activityCounter)),
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
@@ -1055,7 +1055,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_SignalSelf() {
 			return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityID:                    strconv.Itoa(int(activityCounter)),
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
@@ -1193,7 +1193,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr(strconv.Itoa(int(1))),
+					ActivityID:                    "1",
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
@@ -1452,7 +1452,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 			return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityID:                    strconv.Itoa(int(activityCounter)),
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),

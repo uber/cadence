@@ -52,7 +52,7 @@ func FromActivityLocalDispatchInfo(t *types.ActivityLocalDispatchInfo) *shared.A
 		return nil
 	}
 	return &shared.ActivityLocalDispatchInfo{
-		ActivityId:                      t.ActivityID,
+		ActivityId:                      &t.ActivityID,
 		ScheduledTimestamp:              t.ScheduledTimestamp,
 		StartedTimestamp:                t.StartedTimestamp,
 		ScheduledTimestampOfThisAttempt: t.ScheduledTimestampOfThisAttempt,
@@ -66,7 +66,7 @@ func ToActivityLocalDispatchInfo(t *shared.ActivityLocalDispatchInfo) *types.Act
 		return nil
 	}
 	return &types.ActivityLocalDispatchInfo{
-		ActivityID:                      t.ActivityId,
+		ActivityID:                      t.GetActivityId(),
 		ScheduledTimestamp:              t.ScheduledTimestamp,
 		StartedTimestamp:                t.StartedTimestamp,
 		ScheduledTimestampOfThisAttempt: t.ScheduledTimestampOfThisAttempt,
@@ -80,7 +80,7 @@ func FromActivityTaskCancelRequestedEventAttributes(t *types.ActivityTaskCancelR
 		return nil
 	}
 	return &shared.ActivityTaskCancelRequestedEventAttributes{
-		ActivityId:                   t.ActivityID,
+		ActivityId:                   &t.ActivityID,
 		DecisionTaskCompletedEventId: t.DecisionTaskCompletedEventID,
 	}
 }
@@ -91,7 +91,7 @@ func ToActivityTaskCancelRequestedEventAttributes(t *shared.ActivityTaskCancelRe
 		return nil
 	}
 	return &types.ActivityTaskCancelRequestedEventAttributes{
-		ActivityID:                   t.ActivityId,
+		ActivityID:                   t.GetActivityId(),
 		DecisionTaskCompletedEventID: t.DecisionTaskCompletedEventId,
 	}
 }
@@ -184,7 +184,7 @@ func FromActivityTaskScheduledEventAttributes(t *types.ActivityTaskScheduledEven
 		return nil
 	}
 	return &shared.ActivityTaskScheduledEventAttributes{
-		ActivityId:                    t.ActivityID,
+		ActivityId:                    &t.ActivityID,
 		ActivityType:                  FromActivityType(t.ActivityType),
 		Domain:                        t.Domain,
 		TaskList:                      FromTaskList(t.TaskList),
@@ -205,7 +205,7 @@ func ToActivityTaskScheduledEventAttributes(t *shared.ActivityTaskScheduledEvent
 		return nil
 	}
 	return &types.ActivityTaskScheduledEventAttributes{
-		ActivityID:                    t.ActivityId,
+		ActivityID:                    t.GetActivityId(),
 		ActivityType:                  ToActivityType(t.ActivityType),
 		Domain:                        t.Domain,
 		TaskList:                      ToTaskList(t.TaskList),
@@ -3106,7 +3106,7 @@ func FromPendingActivityInfo(t *types.PendingActivityInfo) *shared.PendingActivi
 		return nil
 	}
 	return &shared.PendingActivityInfo{
-		ActivityID:             t.ActivityID,
+		ActivityID:             &t.ActivityID,
 		ActivityType:           FromActivityType(t.ActivityType),
 		State:                  FromPendingActivityState(t.State),
 		HeartbeatDetails:       t.HeartbeatDetails,
@@ -3128,7 +3128,7 @@ func ToPendingActivityInfo(t *shared.PendingActivityInfo) *types.PendingActivity
 		return nil
 	}
 	return &types.PendingActivityInfo{
-		ActivityID:             t.ActivityID,
+		ActivityID:             t.GetActivityID(),
 		ActivityType:           ToActivityType(t.ActivityType),
 		State:                  ToPendingActivityState(t.State),
 		HeartbeatDetails:       t.HeartbeatDetails,
@@ -3304,7 +3304,7 @@ func FromPollForActivityTaskResponse(t *types.PollForActivityTaskResponse) *shar
 	return &shared.PollForActivityTaskResponse{
 		TaskToken:                       t.TaskToken,
 		WorkflowExecution:               FromWorkflowExecution(t.WorkflowExecution),
-		ActivityId:                      t.ActivityID,
+		ActivityId:                      &t.ActivityID,
 		ActivityType:                    FromActivityType(t.ActivityType),
 		Input:                           t.Input,
 		ScheduledTimestamp:              t.ScheduledTimestamp,
@@ -3329,7 +3329,7 @@ func ToPollForActivityTaskResponse(t *shared.PollForActivityTaskResponse) *types
 	return &types.PollForActivityTaskResponse{
 		TaskToken:                       t.TaskToken,
 		WorkflowExecution:               ToWorkflowExecution(t.WorkflowExecution),
-		ActivityID:                      t.ActivityId,
+		ActivityID:                      t.GetActivityId(),
 		ActivityType:                    ToActivityType(t.ActivityType),
 		Input:                           t.Input,
 		ScheduledTimestamp:              t.ScheduledTimestamp,
@@ -3693,7 +3693,7 @@ func FromRecordActivityTaskHeartbeatByIDRequest(t *types.RecordActivityTaskHeart
 		Domain:     &t.Domain,
 		WorkflowID: &t.WorkflowID,
 		RunID:      &t.RunID,
-		ActivityID: t.ActivityID,
+		ActivityID: &t.ActivityID,
 		Details:    t.Details,
 		Identity:   &t.Identity,
 	}
@@ -3708,7 +3708,7 @@ func ToRecordActivityTaskHeartbeatByIDRequest(t *shared.RecordActivityTaskHeartb
 		Domain:     t.GetDomain(),
 		WorkflowID: t.GetWorkflowID(),
 		RunID:      t.GetRunID(),
-		ActivityID: t.ActivityID,
+		ActivityID: t.GetActivityID(),
 		Details:    t.Details,
 		Identity:   t.GetIdentity(),
 	}
@@ -3902,7 +3902,7 @@ func FromRequestCancelActivityTaskDecisionAttributes(t *types.RequestCancelActiv
 		return nil
 	}
 	return &shared.RequestCancelActivityTaskDecisionAttributes{
-		ActivityId: t.ActivityID,
+		ActivityId: &t.ActivityID,
 	}
 }
 
@@ -3912,7 +3912,7 @@ func ToRequestCancelActivityTaskDecisionAttributes(t *shared.RequestCancelActivi
 		return nil
 	}
 	return &types.RequestCancelActivityTaskDecisionAttributes{
-		ActivityID: t.ActivityId,
+		ActivityID: t.GetActivityId(),
 	}
 }
 
@@ -3922,7 +3922,7 @@ func FromRequestCancelActivityTaskFailedEventAttributes(t *types.RequestCancelAc
 		return nil
 	}
 	return &shared.RequestCancelActivityTaskFailedEventAttributes{
-		ActivityId:                   t.ActivityID,
+		ActivityId:                   &t.ActivityID,
 		Cause:                        t.Cause,
 		DecisionTaskCompletedEventId: t.DecisionTaskCompletedEventID,
 	}
@@ -3934,7 +3934,7 @@ func ToRequestCancelActivityTaskFailedEventAttributes(t *shared.RequestCancelAct
 		return nil
 	}
 	return &types.RequestCancelActivityTaskFailedEventAttributes{
-		ActivityID:                   t.ActivityId,
+		ActivityID:                   t.GetActivityId(),
 		Cause:                        t.Cause,
 		DecisionTaskCompletedEventID: t.DecisionTaskCompletedEventId,
 	}
@@ -4223,7 +4223,7 @@ func FromRespondActivityTaskCanceledByIDRequest(t *types.RespondActivityTaskCanc
 		Domain:     &t.Domain,
 		WorkflowID: &t.WorkflowID,
 		RunID:      &t.RunID,
-		ActivityID: t.ActivityID,
+		ActivityID: &t.ActivityID,
 		Details:    t.Details,
 		Identity:   &t.Identity,
 	}
@@ -4238,7 +4238,7 @@ func ToRespondActivityTaskCanceledByIDRequest(t *shared.RespondActivityTaskCance
 		Domain:     t.GetDomain(),
 		WorkflowID: t.GetWorkflowID(),
 		RunID:      t.GetRunID(),
-		ActivityID: t.ActivityID,
+		ActivityID: t.GetActivityID(),
 		Details:    t.Details,
 		Identity:   t.GetIdentity(),
 	}
@@ -4277,7 +4277,7 @@ func FromRespondActivityTaskCompletedByIDRequest(t *types.RespondActivityTaskCom
 		Domain:     &t.Domain,
 		WorkflowID: &t.WorkflowID,
 		RunID:      &t.RunID,
-		ActivityID: t.ActivityID,
+		ActivityID: &t.ActivityID,
 		Result:     t.Result,
 		Identity:   &t.Identity,
 	}
@@ -4292,7 +4292,7 @@ func ToRespondActivityTaskCompletedByIDRequest(t *shared.RespondActivityTaskComp
 		Domain:     t.GetDomain(),
 		WorkflowID: t.GetWorkflowID(),
 		RunID:      t.GetRunID(),
-		ActivityID: t.ActivityID,
+		ActivityID: t.GetActivityID(),
 		Result:     t.Result,
 		Identity:   t.GetIdentity(),
 	}
@@ -4331,7 +4331,7 @@ func FromRespondActivityTaskFailedByIDRequest(t *types.RespondActivityTaskFailed
 		Domain:     &t.Domain,
 		WorkflowID: &t.WorkflowID,
 		RunID:      &t.RunID,
-		ActivityID: t.ActivityID,
+		ActivityID: &t.ActivityID,
 		Reason:     t.Reason,
 		Details:    t.Details,
 		Identity:   &t.Identity,
@@ -4347,7 +4347,7 @@ func ToRespondActivityTaskFailedByIDRequest(t *shared.RespondActivityTaskFailedB
 		Domain:     t.GetDomain(),
 		WorkflowID: t.GetWorkflowID(),
 		RunID:      t.GetRunID(),
-		ActivityID: t.ActivityID,
+		ActivityID: t.GetActivityID(),
 		Reason:     t.Reason,
 		Details:    t.Details,
 		Identity:   t.GetIdentity(),
@@ -4500,12 +4500,12 @@ func FromRetryPolicy(t *types.RetryPolicy) *shared.RetryPolicy {
 		return nil
 	}
 	return &shared.RetryPolicy{
-		InitialIntervalInSeconds:    t.InitialIntervalInSeconds,
-		BackoffCoefficient:          t.BackoffCoefficient,
-		MaximumIntervalInSeconds:    t.MaximumIntervalInSeconds,
-		MaximumAttempts:             t.MaximumAttempts,
+		InitialIntervalInSeconds:    &t.InitialIntervalInSeconds,
+		BackoffCoefficient:          &t.BackoffCoefficient,
+		MaximumIntervalInSeconds:    &t.MaximumIntervalInSeconds,
+		MaximumAttempts:             &t.MaximumAttempts,
 		NonRetriableErrorReasons:    t.NonRetriableErrorReasons,
-		ExpirationIntervalInSeconds: t.ExpirationIntervalInSeconds,
+		ExpirationIntervalInSeconds: &t.ExpirationIntervalInSeconds,
 	}
 }
 
@@ -4515,12 +4515,12 @@ func ToRetryPolicy(t *shared.RetryPolicy) *types.RetryPolicy {
 		return nil
 	}
 	return &types.RetryPolicy{
-		InitialIntervalInSeconds:    t.InitialIntervalInSeconds,
-		BackoffCoefficient:          t.BackoffCoefficient,
-		MaximumIntervalInSeconds:    t.MaximumIntervalInSeconds,
-		MaximumAttempts:             t.MaximumAttempts,
+		InitialIntervalInSeconds:    t.GetInitialIntervalInSeconds(),
+		BackoffCoefficient:          t.GetBackoffCoefficient(),
+		MaximumIntervalInSeconds:    t.GetMaximumIntervalInSeconds(),
+		MaximumAttempts:             t.GetMaximumAttempts(),
 		NonRetriableErrorReasons:    t.NonRetriableErrorReasons,
-		ExpirationIntervalInSeconds: t.ExpirationIntervalInSeconds,
+		ExpirationIntervalInSeconds: t.GetExpirationIntervalInSeconds(),
 	}
 }
 
@@ -4564,7 +4564,7 @@ func FromScheduleActivityTaskDecisionAttributes(t *types.ScheduleActivityTaskDec
 		return nil
 	}
 	return &shared.ScheduleActivityTaskDecisionAttributes{
-		ActivityId:                    t.ActivityID,
+		ActivityId:                    &t.ActivityID,
 		ActivityType:                  FromActivityType(t.ActivityType),
 		Domain:                        &t.Domain,
 		TaskList:                      FromTaskList(t.TaskList),
@@ -4585,7 +4585,7 @@ func ToScheduleActivityTaskDecisionAttributes(t *shared.ScheduleActivityTaskDeci
 		return nil
 	}
 	return &types.ScheduleActivityTaskDecisionAttributes{
-		ActivityID:                    t.ActivityId,
+		ActivityID:                    t.GetActivityId(),
 		ActivityType:                  ToActivityType(t.ActivityType),
 		Domain:                        t.GetDomain(),
 		TaskList:                      ToTaskList(t.TaskList),
