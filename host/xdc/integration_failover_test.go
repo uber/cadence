@@ -1565,7 +1565,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    strconv.Itoa(1),
+					ActivityID:                    "1",
 					ActivityType:                  &types.ActivityType{Name: "some random activity type"},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         []byte("some random input"),

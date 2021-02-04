@@ -2431,7 +2431,7 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    strconv.Itoa(int(1)),
+					ActivityID:                    "1",
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
@@ -2607,7 +2607,7 @@ func (s *integrationSuite) TestDescribeTaskList() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    strconv.Itoa(int(1)),
+					ActivityID:                    "1",
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      taskList,
 					Input:                         buf.Bytes(),

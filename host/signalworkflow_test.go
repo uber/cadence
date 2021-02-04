@@ -99,7 +99,7 @@ func (s *integrationSuite) TestSignalWorkflow() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    strconv.Itoa(int(1)),
+					ActivityID:                    "1",
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
@@ -275,7 +275,7 @@ func (s *integrationSuite) TestSignalWorkflow_DuplicateRequest() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    strconv.Itoa(int(1)),
+					ActivityID:                    "1",
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
@@ -1193,7 +1193,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    strconv.Itoa(int(1)),
+					ActivityID:                    "1",
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
