@@ -562,6 +562,7 @@ func (s *mutableStateSuite) TestTransientDecisionTaskSchedule_CurrentVersionChan
 	s.NoError(err)
 	s.NotNil(di)
 
+	s.Equal(int64(0), s.msBuilder.GetExecutionInfo().DecisionAttempt)
 	s.Equal(0, len(s.msBuilder.GetHistoryBuilder().transientHistory))
 	s.Equal(1, len(s.msBuilder.GetHistoryBuilder().history))
 }
