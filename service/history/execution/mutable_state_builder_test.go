@@ -533,32 +533,6 @@ func (s *mutableStateSuite) TestEventReapplied() {
 	s.True(isReapplied)
 }
 
-func (s *mutableStateSuite) TestFailDecision_WithCurrentVersionUpdate() {
-	version := int64(100)
-	runID := uuid.New()
-	s.msBuilder = NewMutableStateBuilderWithVersionHistoriesWithEventV2(
-		s.mockShard,
-		s.logger,
-		version,
-		runID,
-		testGlobalDomainEntry,
-	).(*mutableStateBuilder)
-	// 1. generate transient decision with attempt++
-	err := s.msBuilder.UpdateCurrentVersion(version, true)
-	s.NoError(err)
-	s.msBuilder.UpdateDecision(&DecisionInfo{
-		Version: version,
-	})
-	s.msBuilder.FailDecision(true)
-	s.Equal(int64(1), s.msBuilder.getDecisionInfo().Attempt)
-
-	// 2. generate non-transient decision with attempt == 0
-	err = s.msBuilder.UpdateCurrentVersion(version+1, true)
-	s.NoError(err)
-	s.msBuilder.FailDecision(true)
-	s.Equal(int64(0), s.msBuilder.getDecisionInfo().Attempt)
-}
-
 func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicated(version int64, runID string) (*types.HistoryEvent, *types.HistoryEvent) {
 	domainID := testDomainID
 	execution := types.WorkflowExecution{
