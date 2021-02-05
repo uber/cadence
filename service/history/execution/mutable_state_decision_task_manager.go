@@ -388,6 +388,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduledEventAsHea
 			m.msb.executionInfo.DecisionAttempt)
 		scheduleID = newDecisionEvent.GetEventID()
 		scheduleTime = newDecisionEvent.GetTimestamp()
+		m.msb.executionInfo.DecisionAttempt = 0
 	}
 
 	decision, err := m.ReplicateDecisionTaskScheduledEvent(
