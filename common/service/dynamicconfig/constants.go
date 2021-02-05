@@ -80,7 +80,6 @@ var keys = map[Key]string{
 	EnableParentClosePolicyWorker:       "system.enableParentClosePolicyWorker",
 	EnableFailoverManager:               "system.enableFailoverManager",
 	EnableStickyQuery:                   "system.enableStickyQuery",
-	EnablePriorityTaskProcessor:         "system.enablePriorityTaskProcessor",
 	EnableDebugMode:                     "system.enableDebugMode",
 
 	// size limit
@@ -214,8 +213,6 @@ var keys = map[Key]string{
 	TimerProcessorSplitQueueInterval:                      "history.timerProcessorSplitQueueInterval",
 	TimerProcessorSplitQueueIntervalJitterCoefficient:     "history.timerProcessorSplitQueueIntervalJitterCoefficient",
 	TimerProcessorMaxRedispatchQueueSize:                  "history.timerProcessorMaxRedispatchQueueSize",
-	TimerProcessorEnablePriorityTaskProcessor:             "history.timerProcessorEnablePriorityTaskProcessor",
-	TimerProcessorEnableMultiCurosrProcessor:              "history.timerProcessorEnableMultiCursorProcessor",
 	TimerProcessorMaxTimeShift:                            "history.timerProcessorMaxTimeShift",
 	TimerProcessorHistoryArchivalSizeLimit:                "history.timerProcessorHistoryArchivalSizeLimit",
 	TimerProcessorArchivalTimeLimit:                       "history.timerProcessorArchivalTimeLimit",
@@ -233,8 +230,6 @@ var keys = map[Key]string{
 	TransferProcessorUpdateAckIntervalJitterCoefficient:   "history.transferProcessorUpdateAckIntervalJitterCoefficient",
 	TransferProcessorCompleteTransferInterval:             "history.transferProcessorCompleteTransferInterval",
 	TransferProcessorMaxRedispatchQueueSize:               "history.transferProcessorMaxRedispatchQueueSize",
-	TransferProcessorEnablePriorityTaskProcessor:          "history.transferProcessorEnablePriorityTaskProcessor",
-	TransferProcessorEnableMultiCurosrProcessor:           "history.transferProcessorEnableMultiCursorProcessor",
 	TransferProcessorEnableValidator:                      "history.transferProcessorEnableValidator",
 	TransferProcessorValidationInterval:                   "history.transferProcessorValidationInterval",
 	TransferProcessorVisibilityArchivalTimeLimit:          "history.transferProcessorVisibilityArchivalTimeLimit",
@@ -417,8 +412,6 @@ const (
 	MaxDecisionStartToCloseSeconds
 	// DisallowQuery is the key to disallow query for a domain
 	DisallowQuery
-	// EnablePriorityTaskProcessor is the key for enabling priority task processor
-	EnablePriorityTaskProcessor
 	// EnableDebugMode is the key for enabling debugging components, logs and metrics
 	EnableDebugMode
 
@@ -682,10 +675,6 @@ const (
 	TimerProcessorSplitQueueIntervalJitterCoefficient
 	// TimerProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for timer processor
 	TimerProcessorMaxRedispatchQueueSize
-	// TimerProcessorEnablePriorityTaskProcessor indicates whether priority task processor should be used for timer processor
-	TimerProcessorEnablePriorityTaskProcessor
-	// TimerProcessorEnableMultiCurosrProcessor indicates whether multi-cursor queue processor should be used for timer processor
-	TimerProcessorEnableMultiCurosrProcessor
 	// TimerProcessorMaxTimeShift is the max shift timer processor can have
 	TimerProcessorMaxTimeShift
 	// TimerProcessorHistoryArchivalSizeLimit is the max history size for inline archival
@@ -720,10 +709,6 @@ const (
 	TransferProcessorCompleteTransferInterval
 	// TransferProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for transferQueueProcessor
 	TransferProcessorMaxRedispatchQueueSize
-	// TransferProcessorEnablePriorityTaskProcessor indicates whether priority task processor should be used for transferQueueProcessor
-	TransferProcessorEnablePriorityTaskProcessor
-	// TransferProcessorEnableMultiCurosrProcessor indicates whether multi-cursor queue processor should be used for transferQueueProcessor
-	TransferProcessorEnableMultiCurosrProcessor
 	// TransferProcessorEnableValidator indicates whether validator should be enabled for transferQueueProcessor
 	TransferProcessorEnableValidator
 	// TransferProcessorValidationInterval is the interval for performing transfer queue validation
