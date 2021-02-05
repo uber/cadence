@@ -163,27 +163,25 @@ func (h *handlerImpl) Start() {
 
 	h.replicationTaskFetchers.Start()
 
-	if h.config.EnablePriorityTaskProcessor() {
-		var err error
-		taskPriorityAssigner := task.NewPriorityAssigner(
-			h.GetClusterMetadata().GetCurrentClusterName(),
-			h.GetDomainCache(),
-			h.GetLogger(),
-			h.GetMetricsClient(),
-			h.config,
-		)
+	var err error
+	taskPriorityAssigner := task.NewPriorityAssigner(
+		h.GetClusterMetadata().GetCurrentClusterName(),
+		h.GetDomainCache(),
+		h.GetLogger(),
+		h.GetMetricsClient(),
+		h.config,
+	)
 
-		h.queueTaskProcessor, err = task.NewProcessor(
-			taskPriorityAssigner,
-			h.config,
-			h.GetLogger(),
-			h.GetMetricsClient(),
-		)
-		if err != nil {
-			h.GetLogger().Fatal("Creating priority task processor failed", tag.Error(err))
-		}
-		h.queueTaskProcessor.Start()
+	h.queueTaskProcessor, err = task.NewProcessor(
+		taskPriorityAssigner,
+		h.config,
+		h.GetLogger(),
+		h.GetMetricsClient(),
+	)
+	if err != nil {
+		h.GetLogger().Fatal("Creating priority task processor failed", tag.Error(err))
 	}
+	h.queueTaskProcessor.Start()
 
 	h.controller = shard.NewShardController(
 		h.Resource,
@@ -216,9 +214,7 @@ func (h *handlerImpl) Start() {
 func (h *handlerImpl) Stop() {
 	h.PrepareToStop()
 	h.replicationTaskFetchers.Stop()
-	if h.queueTaskProcessor != nil {
-		h.queueTaskProcessor.Stop()
-	}
+	h.queueTaskProcessor.Stop()
 	h.controller.Stop()
 	h.historyEventNotifier.Stop()
 	h.failoverCoordinator.Stop()
