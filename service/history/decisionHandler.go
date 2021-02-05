@@ -501,7 +501,7 @@ Update_History_Loop:
 				// start the new decision task if request asked to do so
 				// TODO: replace the poll request
 				_, _, err := msBuilder.AddDecisionTaskStartedEvent(newDecision.ScheduleID, "request-from-RespondDecisionTaskCompleted", &types.PollForDecisionTaskRequest{
-					TaskList: &types.TaskList{Name: common.StringPtr(newDecision.TaskList)},
+					TaskList: &types.TaskList{Name: newDecision.TaskList},
 					Identity: request.Identity,
 				})
 				if err != nil {
@@ -591,7 +591,7 @@ Update_History_Loop:
 		activitiesToDispatchLocally := make(map[string]*types.ActivityLocalDispatchInfo)
 		for _, dr := range decisionResults {
 			if dr.activityDispatchInfo != nil {
-				activitiesToDispatchLocally[*dr.activityDispatchInfo.ActivityID] = dr.activityDispatchInfo
+				activitiesToDispatchLocally[dr.activityDispatchInfo.ActivityID] = dr.activityDispatchInfo
 			}
 		}
 		resp.ActivitiesToDispatchLocally = activitiesToDispatchLocally
@@ -603,7 +603,7 @@ Update_History_Loop:
 				return nil, err
 			}
 			// sticky is always enabled when worker request for new decision task from RespondDecisionTaskCompleted
-			resp.StartedResponse.StickyExecutionEnabled = common.BoolPtr(true)
+			resp.StartedResponse.StickyExecutionEnabled = true
 		}
 
 		return resp, nil
@@ -630,11 +630,11 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 	// before it was started.
 	response.ScheduledEventID = common.Int64Ptr(decision.ScheduleID)
 	response.StartedEventID = common.Int64Ptr(decision.StartedID)
-	response.StickyExecutionEnabled = common.BoolPtr(msBuilder.IsStickyTaskListEnabled())
+	response.StickyExecutionEnabled = msBuilder.IsStickyTaskListEnabled()
 	response.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID())
-	response.Attempt = common.Int64Ptr(decision.Attempt)
+	response.Attempt = decision.Attempt
 	response.WorkflowExecutionTaskList = &types.TaskList{
-		Name: &executionInfo.TaskList,
+		Name: executionInfo.TaskList,
 		Kind: types.TaskListKindNormal.Ptr(),
 	}
 	response.ScheduledTimestamp = common.Int64Ptr(decision.ScheduledTimestamp)

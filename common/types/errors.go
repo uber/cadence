@@ -125,9 +125,7 @@ func (err WorkflowExecutionAlreadyStartedError) Error() string {
 	if err.Message != nil {
 		printField(sb, "Message", *err.Message)
 	}
-	if err.StartRequestID != nil {
-		printField(sb, "StartRequestID", *err.StartRequestID)
-	}
+	printField(sb, "StartRequestID", err.StartRequestID)
 	printField(sb, "RunID", err.RunID)
 	return fmt.Sprintf("WorkflowExecutionAlreadyStartedError{%s}", sb.String())
 }

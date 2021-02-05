@@ -1,0 +1,98 @@
+# config for https://github.com/mgechev/revive
+ignoreGeneratedHeader = false
+severity = "warning"
+confidence = 0.8
+errorCode = 0
+warningCode = 0
+
+#### roughly what golint does.  probably only disable noisy ones.
+
+[rule.blank-imports]
+[rule.context-as-argument]
+[rule.context-keys-type]
+[rule.dot-imports]
+[rule.error-naming]
+[rule.error-return]
+[rule.error-strings]
+[rule.errorf]
+# [rule.exported] # disabled due to lack of value / encouraging bad habits
+[rule.if-return]
+[rule.increment-decrement]
+[rule.indent-error-flow]
+[rule.package-comments]
+[rule.range]
+[rule.receiver-naming]
+[rule.time-naming]
+[rule.unexported-return]
+[rule.var-declaration]
+[rule.var-naming]
+
+#### higher value stuff
+
+# this is basically errcheck, warns on errs that are not checked.
+# strongly desired, but disabled due to 300 failures (to be tackled incrementally).
+# [rule.unhandled-error]
+
+# general defer gotchas.
+#
+# in particular: "recover" warns about unsafe use of recover().
+# this has caught bugs that can allow crashes while seemingly safe, and are *extremely* hard to catch in review.
+#
+# the arguments are excluding only "call-chain", which would disallow `defer someFn(...)()` which is both useful and in use.
+[rule.defer]
+arguments=[["loop","method-call","recover","return"]]
+
+# string(int) is almost always a bug.
+# go vet considers this a fatal error, but only in 1.15 or newer, and go.mod currently targets 1.13
+[rule.string-of-int]
+
+#### added because we currently have zero violations, and they seem decent enough to retain
+
+[rule.atomic] # correct use of sync code, important
+[rule.call-to-gc] # beneficial
+[rule.constant-logical-expr] # minor code simplifier
+[rule.identical-branches] # code simplifier / failures are pretty dubious
+[rule.modifies-parameter] # beneficial
+[rule.modifies-value-receiver] # probably beneficial, prevents subtle bugs
+[rule.range-val-address] # beneficial
+[rule.range-val-in-closure] # beneficial
+[rule.unconditional-recursion] # probably a good idea
+[rule.unreachable-code] # code simplifier
+[rule.waitgroup-by-value] # correct use of sync code, important
+
+#### unused utilities
+
+# [rule.file-header] # could possibly replace `copyright -verifyOnly`?
+# [rule.imports-blacklist] # simple way to ban imports / enforce wrappers, likely useful
+
+#### disabled but maybe desirable
+
+# [rule.bare-return] # probably beneficial as it's slightly error-prone, but 2,000 failures
+# [rule.bool-literal-in-expr] # minor code simplifier, few failures
+# [rule.confusing-results] # maybe beneficial, only a few failures
+# [rule.deep-exit] # probably a good idea in most code, some failures, but not trivial to adopt
+# [rule.duplicated-imports] # minor, but may be worthwhile.  failures are weird but harmless
+# [rule.early-return] # minor code simplifier, a handful of failures
+# [rule.get-return] # existing failures are intentional + desirable, but in principle it's a fine idea
+# [rule.import-shadowing] # probably beneficial, but 750 failures
+# [rule.redefines-builtin-id] # probably beneficial, few failures
+# [rule.struct-tag] # probably beneficial, a few failures
+# [rule.superfluous-else] # minor code simplifier, a few failures
+# [rule.unexported-naming] # probably beneficial, but 300 failures
+# [rule.unused-parameter] # minor code simplifier / clarifier, but 250 failures
+# [rule.unused-receiver] # minor code simplifier / clarifier, but 500 failures
+
+#### probably undesirable
+
+# [rule.add-constant] # extremely noisy.  18,000 failures, overwhelmingly for tests or 0/1 which seem totally fine
+# [rule.argument-limit] # too arbitrary
+# [rule.cognitive-complexity] # dubious value, but possibly interesting
+# [rule.confusing-naming] # dubious value, ~50 failures
+# [rule.cyclomatic] # dubious value, but possibly interesting
+# [rule.empty-block] # easily noticed in code review, but also warns on documented no-op branches, which seem fine
+# [rule.empty-lines] # low value, many failures
+# [rule.flag-parameter] # interesting, but very noisy
+# [rule.function-result-limit] # too arbitrary, easily noticed in code review
+# [rule.line-length-limit] # too arbitrary
+# [rule.max-public-structs] # too arbitrary
+# [rule.unnecessary-stmt] # dubious value

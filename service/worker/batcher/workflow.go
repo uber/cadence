@@ -270,7 +270,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 		//  And we can't use list API because terminate / reset will mutate the result.
 		resp, err := client.ScanWorkflowExecutions(ctx, &types.ListWorkflowExecutionsRequest{
 			Domain:        batchParams.DomainName,
-			PageSize:      common.Int32Ptr(int32(pageSize)),
+			PageSize:      int32(pageSize),
 			NextPageToken: hbd.PageToken,
 			Query:         common.StringPtr(batchParams.Query),
 		})
@@ -360,7 +360,7 @@ func startTaskProcessor(
 								RunID:      runID,
 							},
 							Reason:   common.StringPtr(batchParams.Reason),
-							Identity: common.StringPtr(BatchWFTypeName),
+							Identity: BatchWFTypeName,
 						}, yarpcCallOptions...)
 					})
 			case BatchTypeCancel:
@@ -373,8 +373,8 @@ func startTaskProcessor(
 								WorkflowID: workflowID,
 								RunID:      runID,
 							},
-							Identity:  common.StringPtr(BatchWFTypeName),
-							RequestID: common.StringPtr(requestID),
+							Identity:  BatchWFTypeName,
+							RequestID: requestID,
 						}, yarpcCallOptions...)
 					})
 			case BatchTypeSignal:
@@ -386,8 +386,8 @@ func startTaskProcessor(
 								WorkflowID: workflowID,
 								RunID:      runID,
 							},
-							Identity:   common.StringPtr(BatchWFTypeName),
-							RequestID:  common.StringPtr(requestID),
+							Identity:   BatchWFTypeName,
+							RequestID:  requestID,
 							SignalName: common.StringPtr(batchParams.SignalParams.SignalName),
 							Input:      []byte(batchParams.SignalParams.Input),
 						}, yarpcCallOptions...)

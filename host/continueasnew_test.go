@@ -40,10 +40,10 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	header := &types.Header{
 		Fields: map[string][]byte{"tracing": []byte("sample payload")},
@@ -56,7 +56,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 	}
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -67,7 +67,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 		SearchAttributes:                    searchAttr,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -92,7 +92,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow() {
 				DecisionType: types.DecisionTypeContinueAsNewWorkflowExecution.Ptr(),
 				ContinueAsNewWorkflowExecutionDecisionAttributes: &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
 					WorkflowType:                        workflowType,
-					TaskList:                            &types.TaskList{Name: &tl},
+					TaskList:                            &types.TaskList{Name: tl},
 					Input:                               buf.Bytes(),
 					Header:                              header,
 					Memo:                                memo,
@@ -146,13 +146,13 @@ func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -160,7 +160,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -182,7 +182,7 @@ func (s *integrationSuite) TestContinueAsNewWorkflow_Timeout() {
 				DecisionType: types.DecisionTypeContinueAsNewWorkflowExecution.Ptr(),
 				ContinueAsNewWorkflowExecutionDecisionAttributes: &types.ContinueAsNewWorkflowExecutionDecisionAttributes{
 					WorkflowType:                        workflowType,
-					TaskList:                            &types.TaskList{Name: &tl},
+					TaskList:                            &types.TaskList{Name: tl},
 					Input:                               buf.Bytes(),
 					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1), // set timeout to 1
 					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
@@ -251,13 +251,13 @@ func (s *integrationSuite) TestWorkflowContinueAsNew_TaskID() {
 	identity := "worker1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = common.StringPtr(wt)
+	workflowType.Name = wt
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -265,7 +265,7 @@ func (s *integrationSuite) TestWorkflowContinueAsNew_TaskID() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -343,16 +343,16 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 	identity := "worker1"
 
 	parentWorkflowType := &types.WorkflowType{}
-	parentWorkflowType.Name = common.StringPtr(wtParent)
+	parentWorkflowType.Name = wtParent
 
 	childWorkflowType := &types.WorkflowType{}
-	childWorkflowType.Name = common.StringPtr(wtChild)
+	childWorkflowType.Name = wtChild
 
 	taskList := &types.TaskList{}
-	taskList.Name = common.StringPtr(tl)
+	taskList.Name = tl
 
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          parentID,
 		WorkflowType:                        parentWorkflowType,
@@ -360,7 +360,7 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -486,7 +486,7 @@ func (s *integrationSuite) TestChildWorkflowWithContinueAsNew() {
 	s.Equal(childID, completedAttributes.WorkflowExecution.WorkflowID)
 	s.NotEqual(startedEvent.ChildWorkflowExecutionStartedEventAttributes.WorkflowExecution.RunID,
 		completedAttributes.WorkflowExecution.RunID)
-	s.Equal(wtChild, *completedAttributes.WorkflowType.Name)
+	s.Equal(wtChild, completedAttributes.WorkflowType.Name)
 	s.Equal([]byte("Child Done."), completedAttributes.Result)
 
 	s.Logger.Info("Parent Workflow Execution History: ")

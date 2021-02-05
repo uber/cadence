@@ -231,7 +231,7 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 	// the correct logic should check whether the decision task is a sticky decision
 	// task or not.
 	taskList := &types.TaskList{
-		Name: &task.TaskList,
+		Name: task.TaskList,
 	}
 	if mutableState.GetExecutionInfo().TaskList != task.TaskList {
 		// this decision is an sticky decision
@@ -572,7 +572,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 			WorkflowID: task.TargetWorkflowID,
 			RunID:      task.TargetRunID,
 		},
-		RequestID: common.StringPtr(signalInfo.SignalRequestID),
+		RequestID: signalInfo.SignalRequestID,
 	})
 }
 
@@ -992,7 +992,7 @@ func (t *transferActiveTaskExecutor) createFirstDecisionTask(
 	err := t.historyClient.ScheduleDecisionTask(scheduleDecisionCtx, &types.ScheduleDecisionTaskRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: execution,
-		IsFirstDecision:   common.BoolPtr(true),
+		IsFirstDecision:   true,
 	})
 
 	if err != nil {
@@ -1208,16 +1208,16 @@ func (t *transferActiveTaskExecutor) requestCancelExternalExecutionWithRetry(
 				WorkflowID: task.TargetWorkflowID,
 				RunID:      task.TargetRunID,
 			},
-			Identity: common.StringPtr(execution.IdentityHistoryService),
+			Identity: execution.IdentityHistoryService,
 			// Use the same request ID to dedupe RequestCancelWorkflowExecution calls
-			RequestID: common.StringPtr(requestCancelInfo.CancelRequestID),
+			RequestID: requestCancelInfo.CancelRequestID,
 		},
 		ExternalInitiatedEventID: common.Int64Ptr(task.ScheduleID),
 		ExternalWorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
 		},
-		ChildWorkflowOnly: common.BoolPtr(task.TargetChildWorkflowOnly),
+		ChildWorkflowOnly: task.TargetChildWorkflowOnly,
 	}
 
 	requestCancelCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
@@ -1252,18 +1252,18 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionWithRetry(
 				WorkflowID: task.TargetWorkflowID,
 				RunID:      task.TargetRunID,
 			},
-			Identity:   common.StringPtr(execution.IdentityHistoryService),
+			Identity:   execution.IdentityHistoryService,
 			SignalName: common.StringPtr(signalInfo.SignalName),
 			Input:      signalInfo.Input,
 			// Use same request ID to deduplicate SignalWorkflowExecution calls
-			RequestID: common.StringPtr(signalInfo.SignalRequestID),
+			RequestID: signalInfo.SignalRequestID,
 			Control:   signalInfo.Control,
 		},
 		ExternalWorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
 		},
-		ChildWorkflowOnly: common.BoolPtr(task.TargetChildWorkflowOnly),
+		ChildWorkflowOnly: task.TargetChildWorkflowOnly,
 	}
 
 	signalCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
@@ -1294,7 +1294,7 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 		ExecutionStartToCloseTimeoutSeconds: attributes.ExecutionStartToCloseTimeoutSeconds,
 		TaskStartToCloseTimeoutSeconds:      attributes.TaskStartToCloseTimeoutSeconds,
 		// Use the same request ID to dedupe StartWorkflowExecution calls
-		RequestID:             common.StringPtr(childInfo.CreateRequestID),
+		RequestID:             childInfo.CreateRequestID,
 		WorkflowIDReusePolicy: attributes.WorkflowIDReusePolicy,
 		RetryPolicy:           attributes.RetryPolicy,
 		CronSchedule:          attributes.CronSchedule,
@@ -1496,7 +1496,7 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 					RunID:      childInfo.StartedRunID,
 				},
 				Reason:   common.StringPtr("by parent close policy"),
-				Identity: common.StringPtr(execution.IdentityHistoryService),
+				Identity: execution.IdentityHistoryService,
 			},
 		})
 
@@ -1509,7 +1509,7 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 					WorkflowID: childInfo.StartedWorkflowID,
 					RunID:      childInfo.StartedRunID,
 				},
-				Identity: common.StringPtr(execution.IdentityHistoryService),
+				Identity: execution.IdentityHistoryService,
 			},
 		})
 

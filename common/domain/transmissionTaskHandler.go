@@ -128,8 +128,7 @@ func (domainReplicator *domainReplicatorImpl) convertClusterReplicationConfigToT
 ) []*types.ClusterReplicationConfiguration {
 	output := []*types.ClusterReplicationConfiguration{}
 	for _, cluster := range input {
-		clusterName := common.StringPtr(cluster.ClusterName)
-		output = append(output, &types.ClusterReplicationConfiguration{ClusterName: clusterName})
+		output = append(output, &types.ClusterReplicationConfiguration{ClusterName: cluster.ClusterName})
 	}
 	return output
 }

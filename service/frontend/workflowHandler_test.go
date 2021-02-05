@@ -240,19 +240,19 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_RequestIdNotSet
 		Domain:     "test-domain",
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		RetryPolicy: &types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(2),
-			MaximumAttempts:             common.Int32Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(1),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
 		},
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
@@ -278,21 +278,21 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_DomainNotSet() 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		RetryPolicy: &types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(2),
-			MaximumAttempts:             common.Int32Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(1),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -307,21 +307,21 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowIdNotSe
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
 		Domain: "test-domain",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		RetryPolicy: &types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(2),
-			MaximumAttempts:             common.Int32Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(1),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -337,21 +337,21 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowTypeNot
 		Domain:     "test-domain",
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr(""),
+			Name: "",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		RetryPolicy: &types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(2),
-			MaximumAttempts:             common.Int32Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(1),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -367,21 +367,21 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_TaskListNotSet(
 		Domain:     "test-domain",
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr(""),
+			Name: "",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		RetryPolicy: &types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(2),
-			MaximumAttempts:             common.Int32Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(1),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -397,21 +397,21 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidExecutio
 		Domain:     "test-domain",
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(0),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		RetryPolicy: &types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(2),
-			MaximumAttempts:             common.Int32Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(1),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -427,21 +427,21 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStar
 		Domain:     "test-domain",
 		WorkflowID: "workflow-id",
 		WorkflowType: &types.WorkflowType{
-			Name: common.StringPtr("workflow-type"),
+			Name: "workflow-type",
 		},
 		TaskList: &types.TaskList{
-			Name: common.StringPtr("task-list"),
+			Name: "task-list",
 		},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(0),
 		RetryPolicy: &types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(2),
-			MaximumAttempts:             common.Int32Ptr(1),
-			ExpirationIntervalInSeconds: common.Int32Ptr(1),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
 		},
-		RequestID: common.StringPtr(uuid.New()),
+		RequestID: uuid.New(),
 	}
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
@@ -1149,7 +1149,7 @@ func (s *workflowHandlerSuite) getWorkflowExecutionHistory(nextEventID int64, tr
 			WorkflowID: testWorkflowID,
 			RunID:      testRunID,
 		},
-		SkipArchival:  common.BoolPtr(true),
+		SkipArchival:  true,
 		NextPageToken: token,
 	})
 	s.NoError(err)
@@ -1187,7 +1187,7 @@ func (s *workflowHandlerSuite) TestListWorkflowExecutions() {
 
 	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   s.testDomain,
-		PageSize: common.Int32Ptr(int32(config.ESIndexMaxResultWindow())),
+		PageSize: int32(config.ESIndexMaxResultWindow()),
 	}
 	ctx := context.Background()
 
@@ -1202,7 +1202,7 @@ func (s *workflowHandlerSuite) TestListWorkflowExecutions() {
 	_, err = wh.ListWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 
-	listRequest.PageSize = common.Int32Ptr(int32(config.ESIndexMaxResultWindow() + 1))
+	listRequest.PageSize = int32(config.ESIndexMaxResultWindow() + 1)
 	_, err = wh.ListWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 }
@@ -1216,7 +1216,7 @@ func (s *workflowHandlerSuite) TestScantWorkflowExecutions() {
 
 	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   s.testDomain,
-		PageSize: common.Int32Ptr(int32(config.ESIndexMaxResultWindow())),
+		PageSize: int32(config.ESIndexMaxResultWindow()),
 	}
 	ctx := context.Background()
 
@@ -1231,7 +1231,7 @@ func (s *workflowHandlerSuite) TestScantWorkflowExecutions() {
 	_, err = wh.ScanWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 
-	listRequest.PageSize = common.Int32Ptr(int32(config.ESIndexMaxResultWindow() + 1))
+	listRequest.PageSize = int32(config.ESIndexMaxResultWindow() + 1)
 	_, err = wh.ListWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 }
@@ -1437,7 +1437,7 @@ func registerDomainRequest(
 		EmitMetric:                             common.BoolPtr(true),
 		Clusters: []*types.ClusterReplicationConfiguration{
 			{
-				ClusterName: common.StringPtr(cluster.TestCurrentClusterName),
+				ClusterName: cluster.TestCurrentClusterName,
 			},
 		},
 		ActiveClusterName:        common.StringPtr(cluster.TestCurrentClusterName),
@@ -1464,7 +1464,7 @@ func getHistoryRequest(nextPageToken []byte) *types.GetWorkflowExecutionHistoryR
 func listArchivedWorkflowExecutionsTestRequest() *types.ListArchivedWorkflowExecutionsRequest {
 	return &types.ListArchivedWorkflowExecutionsRequest{
 		Domain:   "some random domain name",
-		PageSize: common.Int32Ptr(10),
+		PageSize: 10,
 		Query:    common.StringPtr("some random query string"),
 	}
 }

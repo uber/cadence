@@ -170,8 +170,8 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Fire() {
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -240,8 +240,8 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Noop() {
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -308,8 +308,8 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -391,8 +391,8 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_NoRetryPolicy_
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -474,8 +474,8 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -505,12 +505,12 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
 		&types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(1.2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(5),
-			MaximumAttempts:             common.Int32Ptr(5),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          1.2,
+			MaximumIntervalInSeconds:    5,
+			MaximumAttempts:             5,
 			NonRetriableErrorReasons:    []string{"（╯' - ')╯ ┻━┻ "},
-			ExpirationIntervalInSeconds: common.Int32Ptr(999),
+			ExpirationIntervalInSeconds: 999,
 		},
 	)
 	startedEvent := test.AddActivityTaskStartedEvent(mutableState, scheduledEvent.GetEventID(), identity)
@@ -571,8 +571,8 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -601,12 +601,12 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_Re
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
 		&types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(1.2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(5),
-			MaximumAttempts:             common.Int32Ptr(5),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          1.2,
+			MaximumIntervalInSeconds:    5,
+			MaximumAttempts:             5,
 			NonRetriableErrorReasons:    []string{"（╯' - ')╯ ┻━┻ "},
-			ExpirationIntervalInSeconds: common.Int32Ptr(999),
+			ExpirationIntervalInSeconds: 999,
 		},
 	)
 
@@ -664,8 +664,8 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_No
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -695,12 +695,12 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_RetryPolicy_No
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
 		&types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(1.2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(5),
-			MaximumAttempts:             common.Int32Ptr(5),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          1.2,
+			MaximumIntervalInSeconds:    5,
+			MaximumAttempts:             5,
 			NonRetriableErrorReasons:    []string{"（╯' - ')╯ ┻━┻ "},
-			ExpirationIntervalInSeconds: common.Int32Ptr(999),
+			ExpirationIntervalInSeconds: 999,
 		},
 	)
 	startedEvent := test.AddActivityTaskStartedEvent(mutableState, scheduledEvent.GetEventID(), identity)
@@ -755,8 +755,8 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noop
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -787,12 +787,12 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Heartbeat_Noop
 		int32(timerTimeout.Seconds()),
 		int32(heartbeatTimerTimeout.Seconds()),
 		&types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(1.2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(5),
-			MaximumAttempts:             common.Int32Ptr(5),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          1.2,
+			MaximumIntervalInSeconds:    5,
+			MaximumAttempts:             5,
 			NonRetriableErrorReasons:    []string{"（╯' - ')╯ ┻━┻ "},
-			ExpirationIntervalInSeconds: common.Int32Ptr(999),
+			ExpirationIntervalInSeconds: 999,
 		},
 	)
 	startedEvent := test.AddActivityTaskStartedEvent(mutableState, scheduledEvent.GetEventID(), identity)
@@ -845,8 +845,8 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionTimeout_Fire() {
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -905,8 +905,8 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionTimeout_Noop() {
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -957,8 +957,8 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowBackoffTimer_Fire() {
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1014,8 +1014,8 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowBackoffTimer_Noop() {
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1068,8 +1068,8 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Fire() {
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1098,12 +1098,12 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Fire() {
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
 		&types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(1.2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(5),
-			MaximumAttempts:             common.Int32Ptr(5),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          1.2,
+			MaximumIntervalInSeconds:    5,
+			MaximumAttempts:             5,
 			NonRetriableErrorReasons:    []string{"（╯' - ')╯ ┻━┻ "},
-			ExpirationIntervalInSeconds: common.Int32Ptr(999),
+			ExpirationIntervalInSeconds: 999,
 		},
 	)
 	activityInfo.Attempt = 1
@@ -1130,7 +1130,7 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Fire() {
 			SourceDomainUUID: activityInfo.DomainID,
 			Execution:        &workflowExecution,
 			TaskList: &types.TaskList{
-				Name: common.StringPtr(activityInfo.TaskList),
+				Name: activityInfo.TaskList,
 			},
 			ScheduleID:                    common.Int64Ptr(activityInfo.ScheduleID),
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(activityInfo.ScheduleToStartTimeout),
@@ -1162,8 +1162,8 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Noop() {
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1193,12 +1193,12 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Noop() {
 		int32(timerTimeout.Seconds()),
 		int32(timerTimeout.Seconds()),
 		&types.RetryPolicy{
-			InitialIntervalInSeconds:    common.Int32Ptr(1),
-			BackoffCoefficient:          common.Float64Ptr(1.2),
-			MaximumIntervalInSeconds:    common.Int32Ptr(5),
-			MaximumAttempts:             common.Int32Ptr(5),
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          1.2,
+			MaximumIntervalInSeconds:    5,
+			MaximumAttempts:             5,
 			NonRetriableErrorReasons:    []string{"（╯' - ')╯ ┻━┻ "},
-			ExpirationIntervalInSeconds: common.Int32Ptr(999),
+			ExpirationIntervalInSeconds: 999,
 		},
 	)
 	startedEvent := test.AddActivityTaskStartedEvent(mutableState, scheduledEvent.GetEventID(), identity)
@@ -1245,8 +1245,8 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_Fire() {
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1303,8 +1303,8 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_ContinueAsNew_Retry()
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
@@ -1371,8 +1371,8 @@ func (s *timerActiveTaskExecutorSuite) TestWorkflowTimeout_ContinueAsNew_Cron() 
 		&types.HistoryStartWorkflowExecutionRequest{
 			DomainUUID: s.domainID,
 			StartRequest: &types.StartWorkflowExecutionRequest{
-				WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
-				TaskList:                            &types.TaskList{Name: common.StringPtr(taskListName)},
+				WorkflowType:                        &types.WorkflowType{Name: workflowType},
+				TaskList:                            &types.TaskList{Name: taskListName},
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},

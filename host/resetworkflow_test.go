@@ -39,13 +39,13 @@ func (s *integrationSuite) TestResetWorkflow() {
 	tl := "integration-reset-workflow-test-taskqueue"
 	identity := "worker1"
 
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 
-	tasklist := &types.TaskList{Name: common.StringPtr(tl)}
+	tasklist := &types.TaskList{Name: tl}
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -53,7 +53,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -82,8 +82,8 @@ func (s *integrationSuite) TestResetWorkflow() {
 				scheduleActivityCommands = append(scheduleActivityCommands, &types.Decision{
 					DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 					ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    common.StringPtr(strconv.Itoa(i)),
-						ActivityType:                  &types.ActivityType{Name: common.StringPtr("ResetActivity")},
+						ActivityID:                    strconv.Itoa(i),
+						ActivityType:                  &types.ActivityType{Name: "ResetActivity"},
 						TaskList:                      tasklist,
 						Input:                         buf.Bytes(),
 						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
@@ -171,7 +171,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 		},
 		Reason:                common.StringPtr("reset execution from test"),
 		DecisionFinishEventID: common.Int64Ptr(lastDecisionCompleted.GetEventID()),
-		RequestID:             common.StringPtr(uuid.New()),
+		RequestID:             uuid.New(),
 	})
 	s.NoError(err)
 
@@ -209,7 +209,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 		},
 		Reason:                common.StringPtr("reset execution from test"),
 		DecisionFinishEventID: common.Int64Ptr(lastDecisionCompleted.GetEventID()),
-		RequestID:             common.StringPtr(uuid.New()),
+		RequestID:             uuid.New(),
 	})
 	s.NoError(err)
 	newRunID := resp.GetRunID()
@@ -242,7 +242,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 		},
 		Reason:                common.StringPtr("reset execution from test"),
 		DecisionFinishEventID: common.Int64Ptr(lastDecisionCompleted.GetEventID()),
-		RequestID:             common.StringPtr(uuid.New()),
+		RequestID:             uuid.New(),
 	})
 	s.NoError(err)
 }
@@ -253,13 +253,13 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 	tl := "integration-reset-workflow-test-taskqueue-no-decision-completed"
 	identity := "worker1"
 
-	workflowType := &types.WorkflowType{Name: common.StringPtr(wt)}
+	workflowType := &types.WorkflowType{Name: wt}
 
-	tasklist := &types.TaskList{Name: common.StringPtr(tl)}
+	tasklist := &types.TaskList{Name: tl}
 
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
 		WorkflowID:                          id,
 		WorkflowType:                        workflowType,
@@ -267,7 +267,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
-		Identity:                            common.StringPtr(identity),
+		Identity:                            identity,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -294,7 +294,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 		},
 		Reason:                common.StringPtr("reset execution from test"),
 		DecisionFinishEventID: common.Int64Ptr(lastDecisionScheduled.GetEventID() + 1),
-		RequestID:             common.StringPtr(uuid.New()),
+		RequestID:             uuid.New(),
 	})
 	s.NoError(err)
 
@@ -319,7 +319,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 		},
 		Reason:                common.StringPtr("reset execution from test"),
 		DecisionFinishEventID: common.Int64Ptr(lastDecisionScheduled.GetEventID() + 1),
-		RequestID:             common.StringPtr(uuid.New()),
+		RequestID:             uuid.New(),
 	})
 	s.NoError(err)
 
@@ -341,8 +341,8 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 			scheduleActivityCommands = append(scheduleActivityCommands, &types.Decision{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr("1"),
-					ActivityType:                  &types.ActivityType{Name: common.StringPtr("ResetActivity")},
+					ActivityID:                    "1",
+					ActivityType:                  &types.ActivityType{Name: "ResetActivity"},
 					TaskList:                      tasklist,
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),

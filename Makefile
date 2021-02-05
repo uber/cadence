@@ -71,8 +71,8 @@ $(BIN)/enumer: go.mod | $(BIN)
 $(BIN)/goimports: go.mod | $(BIN)
 	$(call get_tool,golang.org/x/tools/cmd/goimports)
 
-$(BIN)/golint: go.mod | $(BIN)
-	$(call get_tool,golang.org/x/lint/golint)
+$(BIN)/revive: go.mod | $(BIN)
+	$(call get_tool,github.com/mgechev/revive)
 
 $(BIN)/protoc-gen-go: go.mod | $(BIN)
 	$(call get_tool,google.golang.org/protobuf/cmd/protoc-gen-go)
@@ -270,13 +270,8 @@ go-generate: $(BIN)/mockgen $(BIN)/enumer
 	@echo "updating copyright headers"
 	@$(MAKE) --no-print-directory copyright
 
-lint: $(BIN)/golint fmt
-	@echo "running linter"
-	@lintFail=0; for file in $(sort $(LINT_SRC)); do \
-		$(BIN)/golint "$$file"; \
-		if [ $$? -eq 1 ]; then lintFail=1; fi; \
-	done; \
-	if [ $$lintFail -eq 1 ]; then exit 1; fi;
+lint: $(BIN)/revive
+	$(BIN)/revive -config revive.toml -exclude './canary/...' -exclude './vendor/...' -formatter unix ./... | sort
 
 fmt: $(BIN)/goimports $(ALL_SRC)
 	@echo "running goimports"
@@ -293,7 +288,7 @@ test: bins ## Build and run all tests
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(PKG_TEST_DIRS); do \
-		go test -timeout $(TEST_TIMEOUT) -race -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
+		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
 release: go-generate test ## Re-generate generated code and run tests
@@ -302,7 +297,7 @@ test_e2e: bins
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(INTEG_TEST_ROOT); do \
-		go test -timeout $(TEST_TIMEOUT) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
+		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
 # need to run end-to-end xdc tests with race detector off because of ringpop bug causing data race issue
@@ -310,7 +305,7 @@ test_e2e_xdc: bins
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(INTEG_TEST_XDC_ROOT); do \
-		go test -timeout $(TEST_TIMEOUT) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
+		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
 cover_profile: clean bins_nothrift
@@ -432,11 +427,6 @@ start-cdc-other: bins
 
 start-canary: bins
 	./cadence-canary start
-
-gen-internal-types:
-	go run common/types/generator/main.go
-
-internal-types: gen-internal-types fmt copyright
 
 start-mysql: bins
 	./cadence-server --zone mysql start

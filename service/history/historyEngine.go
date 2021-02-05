@@ -1011,7 +1011,7 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 			case event := <-channel:
 				response.LastFirstEventID = common.Int64Ptr(event.LastFirstEventID)
 				response.NextEventID = common.Int64Ptr(event.NextEventID)
-				response.IsWorkflowRunning = common.BoolPtr(event.WorkflowCloseState == persistence.WorkflowCloseStatusNone)
+				response.IsWorkflowRunning = event.WorkflowCloseState == persistence.WorkflowCloseStatusNone
 				response.PreviousStartedEventID = common.Int64Ptr(event.PreviousStartedEventID)
 				response.WorkflowState = common.Int32Ptr(int32(event.WorkflowState))
 				response.WorkflowCloseState = common.Int32Ptr(int32(event.WorkflowCloseState))
@@ -1328,21 +1328,21 @@ func (e *historyEngineImpl) getMutableState(
 	workflowState, workflowCloseState := mutableState.GetWorkflowStateCloseStatus()
 	retResp = &types.GetMutableStateResponse{
 		Execution:                            &execution,
-		WorkflowType:                         &types.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
+		WorkflowType:                         &types.WorkflowType{Name: executionInfo.WorkflowTypeName},
 		LastFirstEventID:                     common.Int64Ptr(mutableState.GetLastFirstEventID()),
 		NextEventID:                          common.Int64Ptr(mutableState.GetNextEventID()),
 		PreviousStartedEventID:               common.Int64Ptr(mutableState.GetPreviousStartedEventID()),
-		TaskList:                             &types.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
-		StickyTaskList:                       &types.TaskList{Name: common.StringPtr(executionInfo.StickyTaskList)},
+		TaskList:                             &types.TaskList{Name: executionInfo.TaskList},
+		StickyTaskList:                       &types.TaskList{Name: executionInfo.StickyTaskList},
 		ClientLibraryVersion:                 common.StringPtr(executionInfo.ClientLibraryVersion),
 		ClientFeatureVersion:                 common.StringPtr(executionInfo.ClientFeatureVersion),
 		ClientImpl:                           common.StringPtr(executionInfo.ClientImpl),
-		IsWorkflowRunning:                    common.BoolPtr(mutableState.IsWorkflowExecutionRunning()),
+		IsWorkflowRunning:                    mutableState.IsWorkflowExecutionRunning(),
 		StickyTaskListScheduleToStartTimeout: common.Int32Ptr(executionInfo.StickyScheduleToStartTimeout),
 		CurrentBranchToken:                   currentBranchToken,
 		WorkflowState:                        common.Int32Ptr(int32(workflowState)),
 		WorkflowCloseState:                   common.Int32Ptr(int32(workflowCloseState)),
-		IsStickyTaskListEnabled:              common.BoolPtr(mutableState.IsStickyTaskListEnabled()),
+		IsStickyTaskListEnabled:              mutableState.IsStickyTaskListEnabled(),
 	}
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories != nil {
@@ -1467,7 +1467,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 
 	result := &types.DescribeWorkflowExecutionResponse{
 		ExecutionConfiguration: &types.WorkflowExecutionConfiguration{
-			TaskList:                            &types.TaskList{Name: common.StringPtr(executionInfo.TaskList)},
+			TaskList:                            &types.TaskList{Name: executionInfo.TaskList},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(executionInfo.WorkflowTimeout),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(executionInfo.DecisionStartToCloseTimeout),
 		},
@@ -1476,7 +1476,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 				WorkflowID: executionInfo.WorkflowID,
 				RunID:      executionInfo.RunID,
 			},
-			Type:             &types.WorkflowType{Name: common.StringPtr(executionInfo.WorkflowTypeName)},
+			Type:             &types.WorkflowType{Name: executionInfo.WorkflowTypeName},
 			StartTime:        common.Int64Ptr(executionInfo.StartTimestamp.UnixNano()),
 			HistoryLength:    common.Int64Ptr(mutableState.GetNextEventID() - common.FirstEventID),
 			AutoResetPoints:  executionInfo.AutoResetPoints,
@@ -1516,7 +1516,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	if len(mutableState.GetPendingActivityInfos()) > 0 {
 		for _, ai := range mutableState.GetPendingActivityInfos() {
 			p := &types.PendingActivityInfo{
-				ActivityID: common.StringPtr(ai.ActivityID),
+				ActivityID: ai.ActivityID,
 			}
 			state := types.PendingActivityStateScheduled
 			if ai.CancelRequested {
@@ -1542,17 +1542,17 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 				p.LastStartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
 			}
 			if ai.HasRetryPolicy {
-				p.Attempt = common.Int32Ptr(ai.Attempt)
+				p.Attempt = ai.Attempt
 				p.ExpirationTimestamp = common.Int64Ptr(ai.ExpirationTime.UnixNano())
 				if ai.MaximumAttempts != 0 {
-					p.MaximumAttempts = common.Int32Ptr(ai.MaximumAttempts)
+					p.MaximumAttempts = ai.MaximumAttempts
 				}
 				if ai.LastFailureReason != "" {
 					p.LastFailureReason = common.StringPtr(ai.LastFailureReason)
 					p.LastFailureDetails = ai.LastFailureDetails
 				}
 				if ai.LastWorkerIdentity != "" {
-					p.LastWorkerIdentity = common.StringPtr(ai.LastWorkerIdentity)
+					p.LastWorkerIdentity = ai.LastWorkerIdentity
 				}
 			}
 			result.PendingActivities = append(result.PendingActivities, p)
@@ -1564,7 +1564,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			p := &types.PendingChildExecutionInfo{
 				WorkflowID:        ch.StartedWorkflowID,
 				RunID:             ch.StartedRunID,
-				WorkflowTypName:   common.StringPtr(ch.WorkflowTypeName),
+				WorkflowTypName:   ch.WorkflowTypeName,
 				InitiatedID:       common.Int64Ptr(ch.InitiatedID),
 				ParentClosePolicy: &ch.ParentClosePolicy,
 			}
@@ -1576,7 +1576,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 		pendingDecision := &types.PendingDecisionInfo{
 			State:                      types.PendingDecisionStateScheduled.Ptr(),
 			ScheduledTimestamp:         common.Int64Ptr(di.ScheduledTimestamp),
-			Attempt:                    common.Int64Ptr(di.Attempt),
+			Attempt:                    di.Attempt,
 			OriginalScheduledTimestamp: common.Int64Ptr(di.OriginalScheduledTimestamp),
 		}
 		if di.StartedID != common.EmptyEventID {
@@ -1650,7 +1650,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			response.ScheduledEvent = scheduledEvent
 			response.ScheduledTimestampOfThisAttempt = common.Int64Ptr(ai.ScheduledTime.UnixNano())
 
-			response.Attempt = common.Int64Ptr(int64(ai.Attempt))
+			response.Attempt = int64(ai.Attempt)
 			response.HeartbeatDetails = ai.Details
 
 			response.WorkflowType = mutableState.GetWorkflowType()
@@ -1956,7 +1956,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 				ai.StartedID,
 				ai.CancelRequestID,
 				request.Details,
-				common.StringDefault(request.Identity)); err != nil {
+				request.Identity); err != nil {
 				// Unable to add ActivityTaskCanceled event to history
 				return &types.InternalServiceError{Message: "Unable to add ActivityTaskCanceled event to history."}
 			}
@@ -2055,7 +2055,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 		return &types.RecordActivityTaskHeartbeatResponse{}, err
 	}
 
-	return &types.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(cancelRequested)}, nil
+	return &types.RecordActivityTaskHeartbeatResponse{CancelRequested: cancelRequested}, nil
 }
 
 // RequestCancelWorkflowExecution records request cancellation event for workflow execution
@@ -2097,11 +2097,8 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 			isCancelRequested, cancelRequestID := mutableState.IsCancelRequested()
 			if isCancelRequested {
 				cancelRequest := req.CancelRequest
-				if cancelRequest.RequestID != nil {
-					requestID := *cancelRequest.RequestID
-					if requestID != "" && cancelRequestID == requestID {
-						return updateWorkflowWithNewDecision, nil
-					}
+				if cancelRequest.RequestID != "" && cancelRequest.RequestID == cancelRequestID {
+					return updateWorkflowWithNewDecision, nil
 				}
 				// if we consider workflow cancellation idempotent, then this error is redundant
 				// this error maybe useful if this API is invoked by external, not decision from transfer queue
@@ -2850,10 +2847,10 @@ func validateStartWorkflowExecutionRequest(
 	if request.TaskStartToCloseTimeoutSeconds == nil || request.GetTaskStartToCloseTimeoutSeconds() <= 0 {
 		return &types.BadRequestError{Message: "Missing or invalid TaskStartToCloseTimeoutSeconds."}
 	}
-	if request.TaskList == nil || request.TaskList.Name == nil || request.TaskList.GetName() == "" {
+	if request.TaskList == nil || request.TaskList.GetName() == "" {
 		return &types.BadRequestError{Message: "Missing Tasklist."}
 	}
-	if request.WorkflowType == nil || request.WorkflowType.Name == nil || request.WorkflowType.GetName() == "" {
+	if request.WorkflowType == nil || request.WorkflowType.GetName() == "" {
 		return &types.BadRequestError{Message: "Missing WorkflowType."}
 	}
 	if len(request.GetDomain()) > maxIDLengthLimit {
@@ -3058,7 +3055,7 @@ func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(
 func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workflowID string, runID string) error {
 	return &types.WorkflowExecutionAlreadyStartedError{
 		Message:        common.StringPtr(fmt.Sprintf(errMsg, workflowID, runID)),
-		StartRequestID: common.StringPtr(fmt.Sprintf("%v", createRequestID)),
+		StartRequestID: createRequestID,
 		RunID:          runID,
 	}
 }

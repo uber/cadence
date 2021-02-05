@@ -208,7 +208,7 @@ TaskInfoLoop:
 
 	return &types.ReplicationMessages{
 		ReplicationTasks:       replicationTasks,
-		HasMore:                common.BoolPtr(hasMore),
+		HasMore:                hasMore,
 		LastRetrievedMessageID: common.Int64Ptr(readLevel),
 	}, nil
 }
@@ -526,9 +526,9 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 					StartedTime:        startedTime,
 					LastHeartbeatTime:  heartbeatTime,
 					Details:            activityInfo.Details,
-					Attempt:            common.Int32Ptr(activityInfo.Attempt),
+					Attempt:            activityInfo.Attempt,
 					LastFailureReason:  common.StringPtr(activityInfo.LastFailureReason),
-					LastWorkerIdentity: common.StringPtr(activityInfo.LastWorkerIdentity),
+					LastWorkerIdentity: activityInfo.LastWorkerIdentity,
 					LastFailureDetails: activityInfo.LastFailureDetails,
 					VersionHistory:     versionHistory,
 				},

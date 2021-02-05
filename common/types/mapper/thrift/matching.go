@@ -39,7 +39,7 @@ func FromAddActivityTaskRequest(t *types.AddActivityTaskRequest) *matching.AddAc
 		ScheduleId:                    t.ScheduleID,
 		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
 		Source:                        FromTaskSource(t.Source),
-		ForwardedFrom:                 t.ForwardedFrom,
+		ForwardedFrom:                 &t.ForwardedFrom,
 	}
 }
 
@@ -56,7 +56,7 @@ func ToAddActivityTaskRequest(t *matching.AddActivityTaskRequest) *types.AddActi
 		ScheduleID:                    t.ScheduleId,
 		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
 		Source:                        ToTaskSource(t.Source),
-		ForwardedFrom:                 t.ForwardedFrom,
+		ForwardedFrom:                 t.GetForwardedFrom(),
 	}
 }
 
@@ -72,7 +72,7 @@ func FromAddDecisionTaskRequest(t *types.AddDecisionTaskRequest) *matching.AddDe
 		ScheduleId:                    t.ScheduleID,
 		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
 		Source:                        FromTaskSource(t.Source),
-		ForwardedFrom:                 t.ForwardedFrom,
+		ForwardedFrom:                 &t.ForwardedFrom,
 	}
 }
 
@@ -88,7 +88,7 @@ func ToAddDecisionTaskRequest(t *matching.AddDecisionTaskRequest) *types.AddDeci
 		ScheduleID:                    t.ScheduleId,
 		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
 		Source:                        ToTaskSource(t.Source),
-		ForwardedFrom:                 t.ForwardedFrom,
+		ForwardedFrom:                 t.GetForwardedFrom(),
 	}
 }
 
@@ -101,7 +101,7 @@ func FromCancelOutstandingPollRequest(t *types.CancelOutstandingPollRequest) *ma
 		DomainUUID:   &t.DomainUUID,
 		TaskListType: t.TaskListType,
 		TaskList:     FromTaskList(t.TaskList),
-		PollerID:     t.PollerID,
+		PollerID:     &t.PollerID,
 	}
 }
 
@@ -114,7 +114,7 @@ func ToCancelOutstandingPollRequest(t *matching.CancelOutstandingPollRequest) *t
 		DomainUUID:   t.GetDomainUUID(),
 		TaskListType: t.TaskListType,
 		TaskList:     ToTaskList(t.TaskList),
-		PollerID:     t.PollerID,
+		PollerID:     t.GetPollerID(),
 	}
 }
 
@@ -162,440 +162,6 @@ func ToMatchingListTaskListPartitionsRequest(t *matching.ListTaskListPartitionsR
 	}
 }
 
-// FromMatchingServiceAddActivityTaskArgs converts internal MatchingService_AddActivityTask_Args type to thrift
-func FromMatchingServiceAddActivityTaskArgs(t *types.MatchingServiceAddActivityTaskArgs) *matching.MatchingService_AddActivityTask_Args {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_AddActivityTask_Args{
-		AddRequest: FromAddActivityTaskRequest(t.AddRequest),
-	}
-}
-
-// ToMatchingServiceAddActivityTaskArgs converts thrift MatchingService_AddActivityTask_Args type to internal
-func ToMatchingServiceAddActivityTaskArgs(t *matching.MatchingService_AddActivityTask_Args) *types.MatchingServiceAddActivityTaskArgs {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServiceAddActivityTaskArgs{
-		AddRequest: ToAddActivityTaskRequest(t.AddRequest),
-	}
-}
-
-// FromMatchingServiceAddActivityTaskResult converts internal MatchingService_AddActivityTask_Result type to thrift
-func FromMatchingServiceAddActivityTaskResult(t *types.MatchingServiceAddActivityTaskResult) *matching.MatchingService_AddActivityTask_Result {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_AddActivityTask_Result{
-		BadRequestError:        FromBadRequestError(t.BadRequestError),
-		InternalServiceError:   FromInternalServiceError(t.InternalServiceError),
-		ServiceBusyError:       FromServiceBusyError(t.ServiceBusyError),
-		LimitExceededError:     FromLimitExceededError(t.LimitExceededError),
-		DomainNotActiveError:   FromDomainNotActiveError(t.DomainNotActiveError),
-		RemoteSyncMatchedError: FromRemoteSyncMatchedError(t.RemoteSyncMatchedError),
-	}
-}
-
-// ToMatchingServiceAddActivityTaskResult converts thrift MatchingService_AddActivityTask_Result type to internal
-func ToMatchingServiceAddActivityTaskResult(t *matching.MatchingService_AddActivityTask_Result) *types.MatchingServiceAddActivityTaskResult {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServiceAddActivityTaskResult{
-		BadRequestError:        ToBadRequestError(t.BadRequestError),
-		InternalServiceError:   ToInternalServiceError(t.InternalServiceError),
-		ServiceBusyError:       ToServiceBusyError(t.ServiceBusyError),
-		LimitExceededError:     ToLimitExceededError(t.LimitExceededError),
-		DomainNotActiveError:   ToDomainNotActiveError(t.DomainNotActiveError),
-		RemoteSyncMatchedError: ToRemoteSyncMatchedError(t.RemoteSyncMatchedError),
-	}
-}
-
-// FromMatchingServiceAddDecisionTaskArgs converts internal MatchingService_AddDecisionTask_Args type to thrift
-func FromMatchingServiceAddDecisionTaskArgs(t *types.MatchingServiceAddDecisionTaskArgs) *matching.MatchingService_AddDecisionTask_Args {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_AddDecisionTask_Args{
-		AddRequest: FromAddDecisionTaskRequest(t.AddRequest),
-	}
-}
-
-// ToMatchingServiceAddDecisionTaskArgs converts thrift MatchingService_AddDecisionTask_Args type to internal
-func ToMatchingServiceAddDecisionTaskArgs(t *matching.MatchingService_AddDecisionTask_Args) *types.MatchingServiceAddDecisionTaskArgs {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServiceAddDecisionTaskArgs{
-		AddRequest: ToAddDecisionTaskRequest(t.AddRequest),
-	}
-}
-
-// FromMatchingServiceAddDecisionTaskResult converts internal MatchingService_AddDecisionTask_Result type to thrift
-func FromMatchingServiceAddDecisionTaskResult(t *types.MatchingServiceAddDecisionTaskResult) *matching.MatchingService_AddDecisionTask_Result {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_AddDecisionTask_Result{
-		BadRequestError:        FromBadRequestError(t.BadRequestError),
-		InternalServiceError:   FromInternalServiceError(t.InternalServiceError),
-		ServiceBusyError:       FromServiceBusyError(t.ServiceBusyError),
-		LimitExceededError:     FromLimitExceededError(t.LimitExceededError),
-		DomainNotActiveError:   FromDomainNotActiveError(t.DomainNotActiveError),
-		RemoteSyncMatchedError: FromRemoteSyncMatchedError(t.RemoteSyncMatchedError),
-	}
-}
-
-// ToMatchingServiceAddDecisionTaskResult converts thrift MatchingService_AddDecisionTask_Result type to internal
-func ToMatchingServiceAddDecisionTaskResult(t *matching.MatchingService_AddDecisionTask_Result) *types.MatchingServiceAddDecisionTaskResult {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServiceAddDecisionTaskResult{
-		BadRequestError:        ToBadRequestError(t.BadRequestError),
-		InternalServiceError:   ToInternalServiceError(t.InternalServiceError),
-		ServiceBusyError:       ToServiceBusyError(t.ServiceBusyError),
-		LimitExceededError:     ToLimitExceededError(t.LimitExceededError),
-		DomainNotActiveError:   ToDomainNotActiveError(t.DomainNotActiveError),
-		RemoteSyncMatchedError: ToRemoteSyncMatchedError(t.RemoteSyncMatchedError),
-	}
-}
-
-// FromMatchingServiceCancelOutstandingPollArgs converts internal MatchingService_CancelOutstandingPoll_Args type to thrift
-func FromMatchingServiceCancelOutstandingPollArgs(t *types.MatchingServiceCancelOutstandingPollArgs) *matching.MatchingService_CancelOutstandingPoll_Args {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_CancelOutstandingPoll_Args{
-		Request: FromCancelOutstandingPollRequest(t.Request),
-	}
-}
-
-// ToMatchingServiceCancelOutstandingPollArgs converts thrift MatchingService_CancelOutstandingPoll_Args type to internal
-func ToMatchingServiceCancelOutstandingPollArgs(t *matching.MatchingService_CancelOutstandingPoll_Args) *types.MatchingServiceCancelOutstandingPollArgs {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServiceCancelOutstandingPollArgs{
-		Request: ToCancelOutstandingPollRequest(t.Request),
-	}
-}
-
-// FromMatchingServiceCancelOutstandingPollResult converts internal MatchingService_CancelOutstandingPoll_Result type to thrift
-func FromMatchingServiceCancelOutstandingPollResult(t *types.MatchingServiceCancelOutstandingPollResult) *matching.MatchingService_CancelOutstandingPoll_Result {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_CancelOutstandingPoll_Result{
-		BadRequestError:      FromBadRequestError(t.BadRequestError),
-		InternalServiceError: FromInternalServiceError(t.InternalServiceError),
-		ServiceBusyError:     FromServiceBusyError(t.ServiceBusyError),
-	}
-}
-
-// ToMatchingServiceCancelOutstandingPollResult converts thrift MatchingService_CancelOutstandingPoll_Result type to internal
-func ToMatchingServiceCancelOutstandingPollResult(t *matching.MatchingService_CancelOutstandingPoll_Result) *types.MatchingServiceCancelOutstandingPollResult {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServiceCancelOutstandingPollResult{
-		BadRequestError:      ToBadRequestError(t.BadRequestError),
-		InternalServiceError: ToInternalServiceError(t.InternalServiceError),
-		ServiceBusyError:     ToServiceBusyError(t.ServiceBusyError),
-	}
-}
-
-// FromMatchingServiceDescribeTaskListArgs converts internal MatchingService_DescribeTaskList_Args type to thrift
-func FromMatchingServiceDescribeTaskListArgs(t *types.MatchingServiceDescribeTaskListArgs) *matching.MatchingService_DescribeTaskList_Args {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_DescribeTaskList_Args{
-		Request: FromMatchingDescribeTaskListRequest(t.Request),
-	}
-}
-
-// ToMatchingServiceDescribeTaskListArgs converts thrift MatchingService_DescribeTaskList_Args type to internal
-func ToMatchingServiceDescribeTaskListArgs(t *matching.MatchingService_DescribeTaskList_Args) *types.MatchingServiceDescribeTaskListArgs {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServiceDescribeTaskListArgs{
-		Request: ToMatchingDescribeTaskListRequest(t.Request),
-	}
-}
-
-// FromMatchingServiceDescribeTaskListResult converts internal MatchingService_DescribeTaskList_Result type to thrift
-func FromMatchingServiceDescribeTaskListResult(t *types.MatchingServiceDescribeTaskListResult) *matching.MatchingService_DescribeTaskList_Result {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_DescribeTaskList_Result{
-		Success:              FromDescribeTaskListResponse(t.Success),
-		BadRequestError:      FromBadRequestError(t.BadRequestError),
-		InternalServiceError: FromInternalServiceError(t.InternalServiceError),
-		EntityNotExistError:  FromEntityNotExistsError(t.EntityNotExistError),
-		ServiceBusyError:     FromServiceBusyError(t.ServiceBusyError),
-	}
-}
-
-// ToMatchingServiceDescribeTaskListResult converts thrift MatchingService_DescribeTaskList_Result type to internal
-func ToMatchingServiceDescribeTaskListResult(t *matching.MatchingService_DescribeTaskList_Result) *types.MatchingServiceDescribeTaskListResult {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServiceDescribeTaskListResult{
-		Success:              ToDescribeTaskListResponse(t.Success),
-		BadRequestError:      ToBadRequestError(t.BadRequestError),
-		InternalServiceError: ToInternalServiceError(t.InternalServiceError),
-		EntityNotExistError:  ToEntityNotExistsError(t.EntityNotExistError),
-		ServiceBusyError:     ToServiceBusyError(t.ServiceBusyError),
-	}
-}
-
-// FromMatchingServiceListTaskListPartitionsArgs converts internal MatchingService_ListTaskListPartitions_Args type to thrift
-func FromMatchingServiceListTaskListPartitionsArgs(t *types.MatchingServiceListTaskListPartitionsArgs) *matching.MatchingService_ListTaskListPartitions_Args {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_ListTaskListPartitions_Args{
-		Request: FromMatchingListTaskListPartitionsRequest(t.Request),
-	}
-}
-
-// ToMatchingServiceListTaskListPartitionsArgs converts thrift MatchingService_ListTaskListPartitions_Args type to internal
-func ToMatchingServiceListTaskListPartitionsArgs(t *matching.MatchingService_ListTaskListPartitions_Args) *types.MatchingServiceListTaskListPartitionsArgs {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServiceListTaskListPartitionsArgs{
-		Request: ToMatchingListTaskListPartitionsRequest(t.Request),
-	}
-}
-
-// FromMatchingServiceListTaskListPartitionsResult converts internal MatchingService_ListTaskListPartitions_Result type to thrift
-func FromMatchingServiceListTaskListPartitionsResult(t *types.MatchingServiceListTaskListPartitionsResult) *matching.MatchingService_ListTaskListPartitions_Result {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_ListTaskListPartitions_Result{
-		Success:              FromListTaskListPartitionsResponse(t.Success),
-		BadRequestError:      FromBadRequestError(t.BadRequestError),
-		InternalServiceError: FromInternalServiceError(t.InternalServiceError),
-		ServiceBusyError:     FromServiceBusyError(t.ServiceBusyError),
-	}
-}
-
-// ToMatchingServiceListTaskListPartitionsResult converts thrift MatchingService_ListTaskListPartitions_Result type to internal
-func ToMatchingServiceListTaskListPartitionsResult(t *matching.MatchingService_ListTaskListPartitions_Result) *types.MatchingServiceListTaskListPartitionsResult {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServiceListTaskListPartitionsResult{
-		Success:              ToListTaskListPartitionsResponse(t.Success),
-		BadRequestError:      ToBadRequestError(t.BadRequestError),
-		InternalServiceError: ToInternalServiceError(t.InternalServiceError),
-		ServiceBusyError:     ToServiceBusyError(t.ServiceBusyError),
-	}
-}
-
-// FromMatchingServicePollForActivityTaskArgs converts internal MatchingService_PollForActivityTask_Args type to thrift
-func FromMatchingServicePollForActivityTaskArgs(t *types.MatchingServicePollForActivityTaskArgs) *matching.MatchingService_PollForActivityTask_Args {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_PollForActivityTask_Args{
-		PollRequest: FromMatchingPollForActivityTaskRequest(t.PollRequest),
-	}
-}
-
-// ToMatchingServicePollForActivityTaskArgs converts thrift MatchingService_PollForActivityTask_Args type to internal
-func ToMatchingServicePollForActivityTaskArgs(t *matching.MatchingService_PollForActivityTask_Args) *types.MatchingServicePollForActivityTaskArgs {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServicePollForActivityTaskArgs{
-		PollRequest: ToMatchingPollForActivityTaskRequest(t.PollRequest),
-	}
-}
-
-// FromMatchingServicePollForActivityTaskResult converts internal MatchingService_PollForActivityTask_Result type to thrift
-func FromMatchingServicePollForActivityTaskResult(t *types.MatchingServicePollForActivityTaskResult) *matching.MatchingService_PollForActivityTask_Result {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_PollForActivityTask_Result{
-		Success:              FromPollForActivityTaskResponse(t.Success),
-		BadRequestError:      FromBadRequestError(t.BadRequestError),
-		InternalServiceError: FromInternalServiceError(t.InternalServiceError),
-		LimitExceededError:   FromLimitExceededError(t.LimitExceededError),
-		ServiceBusyError:     FromServiceBusyError(t.ServiceBusyError),
-	}
-}
-
-// ToMatchingServicePollForActivityTaskResult converts thrift MatchingService_PollForActivityTask_Result type to internal
-func ToMatchingServicePollForActivityTaskResult(t *matching.MatchingService_PollForActivityTask_Result) *types.MatchingServicePollForActivityTaskResult {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServicePollForActivityTaskResult{
-		Success:              ToPollForActivityTaskResponse(t.Success),
-		BadRequestError:      ToBadRequestError(t.BadRequestError),
-		InternalServiceError: ToInternalServiceError(t.InternalServiceError),
-		LimitExceededError:   ToLimitExceededError(t.LimitExceededError),
-		ServiceBusyError:     ToServiceBusyError(t.ServiceBusyError),
-	}
-}
-
-// FromMatchingServicePollForDecisionTaskArgs converts internal MatchingService_PollForDecisionTask_Args type to thrift
-func FromMatchingServicePollForDecisionTaskArgs(t *types.MatchingServicePollForDecisionTaskArgs) *matching.MatchingService_PollForDecisionTask_Args {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_PollForDecisionTask_Args{
-		PollRequest: FromMatchingPollForDecisionTaskRequest(t.PollRequest),
-	}
-}
-
-// ToMatchingServicePollForDecisionTaskArgs converts thrift MatchingService_PollForDecisionTask_Args type to internal
-func ToMatchingServicePollForDecisionTaskArgs(t *matching.MatchingService_PollForDecisionTask_Args) *types.MatchingServicePollForDecisionTaskArgs {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServicePollForDecisionTaskArgs{
-		PollRequest: ToMatchingPollForDecisionTaskRequest(t.PollRequest),
-	}
-}
-
-// FromMatchingServicePollForDecisionTaskResult converts internal MatchingService_PollForDecisionTask_Result type to thrift
-func FromMatchingServicePollForDecisionTaskResult(t *types.MatchingServicePollForDecisionTaskResult) *matching.MatchingService_PollForDecisionTask_Result {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_PollForDecisionTask_Result{
-		Success:              FromMatchingPollForDecisionTaskResponse(t.Success),
-		BadRequestError:      FromBadRequestError(t.BadRequestError),
-		InternalServiceError: FromInternalServiceError(t.InternalServiceError),
-		LimitExceededError:   FromLimitExceededError(t.LimitExceededError),
-		ServiceBusyError:     FromServiceBusyError(t.ServiceBusyError),
-	}
-}
-
-// ToMatchingServicePollForDecisionTaskResult converts thrift MatchingService_PollForDecisionTask_Result type to internal
-func ToMatchingServicePollForDecisionTaskResult(t *matching.MatchingService_PollForDecisionTask_Result) *types.MatchingServicePollForDecisionTaskResult {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServicePollForDecisionTaskResult{
-		Success:              ToMatchingPollForDecisionTaskResponse(t.Success),
-		BadRequestError:      ToBadRequestError(t.BadRequestError),
-		InternalServiceError: ToInternalServiceError(t.InternalServiceError),
-		LimitExceededError:   ToLimitExceededError(t.LimitExceededError),
-		ServiceBusyError:     ToServiceBusyError(t.ServiceBusyError),
-	}
-}
-
-// FromMatchingServiceQueryWorkflowArgs converts internal MatchingService_QueryWorkflow_Args type to thrift
-func FromMatchingServiceQueryWorkflowArgs(t *types.MatchingServiceQueryWorkflowArgs) *matching.MatchingService_QueryWorkflow_Args {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_QueryWorkflow_Args{
-		QueryRequest: FromMatchingQueryWorkflowRequest(t.QueryRequest),
-	}
-}
-
-// ToMatchingServiceQueryWorkflowArgs converts thrift MatchingService_QueryWorkflow_Args type to internal
-func ToMatchingServiceQueryWorkflowArgs(t *matching.MatchingService_QueryWorkflow_Args) *types.MatchingServiceQueryWorkflowArgs {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServiceQueryWorkflowArgs{
-		QueryRequest: ToMatchingQueryWorkflowRequest(t.QueryRequest),
-	}
-}
-
-// FromMatchingServiceQueryWorkflowResult converts internal MatchingService_QueryWorkflow_Result type to thrift
-func FromMatchingServiceQueryWorkflowResult(t *types.MatchingServiceQueryWorkflowResult) *matching.MatchingService_QueryWorkflow_Result {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_QueryWorkflow_Result{
-		Success:              FromQueryWorkflowResponse(t.Success),
-		BadRequestError:      FromBadRequestError(t.BadRequestError),
-		InternalServiceError: FromInternalServiceError(t.InternalServiceError),
-		EntityNotExistError:  FromEntityNotExistsError(t.EntityNotExistError),
-		QueryFailedError:     FromQueryFailedError(t.QueryFailedError),
-		LimitExceededError:   FromLimitExceededError(t.LimitExceededError),
-		ServiceBusyError:     FromServiceBusyError(t.ServiceBusyError),
-	}
-}
-
-// ToMatchingServiceQueryWorkflowResult converts thrift MatchingService_QueryWorkflow_Result type to internal
-func ToMatchingServiceQueryWorkflowResult(t *matching.MatchingService_QueryWorkflow_Result) *types.MatchingServiceQueryWorkflowResult {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServiceQueryWorkflowResult{
-		Success:              ToQueryWorkflowResponse(t.Success),
-		BadRequestError:      ToBadRequestError(t.BadRequestError),
-		InternalServiceError: ToInternalServiceError(t.InternalServiceError),
-		EntityNotExistError:  ToEntityNotExistsError(t.EntityNotExistError),
-		QueryFailedError:     ToQueryFailedError(t.QueryFailedError),
-		LimitExceededError:   ToLimitExceededError(t.LimitExceededError),
-		ServiceBusyError:     ToServiceBusyError(t.ServiceBusyError),
-	}
-}
-
-// FromMatchingServiceRespondQueryTaskCompletedArgs converts internal MatchingService_RespondQueryTaskCompleted_Args type to thrift
-func FromMatchingServiceRespondQueryTaskCompletedArgs(t *types.MatchingServiceRespondQueryTaskCompletedArgs) *matching.MatchingService_RespondQueryTaskCompleted_Args {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_RespondQueryTaskCompleted_Args{
-		Request: FromMatchingRespondQueryTaskCompletedRequest(t.Request),
-	}
-}
-
-// ToMatchingServiceRespondQueryTaskCompletedArgs converts thrift MatchingService_RespondQueryTaskCompleted_Args type to internal
-func ToMatchingServiceRespondQueryTaskCompletedArgs(t *matching.MatchingService_RespondQueryTaskCompleted_Args) *types.MatchingServiceRespondQueryTaskCompletedArgs {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServiceRespondQueryTaskCompletedArgs{
-		Request: ToMatchingRespondQueryTaskCompletedRequest(t.Request),
-	}
-}
-
-// FromMatchingServiceRespondQueryTaskCompletedResult converts internal MatchingService_RespondQueryTaskCompleted_Result type to thrift
-func FromMatchingServiceRespondQueryTaskCompletedResult(t *types.MatchingServiceRespondQueryTaskCompletedResult) *matching.MatchingService_RespondQueryTaskCompleted_Result {
-	if t == nil {
-		return nil
-	}
-	return &matching.MatchingService_RespondQueryTaskCompleted_Result{
-		BadRequestError:      FromBadRequestError(t.BadRequestError),
-		InternalServiceError: FromInternalServiceError(t.InternalServiceError),
-		EntityNotExistError:  FromEntityNotExistsError(t.EntityNotExistError),
-		LimitExceededError:   FromLimitExceededError(t.LimitExceededError),
-		ServiceBusyError:     FromServiceBusyError(t.ServiceBusyError),
-	}
-}
-
-// ToMatchingServiceRespondQueryTaskCompletedResult converts thrift MatchingService_RespondQueryTaskCompleted_Result type to internal
-func ToMatchingServiceRespondQueryTaskCompletedResult(t *matching.MatchingService_RespondQueryTaskCompleted_Result) *types.MatchingServiceRespondQueryTaskCompletedResult {
-	if t == nil {
-		return nil
-	}
-	return &types.MatchingServiceRespondQueryTaskCompletedResult{
-		BadRequestError:      ToBadRequestError(t.BadRequestError),
-		InternalServiceError: ToInternalServiceError(t.InternalServiceError),
-		EntityNotExistError:  ToEntityNotExistsError(t.EntityNotExistError),
-		LimitExceededError:   ToLimitExceededError(t.LimitExceededError),
-		ServiceBusyError:     ToServiceBusyError(t.ServiceBusyError),
-	}
-}
-
 // FromMatchingPollForActivityTaskRequest converts internal PollForActivityTaskRequest type to thrift
 func FromMatchingPollForActivityTaskRequest(t *types.MatchingPollForActivityTaskRequest) *matching.PollForActivityTaskRequest {
 	if t == nil {
@@ -603,9 +169,9 @@ func FromMatchingPollForActivityTaskRequest(t *types.MatchingPollForActivityTask
 	}
 	return &matching.PollForActivityTaskRequest{
 		DomainUUID:    &t.DomainUUID,
-		PollerID:      t.PollerID,
+		PollerID:      &t.PollerID,
 		PollRequest:   FromPollForActivityTaskRequest(t.PollRequest),
-		ForwardedFrom: t.ForwardedFrom,
+		ForwardedFrom: &t.ForwardedFrom,
 	}
 }
 
@@ -616,9 +182,9 @@ func ToMatchingPollForActivityTaskRequest(t *matching.PollForActivityTaskRequest
 	}
 	return &types.MatchingPollForActivityTaskRequest{
 		DomainUUID:    t.GetDomainUUID(),
-		PollerID:      t.PollerID,
+		PollerID:      t.GetPollerID(),
 		PollRequest:   ToPollForActivityTaskRequest(t.PollRequest),
-		ForwardedFrom: t.ForwardedFrom,
+		ForwardedFrom: t.GetForwardedFrom(),
 	}
 }
 
@@ -629,9 +195,9 @@ func FromMatchingPollForDecisionTaskRequest(t *types.MatchingPollForDecisionTask
 	}
 	return &matching.PollForDecisionTaskRequest{
 		DomainUUID:    &t.DomainUUID,
-		PollerID:      t.PollerID,
+		PollerID:      &t.PollerID,
 		PollRequest:   FromPollForDecisionTaskRequest(t.PollRequest),
-		ForwardedFrom: t.ForwardedFrom,
+		ForwardedFrom: &t.ForwardedFrom,
 	}
 }
 
@@ -642,9 +208,9 @@ func ToMatchingPollForDecisionTaskRequest(t *matching.PollForDecisionTaskRequest
 	}
 	return &types.MatchingPollForDecisionTaskRequest{
 		DomainUUID:    t.GetDomainUUID(),
-		PollerID:      t.PollerID,
+		PollerID:      t.GetPollerID(),
 		PollRequest:   ToPollForDecisionTaskRequest(t.PollRequest),
-		ForwardedFrom: t.ForwardedFrom,
+		ForwardedFrom: t.GetForwardedFrom(),
 	}
 }
 
@@ -659,10 +225,10 @@ func FromMatchingPollForDecisionTaskResponse(t *types.MatchingPollForDecisionTas
 		WorkflowType:              FromWorkflowType(t.WorkflowType),
 		PreviousStartedEventId:    t.PreviousStartedEventID,
 		StartedEventId:            t.StartedEventID,
-		Attempt:                   t.Attempt,
+		Attempt:                   &t.Attempt,
 		NextEventId:               t.NextEventID,
 		BacklogCountHint:          t.BacklogCountHint,
-		StickyExecutionEnabled:    t.StickyExecutionEnabled,
+		StickyExecutionEnabled:    &t.StickyExecutionEnabled,
 		Query:                     FromWorkflowQuery(t.Query),
 		DecisionInfo:              FromTransientDecisionInfo(t.DecisionInfo),
 		WorkflowExecutionTaskList: FromTaskList(t.WorkflowExecutionTaskList),
@@ -685,10 +251,10 @@ func ToMatchingPollForDecisionTaskResponse(t *matching.PollForDecisionTaskRespon
 		WorkflowType:              ToWorkflowType(t.WorkflowType),
 		PreviousStartedEventID:    t.PreviousStartedEventId,
 		StartedEventID:            t.StartedEventId,
-		Attempt:                   t.Attempt,
+		Attempt:                   t.GetAttempt(),
 		NextEventID:               t.NextEventId,
 		BacklogCountHint:          t.BacklogCountHint,
-		StickyExecutionEnabled:    t.StickyExecutionEnabled,
+		StickyExecutionEnabled:    t.GetStickyExecutionEnabled(),
 		Query:                     ToWorkflowQuery(t.Query),
 		DecisionInfo:              ToTransientDecisionInfo(t.DecisionInfo),
 		WorkflowExecutionTaskList: ToTaskList(t.WorkflowExecutionTaskList),
@@ -709,7 +275,7 @@ func FromMatchingQueryWorkflowRequest(t *types.MatchingQueryWorkflowRequest) *ma
 		DomainUUID:    &t.DomainUUID,
 		TaskList:      FromTaskList(t.TaskList),
 		QueryRequest:  FromQueryWorkflowRequest(t.QueryRequest),
-		ForwardedFrom: t.ForwardedFrom,
+		ForwardedFrom: &t.ForwardedFrom,
 	}
 }
 
@@ -722,7 +288,7 @@ func ToMatchingQueryWorkflowRequest(t *matching.QueryWorkflowRequest) *types.Mat
 		DomainUUID:    t.GetDomainUUID(),
 		TaskList:      ToTaskList(t.TaskList),
 		QueryRequest:  ToQueryWorkflowRequest(t.QueryRequest),
-		ForwardedFrom: t.ForwardedFrom,
+		ForwardedFrom: t.GetForwardedFrom(),
 	}
 }
 

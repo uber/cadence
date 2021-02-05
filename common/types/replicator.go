@@ -276,9 +276,9 @@ func (v *GetDLQReplicationMessagesResponse) GetReplicationTasks() (o []*Replicat
 
 // GetDomainReplicationMessagesRequest is an internal type (TBD...)
 type GetDomainReplicationMessagesRequest struct {
-	LastRetrievedMessageID *int64  `json:"lastRetrievedMessageId,omitempty"`
-	LastProcessedMessageID *int64  `json:"lastProcessedMessageId,omitempty"`
-	ClusterName            *string `json:"clusterName,omitempty"`
+	LastRetrievedMessageID *int64 `json:"lastRetrievedMessageId,omitempty"`
+	LastProcessedMessageID *int64 `json:"lastProcessedMessageId,omitempty"`
+	ClusterName            string `json:"clusterName,omitempty"`
 }
 
 // GetLastRetrievedMessageID is an internal getter (TBD...)
@@ -299,8 +299,8 @@ func (v *GetDomainReplicationMessagesRequest) GetLastProcessedMessageID() (o int
 
 // GetClusterName is an internal getter (TBD...)
 func (v *GetDomainReplicationMessagesRequest) GetClusterName() (o string) {
-	if v != nil && v.ClusterName != nil {
-		return *v.ClusterName
+	if v != nil {
+		return v.ClusterName
 	}
 	return
 }
@@ -321,7 +321,7 @@ func (v *GetDomainReplicationMessagesResponse) GetMessages() (o *ReplicationMess
 // GetReplicationMessagesRequest is an internal type (TBD...)
 type GetReplicationMessagesRequest struct {
 	Tokens      []*ReplicationToken `json:"tokens,omitempty"`
-	ClusterName *string             `json:"clusterName,omitempty"`
+	ClusterName string              `json:"clusterName,omitempty"`
 }
 
 // GetTokens is an internal getter (TBD...)
@@ -334,8 +334,8 @@ func (v *GetReplicationMessagesRequest) GetTokens() (o []*ReplicationToken) {
 
 // GetClusterName is an internal getter (TBD...)
 func (v *GetReplicationMessagesRequest) GetClusterName() (o string) {
-	if v != nil && v.ClusterName != nil {
-		return *v.ClusterName
+	if v != nil {
+		return v.ClusterName
 	}
 	return
 }
@@ -633,7 +633,7 @@ func (v *ReadDLQMessagesResponse) GetNextPageToken() (o []byte) {
 type ReplicationMessages struct {
 	ReplicationTasks       []*ReplicationTask `json:"replicationTasks,omitempty"`
 	LastRetrievedMessageID *int64             `json:"lastRetrievedMessageId,omitempty"`
-	HasMore                *bool              `json:"hasMore,omitempty"`
+	HasMore                bool               `json:"hasMore,omitempty"`
 	SyncShardStatus        *SyncShardStatus   `json:"syncShardStatus,omitempty"`
 }
 
@@ -655,8 +655,8 @@ func (v *ReplicationMessages) GetLastRetrievedMessageID() (o int64) {
 
 // GetHasMore is an internal getter (TBD...)
 func (v *ReplicationMessages) GetHasMore() (o bool) {
-	if v != nil && v.HasMore != nil {
-		return *v.HasMore
+	if v != nil {
+		return v.HasMore
 	}
 	return
 }
@@ -959,9 +959,9 @@ type SyncActivityTaskAttributes struct {
 	StartedTime        *int64          `json:"startedTime,omitempty"`
 	LastHeartbeatTime  *int64          `json:"lastHeartbeatTime,omitempty"`
 	Details            []byte          `json:"details,omitempty"`
-	Attempt            *int32          `json:"attempt,omitempty"`
+	Attempt            int32           `json:"attempt,omitempty"`
 	LastFailureReason  *string         `json:"lastFailureReason,omitempty"`
-	LastWorkerIdentity *string         `json:"lastWorkerIdentity,omitempty"`
+	LastWorkerIdentity string          `json:"lastWorkerIdentity,omitempty"`
 	LastFailureDetails []byte          `json:"lastFailureDetails,omitempty"`
 	VersionHistory     *VersionHistory `json:"versionHistory,omitempty"`
 }
@@ -1048,8 +1048,8 @@ func (v *SyncActivityTaskAttributes) GetDetails() (o []byte) {
 
 // GetAttempt is an internal getter (TBD...)
 func (v *SyncActivityTaskAttributes) GetAttempt() (o int32) {
-	if v != nil && v.Attempt != nil {
-		return *v.Attempt
+	if v != nil {
+		return v.Attempt
 	}
 	return
 }
@@ -1064,8 +1064,8 @@ func (v *SyncActivityTaskAttributes) GetLastFailureReason() (o string) {
 
 // GetLastWorkerIdentity is an internal getter (TBD...)
 func (v *SyncActivityTaskAttributes) GetLastWorkerIdentity() (o string) {
-	if v != nil && v.LastWorkerIdentity != nil {
-		return *v.LastWorkerIdentity
+	if v != nil {
+		return v.LastWorkerIdentity
 	}
 	return
 }

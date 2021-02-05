@@ -211,10 +211,10 @@ func (s *failoverWorkflowTestSuite) assertQueryState(env *testsuite.TestWorkflow
 
 var clusters = []*types.ClusterReplicationConfiguration{
 	{
-		ClusterName: common.StringPtr("c1"),
+		ClusterName: "c1",
 	},
 	{
-		ClusterName: common.StringPtr("c2"),
+		ClusterName: "c2",
 	},
 }
 
@@ -227,14 +227,14 @@ func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 	}{
 		{
 			domain: &types.DescribeDomainResponse{
-				IsGlobalDomain: common.BoolPtr(false),
+				IsGlobalDomain: false,
 			},
 			sourceCluster: "c1",
 			expected:      false,
 		},
 		{
 			domain: &types.DescribeDomainResponse{
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
 					ActiveClusterName: common.StringPtr("c1"),
 					Clusters:          clusters,
@@ -245,7 +245,7 @@ func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 		},
 		{
 			domain: &types.DescribeDomainResponse{
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
 					ActiveClusterName: common.StringPtr("c2"),
 					Clusters:          clusters,
@@ -256,7 +256,7 @@ func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 		},
 		{
 			domain: &types.DescribeDomainResponse{
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
 					ActiveClusterName: common.StringPtr("c2"),
 					Clusters:          clusters,
@@ -307,7 +307,7 @@ func (s *failoverWorkflowTestSuite) TestGetDomainsActivity() {
 					ActiveClusterName: common.StringPtr("c1"),
 					Clusters:          clusters,
 				},
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 			},
 		},
 	}
@@ -340,7 +340,7 @@ func (s *failoverWorkflowTestSuite) TestGetDomainsActivity_WithTargetDomains() {
 					ActiveClusterName: common.StringPtr("c1"),
 					Clusters:          clusters,
 				},
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 			},
 			{
 				DomainInfo: &types.DomainInfo{
@@ -351,7 +351,7 @@ func (s *failoverWorkflowTestSuite) TestGetDomainsActivity_WithTargetDomains() {
 					ActiveClusterName: common.StringPtr("c1"),
 					Clusters:          clusters,
 				},
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 			},
 			{
 				DomainInfo: &types.DomainInfo{
@@ -361,7 +361,7 @@ func (s *failoverWorkflowTestSuite) TestGetDomainsActivity_WithTargetDomains() {
 					ActiveClusterName: common.StringPtr("c1"),
 					Clusters:          clusters,
 				},
-				IsGlobalDomain: common.BoolPtr(true),
+				IsGlobalDomain: true,
 			},
 		},
 	}

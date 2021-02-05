@@ -137,7 +137,7 @@ Loop:
 		response, err1 := p.Engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
 			Domain:   p.Domain,
 			TaskList: taskList,
-			Identity: common.StringPtr(p.Identity),
+			Identity: p.Identity,
 		})
 
 		if err1 == history.ErrDuplicate {
@@ -240,7 +240,7 @@ Loop:
 				TaskToken: response.TaskToken,
 				Cause:     types.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure.Ptr(),
 				Details:   []byte(err.Error()),
-				Identity:  common.StringPtr(p.Identity),
+				Identity:  p.Identity,
 			})
 		}
 
@@ -249,11 +249,11 @@ Loop:
 			// non sticky tasklist
 			newTask, err := p.Engine.RespondDecisionTaskCompleted(createContext(), &types.RespondDecisionTaskCompletedRequest{
 				TaskToken:                  response.TaskToken,
-				Identity:                   common.StringPtr(p.Identity),
+				Identity:                   p.Identity,
 				ExecutionContext:           executionCtx,
 				Decisions:                  decisions,
-				ReturnNewDecisionTask:      common.BoolPtr(forceCreateNewDecision),
-				ForceCreateNewDecisionTask: common.BoolPtr(forceCreateNewDecision),
+				ReturnNewDecisionTask:      forceCreateNewDecision,
+				ForceCreateNewDecisionTask: forceCreateNewDecision,
 				QueryResults:               getQueryResults(response.GetQueries(), queryResult),
 			})
 			return false, newTask, err
@@ -263,15 +263,15 @@ Loop:
 			createContext(),
 			&types.RespondDecisionTaskCompletedRequest{
 				TaskToken:        response.TaskToken,
-				Identity:         common.StringPtr(p.Identity),
+				Identity:         p.Identity,
 				ExecutionContext: executionCtx,
 				Decisions:        decisions,
 				StickyAttributes: &types.StickyExecutionAttributes{
 					WorkerTaskList:                p.StickyTaskList,
 					ScheduleToStartTimeoutSeconds: p.StickyScheduleToStartTimeoutSeconds,
 				},
-				ReturnNewDecisionTask:      common.BoolPtr(forceCreateNewDecision),
-				ForceCreateNewDecisionTask: common.BoolPtr(forceCreateNewDecision),
+				ReturnNewDecisionTask:      forceCreateNewDecision,
+				ForceCreateNewDecisionTask: forceCreateNewDecision,
 				QueryResults:               getQueryResults(response.GetQueries(), queryResult),
 			},
 			yarpc.WithHeader(common.LibraryVersionHeaderName, "0.0.1"),
@@ -312,7 +312,7 @@ func (p *TaskPoller) HandlePartialDecision(response *types.PollForDecisionTaskRe
 			TaskToken: response.TaskToken,
 			Cause:     types.DecisionTaskFailedCauseWorkflowWorkerUnhandledFailure.Ptr(),
 			Details:   []byte(err.Error()),
-			Identity:  common.StringPtr(p.Identity),
+			Identity:  p.Identity,
 		})
 	}
 
@@ -323,15 +323,15 @@ func (p *TaskPoller) HandlePartialDecision(response *types.PollForDecisionTaskRe
 		createContext(),
 		&types.RespondDecisionTaskCompletedRequest{
 			TaskToken:        response.TaskToken,
-			Identity:         common.StringPtr(p.Identity),
+			Identity:         p.Identity,
 			ExecutionContext: executionCtx,
 			Decisions:        decisions,
 			StickyAttributes: &types.StickyExecutionAttributes{
 				WorkerTaskList:                p.StickyTaskList,
 				ScheduleToStartTimeoutSeconds: p.StickyScheduleToStartTimeoutSeconds,
 			},
-			ReturnNewDecisionTask:      common.BoolPtr(true),
-			ForceCreateNewDecisionTask: common.BoolPtr(true),
+			ReturnNewDecisionTask:      true,
+			ForceCreateNewDecisionTask: true,
 		},
 		yarpc.WithHeader(common.LibraryVersionHeaderName, "0.0.1"),
 		yarpc.WithHeader(common.FeatureVersionHeaderName, client.GoWorkerConsistentQueryVersion),
@@ -348,7 +348,7 @@ retry:
 		response, err1 := p.Engine.PollForActivityTask(createContext(), &types.PollForActivityTaskRequest{
 			Domain:   p.Domain,
 			TaskList: p.TaskList,
-			Identity: common.StringPtr(p.Identity),
+			Identity: p.Identity,
 		})
 
 		if err1 == history.ErrDuplicate {
@@ -371,14 +371,14 @@ retry:
 		}
 		p.Logger.Debug("Received Activity task", tag.Value(response))
 
-		result, cancel, err2 := p.ActivityHandler(response.WorkflowExecution, response.ActivityType, *response.ActivityID,
+		result, cancel, err2 := p.ActivityHandler(response.WorkflowExecution, response.ActivityType, response.ActivityID,
 			response.Input, response.TaskToken)
 		if cancel {
 			p.Logger.Info("Executing RespondActivityTaskCanceled")
 			return p.Engine.RespondActivityTaskCanceled(createContext(), &types.RespondActivityTaskCanceledRequest{
 				TaskToken: response.TaskToken,
 				Details:   []byte("details"),
-				Identity:  common.StringPtr(p.Identity),
+				Identity:  p.Identity,
 			})
 		}
 
@@ -387,13 +387,13 @@ retry:
 				TaskToken: response.TaskToken,
 				Reason:    common.StringPtr(err2.Error()),
 				Details:   []byte(err2.Error()),
-				Identity:  common.StringPtr(p.Identity),
+				Identity:  p.Identity,
 			})
 		}
 
 		return p.Engine.RespondActivityTaskCompleted(createContext(), &types.RespondActivityTaskCompletedRequest{
 			TaskToken: response.TaskToken,
-			Identity:  common.StringPtr(p.Identity),
+			Identity:  p.Identity,
 			Result:    result,
 		})
 	}
@@ -408,7 +408,7 @@ retry:
 		response, err1 := p.Engine.PollForActivityTask(createContext(), &types.PollForActivityTaskRequest{
 			Domain:   p.Domain,
 			TaskList: p.TaskList,
-			Identity: common.StringPtr(p.Identity),
+			Identity: p.Identity,
 		})
 
 		if err1 == history.ErrDuplicate {
@@ -436,7 +436,7 @@ retry:
 		}
 		p.Logger.Debug("Received Activity task: %v", tag.Value(response))
 
-		result, cancel, err2 := p.ActivityHandler(response.WorkflowExecution, response.ActivityType, *response.ActivityID,
+		result, cancel, err2 := p.ActivityHandler(response.WorkflowExecution, response.ActivityType, response.ActivityID,
 			response.Input, response.TaskToken)
 		if cancel {
 			p.Logger.Info("Executing RespondActivityTaskCanceled")
@@ -444,9 +444,9 @@ retry:
 				Domain:     p.Domain,
 				WorkflowID: response.WorkflowExecution.GetWorkflowID(),
 				RunID:      response.WorkflowExecution.GetRunID(),
-				ActivityID: common.StringPtr(response.GetActivityID()),
+				ActivityID: response.GetActivityID(),
 				Details:    []byte("details"),
-				Identity:   common.StringPtr(p.Identity),
+				Identity:   p.Identity,
 			})
 		}
 
@@ -455,10 +455,10 @@ retry:
 				Domain:     p.Domain,
 				WorkflowID: response.WorkflowExecution.GetWorkflowID(),
 				RunID:      response.WorkflowExecution.GetRunID(),
-				ActivityID: common.StringPtr(response.GetActivityID()),
+				ActivityID: response.GetActivityID(),
 				Reason:     common.StringPtr(err2.Error()),
 				Details:    []byte(err2.Error()),
-				Identity:   common.StringPtr(p.Identity),
+				Identity:   p.Identity,
 			})
 		}
 
@@ -466,8 +466,8 @@ retry:
 			Domain:     p.Domain,
 			WorkflowID: response.WorkflowExecution.GetWorkflowID(),
 			RunID:      response.WorkflowExecution.GetRunID(),
-			ActivityID: common.StringPtr(response.GetActivityID()),
-			Identity:   common.StringPtr(p.Identity),
+			ActivityID: response.GetActivityID(),
+			Identity:   p.Identity,
 			Result:     result,
 		})
 	}

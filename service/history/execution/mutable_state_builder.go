@@ -895,7 +895,7 @@ func (e *mutableStateBuilder) shouldBufferEvent(
 
 func (e *mutableStateBuilder) GetWorkflowType() *types.WorkflowType {
 	wType := &types.WorkflowType{}
-	wType.Name = common.StringPtr(e.executionInfo.WorkflowTypeName)
+	wType.Name = e.executionInfo.WorkflowTypeName
 
 	return wType
 }
@@ -1604,14 +1604,14 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		taskList = attributes.TaskList.GetName()
 	}
 	tl := &types.TaskList{}
-	tl.Name = common.StringPtr(taskList)
+	tl.Name = taskList
 
 	workflowType := previousExecutionInfo.WorkflowTypeName
 	if attributes.WorkflowType != nil {
 		workflowType = attributes.WorkflowType.GetName()
 	}
 	wType := &types.WorkflowType{}
-	wType.Name = common.StringPtr(workflowType)
+	wType.Name = workflowType
 
 	decisionTimeout := previousExecutionInfo.DecisionStartToCloseTimeout
 	if attributes.TaskStartToCloseTimeoutSeconds != nil {
@@ -1619,7 +1619,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 	}
 
 	createRequest := &types.StartWorkflowExecutionRequest{
-		RequestID:                           common.StringPtr(uuid.New()),
+		RequestID:                           uuid.New(),
 		Domain:                              e.domainEntry.GetInfo().Name,
 		WorkflowID:                          execution.WorkflowID,
 		TaskList:                            tl,
@@ -1645,14 +1645,14 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		FirstDecisionTaskBackoffSeconds: attributes.BackoffStartIntervalInSeconds,
 	}
 	if attributes.GetInitiator() == types.ContinueAsNewInitiatorRetryPolicy {
-		req.Attempt = common.Int32Ptr(previousExecutionState.GetExecutionInfo().Attempt + 1)
+		req.Attempt = previousExecutionState.GetExecutionInfo().Attempt + 1
 		expirationTime := previousExecutionState.GetExecutionInfo().ExpirationTime
 		if !expirationTime.IsZero() {
 			req.ExpirationTimestamp = common.Int64Ptr(expirationTime.UnixNano())
 		}
 	} else {
 		// ContinueAsNew by decider or cron
-		req.Attempt = common.Int32Ptr(0)
+		req.Attempt = 0
 		if attributes.RetryPolicy != nil && attributes.RetryPolicy.GetExpirationIntervalInSeconds() > 0 {
 			// has retry policy and expiration time.
 			expirationSeconds := attributes.RetryPolicy.GetExpirationIntervalInSeconds() + req.GetFirstDecisionTaskBackoffSeconds()
@@ -1952,11 +1952,11 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 		resettable = false
 	}
 	info := &types.ResetPointInfo{
-		BinaryChecksum:           common.StringPtr(binChecksum),
+		BinaryChecksum:           binChecksum,
 		RunID:                    exeInfo.RunID,
 		FirstDecisionCompletedID: common.Int64Ptr(event.GetEventID()),
 		CreatedTimeNano:          common.Int64Ptr(e.timeSource.Now().UnixNano()),
-		Resettable:               common.BoolPtr(resettable),
+		Resettable:               resettable,
 	}
 	currResetPoints = append(currResetPoints, info)
 	exeInfo.AutoResetPoints = &types.ResetPoints{
@@ -2129,9 +2129,8 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if e.config.EnableActivityLocalDispatchByDomain(e.domainEntry.GetInfo().Name) &&
-		common.BoolDefault(attributes.RequestLocalDispatch) {
-		return event, ai, &types.ActivityLocalDispatchInfo{ActivityID: common.StringPtr(ai.ActivityID)}, nil
+	if e.config.EnableActivityLocalDispatchByDomain(e.domainEntry.GetInfo().Name) && attributes.RequestLocalDispatch {
+		return event, ai, &types.ActivityLocalDispatchInfo{ActivityID: ai.ActivityID}, nil
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateActivityTransferTasks(
@@ -2169,7 +2168,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 		ScheduledTime:            time.Unix(0, event.GetTimestamp()),
 		StartedID:                common.EmptyEventID,
 		StartedTime:              time.Time{},
-		ActivityID:               common.StringDefault(attributes.ActivityID),
+		ActivityID:               attributes.ActivityID,
 		DomainID:                 targetDomainID,
 		ScheduleToStartTimeout:   attributes.GetScheduleToStartTimeoutSeconds(),
 		ScheduleToCloseTimeout:   scheduleToCloseTimeout,
@@ -3551,7 +3550,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(
 	}
 
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(ci.WorkflowTypeName),
+		Name: ci.WorkflowTypeName,
 	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionCompletedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
@@ -3594,7 +3593,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionFailedEvent(
 	}
 
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(ci.WorkflowTypeName),
+		Name: ci.WorkflowTypeName,
 	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionFailedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
@@ -3637,7 +3636,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCanceledEvent(
 	}
 
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(ci.WorkflowTypeName),
+		Name: ci.WorkflowTypeName,
 	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionCanceledEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
@@ -3680,7 +3679,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTerminatedEvent(
 	}
 
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(ci.WorkflowTypeName),
+		Name: ci.WorkflowTypeName,
 	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionTerminatedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
@@ -3723,7 +3722,7 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(
 	}
 
 	workflowType := &types.WorkflowType{
-		Name: common.StringPtr(ci.WorkflowTypeName),
+		Name: ci.WorkflowTypeName,
 	}
 
 	event := e.hBuilder.AddChildWorkflowExecutionTimedOutEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,

@@ -1112,11 +1112,11 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 	testResetPoints := types.ResetPoints{
 		Points: []*types.ResetPointInfo{
 			{
-				BinaryChecksum:           common.StringPtr("test-binary-checksum"),
+				BinaryChecksum:           "test-binary-checksum",
 				RunID:                    "test-runID",
 				FirstDecisionCompletedID: common.Int64Ptr(123),
 				CreatedTimeNano:          common.Int64Ptr(456),
-				Resettable:               common.BoolPtr(true),
+				Resettable:               true,
 				ExpiringTimeNano:         common.Int64Ptr(789),
 			},
 		},
@@ -3041,11 +3041,11 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 	testResetPoints := types.ResetPoints{
 		Points: []*types.ResetPointInfo{
 			{
-				BinaryChecksum:           common.StringPtr("test-binary-checksum"),
+				BinaryChecksum:           "test-binary-checksum",
 				RunID:                    "test-runID",
 				FirstDecisionCompletedID: common.Int64Ptr(123),
 				CreatedTimeNano:          common.Int64Ptr(456),
-				Resettable:               common.BoolPtr(true),
+				Resettable:               true,
 				ExpiringTimeNano:         common.Int64Ptr(789),
 			},
 		},
@@ -3257,7 +3257,7 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 			DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
 				ScheduledEventID: common.Int64Ptr(2),
 				StartedEventID:   common.Int64Ptr(3),
-				Identity:         common.StringPtr("test_worker"),
+				Identity:         "test_worker",
 			},
 		},
 		{
@@ -3265,7 +3265,7 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 			EventType: types.EventTypeTimerStarted.Ptr(),
 			Version:   common.Int64Ptr(11),
 			TimerStartedEventAttributes: &types.TimerStartedEventAttributes{
-				TimerID:                      common.StringPtr("ID1"),
+				TimerID:                      "ID1",
 				StartToFireTimeoutSeconds:    common.Int64Ptr(101),
 				DecisionTaskCompletedEventID: common.Int64Ptr(5),
 			},
@@ -3278,7 +3278,7 @@ func (s *ExecutionManagerSuite) TestUpdateAndClearBufferedEvents() {
 			EventType: types.EventTypeTimerFired.Ptr(),
 			Version:   common.Int64Ptr(12),
 			TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
-				TimerID:        common.StringPtr("2"),
+				TimerID:        "2",
 				StartedEventID: common.Int64Ptr(3),
 			},
 		},
@@ -3394,7 +3394,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 			DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
 				ScheduledEventID: common.Int64Ptr(2),
 				StartedEventID:   common.Int64Ptr(3),
-				Identity:         common.StringPtr("test_worker"),
+				Identity:         "test_worker",
 			},
 		},
 		{
@@ -3402,7 +3402,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 			EventType: types.EventTypeTimerStarted.Ptr(),
 			Version:   common.Int64Ptr(11),
 			TimerStartedEventAttributes: &types.TimerStartedEventAttributes{
-				TimerID:                      common.StringPtr("ID1"),
+				TimerID:                      "ID1",
 				StartToFireTimeoutSeconds:    common.Int64Ptr(101),
 				DecisionTaskCompletedEventID: common.Int64Ptr(5),
 			},
@@ -3415,7 +3415,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 			EventType: types.EventTypeTimerFired.Ptr(),
 			Version:   common.Int64Ptr(12),
 			TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
-				TimerID:        common.StringPtr("2"),
+				TimerID:        "2",
 				StartedEventID: common.Int64Ptr(3),
 			},
 		},
@@ -5181,7 +5181,7 @@ func timeComparator(t1, t2 time.Time, timeTolerance time.Duration) bool {
 func createTransferPQS(cluster1 string, level1 int32, ackLevel1 int64, cluster2 string, level2 int32, ackLevel2 int64) types.ProcessingQueueStates {
 	domainFilter := &types.DomainFilter{
 		DomainIDs:    nil,
-		ReverseMatch: common.BoolPtr(true),
+		ReverseMatch: true,
 	}
 	processingQueueStateMap := map[string][]*types.ProcessingQueueState{
 		cluster1: {
@@ -5207,7 +5207,7 @@ func createTransferPQS(cluster1 string, level1 int32, ackLevel1 int64, cluster2 
 func createTimerPQS(cluster1 string, level1 int32, ackLevel1 time.Time, cluster2 string, level2 int32, ackLevel2 time.Time) types.ProcessingQueueStates {
 	domainFilter := &types.DomainFilter{
 		DomainIDs:    []string{},
-		ReverseMatch: common.BoolPtr(true),
+		ReverseMatch: true,
 	}
 	processingQueueStateMap := map[string][]*types.ProcessingQueueState{
 		cluster1: {

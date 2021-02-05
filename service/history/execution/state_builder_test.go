@@ -437,8 +437,8 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 			ParentInitiatedEventID:              common.Int64Ptr(parentInitiatedEventID),
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(decisionTimeoutSecond),
-			TaskList:                            &types.TaskList{Name: common.StringPtr(tasklist)},
-			WorkflowType:                        &types.WorkflowType{Name: common.StringPtr(workflowType)},
+			TaskList:                            &types.TaskList{Name: tasklist},
+			WorkflowType:                        &types.WorkflowType{Name: workflowType},
 		},
 	}
 
@@ -450,7 +450,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			SignalName: common.StringPtr("some random signal name"),
 			Input:      []byte("some random signal input"),
-			Identity:   common.StringPtr("some random identity"),
+			Identity:   "some random identity",
 		},
 	}
 
@@ -461,9 +461,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
-			TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
+			TaskList:                   &types.TaskList{Name: tasklist},
 			StartToCloseTimeoutSeconds: common.Int32Ptr(decisionTimeoutSecond),
-			Attempt:                    common.Int64Ptr(newRunDecisionAttempt),
+			Attempt:                    newRunDecisionAttempt,
 		},
 	}
 	newRunEvents := []*types.HistoryEvent{
@@ -684,9 +684,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskScheduled() {
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
-			TaskList:                   &types.TaskList{Name: common.StringPtr(tasklist)},
+			TaskList:                   &types.TaskList{Name: tasklist},
 			StartToCloseTimeoutSeconds: common.Int32Ptr(timeoutSecond),
-			Attempt:                    common.Int64Ptr(decisionAttempt),
+			Attempt:                    decisionAttempt,
 		},
 	}
 	di := &DecisionInfo{
@@ -737,7 +737,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskStarted() {
 		EventType: &evenType,
 		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{
 			ScheduledEventID: common.Int64Ptr(scheduleID),
-			RequestID:        common.StringPtr(decisionRequestID),
+			RequestID:        decisionRequestID,
 		},
 	}
 	di := &DecisionInfo{
@@ -910,7 +910,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeTimerStarted() {
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: &evenType,
 		TimerStartedEventAttributes: &types.TimerStartedEventAttributes{
-			TimerID:                   common.StringPtr(timerID),
+			TimerID:                   timerID,
 			StartToFireTimeoutSeconds: common.Int64Ptr(timeoutSecond),
 		},
 	}
@@ -1540,7 +1540,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkfl
 				WorkflowID: targetWorkflowID,
 				RunID:      targetRunID,
 			},
-			ChildWorkflowOnly: common.BoolPtr(childWorkflowOnly),
+			ChildWorkflowOnly: childWorkflowOnly,
 			Control:           control,
 		},
 	}
@@ -1679,7 +1679,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecu
 			},
 			SignalName:        common.StringPtr(signalName),
 			Input:             signalInput,
-			ChildWorkflowOnly: common.BoolPtr(childWorkflowOnly),
+			ChildWorkflowOnly: childWorkflowOnly,
 		},
 	}
 	si := &persistence.SignalInfo{

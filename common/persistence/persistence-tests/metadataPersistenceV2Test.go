@@ -341,6 +341,34 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	resp5, err5 := m.GetDomain(ctx, "", "")
 	m.Nil(resp5)
 	m.IsType(&types.BadRequestError{}, err5)
+
+	_, err6 := m.CreateDomain(ctx,
+		&p.DomainInfo{
+			ID:          uuid.New(),
+			Name:        name,
+			Status:      status,
+			Description: description,
+			OwnerEmail:  owner,
+			Data:        data,
+		},
+		&p.DomainConfig{
+			Retention:                retention,
+			EmitMetric:               emitMetric,
+			HistoryArchivalStatus:    historyArchivalStatus,
+			HistoryArchivalURI:       historyArchivalURI,
+			VisibilityArchivalStatus: visibilityArchivalStatus,
+			VisibilityArchivalURI:    visibilityArchivalURI,
+		},
+		&p.DomainReplicationConfig{
+			ActiveClusterName: clusterActive,
+			Clusters:          clusters,
+		},
+		isGlobalDomain,
+		configVersion,
+		failoverVersion,
+		0,
+	)
+	m.Error(err6)
 }
 
 // TestConcurrentCreateDomain test
@@ -582,7 +610,15 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 		}(map[string]string{"k0": newValue})
 	}
 	wg.Wait()
-	m.Equal(int32(1), successCount)
+	m.Greater(successCount, int32(0))
+	allDomains, err := m.ListDomains(ctx, 100, nil)
+	m.NoError(err)
+	domainNameMap := make(map[string]bool)
+	for _, domain := range allDomains.Domains {
+		_, ok := domainNameMap[domain.Info.Name]
+		m.False(ok)
+		domainNameMap[domain.Info.Name] = true
+	}
 
 	resp3, err3 := m.GetDomain(ctx, "", name)
 	m.NoError(err3)

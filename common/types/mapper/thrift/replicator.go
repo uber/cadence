@@ -216,7 +216,7 @@ func FromGetDomainReplicationMessagesRequest(t *types.GetDomainReplicationMessag
 	return &replicator.GetDomainReplicationMessagesRequest{
 		LastRetrievedMessageId: t.LastRetrievedMessageID,
 		LastProcessedMessageId: t.LastProcessedMessageID,
-		ClusterName:            t.ClusterName,
+		ClusterName:            &t.ClusterName,
 	}
 }
 
@@ -228,7 +228,7 @@ func ToGetDomainReplicationMessagesRequest(t *replicator.GetDomainReplicationMes
 	return &types.GetDomainReplicationMessagesRequest{
 		LastRetrievedMessageID: t.LastRetrievedMessageId,
 		LastProcessedMessageID: t.LastProcessedMessageId,
-		ClusterName:            t.ClusterName,
+		ClusterName:            t.GetClusterName(),
 	}
 }
 
@@ -259,7 +259,7 @@ func FromGetReplicationMessagesRequest(t *types.GetReplicationMessagesRequest) *
 	}
 	return &replicator.GetReplicationMessagesRequest{
 		Tokens:      FromReplicationTokenArray(t.Tokens),
-		ClusterName: t.ClusterName,
+		ClusterName: &t.ClusterName,
 	}
 }
 
@@ -270,7 +270,7 @@ func ToGetReplicationMessagesRequest(t *replicator.GetReplicationMessagesRequest
 	}
 	return &types.GetReplicationMessagesRequest{
 		Tokens:      ToReplicationTokenArray(t.Tokens),
-		ClusterName: t.ClusterName,
+		ClusterName: t.GetClusterName(),
 	}
 }
 
@@ -466,7 +466,7 @@ func FromReplicationMessages(t *types.ReplicationMessages) *replicator.Replicati
 	return &replicator.ReplicationMessages{
 		ReplicationTasks:       FromReplicationTaskArray(t.ReplicationTasks),
 		LastRetrievedMessageId: t.LastRetrievedMessageID,
-		HasMore:                t.HasMore,
+		HasMore:                &t.HasMore,
 		SyncShardStatus:        FromSyncShardStatus(t.SyncShardStatus),
 	}
 }
@@ -479,7 +479,7 @@ func ToReplicationMessages(t *replicator.ReplicationMessages) *types.Replication
 	return &types.ReplicationMessages{
 		ReplicationTasks:       ToReplicationTaskArray(t.ReplicationTasks),
 		LastRetrievedMessageID: t.LastRetrievedMessageId,
-		HasMore:                t.HasMore,
+		HasMore:                t.GetHasMore(),
 		SyncShardStatus:        ToSyncShardStatus(t.SyncShardStatus),
 	}
 }
@@ -656,9 +656,9 @@ func FromSyncActivityTaskAttributes(t *types.SyncActivityTaskAttributes) *replic
 		StartedTime:        t.StartedTime,
 		LastHeartbeatTime:  t.LastHeartbeatTime,
 		Details:            t.Details,
-		Attempt:            t.Attempt,
+		Attempt:            &t.Attempt,
 		LastFailureReason:  t.LastFailureReason,
-		LastWorkerIdentity: t.LastWorkerIdentity,
+		LastWorkerIdentity: &t.LastWorkerIdentity,
 		LastFailureDetails: t.LastFailureDetails,
 		VersionHistory:     FromVersionHistory(t.VersionHistory),
 	}
@@ -680,9 +680,9 @@ func ToSyncActivityTaskAttributes(t *replicator.SyncActivityTaskAttributes) *typ
 		StartedTime:        t.StartedTime,
 		LastHeartbeatTime:  t.LastHeartbeatTime,
 		Details:            t.Details,
-		Attempt:            t.Attempt,
+		Attempt:            t.GetAttempt(),
 		LastFailureReason:  t.LastFailureReason,
-		LastWorkerIdentity: t.LastWorkerIdentity,
+		LastWorkerIdentity: t.GetLastWorkerIdentity(),
 		LastFailureDetails: t.LastFailureDetails,
 		VersionHistory:     ToVersionHistory(t.VersionHistory),
 	}

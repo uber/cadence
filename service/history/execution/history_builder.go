@@ -253,7 +253,7 @@ func (b *HistoryBuilder) AddTimerStartedEvent(decisionCompletedEventID int64,
 	request *types.StartTimerDecisionAttributes) *types.HistoryEvent {
 
 	attributes := &types.TimerStartedEventAttributes{}
-	attributes.TimerID = common.StringPtr(*request.TimerID)
+	attributes.TimerID = request.TimerID
 	attributes.StartToFireTimeoutSeconds = common.Int64Ptr(*request.StartToFireTimeoutSeconds)
 	attributes.DecisionTaskCompletedEventID = common.Int64Ptr(decisionCompletedEventID)
 
@@ -270,7 +270,7 @@ func (b *HistoryBuilder) AddTimerFiredEvent(
 ) *types.HistoryEvent {
 
 	attributes := &types.TimerFiredEventAttributes{}
-	attributes.TimerID = common.StringPtr(TimerID)
+	attributes.TimerID = TimerID
 	attributes.StartedEventID = common.Int64Ptr(StartedEventID)
 
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeTimerFired)
@@ -284,7 +284,7 @@ func (b *HistoryBuilder) AddActivityTaskCancelRequestedEvent(decisionCompletedEv
 	ActivityID string) *types.HistoryEvent {
 
 	attributes := &types.ActivityTaskCancelRequestedEventAttributes{}
-	attributes.ActivityID = common.StringPtr(ActivityID)
+	attributes.ActivityID = ActivityID
 	attributes.DecisionTaskCompletedEventID = common.Int64Ptr(decisionCompletedEventID)
 
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeActivityTaskCancelRequested)
@@ -298,7 +298,7 @@ func (b *HistoryBuilder) AddRequestCancelActivityTaskFailedEvent(decisionComplet
 	ActivityID string, cause string) *types.HistoryEvent {
 
 	attributes := &types.RequestCancelActivityTaskFailedEventAttributes{}
-	attributes.ActivityID = common.StringPtr(ActivityID)
+	attributes.ActivityID = ActivityID
 	attributes.DecisionTaskCompletedEventID = common.Int64Ptr(decisionCompletedEventID)
 	attributes.Cause = common.StringPtr(cause)
 
@@ -317,7 +317,7 @@ func (b *HistoryBuilder) AddActivityTaskCanceledEvent(scheduleEventID, StartedEv
 	attributes.StartedEventID = common.Int64Ptr(StartedEventID)
 	attributes.LatestCancelRequestedEventID = common.Int64Ptr(LatestCancelRequestedEventID)
 	attributes.Details = details
-	attributes.Identity = common.StringPtr(identity)
+	attributes.Identity = identity
 
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeActivityTaskCanceled)
 	event.ActivityTaskCanceledEventAttributes = attributes
@@ -332,8 +332,8 @@ func (b *HistoryBuilder) AddTimerCanceledEvent(StartedEventID int64,
 	attributes := &types.TimerCanceledEventAttributes{}
 	attributes.StartedEventID = common.Int64Ptr(StartedEventID)
 	attributes.DecisionTaskCompletedEventID = common.Int64Ptr(DecisionTaskCompletedEventID)
-	attributes.TimerID = common.StringPtr(TimerID)
-	attributes.Identity = common.StringPtr(identity)
+	attributes.TimerID = TimerID
+	attributes.Identity = identity
 
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeTimerCanceled)
 	event.TimerCanceledEventAttributes = attributes
@@ -346,10 +346,10 @@ func (b *HistoryBuilder) AddCancelTimerFailedEvent(TimerID string, DecisionTaskC
 	cause string, identity string) *types.HistoryEvent {
 
 	attributes := &types.CancelTimerFailedEventAttributes{}
-	attributes.TimerID = common.StringPtr(TimerID)
+	attributes.TimerID = TimerID
 	attributes.DecisionTaskCompletedEventID = common.Int64Ptr(DecisionTaskCompletedEventID)
 	attributes.Cause = common.StringPtr(cause)
-	attributes.Identity = common.StringPtr(identity)
+	attributes.Identity = identity
 
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeCancelTimerFailed)
 	event.CancelTimerFailedEventAttributes = attributes
@@ -559,9 +559,9 @@ func (b *HistoryBuilder) newWorkflowExecutionStartedEvent(
 	attributes.TaskStartToCloseTimeoutSeconds = common.Int32Ptr(*request.TaskStartToCloseTimeoutSeconds)
 	attributes.ContinuedExecutionRunID = prevRunID
 	attributes.PrevAutoResetPoints = resetPoints
-	attributes.Identity = common.StringPtr(common.StringDefault(request.Identity))
+	attributes.Identity = request.Identity
 	attributes.RetryPolicy = request.RetryPolicy
-	attributes.Attempt = common.Int32Ptr(startRequest.GetAttempt())
+	attributes.Attempt = startRequest.GetAttempt()
 	attributes.ExpirationTimestamp = startRequest.ExpirationTimestamp
 	attributes.CronSchedule = request.CronSchedule
 	attributes.LastCompletionResult = startRequest.LastCompletionResult
@@ -620,7 +620,7 @@ func (b *HistoryBuilder) newDecisionTaskCompletedEvent(scheduleEventID, StartedE
 	attributes.ExecutionContext = request.ExecutionContext
 	attributes.ScheduledEventID = common.Int64Ptr(scheduleEventID)
 	attributes.StartedEventID = common.Int64Ptr(StartedEventID)
-	attributes.Identity = common.StringPtr(common.StringDefault(request.Identity))
+	attributes.Identity = request.Identity
 	attributes.BinaryChecksum = request.BinaryChecksum
 	historyEvent.DecisionTaskCompletedEventAttributes = attributes
 
@@ -662,7 +662,7 @@ func (b *HistoryBuilder) newActivityTaskScheduledEvent(DecisionTaskCompletedEven
 	scheduleAttributes *types.ScheduleActivityTaskDecisionAttributes) *types.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(types.EventTypeActivityTaskScheduled)
 	attributes := &types.ActivityTaskScheduledEventAttributes{}
-	attributes.ActivityID = common.StringPtr(common.StringDefault(scheduleAttributes.ActivityID))
+	attributes.ActivityID = scheduleAttributes.ActivityID
 	attributes.ActivityType = scheduleAttributes.ActivityType
 	attributes.TaskList = scheduleAttributes.TaskList
 	attributes.Header = scheduleAttributes.Header
@@ -689,9 +689,9 @@ func (b *HistoryBuilder) newActivityTaskStartedEvent(
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(types.EventTypeActivityTaskStarted)
 	attributes := &types.ActivityTaskStartedEventAttributes{}
 	attributes.ScheduledEventID = common.Int64Ptr(ScheduledEventID)
-	attributes.Attempt = common.Int32Ptr(attempt)
-	attributes.Identity = common.StringPtr(identity)
-	attributes.RequestID = common.StringPtr(requestID)
+	attributes.Attempt = attempt
+	attributes.Identity = identity
+	attributes.RequestID = requestID
 	attributes.LastFailureReason = common.StringPtr(lastFailureReason)
 	attributes.LastFailureDetails = lastFailureDetails
 	historyEvent.ActivityTaskStartedEventAttributes = attributes
@@ -706,7 +706,7 @@ func (b *HistoryBuilder) newActivityTaskCompletedEvent(scheduleEventID, StartedE
 	attributes.Result = request.Result
 	attributes.ScheduledEventID = common.Int64Ptr(scheduleEventID)
 	attributes.StartedEventID = common.Int64Ptr(StartedEventID)
-	attributes.Identity = common.StringPtr(common.StringDefault(request.Identity))
+	attributes.Identity = request.Identity
 	historyEvent.ActivityTaskCompletedEventAttributes = attributes
 
 	return historyEvent
@@ -741,7 +741,7 @@ func (b *HistoryBuilder) newActivityTaskFailedEvent(scheduleEventID, StartedEven
 	attributes.Details = request.Details
 	attributes.ScheduledEventID = common.Int64Ptr(scheduleEventID)
 	attributes.StartedEventID = common.Int64Ptr(StartedEventID)
-	attributes.Identity = common.StringPtr(common.StringDefault(request.Identity))
+	attributes.Identity = request.Identity
 	historyEvent.ActivityTaskFailedEventAttributes = attributes
 
 	return historyEvent
@@ -785,7 +785,7 @@ func (b *HistoryBuilder) newWorkflowExecutionSignaledEvent(
 	attributes := &types.WorkflowExecutionSignaledEventAttributes{}
 	attributes.SignalName = common.StringPtr(signalName)
 	attributes.Input = input
-	attributes.Identity = common.StringPtr(identity)
+	attributes.Identity = identity
 	historyEvent.WorkflowExecutionSignaledEventAttributes = attributes
 
 	return historyEvent
@@ -797,7 +797,7 @@ func (b *HistoryBuilder) newWorkflowExecutionTerminatedEvent(
 	attributes := &types.WorkflowExecutionTerminatedEventAttributes{}
 	attributes.Reason = common.StringPtr(reason)
 	attributes.Details = details
-	attributes.Identity = common.StringPtr(identity)
+	attributes.Identity = identity
 	historyEvent.WorkflowExecutionTerminatedEventAttributes = attributes
 
 	return historyEvent
@@ -821,7 +821,7 @@ func (b *HistoryBuilder) newWorkflowExecutionCancelRequestedEvent(cause string,
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeWorkflowExecutionCancelRequested)
 	attributes := &types.WorkflowExecutionCancelRequestedEventAttributes{}
 	attributes.Cause = common.StringPtr(cause)
-	attributes.Identity = common.StringPtr(common.StringDefault(request.CancelRequest.Identity))
+	attributes.Identity = request.CancelRequest.Identity
 	if request.ExternalInitiatedEventID != nil {
 		attributes.ExternalInitiatedEventID = common.Int64Ptr(*request.ExternalInitiatedEventID)
 	}
@@ -1152,9 +1152,9 @@ func setDecisionTaskScheduledEventInfo(historyEvent *types.HistoryEvent, taskLis
 	startToCloseTimeoutSeconds int32, attempt int64) *types.HistoryEvent {
 	attributes := &types.DecisionTaskScheduledEventAttributes{}
 	attributes.TaskList = &types.TaskList{}
-	attributes.TaskList.Name = common.StringPtr(taskList)
+	attributes.TaskList.Name = taskList
 	attributes.StartToCloseTimeoutSeconds = common.Int32Ptr(startToCloseTimeoutSeconds)
-	attributes.Attempt = common.Int64Ptr(attempt)
+	attributes.Attempt = attempt
 	historyEvent.DecisionTaskScheduledEventAttributes = attributes
 
 	return historyEvent
@@ -1164,8 +1164,8 @@ func setDecisionTaskStartedEventInfo(historyEvent *types.HistoryEvent, Scheduled
 	identity string) *types.HistoryEvent {
 	attributes := &types.DecisionTaskStartedEventAttributes{}
 	attributes.ScheduledEventID = common.Int64Ptr(ScheduledEventID)
-	attributes.Identity = common.StringPtr(identity)
-	attributes.RequestID = common.StringPtr(requestID)
+	attributes.Identity = identity
+	attributes.RequestID = requestID
 	historyEvent.DecisionTaskStartedEventAttributes = attributes
 
 	return historyEvent

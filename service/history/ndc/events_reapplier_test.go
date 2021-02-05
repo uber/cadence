@@ -82,7 +82,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_AppliedEvent() {
 		EventID:   common.Int64Ptr(1),
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-			Identity:   common.StringPtr("test"),
+			Identity:   "test",
 			SignalName: common.StringPtr("signal"),
 			Input:      []byte{},
 		},
@@ -116,7 +116,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_Noop() {
 		EventID:   common.Int64Ptr(1),
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-			Identity:   common.StringPtr("test"),
+			Identity:   "test",
 			SignalName: common.StringPtr("signal"),
 			Input:      []byte{},
 		},
@@ -143,7 +143,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_PartialAppliedEvent() {
 		EventID:   common.Int64Ptr(1),
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-			Identity:   common.StringPtr("test"),
+			Identity:   "test",
 			SignalName: common.StringPtr("signal"),
 			Input:      []byte{},
 		},
@@ -152,7 +152,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_PartialAppliedEvent() {
 		EventID:   common.Int64Ptr(2),
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-			Identity:   common.StringPtr("test"),
+			Identity:   "test",
 			SignalName: common.StringPtr("signal"),
 			Input:      []byte{},
 		},
@@ -192,7 +192,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_Error() {
 		EventID:   common.Int64Ptr(1),
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-			Identity:   common.StringPtr("test"),
+			Identity:   "test",
 			SignalName: common.StringPtr("signal"),
 			Input:      []byte{},
 		},

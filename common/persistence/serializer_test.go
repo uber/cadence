@@ -76,7 +76,7 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			Result:           []byte("result-1-event-1"),
 			ScheduledEventID: common.Int64Ptr(4),
 			StartedEventID:   common.Int64Ptr(5),
-			Identity:         common.StringPtr("event-1"),
+			Identity:         "event-1",
 		},
 	}
 
@@ -90,12 +90,12 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 	resetPoints0 := &types.ResetPoints{
 		Points: []*types.ResetPointInfo{
 			{
-				BinaryChecksum:           common.StringPtr("bad-binary-cs"),
+				BinaryChecksum:           "bad-binary-cs",
 				RunID:                    "test-run-id",
 				FirstDecisionCompletedID: common.Int64Ptr(123),
 				CreatedTimeNano:          common.Int64Ptr(456),
 				ExpiringTimeNano:         common.Int64Ptr(789),
-				Resettable:               common.BoolPtr(true),
+				Resettable:               true,
 			},
 		},
 	}
@@ -143,7 +143,7 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 
 	domainFilter := &types.DomainFilter{
 		DomainIDs:    []string{"domain1", "domain2"},
-		ReverseMatch: common.BoolPtr(true),
+		ReverseMatch: true,
 	}
 	processingQueueStateMap := map[string][]*types.ProcessingQueueState{
 		"cluster1": {

@@ -197,6 +197,10 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *taskListID,
 		return nil, err
 	}
 	e.taskLists[*taskList] = mgr
+	e.metricsClient.Scope(metrics.MatchingTaskListMgrScope).UpdateGauge(
+		metrics.TaskListManagersGauge,
+		float64(len(e.taskLists)),
+	)
 	e.taskListsLock.Unlock()
 	err = mgr.Start()
 	if err != nil {
@@ -218,6 +222,10 @@ func (e *matchingEngineImpl) removeTaskListManager(id *taskListID) {
 	e.taskListsLock.Lock()
 	defer e.taskListsLock.Unlock()
 	delete(e.taskLists, *id)
+	e.metricsClient.Scope(metrics.MatchingTaskListMgrScope).UpdateGauge(
+		metrics.TaskListManagersGauge,
+		float64(len(e.taskLists)),
+	)
 }
 
 // AddDecisionTask either delivers task directly to waiting poller or save it into task list persistence.
@@ -383,7 +391,7 @@ pollLoop:
 				PreviousStartedEventID:    mutableStateResp.PreviousStartedEventID,
 				NextEventID:               mutableStateResp.NextEventID,
 				WorkflowType:              mutableStateResp.WorkflowType,
-				StickyExecutionEnabled:    common.BoolPtr(isStickyEnabled),
+				StickyExecutionEnabled:    isStickyEnabled,
 				WorkflowExecutionTaskList: mutableStateResp.TaskList,
 				BranchToken:               mutableStateResp.CurrentBranchToken,
 			}
@@ -736,7 +744,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 		queryRequest := task.query.request
 		taskToken := &common.QueryTaskToken{
 			DomainID: queryRequest.DomainUUID,
-			TaskList: *queryRequest.TaskList.Name,
+			TaskList: queryRequest.TaskList.Name,
 			TaskID:   task.query.taskID,
 		}
 		token, _ = e.tokenSerializer.SerializeQueryTaskToken(taskToken)
@@ -774,7 +782,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 		panic("GetActivityTaskScheduledEventAttributes is not set")
 	}
 	attributes := scheduledEvent.ActivityTaskScheduledEventAttributes
-	if attributes.ActivityID == nil {
+	if attributes.ActivityID == "" {
 		panic("ActivityTaskScheduledEventAttributes.ActivityID is not set")
 	}
 	if task.responseC == nil {
@@ -806,7 +814,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 	}
 
 	response.TaskToken, _ = e.tokenSerializer.Serialize(token)
-	response.Attempt = common.Int32Ptr(int32(token.ScheduleAttempt))
+	response.Attempt = int32(token.ScheduleAttempt)
 	response.HeartbeatDetails = historyResponse.HeartbeatDetails
 	response.WorkflowType = historyResponse.WorkflowType
 	response.WorkflowDomain = historyResponse.WorkflowDomain
@@ -823,7 +831,7 @@ func (e *matchingEngineImpl) recordDecisionTaskStarted(
 		WorkflowExecution: task.workflowExecution(),
 		ScheduleID:        &task.event.ScheduleID,
 		TaskID:            &task.event.TaskID,
-		RequestID:         common.StringPtr(uuid.New()),
+		RequestID:         uuid.New(),
 		PollRequest:       pollReq,
 	}
 	var resp *types.RecordDecisionTaskStartedResponse
@@ -852,7 +860,7 @@ func (e *matchingEngineImpl) recordActivityTaskStarted(
 		WorkflowExecution: task.workflowExecution(),
 		ScheduleID:        &task.event.ScheduleID,
 		TaskID:            &task.event.TaskID,
-		RequestID:         common.StringPtr(uuid.New()),
+		RequestID:         uuid.New(),
 		PollRequest:       pollReq,
 	}
 	var resp *types.RecordActivityTaskStartedResponse

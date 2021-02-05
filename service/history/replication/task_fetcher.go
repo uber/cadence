@@ -284,7 +284,7 @@ func (f *taskFetcherImpl) getMessages(
 
 	request := &types.GetReplicationMessagesRequest{
 		Tokens:      tokens,
-		ClusterName: common.StringPtr(f.currentCluster),
+		ClusterName: f.currentCluster,
 	}
 	response, err := f.remotePeer.GetReplicationMessages(ctx, request)
 	if err != nil {
