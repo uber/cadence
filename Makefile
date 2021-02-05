@@ -288,7 +288,7 @@ test: bins ## Build and run all tests
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(PKG_TEST_DIRS); do \
-		go test -timeout $(TEST_TIMEOUT) -race -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
+		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
 release: go-generate test ## Re-generate generated code and run tests
@@ -297,7 +297,7 @@ test_e2e: bins
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(INTEG_TEST_ROOT); do \
-		go test -timeout $(TEST_TIMEOUT) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
+		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
 # need to run end-to-end xdc tests with race detector off because of ringpop bug causing data race issue
@@ -305,7 +305,7 @@ test_e2e_xdc: bins
 	@rm -f test
 	@rm -f test.log
 	@for dir in $(INTEG_TEST_XDC_ROOT); do \
-		go test -timeout $(TEST_TIMEOUT) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
+		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
 cover_profile: clean bins_nothrift
