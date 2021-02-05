@@ -623,7 +623,7 @@ func (s *mutableStateSuite) TestTransientDecisionTaskStart_CurrentVersionChanged
 		decisionScheduleID,
 		uuid.New(),
 		&types.PollForDecisionTaskRequest{
-			Identity: identityHistoryService,
+			Identity: IdentityHistoryService,
 		},
 	)
 	s.NoError(err)
