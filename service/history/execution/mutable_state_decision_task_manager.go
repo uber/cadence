@@ -379,8 +379,15 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduledEventAsHea
 	scheduleID := m.msb.GetNextEventID() // we will generate the schedule event later for repeatedly failing decisions
 	// Avoid creating new history events when decisions are continuously failing
 	scheduleTime := m.msb.timeSource.Now().UnixNano()
-	if m.msb.executionInfo.DecisionAttempt == 0 {
-		newDecisionEvent = m.msb.hBuilder.AddDecisionTaskScheduledEvent(taskList, startToCloseTimeoutSeconds,
+	useNonTransientDecision, err := m.shouldUpdateLastWriteVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	if m.msb.executionInfo.DecisionAttempt == 0 || useNonTransientDecision {
+		newDecisionEvent = m.msb.hBuilder.AddDecisionTaskScheduledEvent(
+			taskList,
+			startToCloseTimeoutSeconds,
 			m.msb.executionInfo.DecisionAttempt)
 		scheduleID = newDecisionEvent.GetEventID()
 		scheduleTime = newDecisionEvent.GetTimestamp()
@@ -476,8 +483,13 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskStartedEvent(
 	startedID := scheduleID + 1
 	tasklist := request.TaskList.GetName()
 	startTime := m.msb.timeSource.Now().UnixNano()
+	useNonTransientDecision, err := m.shouldUpdateLastWriteVersion()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// First check to see if new events came since transient decision was scheduled
-	if decision.Attempt > 0 && decision.ScheduleID != m.msb.GetNextEventID() {
+	if decision.Attempt > 0 && (decision.ScheduleID != m.msb.GetNextEventID() || useNonTransientDecision) {
 		// Also create a new DecisionTaskScheduledEvent since new events came in when it was scheduled
 		scheduleEvent := m.msb.hBuilder.AddDecisionTaskScheduledEvent(tasklist, decision.DecisionTimeout, 0)
 		scheduleID = scheduleEvent.GetEventID()
@@ -492,7 +504,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskStartedEvent(
 		startTime = event.GetTimestamp()
 	}
 
-	decision, err := m.ReplicateDecisionTaskStartedEvent(decision, m.msb.GetCurrentVersion(), scheduleID, startedID, requestID, startTime)
+	decision, err = m.ReplicateDecisionTaskStartedEvent(decision, m.msb.GetCurrentVersion(), scheduleID, startedID, requestID, startTime)
 	// TODO merge active & passive task generation
 	if err := m.msb.taskGenerator.GenerateDecisionStartTasks(
 		m.msb.unixNanoToTime(startTime), // start time is now
@@ -646,10 +658,8 @@ func (m *mutableStateDecisionTaskManagerImpl) FailDecision(
 		TaskList:                   "",
 		OriginalScheduledTimestamp: 0,
 	}
-	currentDecisionVersion := m.msb.GetExecutionInfo().DecisionVersion
-	currentVersion := m.msb.GetCurrentVersion()
-	// If the mutable state current version is different to the decision version, generate non-transient decision
-	if incrementAttempt && currentDecisionVersion == currentVersion {
+
+	if incrementAttempt {
 		failDecisionInfo.Attempt = m.msb.executionInfo.DecisionAttempt + 1
 		failDecisionInfo.ScheduledTimestamp = m.msb.timeSource.Now().UnixNano()
 
@@ -808,4 +818,14 @@ func (m *mutableStateDecisionTaskManagerImpl) afterAddDecisionTaskCompletedEvent
 ) error {
 	m.msb.executionInfo.LastProcessedEvent = event.GetDecisionTaskCompletedEventAttributes().GetStartedEventID()
 	return m.msb.addBinaryCheckSumIfNotExists(event, maxResetPoints)
+}
+
+func (m *mutableStateDecisionTaskManagerImpl) shouldUpdateLastWriteVersion() (bool, error) {
+
+	decisionVersion := m.msb.getDecisionInfo().Version
+	lastWriteVersion, err := m.msb.GetLastWriteVersion()
+	if err != nil {
+		return false, err
+	}
+	return decisionVersion != lastWriteVersion, nil
 }
