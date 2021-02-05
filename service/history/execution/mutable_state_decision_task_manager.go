@@ -379,10 +379,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduledEventAsHea
 	scheduleID := m.msb.GetNextEventID() // we will generate the schedule event later for repeatedly failing decisions
 	// Avoid creating new history events when decisions are continuously failing
 	scheduleTime := m.msb.timeSource.Now().UnixNano()
-	useNonTransientDecision, err := m.shouldUpdateLastWriteVersion()
-	if err != nil {
-		return nil, err
-	}
+	useNonTransientDecision := m.shouldUpdateLastWriteVersion()
 
 	if m.msb.executionInfo.DecisionAttempt == 0 || useNonTransientDecision {
 		newDecisionEvent = m.msb.hBuilder.AddDecisionTaskScheduledEvent(
@@ -483,10 +480,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskStartedEvent(
 	startedID := scheduleID + 1
 	tasklist := request.TaskList.GetName()
 	startTime := m.msb.timeSource.Now().UnixNano()
-	useNonTransientDecision, err := m.shouldUpdateLastWriteVersion()
-	if err != nil {
-		return nil, nil, err
-	}
+	useNonTransientDecision := m.shouldUpdateLastWriteVersion()
 
 	// First check to see if new events came since transient decision was scheduled
 	if decision.Attempt > 0 && (decision.ScheduleID != m.msb.GetNextEventID() || useNonTransientDecision) {
@@ -504,7 +498,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskStartedEvent(
 		startTime = event.GetTimestamp()
 	}
 
-	decision, err = m.ReplicateDecisionTaskStartedEvent(decision, m.msb.GetCurrentVersion(), scheduleID, startedID, requestID, startTime)
+	decision, err := m.ReplicateDecisionTaskStartedEvent(decision, m.msb.GetCurrentVersion(), scheduleID, startedID, requestID, startTime)
 	// TODO merge active & passive task generation
 	if err := m.msb.taskGenerator.GenerateDecisionStartTasks(
 		m.msb.unixNanoToTime(startTime), // start time is now
@@ -820,12 +814,13 @@ func (m *mutableStateDecisionTaskManagerImpl) afterAddDecisionTaskCompletedEvent
 	return m.msb.addBinaryCheckSumIfNotExists(event, maxResetPoints)
 }
 
-func (m *mutableStateDecisionTaskManagerImpl) shouldUpdateLastWriteVersion() (bool, error) {
+func (m *mutableStateDecisionTaskManagerImpl) shouldUpdateLastWriteVersion() bool {
 
 	decisionVersion := m.msb.getDecisionInfo().Version
 	lastWriteVersion, err := m.msb.GetLastWriteVersion()
 	if err != nil {
-		return false, err
+		// The error is version history has no item. This is expected for the first batch of a workflow.
+		return false
 	}
-	return decisionVersion != lastWriteVersion, nil
+	return decisionVersion != lastWriteVersion
 }
