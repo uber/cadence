@@ -550,7 +550,7 @@ func (s *mutableStateSuite) TestTransientDecisionTaskSchedule_CurrentVersionChan
 	err = s.msBuilder.UpdateCurrentVersion(version+1, true)
 	s.NoError(err)
 	versionHistories := s.msBuilder.GetVersionHistories()
-	versionHistory,err := versionHistories.GetCurrentVersionHistory()
+	versionHistory, err := versionHistories.GetCurrentVersionHistory()
 	s.NoError(err)
 	versionHistory.AddOrUpdateItem(&persistence.VersionHistoryItem{
 		EventID: 3,
@@ -580,7 +580,6 @@ func (s *mutableStateSuite) TestTransientDecisionTaskStart_CurrentVersionChanged
 	_, _ = s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
 	err := s.msBuilder.ReplicateDecisionTaskFailedEvent()
 	s.NoError(err)
-
 
 	decisionScheduleID := int64(4)
 	now := time.Now()
@@ -613,7 +612,7 @@ func (s *mutableStateSuite) TestTransientDecisionTaskStart_CurrentVersionChanged
 	err = s.msBuilder.UpdateCurrentVersion(version+1, true)
 	s.NoError(err)
 	versionHistories := s.msBuilder.GetVersionHistories()
-	versionHistory,err := versionHistories.GetCurrentVersionHistory()
+	versionHistory, err := versionHistories.GetCurrentVersionHistory()
 	s.NoError(err)
 	versionHistory.AddOrUpdateItem(&persistence.VersionHistoryItem{
 		EventID: 3,

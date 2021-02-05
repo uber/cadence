@@ -817,11 +817,11 @@ func (m *mutableStateDecisionTaskManagerImpl) afterAddDecisionTaskCompletedEvent
 
 func (m *mutableStateDecisionTaskManagerImpl) shouldUpdateLastWriteVersion() bool {
 
-	decisionVersion := m.msb.getDecisionInfo().Version
+	currentVersion := m.msb.GetCurrentVersion()
 	lastWriteVersion, err := m.msb.GetLastWriteVersion()
 	if err != nil {
 		// The error is version history has no item. This is expected for the first batch of a workflow.
 		return false
 	}
-	return decisionVersion != lastWriteVersion
+	return currentVersion != lastWriteVersion
 }
