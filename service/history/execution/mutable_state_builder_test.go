@@ -533,6 +533,105 @@ func (s *mutableStateSuite) TestEventReapplied() {
 	s.True(isReapplied)
 }
 
+func (s *mutableStateSuite) TestTransientDecisionTaskSchedule_CurrentVersionChanged() {
+	version := int64(2000)
+	runID := uuid.New()
+	s.msBuilder = NewMutableStateBuilderWithVersionHistoriesWithEventV2(
+		s.mockShard,
+		s.logger,
+		version,
+		runID,
+		testGlobalDomainEntry,
+	).(*mutableStateBuilder)
+	_, _ = s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
+	err := s.msBuilder.ReplicateDecisionTaskFailedEvent()
+	s.NoError(err)
+
+	err = s.msBuilder.UpdateCurrentVersion(version+1, true)
+	s.NoError(err)
+	versionHistories := s.msBuilder.GetVersionHistories()
+	versionHistory,err := versionHistories.GetCurrentVersionHistory()
+	s.NoError(err)
+	versionHistory.AddOrUpdateItem(&persistence.VersionHistoryItem{
+		EventID: 3,
+		Version: version,
+	})
+
+	now := time.Now()
+	di, err := s.msBuilder.AddDecisionTaskScheduledEventAsHeartbeat(true, now.UnixNano())
+	s.NoError(err)
+	s.NotNil(di)
+
+	s.Equal(0, len(s.msBuilder.GetHistoryBuilder().transientHistory))
+	s.Equal(1, len(s.msBuilder.GetHistoryBuilder().history))
+}
+
+func (s *mutableStateSuite) TestTransientDecisionTaskStart_CurrentVersionChanged() {
+	version := int64(2000)
+	runID := uuid.New()
+	s.msBuilder = NewMutableStateBuilderWithVersionHistoriesWithEventV2(
+		s.mockShard,
+		s.logger,
+		version,
+		runID,
+		testGlobalDomainEntry,
+	).(*mutableStateBuilder)
+	_, _ = s.prepareTransientDecisionCompletionFirstBatchReplicated(version, runID)
+	err := s.msBuilder.ReplicateDecisionTaskFailedEvent()
+	s.NoError(err)
+
+
+	decisionScheduleID := int64(4)
+	now := time.Now()
+	tasklist := "some random tasklist"
+	decisionTimeoutSecond := int32(11)
+	decisionAttempt := int64(2)
+	newDecisionScheduleEvent := &types.HistoryEvent{
+		Version:   common.Int64Ptr(version),
+		EventID:   common.Int64Ptr(decisionScheduleID),
+		Timestamp: common.Int64Ptr(now.UnixNano()),
+		EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
+			TaskList:                   &types.TaskList{Name: tasklist},
+			StartToCloseTimeoutSeconds: common.Int32Ptr(decisionTimeoutSecond),
+			Attempt:                    decisionAttempt,
+		},
+	}
+	di, err := s.msBuilder.ReplicateDecisionTaskScheduledEvent(
+		newDecisionScheduleEvent.GetVersion(),
+		newDecisionScheduleEvent.GetEventID(),
+		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.TaskList.GetName(),
+		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetStartToCloseTimeoutSeconds(),
+		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetAttempt(),
+		0,
+		0,
+	)
+	s.NoError(err)
+	s.NotNil(di)
+
+	err = s.msBuilder.UpdateCurrentVersion(version+1, true)
+	s.NoError(err)
+	versionHistories := s.msBuilder.GetVersionHistories()
+	versionHistory,err := versionHistories.GetCurrentVersionHistory()
+	s.NoError(err)
+	versionHistory.AddOrUpdateItem(&persistence.VersionHistoryItem{
+		EventID: 3,
+		Version: version,
+	})
+
+	_, _, err = s.msBuilder.AddDecisionTaskStartedEvent(
+		decisionScheduleID,
+		uuid.New(),
+		&types.PollForDecisionTaskRequest{
+			Identity: identityHistoryService,
+		},
+	)
+	s.NoError(err)
+
+	s.Equal(0, len(s.msBuilder.GetHistoryBuilder().transientHistory))
+	s.Equal(2, len(s.msBuilder.GetHistoryBuilder().history))
+}
+
 func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicated(version int64, runID string) (*types.HistoryEvent, *types.HistoryEvent) {
 	domainID := testDomainID
 	execution := types.WorkflowExecution{
