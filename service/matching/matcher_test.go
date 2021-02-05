@@ -86,20 +86,13 @@ func (t *MatcherTestSuite) TestLocalSyncMatch() {
 	<-t.fwdr.AddReqTokenC()
 	<-t.fwdr.PollReqTokenC()
 
-	pollStarted := make(chan struct{})
-
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		close(pollStarted)
+	ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.Poll(ctx)
-		cancel()
 		if err == nil {
 			task.finish(nil)
 		}
-	}()
+	})
 
-	<-pollStarted
-	time.Sleep(10 * time.Millisecond)
 	task := newInternalTask(t.newTaskInfo(), nil, types.TaskSourceHistory, "", true)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	syncMatch, err := t.matcher.Offer(ctx, task)
@@ -204,20 +197,13 @@ func (t *MatcherTestSuite) TestQueryLocalSyncMatch() {
 	<-t.fwdr.AddReqTokenC()
 	<-t.fwdr.PollReqTokenC()
 
-	pollStarted := make(chan struct{})
-
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		close(pollStarted)
+	ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.PollForQuery(ctx)
-		cancel()
 		if err == nil && task.isQuery() {
 			task.finish(nil)
 		}
-	}()
+	})
 
-	<-pollStarted
-	time.Sleep(10 * time.Millisecond)
 	task := newInternalQueryTask(uuid.New(), &types.MatchingQueryWorkflowRequest{})
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	resp, err := t.matcher.OfferQuery(ctx, task)
@@ -227,17 +213,12 @@ func (t *MatcherTestSuite) TestQueryLocalSyncMatch() {
 }
 
 func (t *MatcherTestSuite) TestQueryRemoteSyncMatch() {
-	pollSigC := make(chan struct{})
-
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		<-pollSigC
+	ready := ensureAsyncAfterReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.PollForQuery(ctx)
-		cancel()
 		if err == nil && task.isQuery() {
 			task.finish(nil)
 		}
-	}()
+	})
 
 	var remotePollErr error
 	var remotePollResp types.MatchingPollForDecisionTaskResponse
@@ -263,8 +244,7 @@ func (t *MatcherTestSuite) TestQueryRemoteSyncMatch() {
 		func(arg0 context.Context, arg1 *types.MatchingQueryWorkflowRequest) {
 			req = arg1
 			task.forwardedFrom = req.GetForwardedFrom()
-			close(pollSigC)
-			time.Sleep(10 * time.Millisecond)
+			ready()
 			t.rootMatcher.OfferQuery(ctx, task)
 		},
 	).Return(&types.QueryWorkflowResponse{QueryResult: []byte("answer")}, nil)
@@ -284,18 +264,14 @@ func (t *MatcherTestSuite) TestQueryRemoteSyncMatchError() {
 	<-t.fwdr.PollReqTokenC()
 
 	matched := false
-	pollSigC := make(chan struct{})
 
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		<-pollSigC
+	ready := ensureAsyncAfterReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.PollForQuery(ctx)
-		cancel()
 		if err == nil && task.isQuery() {
 			matched = true
 			task.finish(nil)
 		}
-	}()
+	})
 
 	task := newInternalQueryTask(uuid.New(), &types.MatchingQueryWorkflowRequest{})
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -304,8 +280,7 @@ func (t *MatcherTestSuite) TestQueryRemoteSyncMatchError() {
 	t.client.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Do(
 		func(arg0 context.Context, arg1 *types.MatchingQueryWorkflowRequest) {
 			req = arg1
-			close(pollSigC)
-			time.Sleep(10 * time.Millisecond)
+			ready()
 		},
 	).Return(nil, errMatchingHostThrottle)
 
@@ -322,20 +297,13 @@ func (t *MatcherTestSuite) TestMustOfferLocalMatch() {
 	<-t.fwdr.AddReqTokenC()
 	<-t.fwdr.PollReqTokenC()
 
-	pollStarted := make(chan struct{})
-
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		close(pollStarted)
+	ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.Poll(ctx)
-		cancel()
 		if err == nil {
 			task.finish(nil)
 		}
-	}()
+	})
 
-	<-pollStarted
-	time.Sleep(10 * time.Millisecond)
 	task := newInternalTask(t.newTaskInfo(), nil, types.TaskSourceHistory, "", false)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	err := t.matcher.MustOffer(ctx, task)
@@ -364,12 +332,6 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 		},
 	).Return(&remotePollResp, remotePollErr).AnyTimes()
 
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
-		t.matcher.Poll(ctx)
-		cancel()
-	}()
-
 	taskCompleted := false
 	completionFunc := func(*persistence.TaskInfo, error) {
 		taskCompleted = true
@@ -391,6 +353,13 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 		},
 	).Return(nil)
 
+	// Poll needs to happen before MustOffer, or else it goes into the non-blocking path.
+	ensureAsyncReady(time.Second, func(ctx context.Context) {
+		task, err := t.matcher.Poll(ctx)
+		t.Nil(err)
+		t.NotNil(task)
+	})
+
 	t.NoError(t.matcher.MustOffer(ctx, task))
 	cancel()
 	t.NotNil(req)
@@ -411,12 +380,12 @@ func (t *MatcherTestSuite) TestRemotePoll() {
 		},
 	).Return(&types.MatchingPollForDecisionTaskResponse{}, nil)
 
-	go func() {
-		time.Sleep(10 * time.Millisecond)
+	ready := ensureAsyncAfterReady(0, func(_ context.Context) {
 		pollToken.release()
-	}()
+	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ready()
 	task, err := t.matcher.Poll(ctx)
 	cancel()
 	t.NoError(err)
@@ -435,12 +404,12 @@ func (t *MatcherTestSuite) TestRemotePollForQuery() {
 		},
 	).Return(&types.MatchingPollForDecisionTaskResponse{}, nil)
 
-	go func() {
-		time.Sleep(10 * time.Millisecond)
+	ready := ensureAsyncAfterReady(0, func(_ context.Context) {
 		pollToken.release()
-	}()
+	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ready()
 	task, err := t.matcher.PollForQuery(ctx)
 	cancel()
 	t.NoError(err)
@@ -465,4 +434,55 @@ func (t *MatcherTestSuite) newTaskInfo() *persistence.TaskInfo {
 		ScheduleID:             rand.Int63(),
 		ScheduleToStartTimeout: rand.Int31(),
 	}
+}
+
+// Try to ensure a blocking callback in a goroutine is not running until the thing immediately
+// after `ready()` has blocked, so tests can ensure that the callback contents happen last.
+//
+// Try to delay calling `ready()` until *immediately* before the blocking call for best results.
+//
+// This is a best-effort technique, as there is no way to reliably synchronize this kind of thing
+// without exposing internal latches or having a more sophisticated locking library than Go offers.
+// In case of flakiness, increase the time.Sleep and hope for the best.
+//
+// Note that adding fmt.Println() calls touches synchronization code (for I/O), so it may change behavior.
+func ensureAsyncAfterReady(ctxTimeout time.Duration, cb func(ctx context.Context)) (ready func()) {
+	return func() {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+			defer cancel()
+
+			// since `go func()` is non-blocking, the ready()-ing goroutine should generally continue,
+			// and read whatever blocking point is relevant before this goroutine runs.
+			// in many cases this sleep is unnecessary (especially with -cpu=1), but it does help.
+			time.Sleep(1 * time.Millisecond)
+
+			cb(ctx)
+		}()
+	}
+}
+
+// Try to ensure a blocking callback is actively blocked in a goroutine before returning, so tests can
+// ensure that the callback contents happen first.
+//
+// This is a best-effort technique, as there is no way to reliably synchronize this kind of thing
+// without exposing internal latches or having a more sophisticated locking library than Go offers.
+// In case of flakiness, increase the time.Sleep and hope for the best.
+//
+// Note that adding fmt.Println() calls touches synchronization code (for I/O), so it may change behavior.
+func ensureAsyncReady(ctxTimeout time.Duration, cb func(ctx context.Context)) {
+	running := make(chan struct{})
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+		defer cancel()
+
+		close(running)
+		cb(ctx)
+	}()
+	<-running // ensure the goroutine is alive
+
+	// `close(running)` is non-blocking, so it should generally begin polling before yielding control to other goroutines,
+	// but there is still a race to reach whatever blocking sync point exists between the code being tested.
+	// In many cases this sleep is completely unnecessary (especially with -cpu=1), but it does help.
+	time.Sleep(1 * time.Millisecond)
 }
