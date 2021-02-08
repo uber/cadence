@@ -33,10 +33,14 @@ import (
 	"github.com/uber/cadence/service/history/shard"
 )
 
-type UpdateWorkflowAction struct {
-	Noop           bool
-	CreateDecision bool
-}
+type (
+	UpdateWorkflowAction struct {
+		Noop           bool
+		CreateDecision bool
+	}
+
+	UpdateWorkflowActionFunc func(execution.Context, execution.MutableState) (*UpdateWorkflowAction, error)
+)
 
 var (
 	UpdateWorkflowWithNewDecision = &UpdateWorkflowAction{
@@ -47,7 +51,7 @@ var (
 	}
 )
 
-type UpdateWorkflowActionFunc func(execution.Context, execution.MutableState) (*UpdateWorkflowAction, error)
+///////////////////  Util function for loading workflow ///////////////////
 
 func LoadWorkflowOnce(
 	ctx context.Context,
@@ -124,65 +128,7 @@ func LoadWorkflow(
 	return nil, &types.InternalServiceError{Message: "unable to locate current workflow execution"}
 }
 
-func updateWorkflowHelper(
-	ctx context.Context,
-	workflowContext WorkflowContext,
-	now time.Time,
-	action UpdateWorkflowActionFunc,
-) (retError error) {
-
-UpdateHistoryLoop:
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
-		wfContext := workflowContext.GetContext()
-		mutableState := workflowContext.GetMutableState()
-
-		// conduct caller action
-		postActions, err := action(wfContext, mutableState)
-		if err != nil {
-			if err == ErrStaleState {
-				// Handler detected that cached workflow mutable could potentially be stale
-				// Reload workflow execution history
-				workflowContext.GetContext().Clear()
-				if attempt != conditionalRetryCount-1 {
-					_, err = workflowContext.ReloadMutableState(ctx)
-					if err != nil {
-						return err
-					}
-				}
-				continue UpdateHistoryLoop
-			}
-
-			// Returned error back to the caller
-			return err
-		}
-		if postActions.Noop {
-			return nil
-		}
-
-		if postActions.CreateDecision {
-			// Create a transfer task to schedule a decision task
-			if !mutableState.HasPendingDecision() {
-				_, err := mutableState.AddDecisionTaskScheduledEvent(false)
-				if err != nil {
-					return &types.InternalServiceError{Message: "Failed to add decision scheduled event."}
-				}
-			}
-		}
-
-		err = workflowContext.GetContext().UpdateWorkflowExecutionAsActive(ctx, now)
-		if err == execution.ErrConflict {
-			if attempt != conditionalRetryCount-1 {
-				_, err = workflowContext.ReloadMutableState(ctx)
-				if err != nil {
-					return err
-				}
-			}
-			continue UpdateHistoryLoop
-		}
-		return err
-	}
-	return ErrMaxAttemptsExceeded
-}
+///////////////////  Util function for updating workflows ///////////////////
 
 func UpdateWorkflowExecutionWithAction(
 	ctx context.Context,
@@ -259,17 +205,67 @@ func getUpdateWorkflowActionFunc(
 	}
 }
 
-func ValidateDomainUUID(
-	domainUUID string,
-) (string, error) {
+func updateWorkflowHelper(
+	ctx context.Context,
+	workflowContext WorkflowContext,
+	now time.Time,
+	action UpdateWorkflowActionFunc,
+) (retError error) {
 
-	if domainUUID == "" {
-		return "", &types.BadRequestError{Message: "Missing domain UUID."}
-	} else if uuid.Parse(domainUUID) == nil {
-		return "", &types.BadRequestError{Message: "Invalid domain UUID."}
+UpdateHistoryLoop:
+	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
+		wfContext := workflowContext.GetContext()
+		mutableState := workflowContext.GetMutableState()
+
+		// conduct caller action
+		postActions, err := action(wfContext, mutableState)
+		if err != nil {
+			if err == ErrStaleState {
+				// Handler detected that cached workflow mutable could potentially be stale
+				// Reload workflow execution history
+				workflowContext.GetContext().Clear()
+				if attempt != conditionalRetryCount-1 {
+					_, err = workflowContext.ReloadMutableState(ctx)
+					if err != nil {
+						return err
+					}
+				}
+				continue UpdateHistoryLoop
+			}
+
+			// Returned error back to the caller
+			return err
+		}
+		if postActions.Noop {
+			return nil
+		}
+
+		if postActions.CreateDecision {
+			// Create a transfer task to schedule a decision task
+			if !mutableState.HasPendingDecision() {
+				_, err := mutableState.AddDecisionTaskScheduledEvent(false)
+				if err != nil {
+					return &types.InternalServiceError{Message: "Failed to add decision scheduled event."}
+				}
+			}
+		}
+
+		err = workflowContext.GetContext().UpdateWorkflowExecutionAsActive(ctx, now)
+		if err == execution.ErrConflict {
+			if attempt != conditionalRetryCount-1 {
+				_, err = workflowContext.ReloadMutableState(ctx)
+				if err != nil {
+					return err
+				}
+			}
+			continue UpdateHistoryLoop
+		}
+		return err
 	}
-	return domainUUID, nil
+	return ErrMaxAttemptsExceeded
 }
+
+///////////////////  Util function for getting domain entry ///////////////////
 
 func GetActiveDomainEntry(
 	shard shard.Context,
@@ -307,4 +303,16 @@ func GetPendingActiveDomainEntry(
 	}
 
 	return domainEntry.IsDomainPendingActive(), nil
+}
+
+func ValidateDomainUUID(
+	domainUUID string,
+) (string, error) {
+
+	if domainUUID == "" {
+		return "", &types.BadRequestError{Message: "Missing domain UUID."}
+	} else if uuid.Parse(domainUUID) == nil {
+		return "", &types.BadRequestError{Message: "Invalid domain UUID."}
+	}
+	return domainUUID, nil
 }
