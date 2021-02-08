@@ -117,7 +117,7 @@ func New(
 
 // Start starts the scanner
 func (s *Scanner) Start() error {
-	backgroundActivityContext := context.Background()
+	backgroundActivityContext := newBackgroundContext(s.context)
 	var workerTaskListNames []string
 	var wtl []string
 
@@ -161,23 +161,33 @@ func (s *Scanner) startShardScanner(
 	ctx context.Context,
 	config *shardscanner.ScannerConfig,
 ) (context.Context, []string) {
-	scannerContextKey := shardscanner.ScannerContextKey(config.ScannerWFTypeName)
-	fixerContextKey := shardscanner.ScannerContextKey(config.FixerWFTypeName)
 	workerTaskListNames := []string{}
-	backgroundActivityContext := context.WithValue(ctx, scannerContextKey, s.context)
-
 	if config.DynamicParams.ScannerEnabled() {
-		backgroundActivityContext = context.WithValue(
-			backgroundActivityContext,
-			scannerContextKey,
+		ctx = context.WithValue(
+			ctx,
+			shardscanner.ScannerContextKey(config.ScannerWFTypeName),
 			getShardScannerContext(s.context, config),
 		)
+
+		go s.startWorkflowWithRetry(
+			config.StartWorkflowOptions,
+			config.ScannerWFTypeName,
+			shardscanner.ScannerWorkflowParams{
+				Shards: shardscanner.Shards{
+					Range: &shardscanner.ShardRange{
+						Min: 0,
+						Max: s.context.cfg.Persistence.NumHistoryShards,
+					},
+				},
+			})
+
+		workerTaskListNames = append(workerTaskListNames, config.StartWorkflowOptions.TaskList)
 	}
 
 	if config.DynamicParams.FixerEnabled() {
-		backgroundActivityContext = context.WithValue(
-			backgroundActivityContext,
-			fixerContextKey,
+		ctx = context.WithValue(
+			ctx,
+			shardscanner.ScannerContextKey(config.FixerWFTypeName),
 			getShardFixerContext(s.context, config),
 		)
 
@@ -192,23 +202,7 @@ func (s *Scanner) startShardScanner(
 		workerTaskListNames = append(workerTaskListNames, config.StartFixerOptions.TaskList)
 	}
 
-	if config.DynamicParams.ScannerEnabled() {
-		workerTaskListNames = append(workerTaskListNames, config.StartWorkflowOptions.TaskList)
-
-		go s.startWorkflowWithRetry(
-			config.StartWorkflowOptions,
-			config.ScannerWFTypeName,
-			shardscanner.ScannerWorkflowParams{
-				Shards: shardscanner.Shards{
-					Range: &shardscanner.ShardRange{
-						Min: 0,
-						Max: s.context.cfg.Persistence.NumHistoryShards,
-					},
-				},
-			})
-	}
-
-	return backgroundActivityContext, workerTaskListNames
+	return ctx, workerTaskListNames
 }
 
 func (s *Scanner) startWorkflowWithRetry(
@@ -259,6 +253,12 @@ func (s *Scanner) startWorkflow(
 	}
 	s.context.GetLogger().Info("workflow successfully started", tag.WorkflowType(workflowType))
 	return nil
+}
+
+func newBackgroundContext(scannerContext scannerContext) context.Context {
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, scannerContextKey, scannerContext)
+	return ctx
 }
 
 func getShardScannerContext(ctx scannerContext, config *shardscanner.ScannerConfig) shardscanner.Context {
