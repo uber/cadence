@@ -466,7 +466,7 @@ func FromReplicationMessages(t *types.ReplicationMessages) *replicator.Replicati
 	return &replicator.ReplicationMessages{
 		ReplicationTasks:       FromReplicationTaskArray(t.ReplicationTasks),
 		LastRetrievedMessageId: t.LastRetrievedMessageID,
-		HasMore:                t.HasMore,
+		HasMore:                &t.HasMore,
 		SyncShardStatus:        FromSyncShardStatus(t.SyncShardStatus),
 	}
 }
@@ -479,7 +479,7 @@ func ToReplicationMessages(t *replicator.ReplicationMessages) *types.Replication
 	return &types.ReplicationMessages{
 		ReplicationTasks:       ToReplicationTaskArray(t.ReplicationTasks),
 		LastRetrievedMessageID: t.LastRetrievedMessageId,
-		HasMore:                t.HasMore,
+		HasMore:                t.GetHasMore(),
 		SyncShardStatus:        ToSyncShardStatus(t.SyncShardStatus),
 	}
 }

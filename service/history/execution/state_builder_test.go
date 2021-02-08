@@ -1540,7 +1540,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkfl
 				WorkflowID: targetWorkflowID,
 				RunID:      targetRunID,
 			},
-			ChildWorkflowOnly: common.BoolPtr(childWorkflowOnly),
+			ChildWorkflowOnly: childWorkflowOnly,
 			Control:           control,
 		},
 	}
@@ -1679,7 +1679,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecu
 			},
 			SignalName:        common.StringPtr(signalName),
 			Input:             signalInput,
-			ChildWorkflowOnly: common.BoolPtr(childWorkflowOnly),
+			ChildWorkflowOnly: childWorkflowOnly,
 		},
 	}
 	si := &persistence.SignalInfo{

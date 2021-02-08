@@ -57,17 +57,7 @@ var (
 )
 
 type (
-	// TimerQueueAckMgr is the interface for acking timer task
-	TimerQueueAckMgr interface {
-		CompleteTimerTask(timerTask *persistence.TimerTaskInfo)
-	}
-
-	// QueueAckMgr is the interface for acking transfer task
-	QueueAckMgr interface {
-		CompleteQueueTask(taskID int64)
-	}
-
-	taskBase struct {
+	taskImpl struct {
 		sync.Mutex
 		Info
 
@@ -83,29 +73,13 @@ type (
 		scope         metrics.Scope // initialized when processing task to make the initialization parallel
 		taskExecutor  Executor
 		taskProcessor Processor
+		redispatchFn  func(task Task)
 		maxRetryCount dynamicconfig.IntPropertyFn
 
 		// TODO: following three fields should be removed after new task lifecycle is implemented
 		taskFilter        Filter
 		queueType         QueueType
 		shouldProcessTask bool
-	}
-
-	// TODO: we don't need the following two implementations after rewriting QueueAckMgr.
-	// (timer)QueueAckMgr should store queueTask object instead of just the key. Then by
-	// State() on the queueTask, it can know if the task has been acked or not.
-	timerTask struct {
-		*taskBase
-
-		ackMgr       TimerQueueAckMgr
-		redispatchFn func(task Task)
-	}
-
-	transferTask struct {
-		*taskBase
-
-		ackMgr       QueueAckMgr
-		redispatchFn func(task Task)
 	}
 )
 
@@ -121,24 +95,20 @@ func NewTimerTask(
 	redispatchFn func(task Task),
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
-	ackMgr TimerQueueAckMgr,
 ) Task {
-	return &timerTask{
-		taskBase: newQueueTaskBase(
-			shard,
-			taskInfo,
-			queueType,
-			GetTimerTaskMetricScope(taskInfo.GetTaskType(), queueType == QueueTypeActiveTimer),
-			logger,
-			taskFilter,
-			taskExecutor,
-			taskProcessor,
-			timeSource,
-			maxRetryCount,
-		),
-		ackMgr:       ackMgr,
-		redispatchFn: redispatchFn,
-	}
+	return newTask(
+		shard,
+		taskInfo,
+		queueType,
+		GetTimerTaskMetricScope(taskInfo.GetTaskType(), queueType == QueueTypeActiveTimer),
+		logger,
+		taskFilter,
+		taskExecutor,
+		taskProcessor,
+		timeSource,
+		maxRetryCount,
+		redispatchFn,
+	)
 }
 
 // NewTransferTask creates a new transfer task
@@ -153,27 +123,23 @@ func NewTransferTask(
 	redispatchFn func(task Task),
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
-	ackMgr QueueAckMgr,
 ) Task {
-	return &transferTask{
-		taskBase: newQueueTaskBase(
-			shard,
-			taskInfo,
-			queueType,
-			GetTransferTaskMetricsScope(taskInfo.GetTaskType(), queueType == QueueTypeActiveTransfer),
-			logger,
-			taskFilter,
-			taskExecutor,
-			taskProcessor,
-			timeSource,
-			maxRetryCount,
-		),
-		ackMgr:       ackMgr,
-		redispatchFn: redispatchFn,
-	}
+	return newTask(
+		shard,
+		taskInfo,
+		queueType,
+		GetTransferTaskMetricsScope(taskInfo.GetTaskType(), queueType == QueueTypeActiveTransfer),
+		logger,
+		taskFilter,
+		taskExecutor,
+		taskProcessor,
+		timeSource,
+		maxRetryCount,
+		redispatchFn,
+	)
 }
 
-func newQueueTaskBase(
+func newTask(
 	shard shard.Context,
 	taskInfo Info,
 	queueType QueueType,
@@ -184,7 +150,8 @@ func newQueueTaskBase(
 	taskProcessor Processor,
 	timeSource clock.TimeSource,
 	maxRetryCount dynamicconfig.IntPropertyFn,
-) *taskBase {
+	redispatchFn func(task Task),
+) *taskImpl {
 	var eventLogger eventLogger
 	if shard.GetConfig().EnableDebugMode &&
 		(queueType == QueueTypeActiveTimer || queueType == QueueTypeActiveTransfer) &&
@@ -193,7 +160,7 @@ func newQueueTaskBase(
 		eventLogger.AddEvent("Created task")
 	}
 
-	return &taskBase{
+	return &taskImpl{
 		Info:          taskInfo,
 		shard:         shard,
 		state:         ctask.TaskStatePending,
@@ -207,68 +174,20 @@ func newQueueTaskBase(
 		submitTime:    timeSource.Now(),
 		timeSource:    timeSource,
 		maxRetryCount: maxRetryCount,
+		redispatchFn:  redispatchFn,
 		taskFilter:    taskFilter,
 		taskExecutor:  taskExecutor,
 		taskProcessor: taskProcessor,
 	}
 }
 
-func (t *timerTask) Ack() {
-	t.taskBase.Ack()
-
-	timerTask, ok := t.Info.(*persistence.TimerTaskInfo)
-	if !ok {
-		return
-	}
-
-	if t.ackMgr != nil {
-		t.ackMgr.CompleteTimerTask(timerTask)
-	}
-}
-
-func (t *timerTask) Nack() {
-	t.taskBase.Nack()
-
-	// don't move the following code to taskBase as we need to
-	// submit & redispatch timerTask, not taskBase
-	if t.shouldResubmitOnNack() {
-		if submitted, _ := t.taskProcessor.TrySubmit(t); submitted {
-			return
-		}
-	}
-
-	t.redispatchFn(t)
-}
-
-func (t *transferTask) Ack() {
-	t.taskBase.Ack()
-
-	if t.ackMgr != nil {
-		t.ackMgr.CompleteQueueTask(t.GetTaskID())
-	}
-}
-
-func (t *transferTask) Nack() {
-	t.taskBase.Nack()
-
-	// don't move the following code to taskBase as we need to
-	// submit & redispatch transferTask, not taskBase
-	if t.shouldResubmitOnNack() {
-		if submitted, _ := t.taskProcessor.TrySubmit(t); submitted {
-			return
-		}
-	}
-
-	t.redispatchFn(t)
-}
-
-func (t *taskBase) Execute() error {
+func (t *taskImpl) Execute() error {
 	// TODO: after mergering active and standby queue,
 	// the task should be smart enough to tell if it should be
 	// processed as active or standby and use the corresponding
 	// task executor.
 	if t.scope == nil {
-		t.scope = GetOrCreateDomainTaggedScope(t.shard, t.scopeIdx, t.GetDomainID(), t.logger)
+		t.scope = getOrCreateDomainTaggedScope(t.shard, t.scopeIdx, t.GetDomainID(), t.logger)
 	}
 
 	var err error
@@ -292,7 +211,7 @@ func (t *taskBase) Execute() error {
 	return t.taskExecutor.Execute(t.Info, t.shouldProcessTask)
 }
 
-func (t *taskBase) HandleErr(
+func (t *taskImpl) HandleErr(
 	err error,
 ) (retErr error) {
 	defer func() {
@@ -388,7 +307,7 @@ func (t *taskBase) HandleErr(
 	return err
 }
 
-func (t *taskBase) RetryErr(
+func (t *taskImpl) RetryErr(
 	err error,
 ) bool {
 	if err == errWorkflowBusy || err == ErrTaskRedispatch || err == ErrTaskPendingActive || common.IsContextTimeoutError(err) {
@@ -398,7 +317,7 @@ func (t *taskBase) RetryErr(
 	return true
 }
 
-func (t *taskBase) Ack() {
+func (t *taskImpl) Ack() {
 	t.logEvent("Acked task")
 
 	t.Lock()
@@ -417,30 +336,37 @@ func (t *taskBase) Ack() {
 	}
 }
 
-func (t *taskBase) Nack() {
+func (t *taskImpl) Nack() {
 	t.logEvent("Nacked task")
 
 	t.Lock()
-	defer t.Unlock()
-
 	t.state = ctask.TaskStateNacked
+	t.Unlock()
+
+	if t.shouldResubmitOnNack() {
+		if submitted, _ := t.taskProcessor.TrySubmit(t); submitted {
+			return
+		}
+	}
+
+	t.redispatchFn(t)
 }
 
-func (t *taskBase) State() ctask.State {
+func (t *taskImpl) State() ctask.State {
 	t.Lock()
 	defer t.Unlock()
 
 	return t.state
 }
 
-func (t *taskBase) Priority() int {
+func (t *taskImpl) Priority() int {
 	t.Lock()
 	defer t.Unlock()
 
 	return t.priority
 }
 
-func (t *taskBase) SetPriority(
+func (t *taskImpl) SetPriority(
 	priority int,
 ) {
 	t.Lock()
@@ -449,22 +375,22 @@ func (t *taskBase) SetPriority(
 	t.priority = priority
 }
 
-func (t *taskBase) GetShard() shard.Context {
+func (t *taskImpl) GetShard() shard.Context {
 	return t.shard
 }
 
-func (t *taskBase) GetAttempt() int {
+func (t *taskImpl) GetAttempt() int {
 	t.Lock()
 	defer t.Unlock()
 
 	return t.attempt
 }
 
-func (t *taskBase) GetQueueType() QueueType {
+func (t *taskImpl) GetQueueType() QueueType {
 	return t.queueType
 }
 
-func (t *taskBase) shouldResubmitOnNack() bool {
+func (t *taskImpl) shouldResubmitOnNack() bool {
 	// TODO: for now only resubmit active task on Nack()
 	// we can also consider resubmit standby tasks that fails due to certain error types
 	// this may require change the Nack() interface to Nack(error)
@@ -472,7 +398,7 @@ func (t *taskBase) shouldResubmitOnNack() bool {
 		(t.queueType == QueueTypeActiveTransfer || t.queueType == QueueTypeActiveTimer)
 }
 
-func (t *taskBase) logEvent(
+func (t *taskImpl) logEvent(
 	msg string,
 	detail ...interface{},
 ) {
@@ -481,9 +407,9 @@ func (t *taskBase) logEvent(
 	}
 }
 
-// GetOrCreateDomainTaggedScope returns cached domain-tagged metrics scope if exists
+// getOrCreateDomainTaggedScope returns cached domain-tagged metrics scope if exists
 // otherwise, it creates a new domain-tagged scope, cache and return the scope
-func GetOrCreateDomainTaggedScope(
+func getOrCreateDomainTaggedScope(
 	shard shard.Context,
 	scopeIdx int,
 	domainID string,

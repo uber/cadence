@@ -207,7 +207,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	}
 	expectedResponse.ScheduledEventID = di.ScheduleID
 	expectedResponse.StartedEventID = di.ScheduleID + 1
-	expectedResponse.StickyExecutionEnabled = common.BoolPtr(true)
+	expectedResponse.StickyExecutionEnabled = true
 	expectedResponse.NextEventID = msBuilder.GetNextEventID() + 1
 	expectedResponse.Attempt = di.Attempt
 	expectedResponse.WorkflowExecutionTaskList = &types.TaskList{

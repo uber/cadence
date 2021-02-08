@@ -556,7 +556,7 @@ Update_History_Loop:
 					eventBatchFirstEventID,
 					common.FailureReasonTransactionSizeExceedsLimit,
 					[]byte(updateErr.Error()),
-					identityHistoryService,
+					execution.IdentityHistoryService,
 				); err != nil {
 					return nil, err
 				}
@@ -591,7 +591,7 @@ Update_History_Loop:
 		activitiesToDispatchLocally := make(map[string]*types.ActivityLocalDispatchInfo)
 		for _, dr := range decisionResults {
 			if dr.activityDispatchInfo != nil {
-				activitiesToDispatchLocally[*dr.activityDispatchInfo.ActivityID] = dr.activityDispatchInfo
+				activitiesToDispatchLocally[dr.activityDispatchInfo.ActivityID] = dr.activityDispatchInfo
 			}
 		}
 		resp.ActivitiesToDispatchLocally = activitiesToDispatchLocally
@@ -603,7 +603,7 @@ Update_History_Loop:
 				return nil, err
 			}
 			// sticky is always enabled when worker request for new decision task from RespondDecisionTaskCompleted
-			resp.StartedResponse.StickyExecutionEnabled = common.BoolPtr(true)
+			resp.StartedResponse.StickyExecutionEnabled = true
 		}
 
 		return resp, nil
@@ -630,7 +630,7 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 	// before it was started.
 	response.ScheduledEventID = decision.ScheduleID
 	response.StartedEventID = decision.StartedID
-	response.StickyExecutionEnabled = common.BoolPtr(msBuilder.IsStickyTaskListEnabled())
+	response.StickyExecutionEnabled = msBuilder.IsStickyTaskListEnabled()
 	response.NextEventID = msBuilder.GetNextEventID()
 	response.Attempt = decision.Attempt
 	response.WorkflowExecutionTaskList = &types.TaskList{

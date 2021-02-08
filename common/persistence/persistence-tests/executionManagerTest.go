@@ -1116,7 +1116,7 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 				RunID:                    "test-runID",
 				FirstDecisionCompletedID: 123,
 				CreatedTimeNano:          common.Int64Ptr(456),
-				Resettable:               common.BoolPtr(true),
+				Resettable:               true,
 				ExpiringTimeNano:         common.Int64Ptr(789),
 			},
 		},
@@ -3045,7 +3045,7 @@ func (s *ExecutionManagerSuite) TestContinueAsNew() {
 				RunID:                    "test-runID",
 				FirstDecisionCompletedID: 123,
 				CreatedTimeNano:          common.Int64Ptr(456),
-				Resettable:               common.BoolPtr(true),
+				Resettable:               true,
 				ExpiringTimeNano:         common.Int64Ptr(789),
 			},
 		},
@@ -5181,7 +5181,7 @@ func timeComparator(t1, t2 time.Time, timeTolerance time.Duration) bool {
 func createTransferPQS(cluster1 string, level1 int32, ackLevel1 int64, cluster2 string, level2 int32, ackLevel2 int64) types.ProcessingQueueStates {
 	domainFilter := &types.DomainFilter{
 		DomainIDs:    nil,
-		ReverseMatch: common.BoolPtr(true),
+		ReverseMatch: true,
 	}
 	processingQueueStateMap := map[string][]*types.ProcessingQueueState{
 		cluster1: {
@@ -5207,7 +5207,7 @@ func createTransferPQS(cluster1 string, level1 int32, ackLevel1 int64, cluster2 
 func createTimerPQS(cluster1 string, level1 int32, ackLevel1 time.Time, cluster2 string, level2 int32, ackLevel2 time.Time) types.ProcessingQueueStates {
 	domainFilter := &types.DomainFilter{
 		DomainIDs:    []string{},
-		ReverseMatch: common.BoolPtr(true),
+		ReverseMatch: true,
 	}
 	processingQueueStateMap := map[string][]*types.ProcessingQueueState{
 		cluster1: {

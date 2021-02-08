@@ -210,7 +210,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyExpired() {
 	}
 	expectedResponse.ScheduledEventID = di.ScheduleID
 	expectedResponse.StartedEventID = di.ScheduleID + 1
-	expectedResponse.StickyExecutionEnabled = common.BoolPtr(false)
+	expectedResponse.StickyExecutionEnabled = false
 	expectedResponse.NextEventID = msBuilder.GetNextEventID() + 1
 	expectedResponse.Attempt = di.Attempt
 	expectedResponse.WorkflowExecutionTaskList = &types.TaskList{
@@ -283,7 +283,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	}
 	expectedResponse.ScheduledEventID = di.ScheduleID
 	expectedResponse.StartedEventID = di.ScheduleID + 1
-	expectedResponse.StickyExecutionEnabled = common.BoolPtr(true)
+	expectedResponse.StickyExecutionEnabled = true
 	expectedResponse.NextEventID = msBuilder.GetNextEventID() + 1
 	expectedResponse.Attempt = di.Attempt
 	expectedResponse.WorkflowExecutionTaskList = &types.TaskList{

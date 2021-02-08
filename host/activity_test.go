@@ -86,7 +86,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 			return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityID:                    strconv.Itoa(int(activityCounter)),
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
@@ -204,7 +204,7 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 				{
 					DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 					ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    common.StringPtr("0"),
+						ActivityID:                    "0",
 						ActivityType:                  &types.ActivityType{Name: activityName},
 						TaskList:                      &types.TaskList{Name: tl},
 						Input:                         nil,
@@ -213,11 +213,11 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(4),
 						HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
 						RetryPolicy: &types.RetryPolicy{
-							InitialIntervalInSeconds:    common.Int32Ptr(1),
-							MaximumAttempts:             common.Int32Ptr(3),
-							MaximumIntervalInSeconds:    common.Int32Ptr(1),
-							BackoffCoefficient:          common.Float64Ptr(1),
-							ExpirationIntervalInSeconds: common.Int32Ptr(100),
+							InitialIntervalInSeconds:    1,
+							MaximumAttempts:             3,
+							MaximumIntervalInSeconds:    1,
+							BackoffCoefficient:          1,
+							ExpirationIntervalInSeconds: 100,
 						},
 					},
 				},
@@ -382,7 +382,7 @@ func (s *integrationSuite) TestActivityRetry() {
 				{
 					DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 					ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    common.StringPtr("A"),
+						ActivityID:                    "A",
 						ActivityType:                  &types.ActivityType{Name: activityName},
 						TaskList:                      &types.TaskList{Name: tl},
 						Input:                         []byte("1"),
@@ -391,19 +391,19 @@ func (s *integrationSuite) TestActivityRetry() {
 						StartToCloseTimeoutSeconds:    common.Int32Ptr(4),
 						HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
 						RetryPolicy: &types.RetryPolicy{
-							InitialIntervalInSeconds:    common.Int32Ptr(1),
-							MaximumAttempts:             common.Int32Ptr(3),
-							MaximumIntervalInSeconds:    common.Int32Ptr(1),
+							InitialIntervalInSeconds:    1,
+							MaximumAttempts:             3,
+							MaximumIntervalInSeconds:    1,
 							NonRetriableErrorReasons:    []string{"bad-bug"},
-							BackoffCoefficient:          common.Float64Ptr(1),
-							ExpirationIntervalInSeconds: common.Int32Ptr(100),
+							BackoffCoefficient:          1,
+							ExpirationIntervalInSeconds: 100,
 						},
 					},
 				},
 				{
 					DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 					ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    common.StringPtr("B"),
+						ActivityID:                    "B",
 						ActivityType:                  &types.ActivityType{Name: timeoutActivityName},
 						TaskList:                      &types.TaskList{Name: "no_worker_tasklist"},
 						Input:                         []byte("2"),
@@ -599,7 +599,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
 			return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityID:                    strconv.Itoa(int(activityCounter)),
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
@@ -699,7 +699,7 @@ func (s *integrationSuite) TestActivityTimeouts() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr("A"),
+					ActivityID:                    "A",
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: "NoWorker"},
 					Input:                         []byte("ScheduleToStart"),
@@ -711,7 +711,7 @@ func (s *integrationSuite) TestActivityTimeouts() {
 			}, {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr("B"),
+					ActivityID:                    "B",
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         []byte("ScheduleToClose"),
@@ -723,7 +723,7 @@ func (s *integrationSuite) TestActivityTimeouts() {
 			}, {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr("C"),
+					ActivityID:                    "C",
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         []byte("StartToClose"),
@@ -732,16 +732,16 @@ func (s *integrationSuite) TestActivityTimeouts() {
 					StartToCloseTimeoutSeconds:    common.Int32Ptr(5), // ActivityID C is expected to timeout using StartToClose
 					HeartbeatTimeoutSeconds:       common.Int32Ptr(0),
 					RetryPolicy: &types.RetryPolicy{
-						InitialIntervalInSeconds:    common.Int32Ptr(1),
-						MaximumIntervalInSeconds:    common.Int32Ptr(1),
-						BackoffCoefficient:          common.Float64Ptr(1),
-						ExpirationIntervalInSeconds: common.Int32Ptr(3), // activity expiration time will not be extended, so it won't retry
+						InitialIntervalInSeconds:    1,
+						MaximumIntervalInSeconds:    1,
+						BackoffCoefficient:          1,
+						ExpirationIntervalInSeconds: 3, // activity expiration time will not be extended, so it won't retry
 					},
 				},
 			}, {
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr("D"),
+					ActivityID:                    "D",
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         []byte("Heartbeat"),
@@ -944,7 +944,7 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 				d := &types.Decision{
 					DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 					ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    common.StringPtr(aID),
+						ActivityID:                    aID,
 						ActivityType:                  &types.ActivityType{Name: activityName},
 						TaskList:                      &types.TaskList{Name: tl},
 						Input:                         []byte("Heartbeat"),
@@ -1132,7 +1132,7 @@ func (s *integrationSuite) TestActivityCancellation() {
 			return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityID:                    strconv.Itoa(int(activityCounter)),
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
@@ -1148,7 +1148,7 @@ func (s *integrationSuite) TestActivityCancellation() {
 			return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
 				DecisionType: types.DecisionTypeRequestCancelActivityTask.Ptr(),
 				RequestCancelActivityTaskDecisionAttributes: &types.RequestCancelActivityTaskDecisionAttributes{
-					ActivityID: common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityID: strconv.Itoa(int(activityCounter)),
 				},
 			}}, nil
 		}
@@ -1173,7 +1173,7 @@ func (s *integrationSuite) TestActivityCancellation() {
 			response, err := s.engine.RecordActivityTaskHeartbeat(createContext(),
 				&types.RecordActivityTaskHeartbeatRequest{
 					TaskToken: taskToken, Details: []byte("details")})
-			if *response.CancelRequested {
+			if response.CancelRequested {
 				return []byte("Activity Cancelled."), true, nil
 			}
 			s.Nil(err)
@@ -1259,7 +1259,7 @@ func (s *integrationSuite) TestActivityCancellationNotStarted() {
 			return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityID:                    strconv.Itoa(int(activityCounter)),
 					ActivityType:                  &types.ActivityType{Name: activityName},
 					TaskList:                      &types.TaskList{Name: tl},
 					Input:                         buf.Bytes(),
@@ -1276,7 +1276,7 @@ func (s *integrationSuite) TestActivityCancellationNotStarted() {
 			return []byte(strconv.Itoa(int(activityCounter))), []*types.Decision{{
 				DecisionType: types.DecisionTypeRequestCancelActivityTask.Ptr(),
 				RequestCancelActivityTaskDecisionAttributes: &types.RequestCancelActivityTaskDecisionAttributes{
-					ActivityID: common.StringPtr(strconv.Itoa(int(activityCounter))),
+					ActivityID: strconv.Itoa(int(activityCounter)),
 				},
 			}}, nil
 		}

@@ -101,7 +101,7 @@ func convertToPersistenceDomainFilter(
 
 	return &types.DomainFilter{
 		DomainIDs:    domainIDs,
-		ReverseMatch: common.BoolPtr(domainFilter.ReverseMatch),
+		ReverseMatch: domainFilter.ReverseMatch,
 	}
 }
 

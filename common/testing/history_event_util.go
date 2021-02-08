@@ -384,7 +384,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent := getDefaultHistoryEvent(EventID, version)
 		historyEvent.EventType = types.EventTypeActivityTaskScheduled.Ptr()
 		historyEvent.ActivityTaskScheduledEventAttributes = &types.ActivityTaskScheduledEventAttributes{
-			ActivityID: common.StringPtr(uuid.New()),
+			ActivityID: uuid.New(),
 			ActivityType: &types.ActivityType{
 				Name: "activity",
 			},
@@ -503,7 +503,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent := getDefaultHistoryEvent(EventID, version)
 		historyEvent.EventType = types.EventTypeRequestCancelActivityTaskFailed.Ptr()
 		historyEvent.RequestCancelActivityTaskFailedEventAttributes = &types.RequestCancelActivityTaskFailedEventAttributes{
-			ActivityID:                   common.StringPtr(uuid.New()),
+			ActivityID:                   uuid.New(),
 			DecisionTaskCompletedEventID: lastEvent.GetActivityTaskCancelRequestedEventAttributes().DecisionTaskCompletedEventID,
 		}
 		return historyEvent
@@ -826,7 +826,7 @@ func InitializeHistoryEventGenerator(
 				RunID:      uuid.New(),
 			},
 			SignalName:        common.StringPtr("signal"),
-			ChildWorkflowOnly: common.BoolPtr(false),
+			ChildWorkflowOnly: false,
 		}
 		return historyEvent
 	})
@@ -884,7 +884,7 @@ func InitializeHistoryEventGenerator(
 					WorkflowID: externalWorkflowID,
 					RunID:      uuid.New(),
 				},
-				ChildWorkflowOnly: common.BoolPtr(false),
+				ChildWorkflowOnly: false,
 			}
 		return historyEvent
 	})

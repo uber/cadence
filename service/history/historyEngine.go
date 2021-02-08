@@ -229,47 +229,25 @@ func NewEngineWithShardContext(
 	)
 	openExecutionCheck := invariant.NewConcreteExecutionExists(pRetry)
 
-	if config.TransferProcessorEnableMultiCurosrProcessor() {
-		historyEngImpl.txProcessor = queue.NewTransferQueueProcessor(
-			shard,
-			historyEngImpl,
-			queueTaskProcessor,
-			executionCache,
-			historyEngImpl.workflowResetter,
-			historyEngImpl.archivalClient,
-			openExecutionCheck,
-		)
-	} else {
-		historyEngImpl.txProcessor = newTransferQueueProcessor(
-			shard,
-			historyEngImpl,
-			visibilityMgr,
-			matching,
-			historyClient,
-			queueTaskProcessor,
-			openExecutionCheck,
-			logger,
-		)
-	}
-	if config.TimerProcessorEnableMultiCurosrProcessor() {
-		historyEngImpl.timerProcessor = queue.NewTimerQueueProcessor(
-			shard,
-			historyEngImpl,
-			queueTaskProcessor,
-			executionCache,
-			historyEngImpl.archivalClient,
-			openExecutionCheck,
-		)
-	} else {
-		historyEngImpl.timerProcessor = newTimerQueueProcessor(
-			shard,
-			historyEngImpl,
-			matching,
-			queueTaskProcessor,
-			openExecutionCheck,
-			logger,
-		)
-	}
+	historyEngImpl.txProcessor = queue.NewTransferQueueProcessor(
+		shard,
+		historyEngImpl,
+		queueTaskProcessor,
+		executionCache,
+		historyEngImpl.workflowResetter,
+		historyEngImpl.archivalClient,
+		openExecutionCheck,
+	)
+
+	historyEngImpl.timerProcessor = queue.NewTimerQueueProcessor(
+		shard,
+		historyEngImpl,
+		queueTaskProcessor,
+		executionCache,
+		historyEngImpl.archivalClient,
+		openExecutionCheck,
+	)
+
 	historyEngImpl.eventsReapplier = ndc.NewEventsReapplier(shard.GetMetricsClient(), logger)
 
 	// Only start the replicator processor if global domain is enabled
@@ -1033,7 +1011,7 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 			case event := <-channel:
 				response.LastFirstEventID = event.LastFirstEventID
 				response.NextEventID = event.NextEventID
-				response.IsWorkflowRunning = common.BoolPtr(event.WorkflowCloseState == persistence.WorkflowCloseStatusNone)
+				response.IsWorkflowRunning = event.WorkflowCloseState == persistence.WorkflowCloseStatusNone
 				response.PreviousStartedEventID = common.Int64Ptr(event.PreviousStartedEventID)
 				response.WorkflowState = common.Int32Ptr(int32(event.WorkflowState))
 				response.WorkflowCloseState = common.Int32Ptr(int32(event.WorkflowCloseState))
@@ -1359,12 +1337,12 @@ func (e *historyEngineImpl) getMutableState(
 		ClientLibraryVersion:                 common.StringPtr(executionInfo.ClientLibraryVersion),
 		ClientFeatureVersion:                 common.StringPtr(executionInfo.ClientFeatureVersion),
 		ClientImpl:                           common.StringPtr(executionInfo.ClientImpl),
-		IsWorkflowRunning:                    common.BoolPtr(mutableState.IsWorkflowExecutionRunning()),
+		IsWorkflowRunning:                    mutableState.IsWorkflowExecutionRunning(),
 		StickyTaskListScheduleToStartTimeout: common.Int32Ptr(executionInfo.StickyScheduleToStartTimeout),
 		CurrentBranchToken:                   currentBranchToken,
 		WorkflowState:                        common.Int32Ptr(int32(workflowState)),
 		WorkflowCloseState:                   common.Int32Ptr(int32(workflowCloseState)),
-		IsStickyTaskListEnabled:              common.BoolPtr(mutableState.IsStickyTaskListEnabled()),
+		IsStickyTaskListEnabled:              mutableState.IsStickyTaskListEnabled(),
 	}
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories != nil {
@@ -1538,7 +1516,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	if len(mutableState.GetPendingActivityInfos()) > 0 {
 		for _, ai := range mutableState.GetPendingActivityInfos() {
 			p := &types.PendingActivityInfo{
-				ActivityID: common.StringPtr(ai.ActivityID),
+				ActivityID: ai.ActivityID,
 			}
 			state := types.PendingActivityStateScheduled
 			if ai.CancelRequested {
@@ -2077,7 +2055,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 		return &types.RecordActivityTaskHeartbeatResponse{}, err
 	}
 
-	return &types.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(cancelRequested)}, nil
+	return &types.RecordActivityTaskHeartbeatResponse{CancelRequested: cancelRequested}, nil
 }
 
 // RequestCancelWorkflowExecution records request cancellation event for workflow execution

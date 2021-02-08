@@ -89,7 +89,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("GetMutableState", func(t *testing.T) {
 		h.EXPECT().GetMutableState(ctx, &types.GetMutableStateRequest{}).Return(&types.GetMutableStateResponse{}, internalErr).Times(1)
 		resp, err := th.GetMutableState(ctx, &hist.GetMutableStateRequest{})
-		assert.Equal(t, hist.GetMutableStateResponse{NextEventId: common.Int64Ptr(0), LastFirstEventId: common.Int64Ptr(0)}, *resp)
+		assert.Equal(t, hist.GetMutableStateResponse{IsWorkflowRunning: common.BoolPtr(false, NextEventId: common.Int64Ptr(0), LastFirstEventId: common.Int64Ptr(0)), IsStickyTaskListEnabled: common.BoolPtr(false)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("GetReplicationMessages", func(t *testing.T) {
@@ -140,7 +140,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("RecordActivityTaskHeartbeat", func(t *testing.T) {
 		h.EXPECT().RecordActivityTaskHeartbeat(ctx, &types.HistoryRecordActivityTaskHeartbeatRequest{}).Return(&types.RecordActivityTaskHeartbeatResponse{}, internalErr).Times(1)
 		resp, err := th.RecordActivityTaskHeartbeat(ctx, &hist.RecordActivityTaskHeartbeatRequest{})
-		assert.Equal(t, shared.RecordActivityTaskHeartbeatResponse{}, *resp)
+		assert.Equal(t, shared.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(false)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("RecordActivityTaskStarted", func(t *testing.T) {
@@ -161,7 +161,7 @@ func TestThriftHandler(t *testing.T) {
 			ScheduledEventId: common.Int64Ptr(0),
 			StartedEventId:   common.Int64Ptr(0),
 			NextEventId:      common.Int64Ptr(0),
-			Attempt:          common.Int64Ptr(0)},
+			Attempt:          common.Int64Ptr(0), StickyExecutionEnabled: common.BoolPtr(false)},
 			*resp)
 		assert.Equal(t, expectedErr, err)
 	})

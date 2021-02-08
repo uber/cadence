@@ -296,7 +296,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	}
 
 	updateResp, err := s.handler.UpdateDomain(context.Background(), &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
+		Name: domainName,
 	})
 	s.Nil(err)
 	fnTest(
@@ -372,25 +372,19 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	}
 
 	updateResp, err := s.handler.UpdateDomain(context.Background(), &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		UpdatedInfo: &types.UpdateDomainInfo{
-			Description: common.StringPtr(description),
-			OwnerEmail:  common.StringPtr(email),
-			Data:        data,
-		},
-		Configuration: &types.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-			EmitMetric:                             common.BoolPtr(emitMetric),
-			HistoryArchivalStatus:                  types.ArchivalStatusDisabled.Ptr(),
-			HistoryArchivalURI:                     common.StringPtr(""),
-			VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
-			VisibilityArchivalURI:                  common.StringPtr(""),
-			BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
-		},
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-			Clusters:          clusters,
-		},
+		Name:                                   domainName,
+		Description:                            common.StringPtr(description),
+		OwnerEmail:                             common.StringPtr(email),
+		Data:                                   data,
+		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
+		EmitMetric:                             common.BoolPtr(emitMetric),
+		HistoryArchivalStatus:                  types.ArchivalStatusDisabled.Ptr(),
+		HistoryArchivalURI:                     common.StringPtr(""),
+		VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
+		VisibilityArchivalURI:                  common.StringPtr(""),
+		BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+		ActiveClusterName:                      common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
+		Clusters:                               clusters,
 	})
 	s.Nil(err)
 	fnTest(
@@ -528,7 +522,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	s.Nil(err)
 
 	resp, err := s.handler.UpdateDomain(context.Background(), &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
+		Name: domainName,
 	})
 	s.IsType(&types.BadRequestError{}, err)
 	s.Nil(resp)
@@ -588,25 +582,19 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	s.Nil(err)
 
 	updateResp, err := s.handler.UpdateDomain(context.Background(), &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		UpdatedInfo: &types.UpdateDomainInfo{
-			Description: common.StringPtr(description),
-			OwnerEmail:  common.StringPtr(email),
-			Data:        data,
-		},
-		Configuration: &types.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-			EmitMetric:                             common.BoolPtr(emitMetric),
-			HistoryArchivalStatus:                  types.ArchivalStatusDisabled.Ptr(),
-			HistoryArchivalURI:                     common.StringPtr(""),
-			VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
-			VisibilityArchivalURI:                  common.StringPtr(""),
-			BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
-		},
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: nil,
-			Clusters:          clusters,
-		},
+		Name:                                   domainName,
+		Description:                            common.StringPtr(description),
+		OwnerEmail:                             common.StringPtr(email),
+		Data:                                   data,
+		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
+		EmitMetric:                             common.BoolPtr(emitMetric),
+		HistoryArchivalStatus:                  types.ArchivalStatusDisabled.Ptr(),
+		HistoryArchivalURI:                     common.StringPtr(""),
+		VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
+		VisibilityArchivalURI:                  common.StringPtr(""),
+		BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+		ActiveClusterName:                      nil,
+		Clusters:                               clusters,
 	})
 	s.IsType(&types.BadRequestError{}, err)
 	s.Nil(updateResp)
@@ -701,10 +689,8 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
 
 	updateResp, err := s.handler.UpdateDomain(context.Background(), &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-		},
+		Name:              domainName,
+		ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
 	})
 	s.Nil(err)
 	fnTest(

@@ -983,7 +983,7 @@ type workflowExecutionInfo struct {
 
 // pendingActivityInfo has same fields as types.PendingActivityInfo, but different field type for better display
 type pendingActivityInfo struct {
-	ActivityID             *string
+	ActivityID             string
 	ActivityType           *types.ActivityType
 	State                  *types.PendingActivityState
 	ScheduledTimestamp     *string `json:",omitempty"` // change from *int64
@@ -1539,7 +1539,7 @@ func ResetWorkflow(c *cli.Context) {
 		Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), reason)),
 		DecisionFinishEventID: decisionFinishID,
 		RequestID:             uuid.New(),
-		SkipSignalReapply:     common.BoolPtr(c.Bool(FlagSkipSignalReapply)),
+		SkipSignalReapply:     c.Bool(FlagSkipSignalReapply),
 	})
 	if err != nil {
 		ErrorAndExit("reset failed", err)
@@ -1807,7 +1807,7 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 			DecisionFinishEventID: decisionFinishID,
 			RequestID:             uuid.New(),
 			Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), params.reason)),
-			SkipSignalReapply:     common.BoolPtr(params.skipSignalReapply),
+			SkipSignalReapply:     params.skipSignalReapply,
 		})
 
 		if err != nil {
@@ -2122,7 +2122,7 @@ func CompleteActivity(c *cli.Context) {
 		Domain:     domain,
 		WorkflowID: wid,
 		RunID:      rid,
-		ActivityID: common.StringPtr(activityID),
+		ActivityID: activityID,
 		Result:     []byte(result),
 		Identity:   identity,
 	})
@@ -2153,7 +2153,7 @@ func FailActivity(c *cli.Context) {
 		Domain:     domain,
 		WorkflowID: wid,
 		RunID:      rid,
-		ActivityID: common.StringPtr(activityID),
+		ActivityID: activityID,
 		Reason:     common.StringPtr(reason),
 		Details:    []byte(detail),
 		Identity:   identity,

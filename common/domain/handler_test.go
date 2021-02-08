@@ -359,7 +359,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				Clusters:          cluster1,
 			},
 			FailoverVersion: common.Int64Ptr(common.EmptyVersion),
-			IsGlobalDomain:  common.BoolPtr(isGlobalDomain1),
+			IsGlobalDomain:  isGlobalDomain1,
 		},
 		domainName2: &types.DescribeDomainResponse{
 			DomainInfo: &types.DomainInfo{
@@ -384,7 +384,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				Clusters:          cluster2,
 			},
 			FailoverVersion: common.Int64Ptr(s.ClusterMetadata.GetNextFailoverVersion(activeClusterName2, 0)),
-			IsGlobalDomain:  common.BoolPtr(isGlobalDomain2),
+			IsGlobalDomain:  isGlobalDomain2,
 		},
 	}, domains)
 }
@@ -412,10 +412,8 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_InvalidRetentionPeriod() {
 	s.NoError(err)
 
 	updateRequest := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domain),
-		Configuration: &types.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(-1)),
-		},
+		Name:                                   domain,
+		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(-1)),
 	}
 	_, err = s.handler.UpdateDomain(context.Background(), updateRequest)
 	s.Equal(errInvalidRetentionPeriod, err)
@@ -448,10 +446,8 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_Success() {
 	s.Equal(cluster.TestAlternativeClusterInitialFailoverVersion, resp1.FailoverVersion)
 
 	updateRequest := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domain),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-		},
+		Name:                     domain,
+		ActiveClusterName:        common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
 		FailoverTimeoutInSeconds: common.Int32Ptr(100),
 	}
 	resp, err := s.handler.UpdateDomain(context.Background(), updateRequest)
@@ -487,10 +483,8 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_NotCurrentA
 	s.NoError(err)
 
 	updateRequest := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domain),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr("standby"),
-		},
+		Name:                     domain,
+		ActiveClusterName:        common.StringPtr("standby"),
 		FailoverTimeoutInSeconds: common.Int32Ptr(100),
 	}
 	_, err = s.handler.UpdateDomain(context.Background(), updateRequest)
@@ -519,10 +513,8 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_OngoingFail
 	s.NoError(err)
 
 	updateRequest := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domain),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-		},
+		Name:                     domain,
+		ActiveClusterName:        common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
 		FailoverTimeoutInSeconds: common.Int32Ptr(100),
 	}
 	_, err = s.handler.UpdateDomain(context.Background(), updateRequest)
@@ -553,10 +545,8 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_NoUpdateAct
 	s.NoError(err)
 
 	updateRequest := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domain),
-		UpdatedInfo: &types.UpdateDomainInfo{
-			OwnerEmail: common.StringPtr("test"),
-		},
+		Name:                     domain,
+		OwnerEmail:               common.StringPtr("test"),
 		FailoverTimeoutInSeconds: common.Int32Ptr(100),
 	}
 	_, err = s.handler.UpdateDomain(context.Background(), updateRequest)
@@ -586,10 +576,8 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_After_Force
 
 	// Start graceful failover
 	updateRequest := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domain),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-		},
+		Name:                     domain,
+		ActiveClusterName:        common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
 		FailoverTimeoutInSeconds: common.Int32Ptr(100),
 	}
 	resp, err := s.handler.UpdateDomain(context.Background(), updateRequest)
@@ -597,10 +585,8 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_GracefulFailover_After_Force
 
 	// Force failover
 	updateRequest = &types.UpdateDomainRequest{
-		Name: common.StringPtr(domain),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
-		},
+		Name:              domain,
+		ActiveClusterName: common.StringPtr(s.ClusterMetadata.GetCurrentClusterName()),
 	}
 	_, err = s.handler.UpdateDomain(context.Background(), updateRequest)
 	s.NoError(err)
@@ -634,10 +620,8 @@ func (s *domainHandlerCommonSuite) TestUpdateDomain_ForceFailover_SameActiveClus
 
 	// Start graceful failover
 	updateRequest := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domain),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr("standby"),
-		},
+		Name:              domain,
+		ActiveClusterName: common.StringPtr("standby"),
 	}
 	_, err = s.handler.UpdateDomain(context.Background(), updateRequest)
 	s.NoError(err)

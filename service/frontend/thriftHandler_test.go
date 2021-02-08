@@ -65,7 +65,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("DescribeDomain", func(t *testing.T) {
 		h.EXPECT().DescribeDomain(ctx, &types.DescribeDomainRequest{}).Return(&types.DescribeDomainResponse{}, internalErr).Times(1)
 		resp, err := th.DescribeDomain(ctx, &shared.DescribeDomainRequest{})
-		assert.Equal(t, shared.DescribeDomainResponse{}, *resp)
+		assert.Equal(t, shared.DescribeDomainResponse{IsGlobalDomain: common.BoolPtr(false)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("DescribeTaskList", func(t *testing.T) {
@@ -95,7 +95,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("GetWorkflowExecutionHistory", func(t *testing.T) {
 		h.EXPECT().GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{}).Return(&types.GetWorkflowExecutionHistoryResponse{}, internalErr).Times(1)
 		resp, err := th.GetWorkflowExecutionHistory(ctx, &shared.GetWorkflowExecutionHistoryRequest{})
-		assert.Equal(t, shared.GetWorkflowExecutionHistoryResponse{}, *resp)
+		assert.Equal(t, shared.GetWorkflowExecutionHistoryResponse{Archived: common.BoolPtr(false)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("ListArchivedWorkflowExecutions", func(t *testing.T) {
@@ -137,7 +137,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("PollForActivityTask", func(t *testing.T) {
 		h.EXPECT().PollForActivityTask(ctx, &types.PollForActivityTaskRequest{}).Return(&types.PollForActivityTaskResponse{}, internalErr).Times(1)
 		resp, err := th.PollForActivityTask(ctx, &shared.PollForActivityTaskRequest{})
-		assert.Equal(t, shared.PollForActivityTaskResponse{WorkflowDomain: common.StringPtr(""), Attempt: common.Int32Ptr(0)}, *resp)
+		assert.Equal(t, shared.PollForActivityTaskResponse{WorkflowDomain: common.StringPtr(""), ActivityId: common.StringPtr(""), Attempt: common.Int32Ptr(0)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("PollForDecisionTask", func(t *testing.T) {
@@ -155,13 +155,13 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("RecordActivityTaskHeartbeat", func(t *testing.T) {
 		h.EXPECT().RecordActivityTaskHeartbeat(ctx, &types.RecordActivityTaskHeartbeatRequest{}).Return(&types.RecordActivityTaskHeartbeatResponse{}, internalErr).Times(1)
 		resp, err := th.RecordActivityTaskHeartbeat(ctx, &shared.RecordActivityTaskHeartbeatRequest{})
-		assert.Equal(t, shared.RecordActivityTaskHeartbeatResponse{}, *resp)
+		assert.Equal(t, shared.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(false)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("RecordActivityTaskHeartbeatByID", func(t *testing.T) {
 		h.EXPECT().RecordActivityTaskHeartbeatByID(ctx, &types.RecordActivityTaskHeartbeatByIDRequest{}).Return(&types.RecordActivityTaskHeartbeatResponse{}, internalErr).Times(1)
 		resp, err := th.RecordActivityTaskHeartbeatByID(ctx, &shared.RecordActivityTaskHeartbeatByIDRequest{})
-		assert.Equal(t, shared.RecordActivityTaskHeartbeatResponse{}, *resp)
+		assert.Equal(t, shared.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(false)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("RegisterDomain", func(t *testing.T) {
@@ -263,7 +263,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("UpdateDomain", func(t *testing.T) {
 		h.EXPECT().UpdateDomain(ctx, &types.UpdateDomainRequest{}).Return(&types.UpdateDomainResponse{}, internalErr).Times(1)
 		resp, err := th.UpdateDomain(ctx, &shared.UpdateDomainRequest{})
-		assert.Equal(t, shared.UpdateDomainResponse{}, *resp)
+		assert.Equal(t, shared.UpdateDomainResponse{IsGlobalDomain: common.BoolPtr(false)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 }

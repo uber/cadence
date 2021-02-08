@@ -44,7 +44,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 		Name: tl,
 		Kind: types.TaskListKindNormal.Ptr(),
 	}
-	stikyTaskList := &types.TaskList{
+	stickyTaskList := &types.TaskList{
 		Name: "test-sticky-tasklist",
 		Kind: types.TaskListKindSticky.Ptr(),
 	}
@@ -89,11 +89,11 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 			TaskToken: taskToken,
 			Decisions: []*types.Decision{},
 			StickyAttributes: &types.StickyExecutionAttributes{
-				WorkerTaskList:                stikyTaskList,
+				WorkerTaskList:                stickyTaskList,
 				ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 			},
-			ReturnNewDecisionTask:      common.BoolPtr(true),
-			ForceCreateNewDecisionTask: common.BoolPtr(true),
+			ReturnNewDecisionTask:      true,
+			ForceCreateNewDecisionTask: true,
 		})
 		if _, ok := err2.(*types.EntityNotExistsError); ok {
 			hbTimeout++
@@ -118,7 +118,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 	resp5, err5 := s.engine.RespondDecisionTaskCompleted(createContext(), &types.RespondDecisionTaskCompletedRequest{
 		TaskToken: taskToken,
 		Decisions: []*types.Decision{
-			&types.Decision{
+			{
 				DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
 				CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{
 					Result: []byte("efg"),
@@ -126,11 +126,11 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 			},
 		},
 		StickyAttributes: &types.StickyExecutionAttributes{
-			WorkerTaskList:                stikyTaskList,
+			WorkerTaskList:                stickyTaskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 		},
-		ReturnNewDecisionTask:      common.BoolPtr(true),
-		ForceCreateNewDecisionTask: common.BoolPtr(false),
+		ReturnNewDecisionTask:      true,
+		ForceCreateNewDecisionTask: false,
 	})
 	s.Nil(err5)
 	s.Nil(resp5.DecisionTask)
@@ -196,15 +196,15 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 			WorkerTaskList:                stikyTaskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 		},
-		ReturnNewDecisionTask:      common.BoolPtr(true),
-		ForceCreateNewDecisionTask: common.BoolPtr(true),
+		ReturnNewDecisionTask:      true,
+		ForceCreateNewDecisionTask: true,
 	})
 	s.Nil(err2)
 
 	resp3, err3 := s.engine.RespondDecisionTaskCompleted(createContext(), &types.RespondDecisionTaskCompletedRequest{
 		TaskToken: resp2.DecisionTask.GetTaskToken(),
 		Decisions: []*types.Decision{
-			&types.Decision{
+			{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
 					MarkerName: common.StringPtr("localActivity1"),
@@ -216,15 +216,15 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 			WorkerTaskList:                stikyTaskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 		},
-		ReturnNewDecisionTask:      common.BoolPtr(true),
-		ForceCreateNewDecisionTask: common.BoolPtr(true),
+		ReturnNewDecisionTask:      true,
+		ForceCreateNewDecisionTask: true,
 	})
 	s.Nil(err3)
 
 	resp4, err4 := s.engine.RespondDecisionTaskCompleted(createContext(), &types.RespondDecisionTaskCompletedRequest{
 		TaskToken: resp3.DecisionTask.GetTaskToken(),
 		Decisions: []*types.Decision{
-			&types.Decision{
+			{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
 					MarkerName: common.StringPtr("localActivity2"),
@@ -236,15 +236,15 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 			WorkerTaskList:                stikyTaskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 		},
-		ReturnNewDecisionTask:      common.BoolPtr(true),
-		ForceCreateNewDecisionTask: common.BoolPtr(true),
+		ReturnNewDecisionTask:      true,
+		ForceCreateNewDecisionTask: true,
 	})
 	s.Nil(err4)
 
 	resp5, err5 := s.engine.RespondDecisionTaskCompleted(createContext(), &types.RespondDecisionTaskCompletedRequest{
 		TaskToken: resp4.DecisionTask.GetTaskToken(),
 		Decisions: []*types.Decision{
-			&types.Decision{
+			{
 				DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
 				CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{
 					Result: []byte("efg"),
@@ -255,8 +255,8 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 			WorkerTaskList:                stikyTaskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 		},
-		ReturnNewDecisionTask:      common.BoolPtr(true),
-		ForceCreateNewDecisionTask: common.BoolPtr(false),
+		ReturnNewDecisionTask:      true,
+		ForceCreateNewDecisionTask: false,
 	})
 	s.Nil(err5)
 	s.Nil(resp5.DecisionTask)

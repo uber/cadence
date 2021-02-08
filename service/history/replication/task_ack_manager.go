@@ -208,7 +208,7 @@ TaskInfoLoop:
 
 	return &types.ReplicationMessages{
 		ReplicationTasks:       replicationTasks,
-		HasMore:                common.BoolPtr(hasMore),
+		HasMore:                hasMore,
 		LastRetrievedMessageID: common.Int64Ptr(readLevel),
 	}, nil
 }

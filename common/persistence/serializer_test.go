@@ -95,7 +95,7 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 				FirstDecisionCompletedID: 123,
 				CreatedTimeNano:          common.Int64Ptr(456),
 				ExpiringTimeNano:         common.Int64Ptr(789),
-				Resettable:               common.BoolPtr(true),
+				Resettable:               true,
 			},
 		},
 	}
@@ -143,7 +143,7 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 
 	domainFilter := &types.DomainFilter{
 		DomainIDs:    []string{"domain1", "domain2"},
-		ReverseMatch: common.BoolPtr(true),
+		ReverseMatch: true,
 	}
 	processingQueueStateMap := map[string][]*types.ProcessingQueueState{
 		"cluster1": {

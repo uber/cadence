@@ -82,7 +82,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 				scheduleActivityCommands = append(scheduleActivityCommands, &types.Decision{
 					DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 					ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    common.StringPtr(strconv.Itoa(i)),
+						ActivityID:                    strconv.Itoa(i),
 						ActivityType:                  &types.ActivityType{Name: "ResetActivity"},
 						TaskList:                      tasklist,
 						Input:                         buf.Bytes(),
@@ -341,7 +341,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 			scheduleActivityCommands = append(scheduleActivityCommands, &types.Decision{
 				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    common.StringPtr("1"),
+					ActivityID:                    "1",
 					ActivityType:                  &types.ActivityType{Name: "ResetActivity"},
 					TaskList:                      tasklist,
 					Input:                         buf.Bytes(),

@@ -41,20 +41,3 @@ func (v *HealthStatus) GetMsg() (o string) {
 	}
 	return
 }
-
-// MetaHealthArgs is an internal type (TBD...)
-type MetaHealthArgs struct {
-}
-
-// MetaHealthResult is an internal type (TBD...)
-type MetaHealthResult struct {
-	Success *HealthStatus `json:"success,omitempty"`
-}
-
-// GetSuccess is an internal getter (TBD...)
-func (v *MetaHealthResult) GetSuccess() (o *HealthStatus) {
-	if v != nil && v.Success != nil {
-		return v.Success
-	}
-	return
-}

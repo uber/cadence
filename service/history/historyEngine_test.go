@@ -1088,7 +1088,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 	decisions := []*types.Decision{{
 		DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 		ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-			ActivityID:                    common.StringPtr(activity3ID),
+			ActivityID:                    activity3ID,
 			ActivityType:                  &types.ActivityType{Name: activity3Type},
 			TaskList:                      &types.TaskList{Name: tl},
 			Input:                         activity3Input,
@@ -1133,7 +1133,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 
 	executionBuilder := s.getBuilder(constants.TestDomainID, we)
 	activity3Attributes := s.getActivityScheduledEvent(executionBuilder, 13).ActivityTaskScheduledEventAttributes
-	s.Equal(activity3ID, *activity3Attributes.ActivityID)
+	s.Equal(activity3ID, activity3Attributes.ActivityID)
 	s.Equal(activity3Type, activity3Attributes.ActivityType.Name)
 	s.Equal(int64(12), activity3Attributes.DecisionTaskCompletedEventID)
 	s.Equal(tl, activity3Attributes.TaskList.Name)
@@ -1193,7 +1193,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 	decisions := []*types.Decision{{
 		DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 		ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-			ActivityID:                    common.StringPtr("activity1"),
+			ActivityID:                    "activity1",
 			ActivityType:                  &types.ActivityType{Name: "activity_type1"},
 			TaskList:                      &types.TaskList{Name: tl},
 			Input:                         input,
@@ -1554,7 +1554,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 		decisions := []*types.Decision{{
 			DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 			ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-				ActivityID:                    common.StringPtr("activity1"),
+				ActivityID:                    "activity1",
 				ActivityType:                  &types.ActivityType{Name: "activity_type1"},
 				TaskList:                      &types.TaskList{Name: tl},
 				Input:                         input,
@@ -1706,7 +1706,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 	decisions := []*types.Decision{{
 		DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
 		ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-			ActivityID:                    common.StringPtr("activity1"),
+			ActivityID:                    "activity1",
 			ActivityType:                  &types.ActivityType{Name: "activity_type1"},
 			TaskList:                      &types.TaskList{Name: tl},
 			Input:                         input,
@@ -1742,7 +1742,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 	s.False(executionBuilder.HasPendingDecision())
 
 	activity1Attributes := s.getActivityScheduledEvent(executionBuilder, int64(5)).ActivityTaskScheduledEventAttributes
-	s.Equal("activity1", *activity1Attributes.ActivityID)
+	s.Equal("activity1", activity1Attributes.ActivityID)
 	s.Equal("activity_type1", activity1Attributes.ActivityType.Name)
 	s.Equal(int64(4), activity1Attributes.DecisionTaskCompletedEventID)
 	s.Equal(tl, activity1Attributes.TaskList.Name)
@@ -1791,7 +1791,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatTimeout(
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &types.HistoryRespondDecisionTaskCompletedRequest{
 		DomainUUID: constants.TestDomainID,
 		CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
-			ForceCreateNewDecisionTask: common.BoolPtr(true),
+			ForceCreateNewDecisionTask: true,
 			TaskToken:                  taskToken,
 			Decisions:                  decisions,
 			ExecutionContext:           executionContext,
@@ -1839,7 +1839,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &types.HistoryRespondDecisionTaskCompletedRequest{
 		DomainUUID: constants.TestDomainID,
 		CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
-			ForceCreateNewDecisionTask: common.BoolPtr(true),
+			ForceCreateNewDecisionTask: true,
 			TaskToken:                  taskToken,
 			Decisions:                  decisions,
 			ExecutionContext:           executionContext,
@@ -1887,7 +1887,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &types.HistoryRespondDecisionTaskCompletedRequest{
 		DomainUUID: constants.TestDomainID,
 		CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
-			ForceCreateNewDecisionTask: common.BoolPtr(true),
+			ForceCreateNewDecisionTask: true,
 			TaskToken:                  taskToken,
 			Decisions:                  decisions,
 			ExecutionContext:           executionContext,
@@ -3918,7 +3918,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NotSchedule
 	decisions := []*types.Decision{{
 		DecisionType: types.DecisionTypeRequestCancelActivityTask.Ptr(),
 		RequestCancelActivityTaskDecisionAttributes: &types.RequestCancelActivityTaskDecisionAttributes{
-			ActivityID: common.StringPtr(activityID),
+			ActivityID: activityID,
 		},
 	}}
 
@@ -3985,7 +3985,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Scheduled()
 	decisions := []*types.Decision{{
 		DecisionType: types.DecisionTypeRequestCancelActivityTask.Ptr(),
 		RequestCancelActivityTaskDecisionAttributes: &types.RequestCancelActivityTaskDecisionAttributes{
-			ActivityID: common.StringPtr(activityID),
+			ActivityID: activityID,
 		},
 	}}
 
@@ -4055,7 +4055,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Started() {
 	decisions := []*types.Decision{{
 		DecisionType: types.DecisionTypeRequestCancelActivityTask.Ptr(),
 		RequestCancelActivityTaskDecisionAttributes: &types.RequestCancelActivityTaskDecisionAttributes{
-			ActivityID: common.StringPtr(activityID),
+			ActivityID: activityID,
 		},
 	}}
 
@@ -4119,7 +4119,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Completed()
 		{
 			DecisionType: types.DecisionTypeRequestCancelActivityTask.Ptr(),
 			RequestCancelActivityTaskDecisionAttributes: &types.RequestCancelActivityTaskDecisionAttributes{
-				ActivityID: common.StringPtr(activityID),
+				ActivityID: activityID,
 			},
 		},
 		{
@@ -4194,7 +4194,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 	decisions := []*types.Decision{{
 		DecisionType: types.DecisionTypeRequestCancelActivityTask.Ptr(),
 		RequestCancelActivityTaskDecisionAttributes: &types.RequestCancelActivityTaskDecisionAttributes{
-			ActivityID: common.StringPtr(activityID),
+			ActivityID: activityID,
 		},
 	}}
 
@@ -4238,7 +4238,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 	})
 	s.Nil(err)
 	s.NotNil(hbResponse)
-	s.True(*hbResponse.CancelRequested)
+	s.True(hbResponse.CancelRequested)
 
 	// Try cancelling the request.
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
@@ -4301,7 +4301,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 	decisions := []*types.Decision{{
 		DecisionType: types.DecisionTypeRequestCancelActivityTask.Ptr(),
 		RequestCancelActivityTaskDecisionAttributes: &types.RequestCancelActivityTaskDecisionAttributes{
-			ActivityID: common.StringPtr(activityID),
+			ActivityID: activityID,
 		},
 	}}
 
@@ -4345,7 +4345,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 	})
 	s.Nil(err)
 	s.NotNil(hbResponse)
-	s.True(*hbResponse.CancelRequested)
+	s.True(hbResponse.CancelRequested)
 
 	// Try cancelling the request.
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
@@ -4407,7 +4407,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	decisions := []*types.Decision{{
 		DecisionType: types.DecisionTypeRequestCancelActivityTask.Ptr(),
 		RequestCancelActivityTaskDecisionAttributes: &types.RequestCancelActivityTaskDecisionAttributes{
-			ActivityID: common.StringPtr(activityID),
+			ActivityID: activityID,
 		},
 	}}
 
@@ -4492,7 +4492,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	})
 	s.Nil(err)
 	s.NotNil(hbResponse)
-	s.True(*hbResponse.CancelRequested)
+	s.True(hbResponse.CancelRequested)
 
 	// Try cancelling the request.
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
@@ -4554,7 +4554,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	decisions := []*types.Decision{{
 		DecisionType: types.DecisionTypeRequestCancelActivityTask.Ptr(),
 		RequestCancelActivityTaskDecisionAttributes: &types.RequestCancelActivityTaskDecisionAttributes{
-			ActivityID: common.StringPtr(activityID),
+			ActivityID: activityID,
 		},
 	}}
 

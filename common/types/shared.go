@@ -41,17 +41,17 @@ func (v *AccessDeniedError) GetMessage() (o string) {
 
 // ActivityLocalDispatchInfo is an internal type (TBD...)
 type ActivityLocalDispatchInfo struct {
-	ActivityID                      *string `json:"activityId,omitempty"`
-	ScheduledTimestamp              *int64  `json:"scheduledTimestamp,omitempty"`
-	StartedTimestamp                *int64  `json:"startedTimestamp,omitempty"`
-	ScheduledTimestampOfThisAttempt *int64  `json:"scheduledTimestampOfThisAttempt,omitempty"`
-	TaskToken                       []byte  `json:"taskToken,omitempty"`
+	ActivityID                      string `json:"activityId,omitempty"`
+	ScheduledTimestamp              *int64 `json:"scheduledTimestamp,omitempty"`
+	StartedTimestamp                *int64 `json:"startedTimestamp,omitempty"`
+	ScheduledTimestampOfThisAttempt *int64 `json:"scheduledTimestampOfThisAttempt,omitempty"`
+	TaskToken                       []byte `json:"taskToken,omitempty"`
 }
 
 // GetActivityID is an internal getter (TBD...)
 func (v *ActivityLocalDispatchInfo) GetActivityID() (o string) {
-	if v != nil && v.ActivityID != nil {
-		return *v.ActivityID
+	if v != nil {
+		return v.ActivityID
 	}
 	return
 }
@@ -90,14 +90,14 @@ func (v *ActivityLocalDispatchInfo) GetTaskToken() (o []byte) {
 
 // ActivityTaskCancelRequestedEventAttributes is an internal type (TBD...)
 type ActivityTaskCancelRequestedEventAttributes struct {
-	ActivityID                   *string `json:"activityId,omitempty"`
+	ActivityID                   string `json:"activityId,omitempty"`
 	DecisionTaskCompletedEventID int64   `json:"decisionTaskCompletedEventId,omitempty"`
 }
 
 // GetActivityID is an internal getter (TBD...)
 func (v *ActivityTaskCancelRequestedEventAttributes) GetActivityID() (o string) {
-	if v != nil && v.ActivityID != nil {
-		return *v.ActivityID
+	if v != nil {
+		return v.ActivityID
 	}
 	return
 }
@@ -250,7 +250,7 @@ func (v *ActivityTaskFailedEventAttributes) GetIdentity() (o string) {
 
 // ActivityTaskScheduledEventAttributes is an internal type (TBD...)
 type ActivityTaskScheduledEventAttributes struct {
-	ActivityID                    *string       `json:"activityId,omitempty"`
+	ActivityID                    string        `json:"activityId,omitempty"`
 	ActivityType                  *ActivityType `json:"activityType,omitempty"`
 	Domain                        *string       `json:"domain,omitempty"`
 	TaskList                      *TaskList     `json:"taskList,omitempty"`
@@ -266,8 +266,8 @@ type ActivityTaskScheduledEventAttributes struct {
 
 // GetActivityID is an internal getter (TBD...)
 func (v *ActivityTaskScheduledEventAttributes) GetActivityID() (o string) {
-	if v != nil && v.ActivityID != nil {
-		return *v.ActivityID
+	if v != nil {
+		return v.ActivityID
 	}
 	return
 }
@@ -2300,7 +2300,7 @@ type DescribeDomainResponse struct {
 	Configuration            *DomainConfiguration            `json:"configuration,omitempty"`
 	ReplicationConfiguration *DomainReplicationConfiguration `json:"replicationConfiguration,omitempty"`
 	FailoverVersion          *int64                          `json:"failoverVersion,omitempty"`
-	IsGlobalDomain           *bool                           `json:"isGlobalDomain,omitempty"`
+	IsGlobalDomain           bool                            `json:"isGlobalDomain,omitempty"`
 }
 
 // GetDomainInfo is an internal getter (TBD...)
@@ -2337,8 +2337,8 @@ func (v *DescribeDomainResponse) GetFailoverVersion() (o int64) {
 
 // GetIsGlobalDomain is an internal getter (TBD...)
 func (v *DescribeDomainResponse) GetIsGlobalDomain() (o bool) {
-	if v != nil && v.IsGlobalDomain != nil {
-		return *v.IsGlobalDomain
+	if v != nil {
+		return v.IsGlobalDomain
 	}
 	return
 }
@@ -2472,7 +2472,7 @@ type DescribeTaskListRequest struct {
 	Domain                string        `json:"domain,omitempty"`
 	TaskList              *TaskList     `json:"taskList,omitempty"`
 	TaskListType          *TaskListType `json:"taskListType,omitempty"`
-	IncludeTaskListStatus *bool         `json:"includeTaskListStatus,omitempty"`
+	IncludeTaskListStatus bool          `json:"includeTaskListStatus,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -2501,8 +2501,8 @@ func (v *DescribeTaskListRequest) GetTaskListType() (o TaskListType) {
 
 // GetIncludeTaskListStatus is an internal getter (TBD...)
 func (v *DescribeTaskListRequest) GetIncludeTaskListStatus() (o bool) {
-	if v != nil && v.IncludeTaskListStatus != nil {
-		return *v.IncludeTaskListStatus
+	if v != nil {
+		return v.IncludeTaskListStatus
 	}
 	return
 }
@@ -3405,9 +3405,9 @@ type GetWorkflowExecutionHistoryRequest struct {
 	Execution              *WorkflowExecution      `json:"execution,omitempty"`
 	MaximumPageSize        int32                   `json:"maximumPageSize,omitempty"`
 	NextPageToken          []byte                  `json:"nextPageToken,omitempty"`
-	WaitForNewEvent        *bool                   `json:"waitForNewEvent,omitempty"`
+	WaitForNewEvent        bool                    `json:"waitForNewEvent,omitempty"`
 	HistoryEventFilterType *HistoryEventFilterType `json:"HistoryEventFilterType,omitempty"`
-	SkipArchival           *bool                   `json:"skipArchival,omitempty"`
+	SkipArchival           bool                    `json:"skipArchival,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -3444,8 +3444,8 @@ func (v *GetWorkflowExecutionHistoryRequest) GetNextPageToken() (o []byte) {
 
 // GetWaitForNewEvent is an internal getter (TBD...)
 func (v *GetWorkflowExecutionHistoryRequest) GetWaitForNewEvent() (o bool) {
-	if v != nil && v.WaitForNewEvent != nil {
-		return *v.WaitForNewEvent
+	if v != nil {
+		return v.WaitForNewEvent
 	}
 	return
 }
@@ -3460,8 +3460,8 @@ func (v *GetWorkflowExecutionHistoryRequest) GetHistoryEventFilterType() (o Hist
 
 // GetSkipArchival is an internal getter (TBD...)
 func (v *GetWorkflowExecutionHistoryRequest) GetSkipArchival() (o bool) {
-	if v != nil && v.SkipArchival != nil {
-		return *v.SkipArchival
+	if v != nil {
+		return v.SkipArchival
 	}
 	return
 }
@@ -3471,7 +3471,7 @@ type GetWorkflowExecutionHistoryResponse struct {
 	History       *History    `json:"history,omitempty"`
 	RawHistory    []*DataBlob `json:"rawHistory,omitempty"`
 	NextPageToken []byte      `json:"nextPageToken,omitempty"`
-	Archived      *bool       `json:"archived,omitempty"`
+	Archived      bool        `json:"archived,omitempty"`
 }
 
 // GetHistory is an internal getter (TBD...)
@@ -3500,8 +3500,8 @@ func (v *GetWorkflowExecutionHistoryResponse) GetNextPageToken() (o []byte) {
 
 // GetArchived is an internal getter (TBD...)
 func (v *GetWorkflowExecutionHistoryResponse) GetArchived() (o bool) {
-	if v != nil && v.Archived != nil {
-		return *v.Archived
+	if v != nil {
+		return v.Archived
 	}
 	return
 }
@@ -4684,7 +4684,7 @@ const (
 
 // PendingActivityInfo is an internal type (TBD...)
 type PendingActivityInfo struct {
-	ActivityID             *string               `json:"activityID,omitempty"`
+	ActivityID             string                `json:"activityID,omitempty"`
 	ActivityType           *ActivityType         `json:"activityType,omitempty"`
 	State                  *PendingActivityState `json:"state,omitempty"`
 	HeartbeatDetails       []byte                `json:"heartbeatDetails,omitempty"`
@@ -4701,8 +4701,8 @@ type PendingActivityInfo struct {
 
 // GetActivityID is an internal getter (TBD...)
 func (v *PendingActivityInfo) GetActivityID() (o string) {
-	if v != nil && v.ActivityID != nil {
-		return *v.ActivityID
+	if v != nil {
+		return v.ActivityID
 	}
 	return
 }
@@ -5054,7 +5054,7 @@ func (v *PollForActivityTaskRequest) GetTaskListMetadata() (o *TaskListMetadata)
 type PollForActivityTaskResponse struct {
 	TaskToken                       []byte             `json:"taskToken,omitempty"`
 	WorkflowExecution               *WorkflowExecution `json:"workflowExecution,omitempty"`
-	ActivityID                      *string            `json:"activityId,omitempty"`
+	ActivityID                      string             `json:"activityId,omitempty"`
 	ActivityType                    *ActivityType      `json:"activityType,omitempty"`
 	Input                           []byte             `json:"input,omitempty"`
 	ScheduledTimestamp              *int64             `json:"scheduledTimestamp,omitempty"`
@@ -5088,8 +5088,8 @@ func (v *PollForActivityTaskResponse) GetWorkflowExecution() (o *WorkflowExecuti
 
 // GetActivityID is an internal getter (TBD...)
 func (v *PollForActivityTaskResponse) GetActivityID() (o string) {
-	if v != nil && v.ActivityID != nil {
-		return *v.ActivityID
+	if v != nil {
+		return v.ActivityID
 	}
 	return
 }
@@ -5733,12 +5733,12 @@ func (v *ReapplyEventsRequest) GetEvents() (o *DataBlob) {
 
 // RecordActivityTaskHeartbeatByIDRequest is an internal type (TBD...)
 type RecordActivityTaskHeartbeatByIDRequest struct {
-	Domain     string  `json:"domain,omitempty"`
-	WorkflowID string  `json:"workflowID,omitempty"`
-	RunID      string  `json:"runID,omitempty"`
-	ActivityID *string `json:"activityID,omitempty"`
-	Details    []byte  `json:"details,omitempty"`
-	Identity   string  `json:"identity,omitempty"`
+	Domain     string `json:"domain,omitempty"`
+	WorkflowID string `json:"workflowID,omitempty"`
+	RunID      string `json:"runID,omitempty"`
+	ActivityID string `json:"activityID,omitempty"`
+	Details    []byte `json:"details,omitempty"`
+	Identity   string `json:"identity,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -5767,8 +5767,8 @@ func (v *RecordActivityTaskHeartbeatByIDRequest) GetRunID() (o string) {
 
 // GetActivityID is an internal getter (TBD...)
 func (v *RecordActivityTaskHeartbeatByIDRequest) GetActivityID() (o string) {
-	if v != nil && v.ActivityID != nil {
-		return *v.ActivityID
+	if v != nil {
+		return v.ActivityID
 	}
 	return
 }
@@ -5822,13 +5822,13 @@ func (v *RecordActivityTaskHeartbeatRequest) GetIdentity() (o string) {
 
 // RecordActivityTaskHeartbeatResponse is an internal type (TBD...)
 type RecordActivityTaskHeartbeatResponse struct {
-	CancelRequested *bool `json:"cancelRequested,omitempty"`
+	CancelRequested bool `json:"cancelRequested,omitempty"`
 }
 
 // GetCancelRequested is an internal getter (TBD...)
 func (v *RecordActivityTaskHeartbeatResponse) GetCancelRequested() (o bool) {
-	if v != nil && v.CancelRequested != nil {
-		return *v.CancelRequested
+	if v != nil {
+		return v.CancelRequested
 	}
 	return
 }
@@ -6072,28 +6072,28 @@ func (v *RemoveTaskRequest) GetVisibilityTimestamp() (o int64) {
 
 // RequestCancelActivityTaskDecisionAttributes is an internal type (TBD...)
 type RequestCancelActivityTaskDecisionAttributes struct {
-	ActivityID *string `json:"activityId,omitempty"`
+	ActivityID string `json:"activityId,omitempty"`
 }
 
 // GetActivityID is an internal getter (TBD...)
 func (v *RequestCancelActivityTaskDecisionAttributes) GetActivityID() (o string) {
-	if v != nil && v.ActivityID != nil {
-		return *v.ActivityID
+	if v != nil {
+		return v.ActivityID
 	}
 	return
 }
 
 // RequestCancelActivityTaskFailedEventAttributes is an internal type (TBD...)
 type RequestCancelActivityTaskFailedEventAttributes struct {
-	ActivityID                   *string `json:"activityId,omitempty"`
+	ActivityID                   string  `json:"activityId,omitempty"`
 	Cause                        *string `json:"cause,omitempty"`
 	DecisionTaskCompletedEventID int64   `json:"decisionTaskCompletedEventId,omitempty"`
 }
 
 // GetActivityID is an internal getter (TBD...)
 func (v *RequestCancelActivityTaskFailedEventAttributes) GetActivityID() (o string) {
-	if v != nil && v.ActivityID != nil {
-		return *v.ActivityID
+	if v != nil {
+		return v.ActivityID
 	}
 	return
 }
@@ -6120,7 +6120,7 @@ type RequestCancelExternalWorkflowExecutionDecisionAttributes struct {
 	WorkflowID        string `json:"workflowId,omitempty"`
 	RunID             string `json:"runId,omitempty"`
 	Control           []byte `json:"control,omitempty"`
-	ChildWorkflowOnly *bool  `json:"childWorkflowOnly,omitempty"`
+	ChildWorkflowOnly bool   `json:"childWorkflowOnly,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6157,8 +6157,8 @@ func (v *RequestCancelExternalWorkflowExecutionDecisionAttributes) GetControl() 
 
 // GetChildWorkflowOnly is an internal getter (TBD...)
 func (v *RequestCancelExternalWorkflowExecutionDecisionAttributes) GetChildWorkflowOnly() (o bool) {
-	if v != nil && v.ChildWorkflowOnly != nil {
-		return *v.ChildWorkflowOnly
+	if v != nil {
+		return v.ChildWorkflowOnly
 	}
 	return
 }
@@ -6227,7 +6227,7 @@ type RequestCancelExternalWorkflowExecutionInitiatedEventAttributes struct {
 	Domain                       string             `json:"domain,omitempty"`
 	WorkflowExecution            *WorkflowExecution `json:"workflowExecution,omitempty"`
 	Control                      []byte             `json:"control,omitempty"`
-	ChildWorkflowOnly            *bool              `json:"childWorkflowOnly,omitempty"`
+	ChildWorkflowOnly            bool               `json:"childWorkflowOnly,omitempty"`
 }
 
 // GetDecisionTaskCompletedEventID is an internal getter (TBD...)
@@ -6264,8 +6264,8 @@ func (v *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) GetCont
 
 // GetChildWorkflowOnly is an internal getter (TBD...)
 func (v *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) GetChildWorkflowOnly() (o bool) {
-	if v != nil && v.ChildWorkflowOnly != nil {
-		return *v.ChildWorkflowOnly
+	if v != nil {
+		return v.ChildWorkflowOnly
 	}
 	return
 }
@@ -6317,7 +6317,7 @@ type ResetPointInfo struct {
 	FirstDecisionCompletedID int64  `json:"firstDecisionCompletedId,omitempty"`
 	CreatedTimeNano          *int64 `json:"createdTimeNano,omitempty"`
 	ExpiringTimeNano         *int64 `json:"expiringTimeNano,omitempty"`
-	Resettable               *bool  `json:"resettable,omitempty"`
+	Resettable               bool   `json:"resettable,omitempty"`
 }
 
 // GetBinaryChecksum is an internal getter (TBD...)
@@ -6362,8 +6362,8 @@ func (v *ResetPointInfo) GetExpiringTimeNano() (o int64) {
 
 // GetResettable is an internal getter (TBD...)
 func (v *ResetPointInfo) GetResettable() (o bool) {
-	if v != nil && v.Resettable != nil {
-		return *v.Resettable
+	if v != nil {
+		return v.Resettable
 	}
 	return
 }
@@ -6445,7 +6445,7 @@ type ResetWorkflowExecutionRequest struct {
 	Reason                *string            `json:"reason,omitempty"`
 	DecisionFinishEventID int64              `json:"decisionFinishEventId,omitempty"`
 	RequestID             string             `json:"requestId,omitempty"`
-	SkipSignalReapply     *bool              `json:"skipSignalReapply,omitempty"`
+	SkipSignalReapply     bool               `json:"skipSignalReapply,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6490,8 +6490,8 @@ func (v *ResetWorkflowExecutionRequest) GetRequestID() (o string) {
 
 // GetSkipSignalReapply is an internal getter (TBD...)
 func (v *ResetWorkflowExecutionRequest) GetSkipSignalReapply() (o bool) {
-	if v != nil && v.SkipSignalReapply != nil {
-		return *v.SkipSignalReapply
+	if v != nil {
+		return v.SkipSignalReapply
 	}
 	return
 }
@@ -6511,12 +6511,12 @@ func (v *ResetWorkflowExecutionResponse) GetRunID() (o string) {
 
 // RespondActivityTaskCanceledByIDRequest is an internal type (TBD...)
 type RespondActivityTaskCanceledByIDRequest struct {
-	Domain     string  `json:"domain,omitempty"`
-	WorkflowID string  `json:"workflowID,omitempty"`
-	RunID      string  `json:"runID,omitempty"`
-	ActivityID *string `json:"activityID,omitempty"`
-	Details    []byte  `json:"details,omitempty"`
-	Identity   string  `json:"identity,omitempty"`
+	Domain     string `json:"domain,omitempty"`
+	WorkflowID string `json:"workflowID,omitempty"`
+	RunID      string `json:"runID,omitempty"`
+	ActivityID string `json:"activityID,omitempty"`
+	Details    []byte `json:"details,omitempty"`
+	Identity   string `json:"identity,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6545,8 +6545,8 @@ func (v *RespondActivityTaskCanceledByIDRequest) GetRunID() (o string) {
 
 // GetActivityID is an internal getter (TBD...)
 func (v *RespondActivityTaskCanceledByIDRequest) GetActivityID() (o string) {
-	if v != nil && v.ActivityID != nil {
-		return *v.ActivityID
+	if v != nil {
+		return v.ActivityID
 	}
 	return
 }
@@ -6600,12 +6600,12 @@ func (v *RespondActivityTaskCanceledRequest) GetIdentity() (o string) {
 
 // RespondActivityTaskCompletedByIDRequest is an internal type (TBD...)
 type RespondActivityTaskCompletedByIDRequest struct {
-	Domain     string  `json:"domain,omitempty"`
-	WorkflowID string  `json:"workflowID,omitempty"`
-	RunID      string  `json:"runID,omitempty"`
-	ActivityID *string `json:"activityID,omitempty"`
-	Result     []byte  `json:"result,omitempty"`
-	Identity   string  `json:"identity,omitempty"`
+	Domain     string `json:"domain,omitempty"`
+	WorkflowID string `json:"workflowID,omitempty"`
+	RunID      string `json:"runID,omitempty"`
+	ActivityID string `json:"activityID,omitempty"`
+	Result     []byte `json:"result,omitempty"`
+	Identity   string `json:"identity,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6634,8 +6634,8 @@ func (v *RespondActivityTaskCompletedByIDRequest) GetRunID() (o string) {
 
 // GetActivityID is an internal getter (TBD...)
 func (v *RespondActivityTaskCompletedByIDRequest) GetActivityID() (o string) {
-	if v != nil && v.ActivityID != nil {
-		return *v.ActivityID
+	if v != nil {
+		return v.ActivityID
 	}
 	return
 }
@@ -6692,7 +6692,7 @@ type RespondActivityTaskFailedByIDRequest struct {
 	Domain     string  `json:"domain,omitempty"`
 	WorkflowID string  `json:"workflowID,omitempty"`
 	RunID      string  `json:"runID,omitempty"`
-	ActivityID *string `json:"activityID,omitempty"`
+	ActivityID string  `json:"activityID,omitempty"`
 	Reason     *string `json:"reason,omitempty"`
 	Details    []byte  `json:"details,omitempty"`
 	Identity   string  `json:"identity,omitempty"`
@@ -6724,8 +6724,8 @@ func (v *RespondActivityTaskFailedByIDRequest) GetRunID() (o string) {
 
 // GetActivityID is an internal getter (TBD...)
 func (v *RespondActivityTaskFailedByIDRequest) GetActivityID() (o string) {
-	if v != nil && v.ActivityID != nil {
-		return *v.ActivityID
+	if v != nil {
+		return v.ActivityID
 	}
 	return
 }
@@ -6801,8 +6801,8 @@ type RespondDecisionTaskCompletedRequest struct {
 	ExecutionContext           []byte                          `json:"executionContext,omitempty"`
 	Identity                   string                          `json:"identity,omitempty"`
 	StickyAttributes           *StickyExecutionAttributes      `json:"stickyAttributes,omitempty"`
-	ReturnNewDecisionTask      *bool                           `json:"returnNewDecisionTask,omitempty"`
-	ForceCreateNewDecisionTask *bool                           `json:"forceCreateNewDecisionTask,omitempty"`
+	ReturnNewDecisionTask      bool                            `json:"returnNewDecisionTask,omitempty"`
+	ForceCreateNewDecisionTask bool                            `json:"forceCreateNewDecisionTask,omitempty"`
 	BinaryChecksum             string                          `json:"binaryChecksum,omitempty"`
 	QueryResults               map[string]*WorkflowQueryResult `json:"queryResults,omitempty"`
 }
@@ -6849,16 +6849,16 @@ func (v *RespondDecisionTaskCompletedRequest) GetStickyAttributes() (o *StickyEx
 
 // GetReturnNewDecisionTask is an internal getter (TBD...)
 func (v *RespondDecisionTaskCompletedRequest) GetReturnNewDecisionTask() (o bool) {
-	if v != nil && v.ReturnNewDecisionTask != nil {
-		return *v.ReturnNewDecisionTask
+	if v != nil {
+		return v.ReturnNewDecisionTask
 	}
 	return
 }
 
 // GetForceCreateNewDecisionTask is an internal getter (TBD...)
 func (v *RespondDecisionTaskCompletedRequest) GetForceCreateNewDecisionTask() (o bool) {
-	if v != nil && v.ForceCreateNewDecisionTask != nil {
-		return *v.ForceCreateNewDecisionTask
+	if v != nil {
+		return v.ForceCreateNewDecisionTask
 	}
 	return
 }
@@ -7001,42 +7001,42 @@ func (v *RespondQueryTaskCompletedRequest) GetWorkerVersionInfo() (o *WorkerVers
 
 // RetryPolicy is an internal type (TBD...)
 type RetryPolicy struct {
-	InitialIntervalInSeconds    *int32   `json:"initialIntervalInSeconds,omitempty"`
-	BackoffCoefficient          *float64 `json:"backoffCoefficient,omitempty"`
-	MaximumIntervalInSeconds    *int32   `json:"maximumIntervalInSeconds,omitempty"`
-	MaximumAttempts             *int32   `json:"maximumAttempts,omitempty"`
+	InitialIntervalInSeconds    int32    `json:"initialIntervalInSeconds,omitempty"`
+	BackoffCoefficient          float64  `json:"backoffCoefficient,omitempty"`
+	MaximumIntervalInSeconds    int32    `json:"maximumIntervalInSeconds,omitempty"`
+	MaximumAttempts             int32    `json:"maximumAttempts,omitempty"`
 	NonRetriableErrorReasons    []string `json:"nonRetriableErrorReasons,omitempty"`
-	ExpirationIntervalInSeconds *int32   `json:"expirationIntervalInSeconds,omitempty"`
+	ExpirationIntervalInSeconds int32    `json:"expirationIntervalInSeconds,omitempty"`
 }
 
 // GetInitialIntervalInSeconds is an internal getter (TBD...)
 func (v *RetryPolicy) GetInitialIntervalInSeconds() (o int32) {
-	if v != nil && v.InitialIntervalInSeconds != nil {
-		return *v.InitialIntervalInSeconds
+	if v != nil {
+		return v.InitialIntervalInSeconds
 	}
 	return
 }
 
 // GetBackoffCoefficient is an internal getter (TBD...)
 func (v *RetryPolicy) GetBackoffCoefficient() (o float64) {
-	if v != nil && v.BackoffCoefficient != nil {
-		return *v.BackoffCoefficient
+	if v != nil {
+		return v.BackoffCoefficient
 	}
 	return
 }
 
 // GetMaximumIntervalInSeconds is an internal getter (TBD...)
 func (v *RetryPolicy) GetMaximumIntervalInSeconds() (o int32) {
-	if v != nil && v.MaximumIntervalInSeconds != nil {
-		return *v.MaximumIntervalInSeconds
+	if v != nil {
+		return v.MaximumIntervalInSeconds
 	}
 	return
 }
 
 // GetMaximumAttempts is an internal getter (TBD...)
 func (v *RetryPolicy) GetMaximumAttempts() (o int32) {
-	if v != nil && v.MaximumAttempts != nil {
-		return *v.MaximumAttempts
+	if v != nil {
+		return v.MaximumAttempts
 	}
 	return
 }
@@ -7051,8 +7051,8 @@ func (v *RetryPolicy) GetNonRetriableErrorReasons() (o []string) {
 
 // GetExpirationIntervalInSeconds is an internal getter (TBD...)
 func (v *RetryPolicy) GetExpirationIntervalInSeconds() (o int32) {
-	if v != nil && v.ExpirationIntervalInSeconds != nil {
-		return *v.ExpirationIntervalInSeconds
+	if v != nil {
+		return v.ExpirationIntervalInSeconds
 	}
 	return
 }
@@ -7135,7 +7135,7 @@ func (v *RetryTaskV2Error) GetEndEventVersion() (o int64) {
 
 // ScheduleActivityTaskDecisionAttributes is an internal type (TBD...)
 type ScheduleActivityTaskDecisionAttributes struct {
-	ActivityID                    *string       `json:"activityId,omitempty"`
+	ActivityID                    string        `json:"activityId,omitempty"`
 	ActivityType                  *ActivityType `json:"activityType,omitempty"`
 	Domain                        string        `json:"domain,omitempty"`
 	TaskList                      *TaskList     `json:"taskList,omitempty"`
@@ -7146,13 +7146,13 @@ type ScheduleActivityTaskDecisionAttributes struct {
 	HeartbeatTimeoutSeconds       *int32        `json:"heartbeatTimeoutSeconds,omitempty"`
 	RetryPolicy                   *RetryPolicy  `json:"retryPolicy,omitempty"`
 	Header                        *Header       `json:"header,omitempty"`
-	RequestLocalDispatch          *bool         `json:"requestLocalDispatch,omitempty"`
+	RequestLocalDispatch          bool          `json:"requestLocalDispatch,omitempty"`
 }
 
 // GetActivityID is an internal getter (TBD...)
 func (v *ScheduleActivityTaskDecisionAttributes) GetActivityID() (o string) {
-	if v != nil && v.ActivityID != nil {
-		return *v.ActivityID
+	if v != nil {
+		return v.ActivityID
 	}
 	return
 }
@@ -7239,8 +7239,8 @@ func (v *ScheduleActivityTaskDecisionAttributes) GetHeader() (o *Header) {
 
 // GetRequestLocalDispatch is an internal getter (TBD...)
 func (v *ScheduleActivityTaskDecisionAttributes) GetRequestLocalDispatch() (o bool) {
-	if v != nil && v.RequestLocalDispatch != nil {
-		return *v.RequestLocalDispatch
+	if v != nil {
+		return v.RequestLocalDispatch
 	}
 	return
 }
@@ -7278,7 +7278,7 @@ type SignalExternalWorkflowExecutionDecisionAttributes struct {
 	SignalName        *string            `json:"signalName,omitempty"`
 	Input             []byte             `json:"input,omitempty"`
 	Control           []byte             `json:"control,omitempty"`
-	ChildWorkflowOnly *bool              `json:"childWorkflowOnly,omitempty"`
+	ChildWorkflowOnly bool               `json:"childWorkflowOnly,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -7323,8 +7323,8 @@ func (v *SignalExternalWorkflowExecutionDecisionAttributes) GetControl() (o []by
 
 // GetChildWorkflowOnly is an internal getter (TBD...)
 func (v *SignalExternalWorkflowExecutionDecisionAttributes) GetChildWorkflowOnly() (o bool) {
-	if v != nil && v.ChildWorkflowOnly != nil {
-		return *v.ChildWorkflowOnly
+	if v != nil {
+		return v.ChildWorkflowOnly
 	}
 	return
 }
@@ -7439,7 +7439,7 @@ type SignalExternalWorkflowExecutionInitiatedEventAttributes struct {
 	SignalName                   *string            `json:"signalName,omitempty"`
 	Input                        []byte             `json:"input,omitempty"`
 	Control                      []byte             `json:"control,omitempty"`
-	ChildWorkflowOnly            *bool              `json:"childWorkflowOnly,omitempty"`
+	ChildWorkflowOnly            bool               `json:"childWorkflowOnly,omitempty"`
 }
 
 // GetDecisionTaskCompletedEventID is an internal getter (TBD...)
@@ -7492,8 +7492,8 @@ func (v *SignalExternalWorkflowExecutionInitiatedEventAttributes) GetControl() (
 
 // GetChildWorkflowOnly is an internal getter (TBD...)
 func (v *SignalExternalWorkflowExecutionInitiatedEventAttributes) GetChildWorkflowOnly() (o bool) {
-	if v != nil && v.ChildWorkflowOnly != nil {
-		return *v.ChildWorkflowOnly
+	if v != nil {
+		return v.ChildWorkflowOnly
 	}
 	return
 }
@@ -8784,76 +8784,30 @@ func (v *TransientDecisionInfo) GetStartedEvent() (o *HistoryEvent) {
 	return
 }
 
-// UpdateDomainInfo is an internal type (TBD...)
-type UpdateDomainInfo struct {
-	Description *string           `json:"description,omitempty"`
-	OwnerEmail  *string           `json:"ownerEmail,omitempty"`
-	Data        map[string]string `json:"data,omitempty"`
-}
-
-// GetDescription is an internal getter (TBD...)
-func (v *UpdateDomainInfo) GetDescription() (o string) {
-	if v != nil && v.Description != nil {
-		return *v.Description
-	}
-	return
-}
-
-// GetOwnerEmail is an internal getter (TBD...)
-func (v *UpdateDomainInfo) GetOwnerEmail() (o string) {
-	if v != nil && v.OwnerEmail != nil {
-		return *v.OwnerEmail
-	}
-	return
-}
-
-// GetData is an internal getter (TBD...)
-func (v *UpdateDomainInfo) GetData() (o map[string]string) {
-	if v != nil && v.Data != nil {
-		return v.Data
-	}
-	return
-}
-
 // UpdateDomainRequest is an internal type (TBD...)
 type UpdateDomainRequest struct {
-	Name                     *string                         `json:"name,omitempty"`
-	UpdatedInfo              *UpdateDomainInfo               `json:"updatedInfo,omitempty"`
-	Configuration            *DomainConfiguration            `json:"configuration,omitempty"`
-	ReplicationConfiguration *DomainReplicationConfiguration `json:"replicationConfiguration,omitempty"`
-	SecurityToken            *string                         `json:"securityToken,omitempty"`
-	DeleteBadBinary          *string                         `json:"deleteBadBinary,omitempty"`
-	FailoverTimeoutInSeconds *int32                          `json:"failoverTimeoutInSeconds,omitempty"`
+	Name                                   string                             `json:"name,omitempty"`
+	Description                            *string                            `json:"description,omitempty"`
+	OwnerEmail                             *string                            `json:"ownerEmail,omitempty"`
+	Data                                   map[string]string                  `json:"data,omitempty"`
+	WorkflowExecutionRetentionPeriodInDays *int32                             `json:"workflowExecutionRetentionPeriodInDays,omitempty"`
+	EmitMetric                             *bool                              `json:"emitMetric,omitempty"`
+	BadBinaries                            *BadBinaries                       `json:"badBinaries,omitempty"`
+	HistoryArchivalStatus                  *ArchivalStatus                    `json:"historyArchivalStatus,omitempty"`
+	HistoryArchivalURI                     *string                            `json:"historyArchivalURI,omitempty"`
+	VisibilityArchivalStatus               *ArchivalStatus                    `json:"visibilityArchivalStatus,omitempty"`
+	VisibilityArchivalURI                  *string                            `json:"visibilityArchivalURI,omitempty"`
+	ActiveClusterName                      *string                            `json:"activeClusterName,omitempty"`
+	Clusters                               []*ClusterReplicationConfiguration `json:"clusters,omitempty"`
+	SecurityToken                          *string                            `json:"securityToken,omitempty"`
+	DeleteBadBinary                        *string                            `json:"deleteBadBinary,omitempty"`
+	FailoverTimeoutInSeconds               *int32                             `json:"failoverTimeoutInSeconds,omitempty"`
 }
 
 // GetName is an internal getter (TBD...)
 func (v *UpdateDomainRequest) GetName() (o string) {
-	if v != nil && v.Name != nil {
-		return *v.Name
-	}
-	return
-}
-
-// GetUpdatedInfo is an internal getter (TBD...)
-func (v *UpdateDomainRequest) GetUpdatedInfo() (o *UpdateDomainInfo) {
-	if v != nil && v.UpdatedInfo != nil {
-		return v.UpdatedInfo
-	}
-	return
-}
-
-// GetConfiguration is an internal getter (TBD...)
-func (v *UpdateDomainRequest) GetConfiguration() (o *DomainConfiguration) {
-	if v != nil && v.Configuration != nil {
-		return v.Configuration
-	}
-	return
-}
-
-// GetReplicationConfiguration is an internal getter (TBD...)
-func (v *UpdateDomainRequest) GetReplicationConfiguration() (o *DomainReplicationConfiguration) {
-	if v != nil && v.ReplicationConfiguration != nil {
-		return v.ReplicationConfiguration
+	if v != nil {
+		return v.Name
 	}
 	return
 }
@@ -8882,13 +8836,29 @@ func (v *UpdateDomainRequest) GetFailoverTimeoutInSeconds() (o int32) {
 	return
 }
 
+// GetHistoryArchivalURI is an internal getter (TBD...)
+func (v *UpdateDomainRequest) GetHistoryArchivalURI() (o string) {
+	if v != nil && v.HistoryArchivalURI != nil {
+		return *v.HistoryArchivalURI
+	}
+	return
+}
+
+// GetVisibilityArchivalURI is an internal getter (TBD...)
+func (v *UpdateDomainRequest) GetVisibilityArchivalURI() (o string) {
+	if v != nil && v.VisibilityArchivalURI != nil {
+		return *v.VisibilityArchivalURI
+	}
+	return
+}
+
 // UpdateDomainResponse is an internal type (TBD...)
 type UpdateDomainResponse struct {
 	DomainInfo               *DomainInfo                     `json:"domainInfo,omitempty"`
 	Configuration            *DomainConfiguration            `json:"configuration,omitempty"`
 	ReplicationConfiguration *DomainReplicationConfiguration `json:"replicationConfiguration,omitempty"`
 	FailoverVersion          *int64                          `json:"failoverVersion,omitempty"`
-	IsGlobalDomain           *bool                           `json:"isGlobalDomain,omitempty"`
+	IsGlobalDomain           bool                            `json:"isGlobalDomain,omitempty"`
 }
 
 // GetDomainInfo is an internal getter (TBD...)
@@ -8925,8 +8895,8 @@ func (v *UpdateDomainResponse) GetFailoverVersion() (o int64) {
 
 // GetIsGlobalDomain is an internal getter (TBD...)
 func (v *UpdateDomainResponse) GetIsGlobalDomain() (o bool) {
-	if v != nil && v.IsGlobalDomain != nil {
-		return *v.IsGlobalDomain
+	if v != nil {
+		return v.IsGlobalDomain
 	}
 	return
 }

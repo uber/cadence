@@ -210,7 +210,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 			response.PreviousStartedEventID = common.Int64Ptr(scheduleID)
 			response.ScheduledEventID = scheduleID + 1
 			response.Attempt = 0
-			response.StickyExecutionEnabled = common.BoolPtr(true)
+			response.StickyExecutionEnabled = true
 			response.WorkflowExecutionTaskList = &types.TaskList{
 				Name: tl,
 				Kind: &taskListKindNormal,
@@ -246,7 +246,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 		PreviousStartedEventID: common.Int64Ptr(scheduleID),
 		Attempt:                0,
 		BacklogCountHint:       common.Int64Ptr(1),
-		StickyExecutionEnabled: common.BoolPtr(true),
+		StickyExecutionEnabled: true,
 		WorkflowExecutionTaskList: &types.TaskList{
 			Name: tl,
 			Kind: &tlKind,
@@ -310,7 +310,7 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(callContext context.Co
 			DescRequest: &types.DescribeTaskListRequest{
 				TaskList:              taskList,
 				TaskListType:          &taskListType,
-				IncludeTaskListStatus: common.BoolPtr(false),
+				IncludeTaskListStatus: false,
 			},
 		})
 		s.NoError(err)
@@ -493,7 +493,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 			resp := &types.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    &activityID,
+						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
@@ -523,7 +523,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 			s.logger.Debug(fmt.Sprintf("empty poll returned"))
 			continue
 		}
-		s.EqualValues(activityID, *result.ActivityID)
+		s.EqualValues(activityID, result.ActivityID)
 		s.EqualValues(activityType, result.ActivityType)
 		s.EqualValues(activityInput, result.Input)
 		s.EqualValues(workflowExecution, *result.WorkflowExecution)
@@ -606,7 +606,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 			return &types.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    &activityID,
+						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
@@ -677,7 +677,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 			s.True(len(result.TaskToken) > 0)
 		}
 
-		s.EqualValues(activityID, *result.ActivityID)
+		s.EqualValues(activityID, result.ActivityID)
 		s.EqualValues(activityType, result.ActivityType)
 		s.EqualValues(activityInput, result.Input)
 		s.EqualValues(workflowExecution, *result.WorkflowExecution)
@@ -715,7 +715,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 		DescRequest: &types.DescribeTaskListRequest{
 			TaskList:              taskList,
 			TaskListType:          &tlType,
-			IncludeTaskListStatus: common.BoolPtr(true),
+			IncludeTaskListStatus: true,
 		},
 	})
 	s.NoError(err)
@@ -828,7 +828,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 			return &types.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    &activityID,
+						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
@@ -860,7 +860,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 					s.logger.Debug(fmt.Sprintf("empty poll returned"))
 					continue
 				}
-				s.EqualValues(activityID, *result.ActivityID)
+				s.EqualValues(activityID, result.ActivityID)
 				s.EqualValues(activityType, result.ActivityType)
 				s.EqualValues(activityInput, result.Input)
 				s.EqualValues(activityHeader, result.Header)
@@ -1133,7 +1133,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 			return &types.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    &activityID,
+						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: taskList.Name},
 						ActivityType:                  activityType,
 						Input:                         activityInput,
@@ -1162,7 +1162,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 					s.logger.Debug(fmt.Sprintf("empty poll returned"))
 					continue
 				}
-				s.EqualValues(activityID, *result.ActivityID)
+				s.EqualValues(activityID, result.ActivityID)
 				s.EqualValues(activityType, result.ActivityType)
 				s.EqualValues(activityInput, result.Input)
 				s.EqualValues(workflowExecution, *result.WorkflowExecution)
@@ -1608,7 +1608,7 @@ func (s *matchingEngineSuite) setupRecordActivityTaskStartedMock(tlName string) 
 			return &types.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    &activityID,
+						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: tlName},
 						ActivityType:                  activityType,
 						Input:                         activityInput,

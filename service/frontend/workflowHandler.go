@@ -378,7 +378,7 @@ func (wh *WorkflowHandler) UpdateDomain(
 	if isGraceFailoverRequest(updateRequest) {
 		if err := wh.checkOngoingFailover(
 			ctx,
-			updateRequest.Name,
+			&updateRequest.Name,
 		); err != nil {
 			return nil, err
 		}
@@ -733,7 +733,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
-		resp = &types.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(true)}
+		resp = &types.RecordActivityTaskHeartbeatResponse{CancelRequested: true}
 	} else {
 		resp, err = wh.GetHistoryClient().RecordActivityTaskHeartbeat(ctx, &types.HistoryRecordActivityTaskHeartbeatRequest{
 			DomainUUID:       taskToken.DomainID,
@@ -839,7 +839,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 		if err != nil {
 			return nil, wh.error(err, scope)
 		}
-		resp = &types.RecordActivityTaskHeartbeatResponse{CancelRequested: common.BoolPtr(true)}
+		resp = &types.RecordActivityTaskHeartbeatResponse{CancelRequested: true}
 	} else {
 		req := &types.RecordActivityTaskHeartbeatRequest{
 			TaskToken: token,
@@ -2083,7 +2083,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		History:       history,
 		RawHistory:    historyBlob,
 		NextPageToken: nextToken,
-		Archived:      common.BoolPtr(false),
+		Archived:      false,
 	}, nil
 }
 
@@ -3764,7 +3764,7 @@ func createServiceBusyError() *types.ServiceBusyError {
 }
 
 func isFailoverRequest(updateRequest *types.UpdateDomainRequest) bool {
-	return updateRequest.ReplicationConfiguration != nil && updateRequest.ReplicationConfiguration.ActiveClusterName != nil
+	return updateRequest.ActiveClusterName != nil
 }
 
 func isGraceFailoverRequest(updateRequest *types.UpdateDomainRequest) bool {
@@ -3897,7 +3897,7 @@ func (wh *WorkflowHandler) getArchivedHistory(
 	return &types.GetWorkflowExecutionHistoryResponse{
 		History:       history,
 		NextPageToken: resp.NextPageToken,
-		Archived:      common.BoolPtr(true),
+		Archived:      true,
 	}, nil
 }
 

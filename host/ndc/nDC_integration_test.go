@@ -157,7 +157,7 @@ func (s *nDCIntegrationTestSuite) GetReplicationMessagesMock(
 		replicationMessage := &types.ReplicationMessages{
 			ReplicationTasks:       tasks,
 			LastRetrievedMessageID: tasks[len(tasks)-1].SourceTaskID,
-			HasMore:                common.BoolPtr(true),
+			HasMore:                true,
 		}
 
 		return &types.GetReplicationMessagesResponse{
@@ -242,7 +242,7 @@ func (s *nDCIntegrationTestSuite) verifyEventHistory(
 			},
 			MaximumPageSize:        1000,
 			NextPageToken:          nil,
-			WaitForNewEvent:        common.BoolPtr(false),
+			WaitForNewEvent:        false,
 			HistoryEventFilterType: types.HistoryEventFilterTypeAllEvent.Ptr(),
 		},
 	)
@@ -436,7 +436,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 				EventType: types.EventTypeActivityTaskScheduled.Ptr(),
 				ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
 					DecisionTaskCompletedEventID:  4,
-					ActivityID:                    common.StringPtr("0"),
+					ActivityID:                    "0",
 					ActivityType:                  &types.ActivityType{Name: "activity-type"},
 					TaskList:                      &types.TaskList{Name: tasklist},
 					Input:                         nil,
@@ -741,7 +741,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				EventType: types.EventTypeActivityTaskScheduled.Ptr(),
 				ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
 					DecisionTaskCompletedEventID:  4,
-					ActivityID:                    common.StringPtr("0"),
+					ActivityID:                    "0",
 					ActivityType:                  &types.ActivityType{Name: "activity-type"},
 					TaskList:                      &types.TaskList{Name: tasklist},
 					Input:                         nil,
@@ -1208,7 +1208,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				EventType: types.EventTypeActivityTaskScheduled.Ptr(),
 				ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
 					DecisionTaskCompletedEventID:  4,
-					ActivityID:                    common.StringPtr("0"),
+					ActivityID:                    "0",
 					ActivityType:                  &types.ActivityType{Name: "activity-type"},
 					TaskList:                      &types.TaskList{Name: tasklist},
 					Input:                         nil,
@@ -1328,7 +1328,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				EventType: types.EventTypeActivityTaskScheduled.Ptr(),
 				ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
 					DecisionTaskCompletedEventID:  4,
-					ActivityID:                    common.StringPtr("0"),
+					ActivityID:                    "0",
 					ActivityType:                  &types.ActivityType{Name: "activity-type"},
 					TaskList:                      &types.TaskList{Name: tasklist},
 					Input:                         nil,
