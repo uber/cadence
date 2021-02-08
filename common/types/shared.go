@@ -91,7 +91,7 @@ func (v *ActivityLocalDispatchInfo) GetTaskToken() (o []byte) {
 // ActivityTaskCancelRequestedEventAttributes is an internal type (TBD...)
 type ActivityTaskCancelRequestedEventAttributes struct {
 	ActivityID                   string `json:"activityId,omitempty"`
-	DecisionTaskCompletedEventID int64   `json:"decisionTaskCompletedEventId,omitempty"`
+	DecisionTaskCompletedEventID int64  `json:"decisionTaskCompletedEventId,omitempty"`
 }
 
 // GetActivityID is an internal getter (TBD...)

@@ -587,8 +587,8 @@ func (s *mutableStateSuite) TestTransientDecisionTaskStart_CurrentVersionChanged
 	decisionTimeoutSecond := int32(11)
 	decisionAttempt := int64(2)
 	newDecisionScheduleEvent := &types.HistoryEvent{
-		Version:   common.Int64Ptr(version),
-		EventID:   common.Int64Ptr(decisionScheduleID),
+		Version:   version,
+		EventID:   decisionScheduleID,
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{

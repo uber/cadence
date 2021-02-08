@@ -89,7 +89,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("GetMutableState", func(t *testing.T) {
 		h.EXPECT().GetMutableState(ctx, &types.GetMutableStateRequest{}).Return(&types.GetMutableStateResponse{}, internalErr).Times(1)
 		resp, err := th.GetMutableState(ctx, &hist.GetMutableStateRequest{})
-		assert.Equal(t, hist.GetMutableStateResponse{IsWorkflowRunning: common.BoolPtr(false, NextEventId: common.Int64Ptr(0), LastFirstEventId: common.Int64Ptr(0)), IsStickyTaskListEnabled: common.BoolPtr(false)}, *resp)
+		assert.Equal(t, hist.GetMutableStateResponse{IsWorkflowRunning: common.BoolPtr(false), NextEventId: common.Int64Ptr(0), LastFirstEventId: common.Int64Ptr(0), IsStickyTaskListEnabled: common.BoolPtr(false)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("GetReplicationMessages", func(t *testing.T) {
