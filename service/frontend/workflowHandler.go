@@ -378,7 +378,7 @@ func (wh *WorkflowHandler) UpdateDomain(
 	if isGraceFailoverRequest(updateRequest) {
 		if err := wh.checkOngoingFailover(
 			ctx,
-			updateRequest.Name,
+			&updateRequest.Name,
 		); err != nil {
 			return nil, err
 		}
@@ -3764,7 +3764,7 @@ func createServiceBusyError() *types.ServiceBusyError {
 }
 
 func isFailoverRequest(updateRequest *types.UpdateDomainRequest) bool {
-	return updateRequest.ReplicationConfiguration != nil && updateRequest.ReplicationConfiguration.ActiveClusterName != nil
+	return updateRequest.ActiveClusterName != nil
 }
 
 func isGraceFailoverRequest(updateRequest *types.UpdateDomainRequest) bool {

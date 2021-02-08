@@ -5474,44 +5474,48 @@ func ToTransientDecisionInfo(t *shared.TransientDecisionInfo) *types.TransientDe
 	}
 }
 
-// FromUpdateDomainInfo converts internal UpdateDomainInfo type to thrift
-func FromUpdateDomainInfo(t *types.UpdateDomainInfo) *shared.UpdateDomainInfo {
-	if t == nil {
-		return nil
-	}
-	return &shared.UpdateDomainInfo{
-		Description: t.Description,
-		OwnerEmail:  t.OwnerEmail,
-		Data:        t.Data,
-	}
-}
-
-// ToUpdateDomainInfo converts thrift UpdateDomainInfo type to internal
-func ToUpdateDomainInfo(t *shared.UpdateDomainInfo) *types.UpdateDomainInfo {
-	if t == nil {
-		return nil
-	}
-	return &types.UpdateDomainInfo{
-		Description: t.Description,
-		OwnerEmail:  t.OwnerEmail,
-		Data:        t.Data,
-	}
-}
-
 // FromUpdateDomainRequest converts internal UpdateDomainRequest type to thrift
 func FromUpdateDomainRequest(t *types.UpdateDomainRequest) *shared.UpdateDomainRequest {
 	if t == nil {
 		return nil
 	}
-	return &shared.UpdateDomainRequest{
-		Name:                     t.Name,
-		UpdatedInfo:              FromUpdateDomainInfo(t.UpdatedInfo),
-		Configuration:            FromDomainConfiguration(t.Configuration),
-		ReplicationConfiguration: FromDomainReplicationConfiguration(t.ReplicationConfiguration),
+	request := shared.UpdateDomainRequest{
+		Name:                     &t.Name,
 		SecurityToken:            t.SecurityToken,
 		DeleteBadBinary:          t.DeleteBadBinary,
 		FailoverTimeoutInSeconds: t.FailoverTimeoutInSeconds,
 	}
+	if t.Description != nil || t.OwnerEmail != nil || t.Data != nil {
+		request.UpdatedInfo = &shared.UpdateDomainInfo{
+			Description: t.Description,
+			OwnerEmail:  t.OwnerEmail,
+			Data:        t.Data,
+		}
+	}
+	if t.WorkflowExecutionRetentionPeriodInDays != nil ||
+		t.EmitMetric != nil ||
+		t.BadBinaries != nil ||
+		t.HistoryArchivalStatus != nil ||
+		t.HistoryArchivalURI != nil ||
+		t.VisibilityArchivalStatus != nil ||
+		t.VisibilityArchivalURI != nil {
+		request.Configuration = &shared.DomainConfiguration{
+			WorkflowExecutionRetentionPeriodInDays: t.WorkflowExecutionRetentionPeriodInDays,
+			EmitMetric:                             t.EmitMetric,
+			BadBinaries:                            FromBadBinaries(t.BadBinaries),
+			HistoryArchivalStatus:                  FromArchivalStatus(t.HistoryArchivalStatus),
+			HistoryArchivalURI:                     t.HistoryArchivalURI,
+			VisibilityArchivalStatus:               FromArchivalStatus(t.VisibilityArchivalStatus),
+			VisibilityArchivalURI:                  t.VisibilityArchivalURI,
+		}
+	}
+	if t.ActiveClusterName != nil || t.Clusters != nil {
+		request.ReplicationConfiguration = &shared.DomainReplicationConfiguration{
+			ActiveClusterName: t.ActiveClusterName,
+			Clusters:          FromClusterReplicationConfigurationArray(t.Clusters),
+		}
+	}
+	return &request
 }
 
 // ToUpdateDomainRequest converts thrift UpdateDomainRequest type to internal
@@ -5519,15 +5523,31 @@ func ToUpdateDomainRequest(t *shared.UpdateDomainRequest) *types.UpdateDomainReq
 	if t == nil {
 		return nil
 	}
-	return &types.UpdateDomainRequest{
-		Name:                     t.Name,
-		UpdatedInfo:              ToUpdateDomainInfo(t.UpdatedInfo),
-		Configuration:            ToDomainConfiguration(t.Configuration),
-		ReplicationConfiguration: ToDomainReplicationConfiguration(t.ReplicationConfiguration),
+	request := types.UpdateDomainRequest{
+		Name:                     t.GetName(),
 		SecurityToken:            t.SecurityToken,
 		DeleteBadBinary:          t.DeleteBadBinary,
 		FailoverTimeoutInSeconds: t.FailoverTimeoutInSeconds,
 	}
+	if t.UpdatedInfo != nil {
+		request.Description = t.UpdatedInfo.Description
+		request.OwnerEmail = t.UpdatedInfo.OwnerEmail
+		request.Data = t.UpdatedInfo.Data
+	}
+	if t.Configuration != nil {
+		request.WorkflowExecutionRetentionPeriodInDays = t.Configuration.WorkflowExecutionRetentionPeriodInDays
+		request.EmitMetric = t.Configuration.EmitMetric
+		request.BadBinaries = ToBadBinaries(t.Configuration.BadBinaries)
+		request.HistoryArchivalStatus = ToArchivalStatus(t.Configuration.HistoryArchivalStatus)
+		request.HistoryArchivalURI = t.Configuration.HistoryArchivalURI
+		request.VisibilityArchivalStatus = ToArchivalStatus(t.Configuration.VisibilityArchivalStatus)
+		request.VisibilityArchivalURI = t.Configuration.VisibilityArchivalURI
+	}
+	if t.ReplicationConfiguration != nil {
+		request.ActiveClusterName = t.ReplicationConfiguration.ActiveClusterName
+		request.Clusters = ToClusterReplicationConfigurationArray(t.ReplicationConfiguration.Clusters)
+	}
+	return &request
 }
 
 // FromUpdateDomainResponse converts internal UpdateDomainResponse type to thrift
