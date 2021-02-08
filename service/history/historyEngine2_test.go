@@ -146,7 +146,7 @@ func (s *engine2Suite) SetupTest() {
 		timerProcessor:       s.mockTimerProcessor,
 	}
 	s.mockShard.SetEngine(h)
-	h.decisionHandler = newDecisionHandler(h)
+	h.decisionHandler = NewDecisionHandler(s.mockShard, h.executionCache, h.tokenSerializer)
 
 	s.historyEngine = h
 }

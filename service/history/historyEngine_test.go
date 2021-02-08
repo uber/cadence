@@ -170,7 +170,7 @@ func (s *engineSuite) SetupTest() {
 		workflowResetter:     s.mockWorkflowResetter,
 	}
 	s.mockShard.SetEngine(h)
-	h.decisionHandler = newDecisionHandler(h)
+	h.decisionHandler = NewDecisionHandler(s.mockShard, h.executionCache, h.tokenSerializer)
 
 	h.historyEventNotifier.Start()
 
