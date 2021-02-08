@@ -556,7 +556,7 @@ Update_History_Loop:
 					eventBatchFirstEventID,
 					common.FailureReasonTransactionSizeExceedsLimit,
 					[]byte(updateErr.Error()),
-					identityHistoryService,
+					execution.IdentityHistoryService,
 				); err != nil {
 					return nil, err
 				}

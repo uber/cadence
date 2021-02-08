@@ -44,7 +44,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 		Name: tl,
 		Kind: types.TaskListKindNormal.Ptr(),
 	}
-	stikyTaskList := &types.TaskList{
+	stickyTaskList := &types.TaskList{
 		Name: "test-sticky-tasklist",
 		Kind: types.TaskListKindSticky.Ptr(),
 	}
@@ -89,7 +89,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 			TaskToken: taskToken,
 			Decisions: []*types.Decision{},
 			StickyAttributes: &types.StickyExecutionAttributes{
-				WorkerTaskList:                stikyTaskList,
+				WorkerTaskList:                stickyTaskList,
 				ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 			},
 			ReturnNewDecisionTask:      true,
@@ -118,7 +118,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 	resp5, err5 := s.engine.RespondDecisionTaskCompleted(createContext(), &types.RespondDecisionTaskCompletedRequest{
 		TaskToken: taskToken,
 		Decisions: []*types.Decision{
-			&types.Decision{
+			{
 				DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
 				CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{
 					Result: []byte("efg"),
@@ -126,7 +126,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 			},
 		},
 		StickyAttributes: &types.StickyExecutionAttributes{
-			WorkerTaskList:                stikyTaskList,
+			WorkerTaskList:                stickyTaskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 		},
 		ReturnNewDecisionTask:      true,
@@ -204,7 +204,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 	resp3, err3 := s.engine.RespondDecisionTaskCompleted(createContext(), &types.RespondDecisionTaskCompletedRequest{
 		TaskToken: resp2.DecisionTask.GetTaskToken(),
 		Decisions: []*types.Decision{
-			&types.Decision{
+			{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
 					MarkerName: common.StringPtr("localActivity1"),
@@ -224,7 +224,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 	resp4, err4 := s.engine.RespondDecisionTaskCompleted(createContext(), &types.RespondDecisionTaskCompletedRequest{
 		TaskToken: resp3.DecisionTask.GetTaskToken(),
 		Decisions: []*types.Decision{
-			&types.Decision{
+			{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
 					MarkerName: common.StringPtr("localActivity2"),
@@ -244,7 +244,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 	resp5, err5 := s.engine.RespondDecisionTaskCompleted(createContext(), &types.RespondDecisionTaskCompletedRequest{
 		TaskToken: resp4.DecisionTask.GetTaskToken(),
 		Decisions: []*types.Decision{
-			&types.Decision{
+			{
 				DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
 				CompleteWorkflowExecutionDecisionAttributes: &types.CompleteWorkflowExecutionDecisionAttributes{
 					Result: []byte("efg"),

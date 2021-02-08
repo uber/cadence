@@ -179,7 +179,7 @@ func (s *transferQueueValidatorSuite) TestAckTasks_NoTaskLost() {
 			task.QueueTypeActiveTransfer,
 			nil, nil, nil, nil, nil,
 			s.timeSource,
-			nil, nil,
+			nil,
 		)
 	}
 
@@ -212,7 +212,7 @@ func (s *transferQueueValidatorSuite) TestAckTasks_TaskLost() {
 			task.QueueTypeActiveTransfer,
 			nil, nil, nil, nil, nil,
 			s.timeSource,
-			nil, nil,
+			nil,
 		)
 	}
 

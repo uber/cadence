@@ -212,7 +212,7 @@ func FailDecision(
 		decision.StartedID,
 		decisionFailureCause,
 		nil,
-		identityHistoryService,
+		IdentityHistoryService,
 		"",
 		"",
 		"",
