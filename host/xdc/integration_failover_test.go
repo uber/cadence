@@ -630,7 +630,7 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 			WorkflowID: id,
 			RunID:      we.GetRunID(),
 		},
-		SignalName: common.StringPtr(signalName),
+		SignalName: signalName,
 		Input:      signalInput,
 		Identity:   identity1,
 	})
@@ -663,7 +663,7 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 			WorkflowID: id,
 			RunID:      we.GetRunID(),
 		},
-		SignalName: common.StringPtr(signalName),
+		SignalName: signalName,
 		Input:      signalInput,
 		Identity:   identity2,
 	})
@@ -1245,7 +1245,7 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 			WorkflowID: id,
 			RunID:      we.GetRunID(),
 		},
-		SignalName: common.StringPtr(signalName),
+		SignalName: signalName,
 		Input:      signalInput,
 		Identity:   identity,
 	})
@@ -1302,7 +1302,7 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 		},
-		SignalName: common.StringPtr(signalName2),
+		SignalName: signalName2,
 		Input:      signalInput2,
 		Identity:   identity,
 	})
@@ -1402,7 +1402,7 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 					WorkflowID: id,
 					RunID:      we.GetRunID(),
 				},
-				SignalName: common.StringPtr(signalName),
+				SignalName: signalName,
 				Input:      signalInput,
 				Identity:   "",
 			})

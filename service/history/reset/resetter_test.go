@@ -593,7 +593,7 @@ func (s *workflowResetterSuite) TestReapplyEvents() {
 		EventID:   101,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-			SignalName: common.StringPtr("some random signal name"),
+			SignalName: "some random signal name",
 			Input:      []byte("some random signal input"),
 			Identity:   "some random signal identity",
 		},
@@ -607,7 +607,7 @@ func (s *workflowResetterSuite) TestReapplyEvents() {
 		EventID:   103,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-			SignalName: common.StringPtr("another random signal name"),
+			SignalName: "another random signal name",
 			Input:      []byte("another random signal input"),
 			Identity:   "another random signal identity",
 		},

@@ -886,7 +886,7 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 			EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 			Version:   failoverVersion,
 			WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-				SignalName: common.StringPtr("test-signal-buffered"),
+				SignalName: "test-signal-buffered",
 				Input:      []byte("test-signal-buffered-input"),
 			},
 		},

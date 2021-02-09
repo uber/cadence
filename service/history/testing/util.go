@@ -311,7 +311,7 @@ func AddRequestSignalInitiatedEvent(
 				WorkflowID: workflowID,
 				RunID:      runID,
 			},
-			SignalName: common.StringPtr(signalName),
+			SignalName: signalName,
 			Input:      input,
 			Control:    control,
 		})
