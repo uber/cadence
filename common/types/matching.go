@@ -534,7 +534,7 @@ func (v *MatchingQueryWorkflowRequest) GetForwardedFrom() (o string) {
 type MatchingRespondQueryTaskCompletedRequest struct {
 	DomainUUID       string                            `json:"domainUUID,omitempty"`
 	TaskList         *TaskList                         `json:"taskList,omitempty"`
-	TaskID           *string                           `json:"taskID,omitempty"`
+	TaskID           string                            `json:"taskID,omitempty"`
 	CompletedRequest *RespondQueryTaskCompletedRequest `json:"completedRequest,omitempty"`
 }
 
@@ -556,8 +556,8 @@ func (v *MatchingRespondQueryTaskCompletedRequest) GetTaskList() (o *TaskList) {
 
 // GetTaskID is an internal getter (TBD...)
 func (v *MatchingRespondQueryTaskCompletedRequest) GetTaskID() (o string) {
-	if v != nil && v.TaskID != nil {
-		return *v.TaskID
+	if v != nil {
+		return v.TaskID
 	}
 	return
 }

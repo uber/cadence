@@ -90,7 +90,7 @@ func (s *dlqMessageHandlerSuite) TestReadMessages() {
 	tasks := []*types.ReplicationTask{
 		{
 			TaskType:     types.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskID: common.Int64Ptr(1),
+			SourceTaskID: 1,
 		},
 	}
 	s.mockReplicationQueue.EXPECT().GetDLQAckLevel(gomock.Any()).Return(ackLevel, nil).Times(1)
@@ -112,7 +112,7 @@ func (s *dlqMessageHandlerSuite) TestReadMessages_ThrowErrorOnGetDLQAckLevel() {
 	tasks := []*types.ReplicationTask{
 		{
 			TaskType:     types.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskID: common.Int64Ptr(1),
+			SourceTaskID: 1,
 		},
 	}
 	testError := fmt.Errorf("test")
@@ -192,7 +192,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages() {
 	tasks := []*types.ReplicationTask{
 		{
 			TaskType:             types.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskID:         common.Int64Ptr(messageID),
+			SourceTaskID:         messageID,
 			DomainTaskAttributes: domainAttribute,
 		},
 	}
@@ -221,7 +221,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnGetDLQAckLevel() 
 	tasks := []*types.ReplicationTask{
 		{
 			TaskType:             types.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskID:         common.Int64Ptr(int64(messageID)),
+			SourceTaskID:         messageID,
 			DomainTaskAttributes: domainAttribute,
 		},
 	}
@@ -273,12 +273,12 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnHandleReceivingTa
 	tasks := []*types.ReplicationTask{
 		{
 			TaskType:             types.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskID:         common.Int64Ptr(messageID1),
+			SourceTaskID:         messageID1,
 			DomainTaskAttributes: domainAttribute1,
 		},
 		{
 			TaskType:             types.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskID:         common.Int64Ptr(messageID2),
+			SourceTaskID:         messageID2,
 			DomainTaskAttributes: domainAttribute2,
 		},
 	}
@@ -313,12 +313,12 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnDeleteMessages() 
 	tasks := []*types.ReplicationTask{
 		{
 			TaskType:             types.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskID:         common.Int64Ptr(messageID1),
+			SourceTaskID:         messageID1,
 			DomainTaskAttributes: domainAttribute1,
 		},
 		{
 			TaskType:             types.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskID:         common.Int64Ptr(messageID2),
+			SourceTaskID:         messageID2,
 			DomainTaskAttributes: domainAttribute2,
 		},
 	}
@@ -349,7 +349,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_IgnoreErrorOnUpdateDLQAckLeve
 	tasks := []*types.ReplicationTask{
 		{
 			TaskType:             types.ReplicationTaskTypeDomain.Ptr(),
-			SourceTaskID:         common.Int64Ptr(messageID),
+			SourceTaskID:         messageID,
 			DomainTaskAttributes: domainAttribute,
 		},
 	}

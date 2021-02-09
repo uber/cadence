@@ -3600,7 +3600,7 @@ type HistoryEvent struct {
 	Timestamp                                                      *int64                                                          `json:"timestamp,omitempty"`
 	EventType                                                      *EventType                                                      `json:"eventType,omitempty"`
 	Version                                                        int64                                                           `json:"version,omitempty"`
-	TaskID                                                         *int64                                                          `json:"taskId,omitempty"`
+	TaskID                                                         int64                                                           `json:"taskId,omitempty"`
 	WorkflowExecutionStartedEventAttributes                        *WorkflowExecutionStartedEventAttributes                        `json:"workflowExecutionStartedEventAttributes,omitempty"`
 	WorkflowExecutionCompletedEventAttributes                      *WorkflowExecutionCompletedEventAttributes                      `json:"workflowExecutionCompletedEventAttributes,omitempty"`
 	WorkflowExecutionFailedEventAttributes                         *WorkflowExecutionFailedEventAttributes                         `json:"workflowExecutionFailedEventAttributes,omitempty"`
@@ -3679,8 +3679,8 @@ func (v *HistoryEvent) GetVersion() (o int64) {
 
 // GetTaskID is an internal getter (TBD...)
 func (v *HistoryEvent) GetTaskID() (o int64) {
-	if v != nil && v.TaskID != nil {
-		return *v.TaskID
+	if v != nil {
+		return v.TaskID
 	}
 	return
 }
