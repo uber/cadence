@@ -1132,7 +1132,7 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Fire() {
 			TaskList: &types.TaskList{
 				Name: activityInfo.TaskList,
 			},
-			ScheduleID:                    common.Int64Ptr(activityInfo.ScheduleID),
+			ScheduleID:                    activityInfo.ScheduleID,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(activityInfo.ScheduleToStartTimeout),
 		},
 	).Return(nil).Times(1)

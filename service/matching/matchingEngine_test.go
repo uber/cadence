@@ -208,7 +208,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 			response := &types.RecordDecisionTaskStartedResponse{}
 			response.WorkflowType = &workflowType
 			response.PreviousStartedEventID = common.Int64Ptr(scheduleID)
-			response.ScheduledEventID = common.Int64Ptr(scheduleID + 1)
+			response.ScheduledEventID = scheduleID + 1
 			response.Attempt = 0
 			response.StickyExecutionEnabled = true
 			response.WorkflowExecutionTaskList = &types.TaskList{
@@ -221,7 +221,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 	addRequest := types.AddDecisionTaskRequest{
 		DomainUUID:                    domainID,
 		Execution:                     &execution,
-		ScheduleID:                    &scheduleID,
+		ScheduleID:                    scheduleID,
 		TaskList:                      stickyTaskList,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 	}
@@ -362,7 +362,7 @@ func (s *matchingEngineSuite) AddTasksTest(taskType int, isForwarded bool) {
 				SourceDomainUUID:              domainID,
 				DomainUUID:                    domainID,
 				Execution:                     &execution,
-				ScheduleID:                    &scheduleID,
+				ScheduleID:                    scheduleID,
 				TaskList:                      taskList,
 				ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 			}
@@ -374,7 +374,7 @@ func (s *matchingEngineSuite) AddTasksTest(taskType int, isForwarded bool) {
 			addRequest := types.AddDecisionTaskRequest{
 				DomainUUID:                    domainID,
 				Execution:                     &execution,
-				ScheduleID:                    &scheduleID,
+				ScheduleID:                    scheduleID,
 				TaskList:                      taskList,
 				ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 			}
@@ -431,8 +431,7 @@ func (s *matchingEngineSuite) TestTaskWriterShutdown() {
 	tlmImpl.taskWriter.Stop()
 
 	// now attempt to add a task
-	scheduleID := int64(5)
-	addRequest.ScheduleID = &scheduleID
+	addRequest.ScheduleID = 5
 	_, err = s.matchingEngine.AddActivityTask(s.handlerContext, &addRequest)
 	s.Error(err)
 
@@ -470,7 +469,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 			SourceDomainUUID:              domainID,
 			DomainUUID:                    domainID,
 			Execution:                     &workflowExecution,
-			ScheduleID:                    &scheduleID,
+			ScheduleID:                    scheduleID,
 			TaskList:                      taskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 		}
@@ -650,7 +649,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 			SourceDomainUUID:              domainID,
 			DomainUUID:                    domainID,
 			Execution:                     &workflowExecution,
-			ScheduleID:                    &scheduleID,
+			ScheduleID:                    scheduleID,
 			TaskList:                      taskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 		}
@@ -798,7 +797,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 					SourceDomainUUID:              domainID,
 					DomainUUID:                    domainID,
 					Execution:                     &workflowExecution,
-					ScheduleID:                    &scheduleID,
+					ScheduleID:                    scheduleID,
 					TaskList:                      taskList,
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 				}
@@ -938,7 +937,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 				addRequest := types.AddDecisionTaskRequest{
 					DomainUUID:                    domainID,
 					Execution:                     &workflowExecution,
-					ScheduleID:                    &scheduleID,
+					ScheduleID:                    scheduleID,
 					TaskList:                      taskList,
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 				}
@@ -962,8 +961,8 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 			s.logger.Debug("Mock Received RecordDecisionTaskStartedRequest")
 			return &types.RecordDecisionTaskStartedResponse{
 				PreviousStartedEventID: &startedEventID,
-				StartedEventID:         &startedEventID,
-				ScheduledEventID:       &scheduleID,
+				StartedEventID:         startedEventID,
+				ScheduledEventID:       scheduleID,
 				WorkflowType:           workflowType,
 			}, nil
 		}).AnyTimes()
@@ -986,7 +985,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 				}
 				s.EqualValues(workflowExecution, *result.WorkflowExecution)
 				s.EqualValues(workflowType, result.WorkflowType)
-				s.EqualValues(startedEventID, *result.StartedEventID)
+				s.EqualValues(startedEventID, result.StartedEventID)
 				s.EqualValues(workflowExecution, *result.WorkflowExecution)
 				token := &common.TaskToken{
 					DomainID:   domainID,
@@ -1093,7 +1092,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 					SourceDomainUUID:              domainID,
 					DomainUUID:                    domainID,
 					Execution:                     &workflowExecution,
-					ScheduleID:                    &scheduleID,
+					ScheduleID:                    scheduleID,
 					TaskList:                      taskList,
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(600),
 				}
@@ -1242,7 +1241,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 				addRequest := types.AddDecisionTaskRequest{
 					DomainUUID:                    domainID,
 					Execution:                     &workflowExecution,
-					ScheduleID:                    &scheduleID,
+					ScheduleID:                    scheduleID,
 					TaskList:                      taskList,
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(600),
 				}
@@ -1277,8 +1276,8 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 			startedTasks[*taskRequest.TaskID] = true
 			return &types.RecordDecisionTaskStartedResponse{
 				PreviousStartedEventID: &startedEventID,
-				StartedEventID:         &startedEventID,
-				ScheduledEventID:       &scheduleID,
+				StartedEventID:         startedEventID,
+				ScheduledEventID:       scheduleID,
 				WorkflowType:           workflowType,
 			}, nil
 		}).AnyTimes()
@@ -1302,7 +1301,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 				}
 				s.EqualValues(workflowExecution, *result.WorkflowExecution)
 				s.EqualValues(workflowType, result.WorkflowType)
-				s.EqualValues(startedEventID, *result.StartedEventID)
+				s.EqualValues(startedEventID, result.StartedEventID)
 				s.EqualValues(workflowExecution, *result.WorkflowExecution)
 				token := &common.TaskToken{
 					DomainID:   domainID,
@@ -1359,7 +1358,7 @@ func (s *matchingEngineSuite) TestAddTaskAfterStartFailure() {
 		SourceDomainUUID:              domainID,
 		DomainUUID:                    domainID,
 		Execution:                     &workflowExecution,
-		ScheduleID:                    &scheduleID,
+		ScheduleID:                    scheduleID,
 		TaskList:                      taskList,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 	}
@@ -1408,7 +1407,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 			SourceDomainUUID:              domainID,
 			DomainUUID:                    domainID,
 			Execution:                     &workflowExecution,
-			ScheduleID:                    &scheduleID,
+			ScheduleID:                    scheduleID,
 			TaskList:                      taskList,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
 		}
@@ -1550,7 +1549,7 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 				SourceDomainUUID:              domainID,
 				DomainUUID:                    domainID,
 				Execution:                     &workflowExecution,
-				ScheduleID:                    &scheduleID,
+				ScheduleID:                    scheduleID,
 				TaskList:                      taskList,
 				ScheduleToStartTimeoutSeconds: common.Int32Ptr(5),
 			}
@@ -1646,7 +1645,7 @@ func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID i
 	attributes.ScheduleToStartTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.ScheduleToStartTimeoutSeconds)
 	attributes.StartToCloseTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.StartToCloseTimeoutSeconds)
 	attributes.HeartbeatTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.HeartbeatTimeoutSeconds)
-	attributes.DecisionTaskCompletedEventID = common.Int64Ptr(decisionTaskCompletedEventID)
+	attributes.DecisionTaskCompletedEventID = decisionTaskCompletedEventID
 	historyEvent.ActivityTaskScheduledEventAttributes = attributes
 
 	return historyEvent
@@ -1655,7 +1654,7 @@ func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID i
 func newHistoryEvent(eventID int64, eventType types.EventType) *types.HistoryEvent {
 	ts := common.Int64Ptr(time.Now().UnixNano())
 	historyEvent := &types.HistoryEvent{}
-	historyEvent.EventID = common.Int64Ptr(eventID)
+	historyEvent.EventID = eventID
 	historyEvent.Timestamp = ts
 	historyEvent.EventType = &eventType
 

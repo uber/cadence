@@ -628,10 +628,10 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 
 	// Starting decision could result in different scheduleID if decision was transient and new new events came in
 	// before it was started.
-	response.ScheduledEventID = common.Int64Ptr(decision.ScheduleID)
-	response.StartedEventID = common.Int64Ptr(decision.StartedID)
+	response.ScheduledEventID = decision.ScheduleID
+	response.StartedEventID = decision.StartedID
 	response.StickyExecutionEnabled = msBuilder.IsStickyTaskListEnabled()
-	response.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID())
+	response.NextEventID = msBuilder.GetNextEventID()
 	response.Attempt = decision.Attempt
 	response.WorkflowExecutionTaskList = &types.TaskList{
 		Name: executionInfo.TaskList,

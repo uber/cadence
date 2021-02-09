@@ -124,12 +124,12 @@ func (s *stateRebuilderSuite) TestApplyEvents() {
 	requestID := uuid.New()
 	events := []*types.HistoryEvent{
 		{
-			EventID:                                 common.Int64Ptr(1),
+			EventID:                                 1,
 			EventType:                               types.EventTypeWorkflowExecutionStarted.Ptr(),
 			WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
 		},
 		{
-			EventID:                                  common.Int64Ptr(2),
+			EventID:                                  2,
 			EventType:                                types.EventTypeWorkflowExecutionSignaled.Ptr(),
 			WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{},
 		},
@@ -160,23 +160,23 @@ func (s *stateRebuilderSuite) TestPagination() {
 	workflowIdentifier := definition.NewWorkflowIdentifier(s.domainID, s.workflowID, s.runID)
 
 	event1 := &types.HistoryEvent{
-		EventID:                                 common.Int64Ptr(1),
+		EventID:                                 1,
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
 	}
 	event2 := &types.HistoryEvent{
-		EventID:                              common.Int64Ptr(2),
+		EventID:                              2,
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{},
 	}
 	event3 := &types.HistoryEvent{
-		EventID:                            common.Int64Ptr(3),
+		EventID:                            3,
 		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{},
 	}
 	event4 := &types.HistoryEvent{
-		EventID:                              common.Int64Ptr(4),
+		EventID:                              4,
 		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{},
 	}
 	event5 := &types.HistoryEvent{
-		EventID:                              common.Int64Ptr(5),
+		EventID:                              5,
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
 	}
 	history1 := []*types.History{{Events: []*types.HistoryEvent{event1, event2, event3}}}
@@ -238,8 +238,8 @@ func (s *stateRebuilderSuite) TestRebuild() {
 	firstEventID := common.FirstEventID
 	nextEventID := lastEventID + 1
 	events1 := []*types.HistoryEvent{{
-		EventID:   common.Int64Ptr(1),
-		Version:   common.Int64Ptr(version),
+		EventID:   1,
+		Version:   version,
 		EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
 			WorkflowType:                        &types.WorkflowType{Name: "some random workflow type"},
@@ -251,8 +251,8 @@ func (s *stateRebuilderSuite) TestRebuild() {
 		},
 	}}
 	events2 := []*types.HistoryEvent{{
-		EventID:   common.Int64Ptr(2),
-		Version:   common.Int64Ptr(version),
+		EventID:   2,
+		Version:   version,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			SignalName: common.StringPtr("some random signal name"),

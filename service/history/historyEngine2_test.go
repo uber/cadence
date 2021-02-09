@@ -208,10 +208,10 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyExpired() {
 	if executionInfo.LastProcessedEvent != common.EmptyEventID {
 		expectedResponse.PreviousStartedEventID = common.Int64Ptr(executionInfo.LastProcessedEvent)
 	}
-	expectedResponse.ScheduledEventID = common.Int64Ptr(di.ScheduleID)
-	expectedResponse.StartedEventID = common.Int64Ptr(di.ScheduleID + 1)
+	expectedResponse.ScheduledEventID = di.ScheduleID
+	expectedResponse.StartedEventID = di.ScheduleID + 1
 	expectedResponse.StickyExecutionEnabled = false
-	expectedResponse.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID() + 1)
+	expectedResponse.NextEventID = msBuilder.GetNextEventID() + 1
 	expectedResponse.Attempt = di.Attempt
 	expectedResponse.WorkflowExecutionTaskList = &types.TaskList{
 		Name: executionInfo.TaskList,
@@ -281,10 +281,10 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	if executionInfo.LastProcessedEvent != common.EmptyEventID {
 		expectedResponse.PreviousStartedEventID = common.Int64Ptr(executionInfo.LastProcessedEvent)
 	}
-	expectedResponse.ScheduledEventID = common.Int64Ptr(di.ScheduleID)
-	expectedResponse.StartedEventID = common.Int64Ptr(di.ScheduleID + 1)
+	expectedResponse.ScheduledEventID = di.ScheduleID
+	expectedResponse.StartedEventID = di.ScheduleID + 1
 	expectedResponse.StickyExecutionEnabled = true
-	expectedResponse.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID() + 1)
+	expectedResponse.NextEventID = msBuilder.GetNextEventID() + 1
 	expectedResponse.Attempt = di.Attempt
 	expectedResponse.WorkflowExecutionTaskList = &types.TaskList{
 		Name: executionInfo.TaskList,
@@ -479,7 +479,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedConflictOnUpdate() {
 	s.NotNil(response)
 	s.Equal("wType", response.WorkflowType.Name)
 	s.True(response.PreviousStartedEventID == nil)
-	s.Equal(int64(3), *response.StartedEventID)
+	s.Equal(int64(3), response.StartedEventID)
 }
 
 func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
@@ -663,7 +663,7 @@ func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 	s.NotNil(response)
 	s.Equal("wType", response.WorkflowType.Name)
 	s.True(response.PreviousStartedEventID == nil)
-	s.Equal(int64(3), *response.StartedEventID)
+	s.Equal(int64(3), response.StartedEventID)
 	expectedQueryMap := map[string]*types.WorkflowQuery{
 		id1: {},
 		id2: {},
@@ -721,7 +721,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 
 	msBuilder := s.createExecutionStartedState(workflowExecution, tl, identity, true)
 	decisionCompletedEvent := test.AddDecisionTaskCompletedEvent(msBuilder, int64(2), int64(3), nil, identity)
-	scheduledEvent, _ := test.AddActivityTaskScheduledEvent(msBuilder, *decisionCompletedEvent.EventID, activityID,
+	scheduledEvent, _ := test.AddActivityTaskScheduledEvent(msBuilder, decisionCompletedEvent.EventID, activityID,
 		activityType, tl, activityInput, 100, 10, 1, 5)
 
 	ms1 := execution.CreatePersistenceMutableState(msBuilder)

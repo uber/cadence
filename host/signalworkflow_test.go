@@ -1002,7 +1002,7 @@ CheckHistoryLoopForCancelSent:
 		}
 
 		signalExternalWorkflowExecutionFailedEventAttributes := signalFailedEvent.SignalExternalWorkflowExecutionFailedEventAttributes
-		s.Equal(int64(intiatedEventID), *signalExternalWorkflowExecutionFailedEventAttributes.InitiatedEventID)
+		s.Equal(int64(intiatedEventID), signalExternalWorkflowExecutionFailedEventAttributes.InitiatedEventID)
 		s.Equal("workflow_not_exist", signalExternalWorkflowExecutionFailedEventAttributes.WorkflowExecution.WorkflowID)
 		s.Equal(we.RunID, signalExternalWorkflowExecutionFailedEventAttributes.WorkflowExecution.RunID)
 
@@ -1129,7 +1129,7 @@ CheckHistoryLoopForCancelSent:
 		}
 
 		signalExternalWorkflowExecutionFailedEventAttributes := signalFailedEvent.SignalExternalWorkflowExecutionFailedEventAttributes
-		s.Equal(int64(intiatedEventID), *signalExternalWorkflowExecutionFailedEventAttributes.InitiatedEventID)
+		s.Equal(int64(intiatedEventID), signalExternalWorkflowExecutionFailedEventAttributes.InitiatedEventID)
 		s.Equal(id, signalExternalWorkflowExecutionFailedEventAttributes.WorkflowExecution.WorkflowID)
 		s.Equal(we.RunID, signalExternalWorkflowExecutionFailedEventAttributes.WorkflowExecution.RunID)
 

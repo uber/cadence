@@ -937,15 +937,15 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetFirstPage() {
 	nextPageToken := []byte{'1', '2', '3'}
 	historyBatch1 := &types.History{
 		Events: []*types.HistoryEvent{
-			{EventID: common.Int64Ptr(1)},
-			{EventID: common.Int64Ptr(2)},
+			{EventID: 1},
+			{EventID: 2},
 		},
 	}
 	historyBatch2 := &types.History{
 		Events: []*types.HistoryEvent{
-			{EventID: common.Int64Ptr(3)},
-			{EventID: common.Int64Ptr(4)},
-			{EventID: common.Int64Ptr(5)},
+			{EventID: 3},
+			{EventID: 4},
+			{EventID: 5},
 		},
 	}
 	history := &types.History{}
@@ -989,7 +989,7 @@ func (s *workflowHandlerSuite) TestGetHistory() {
 	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, req).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents: []*types.HistoryEvent{
 			{
-				EventID: common.Int64Ptr(int64(100)),
+				EventID: int64(100),
 			},
 		},
 		NextPageToken:    []byte{},
@@ -1105,16 +1105,16 @@ func (s *workflowHandlerSuite) TestGetSearchAttributes() {
 func (s *workflowHandlerSuite) TestGetWorkflowExecutionHistory__Success__RawHistoryEnabledTransientDecisionEmitted() {
 	var nextEventID int64 = 5
 	s.getWorkflowExecutionHistory(5, &types.TransientDecisionInfo{
-		StartedEvent:   &types.HistoryEvent{EventID: common.Int64Ptr(nextEventID + 1)},
-		ScheduledEvent: &types.HistoryEvent{EventID: common.Int64Ptr(nextEventID)},
+		StartedEvent:   &types.HistoryEvent{EventID: nextEventID + 1},
+		ScheduledEvent: &types.HistoryEvent{EventID: nextEventID},
 	}, []*types.HistoryEvent{{}, {}, {}})
 }
 
 func (s *workflowHandlerSuite) TestGetWorkflowExecutionHistory__Success__RawHistoryEnabledNoTransientDecisionEmitted() {
 	var nextEventID int64 = 5
 	s.getWorkflowExecutionHistory(5, &types.TransientDecisionInfo{
-		StartedEvent:   &types.HistoryEvent{EventID: common.Int64Ptr(nextEventID + 1)},
-		ScheduledEvent: &types.HistoryEvent{EventID: common.Int64Ptr(nextEventID)},
+		StartedEvent:   &types.HistoryEvent{EventID: nextEventID + 1},
+		ScheduledEvent: &types.HistoryEvent{EventID: nextEventID},
 	}, []*types.HistoryEvent{{}, {}, {}})
 }
 
@@ -1310,7 +1310,7 @@ func (s *workflowHandlerSuite) TestConvertIndexedKeyToThrift() {
 func (s *workflowHandlerSuite) TestVerifyHistoryIsComplete() {
 	events := make([]*types.HistoryEvent, 50)
 	for i := 0; i < len(events); i++ {
-		events[i] = &types.HistoryEvent{EventID: common.Int64Ptr(int64(i + 1))}
+		events[i] = &types.HistoryEvent{EventID: int64(i + 1)}
 	}
 	var eventsWithHoles []*types.HistoryEvent
 	eventsWithHoles = append(eventsWithHoles, events[9:12]...)

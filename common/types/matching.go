@@ -32,7 +32,7 @@ type AddActivityTaskRequest struct {
 	Execution                     *WorkflowExecution `json:"execution,omitempty"`
 	SourceDomainUUID              string             `json:"sourceDomainUUID,omitempty"`
 	TaskList                      *TaskList          `json:"taskList,omitempty"`
-	ScheduleID                    *int64             `json:"scheduleId,omitempty"`
+	ScheduleID                    int64              `json:"scheduleId,omitempty"`
 	ScheduleToStartTimeoutSeconds *int32             `json:"scheduleToStartTimeoutSeconds,omitempty"`
 	Source                        *TaskSource        `json:"source,omitempty"`
 	ForwardedFrom                 string             `json:"forwardedFrom,omitempty"`
@@ -72,8 +72,8 @@ func (v *AddActivityTaskRequest) GetTaskList() (o *TaskList) {
 
 // GetScheduleID is an internal getter (TBD...)
 func (v *AddActivityTaskRequest) GetScheduleID() (o int64) {
-	if v != nil && v.ScheduleID != nil {
-		return *v.ScheduleID
+	if v != nil {
+		return v.ScheduleID
 	}
 	return
 }
@@ -107,7 +107,7 @@ type AddDecisionTaskRequest struct {
 	DomainUUID                    string             `json:"domainUUID,omitempty"`
 	Execution                     *WorkflowExecution `json:"execution,omitempty"`
 	TaskList                      *TaskList          `json:"taskList,omitempty"`
-	ScheduleID                    *int64             `json:"scheduleId,omitempty"`
+	ScheduleID                    int64              `json:"scheduleId,omitempty"`
 	ScheduleToStartTimeoutSeconds *int32             `json:"scheduleToStartTimeoutSeconds,omitempty"`
 	Source                        *TaskSource        `json:"source,omitempty"`
 	ForwardedFrom                 string             `json:"forwardedFrom,omitempty"`
@@ -139,8 +139,8 @@ func (v *AddDecisionTaskRequest) GetTaskList() (o *TaskList) {
 
 // GetScheduleID is an internal getter (TBD...)
 func (v *AddDecisionTaskRequest) GetScheduleID() (o int64) {
-	if v != nil && v.ScheduleID != nil {
-		return *v.ScheduleID
+	if v != nil {
+		return v.ScheduleID
 	}
 	return
 }
@@ -339,9 +339,9 @@ type MatchingPollForDecisionTaskResponse struct {
 	WorkflowExecution         *WorkflowExecution        `json:"workflowExecution,omitempty"`
 	WorkflowType              *WorkflowType             `json:"workflowType,omitempty"`
 	PreviousStartedEventID    *int64                    `json:"previousStartedEventId,omitempty"`
-	StartedEventID            *int64                    `json:"startedEventId,omitempty"`
+	StartedEventID            int64                     `json:"startedEventId,omitempty"`
 	Attempt                   int64                     `json:"attempt,omitempty"`
-	NextEventID               *int64                    `json:"nextEventId,omitempty"`
+	NextEventID               int64                     `json:"nextEventId,omitempty"`
 	BacklogCountHint          *int64                    `json:"backlogCountHint,omitempty"`
 	StickyExecutionEnabled    bool                      `json:"stickyExecutionEnabled,omitempty"`
 	Query                     *WorkflowQuery            `json:"query,omitempty"`
@@ -388,8 +388,8 @@ func (v *MatchingPollForDecisionTaskResponse) GetPreviousStartedEventID() (o int
 
 // GetStartedEventID is an internal getter (TBD...)
 func (v *MatchingPollForDecisionTaskResponse) GetStartedEventID() (o int64) {
-	if v != nil && v.StartedEventID != nil {
-		return *v.StartedEventID
+	if v != nil {
+		return v.StartedEventID
 	}
 	return
 }
@@ -404,8 +404,8 @@ func (v *MatchingPollForDecisionTaskResponse) GetAttempt() (o int64) {
 
 // GetNextEventID is an internal getter (TBD...)
 func (v *MatchingPollForDecisionTaskResponse) GetNextEventID() (o int64) {
-	if v != nil && v.NextEventID != nil {
-		return *v.NextEventID
+	if v != nil {
+		return v.NextEventID
 	}
 	return
 }

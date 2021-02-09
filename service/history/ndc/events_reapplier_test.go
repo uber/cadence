@@ -79,7 +79,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_AppliedEvent() {
 		DomainID: uuid.New(),
 	}
 	event := &types.HistoryEvent{
-		EventID:   common.Int64Ptr(1),
+		EventID:   1,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			Identity:   "test",
@@ -113,7 +113,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_AppliedEvent() {
 func (s *eventReapplicationSuite) TestReapplyEvents_Noop() {
 	runID := uuid.New()
 	event := &types.HistoryEvent{
-		EventID:   common.Int64Ptr(1),
+		EventID:   1,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			Identity:   "test",
@@ -140,7 +140,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_PartialAppliedEvent() {
 		DomainID: uuid.New(),
 	}
 	event1 := &types.HistoryEvent{
-		EventID:   common.Int64Ptr(1),
+		EventID:   1,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			Identity:   "test",
@@ -149,7 +149,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_PartialAppliedEvent() {
 		},
 	}
 	event2 := &types.HistoryEvent{
-		EventID:   common.Int64Ptr(2),
+		EventID:   2,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			Identity:   "test",
@@ -189,7 +189,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_Error() {
 		DomainID: uuid.New(),
 	}
 	event := &types.HistoryEvent{
-		EventID:   common.Int64Ptr(1),
+		EventID:   1,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			Identity:   "test",

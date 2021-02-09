@@ -953,9 +953,9 @@ type SyncActivityTaskAttributes struct {
 	WorkflowID         string          `json:"workflowId,omitempty"`
 	RunID              string          `json:"runId,omitempty"`
 	Version            *int64          `json:"version,omitempty"`
-	ScheduledID        *int64          `json:"scheduledId,omitempty"`
+	ScheduledID        int64           `json:"scheduledId,omitempty"`
 	ScheduledTime      *int64          `json:"scheduledTime,omitempty"`
-	StartedID          *int64          `json:"startedId,omitempty"`
+	StartedID          int64           `json:"startedId,omitempty"`
 	StartedTime        *int64          `json:"startedTime,omitempty"`
 	LastHeartbeatTime  *int64          `json:"lastHeartbeatTime,omitempty"`
 	Details            []byte          `json:"details,omitempty"`
@@ -1000,8 +1000,8 @@ func (v *SyncActivityTaskAttributes) GetVersion() (o int64) {
 
 // GetScheduledID is an internal getter (TBD...)
 func (v *SyncActivityTaskAttributes) GetScheduledID() (o int64) {
-	if v != nil && v.ScheduledID != nil {
-		return *v.ScheduledID
+	if v != nil {
+		return v.ScheduledID
 	}
 	return
 }
@@ -1016,8 +1016,8 @@ func (v *SyncActivityTaskAttributes) GetScheduledTime() (o int64) {
 
 // GetStartedID is an internal getter (TBD...)
 func (v *SyncActivityTaskAttributes) GetStartedID() (o int64) {
-	if v != nil && v.StartedID != nil {
-		return *v.StartedID
+	if v != nil {
+		return v.StartedID
 	}
 	return
 }
