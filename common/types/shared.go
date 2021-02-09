@@ -2252,14 +2252,14 @@ const (
 
 // DeprecateDomainRequest is an internal type (TBD...)
 type DeprecateDomainRequest struct {
-	Name          *string `json:"name,omitempty"`
-	SecurityToken string  `json:"securityToken,omitempty"`
+	Name          string `json:"name,omitempty"`
+	SecurityToken string `json:"securityToken,omitempty"`
 }
 
 // GetName is an internal getter (TBD...)
 func (v *DeprecateDomainRequest) GetName() (o string) {
-	if v != nil && v.Name != nil {
-		return *v.Name
+	if v != nil {
+		return v.Name
 	}
 	return
 }
@@ -2637,27 +2637,27 @@ func (v *DomainCacheInfo) GetNumOfItemsInCacheByName() (o int64) {
 
 // DomainConfiguration is an internal type (TBD...)
 type DomainConfiguration struct {
-	WorkflowExecutionRetentionPeriodInDays *int32          `json:"workflowExecutionRetentionPeriodInDays,omitempty"`
-	EmitMetric                             *bool           `json:"emitMetric,omitempty"`
+	WorkflowExecutionRetentionPeriodInDays int32           `json:"workflowExecutionRetentionPeriodInDays,omitempty"`
+	EmitMetric                             bool            `json:"emitMetric,omitempty"`
 	BadBinaries                            *BadBinaries    `json:"badBinaries,omitempty"`
 	HistoryArchivalStatus                  *ArchivalStatus `json:"historyArchivalStatus,omitempty"`
-	HistoryArchivalURI                     *string         `json:"historyArchivalURI,omitempty"`
+	HistoryArchivalURI                     string          `json:"historyArchivalURI,omitempty"`
 	VisibilityArchivalStatus               *ArchivalStatus `json:"visibilityArchivalStatus,omitempty"`
-	VisibilityArchivalURI                  *string         `json:"visibilityArchivalURI,omitempty"`
+	VisibilityArchivalURI                  string          `json:"visibilityArchivalURI,omitempty"`
 }
 
 // GetWorkflowExecutionRetentionPeriodInDays is an internal getter (TBD...)
 func (v *DomainConfiguration) GetWorkflowExecutionRetentionPeriodInDays() (o int32) {
-	if v != nil && v.WorkflowExecutionRetentionPeriodInDays != nil {
-		return *v.WorkflowExecutionRetentionPeriodInDays
+	if v != nil {
+		return v.WorkflowExecutionRetentionPeriodInDays
 	}
 	return
 }
 
 // GetEmitMetric is an internal getter (TBD...)
 func (v *DomainConfiguration) GetEmitMetric() (o bool) {
-	if v != nil && v.EmitMetric != nil {
-		return *v.EmitMetric
+	if v != nil {
+		return v.EmitMetric
 	}
 	return
 }
@@ -2680,8 +2680,8 @@ func (v *DomainConfiguration) GetHistoryArchivalStatus() (o ArchivalStatus) {
 
 // GetHistoryArchivalURI is an internal getter (TBD...)
 func (v *DomainConfiguration) GetHistoryArchivalURI() (o string) {
-	if v != nil && v.HistoryArchivalURI != nil {
-		return *v.HistoryArchivalURI
+	if v != nil {
+		return v.HistoryArchivalURI
 	}
 	return
 }
@@ -2696,26 +2696,26 @@ func (v *DomainConfiguration) GetVisibilityArchivalStatus() (o ArchivalStatus) {
 
 // GetVisibilityArchivalURI is an internal getter (TBD...)
 func (v *DomainConfiguration) GetVisibilityArchivalURI() (o string) {
-	if v != nil && v.VisibilityArchivalURI != nil {
-		return *v.VisibilityArchivalURI
+	if v != nil {
+		return v.VisibilityArchivalURI
 	}
 	return
 }
 
 // DomainInfo is an internal type (TBD...)
 type DomainInfo struct {
-	Name        *string           `json:"name,omitempty"`
+	Name        string            `json:"name,omitempty"`
 	Status      *DomainStatus     `json:"status,omitempty"`
-	Description *string           `json:"description,omitempty"`
-	OwnerEmail  *string           `json:"ownerEmail,omitempty"`
+	Description string            `json:"description,omitempty"`
+	OwnerEmail  string            `json:"ownerEmail,omitempty"`
 	Data        map[string]string `json:"data,omitempty"`
-	UUID        *string           `json:"uuid,omitempty"`
+	UUID        string            `json:"uuid,omitempty"`
 }
 
 // GetName is an internal getter (TBD...)
 func (v *DomainInfo) GetName() (o string) {
-	if v != nil && v.Name != nil {
-		return *v.Name
+	if v != nil {
+		return v.Name
 	}
 	return
 }
@@ -2730,16 +2730,16 @@ func (v *DomainInfo) GetStatus() (o DomainStatus) {
 
 // GetDescription is an internal getter (TBD...)
 func (v *DomainInfo) GetDescription() (o string) {
-	if v != nil && v.Description != nil {
-		return *v.Description
+	if v != nil {
+		return v.Description
 	}
 	return
 }
 
 // GetOwnerEmail is an internal getter (TBD...)
 func (v *DomainInfo) GetOwnerEmail() (o string) {
-	if v != nil && v.OwnerEmail != nil {
-		return *v.OwnerEmail
+	if v != nil {
+		return v.OwnerEmail
 	}
 	return
 }
@@ -2754,8 +2754,8 @@ func (v *DomainInfo) GetData() (o map[string]string) {
 
 // GetUUID is an internal getter (TBD...)
 func (v *DomainInfo) GetUUID() (o string) {
-	if v != nil && v.UUID != nil {
-		return *v.UUID
+	if v != nil {
+		return v.UUID
 	}
 	return
 }
@@ -2802,14 +2802,14 @@ func (v *DomainNotActiveError) GetActiveCluster() (o string) {
 
 // DomainReplicationConfiguration is an internal type (TBD...)
 type DomainReplicationConfiguration struct {
-	ActiveClusterName *string                            `json:"activeClusterName,omitempty"`
+	ActiveClusterName string                             `json:"activeClusterName,omitempty"`
 	Clusters          []*ClusterReplicationConfiguration `json:"clusters,omitempty"`
 }
 
 // GetActiveClusterName is an internal getter (TBD...)
 func (v *DomainReplicationConfiguration) GetActiveClusterName() (o string) {
-	if v != nil && v.ActiveClusterName != nil {
-		return *v.ActiveClusterName
+	if v != nil {
+		return v.ActiveClusterName
 	}
 	return
 }
@@ -5888,50 +5888,50 @@ func (v *RefreshWorkflowTasksRequest) GetExecution() (o *WorkflowExecution) {
 
 // RegisterDomainRequest is an internal type (TBD...)
 type RegisterDomainRequest struct {
-	Name                                   *string                            `json:"name,omitempty"`
-	Description                            *string                            `json:"description,omitempty"`
-	OwnerEmail                             *string                            `json:"ownerEmail,omitempty"`
-	WorkflowExecutionRetentionPeriodInDays *int32                             `json:"workflowExecutionRetentionPeriodInDays,omitempty"`
+	Name                                   string                             `json:"name,omitempty"`
+	Description                            string                             `json:"description,omitempty"`
+	OwnerEmail                             string                             `json:"ownerEmail,omitempty"`
+	WorkflowExecutionRetentionPeriodInDays int32                              `json:"workflowExecutionRetentionPeriodInDays,omitempty"`
 	EmitMetric                             *bool                              `json:"emitMetric,omitempty"`
 	Clusters                               []*ClusterReplicationConfiguration `json:"clusters,omitempty"`
-	ActiveClusterName                      *string                            `json:"activeClusterName,omitempty"`
+	ActiveClusterName                      string                             `json:"activeClusterName,omitempty"`
 	Data                                   map[string]string                  `json:"data,omitempty"`
 	SecurityToken                          string                             `json:"securityToken,omitempty"`
-	IsGlobalDomain                         *bool                              `json:"isGlobalDomain,omitempty"`
+	IsGlobalDomain                         bool                               `json:"isGlobalDomain,omitempty"`
 	HistoryArchivalStatus                  *ArchivalStatus                    `json:"historyArchivalStatus,omitempty"`
-	HistoryArchivalURI                     *string                            `json:"historyArchivalURI,omitempty"`
+	HistoryArchivalURI                     string                             `json:"historyArchivalURI,omitempty"`
 	VisibilityArchivalStatus               *ArchivalStatus                    `json:"visibilityArchivalStatus,omitempty"`
-	VisibilityArchivalURI                  *string                            `json:"visibilityArchivalURI,omitempty"`
+	VisibilityArchivalURI                  string                             `json:"visibilityArchivalURI,omitempty"`
 }
 
 // GetName is an internal getter (TBD...)
 func (v *RegisterDomainRequest) GetName() (o string) {
-	if v != nil && v.Name != nil {
-		return *v.Name
+	if v != nil {
+		return v.Name
 	}
 	return
 }
 
 // GetDescription is an internal getter (TBD...)
 func (v *RegisterDomainRequest) GetDescription() (o string) {
-	if v != nil && v.Description != nil {
-		return *v.Description
+	if v != nil {
+		return v.Description
 	}
 	return
 }
 
 // GetOwnerEmail is an internal getter (TBD...)
 func (v *RegisterDomainRequest) GetOwnerEmail() (o string) {
-	if v != nil && v.OwnerEmail != nil {
-		return *v.OwnerEmail
+	if v != nil {
+		return v.OwnerEmail
 	}
 	return
 }
 
 // GetWorkflowExecutionRetentionPeriodInDays is an internal getter (TBD...)
 func (v *RegisterDomainRequest) GetWorkflowExecutionRetentionPeriodInDays() (o int32) {
-	if v != nil && v.WorkflowExecutionRetentionPeriodInDays != nil {
-		return *v.WorkflowExecutionRetentionPeriodInDays
+	if v != nil {
+		return v.WorkflowExecutionRetentionPeriodInDays
 	}
 	return
 }
@@ -5955,8 +5955,8 @@ func (v *RegisterDomainRequest) GetClusters() (o []*ClusterReplicationConfigurat
 
 // GetActiveClusterName is an internal getter (TBD...)
 func (v *RegisterDomainRequest) GetActiveClusterName() (o string) {
-	if v != nil && v.ActiveClusterName != nil {
-		return *v.ActiveClusterName
+	if v != nil {
+		return v.ActiveClusterName
 	}
 	return
 }
@@ -5979,8 +5979,8 @@ func (v *RegisterDomainRequest) GetSecurityToken() (o string) {
 
 // GetIsGlobalDomain is an internal getter (TBD...)
 func (v *RegisterDomainRequest) GetIsGlobalDomain() (o bool) {
-	if v != nil && v.IsGlobalDomain != nil {
-		return *v.IsGlobalDomain
+	if v != nil {
+		return v.IsGlobalDomain
 	}
 	return
 }
@@ -5995,8 +5995,8 @@ func (v *RegisterDomainRequest) GetHistoryArchivalStatus() (o ArchivalStatus) {
 
 // GetHistoryArchivalURI is an internal getter (TBD...)
 func (v *RegisterDomainRequest) GetHistoryArchivalURI() (o string) {
-	if v != nil && v.HistoryArchivalURI != nil {
-		return *v.HistoryArchivalURI
+	if v != nil {
+		return v.HistoryArchivalURI
 	}
 	return
 }
@@ -6011,8 +6011,8 @@ func (v *RegisterDomainRequest) GetVisibilityArchivalStatus() (o ArchivalStatus)
 
 // GetVisibilityArchivalURI is an internal getter (TBD...)
 func (v *RegisterDomainRequest) GetVisibilityArchivalURI() (o string) {
-	if v != nil && v.VisibilityArchivalURI != nil {
-		return *v.VisibilityArchivalURI
+	if v != nil {
+		return v.VisibilityArchivalURI
 	}
 	return
 }

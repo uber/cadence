@@ -132,11 +132,11 @@ func (s *integrationClustersTestSuite) TestDomainFailover() {
 	domainName := "test-domain-for-fail-over-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(7),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 7,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -158,7 +158,7 @@ func (s *integrationClustersTestSuite) TestDomainFailover() {
 
 	// update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: domainName,
+		Name:              domainName,
 		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
@@ -216,11 +216,11 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 	domainName := "test-simple-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -410,7 +410,7 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 
 	// update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: domainName,
+		Name:              domainName,
 		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
@@ -513,11 +513,11 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	domainName := "test-sticky-decision-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -634,7 +634,7 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 
 	// Update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: domainName,
+		Name:              domainName,
 		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
@@ -665,7 +665,7 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 
 	// Update domain to fail over back
 	updateReq = &types.UpdateDomainRequest{
-		Name: domainName,
+		Name:              domainName,
 		ActiveClusterName: common.StringPtr(clusterName[0]),
 	}
 	updateResp, err = client2.UpdateDomain(createContext(), updateReq)
@@ -684,11 +684,11 @@ func (s *integrationClustersTestSuite) TestStartWorkflowExecution_Failover_Workf
 	domainName := "test-start-workflow-failover-ID-reuse-policy" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -775,7 +775,7 @@ func (s *integrationClustersTestSuite) TestStartWorkflowExecution_Failover_Workf
 
 	// update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: domainName,
+		Name:              domainName,
 		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
@@ -819,11 +819,11 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 	domainName := "test-terminate-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -918,7 +918,7 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 
 	// update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: domainName,
+		Name:              domainName,
 		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
@@ -1002,11 +1002,11 @@ func (s *integrationClustersTestSuite) TestContinueAsNewFailover() {
 	domainName := "test-continueAsNew-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -1108,7 +1108,7 @@ func (s *integrationClustersTestSuite) TestContinueAsNewFailover() {
 
 	// update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: domainName,
+		Name:              domainName,
 		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
@@ -1138,11 +1138,11 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 	domainName := "test-signal-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -1246,7 +1246,7 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 
 	// Update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: domainName,
+		Name:              domainName,
 		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
@@ -1317,11 +1317,11 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 	domainName := "test-user-timer-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -1462,7 +1462,7 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 
 	// Update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: domainName,
+		Name:              domainName,
 		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
@@ -1487,11 +1487,11 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	domainName := "test-activity-heartbeat-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -1635,7 +1635,7 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 
 	// Update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: domainName,
+		Name:              domainName,
 		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
@@ -1695,11 +1695,11 @@ func (s *integrationClustersTestSuite) TestTransientDecisionFailover() {
 	domainName := "test-transient-decision-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -1790,7 +1790,7 @@ func (s *integrationClustersTestSuite) TestTransientDecisionFailover() {
 
 	// Update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: domainName,
+		Name:              domainName,
 		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
@@ -1814,11 +1814,11 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 	domainName := "test-cron-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -1881,7 +1881,7 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 	// Failover during backoff
 	// Update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: domainName,
+		Name:              domainName,
 		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
@@ -1912,11 +1912,11 @@ func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
 	domainName := "test-workflow-retry-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -1988,7 +1988,7 @@ func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
 
 	// Update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: domainName,
+		Name:              domainName,
 		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)

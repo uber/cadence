@@ -86,13 +86,12 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 	securityToken := c.String(FlagSecurityToken)
 	var err error
 
-	var isGlobalDomainPtr *bool
+	isGlobalDomain := false
 	if c.IsSet(FlagIsGlobalDomain) {
-		isGlobalDomain, err := strconv.ParseBool(c.String(FlagIsGlobalDomain))
+		isGlobalDomain, err = strconv.ParseBool(c.String(FlagIsGlobalDomain))
 		if err != nil {
 			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagIsGlobalDomain), err)
 		}
-		isGlobalDomainPtr = common.BoolPtr(isGlobalDomain)
 	}
 
 	domainData := map[string]string{}
@@ -110,9 +109,9 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 		}
 	}
 
-	var activeClusterName *string
+	activeClusterName := ""
 	if c.IsSet(FlagActiveClusterName) {
-		activeClusterName = common.StringPtr(c.String(FlagActiveClusterName))
+		activeClusterName = c.String(FlagActiveClusterName)
 	}
 
 	var clusters []*types.ClusterReplicationConfiguration
@@ -129,19 +128,19 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 	}
 
 	request := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		Description:                            common.StringPtr(description),
-		OwnerEmail:                             common.StringPtr(ownerEmail),
+		Name:                                   domainName,
+		Description:                            description,
+		OwnerEmail:                             ownerEmail,
 		Data:                                   domainData,
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(retentionDays)),
+		WorkflowExecutionRetentionPeriodInDays: int32(retentionDays),
 		Clusters:                               clusters,
 		ActiveClusterName:                      activeClusterName,
 		SecurityToken:                          securityToken,
 		HistoryArchivalStatus:                  archivalStatus(c, FlagHistoryArchivalStatus),
-		HistoryArchivalURI:                     common.StringPtr(c.String(FlagHistoryArchivalURI)),
+		HistoryArchivalURI:                     c.String(FlagHistoryArchivalURI),
 		VisibilityArchivalStatus:               archivalStatus(c, FlagVisibilityArchivalStatus),
-		VisibilityArchivalURI:                  common.StringPtr(c.String(FlagVisibilityArchivalURI)),
-		IsGlobalDomain:                         isGlobalDomainPtr,
+		VisibilityArchivalURI:                  c.String(FlagVisibilityArchivalURI),
+		IsGlobalDomain:                         isGlobalDomain,
 	}
 
 	ctx, cancel := newContext(c)

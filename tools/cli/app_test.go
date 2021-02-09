@@ -157,16 +157,16 @@ func (s *cliAppSuite) TestDomainRegister_Failed() {
 
 var describeDomainResponseServer = &types.DescribeDomainResponse{
 	DomainInfo: &types.DomainInfo{
-		Name:        common.StringPtr("test-domain"),
-		Description: common.StringPtr("a test domain"),
-		OwnerEmail:  common.StringPtr("test@uber.com"),
+		Name:        "test-domain",
+		Description: "a test domain",
+		OwnerEmail:  "test@uber.com",
 	},
 	Configuration: &types.DomainConfiguration{
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(3),
-		EmitMetric:                             common.BoolPtr(true),
+		WorkflowExecutionRetentionPeriodInDays: 3,
+		EmitMetric:                             true,
 	},
 	ReplicationConfiguration: &types.DomainReplicationConfiguration{
-		ActiveClusterName: common.StringPtr("active"),
+		ActiveClusterName: "active",
 		Clusters: []*types.ClusterReplicationConfiguration{
 			{
 				ClusterName: "active",

@@ -1573,12 +1573,12 @@ func (s *nDCIntegrationTestSuite) registerDomain() {
 	s.domainName = "test-simple-workflow-ndc-" + common.GenerateRandomString(5)
 	client1 := s.active.GetFrontendClient() // active
 	err := client1.RegisterDomain(s.createContext(), &types.RegisterDomainRequest{
-		Name:           common.StringPtr(s.domainName),
-		IsGlobalDomain: common.BoolPtr(true),
+		Name:           s.domainName,
+		IsGlobalDomain: true,
 		Clusters:       clusterReplicationConfig,
 		// make the active cluster `standby` and replicate to `active` cluster
-		ActiveClusterName:                      common.StringPtr(clusterName[1]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[1],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	})
 	s.Require().NoError(err)
 
