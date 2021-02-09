@@ -16,7 +16,7 @@ GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
 TEST_TIMEOUT = 20m
-TEST_ARG ?= -race -timeout $(TEST_TIMEOUT)
+TEST_ARG ?= -race -v -timeout $(TEST_TIMEOUT)
 BUILD := .build
 BIN := $(BUILD)/bin
 TOOLS_CMD_ROOT=./cmd/tools
