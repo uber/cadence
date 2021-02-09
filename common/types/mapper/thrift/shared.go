@@ -909,7 +909,7 @@ func FromCountWorkflowExecutionsRequest(t *types.CountWorkflowExecutionsRequest)
 	}
 	return &shared.CountWorkflowExecutionsRequest{
 		Domain: &t.Domain,
-		Query:  t.Query,
+		Query:  &t.Query,
 	}
 }
 
@@ -920,7 +920,7 @@ func ToCountWorkflowExecutionsRequest(t *shared.CountWorkflowExecutionsRequest) 
 	}
 	return &types.CountWorkflowExecutionsRequest{
 		Domain: t.GetDomain(),
-		Query:  t.Query,
+		Query:  t.GetQuery(),
 	}
 }
 
@@ -2735,7 +2735,7 @@ func FromListArchivedWorkflowExecutionsRequest(t *types.ListArchivedWorkflowExec
 		Domain:        &t.Domain,
 		PageSize:      &t.PageSize,
 		NextPageToken: t.NextPageToken,
-		Query:         t.Query,
+		Query:         &t.Query,
 	}
 }
 
@@ -2748,7 +2748,7 @@ func ToListArchivedWorkflowExecutionsRequest(t *shared.ListArchivedWorkflowExecu
 		Domain:        t.GetDomain(),
 		PageSize:      t.GetPageSize(),
 		NextPageToken: t.NextPageToken,
-		Query:         t.Query,
+		Query:         t.GetQuery(),
 	}
 }
 
@@ -2977,7 +2977,7 @@ func FromListWorkflowExecutionsRequest(t *types.ListWorkflowExecutionsRequest) *
 		Domain:        &t.Domain,
 		PageSize:      &t.PageSize,
 		NextPageToken: t.NextPageToken,
-		Query:         t.Query,
+		Query:         &t.Query,
 	}
 }
 
@@ -2990,7 +2990,7 @@ func ToListWorkflowExecutionsRequest(t *shared.ListWorkflowExecutionsRequest) *t
 		Domain:        t.GetDomain(),
 		PageSize:      t.GetPageSize(),
 		NextPageToken: t.NextPageToken,
-		Query:         t.Query,
+		Query:         t.GetQuery(),
 	}
 }
 
