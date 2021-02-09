@@ -23,7 +23,7 @@ package types
 // AddSearchAttributeRequest is an internal type (TBD...)
 type AddSearchAttributeRequest struct {
 	SearchAttribute map[string]IndexedValueType `json:"searchAttribute,omitempty"`
-	SecurityToken   *string                     `json:"securityToken,omitempty"`
+	SecurityToken   string                      `json:"securityToken,omitempty"`
 }
 
 // GetSearchAttribute is an internal getter (TBD...)
@@ -36,8 +36,8 @@ func (v *AddSearchAttributeRequest) GetSearchAttribute() (o map[string]IndexedVa
 
 // GetSecurityToken is an internal getter (TBD...)
 func (v *AddSearchAttributeRequest) GetSecurityToken() (o string) {
-	if v != nil && v.SecurityToken != nil {
-		return *v.SecurityToken
+	if v != nil {
+		return v.SecurityToken
 	}
 	return
 }

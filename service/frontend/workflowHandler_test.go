@@ -1440,7 +1440,7 @@ func registerDomainRequest(
 		},
 		ActiveClusterName:        common.StringPtr(cluster.TestCurrentClusterName),
 		Data:                     make(map[string]string),
-		SecurityToken:            common.StringPtr("token"),
+		SecurityToken:            "token",
 		HistoryArchivalStatus:    historyArchivalStatus,
 		HistoryArchivalURI:       historyArchivalURI,
 		VisibilityArchivalStatus: visibilityArchivalStatus,
