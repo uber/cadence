@@ -15,10 +15,11 @@ require (
 	github.com/cch123/elasticsql v0.0.0-20190321073543-a1a440758eb9
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2
+	github.com/dmarkham/enumer v1.5.2
+	github.com/dmetzgar/goveralls v0.0.3
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/emirpasic/gods v0.0.0-20190624094223-e689965507ab
 	github.com/fatih/color v1.10.0
-	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gocql/gocql v0.0.0-20191126110522-1982a06ad6b9
 	github.com/golang/mock v1.4.4
@@ -36,6 +37,7 @@ require (
 	github.com/m3db/prometheus_common v0.1.0 // indirect
 	github.com/m3db/prometheus_procfs v0.8.1 // indirect
 	github.com/mattn/go-sqlite3 v1.11.0 // indirect
+	github.com/mgechev/revive v1.0.3
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/olivere/elastic v6.2.21+incompatible
 	github.com/olivere/elastic/v7 v7.0.21
@@ -65,11 +67,9 @@ require (
 	go.uber.org/zap v1.12.0
 	golang.org/x/net v0.0.0-20201031054903-ff519b6c9102
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9 // indirect
-	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4 // indirect
 	golang.org/x/text v0.3.4 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+	golang.org/x/tools v0.1.0
 	gonum.org/v1/gonum v0.7.0
 	google.golang.org/api v0.15.0
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
