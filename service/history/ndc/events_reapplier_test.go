@@ -31,7 +31,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
@@ -83,7 +82,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_AppliedEvent() {
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			Identity:   "test",
-			SignalName: common.StringPtr("signal"),
+			SignalName: "signal",
 			Input:      []byte{},
 		},
 	}
@@ -117,7 +116,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_Noop() {
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			Identity:   "test",
-			SignalName: common.StringPtr("signal"),
+			SignalName: "signal",
 			Input:      []byte{},
 		},
 	}
@@ -144,7 +143,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_PartialAppliedEvent() {
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			Identity:   "test",
-			SignalName: common.StringPtr("signal"),
+			SignalName: "signal",
 			Input:      []byte{},
 		},
 	}
@@ -153,7 +152,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_PartialAppliedEvent() {
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			Identity:   "test",
-			SignalName: common.StringPtr("signal"),
+			SignalName: "signal",
 			Input:      []byte{},
 		},
 	}
@@ -193,7 +192,7 @@ func (s *eventReapplicationSuite) TestReapplyEvents_Error() {
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			Identity:   "test",
-			SignalName: common.StringPtr("signal"),
+			SignalName: "signal",
 			Input:      []byte{},
 		},
 	}

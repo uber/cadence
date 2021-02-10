@@ -697,7 +697,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 			WorkflowID: id,
 			RunID:      we.RunID,
 		},
-		SignalName: common.StringPtr(signalName),
+		SignalName: signalName,
 		Input:      signalInput,
 		Identity:   identity,
 	})
@@ -875,7 +875,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 			WorkflowID: id,
 			RunID:      we.RunID,
 		},
-		SignalName: common.StringPtr(signalName),
+		SignalName: signalName,
 		Input:      signalInput,
 		Identity:   identity,
 	})
@@ -1041,7 +1041,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 			WorkflowID: id,
 			RunID:      we.RunID,
 		},
-		SignalName: common.StringPtr(signalName),
+		SignalName: signalName,
 		Input:      signalInput,
 		Identity:   identity,
 	})
@@ -1231,7 +1231,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 			WorkflowID: id,
 			RunID:      we.RunID,
 		},
-		SignalName: common.StringPtr(signalName),
+		SignalName: signalName,
 		Input:      signalInput,
 		Identity:   identity,
 	})
@@ -1253,7 +1253,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 				WorkflowID: id,
 				RunID:      we.RunID,
 			},
-			SignalName: common.StringPtr(signalName),
+			SignalName: signalName,
 			Input:      signalInput,
 			Identity:   identity,
 		})

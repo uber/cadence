@@ -255,7 +255,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 		Version:   version,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-			SignalName: common.StringPtr("some random signal name"),
+			SignalName: "some random signal name",
 			Input:      []byte("some random signal input"),
 			Identity:   "some random identity",
 		},

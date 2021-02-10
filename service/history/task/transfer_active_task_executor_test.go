@@ -2217,7 +2217,7 @@ func (s *transferActiveTaskExecutorSuite) createSignalWorkflowExecutionRequest(
 			Domain:            targetDomainName,
 			WorkflowExecution: &targetExecution,
 			Identity:          execution.IdentityHistoryService,
-			SignalName:        common.StringPtr(si.SignalName),
+			SignalName:        si.SignalName,
 			Input:             si.Input,
 			RequestID:         si.SignalRequestID,
 			Control:           si.Control,

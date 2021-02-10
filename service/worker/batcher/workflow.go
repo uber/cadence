@@ -388,7 +388,7 @@ func startTaskProcessor(
 							},
 							Identity:   BatchWFTypeName,
 							RequestID:  requestID,
-							SignalName: common.StringPtr(batchParams.SignalParams.SignalName),
+							SignalName: batchParams.SignalParams.SignalName,
 							Input:      []byte(batchParams.SignalParams.Input),
 						}, yarpcCallOptions...)
 					})

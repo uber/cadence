@@ -284,7 +284,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 			Domain:     domainID,
 			WorkflowID: workflowID,
 			Identity:   identity,
-			SignalName: common.StringPtr(signalName),
+			SignalName: signalName,
 			Input:      input,
 		},
 	}
@@ -341,7 +341,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            identity,
-			SignalName:                          common.StringPtr(signalName),
+			SignalName:                          signalName,
 			Input:                               input,
 			RequestID:                           requestID,
 		},
