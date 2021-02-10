@@ -170,31 +170,33 @@ func (c *clientImpl) initAuth(saramaConfig *sarama.Config) error {
 }
 
 // convertTLSConfig convert tls config
-func convertTLSConfig(tlsConfig auth.TLS) (*tls.Config, error) {
-	if !tlsConfig.Enabled {
+func convertTLSConfig(authConfig auth.TLS) (*tls.Config, error) {
+	if !authConfig.Enabled {
 		return nil, nil
 	}
 
-	if tlsConfig.CertFile != "" && tlsConfig.CaFile != "" && tlsConfig.KeyFile != "" {
-		cert, err := tls.LoadX509KeyPair(tlsConfig.CertFile, tlsConfig.KeyFile)
-		if err != nil {
-			return nil, err
-		}
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: !authConfig.EnableHostVerification,
+	}
+
+	if authConfig.CaFile != "" {
 		caCertPool := x509.NewCertPool()
-		pemData, err := ioutil.ReadFile(tlsConfig.CaFile)
+		pemData, err := ioutil.ReadFile(authConfig.CaFile)
 		if err != nil {
 			return nil, err
 		}
 		caCertPool.AppendCertsFromPEM(pemData)
 
-		return &tls.Config{
-			Certificates:       []tls.Certificate{cert},
-			RootCAs:            caCertPool,
-			InsecureSkipVerify: !tlsConfig.EnableHostVerification,
-		}, nil
-	} else {
-		return &tls.Config{
-			InsecureSkipVerify: !tlsConfig.EnableHostVerification,
-		}, nil
+		tlsConfig.RootCAs = caCertPool
 	}
+
+	if authConfig.CertFile != "" && authConfig.KeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(authConfig.CertFile, authConfig.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+	return tlsConfig, nil
 }
