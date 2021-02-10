@@ -31,6 +31,7 @@ import (
 	"go.uber.org/cadence/mocks"
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/worker"
+	"go.uber.org/zap/zaptest"
 )
 
 type (
@@ -51,7 +52,9 @@ func TestWorkflowTestSuite(t *testing.T) {
 }
 
 func (s *workflowTestSuite) SetupTest() {
+	s.SetLogger(zaptest.NewLogger(s.T()))
 	s.env = s.NewTestWorkflowEnvironment()
+	s.env.Test(s.T())
 }
 
 func (s *workflowTestSuite) TearDownTest() {
