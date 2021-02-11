@@ -23,8 +23,12 @@
 package shardscanner
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"time"
+
+	"go.uber.org/cadence/activity"
 
 	"go.uber.org/cadence"
 	cclient "go.uber.org/cadence/client"
@@ -44,28 +48,27 @@ const (
 	ErrSerialization = "encountered serialization error"
 	// ErrMissingHooks indicates scanner is not providing hooks to Invariant manager or Iterator
 	ErrMissingHooks = "hooks are not provided for this scanner"
+
+	ErrContextInvalid = "context"
 )
 
 type (
-	// ScannerContextKey is type used for identifying context
-	ScannerContextKey string
+	contextKey string
 
 	// Context is the resource that is available in activities under ShardScanner context key
 	Context struct {
-		Resource   resource.Resource
-		Hooks      *ScannerHooks
-		Scope      metrics.Scope
-		Config     *ScannerConfig
-		ContextKey ScannerContextKey
+		Resource resource.Resource
+		Hooks    *ScannerHooks
+		Scope    metrics.Scope
+		Config   *ScannerConfig
 	}
 
 	// FixerContext is the resource that is available to activities under ShardFixer key
 	FixerContext struct {
-		Resource   resource.Resource
-		Hooks      *FixerHooks
-		Scope      metrics.Scope
-		Config     *ScannerConfig
-		ContextKey ScannerContextKey
+		Resource resource.Resource
+		Hooks    *FixerHooks
+		Scope    metrics.Scope
+		Config   *ScannerConfig
 	}
 
 	// ScannerEmitMetricsActivityParams is the parameter for ScannerEmitMetricsActivity
@@ -74,7 +77,6 @@ type (
 		ShardControlFlowFailureCount int
 		AggregateReportResult        AggregateScanReportResult
 		ShardDistributionStats       ShardDistributionStats
-		ContextKey                   ScannerContextKey
 	}
 
 	// ShardRange identifies a set of shards based on min (inclusive) and max (exclusive)
@@ -98,7 +100,6 @@ type (
 
 	// ScannerConfigActivityParams is the parameter for ScannerConfigActivity
 	ScannerConfigActivityParams struct {
-		ContextKey ScannerContextKey
 		Overwrites ScannerWorkflowConfigOverwrites
 	}
 
@@ -107,7 +108,6 @@ type (
 		Shards                  []int
 		PageSize                int
 		BlobstoreFlushThreshold int
-		ContextKey              ScannerContextKey
 		ScannerConfig           CustomScannerConfig
 	}
 
@@ -115,7 +115,6 @@ type (
 	FixerWorkflowParams struct {
 		ScannerWorkflowWorkflowID     string
 		ScannerWorkflowRunID          string
-		ContextKey                    ScannerContextKey
 		FixerWorkflowConfigOverwrites FixerWorkflowConfigOverwrites
 	}
 	// ScanReport is the report of running Scan on a single shard.
@@ -188,7 +187,6 @@ type (
 
 	// FixerCorruptedKeysActivityParams is the parameter for FixerCorruptedKeysActivity
 	FixerCorruptedKeysActivityParams struct {
-		ContextKey                ScannerContextKey
 		ScannerWorkflowWorkflowID string
 		ScannerWorkflowRunID      string
 		StartingShardID           *int
@@ -198,7 +196,6 @@ type (
 	FixShardActivityParams struct {
 		CorruptedKeysEntries        []CorruptedKeysEntry
 		ResolvedFixerWorkflowConfig ResolvedFixerWorkflowConfig
-		ContextKey                  ScannerContextKey
 	}
 
 	// CustomScannerConfig is used to pass key/value parameters between shardscanner activity and scanner implementation
@@ -316,7 +313,6 @@ func GetCorruptedKeys(
 		ScannerWorkflowWorkflowID: params.ScannerWorkflowWorkflowID,
 		ScannerWorkflowRunID:      params.ScannerWorkflowRunID,
 		StartingShardID:           nil,
-		ContextKey:                params.ContextKey,
 	}
 	var minShardID *int
 	var maxShardID *int
@@ -419,6 +415,48 @@ func (s Shards) Flatten() ([]int, int, int) {
 	return shardList, min, max
 }
 
-func (c ScannerContextKey) String() string {
-	return string(c)
+func NewShardScannerContext(res resource.Resource, config *ScannerConfig) Context {
+	return Context{
+		Resource: res,
+		Scope:    res.GetMetricsClient().Scope(metrics.ExecutionsScannerScope),
+		Config:   config,
+		Hooks:    config.ScannerHooks(),
+	}
+}
+
+func NewShardFixerContext(res resource.Resource, config *ScannerConfig) FixerContext {
+	return FixerContext{
+		Resource: res,
+		Scope:    res.GetMetricsClient().Scope(metrics.ExecutionsFixerScope),
+		Config:   config,
+		Hooks:    config.FixerHooks(),
+	}
+}
+
+func NewContext(ctx context.Context, workflowName string, scannerContext interface{}) context.Context {
+	return context.WithValue(ctx, contextKey(workflowName), scannerContext)
+}
+
+func GetScannerContext(ctx context.Context) (*Context, error) {
+	info := activity.GetInfo(ctx)
+	if info.WorkflowType == nil {
+		return nil, fmt.Errorf("workflowType is nil")
+	}
+	val, ok := ctx.Value(contextKey(info.WorkflowType.Name)).(*Context)
+	if !ok {
+		return nil, fmt.Errorf("context type is not %T for a key %q", val, info.WorkflowType.Name)
+	}
+	return val, nil
+}
+
+func GetFixerContext(ctx context.Context) (*FixerContext, error) {
+	info := activity.GetInfo(ctx)
+	if info.WorkflowType == nil {
+		return nil, fmt.Errorf("workflowType is nil")
+	}
+	val, ok := ctx.Value(contextKey(info.WorkflowType.Name)).(*FixerContext)
+	if !ok {
+		return nil, fmt.Errorf("context type is not %T for a key %q", val, info.WorkflowType.Name)
+	}
+	return val, nil
 }

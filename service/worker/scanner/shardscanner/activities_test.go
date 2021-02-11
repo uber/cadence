@@ -28,17 +28,14 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/cadence/worker"
+
 	"github.com/pborman/uuid"
 	"github.com/uber-go/tally"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-
-	"go.uber.org/cadence/.gen/go/shared"
-	"go.uber.org/cadence/activity"
-	"go.uber.org/cadence/testsuite"
-	"go.uber.org/cadence/worker"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
@@ -51,9 +48,12 @@ import (
 	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"go.uber.org/cadence/.gen/go/shared"
+	"go.uber.org/cadence/activity"
+	"go.uber.org/cadence/testsuite"
 )
 
-var TestContextKey ScannerContextKey = "test-workflow"
+const testWorkflowName = "default-test-workflow-type-name"
 
 type activitiesSuite struct {
 	suite.Suite
@@ -86,15 +86,15 @@ func (s *activitiesSuite) TearDownTest() {
 func (s *activitiesSuite) TestScanShardActivity() {
 
 	testCases := []struct {
-		params      ScanShardActivityParams
-		wantErr     bool
-		managerHook func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) invariant.Manager
-		itHook      func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) pagination.Iterator
+		params       ScanShardActivityParams
+		wantErr      bool
+		managerHook  func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) invariant.Manager
+		itHook       func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) pagination.Iterator
+		workflowName string
 	}{
 		{
 			params: ScanShardActivityParams{
-				Shards:     []int{0},
-				ContextKey: TestContextKey,
+				Shards: []int{0},
 			},
 			managerHook: func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) invariant.Manager {
 				manager := invariant.NewMockManager(s.controller)
@@ -120,7 +120,15 @@ func (s *activitiesSuite) TestScanShardActivity() {
 				it.EXPECT().Next().Return(&entity.ConcreteExecution{}, nil).Times(2)
 				return it
 			},
-			wantErr: false,
+			workflowName: testWorkflowName,
+			wantErr:      false,
+		},
+		{
+			params: ScanShardActivityParams{
+				Shards: []int{0},
+			},
+			workflowName: "wrong-test-name",
+			wantErr:      true,
 		},
 	}
 
@@ -129,17 +137,17 @@ func (s *activitiesSuite) TestScanShardActivity() {
 		env := s.NewTestActivityEnvironment()
 		hooks, _ := NewScannerHooks(tc.managerHook, tc.itHook)
 		env.SetWorkerOptions(worker.Options{
-			BackgroundActivityContext: context.WithValue(context.Background(), TestContextKey, Context{
-				ContextKey: TestContextKey,
-				Config:     &ScannerConfig{},
-				Scope:      s.mockResource.MetricsClient.Scope(metrics.ShardScannerScope),
-				Resource:   s.mockResource,
-				Hooks:      hooks,
+			BackgroundActivityContext: NewContext(context.Background(), tc.workflowName, &Context{
+				Config:   &ScannerConfig{},
+				Scope:    s.mockResource.MetricsClient.Scope(metrics.ShardScannerScope),
+				Resource: s.mockResource,
+				Hooks:    hooks,
 			}),
 		})
 		report, err := env.ExecuteActivity(ScanShardActivity, tc.params)
 		if tc.wantErr {
 			s.Error(err)
+			break
 		} else {
 			s.NoError(err)
 		}
@@ -148,8 +156,8 @@ func (s *activitiesSuite) TestScanShardActivity() {
 
 		for _, v := range s.mockResource.MetricsScope.(tally.TestScope).Snapshot().Timers() {
 			tags := v.Tags()
-			s.Equal(tags["activityType"], "cadence-sys-shardscanner-scanshard-activity")
-			s.Equal(tags["workflowType"], "test-workflow")
+			s.Equal("cadence-sys-shardscanner-scanshard-activity", tags["activityType"])
+			s.Equal(tc.workflowName, tags["workflowType"])
 		}
 
 	}
@@ -168,7 +176,6 @@ func (s *activitiesSuite) TestFixShardActivity() {
 			name:    "run fixer",
 			wantErr: false,
 			params: FixShardActivityParams{
-				ContextKey: TestContextKey,
 				CorruptedKeysEntries: []CorruptedKeysEntry{
 					{ShardID: 1, CorruptedKeys: struct {
 						UUID      string
@@ -223,7 +230,6 @@ func (s *activitiesSuite) TestFixShardActivity() {
 					}{UUID: "test-uuid", MinPage: 0, MaxPage: 1, Extension: "test-ext"}},
 				},
 				ResolvedFixerWorkflowConfig: ResolvedFixerWorkflowConfig{},
-				ContextKey:                  TestContextKey,
 			},
 		},
 	}
@@ -238,7 +244,6 @@ func (s *activitiesSuite) TestFixShardActivity() {
 			s.mockResource.DomainCache = domainCache
 
 			fc := FixerContext{
-				ContextKey: TestContextKey,
 				Config: &ScannerConfig{
 					DynamicParams: DynamicParams{
 						AllowDomain: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
@@ -256,7 +261,7 @@ func (s *activitiesSuite) TestFixShardActivity() {
 			env := s.NewTestActivityEnvironment()
 
 			env.SetWorkerOptions(worker.Options{
-				BackgroundActivityContext: context.WithValue(context.Background(), TestContextKey, fc),
+				BackgroundActivityContext: NewContext(context.Background(), testWorkflowName, &fc),
 			})
 			report, execErr := env.ExecuteActivity(FixShardActivity, tc.params)
 			if tc.wantErr {
@@ -287,7 +292,6 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 			},
 			params: ScannerConfigActivityParams{
 				Overwrites: ScannerWorkflowConfigOverwrites{},
-				ContextKey: TestContextKey,
 			},
 			addHook: true,
 			resolved: ResolvedScannerWorkflowConfig{
@@ -313,7 +317,6 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 			},
 			params: ScannerConfigActivityParams{
 				Overwrites: ScannerWorkflowConfigOverwrites{},
-				ContextKey: TestContextKey,
 			},
 			resolved: ResolvedScannerWorkflowConfig{
 				GenericScannerConfig: GenericScannerConfig{
@@ -344,7 +347,6 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 						"test": "test",
 					},
 				},
-				ContextKey: TestContextKey,
 			},
 			resolved: ResolvedScannerWorkflowConfig{
 				GenericScannerConfig: GenericScannerConfig{
@@ -364,7 +366,6 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 	for _, tc := range testCases {
 		env := s.NewTestActivityEnvironment()
 		sc := Context{
-			ContextKey: TestContextKey,
 			Config: &ScannerConfig{
 				DynamicParams: *tc.dynamicParams,
 			},
@@ -372,14 +373,14 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 
 		if tc.addHook {
 			sc.Hooks = &ScannerHooks{
-				GetScannerConfig: func(scanner Context) CustomScannerConfig {
+				GetScannerConfig: func(scanner *Context) CustomScannerConfig {
 					return map[string]string{"test-key": "test-value"}
 				},
 			}
 		}
 
 		env.SetWorkerOptions(worker.Options{
-			BackgroundActivityContext: context.WithValue(context.Background(), TestContextKey, sc),
+			BackgroundActivityContext: NewContext(context.Background(), testWorkflowName, &sc),
 		},
 		)
 
@@ -434,12 +435,11 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
 	}, nil)
 	env := s.NewTestActivityEnvironment()
 	env.SetWorkerOptions(worker.Options{
-		BackgroundActivityContext: context.WithValue(context.Background(), TestContextKey, FixerContext{
-			Resource:   s.mockResource,
-			ContextKey: TestContextKey,
+		BackgroundActivityContext: NewContext(context.Background(), testWorkflowName, &FixerContext{
+			Resource: s.mockResource,
 		}),
 	})
-	fixerResultValue, err := env.ExecuteActivity(FixerCorruptedKeysActivity, FixerCorruptedKeysActivityParams{ContextKey: TestContextKey})
+	fixerResultValue, err := env.ExecuteActivity(FixerCorruptedKeysActivity, FixerCorruptedKeysActivityParams{})
 	s.NoError(err)
 	fixerResult := &FixerCorruptedKeysActivityResult{}
 	s.NoError(fixerResultValue.Get(&fixerResult))

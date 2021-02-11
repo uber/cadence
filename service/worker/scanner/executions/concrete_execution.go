@@ -144,7 +144,7 @@ func FixerManager(_ context.Context, pr persistence.Retryer, _ shardscanner.FixS
 }
 
 // ConcreteExecutionConfig resolves dynamic config for concrete executions scanner.
-func ConcreteExecutionConfig(ctx shardscanner.Context) shardscanner.CustomScannerConfig {
+func ConcreteExecutionConfig(ctx *shardscanner.Context) shardscanner.CustomScannerConfig {
 	res := shardscanner.CustomScannerConfig{}
 
 	if ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerInvariantCollectionHistory, true)() {

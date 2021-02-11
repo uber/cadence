@@ -22,7 +22,10 @@ package scanner
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	"go.uber.org/cadence/activity"
 
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/shared"
@@ -34,7 +37,6 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
@@ -47,6 +49,8 @@ const (
 )
 
 type (
+	contextKey string
+
 	// Config defines the configuration for scanner
 	Config struct {
 		// ScannerPersistenceMaxQPS the max rate of calls to persistence
@@ -73,9 +77,9 @@ type (
 		TallyScope tally.Scope
 	}
 
-	// scannerContext is the context object that get's
+	// ScannerContext is the context object that get's
 	// passed around within the scanner workflows / activities
-	scannerContext struct {
+	ScannerContext struct {
 		resource.Resource
 		cfg        Config
 		tallyScope tally.Scope
@@ -86,7 +90,7 @@ type (
 	// of database tables to cleanup resources, monitor anomalies
 	// and emit stats for analytics
 	Scanner struct {
-		context scannerContext
+		context ScannerContext
 	}
 )
 
@@ -100,15 +104,14 @@ func New(
 	params *BootstrapParams,
 ) *Scanner {
 
-	cfg := params.Config
 	zapLogger, err := zap.NewProduction()
 	if err != nil {
 		resource.GetLogger().Fatal("failed to initialize zap logger", tag.Error(err))
 	}
 	return &Scanner{
-		context: scannerContext{
+		context: ScannerContext{
 			Resource:   resource,
-			cfg:        cfg,
+			cfg:        params.Config,
 			tallyScope: params.TallyScope,
 			zapLogger:  zapLogger.Named("scanner"),
 		},
@@ -117,28 +120,32 @@ func New(
 
 // Start starts the scanner
 func (s *Scanner) Start() error {
-	backgroundActivityContext := newBackgroundContext(s.context)
+	bac := context.Background()
 	var workerTaskListNames []string
 	var wtl []string
 
 	for _, sc := range s.context.cfg.ShardScanners {
-		s.context.GetLogger().Info("starting shard scanner", tag.WorkflowType(sc.ScannerWFTypeName))
-		backgroundActivityContext, wtl = s.startShardScanner(backgroundActivityContext, sc)
+		bac, wtl = s.startShardScanner(bac, sc)
 		workerTaskListNames = append(workerTaskListNames, wtl...)
 	}
 
 	switch s.context.cfg.Persistence.DefaultStoreType() {
 	case config.StoreTypeSQL:
 		if s.context.cfg.TaskListScannerEnabled() {
-			go s.startWorkflowWithRetry(tlScannerWFStartOptions, tlScannerWFTypeName, nil)
+			bac = s.startScanner(
+				bac,
+				tlScannerWFStartOptions,
+				tlScannerWFTypeName)
 			workerTaskListNames = append(workerTaskListNames, tlScannerTaskListName)
 		}
 	case config.StoreTypeCassandra:
 		if s.context.cfg.HistoryScannerEnabled() {
-			go s.startWorkflowWithRetry(historyScannerWFStartOptions, historyScannerWFTypeName, nil)
+			bac = s.startScanner(
+				bac,
+				historyScannerWFStartOptions,
+				historyScannerWFTypeName)
 			workerTaskListNames = append(workerTaskListNames, historyScannerTaskListName)
 		}
-
 	}
 
 	workerOpts := worker.Options{
@@ -146,7 +153,7 @@ func (s *Scanner) Start() error {
 		MetricsScope:                           s.context.tallyScope,
 		MaxConcurrentActivityExecutionSize:     maxConcurrentActivityExecutionSize,
 		MaxConcurrentDecisionTaskExecutionSize: maxConcurrentDecisionTaskExecutionSize,
-		BackgroundActivityContext:              backgroundActivityContext,
+		BackgroundActivityContext:              bac,
 	}
 
 	for _, tl := range workerTaskListNames {
@@ -157,18 +164,18 @@ func (s *Scanner) Start() error {
 	return nil
 }
 
+func (s *Scanner) startScanner(ctx context.Context, options cclient.StartWorkflowOptions, workflowName string) context.Context {
+	go s.startWorkflowWithRetry(options, workflowName, nil)
+	return NewScannerContext(ctx, workflowName, &s.context)
+}
+
 func (s *Scanner) startShardScanner(
 	ctx context.Context,
 	config *shardscanner.ScannerConfig,
 ) (context.Context, []string) {
 	workerTaskListNames := []string{}
 	if config.DynamicParams.ScannerEnabled() {
-		ctx = context.WithValue(
-			ctx,
-			shardscanner.ScannerContextKey(config.ScannerWFTypeName),
-			getShardScannerContext(s.context, config),
-		)
-
+		ctx = shardscanner.NewContext(ctx, config.ScannerWFTypeName, shardscanner.NewShardScannerContext(s.context.Resource, config))
 		go s.startWorkflowWithRetry(
 			config.StartWorkflowOptions,
 			config.ScannerWFTypeName,
@@ -185,12 +192,7 @@ func (s *Scanner) startShardScanner(
 	}
 
 	if config.DynamicParams.FixerEnabled() {
-		ctx = context.WithValue(
-			ctx,
-			shardscanner.ScannerContextKey(config.FixerWFTypeName),
-			getShardFixerContext(s.context, config),
-		)
-
+		ctx = shardscanner.NewContext(ctx, config.FixerWFTypeName, shardscanner.NewShardFixerContext(s.context.Resource, config))
 		go s.startWorkflowWithRetry(
 			config.StartFixerOptions,
 			config.FixerWFTypeName,
@@ -225,6 +227,8 @@ func (s *Scanner) startWorkflowWithRetry(
 	})
 	if err != nil {
 		s.context.GetLogger().Fatal("unable to start scanner", tag.WorkflowType(workflowType), tag.Error(err))
+	} else {
+		s.context.GetLogger().Info("starting scanner", tag.WorkflowType(workflowType))
 	}
 }
 
@@ -255,28 +259,18 @@ func (s *Scanner) startWorkflow(
 	return nil
 }
 
-func newBackgroundContext(scannerContext scannerContext) context.Context {
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, scannerContextKey, scannerContext)
-	return ctx
+func NewScannerContext(ctx context.Context, workflowName string, scannerContext interface{}) context.Context {
+	return context.WithValue(ctx, contextKey(workflowName), scannerContext)
 }
 
-func getShardScannerContext(ctx scannerContext, config *shardscanner.ScannerConfig) shardscanner.Context {
-	return shardscanner.Context{
-		Resource:   ctx.Resource,
-		Scope:      ctx.Resource.GetMetricsClient().Scope(metrics.ExecutionsScannerScope),
-		Config:     config,
-		ContextKey: shardscanner.ScannerContextKey(config.ScannerWFTypeName),
-		Hooks:      config.ScannerHooks(),
+func GetScannerContext(ctx context.Context) (*ScannerContext, error) {
+	info := activity.GetInfo(ctx)
+	if info.WorkflowType == nil {
+		return nil, fmt.Errorf("workflowType is nil")
 	}
-}
-
-func getShardFixerContext(ctx scannerContext, config *shardscanner.ScannerConfig) shardscanner.FixerContext {
-	return shardscanner.FixerContext{
-		Resource:   ctx.Resource,
-		Scope:      ctx.Resource.GetMetricsClient().Scope(metrics.ExecutionsFixerScope),
-		ContextKey: shardscanner.ScannerContextKey(config.FixerWFTypeName),
-		Hooks:      config.FixerHooks(),
-		Config:     config,
+	val, ok := ctx.Value(contextKey(info.WorkflowType.Name)).(*ScannerContext)
+	if !ok {
+		return nil, fmt.Errorf("context type is not %T for a key %q", val, info.WorkflowType.Name)
 	}
+	return val, nil
 }

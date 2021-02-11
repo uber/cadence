@@ -97,8 +97,6 @@ func NewFixerWorkflow(
 		return nil, errors.New("workflow name is not provided")
 	}
 
-	params.ContextKey = ScannerContextKey(name)
-
 	wf := FixerWorkflow{
 		Params: params,
 	}
@@ -139,7 +137,6 @@ func (fx *FixerWorkflow) Start(ctx workflow.Context) error {
 				if err := workflow.ExecuteActivity(activityCtx, ActivityFixShard, FixShardActivityParams{
 					CorruptedKeysEntries:        batch,
 					ResolvedFixerWorkflowConfig: resolvedConfig,
-					ContextKey:                  fx.Params.ContextKey,
 				}).Get(ctx, &reports); err != nil {
 					errStr := err.Error()
 					shardReportChan.Send(ctx, FixReportError{

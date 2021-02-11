@@ -25,12 +25,13 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/cadence/worker"
+	"go.uber.org/zap"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/cadence/testsuite"
-	"go.uber.org/cadence/worker"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
@@ -61,13 +62,13 @@ func (s *scannerWorkflowTestSuite) TestScavengerActivity() {
 	defer mockResource.Finish(s.T())
 
 	mockResource.TaskMgr.On("ListTaskList", mock.Anything, mock.Anything).Return(&p.ListTaskListResponse{}, nil)
-	ctx := scannerContext{
+	ctx := ScannerContext{
 		Resource:  mockResource,
 		zapLogger: zap.NewNop(),
 	}
 	env.SetTestTimeout(time.Second * 5)
 	env.SetWorkerOptions(worker.Options{
-		BackgroundActivityContext: context.WithValue(context.Background(), scannerContextKey, ctx),
+		BackgroundActivityContext: NewScannerContext(context.Background(), "default-test-workflow-type-name", &ctx),
 	})
 	tlScavengerHBInterval = time.Millisecond * 10
 	_, err := env.ExecuteActivity(taskListScavengerActivityName)

@@ -26,11 +26,11 @@ import (
 	"context"
 	"errors"
 
+	"go.uber.org/cadence/workflow"
+
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
-
-	"go.uber.org/cadence/workflow"
 )
 
 const (
@@ -76,7 +76,7 @@ type ScannerWorkflow struct {
 type ScannerHooks struct {
 	Manager          ManagerCB
 	Iterator         IteratorCB
-	GetScannerConfig func(scanner Context) CustomScannerConfig
+	GetScannerConfig func(scanner *Context) CustomScannerConfig
 }
 
 // NewScannerWorkflow creates instance of shard scanner
@@ -118,7 +118,6 @@ func (wf *ScannerWorkflow) Start(ctx workflow.Context) error {
 	var resolvedConfig ResolvedScannerWorkflowConfig
 	if err := workflow.ExecuteActivity(activityCtx, ActivityScannerConfig, ScannerConfigActivityParams{
 		Overwrites: wf.Params.ScannerWorkflowConfigOverwrites,
-		ContextKey: ScannerContextKey(wf.Name),
 	}).Get(ctx, &resolvedConfig); err != nil {
 		return err
 	}
@@ -139,7 +138,6 @@ func (wf *ScannerWorkflow) Start(ctx workflow.Context) error {
 					Shards:                  batch,
 					PageSize:                resolvedConfig.GenericScannerConfig.PageSize,
 					BlobstoreFlushThreshold: resolvedConfig.GenericScannerConfig.BlobstoreFlushThreshold,
-					ContextKey:              ScannerContextKey(wf.Name),
 					ScannerConfig:           resolvedConfig.CustomScannerConfig,
 				}).Get(ctx, &reports); err != nil {
 					errStr := err.Error()
@@ -178,7 +176,6 @@ func (wf *ScannerWorkflow) Start(ctx workflow.Context) error {
 		ShardControlFlowFailureCount: summary[ShardStatusControlFlowFailure],
 		AggregateReportResult:        wf.Aggregator.GetAggregateReport(),
 		ShardDistributionStats:       wf.Aggregator.GetShardDistributionStats(),
-		ContextKey:                   ScannerContextKey(wf.Name),
 	}).Get(ctx, nil); err != nil {
 		return err
 	}
@@ -227,7 +224,7 @@ func getShardBatches(
 }
 
 // SetConfig allow to pass optional config resolver hook
-func (sh *ScannerHooks) SetConfig(config func(scanner Context) CustomScannerConfig) {
+func (sh *ScannerHooks) SetConfig(config func(scanner *Context) CustomScannerConfig) {
 	sh.GetScannerConfig = config
 }
 

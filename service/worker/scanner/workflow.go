@@ -37,8 +37,6 @@ import (
 )
 
 const (
-	scannerContextKey = "scannerContextKey"
-
 	maxConcurrentActivityExecutionSize     = 10
 	maxConcurrentDecisionTaskExecutionSize = 10
 	infiniteDuration                       = 20 * 365 * 24 * time.Hour
@@ -126,7 +124,8 @@ func HistoryScavengerActivity(
 	activityCtx context.Context,
 ) (history.ScavengerHeartbeatDetails, error) {
 
-	ctx := activityCtx.Value(scannerContextKey).(scannerContext)
+	ctx, _ := GetScannerContext(activityCtx)
+
 	rps := ctx.cfg.ScannerPersistenceMaxQPS()
 
 	hbd := history.ScavengerHeartbeatDetails{}
@@ -151,8 +150,10 @@ func HistoryScavengerActivity(
 func TaskListScavengerActivity(
 	activityCtx context.Context,
 ) error {
-
-	ctx := activityCtx.Value(scannerContextKey).(scannerContext)
+	ctx, err := GetScannerContext(activityCtx)
+	if err != nil {
+		return err
+	}
 	scavenger := tasklist.NewScavenger(activityCtx, ctx.GetTaskManager(), ctx.GetMetricsClient(), ctx.GetLogger())
 	ctx.GetLogger().Info("Starting task list scavenger")
 	scavenger.Start()
