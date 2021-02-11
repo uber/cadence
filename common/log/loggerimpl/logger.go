@@ -51,8 +51,8 @@ func NewNopLogger() log.Logger {
 	}
 }
 
-// NewDevelopmentForTest is a helper to create new development logger in unit test
-func NewDevelopmentForTest(s suite.Suite) log.Logger {
+// NewLoggerForTest is a helper to create new development logger in unit test
+func NewLoggerForTest(s suite.Suite) log.Logger {
 	return NewLogger(zaptest.NewLogger(s.T()))
 }
 

@@ -67,7 +67,7 @@ func (s *dlqMessageHandlerSuite) SetupTest() {
 	s.mockReplicationTaskExecutor = NewMockReplicationTaskExecutor(s.controller)
 	s.mockReplicationQueue = NewMockReplicationQueue(s.controller)
 
-	logger := loggerimpl.NewDevelopmentForTest(s.Suite)
+	logger := loggerimpl.NewLoggerForTest(s.Suite)
 	s.dlqMessageHandler = NewDLQMessageHandler(
 		s.mockReplicationTaskExecutor,
 		s.mockReplicationQueue,
