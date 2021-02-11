@@ -28,10 +28,9 @@ import (
 	"fmt"
 	"time"
 
-	"go.uber.org/cadence/activity"
-
 	"go.uber.org/cadence"
-	cclient "go.uber.org/cadence/client"
+	"go.uber.org/cadence/activity"
+	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common/metrics"
@@ -254,8 +253,8 @@ type (
 		FixerHooks           func() *FixerHooks
 		DynamicParams        DynamicParams
 		DynamicCollection    *dynamicconfig.Collection
-		StartWorkflowOptions cclient.StartWorkflowOptions
-		StartFixerOptions    cclient.StartWorkflowOptions
+		StartWorkflowOptions client.StartWorkflowOptions
+		StartFixerOptions    client.StartWorkflowOptions
 	}
 
 	// FixerWorkflowConfigOverwrites enables overwriting the default values.
@@ -415,7 +414,11 @@ func (s Shards) Flatten() ([]int, int, int) {
 	return shardList, min, max
 }
 
-func NewShardScannerContext(res resource.Resource, config *ScannerConfig) Context {
+// NewShardScannerContext sets scanner context up
+func NewShardScannerContext(
+	res resource.Resource,
+	config *ScannerConfig,
+) Context {
 	return Context{
 		Resource: res,
 		Scope:    res.GetMetricsClient().Scope(metrics.ExecutionsScannerScope),
@@ -424,7 +427,11 @@ func NewShardScannerContext(res resource.Resource, config *ScannerConfig) Contex
 	}
 }
 
-func NewShardFixerContext(res resource.Resource, config *ScannerConfig) FixerContext {
+// NewShardFixerContext sets fixer context up
+func NewShardFixerContext(
+	res resource.Resource,
+	config *ScannerConfig,
+) FixerContext {
 	return FixerContext{
 		Resource: res,
 		Scope:    res.GetMetricsClient().Scope(metrics.ExecutionsFixerScope),
@@ -433,11 +440,20 @@ func NewShardFixerContext(res resource.Resource, config *ScannerConfig) FixerCon
 	}
 }
 
-func NewContext(ctx context.Context, workflowName string, scannerContext interface{}) context.Context {
+// NewContext provides context to be used as background activity context
+func NewContext(
+	ctx context.Context,
+	workflowName string,
+	scannerContext interface{},
+) context.Context {
 	return context.WithValue(ctx, contextKey(workflowName), scannerContext)
 }
 
-func GetScannerContext(ctx context.Context) (*Context, error) {
+// GetScannerContext extracts scanner context from activity context
+// it uses typed, private key to reduce access scope
+func GetScannerContext(
+	ctx context.Context,
+) (*Context, error) {
 	info := activity.GetInfo(ctx)
 	if info.WorkflowType == nil {
 		return nil, fmt.Errorf("workflowType is nil")
@@ -449,7 +465,11 @@ func GetScannerContext(ctx context.Context) (*Context, error) {
 	return val, nil
 }
 
-func GetFixerContext(ctx context.Context) (*FixerContext, error) {
+// GetFixerContext extracts fixer context from activity context
+// it uses typed, private key to reduce access scope
+func GetFixerContext(
+	ctx context.Context,
+) (*FixerContext, error) {
 	info := activity.GetInfo(ctx)
 	if info.WorkflowType == nil {
 		return nil, fmt.Errorf("workflowType is nil")

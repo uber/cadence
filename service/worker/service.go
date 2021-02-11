@@ -133,7 +133,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			Persistence:              &params.PersistenceConfig,
 			ClusterMetadata:          params.ClusterMetadata,
 			TaskListScannerEnabled:   dc.GetBoolProperty(dynamicconfig.TaskListScannerEnabled, true),
-			HistoryScannerEnabled:    dc.GetBoolProperty(dynamicconfig.HistoryScannerEnabled, true),
+			HistoryScannerEnabled:    dc.GetBoolProperty(dynamicconfig.HistoryScannerEnabled, false),
 			ShardScanners: []*shardscanner.ScannerConfig{
 				executions.ConcreteExecutionScannerConfig(dc),
 				executions.CurrentExecutionScannerConfig(dc),

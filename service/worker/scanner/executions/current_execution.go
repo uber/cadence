@@ -83,7 +83,6 @@ func CurrentExecutionManager(
 	ctx context.Context,
 	pr persistence.Retryer,
 	params shardscanner.ScanShardActivityParams,
-	_ shardscanner.ScannerConfig,
 ) invariant.Manager {
 	var ivs []invariant.Invariant
 	collections := ParseCollections(params.ScannerConfig)
@@ -167,7 +166,6 @@ func CurrentExecutionIterator(
 	ctx context.Context,
 	pr persistence.Retryer,
 	params shardscanner.ScanShardActivityParams,
-	_ shardscanner.ScannerConfig,
 ) pagination.Iterator {
 	return CurrentExecutionType.ToIterator()(ctx, pr, params.PageSize)
 }
@@ -178,7 +176,6 @@ func CurrentExecutionFixerIterator(
 	client blobstore.Client,
 	keys store.Keys,
 	_ shardscanner.FixShardActivityParams,
-	_ shardscanner.ScannerConfig,
 ) store.ScanOutputIterator {
 	return store.NewBlobstoreIterator(ctx, client, keys, CurrentExecutionType.ToBlobstoreEntity())
 }

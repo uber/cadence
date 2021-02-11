@@ -58,7 +58,10 @@ func ScannerConfigActivity(
 	activityCtx context.Context,
 	params ScannerConfigActivityParams,
 ) (ResolvedScannerWorkflowConfig, error) {
-	ctx, _ := GetScannerContext(activityCtx)
+	ctx, err := GetScannerContext(activityCtx)
+	if err != nil {
+		return ResolvedScannerWorkflowConfig{}, err
+	}
 	dc := ctx.Config.DynamicParams
 
 	result := ResolvedScannerWorkflowConfig{
@@ -163,10 +166,10 @@ func scanShard(
 
 	scanner := NewScanner(
 		shardID,
-		ctx.Hooks.Iterator(activityCtx, pr, params, *ctx.Config),
+		ctx.Hooks.Iterator(activityCtx, pr, params),
 		resources.GetBlobstoreClient(),
 		params.BlobstoreFlushThreshold,
-		ctx.Hooks.Manager(activityCtx, pr, params, *ctx.Config),
+		ctx.Hooks.Manager(activityCtx, pr, params),
 		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
 	)
 	report := scanner.Scan(activityCtx)
@@ -340,8 +343,8 @@ func fixShard(
 	fixer := NewFixer(
 		activityCtx,
 		shardID,
-		ctx.Hooks.InvariantManager(activityCtx, pr, params, *ctx.Config),
-		ctx.Hooks.Iterator(activityCtx, resource.GetBlobstoreClient(), corruptedKeys, params, *ctx.Config),
+		ctx.Hooks.InvariantManager(activityCtx, pr, params),
+		ctx.Hooks.Iterator(activityCtx, resource.GetBlobstoreClient(), corruptedKeys, params),
 		resource.GetBlobstoreClient(),
 		params.ResolvedFixerWorkflowConfig.BlobstoreFlushThreshold,
 		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
@@ -360,7 +363,10 @@ func ScannerEmitMetricsActivity(
 	activityCtx context.Context,
 	params ScannerEmitMetricsActivityParams,
 ) error {
-	ctx, _ := GetScannerContext(activityCtx)
+	ctx, err := GetScannerContext(activityCtx)
+	if err != nil {
+		return err
+	}
 	info := activity.GetInfo(activityCtx)
 	scope := ctx.Scope.Tagged(
 		metrics.ActivityTypeTag(ActivityScannerEmitMetrics),

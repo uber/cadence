@@ -47,7 +47,6 @@ type FixerManagerCB func(
 	context.Context,
 	persistence.Retryer,
 	FixShardActivityParams,
-	ScannerConfig,
 ) invariant.Manager
 
 // FixerIteratorCB is a function which returns ScanOutputIterator for fixer.
@@ -56,7 +55,6 @@ type FixerIteratorCB func(
 	blobstore.Client,
 	store.Keys,
 	FixShardActivityParams,
-	ScannerConfig,
 ) store.ScanOutputIterator
 
 // FixerHooks holds callback functions for shard scanner workflow implementation.

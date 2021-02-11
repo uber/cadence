@@ -53,7 +53,6 @@ type ManagerCB func(
 	context.Context,
 	persistence.Retryer,
 	ScanShardActivityParams,
-	ScannerConfig,
 ) invariant.Manager
 
 // IteratorCB is a function which returns iterator for scanner.
@@ -61,7 +60,6 @@ type IteratorCB func(
 	context.Context,
 	persistence.Retryer,
 	ScanShardActivityParams,
-	ScannerConfig,
 ) pagination.Iterator
 
 // ScannerWorkflow is a workflow which scans and checks entities in a shard.

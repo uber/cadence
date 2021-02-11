@@ -28,14 +28,16 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/cadence/worker"
-
-	"github.com/pborman/uuid"
-	"github.com/uber-go/tally"
-
 	"github.com/golang/mock/gomock"
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber-go/tally"
+
+	"go.uber.org/cadence/.gen/go/shared"
+	"go.uber.org/cadence/activity"
+	"go.uber.org/cadence/testsuite"
+	"go.uber.org/cadence/worker"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
@@ -48,9 +50,6 @@ import (
 	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service/dynamicconfig"
-	"go.uber.org/cadence/.gen/go/shared"
-	"go.uber.org/cadence/activity"
-	"go.uber.org/cadence/testsuite"
 )
 
 const testWorkflowName = "default-test-workflow-type-name"
@@ -88,15 +87,15 @@ func (s *activitiesSuite) TestScanShardActivity() {
 	testCases := []struct {
 		params       ScanShardActivityParams
 		wantErr      bool
-		managerHook  func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) invariant.Manager
-		itHook       func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) pagination.Iterator
+		managerHook  func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams) invariant.Manager
+		itHook       func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams) pagination.Iterator
 		workflowName string
 	}{
 		{
 			params: ScanShardActivityParams{
 				Shards: []int{0},
 			},
-			managerHook: func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) invariant.Manager {
+			managerHook: func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams) invariant.Manager {
 				manager := invariant.NewMockManager(s.controller)
 				manager.EXPECT().RunChecks(gomock.Any(), gomock.Any()).
 					AnyTimes().
@@ -105,7 +104,7 @@ func (s *activitiesSuite) TestScanShardActivity() {
 					)
 				return manager
 			},
-			itHook: func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams, config ScannerConfig) pagination.Iterator {
+			itHook: func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams) pagination.Iterator {
 				it := pagination.NewMockIterator(s.controller)
 				calls := 0
 				it.EXPECT().HasNext().DoAndReturn(
@@ -186,7 +185,7 @@ func (s *activitiesSuite) TestFixShardActivity() {
 				},
 				ResolvedFixerWorkflowConfig: ResolvedFixerWorkflowConfig{},
 			},
-			managerHook: func(ctx context.Context, pr persistence.Retryer, p FixShardActivityParams, c ScannerConfig) invariant.Manager {
+			managerHook: func(ctx context.Context, pr persistence.Retryer, p FixShardActivityParams) invariant.Manager {
 				manager := invariant.NewMockManager(s.controller)
 				manager.EXPECT().RunFixes(gomock.Any(), gomock.Any()).
 					AnyTimes().
@@ -195,7 +194,7 @@ func (s *activitiesSuite) TestFixShardActivity() {
 					)
 				return manager
 			},
-			itHook: func(ctx context.Context, client blobstore.Client, k store.Keys, params FixShardActivityParams, config ScannerConfig) store.ScanOutputIterator {
+			itHook: func(ctx context.Context, client blobstore.Client, k store.Keys, params FixShardActivityParams) store.ScanOutputIterator {
 				it := store.NewMockScanOutputIterator(s.controller)
 				calls := 0
 				it.EXPECT().HasNext().DoAndReturn(

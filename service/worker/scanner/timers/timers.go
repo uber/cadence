@@ -110,7 +110,6 @@ func Manager(
 	_ context.Context,
 	pr persistence.Retryer,
 	_ shardscanner.ScanShardActivityParams,
-	_ shardscanner.ScannerConfig,
 ) invariant.Manager {
 	return invariant.NewInvariantManager(getInvariants(pr))
 }
@@ -120,7 +119,6 @@ func Iterator(
 	ctx context.Context,
 	pr persistence.Retryer,
 	params shardscanner.ScanShardActivityParams,
-	_ shardscanner.ScannerConfig,
 ) pagination.Iterator {
 	start, err := strconv.Atoi(params.ScannerConfig[periodStartKey])
 	if err != nil {
@@ -144,7 +142,6 @@ func FixerIterator(
 	client blobstore.Client,
 	keys store.Keys,
 	_ shardscanner.FixShardActivityParams,
-	_ shardscanner.ScannerConfig,
 ) store.ScanOutputIterator {
 	return store.NewBlobstoreIterator(ctx, client, keys, &entity.Timer{})
 }
@@ -154,7 +151,6 @@ func FixerManager(
 	_ context.Context,
 	pr persistence.Retryer,
 	_ shardscanner.FixShardActivityParams,
-	_ shardscanner.ScannerConfig,
 ) invariant.Manager {
 	return invariant.NewInvariantManager(getInvariants(pr))
 }
