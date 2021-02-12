@@ -111,6 +111,7 @@ var keys = map[Key]string{
 	FrontendGlobalDomainRPS:                     "frontend.globalDomainrps",
 	FrontendHistoryMgrNumConns:                  "frontend.historyMgrNumConns",
 	FrontendShutdownDrainDuration:               "frontend.shutdownDrainDuration",
+	MaxWorkflowRetentionInDays:                  "frontend.maxWorkflowRetentionInDays",
 	DisableListVisibilityByFilter:               "frontend.disableListVisibilityByFilter",
 	FrontendThrottledLogRPS:                     "frontend.throttledLogRPS",
 	EnableClientVersionCheck:                    "frontend.enableClientVersionCheck",
@@ -470,6 +471,10 @@ const (
 	FrontendThrottledLogRPS
 	// FrontendShutdownDrainDuration is the duration of traffic drain during shutdown
 	FrontendShutdownDrainDuration
+	// MaxWorkflowRetentionInDays is the maximum retention allowed when registering a domain
+	// !!! Do NOT simply decrease this number, because it is being used by history scavenger to avoid race condition against history archival.
+	//	Check more details in history scanner(scavenger)
+	MaxWorkflowRetentionInDays
 	// EnableClientVersionCheck enables client version check for frontend
 	EnableClientVersionCheck
 

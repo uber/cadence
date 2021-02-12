@@ -139,6 +139,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 				executions.CurrentExecutionScannerConfig(dc),
 				timers.ScannerConfig(dc),
 			},
+			MaxWorkflowRetentionInDays: dc.GetIntProperty(dynamicconfig.MaxWorkflowRetentionInDays, common.DefaultMaxWorkflowRetentionInDays),
 		},
 		BatcherCfg: &batcher.Config{
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
