@@ -448,7 +448,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-			SignalName: common.StringPtr("some random signal name"),
+			SignalName: "some random signal name",
 			Input:      []byte("some random signal input"),
 			Identity:   "some random identity",
 		},
@@ -1677,7 +1677,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecu
 				WorkflowID: targetWorkflowID,
 				RunID:      targetRunID,
 			},
-			SignalName:        common.StringPtr(signalName),
+			SignalName:        signalName,
 			Input:             signalInput,
 			ChildWorkflowOnly: childWorkflowOnly,
 		},

@@ -491,7 +491,7 @@ func (v *decisionAttrValidator) validateSignalExternalWorkflowExecutionAttribute
 	if targetRunID != "" && uuid.Parse(targetRunID) == nil {
 		return &types.BadRequestError{Message: "Invalid RunId set on decision."}
 	}
-	if attributes.SignalName == nil {
+	if attributes.SignalName == "" {
 		return &types.BadRequestError{Message: "SignalName is not set on decision."}
 	}
 
