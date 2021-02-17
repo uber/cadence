@@ -156,7 +156,7 @@ func FixerManager(
 }
 
 // Config resolves dynamic config for timers scanner.
-func Config(ctx *shardscanner.Context) shardscanner.CustomScannerConfig {
+func Config(ctx shardscanner.Context) shardscanner.CustomScannerConfig {
 	res := shardscanner.CustomScannerConfig{}
 	res[periodStartKey] = strconv.Itoa(ctx.Config.DynamicCollection.GetIntProperty(dynamicconfig.TimersScannerPeriodStart, _defaultPeriodStart)())
 	res[periodEndKey] = strconv.Itoa(ctx.Config.DynamicCollection.GetIntProperty(dynamicconfig.TimersScannerPeriodEnd, _defaultPeriodEnd)())

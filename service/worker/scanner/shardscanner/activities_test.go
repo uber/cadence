@@ -135,13 +135,12 @@ func (s *activitiesSuite) TestScanShardActivity() {
 
 		env := s.NewTestActivityEnvironment()
 		hooks, _ := NewScannerHooks(tc.managerHook, tc.itHook)
+		sc := NewShardScannerContext(s.mockResource, &ScannerConfig{
+			ScannerHooks: func() *ScannerHooks { return hooks },
+		})
+		ctx := NewScannerContext(context.Background(), tc.workflowName, sc)
 		env.SetWorkerOptions(worker.Options{
-			BackgroundActivityContext: NewContext(context.Background(), tc.workflowName, &Context{
-				Config:   &ScannerConfig{},
-				Scope:    s.mockResource.MetricsClient.Scope(metrics.ShardScannerScope),
-				Resource: s.mockResource,
-				Hooks:    hooks,
-			}),
+			BackgroundActivityContext: ctx,
 		})
 		report, err := env.ExecuteActivity(ScanShardActivity, tc.params)
 		if tc.wantErr {
@@ -216,21 +215,6 @@ func (s *activitiesSuite) TestFixShardActivity() {
 				return it
 			},
 		},
-		{
-			name:    "hooks are not provided",
-			wantErr: true,
-			params: FixShardActivityParams{
-				CorruptedKeysEntries: []CorruptedKeysEntry{
-					{ShardID: 1, CorruptedKeys: struct {
-						UUID      string
-						MinPage   int
-						MaxPage   int
-						Extension store.Extension
-					}{UUID: "test-uuid", MinPage: 0, MaxPage: 1, Extension: "test-ext"}},
-				},
-				ResolvedFixerWorkflowConfig: ResolvedFixerWorkflowConfig{},
-			},
-		},
 	}
 
 	for _, tc := range testCases {
@@ -241,26 +225,25 @@ func (s *activitiesSuite) TestFixShardActivity() {
 			domainCache := cache.NewMockDomainCache(s.controller)
 			domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil).AnyTimes()
 			s.mockResource.DomainCache = domainCache
-
-			fc := FixerContext{
-				Config: &ScannerConfig{
-					DynamicParams: DynamicParams{
-						AllowDomain: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
-					},
+			cfg := &ScannerConfig{
+				DynamicParams: DynamicParams{
+					AllowDomain: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
 				},
-				Scope:    metrics.NoopScope(metrics.Worker),
-				Resource: s.mockResource,
 			}
 			if tc.itHook != nil && tc.managerHook != nil {
-				fc.Hooks = &FixerHooks{
-					InvariantManager: tc.managerHook,
-					Iterator:         tc.itHook,
+				cfg.FixerHooks = func() *FixerHooks {
+					return &FixerHooks{
+						InvariantManager: tc.managerHook,
+						Iterator:         tc.itHook,
+					}
 				}
 			}
+			fc := NewShardFixerContext(s.mockResource, cfg)
+
 			env := s.NewTestActivityEnvironment()
 
 			env.SetWorkerOptions(worker.Options{
-				BackgroundActivityContext: NewContext(context.Background(), testWorkflowName, &fc),
+				BackgroundActivityContext: NewFixerContext(context.Background(), testWorkflowName, fc),
 			})
 			report, execErr := env.ExecuteActivity(FixShardActivity, tc.params)
 			if tc.wantErr {
@@ -364,22 +347,29 @@ func (s *activitiesSuite) TestScannerConfigActivity() {
 
 	for _, tc := range testCases {
 		env := s.NewTestActivityEnvironment()
-		sc := Context{
-			Config: &ScannerConfig{
-				DynamicParams: *tc.dynamicParams,
+
+		cfg := &ScannerConfig{
+			DynamicParams: *tc.dynamicParams,
+			ScannerHooks: func() *ScannerHooks {
+				return &ScannerHooks{}
 			},
 		}
-
 		if tc.addHook {
-			sc.Hooks = &ScannerHooks{
-				GetScannerConfig: func(scanner *Context) CustomScannerConfig {
-					return map[string]string{"test-key": "test-value"}
-				},
+			cfg.ScannerHooks = func() *ScannerHooks {
+				return &ScannerHooks{
+					GetScannerConfig: func(scanner Context) CustomScannerConfig {
+						return map[string]string{"test-key": "test-value"}
+					},
+				}
 			}
 		}
 
 		env.SetWorkerOptions(worker.Options{
-			BackgroundActivityContext: NewContext(context.Background(), testWorkflowName, &sc),
+			BackgroundActivityContext: NewScannerContext(
+				context.Background(),
+				testWorkflowName,
+				NewShardScannerContext(s.mockResource, cfg),
+			),
 		},
 		)
 
@@ -433,10 +423,17 @@ func (s *activitiesSuite) TestFixerCorruptedKeysActivity() {
 		QueryResult: queryResultData,
 	}, nil)
 	env := s.NewTestActivityEnvironment()
+	cfg := &ScannerConfig{
+		DynamicParams: DynamicParams{
+			AllowDomain: dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+		},
+		FixerHooks: func() *FixerHooks {
+			return &FixerHooks{}
+		},
+	}
+	fc := NewShardFixerContext(s.mockResource, cfg)
 	env.SetWorkerOptions(worker.Options{
-		BackgroundActivityContext: NewContext(context.Background(), testWorkflowName, &FixerContext{
-			Resource: s.mockResource,
-		}),
+		BackgroundActivityContext: NewFixerContext(context.Background(), testWorkflowName, fc),
 	})
 	fixerResultValue, err := env.ExecuteActivity(FixerCorruptedKeysActivity, FixerCorruptedKeysActivityParams{})
 	s.NoError(err)

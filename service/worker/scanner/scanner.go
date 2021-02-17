@@ -80,17 +80,17 @@ type (
 	// scannerContext is the context object that get's
 	// passed around within the scanner workflows / activities
 	scannerContext struct {
-		resource   resource.Resource
-		cfg        Config
-		tallyScope tally.Scope
-		zapLogger  *zap.Logger
+		resource resource.Resource
+		cfg      Config
 	}
 
 	// Scanner is the background sub-system that does full scans
 	// of database tables to cleanup resources, monitor anomalies
 	// and emit stats for analytics
 	Scanner struct {
-		context scannerContext
+		context    scannerContext
+		tallyScope tally.Scope
+		zapLogger  *zap.Logger
 	}
 )
 
@@ -110,12 +110,13 @@ func New(
 	}
 	return &Scanner{
 		context: scannerContext{
-			resource:   resource,
-			cfg:        params.Config,
-			tallyScope: params.TallyScope,
-			zapLogger:  zapLogger.Named("scanner"),
+			resource: resource,
+			cfg:      params.Config,
 		},
+		tallyScope: params.TallyScope,
+		zapLogger:  zapLogger.Named("scanner"),
 	}
+
 }
 
 // Start starts the scanner
@@ -149,8 +150,8 @@ func (s *Scanner) Start() error {
 	}
 
 	workerOpts := worker.Options{
-		Logger:                                 s.context.zapLogger,
-		MetricsScope:                           s.context.tallyScope,
+		Logger:                                 s.zapLogger,
+		MetricsScope:                           s.tallyScope,
 		MaxConcurrentActivityExecutionSize:     maxConcurrentActivityExecutionSize,
 		MaxConcurrentDecisionTaskExecutionSize: maxConcurrentDecisionTaskExecutionSize,
 		BackgroundActivityContext:              ctx,
@@ -166,7 +167,7 @@ func (s *Scanner) Start() error {
 
 func (s *Scanner) startScanner(ctx context.Context, options client.StartWorkflowOptions, workflowName string) context.Context {
 	go s.startWorkflowWithRetry(options, workflowName, nil)
-	return NewScannerContext(ctx, workflowName, &s.context)
+	return NewScannerContext(ctx, workflowName, s.context)
 }
 
 func (s *Scanner) startShardScanner(
@@ -175,7 +176,11 @@ func (s *Scanner) startShardScanner(
 ) (context.Context, []string) {
 	workerTaskListNames := []string{}
 	if config.DynamicParams.ScannerEnabled() {
-		ctx = shardscanner.NewContext(ctx, config.ScannerWFTypeName, shardscanner.NewShardScannerContext(s.context.resource, config))
+		ctx = shardscanner.NewScannerContext(
+			ctx,
+			config.ScannerWFTypeName,
+			shardscanner.NewShardScannerContext(s.context.resource, config),
+		)
 		go s.startWorkflowWithRetry(
 			config.StartWorkflowOptions,
 			config.ScannerWFTypeName,
@@ -192,7 +197,11 @@ func (s *Scanner) startShardScanner(
 	}
 
 	if config.DynamicParams.FixerEnabled() {
-		ctx = shardscanner.NewContext(ctx, config.FixerWFTypeName, shardscanner.NewShardFixerContext(s.context.resource, config))
+		ctx = shardscanner.NewFixerContext(
+			ctx,
+			config.FixerWFTypeName,
+			shardscanner.NewShardFixerContext(s.context.resource, config),
+		)
 		go s.startWorkflowWithRetry(
 			config.StartFixerOptions,
 			config.FixerWFTypeName,
@@ -262,20 +271,20 @@ func (s *Scanner) startWorkflow(
 
 // NewScannerContext provides context to be used as background activity context
 // it uses typed, private key to reduce access scope
-func NewScannerContext(ctx context.Context, workflowName string, scannerContext *scannerContext) context.Context {
+func NewScannerContext(ctx context.Context, workflowName string, scannerContext scannerContext) context.Context {
 	return context.WithValue(ctx, contextKey(workflowName), scannerContext)
 }
 
 // GetScannerContext extracts scanner context from activity context
 // it uses typed, private key to reduce access scope
-func GetScannerContext(ctx context.Context) (*scannerContext, error) {
+func GetScannerContext(ctx context.Context) (scannerContext, error) {
 	info := activity.GetInfo(ctx)
 	if info.WorkflowType == nil {
-		return nil, fmt.Errorf("workflowType is nil")
+		return scannerContext{}, fmt.Errorf("workflowType is nil")
 	}
-	val, ok := ctx.Value(contextKey(info.WorkflowType.Name)).(*scannerContext)
+	val, ok := ctx.Value(contextKey(info.WorkflowType.Name)).(scannerContext)
 	if !ok {
-		return nil, fmt.Errorf("context type is not %T for a key %q", val, info.WorkflowType.Name)
+		return scannerContext{}, fmt.Errorf("context type is not %T for a key %q", val, info.WorkflowType.Name)
 	}
 	return val, nil
 }

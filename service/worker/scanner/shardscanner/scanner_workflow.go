@@ -74,7 +74,7 @@ type ScannerWorkflow struct {
 type ScannerHooks struct {
 	Manager          ManagerCB
 	Iterator         IteratorCB
-	GetScannerConfig func(scanner *Context) CustomScannerConfig
+	GetScannerConfig func(scanner Context) CustomScannerConfig
 }
 
 // NewScannerWorkflow creates instance of shard scanner
@@ -169,15 +169,14 @@ func (wf *ScannerWorkflow) Start(ctx workflow.Context) error {
 
 	activityCtx = getShortActivityContext(ctx)
 	summary := wf.Aggregator.GetStatusSummary()
-	if err := workflow.ExecuteActivity(activityCtx, ActivityScannerEmitMetrics, ScannerEmitMetricsActivityParams{
+
+	return workflow.ExecuteActivity(activityCtx, ActivityScannerEmitMetrics, ScannerEmitMetricsActivityParams{
 		ShardSuccessCount:            summary[ShardStatusSuccess],
 		ShardControlFlowFailureCount: summary[ShardStatusControlFlowFailure],
 		AggregateReportResult:        wf.Aggregator.GetAggregateReport(),
 		ShardDistributionStats:       wf.Aggregator.GetShardDistributionStats(),
-	}).Get(ctx, nil); err != nil {
-		return err
-	}
-	return nil
+	}).Get(ctx, nil)
+
 }
 
 func getScanHandlers(aggregator *ShardScanResultAggregator) map[string]interface{} {
@@ -222,7 +221,7 @@ func getShardBatches(
 }
 
 // SetConfig allow to pass optional config resolver hook
-func (sh *ScannerHooks) SetConfig(config func(scanner *Context) CustomScannerConfig) {
+func (sh *ScannerHooks) SetConfig(config func(scanner Context) CustomScannerConfig) {
 	sh.GetScannerConfig = config
 }
 

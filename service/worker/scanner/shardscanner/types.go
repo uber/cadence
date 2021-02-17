@@ -47,8 +47,6 @@ const (
 	ErrSerialization = "encountered serialization error"
 	// ErrMissingHooks indicates scanner is not providing hooks to Invariant manager or Iterator
 	ErrMissingHooks = "hooks are not provided for this scanner"
-
-	ErrContextInvalid = "context"
 )
 
 type (
@@ -441,26 +439,34 @@ func NewShardFixerContext(
 }
 
 // NewContext provides context to be used as background activity context
-func NewContext(
+func NewFixerContext(
 	ctx context.Context,
 	workflowName string,
-	scannerContext interface{},
+	fixerContext FixerContext,
+) context.Context {
+	return context.WithValue(ctx, contextKey(workflowName), fixerContext)
+}
+
+// NewContext provides context to be used as background activity context
+func NewScannerContext(
+	ctx context.Context,
+	workflowName string,
+	scannerContext Context,
 ) context.Context {
 	return context.WithValue(ctx, contextKey(workflowName), scannerContext)
 }
 
 // GetScannerContext extracts scanner context from activity context
-// it uses typed, private key to reduce access scope
 func GetScannerContext(
 	ctx context.Context,
-) (*Context, error) {
+) (Context, error) {
 	info := activity.GetInfo(ctx)
 	if info.WorkflowType == nil {
-		return nil, fmt.Errorf("workflowType is nil")
+		return Context{}, fmt.Errorf("workflowType is nil")
 	}
-	val, ok := ctx.Value(contextKey(info.WorkflowType.Name)).(*Context)
+	val, ok := ctx.Value(contextKey(info.WorkflowType.Name)).(Context)
 	if !ok {
-		return nil, fmt.Errorf("context type is not %T for a key %q", val, info.WorkflowType.Name)
+		return Context{}, fmt.Errorf("context type is not %T for a key %q", val, info.WorkflowType.Name)
 	}
 	return val, nil
 }
@@ -469,14 +475,14 @@ func GetScannerContext(
 // it uses typed, private key to reduce access scope
 func GetFixerContext(
 	ctx context.Context,
-) (*FixerContext, error) {
+) (FixerContext, error) {
 	info := activity.GetInfo(ctx)
 	if info.WorkflowType == nil {
-		return nil, fmt.Errorf("workflowType is nil")
+		return FixerContext{}, fmt.Errorf("workflowType is nil")
 	}
-	val, ok := ctx.Value(contextKey(info.WorkflowType.Name)).(*FixerContext)
+	val, ok := ctx.Value(contextKey(info.WorkflowType.Name)).(FixerContext)
 	if !ok {
-		return nil, fmt.Errorf("context type is not %T for a key %q", val, info.WorkflowType.Name)
+		return FixerContext{}, fmt.Errorf("context type is not %T for a key %q", val, info.WorkflowType.Name)
 	}
 	return val, nil
 }
