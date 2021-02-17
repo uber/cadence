@@ -143,11 +143,11 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	domainName := "test-xdc-search-attr-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
+		Name:                                   domainName,
 		Clusters:                               clusterReplicationConfigES,
-		ActiveClusterName:                      common.StringPtr(clusterNameES[0]),
-		IsGlobalDomain:                         common.BoolPtr(true),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterNameES[0],
+		IsGlobalDomain:                         true,
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -205,7 +205,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   domainName,
 		PageSize: 5,
-		Query:    common.StringPtr(query),
+		Query:    query,
 	}
 
 	testListResult := func(client host.FrontendClient) {
@@ -269,7 +269,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 	listRequest = &types.ListWorkflowExecutionsRequest{
 		Domain:   domainName,
 		PageSize: int32(2),
-		Query:    common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt)),
+		Query:    fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt),
 	}
 
 	testListResult = func(client host.FrontendClient) {

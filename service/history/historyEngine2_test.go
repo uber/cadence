@@ -168,7 +168,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyExpired() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -192,7 +192,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyExpired() {
 		DomainUUID:        domainID,
 		WorkflowExecution: &we,
 		ScheduleID:        common.Int64Ptr(2),
-		TaskID:            common.Int64Ptr(100),
+		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
@@ -240,7 +240,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -265,7 +265,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 		DomainUUID:        domainID,
 		WorkflowExecution: &we,
 		ScheduleID:        common.Int64Ptr(2),
-		TaskID:            common.Int64Ptr(100),
+		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
@@ -319,7 +319,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfNoExecution() {
 		DomainUUID:        domainID,
 		WorkflowExecution: workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
-		TaskID:            common.Int64Ptr(100),
+		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
@@ -349,7 +349,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfGetExecutionFailed() {
 		DomainUUID:        domainID,
 		WorkflowExecution: workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
-		TaskID:            common.Int64Ptr(100),
+		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
@@ -382,7 +382,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyStarted() {
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
-		TaskID:            common.Int64Ptr(100),
+		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
@@ -419,7 +419,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyCompleted() {
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
-		TaskID:            common.Int64Ptr(100),
+		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
@@ -466,7 +466,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedConflictOnUpdate() {
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
-		TaskID:            common.Int64Ptr(100),
+		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
@@ -510,7 +510,7 @@ func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
-		TaskID:            common.Int64Ptr(100),
+		TaskID:            100,
 		RequestID:         requestID,
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
@@ -555,7 +555,7 @@ func (s *engine2Suite) TestRecordDecisionTaskRetryDifferentRequest() {
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
-		TaskID:            common.Int64Ptr(100),
+		TaskID:            100,
 		RequestID:         requestID,
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
@@ -598,7 +598,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedMaxAttemptsExceeded() {
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
-		TaskID:            common.Int64Ptr(100),
+		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
@@ -649,7 +649,7 @@ func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        common.Int64Ptr(2),
-		TaskID:            common.Int64Ptr(100),
+		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
@@ -688,7 +688,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedIfNoExecution() {
 		DomainUUID:        domainID,
 		WorkflowExecution: workflowExecution,
 		ScheduleID:        common.Int64Ptr(5),
-		TaskID:            common.Int64Ptr(100),
+		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForActivityTaskRequest{
 			TaskList: &types.TaskList{
@@ -741,7 +741,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
 		ScheduleID:        common.Int64Ptr(5),
-		TaskID:            common.Int64Ptr(100),
+		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForActivityTaskRequest{
 			TaskList: &types.TaskList{
@@ -863,7 +863,7 @@ func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -874,7 +874,7 @@ func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
 	decisions := []*types.Decision{{
 		DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 		RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-			MarkerName: common.StringPtr(markerName),
+			MarkerName: markerName,
 			Details:    markerDetails,
 		},
 	}}
@@ -1189,7 +1189,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		runID,
 		constants.TestLocalDomainEntry,
 	)
@@ -1325,7 +1325,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		runID,
 		constants.TestLocalDomainEntry,
 	)
@@ -1375,7 +1375,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_DuplicateReque
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		runID,
 		constants.TestLocalDomainEntry,
 	)
@@ -1433,7 +1433,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_WorkflowAlread
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		runID,
 		constants.TestLocalDomainEntry,
 	)

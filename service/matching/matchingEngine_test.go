@@ -80,7 +80,7 @@ func TestMatchingEngineSuite(t *testing.T) {
 }
 
 func (s *matchingEngineSuite) SetupSuite() {
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 	http.Handle("/test/tasks", http.HandlerFunc(s.TasksHandler))
 }
 
@@ -115,7 +115,7 @@ func (s *matchingEngineSuite) SetupTest() {
 		&types.TaskList{Name: matchingTestTaskList, Kind: &tlKindNormal},
 		metrics.NewClient(tally.NoopScope, metrics.Matching),
 		metrics.MatchingTaskListMgrScope,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 	)
 
 	s.matchingEngine = s.newMatchingEngine(defaultTestConfig(), s.taskManager)
@@ -1123,13 +1123,13 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 	// History service is using mock
 	s.mockHistoryClient.EXPECT().RecordActivityTaskStarted(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest) (*types.RecordActivityTaskStartedResponse, error) {
-			if _, ok := startedTasks[*taskRequest.TaskID]; ok {
+			if _, ok := startedTasks[taskRequest.TaskID]; ok {
 				s.logger.Debug(fmt.Sprintf("From error function Mock Received DUPLICATED RecordActivityTaskStartedRequest for taskID=%v", taskRequest.TaskID))
 				return nil, &types.EntityNotExistsError{Message: "already started"}
 			}
 			s.logger.Debug(fmt.Sprintf("Mock Received RecordActivityTaskStartedRequest for taskID=%v", taskRequest.TaskID))
 
-			startedTasks[*taskRequest.TaskID] = true
+			startedTasks[taskRequest.TaskID] = true
 			return &types.RecordActivityTaskStartedResponse{
 				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
@@ -1267,13 +1267,13 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 	// History service is using mock
 	s.mockHistoryClient.EXPECT().RecordDecisionTaskStarted(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(ctx context.Context, taskRequest *types.RecordDecisionTaskStartedRequest) (*types.RecordDecisionTaskStartedResponse, error) {
-			if _, ok := startedTasks[*taskRequest.TaskID]; ok {
+			if _, ok := startedTasks[taskRequest.TaskID]; ok {
 				s.logger.Debug(fmt.Sprintf("From error function Mock Received DUPLICATED RecordDecisionTaskStartedRequest for taskID=%v", taskRequest.TaskID))
 				return nil, &types.EventAlreadyStartedError{Message: "already started"}
 			}
 			s.logger.Debug(fmt.Sprintf("Mock Received RecordDecisionTaskStartedRequest for taskID=%v", taskRequest.TaskID))
 			s.logger.Debug("Mock Received RecordDecisionTaskStartedRequest")
-			startedTasks[*taskRequest.TaskID] = true
+			startedTasks[taskRequest.TaskID] = true
 			return &types.RecordDecisionTaskStartedResponse{
 				PreviousStartedEventID: &startedEventID,
 				StartedEventID:         startedEventID,

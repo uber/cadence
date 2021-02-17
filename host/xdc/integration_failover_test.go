@@ -132,11 +132,11 @@ func (s *integrationClustersTestSuite) TestDomainFailover() {
 	domainName := "test-domain-for-fail-over-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(7),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 7,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -216,11 +216,11 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 	domainName := "test-simple-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -513,11 +513,11 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 	domainName := "test-sticky-decision-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -684,11 +684,11 @@ func (s *integrationClustersTestSuite) TestStartWorkflowExecution_Failover_Workf
 	domainName := "test-start-workflow-failover-ID-reuse-policy" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -819,11 +819,11 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 	domainName := "test-terminate-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -1002,11 +1002,11 @@ func (s *integrationClustersTestSuite) TestContinueAsNewFailover() {
 	domainName := "test-continueAsNew-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -1138,11 +1138,11 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 	domainName := "test-signal-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -1317,11 +1317,11 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 	domainName := "test-user-timer-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -1487,11 +1487,11 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 	domainName := "test-activity-heartbeat-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -1695,11 +1695,11 @@ func (s *integrationClustersTestSuite) TestTransientDecisionFailover() {
 	domainName := "test-transient-decision-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -1814,11 +1814,11 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 	domainName := "test-cron-workflow-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)
@@ -1912,11 +1912,11 @@ func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
 	domainName := "test-workflow-retry-failover-" + common.GenerateRandomString(5)
 	client1 := s.cluster1.GetFrontendClient() // active
 	regReq := &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr(domainName),
-		IsGlobalDomain:                         common.BoolPtr(true),
+		Name:                                   domainName,
+		IsGlobalDomain:                         true,
 		Clusters:                               clusterReplicationConfig,
-		ActiveClusterName:                      common.StringPtr(clusterName[0]),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(1),
+		ActiveClusterName:                      clusterName[0],
+		WorkflowExecutionRetentionPeriodInDays: 1,
 	}
 	err := client1.RegisterDomain(createContext(), regReq)
 	s.NoError(err)

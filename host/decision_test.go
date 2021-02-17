@@ -207,7 +207,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 			{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-					MarkerName: common.StringPtr("localActivity1"),
+					MarkerName: "localActivity1",
 					Details:    []byte("abc"),
 				},
 			},
@@ -227,7 +227,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 			{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-					MarkerName: common.StringPtr("localActivity2"),
+					MarkerName: "localActivity2",
 					Details:    []byte("abc"),
 				},
 			},

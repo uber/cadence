@@ -62,7 +62,7 @@ func (s *processingQueueSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 	s.metricsClient = metrics.NewClient(tally.NoopScope, metrics.History)
 }
 

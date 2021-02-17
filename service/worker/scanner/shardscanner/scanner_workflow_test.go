@@ -231,7 +231,6 @@ func (s *fixerWorkflowSuite) TestNewScannerHooks() {
 				ctx context.Context,
 				retryer persistence.Retryer,
 				params ScanShardActivityParams,
-				config ScannerConfig,
 			) pagination.Iterator {
 				return nil
 			},
@@ -244,7 +243,6 @@ func (s *fixerWorkflowSuite) TestNewScannerHooks() {
 				ctx context.Context,
 				retryer persistence.Retryer,
 				params ScanShardActivityParams,
-				config ScannerConfig,
 			) invariant.Manager {
 				return nil
 			},
@@ -257,7 +255,6 @@ func (s *fixerWorkflowSuite) TestNewScannerHooks() {
 				ctx context.Context,
 				retryer persistence.Retryer,
 				params ScanShardActivityParams,
-				config ScannerConfig,
 			) invariant.Manager {
 				return nil
 			},
@@ -265,7 +262,6 @@ func (s *fixerWorkflowSuite) TestNewScannerHooks() {
 				ctx context.Context,
 				retryer persistence.Retryer,
 				params ScanShardActivityParams,
-				config ScannerConfig,
 			) pagination.Iterator {
 				return nil
 			},

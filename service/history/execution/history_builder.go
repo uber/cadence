@@ -807,7 +807,7 @@ func (b *HistoryBuilder) newMarkerRecordedEventAttributes(DecisionTaskCompletedE
 	request *types.RecordMarkerDecisionAttributes) *types.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(types.EventTypeMarkerRecorded)
 	attributes := &types.MarkerRecordedEventAttributes{}
-	attributes.MarkerName = common.StringPtr(common.StringDefault(request.MarkerName))
+	attributes.MarkerName = request.MarkerName
 	attributes.Details = request.Details
 	attributes.DecisionTaskCompletedEventID = DecisionTaskCompletedEventID
 	attributes.Header = request.Header

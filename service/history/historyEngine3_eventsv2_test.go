@@ -164,7 +164,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -189,7 +189,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 		DomainUUID:        domainID,
 		WorkflowExecution: &we,
 		ScheduleID:        common.Int64Ptr(2),
-		TaskID:            common.Int64Ptr(100),
+		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
@@ -291,7 +291,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		runID,
 		constants.TestLocalDomainEntry,
 	)

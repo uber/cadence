@@ -463,9 +463,9 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Failure_InvalidArchivalURI() {
 
 	req := registerDomainRequest(
 		types.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr(testHistoryArchivalURI),
+		testHistoryArchivalURI,
 		types.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr(testVisibilityArchivalURI),
+		testVisibilityArchivalURI,
 	)
 	err := wh.RegisterDomain(context.Background(), req)
 	s.Error(err)
@@ -488,7 +488,7 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_EnabledWithNoArchivalU
 
 	wh := s.getWorkflowHandler(s.newConfig())
 
-	req := registerDomainRequest(types.ArchivalStatusEnabled.Ptr(), nil, types.ArchivalStatusEnabled.Ptr(), nil)
+	req := registerDomainRequest(types.ArchivalStatusEnabled.Ptr(), "", types.ArchivalStatusEnabled.Ptr(), "")
 	err := wh.RegisterDomain(context.Background(), req)
 	s.NoError(err)
 }
@@ -512,9 +512,9 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_EnabledWithArchivalURI
 
 	req := registerDomainRequest(
 		types.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr(testHistoryArchivalURI),
+		testHistoryArchivalURI,
 		types.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr(testVisibilityArchivalURI),
+		testVisibilityArchivalURI,
 	)
 	err := wh.RegisterDomain(context.Background(), req)
 	s.NoError(err)
@@ -535,9 +535,9 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_ClusterNotConfiguredFo
 
 	req := registerDomainRequest(
 		types.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr(testVisibilityArchivalURI),
+		testVisibilityArchivalURI,
 		types.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr("invalidURI"),
+		"invalidURI",
 	)
 	err := wh.RegisterDomain(context.Background(), req)
 	s.NoError(err)
@@ -556,7 +556,7 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_NotEnabled() {
 
 	wh := s.getWorkflowHandler(s.newConfig())
 
-	req := registerDomainRequest(nil, nil, nil, nil)
+	req := registerDomainRequest(nil, "", nil, "")
 	err := wh.RegisterDomain(context.Background(), req)
 	s.NoError(err)
 }
@@ -1192,13 +1192,13 @@ func (s *workflowHandlerSuite) TestListWorkflowExecutions() {
 	ctx := context.Background()
 
 	query := "WorkflowID = 'wid'"
-	listRequest.Query = common.StringPtr(query)
+	listRequest.Query = query
 	_, err := wh.ListWorkflowExecutions(ctx, listRequest)
 	s.NoError(err)
 	s.Equal(query, listRequest.GetQuery())
 
 	query = "InvalidKey = 'a'"
-	listRequest.Query = common.StringPtr(query)
+	listRequest.Query = query
 	_, err = wh.ListWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 
@@ -1221,13 +1221,13 @@ func (s *workflowHandlerSuite) TestScantWorkflowExecutions() {
 	ctx := context.Background()
 
 	query := "WorkflowID = 'wid'"
-	listRequest.Query = common.StringPtr(query)
+	listRequest.Query = query
 	_, err := wh.ScanWorkflowExecutions(ctx, listRequest)
 	s.NoError(err)
 	s.Equal(query, listRequest.GetQuery())
 
 	query = "InvalidKey = 'a'"
-	listRequest.Query = common.StringPtr(query)
+	listRequest.Query = query
 	_, err = wh.ScanWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 
@@ -1248,13 +1248,13 @@ func (s *workflowHandlerSuite) TestCountWorkflowExecutions() {
 	ctx := context.Background()
 
 	query := "WorkflowID = 'wid'"
-	countRequest.Query = common.StringPtr(query)
+	countRequest.Query = query
 	_, err := wh.CountWorkflowExecutions(ctx, countRequest)
 	s.NoError(err)
 	s.Equal(query, countRequest.GetQuery())
 
 	query = "InvalidKey = 'a'"
-	countRequest.Query = common.StringPtr(query)
+	countRequest.Query = query
 	_, err = wh.CountWorkflowExecutions(ctx, countRequest)
 	s.NotNil(err)
 }
@@ -1423,29 +1423,29 @@ func persistenceGetDomainResponse(historyArchivalState, visibilityArchivalState 
 
 func registerDomainRequest(
 	historyArchivalStatus *types.ArchivalStatus,
-	historyArchivalURI *string,
+	historyArchivalURI string,
 	visibilityArchivalStatus *types.ArchivalStatus,
-	visibilityArchivalURI *string,
+	visibilityArchivalURI string,
 ) *types.RegisterDomainRequest {
 	return &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr("test-domain"),
-		Description:                            common.StringPtr("test-description"),
-		OwnerEmail:                             common.StringPtr("test-owner-email"),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(10),
+		Name:                                   "test-domain",
+		Description:                            "test-description",
+		OwnerEmail:                             "test-owner-email",
+		WorkflowExecutionRetentionPeriodInDays: 10,
 		EmitMetric:                             common.BoolPtr(true),
 		Clusters: []*types.ClusterReplicationConfiguration{
 			{
 				ClusterName: cluster.TestCurrentClusterName,
 			},
 		},
-		ActiveClusterName:        common.StringPtr(cluster.TestCurrentClusterName),
+		ActiveClusterName:        cluster.TestCurrentClusterName,
 		Data:                     make(map[string]string),
-		SecurityToken:            common.StringPtr("token"),
+		SecurityToken:            "token",
 		HistoryArchivalStatus:    historyArchivalStatus,
 		HistoryArchivalURI:       historyArchivalURI,
 		VisibilityArchivalStatus: visibilityArchivalStatus,
 		VisibilityArchivalURI:    visibilityArchivalURI,
-		IsGlobalDomain:           common.BoolPtr(false),
+		IsGlobalDomain:           false,
 	}
 }
 
@@ -1463,6 +1463,6 @@ func listArchivedWorkflowExecutionsTestRequest() *types.ListArchivedWorkflowExec
 	return &types.ListArchivedWorkflowExecutionsRequest{
 		Domain:   "some random domain name",
 		PageSize: 10,
-		Query:    common.StringPtr("some random query string"),
+		Query:    "some random query string",
 	}
 }

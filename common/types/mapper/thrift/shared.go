@@ -909,7 +909,7 @@ func FromCountWorkflowExecutionsRequest(t *types.CountWorkflowExecutionsRequest)
 	}
 	return &shared.CountWorkflowExecutionsRequest{
 		Domain: &t.Domain,
-		Query:  t.Query,
+		Query:  &t.Query,
 	}
 }
 
@@ -920,7 +920,7 @@ func ToCountWorkflowExecutionsRequest(t *shared.CountWorkflowExecutionsRequest) 
 	}
 	return &types.CountWorkflowExecutionsRequest{
 		Domain: t.GetDomain(),
-		Query:  t.Query,
+		Query:  t.GetQuery(),
 	}
 }
 
@@ -1466,8 +1466,8 @@ func FromDeprecateDomainRequest(t *types.DeprecateDomainRequest) *shared.Depreca
 		return nil
 	}
 	return &shared.DeprecateDomainRequest{
-		Name:          t.Name,
-		SecurityToken: t.SecurityToken,
+		Name:          &t.Name,
+		SecurityToken: &t.SecurityToken,
 	}
 }
 
@@ -1477,8 +1477,8 @@ func ToDeprecateDomainRequest(t *shared.DeprecateDomainRequest) *types.Deprecate
 		return nil
 	}
 	return &types.DeprecateDomainRequest{
-		Name:          t.Name,
-		SecurityToken: t.SecurityToken,
+		Name:          t.GetName(),
+		SecurityToken: t.GetSecurityToken(),
 	}
 }
 
@@ -1774,13 +1774,13 @@ func FromDomainConfiguration(t *types.DomainConfiguration) *shared.DomainConfigu
 		return nil
 	}
 	return &shared.DomainConfiguration{
-		WorkflowExecutionRetentionPeriodInDays: t.WorkflowExecutionRetentionPeriodInDays,
-		EmitMetric:                             t.EmitMetric,
+		WorkflowExecutionRetentionPeriodInDays: &t.WorkflowExecutionRetentionPeriodInDays,
+		EmitMetric:                             &t.EmitMetric,
 		BadBinaries:                            FromBadBinaries(t.BadBinaries),
 		HistoryArchivalStatus:                  FromArchivalStatus(t.HistoryArchivalStatus),
-		HistoryArchivalURI:                     t.HistoryArchivalURI,
+		HistoryArchivalURI:                     &t.HistoryArchivalURI,
 		VisibilityArchivalStatus:               FromArchivalStatus(t.VisibilityArchivalStatus),
-		VisibilityArchivalURI:                  t.VisibilityArchivalURI,
+		VisibilityArchivalURI:                  &t.VisibilityArchivalURI,
 	}
 }
 
@@ -1790,13 +1790,13 @@ func ToDomainConfiguration(t *shared.DomainConfiguration) *types.DomainConfigura
 		return nil
 	}
 	return &types.DomainConfiguration{
-		WorkflowExecutionRetentionPeriodInDays: t.WorkflowExecutionRetentionPeriodInDays,
-		EmitMetric:                             t.EmitMetric,
+		WorkflowExecutionRetentionPeriodInDays: t.GetWorkflowExecutionRetentionPeriodInDays(),
+		EmitMetric:                             t.GetEmitMetric(),
 		BadBinaries:                            ToBadBinaries(t.BadBinaries),
 		HistoryArchivalStatus:                  ToArchivalStatus(t.HistoryArchivalStatus),
-		HistoryArchivalURI:                     t.HistoryArchivalURI,
+		HistoryArchivalURI:                     t.GetHistoryArchivalURI(),
 		VisibilityArchivalStatus:               ToArchivalStatus(t.VisibilityArchivalStatus),
-		VisibilityArchivalURI:                  t.VisibilityArchivalURI,
+		VisibilityArchivalURI:                  t.GetVisibilityArchivalURI(),
 	}
 }
 
@@ -1806,12 +1806,12 @@ func FromDomainInfo(t *types.DomainInfo) *shared.DomainInfo {
 		return nil
 	}
 	return &shared.DomainInfo{
-		Name:        t.Name,
+		Name:        &t.Name,
 		Status:      FromDomainStatus(t.Status),
-		Description: t.Description,
-		OwnerEmail:  t.OwnerEmail,
+		Description: &t.Description,
+		OwnerEmail:  &t.OwnerEmail,
 		Data:        t.Data,
-		UUID:        t.UUID,
+		UUID:        &t.UUID,
 	}
 }
 
@@ -1821,12 +1821,12 @@ func ToDomainInfo(t *shared.DomainInfo) *types.DomainInfo {
 		return nil
 	}
 	return &types.DomainInfo{
-		Name:        t.Name,
+		Name:        t.GetName(),
 		Status:      ToDomainStatus(t.Status),
-		Description: t.Description,
-		OwnerEmail:  t.OwnerEmail,
+		Description: t.GetDescription(),
+		OwnerEmail:  t.GetOwnerEmail(),
 		Data:        t.Data,
-		UUID:        t.UUID,
+		UUID:        t.GetUUID(),
 	}
 }
 
@@ -1862,7 +1862,7 @@ func FromDomainReplicationConfiguration(t *types.DomainReplicationConfiguration)
 		return nil
 	}
 	return &shared.DomainReplicationConfiguration{
-		ActiveClusterName: t.ActiveClusterName,
+		ActiveClusterName: &t.ActiveClusterName,
 		Clusters:          FromClusterReplicationConfigurationArray(t.Clusters),
 	}
 }
@@ -1873,7 +1873,7 @@ func ToDomainReplicationConfiguration(t *shared.DomainReplicationConfiguration) 
 		return nil
 	}
 	return &types.DomainReplicationConfiguration{
-		ActiveClusterName: t.ActiveClusterName,
+		ActiveClusterName: t.GetActiveClusterName(),
 		Clusters:          ToClusterReplicationConfigurationArray(t.Clusters),
 	}
 }
@@ -2492,7 +2492,7 @@ func FromHistoryEvent(t *types.HistoryEvent) *shared.HistoryEvent {
 		Timestamp:                               t.Timestamp,
 		EventType:                               FromEventType(t.EventType),
 		Version:                                 &t.Version,
-		TaskId:                                  t.TaskID,
+		TaskId:                                  &t.TaskID,
 		WorkflowExecutionStartedEventAttributes: FromWorkflowExecutionStartedEventAttributes(t.WorkflowExecutionStartedEventAttributes),
 		WorkflowExecutionCompletedEventAttributes:                      FromWorkflowExecutionCompletedEventAttributes(t.WorkflowExecutionCompletedEventAttributes),
 		WorkflowExecutionFailedEventAttributes:                         FromWorkflowExecutionFailedEventAttributes(t.WorkflowExecutionFailedEventAttributes),
@@ -2548,7 +2548,7 @@ func ToHistoryEvent(t *shared.HistoryEvent) *types.HistoryEvent {
 		Timestamp:                               t.Timestamp,
 		EventType:                               ToEventType(t.EventType),
 		Version:                                 t.GetVersion(),
-		TaskID:                                  t.TaskId,
+		TaskID:                                  t.GetTaskId(),
 		WorkflowExecutionStartedEventAttributes: ToWorkflowExecutionStartedEventAttributes(t.WorkflowExecutionStartedEventAttributes),
 		WorkflowExecutionCompletedEventAttributes:                      ToWorkflowExecutionCompletedEventAttributes(t.WorkflowExecutionCompletedEventAttributes),
 		WorkflowExecutionFailedEventAttributes:                         ToWorkflowExecutionFailedEventAttributes(t.WorkflowExecutionFailedEventAttributes),
@@ -2735,7 +2735,7 @@ func FromListArchivedWorkflowExecutionsRequest(t *types.ListArchivedWorkflowExec
 		Domain:        &t.Domain,
 		PageSize:      &t.PageSize,
 		NextPageToken: t.NextPageToken,
-		Query:         t.Query,
+		Query:         &t.Query,
 	}
 }
 
@@ -2748,7 +2748,7 @@ func ToListArchivedWorkflowExecutionsRequest(t *shared.ListArchivedWorkflowExecu
 		Domain:        t.GetDomain(),
 		PageSize:      t.GetPageSize(),
 		NextPageToken: t.NextPageToken,
-		Query:         t.Query,
+		Query:         t.GetQuery(),
 	}
 }
 
@@ -2977,7 +2977,7 @@ func FromListWorkflowExecutionsRequest(t *types.ListWorkflowExecutionsRequest) *
 		Domain:        &t.Domain,
 		PageSize:      &t.PageSize,
 		NextPageToken: t.NextPageToken,
-		Query:         t.Query,
+		Query:         &t.Query,
 	}
 }
 
@@ -2990,7 +2990,7 @@ func ToListWorkflowExecutionsRequest(t *shared.ListWorkflowExecutionsRequest) *t
 		Domain:        t.GetDomain(),
 		PageSize:      t.GetPageSize(),
 		NextPageToken: t.NextPageToken,
-		Query:         t.Query,
+		Query:         t.GetQuery(),
 	}
 }
 
@@ -3022,7 +3022,7 @@ func FromMarkerRecordedEventAttributes(t *types.MarkerRecordedEventAttributes) *
 		return nil
 	}
 	return &shared.MarkerRecordedEventAttributes{
-		MarkerName:                   t.MarkerName,
+		MarkerName:                   &t.MarkerName,
 		Details:                      t.Details,
 		DecisionTaskCompletedEventId: &t.DecisionTaskCompletedEventID,
 		Header:                       FromHeader(t.Header),
@@ -3035,7 +3035,7 @@ func ToMarkerRecordedEventAttributes(t *shared.MarkerRecordedEventAttributes) *t
 		return nil
 	}
 	return &types.MarkerRecordedEventAttributes{
-		MarkerName:                   t.MarkerName,
+		MarkerName:                   t.GetMarkerName(),
 		Details:                      t.Details,
 		DecisionTaskCompletedEventID: t.GetDecisionTaskCompletedEventId(),
 		Header:                       ToHeader(t.Header),
@@ -3764,7 +3764,7 @@ func FromRecordMarkerDecisionAttributes(t *types.RecordMarkerDecisionAttributes)
 		return nil
 	}
 	return &shared.RecordMarkerDecisionAttributes{
-		MarkerName: t.MarkerName,
+		MarkerName: &t.MarkerName,
 		Details:    t.Details,
 		Header:     FromHeader(t.Header),
 	}
@@ -3776,7 +3776,7 @@ func ToRecordMarkerDecisionAttributes(t *shared.RecordMarkerDecisionAttributes) 
 		return nil
 	}
 	return &types.RecordMarkerDecisionAttributes{
-		MarkerName: t.MarkerName,
+		MarkerName: t.GetMarkerName(),
 		Details:    t.Details,
 		Header:     ToHeader(t.Header),
 	}
@@ -3810,20 +3810,20 @@ func FromRegisterDomainRequest(t *types.RegisterDomainRequest) *shared.RegisterD
 		return nil
 	}
 	return &shared.RegisterDomainRequest{
-		Name:                                   t.Name,
-		Description:                            t.Description,
-		OwnerEmail:                             t.OwnerEmail,
-		WorkflowExecutionRetentionPeriodInDays: t.WorkflowExecutionRetentionPeriodInDays,
+		Name:                                   &t.Name,
+		Description:                            &t.Description,
+		OwnerEmail:                             &t.OwnerEmail,
+		WorkflowExecutionRetentionPeriodInDays: &t.WorkflowExecutionRetentionPeriodInDays,
 		EmitMetric:                             t.EmitMetric,
 		Clusters:                               FromClusterReplicationConfigurationArray(t.Clusters),
-		ActiveClusterName:                      t.ActiveClusterName,
+		ActiveClusterName:                      &t.ActiveClusterName,
 		Data:                                   t.Data,
-		SecurityToken:                          t.SecurityToken,
-		IsGlobalDomain:                         t.IsGlobalDomain,
+		SecurityToken:                          &t.SecurityToken,
+		IsGlobalDomain:                         &t.IsGlobalDomain,
 		HistoryArchivalStatus:                  FromArchivalStatus(t.HistoryArchivalStatus),
-		HistoryArchivalURI:                     t.HistoryArchivalURI,
+		HistoryArchivalURI:                     &t.HistoryArchivalURI,
 		VisibilityArchivalStatus:               FromArchivalStatus(t.VisibilityArchivalStatus),
-		VisibilityArchivalURI:                  t.VisibilityArchivalURI,
+		VisibilityArchivalURI:                  &t.VisibilityArchivalURI,
 	}
 }
 
@@ -3833,20 +3833,20 @@ func ToRegisterDomainRequest(t *shared.RegisterDomainRequest) *types.RegisterDom
 		return nil
 	}
 	return &types.RegisterDomainRequest{
-		Name:                                   t.Name,
-		Description:                            t.Description,
-		OwnerEmail:                             t.OwnerEmail,
-		WorkflowExecutionRetentionPeriodInDays: t.WorkflowExecutionRetentionPeriodInDays,
+		Name:                                   t.GetName(),
+		Description:                            t.GetDescription(),
+		OwnerEmail:                             t.GetOwnerEmail(),
+		WorkflowExecutionRetentionPeriodInDays: t.GetWorkflowExecutionRetentionPeriodInDays(),
 		EmitMetric:                             t.EmitMetric,
 		Clusters:                               ToClusterReplicationConfigurationArray(t.Clusters),
-		ActiveClusterName:                      t.ActiveClusterName,
+		ActiveClusterName:                      t.GetActiveClusterName(),
 		Data:                                   t.Data,
-		SecurityToken:                          t.SecurityToken,
-		IsGlobalDomain:                         t.IsGlobalDomain,
+		SecurityToken:                          t.GetSecurityToken(),
+		IsGlobalDomain:                         t.GetIsGlobalDomain(),
 		HistoryArchivalStatus:                  ToArchivalStatus(t.HistoryArchivalStatus),
-		HistoryArchivalURI:                     t.HistoryArchivalURI,
+		HistoryArchivalURI:                     t.GetHistoryArchivalURI(),
 		VisibilityArchivalStatus:               ToArchivalStatus(t.VisibilityArchivalStatus),
-		VisibilityArchivalURI:                  t.VisibilityArchivalURI,
+		VisibilityArchivalURI:                  t.GetVisibilityArchivalURI(),
 	}
 }
 
@@ -5481,7 +5481,7 @@ func FromUpdateDomainRequest(t *types.UpdateDomainRequest) *shared.UpdateDomainR
 	}
 	request := shared.UpdateDomainRequest{
 		Name:                     &t.Name,
-		SecurityToken:            t.SecurityToken,
+		SecurityToken:            &t.SecurityToken,
 		DeleteBadBinary:          t.DeleteBadBinary,
 		FailoverTimeoutInSeconds: t.FailoverTimeoutInSeconds,
 	}
@@ -5525,7 +5525,7 @@ func ToUpdateDomainRequest(t *shared.UpdateDomainRequest) *types.UpdateDomainReq
 	}
 	request := types.UpdateDomainRequest{
 		Name:                     t.GetName(),
-		SecurityToken:            t.SecurityToken,
+		SecurityToken:            t.GetSecurityToken(),
 		DeleteBadBinary:          t.DeleteBadBinary,
 		FailoverTimeoutInSeconds: t.FailoverTimeoutInSeconds,
 	}

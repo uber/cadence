@@ -58,7 +58,10 @@ func ScannerConfigActivity(
 	activityCtx context.Context,
 	params ScannerConfigActivityParams,
 ) (ResolvedScannerWorkflowConfig, error) {
-	ctx := activityCtx.Value(params.ContextKey).(Context)
+	ctx, err := GetScannerContext(activityCtx)
+	if err != nil {
+		return ResolvedScannerWorkflowConfig{}, err
+	}
 	dc := ctx.Config.DynamicParams
 
 	result := ResolvedScannerWorkflowConfig{
@@ -134,10 +137,15 @@ func scanShard(
 	shardID int,
 	heartbeatDetails ScanShardHeartbeatDetails,
 ) (*ScanReport, error) {
-	ctx := activityCtx.Value(params.ContextKey).(Context)
+	ctx, err := GetScannerContext(activityCtx)
+	if err != nil {
+		return nil, err
+	}
+	info := activity.GetInfo(activityCtx)
+
 	scope := ctx.Scope.Tagged(
 		metrics.ActivityTypeTag(ActivityScanShard),
-		metrics.WorkflowTypeTag(params.ContextKey.String()),
+		metrics.WorkflowTypeTag(info.WorkflowType.Name),
 		metrics.DomainTag(c.SystemLocalDomainName),
 	)
 	sw := scope.StartTimer(metrics.CadenceLatency)
@@ -158,10 +166,10 @@ func scanShard(
 
 	scanner := NewScanner(
 		shardID,
-		ctx.Hooks.Iterator(activityCtx, pr, params, *ctx.Config),
+		ctx.Hooks.Iterator(activityCtx, pr, params),
 		resources.GetBlobstoreClient(),
 		params.BlobstoreFlushThreshold,
-		ctx.Hooks.Manager(activityCtx, pr, params, *ctx.Config),
+		ctx.Hooks.Manager(activityCtx, pr, params),
 		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
 	)
 	report := scanner.Scan(activityCtx)
@@ -179,8 +187,12 @@ func FixerCorruptedKeysActivity(
 	activityCtx context.Context,
 	params FixerCorruptedKeysActivityParams,
 ) (*FixerCorruptedKeysActivityResult, error) {
-	resource := activityCtx.Value(params.ContextKey).(FixerContext).Resource
-	client := resource.GetSDKClient()
+	ctx, err := GetFixerContext(activityCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	client := ctx.Resource.GetSDKClient()
 	if params.ScannerWorkflowRunID == "" {
 		listResp, err := client.ListClosedWorkflowExecutions(activityCtx, &shared.ListClosedWorkflowExecutionsRequest{
 			Domain:          c.StringPtr(c.SystemLocalDomainName),
@@ -302,11 +314,15 @@ func fixShard(
 	corruptedKeys store.Keys,
 	heartbeatDetails FixShardHeartbeatDetails,
 ) (*FixReport, error) {
-	ctx := activityCtx.Value(params.ContextKey).(FixerContext)
-	resources := ctx.Resource
+	ctx, err := GetFixerContext(activityCtx)
+	if err != nil {
+		return nil, err
+	}
+	resource := ctx.Resource
+	info := activity.GetInfo(activityCtx)
 	scope := ctx.Scope.Tagged(
 		metrics.ActivityTypeTag(ActivityFixShard),
-		metrics.WorkflowTypeTag(params.ContextKey.String()),
+		metrics.WorkflowTypeTag(info.WorkflowType.Name),
 		metrics.DomainTag(c.SystemLocalDomainName),
 	)
 	sw := scope.StartTimer(metrics.CadenceLatency)
@@ -316,23 +332,23 @@ func fixShard(
 		return nil, cadence.NewCustomError(ErrMissingHooks)
 	}
 
-	execManager, err := resources.GetExecutionManager(shardID)
+	execManager, err := resource.GetExecutionManager(shardID)
 	if err != nil {
 		scope.IncCounter(metrics.CadenceFailures)
 		return nil, err
 	}
 
-	pr := persistence.NewPersistenceRetryer(execManager, resources.GetHistoryManager(), c.CreatePersistenceRetryPolicy())
+	pr := persistence.NewPersistenceRetryer(execManager, resource.GetHistoryManager(), c.CreatePersistenceRetryPolicy())
 
 	fixer := NewFixer(
 		activityCtx,
 		shardID,
-		ctx.Hooks.InvariantManager(activityCtx, pr, params, *ctx.Config),
-		ctx.Hooks.Iterator(activityCtx, resources.GetBlobstoreClient(), corruptedKeys, params, *ctx.Config),
-		resources.GetBlobstoreClient(),
+		ctx.Hooks.InvariantManager(activityCtx, pr, params),
+		ctx.Hooks.Iterator(activityCtx, resource.GetBlobstoreClient(), corruptedKeys, params),
+		resource.GetBlobstoreClient(),
 		params.ResolvedFixerWorkflowConfig.BlobstoreFlushThreshold,
 		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
-		resources.GetDomainCache(),
+		resource.GetDomainCache(),
 		ctx.Config.DynamicParams.AllowDomain,
 	)
 	report := fixer.Fix()
@@ -347,10 +363,14 @@ func ScannerEmitMetricsActivity(
 	activityCtx context.Context,
 	params ScannerEmitMetricsActivityParams,
 ) error {
-	contextKey := params.ContextKey
-	scope := activityCtx.Value(contextKey).(Context).Scope.Tagged(
+	ctx, err := GetScannerContext(activityCtx)
+	if err != nil {
+		return err
+	}
+	info := activity.GetInfo(activityCtx)
+	scope := ctx.Scope.Tagged(
 		metrics.ActivityTypeTag(ActivityScannerEmitMetrics),
-		metrics.WorkflowTypeTag(contextKey.String()),
+		metrics.WorkflowTypeTag(info.WorkflowType.Name),
 		metrics.DomainTag(c.SystemLocalDomainName),
 	)
 	scope.UpdateGauge(metrics.CadenceShardSuccessGauge, float64(params.ShardSuccessCount))

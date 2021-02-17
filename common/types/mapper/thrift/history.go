@@ -497,7 +497,7 @@ func FromRecordActivityTaskStartedRequest(t *types.RecordActivityTaskStartedRequ
 		DomainUUID:        &t.DomainUUID,
 		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
 		ScheduleId:        t.ScheduleID,
-		TaskId:            t.TaskID,
+		TaskId:            &t.TaskID,
 		RequestId:         &t.RequestID,
 		PollRequest:       FromPollForActivityTaskRequest(t.PollRequest),
 	}
@@ -512,7 +512,7 @@ func ToRecordActivityTaskStartedRequest(t *history.RecordActivityTaskStartedRequ
 		DomainUUID:        t.GetDomainUUID(),
 		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
 		ScheduleID:        t.ScheduleId,
-		TaskID:            t.TaskId,
+		TaskID:            t.GetTaskId(),
 		RequestID:         t.GetRequestId(),
 		PollRequest:       ToPollForActivityTaskRequest(t.PollRequest),
 	}
@@ -587,7 +587,7 @@ func FromRecordDecisionTaskStartedRequest(t *types.RecordDecisionTaskStartedRequ
 		DomainUUID:        &t.DomainUUID,
 		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
 		ScheduleId:        t.ScheduleID,
-		TaskId:            t.TaskID,
+		TaskId:            &t.TaskID,
 		RequestId:         &t.RequestID,
 		PollRequest:       FromPollForDecisionTaskRequest(t.PollRequest),
 	}
@@ -602,7 +602,7 @@ func ToRecordDecisionTaskStartedRequest(t *history.RecordDecisionTaskStartedRequ
 		DomainUUID:        t.GetDomainUUID(),
 		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
 		ScheduleID:        t.ScheduleId,
-		TaskID:            t.TaskId,
+		TaskID:            t.GetTaskId(),
 		RequestID:         t.GetRequestId(),
 		PollRequest:       ToPollForDecisionTaskRequest(t.PollRequest),
 	}

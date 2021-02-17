@@ -32,7 +32,6 @@ import (
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
@@ -199,7 +198,7 @@ func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 	s.mockClientBean.EXPECT().GetRemoteAdminClient(s.sourceCluster).Return(s.adminClient).AnyTimes()
 	replicationTask := &types.ReplicationTask{
 		TaskType:     types.ReplicationTaskTypeHistory.Ptr(),
-		SourceTaskID: common.Int64Ptr(lastMessageID),
+		SourceTaskID: lastMessageID,
 	}
 	s.adminClient.EXPECT().
 		GetDLQReplicationMessages(ctx, gomock.Any()).
