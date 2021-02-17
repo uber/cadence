@@ -228,7 +228,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
 	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   s.domainName,
 		PageSize: int32(2),
-		Query:    common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing and BinaryChecksums = 'binary-v1'`, wt)),
+		Query:    fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing and BinaryChecksums = 'binary-v1'`, wt),
 	}
 	// verify upsert data is on ES
 	s.testListResultForUpsertSearchAttributes(listRequest)
@@ -310,7 +310,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrQuery() {
 	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   s.domainName,
 		PageSize: defaultTestValueOfESIndexMaxResultWindow,
-		Query:    common.StringPtr(query1),
+		Query:    query1,
 	}
 	for i := 0; i < numOfRetry; i++ {
 		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
@@ -331,7 +331,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrQuery() {
 
 	// query with or clause
 	query2 := fmt.Sprintf(`CustomIntField = %d or CustomIntField = %d`, 1, 2)
-	listRequest.Query = common.StringPtr(query2)
+	listRequest.Query = query2
 	var openExecutions []*types.WorkflowExecutionInfo
 	for i := 0; i < numOfRetry; i++ {
 		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
@@ -357,7 +357,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrQuery() {
 
 	// query for open
 	query3 := fmt.Sprintf(`(CustomIntField = %d or CustomIntField = %d) and CloseTime = missing`, 2, 3)
-	listRequest.Query = common.StringPtr(query3)
+	listRequest.Query = query3
 	for i := 0; i < numOfRetry; i++ {
 		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
 		s.Nil(err)
@@ -400,7 +400,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 		Domain:        s.domainName,
 		PageSize:      int32(defaultTestValueOfESIndexMaxResultWindow),
 		NextPageToken: nextPageToken,
-		Query:         common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt)),
+		Query:         fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt),
 	}
 	// get first page
 	for i := 0; i < numOfRetry; i++ {
@@ -468,7 +468,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrderBy() {
 	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   s.domainName,
 		PageSize: pageSize,
-		Query:    common.StringPtr(query1),
+		Query:    query1,
 	}
 	for i := 0; i < numOfRetry; i++ {
 		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
@@ -486,7 +486,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrderBy() {
 
 	// greatest effort to reduce duplicate code
 	testHelper := func(query, searchAttrKey string, prevVal, currVal interface{}) {
-		listRequest.Query = common.StringPtr(query)
+		listRequest.Query = query
 		listRequest.NextPageToken = []byte{}
 		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
 		s.Nil(err)
@@ -576,7 +576,7 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 		Domain:        s.domainName,
 		PageSize:      int32(pageSize),
 		NextPageToken: nextPageToken,
-		Query:         common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wType)),
+		Query:         fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wType),
 	}
 	// test first page
 	for i := 0; i < numOfRetry; i++ {
@@ -631,7 +631,7 @@ func (s *elasticsearchIntegrationSuite) testHelperForReadOnce(runID, query strin
 	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   s.domainName,
 		PageSize: defaultTestValueOfESIndexMaxResultWindow,
-		Query:    common.StringPtr(query),
+		Query:    query,
 	}
 	for i := 0; i < numOfRetry; i++ {
 		var resp *types.ListWorkflowExecutionsResponse
@@ -759,7 +759,7 @@ func (s *elasticsearchIntegrationSuite) TestCountWorkflow() {
 	query := fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, s.testSearchAttributeVal)
 	countRequest := &types.CountWorkflowExecutionsRequest{
 		Domain: s.domainName,
-		Query:  common.StringPtr(query),
+		Query:  query,
 	}
 	var resp *types.CountWorkflowExecutionsResponse
 	for i := 0; i < numOfRetry; i++ {
@@ -773,7 +773,7 @@ func (s *elasticsearchIntegrationSuite) TestCountWorkflow() {
 	s.Equal(int64(1), resp.GetCount())
 
 	query = fmt.Sprintf(`WorkflowID = "%s" and %s = "%s"`, id, s.testSearchAttributeKey, "noMatch")
-	countRequest.Query = common.StringPtr(query)
+	countRequest.Query = query
 	resp, err = s.engine.CountWorkflowExecutions(createContext(), countRequest)
 	s.Nil(err)
 	s.Equal(int64(0), resp.GetCount())
@@ -904,7 +904,7 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution() {
 	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   s.domainName,
 		PageSize: int32(2),
-		Query:    common.StringPtr(fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt)),
+		Query:    fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt),
 	}
 	verified := false
 	for i := 0; i < numOfRetry; i++ {

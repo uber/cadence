@@ -250,7 +250,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 	if startOver {
 		resp, err := client.CountWorkflowExecutions(ctx, &types.CountWorkflowExecutionsRequest{
 			Domain: batchParams.DomainName,
-			Query:  common.StringPtr(batchParams.Query),
+			Query:  batchParams.Query,
 		})
 		if err != nil {
 			return HeartBeatDetails{}, err
@@ -272,7 +272,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 			Domain:        batchParams.DomainName,
 			PageSize:      int32(pageSize),
 			NextPageToken: hbd.PageToken,
-			Query:         common.StringPtr(batchParams.Query),
+			Query:         batchParams.Query,
 		})
 		if err != nil {
 			return HeartBeatDetails{}, err

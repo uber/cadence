@@ -1385,8 +1385,8 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetSearchAttributes()
 
 // CountWorkflowExecutionsRequest is an internal type (TBD...)
 type CountWorkflowExecutionsRequest struct {
-	Domain string  `json:"domain,omitempty"`
-	Query  *string `json:"query,omitempty"`
+	Domain string `json:"domain,omitempty"`
+	Query  string `json:"query,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -1399,8 +1399,8 @@ func (v *CountWorkflowExecutionsRequest) GetDomain() (o string) {
 
 // GetQuery is an internal getter (TBD...)
 func (v *CountWorkflowExecutionsRequest) GetQuery() (o string) {
-	if v != nil && v.Query != nil {
-		return *v.Query
+	if v != nil {
+		return v.Query
 	}
 	return
 }
@@ -4192,10 +4192,10 @@ func (v *LimitExceededError) GetMessage() (o string) {
 
 // ListArchivedWorkflowExecutionsRequest is an internal type (TBD...)
 type ListArchivedWorkflowExecutionsRequest struct {
-	Domain        string  `json:"domain,omitempty"`
-	PageSize      int32   `json:"pageSize,omitempty"`
-	NextPageToken []byte  `json:"nextPageToken,omitempty"`
-	Query         *string `json:"query,omitempty"`
+	Domain        string `json:"domain,omitempty"`
+	PageSize      int32  `json:"pageSize,omitempty"`
+	NextPageToken []byte `json:"nextPageToken,omitempty"`
+	Query         string `json:"query,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -4224,8 +4224,8 @@ func (v *ListArchivedWorkflowExecutionsRequest) GetNextPageToken() (o []byte) {
 
 // GetQuery is an internal getter (TBD...)
 func (v *ListArchivedWorkflowExecutionsRequest) GetQuery() (o string) {
-	if v != nil && v.Query != nil {
-		return *v.Query
+	if v != nil {
+		return v.Query
 	}
 	return
 }
@@ -4511,10 +4511,10 @@ func (v *ListTaskListPartitionsResponse) GetDecisionTaskListPartitions() (o []*T
 
 // ListWorkflowExecutionsRequest is an internal type (TBD...)
 type ListWorkflowExecutionsRequest struct {
-	Domain        string  `json:"domain,omitempty"`
-	PageSize      int32   `json:"pageSize,omitempty"`
-	NextPageToken []byte  `json:"nextPageToken,omitempty"`
-	Query         *string `json:"query,omitempty"`
+	Domain        string `json:"domain,omitempty"`
+	PageSize      int32  `json:"pageSize,omitempty"`
+	NextPageToken []byte `json:"nextPageToken,omitempty"`
+	Query         string `json:"query,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -4543,8 +4543,8 @@ func (v *ListWorkflowExecutionsRequest) GetNextPageToken() (o []byte) {
 
 // GetQuery is an internal getter (TBD...)
 func (v *ListWorkflowExecutionsRequest) GetQuery() (o string) {
-	if v != nil && v.Query != nil {
-		return *v.Query
+	if v != nil {
+		return v.Query
 	}
 	return
 }

@@ -1192,13 +1192,13 @@ func (s *workflowHandlerSuite) TestListWorkflowExecutions() {
 	ctx := context.Background()
 
 	query := "WorkflowID = 'wid'"
-	listRequest.Query = common.StringPtr(query)
+	listRequest.Query = query
 	_, err := wh.ListWorkflowExecutions(ctx, listRequest)
 	s.NoError(err)
 	s.Equal(query, listRequest.GetQuery())
 
 	query = "InvalidKey = 'a'"
-	listRequest.Query = common.StringPtr(query)
+	listRequest.Query = query
 	_, err = wh.ListWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 
@@ -1221,13 +1221,13 @@ func (s *workflowHandlerSuite) TestScantWorkflowExecutions() {
 	ctx := context.Background()
 
 	query := "WorkflowID = 'wid'"
-	listRequest.Query = common.StringPtr(query)
+	listRequest.Query = query
 	_, err := wh.ScanWorkflowExecutions(ctx, listRequest)
 	s.NoError(err)
 	s.Equal(query, listRequest.GetQuery())
 
 	query = "InvalidKey = 'a'"
-	listRequest.Query = common.StringPtr(query)
+	listRequest.Query = query
 	_, err = wh.ScanWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 
@@ -1248,13 +1248,13 @@ func (s *workflowHandlerSuite) TestCountWorkflowExecutions() {
 	ctx := context.Background()
 
 	query := "WorkflowID = 'wid'"
-	countRequest.Query = common.StringPtr(query)
+	countRequest.Query = query
 	_, err := wh.CountWorkflowExecutions(ctx, countRequest)
 	s.NoError(err)
 	s.Equal(query, countRequest.GetQuery())
 
 	query = "InvalidKey = 'a'"
-	countRequest.Query = common.StringPtr(query)
+	countRequest.Query = query
 	_, err = wh.CountWorkflowExecutions(ctx, countRequest)
 	s.NotNil(err)
 }
@@ -1463,6 +1463,6 @@ func listArchivedWorkflowExecutionsTestRequest() *types.ListArchivedWorkflowExec
 	return &types.ListArchivedWorkflowExecutionsRequest{
 		Domain:   "some random domain name",
 		PageSize: 10,
-		Query:    common.StringPtr("some random query string"),
+		Query:    "some random query string",
 	}
 }
