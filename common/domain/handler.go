@@ -124,16 +124,11 @@ func (d *handlerImpl) RegisterDomain(
 ) error {
 
 	if !d.clusterMetadata.IsGlobalDomainEnabled() {
-		if registerRequest.GetIsGlobalDomain() {
+		if registerRequest.IsGlobalDomain {
 			return &types.BadRequestError{Message: "Cannot register global domain when not enabled"}
 		}
-
-		registerRequest.IsGlobalDomain = common.BoolPtr(false)
 	} else {
 		// cluster global domain enabled
-		if registerRequest.IsGlobalDomain == nil {
-			return &types.BadRequestError{Message: "Must specify whether domain is a global domain"}
-		}
 		if !d.clusterMetadata.IsMasterCluster() && registerRequest.GetIsGlobalDomain() {
 			return errNotMasterCluster
 		}
@@ -154,7 +149,7 @@ func (d *handlerImpl) RegisterDomain(
 
 	activeClusterName := d.clusterMetadata.GetCurrentClusterName()
 	// input validation on cluster names
-	if registerRequest.ActiveClusterName != nil {
+	if registerRequest.ActiveClusterName != "" {
 		activeClusterName = registerRequest.GetActiveClusterName()
 	}
 	clusters := []*persistence.ClusterReplicationConfig{}
@@ -623,21 +618,21 @@ func (d *handlerImpl) createResponse(
 ) (*types.DomainInfo, *types.DomainConfiguration, *types.DomainReplicationConfiguration) {
 
 	infoResult := &types.DomainInfo{
-		Name:        common.StringPtr(info.Name),
+		Name:        info.Name,
 		Status:      getDomainStatus(info),
-		Description: common.StringPtr(info.Description),
-		OwnerEmail:  common.StringPtr(info.OwnerEmail),
+		Description: info.Description,
+		OwnerEmail:  info.OwnerEmail,
 		Data:        info.Data,
-		UUID:        common.StringPtr(info.ID),
+		UUID:        info.ID,
 	}
 
 	configResult := &types.DomainConfiguration{
-		EmitMetric:                             common.BoolPtr(config.EmitMetric),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(config.Retention),
+		EmitMetric:                             config.EmitMetric,
+		WorkflowExecutionRetentionPeriodInDays: config.Retention,
 		HistoryArchivalStatus:                  config.HistoryArchivalStatus.Ptr(),
-		HistoryArchivalURI:                     common.StringPtr(config.HistoryArchivalURI),
+		HistoryArchivalURI:                     config.HistoryArchivalURI,
 		VisibilityArchivalStatus:               config.VisibilityArchivalStatus.Ptr(),
-		VisibilityArchivalURI:                  common.StringPtr(config.VisibilityArchivalURI),
+		VisibilityArchivalURI:                  config.VisibilityArchivalURI,
 		BadBinaries:                            &config.BadBinaries,
 	}
 
@@ -649,7 +644,7 @@ func (d *handlerImpl) createResponse(
 	}
 
 	replicationConfigResult := &types.DomainReplicationConfiguration{
-		ActiveClusterName: common.StringPtr(replicationConfig.ActiveClusterName),
+		ActiveClusterName: replicationConfig.ActiveClusterName,
 		Clusters:          clusters,
 	}
 

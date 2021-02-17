@@ -236,7 +236,7 @@ func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 			domain: &types.DescribeDomainResponse{
 				IsGlobalDomain: true,
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c1"),
+					ActiveClusterName: "c1",
 					Clusters:          clusters,
 				},
 			},
@@ -247,7 +247,7 @@ func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 			domain: &types.DescribeDomainResponse{
 				IsGlobalDomain: true,
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c2"),
+					ActiveClusterName: "c2",
 					Clusters:          clusters,
 				},
 			},
@@ -258,7 +258,7 @@ func (s *failoverWorkflowTestSuite) TestShouldFailover() {
 			domain: &types.DescribeDomainResponse{
 				IsGlobalDomain: true,
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c2"),
+					ActiveClusterName: "c2",
 					Clusters:          clusters,
 				},
 				DomainInfo: &types.DomainInfo{
@@ -300,11 +300,11 @@ func (s *failoverWorkflowTestSuite) TestGetDomainsActivity() {
 		Domains: []*types.DescribeDomainResponse{
 			{
 				DomainInfo: &types.DomainInfo{
-					Name: common.StringPtr("d1"),
+					Name: "d1",
 					Data: map[string]string{common.DomainDataKeyForManagedFailover: "true"},
 				},
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c1"),
+					ActiveClusterName: "c1",
 					Clusters:          clusters,
 				},
 				IsGlobalDomain: true,
@@ -333,32 +333,32 @@ func (s *failoverWorkflowTestSuite) TestGetDomainsActivity_WithTargetDomains() {
 		Domains: []*types.DescribeDomainResponse{
 			{
 				DomainInfo: &types.DomainInfo{
-					Name: common.StringPtr("d1"),
+					Name: "d1",
 					Data: map[string]string{common.DomainDataKeyForManagedFailover: "true"},
 				},
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c1"),
+					ActiveClusterName: "c1",
 					Clusters:          clusters,
 				},
 				IsGlobalDomain: true,
 			},
 			{
 				DomainInfo: &types.DomainInfo{
-					Name: common.StringPtr("d2"),
+					Name: "d2",
 					Data: map[string]string{common.DomainDataKeyForManagedFailover: "true"},
 				},
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c1"),
+					ActiveClusterName: "c1",
 					Clusters:          clusters,
 				},
 				IsGlobalDomain: true,
 			},
 			{
 				DomainInfo: &types.DomainInfo{
-					Name: common.StringPtr("d3"),
+					Name: "d3",
 				},
 				ReplicationConfiguration: &types.DomainReplicationConfiguration{
-					ActiveClusterName: common.StringPtr("c1"),
+					ActiveClusterName: "c1",
 					Clusters:          clusters,
 				},
 				IsGlobalDomain: true,
