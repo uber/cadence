@@ -20,29 +20,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package scanner
+package shardscanner
 
 import (
+	"context"
 	"testing"
-
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/suite"
 )
 
-type scannerTestSuite struct {
-	suite.Suite
-	mockCtrl *gomock.Controller
+func TestGetFixerContextPanicsWhenNonActivityContextProvided(t *testing.T) {
+	defer func() { recover() }()
+	GetFixerContext(context.Background())
+	t.Errorf("should have panicked")
 }
 
-func TestScannerSuite(t *testing.T) {
-	suite.Run(t, new(scannerTestSuite))
-}
-
-func (s *scannerTestSuite) SetupTest() {
-	s.mockCtrl = gomock.NewController(s.T())
-
-}
-
-func (s *scannerTestSuite) TearDownTest() {
-	s.mockCtrl.Finish()
+func TestGetScannerContextPanicsWhenNonActivityContextProvided(t *testing.T) {
+	defer func() { recover() }()
+	GetScannerContext(context.Background())
+	t.Errorf("should have panicked")
 }
