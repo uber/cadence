@@ -34,25 +34,26 @@ func TestConfigTestSuite(t *testing.T) {
 	suite.Run(t, new(ConfigTestSuite))
 }
 
-// func (s *ConfigTestSuite) TestValidate() {
-// 	testCases := []func(*Config){
-// 		func(c *Config) { c.Service.Env = "" },
-// 		func(c *Config) { c.Service.Env = "foobar" },
-// 		func(c *Config) { c.Service.HTTPListenPort = 0 },
-// 	}
-// 	for _, tc := range testCases {
-// 		config := s.buildConfig()
-// 		tc(&config)
-// 		s.Error(config.validate())
-// 	}
-// }
+func (s *ConfigTestSuite) TestValidate() {
+	testCases := []func(*Config){
+		func(c *Config) { c.Bench.Name = "" },
+		func(c *Config) { c.Bench.Domains = []string{} },
+		func(c *Config) { c.Bench.NumTaskLists = 0 },
+	}
 
-// func (s *ConfigTestSuite) buildConfig() Config {
-// 	return Config{
-// 		Service: ServiceConfig{
-// 			Name:           "unit-test",
-// 			Env:            "staging",
-// 			HTTPListenPort: 8080,
-// 		},
-// 	}
-// }
+	for _, tc := range testCases {
+		config := s.buildConfig()
+		tc(&config)
+		s.Error(config.Validate())
+	}
+}
+
+func (s *ConfigTestSuite) buildConfig() Config {
+	return Config{
+		Bench: Bench{
+			Name:         "cadence-bench",
+			Domains:      []string{"cadence-bench"},
+			NumTaskLists: 1,
+		},
+	}
+}

@@ -25,13 +25,4 @@ type (
 	Runnable interface {
 		Run() error
 	}
-
-	// Daemon is the interface for any background routine
-	Daemon interface {
-		Start() error
-		Stop()
-	}
-
-	// LoadGenerator is an alias for Deamon
-	LoadGenerator Daemon
 )
