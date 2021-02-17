@@ -355,7 +355,7 @@ func (v *GetReplicationMessagesResponse) GetMessagesByShard() (o map[int32]*Repl
 
 // HistoryTaskV2Attributes is an internal type (TBD...)
 type HistoryTaskV2Attributes struct {
-	TaskID              *int64                `json:"taskId,omitempty"`
+	TaskID              int64                 `json:"taskId,omitempty"`
 	DomainID            string                `json:"domainId,omitempty"`
 	WorkflowID          string                `json:"workflowId,omitempty"`
 	RunID               string                `json:"runId,omitempty"`
@@ -366,8 +366,8 @@ type HistoryTaskV2Attributes struct {
 
 // GetTaskID is an internal getter (TBD...)
 func (v *HistoryTaskV2Attributes) GetTaskID() (o int64) {
-	if v != nil && v.TaskID != nil {
-		return *v.TaskID
+	if v != nil {
+		return v.TaskID
 	}
 	return
 }
@@ -672,7 +672,7 @@ func (v *ReplicationMessages) GetSyncShardStatus() (o *SyncShardStatus) {
 // ReplicationTask is an internal type (TBD...)
 type ReplicationTask struct {
 	TaskType                      *ReplicationTaskType           `json:"taskType,omitempty"`
-	SourceTaskID                  *int64                         `json:"sourceTaskId,omitempty"`
+	SourceTaskID                  int64                          `json:"sourceTaskId,omitempty"`
 	DomainTaskAttributes          *DomainTaskAttributes          `json:"domainTaskAttributes,omitempty"`
 	SyncShardStatusTaskAttributes *SyncShardStatusTaskAttributes `json:"syncShardStatusTaskAttributes,omitempty"`
 	SyncActivityTaskAttributes    *SyncActivityTaskAttributes    `json:"syncActivityTaskAttributes,omitempty"`
@@ -691,8 +691,8 @@ func (v *ReplicationTask) GetTaskType() (o ReplicationTaskType) {
 
 // GetSourceTaskID is an internal getter (TBD...)
 func (v *ReplicationTask) GetSourceTaskID() (o int64) {
-	if v != nil && v.SourceTaskID != nil {
-		return *v.SourceTaskID
+	if v != nil {
+		return v.SourceTaskID
 	}
 	return
 }
@@ -751,7 +751,7 @@ type ReplicationTaskInfo struct {
 	WorkflowID   string `json:"workflowID,omitempty"`
 	RunID        string `json:"runID,omitempty"`
 	TaskType     *int16 `json:"taskType,omitempty"`
-	TaskID       *int64 `json:"taskID,omitempty"`
+	TaskID       int64  `json:"taskID,omitempty"`
 	Version      *int64 `json:"version,omitempty"`
 	FirstEventID *int64 `json:"firstEventID,omitempty"`
 	NextEventID  *int64 `json:"nextEventID,omitempty"`
@@ -792,8 +792,8 @@ func (v *ReplicationTaskInfo) GetTaskType() (o int16) {
 
 // GetTaskID is an internal getter (TBD...)
 func (v *ReplicationTaskInfo) GetTaskID() (o int64) {
-	if v != nil && v.TaskID != nil {
-		return *v.TaskID
+	if v != nil {
+		return v.TaskID
 	}
 	return
 }

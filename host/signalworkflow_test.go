@@ -58,7 +58,7 @@ func (s *integrationSuite) TestSignalWorkflow() {
 			WorkflowID: id,
 			RunID:      uuid.New(),
 		},
-		SignalName: common.StringPtr("failed signal."),
+		SignalName: "failed signal.",
 		Input:      nil,
 		Identity:   identity,
 	})
@@ -159,7 +159,7 @@ func (s *integrationSuite) TestSignalWorkflow() {
 			WorkflowID: id,
 			RunID:      we.RunID,
 		},
-		SignalName: common.StringPtr(signalName),
+		SignalName: signalName,
 		Input:      signalInput,
 		Identity:   identity,
 	})
@@ -172,7 +172,7 @@ func (s *integrationSuite) TestSignalWorkflow() {
 
 	s.False(workflowComplete)
 	s.True(signalEvent != nil)
-	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
+	s.Equal(signalName, signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
 	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
 	s.Equal(identity, signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
 
@@ -184,7 +184,7 @@ func (s *integrationSuite) TestSignalWorkflow() {
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 		},
-		SignalName: common.StringPtr(signalName),
+		SignalName: signalName,
 		Input:      signalInput,
 		Identity:   identity,
 	})
@@ -197,7 +197,7 @@ func (s *integrationSuite) TestSignalWorkflow() {
 
 	s.False(workflowComplete)
 	s.True(signalEvent != nil)
-	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
+	s.Equal(signalName, signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
 	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
 	s.Equal(identity, signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
 
@@ -220,7 +220,7 @@ func (s *integrationSuite) TestSignalWorkflow() {
 			WorkflowID: id,
 			RunID:      we.RunID,
 		},
-		SignalName: common.StringPtr("failed signal 1."),
+		SignalName: "failed signal 1.",
 		Input:      nil,
 		Identity:   identity,
 	})
@@ -338,7 +338,7 @@ func (s *integrationSuite) TestSignalWorkflow_DuplicateRequest() {
 			WorkflowID: id,
 			RunID:      we.RunID,
 		},
-		SignalName: common.StringPtr(signalName),
+		SignalName: signalName,
 		Input:      signalInput,
 		Identity:   identity,
 		RequestID:  RequestID,
@@ -353,7 +353,7 @@ func (s *integrationSuite) TestSignalWorkflow_DuplicateRequest() {
 
 	s.False(workflowComplete)
 	s.True(signalEvent != nil)
-	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
+	s.Equal(signalName, signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
 	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
 	s.Equal(identity, signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
 	s.Equal(1, numOfSignaledEvent)
@@ -450,7 +450,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision() {
 					WorkflowID: id,
 					RunID:      we2.GetRunID(),
 				},
-				SignalName: common.StringPtr(signalName),
+				SignalName: signalName,
 				Input:      signalInput,
 			},
 		}}, nil
@@ -585,7 +585,7 @@ CheckHistoryLoopForSignalSent:
 
 	s.False(workflowComplete)
 	s.True(signalEvent != nil)
-	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
+	s.Equal(signalName, signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
 	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
 	s.Equal(execution.IdentityHistoryService, signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
 }
@@ -632,7 +632,7 @@ func (s *integrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
 			WorkflowID: id,
 			RunID:      we.RunID,
 		},
-		SignalName: common.StringPtr(signalName),
+		SignalName: signalName,
 		Input:      signalInput,
 		Identity:   identity,
 	})
@@ -747,7 +747,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_WithoutRunID() {
 					WorkflowID: id,
 					// No RunID in decision
 				},
-				SignalName: common.StringPtr(signalName),
+				SignalName: signalName,
 				Input:      signalInput,
 			},
 		}}, nil
@@ -881,7 +881,7 @@ CheckHistoryLoopForSignalSent:
 
 	s.False(workflowComplete)
 	s.True(signalEvent != nil)
-	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
+	s.Equal(signalName, signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
 	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
 	s.Equal(execution.IdentityHistoryService, signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
 }
@@ -948,7 +948,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_UnKnownTarget() {
 					WorkflowID: "workflow_not_exist",
 					RunID:      we.GetRunID(),
 				},
-				SignalName: common.StringPtr(signalName),
+				SignalName: signalName,
 				Input:      signalInput,
 			},
 		}}, nil
@@ -1075,7 +1075,7 @@ func (s *integrationSuite) TestSignalExternalWorkflowDecision_SignalSelf() {
 					WorkflowID: id,
 					RunID:      we.GetRunID(),
 				},
-				SignalName: common.StringPtr(signalName),
+				SignalName: signalName,
 				Input:      signalInput,
 			},
 		}}, nil
@@ -1273,7 +1273,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 		Header:                              header,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		SignalName:                          common.StringPtr(signalName),
+		SignalName:                          signalName,
 		SignalInput:                         signalInput,
 		Identity:                            identity,
 		WorkflowIDReusePolicy:               &wfIDReusePolicy,
@@ -1289,7 +1289,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 
 	s.False(workflowComplete)
 	s.True(signalEvent != nil)
-	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
+	s.Equal(signalName, signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
 	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
 	s.Equal(identity, signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
 
@@ -1308,7 +1308,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	// Send signal to terminated workflow
 	signalName = "signal to terminate"
 	signalInput = []byte("signal to terminate input.")
-	sRequest.SignalName = common.StringPtr(signalName)
+	sRequest.SignalName = signalName
 	sRequest.SignalInput = signalInput
 	sRequest.WorkflowID = id
 
@@ -1325,7 +1325,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 
 	s.False(workflowComplete)
 	s.True(signalEvent != nil)
-	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
+	s.Equal(signalName, signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
 	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
 	s.Equal(identity, signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
 	s.True(startedEvent != nil)
@@ -1335,7 +1335,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 	id = "integration-signal-with-start-workflow-test-non-exist"
 	signalName = "signal to non exist"
 	signalInput = []byte("signal to non exist input.")
-	sRequest.SignalName = common.StringPtr(signalName)
+	sRequest.SignalName = signalName
 	sRequest.SignalInput = signalInput
 	sRequest.WorkflowID = id
 	resp, err = s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
@@ -1350,7 +1350,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 
 	s.False(workflowComplete)
 	s.True(signalEvent != nil)
-	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
+	s.Equal(signalName, signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
 	s.Equal(signalInput, signalEvent.WorkflowExecutionSignaledEventAttributes.Input)
 	s.Equal(identity, signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
 
@@ -1511,7 +1511,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		SignalName:                          common.StringPtr(signalName),
+		SignalName:                          signalName,
 		SignalInput:                         signalInput,
 		Identity:                            identity,
 		WorkflowIDReusePolicy:               &wfIDReusePolicy,

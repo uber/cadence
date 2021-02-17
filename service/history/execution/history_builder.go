@@ -783,7 +783,7 @@ func (b *HistoryBuilder) newWorkflowExecutionSignaledEvent(
 	signalName string, input []byte, identity string) *types.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(types.EventTypeWorkflowExecutionSignaled)
 	attributes := &types.WorkflowExecutionSignaledEventAttributes{}
-	attributes.SignalName = common.StringPtr(signalName)
+	attributes.SignalName = signalName
 	attributes.Input = input
 	attributes.Identity = identity
 	historyEvent.WorkflowExecutionSignaledEventAttributes = attributes
@@ -903,7 +903,7 @@ func (b *HistoryBuilder) newSignalExternalWorkflowExecutionInitiatedEvent(decisi
 		WorkflowID: request.Execution.WorkflowID,
 		RunID:      request.Execution.RunID,
 	}
-	attributes.SignalName = common.StringPtr(request.GetSignalName())
+	attributes.SignalName = request.GetSignalName()
 	attributes.Input = request.Input
 	attributes.Control = request.Control
 	attributes.ChildWorkflowOnly = request.ChildWorkflowOnly

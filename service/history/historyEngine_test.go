@@ -2048,7 +2048,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowSucc
 				WorkflowID: we.WorkflowID,
 				RunID:      we.RunID,
 			},
-			SignalName: common.StringPtr("signal"),
+			SignalName: "signal",
 			Input:      []byte("test input"),
 		},
 	}}
@@ -2247,7 +2247,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 				WorkflowID: we.WorkflowID,
 				RunID:      we.RunID,
 			},
-			SignalName: common.StringPtr("signal"),
+			SignalName: "signal",
 			Input:      []byte("test input"),
 		},
 	}}
@@ -2299,7 +2299,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 				WorkflowID: we.WorkflowID,
 				RunID:      we.RunID,
 			},
-			SignalName: common.StringPtr("signal"),
+			SignalName: "signal",
 			Input:      []byte("test input"),
 		},
 	}}
@@ -4918,7 +4918,7 @@ func (s *engineSuite) TestSignalWorkflowExecution() {
 			Domain:            constants.TestDomainID,
 			WorkflowExecution: &we,
 			Identity:          identity,
-			SignalName:        common.StringPtr(signalName),
+			SignalName:        signalName,
 			Input:             input,
 		},
 	}
@@ -4964,7 +4964,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest() {
 			Domain:            constants.TestDomainID,
 			WorkflowExecution: &we,
 			Identity:          identity,
-			SignalName:        common.StringPtr(signalName),
+			SignalName:        signalName,
 			Input:             input,
 			RequestID:         requestID,
 		},
@@ -5011,7 +5011,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_Failed() {
 			Domain:            constants.TestDomainID,
 			WorkflowExecution: we,
 			Identity:          identity,
-			SignalName:        common.StringPtr(signalName),
+			SignalName:        signalName,
 			Input:             input,
 		},
 	}

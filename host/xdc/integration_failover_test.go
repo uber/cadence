@@ -158,10 +158,8 @@ func (s *integrationClustersTestSuite) TestDomainFailover() {
 
 	// update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterName[1]),
-		},
+		Name: domainName,
+		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
 	s.NoError(err)
@@ -412,10 +410,8 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 
 	// update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterName[1]),
-		},
+		Name: domainName,
+		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
 	s.NoError(err)
@@ -630,7 +626,7 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 			WorkflowID: id,
 			RunID:      we.GetRunID(),
 		},
-		SignalName: common.StringPtr(signalName),
+		SignalName: signalName,
 		Input:      signalInput,
 		Identity:   identity1,
 	})
@@ -638,10 +634,8 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 
 	// Update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterName[1]),
-		},
+		Name: domainName,
+		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
 	s.NoError(err)
@@ -663,7 +657,7 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 			WorkflowID: id,
 			RunID:      we.GetRunID(),
 		},
-		SignalName: common.StringPtr(signalName),
+		SignalName: signalName,
 		Input:      signalInput,
 		Identity:   identity2,
 	})
@@ -671,10 +665,8 @@ func (s *integrationClustersTestSuite) TestStickyDecisionFailover() {
 
 	// Update domain to fail over back
 	updateReq = &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterName[0]),
-		},
+		Name: domainName,
+		ActiveClusterName: common.StringPtr(clusterName[0]),
 	}
 	updateResp, err = client2.UpdateDomain(createContext(), updateReq)
 	s.NoError(err)
@@ -783,10 +775,8 @@ func (s *integrationClustersTestSuite) TestStartWorkflowExecution_Failover_Workf
 
 	// update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterName[1]),
-		},
+		Name: domainName,
+		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
 	s.NoError(err)
@@ -928,10 +918,8 @@ func (s *integrationClustersTestSuite) TestTerminateFailover() {
 
 	// update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterName[1]),
-		},
+		Name: domainName,
+		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
 	s.NoError(err)
@@ -1120,10 +1108,8 @@ func (s *integrationClustersTestSuite) TestContinueAsNewFailover() {
 
 	// update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterName[1]),
-		},
+		Name: domainName,
+		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
 	s.NoError(err)
@@ -1245,7 +1231,7 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 			WorkflowID: id,
 			RunID:      we.GetRunID(),
 		},
-		SignalName: common.StringPtr(signalName),
+		SignalName: signalName,
 		Input:      signalInput,
 		Identity:   identity,
 	})
@@ -1260,10 +1246,8 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 
 	// Update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterName[1]),
-		},
+		Name: domainName,
+		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
 	s.NoError(err)
@@ -1302,7 +1286,7 @@ func (s *integrationClustersTestSuite) TestSignalFailover() {
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 		},
-		SignalName: common.StringPtr(signalName2),
+		SignalName: signalName2,
 		Input:      signalInput2,
 		Identity:   identity,
 	})
@@ -1402,7 +1386,7 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 					WorkflowID: id,
 					RunID:      we.GetRunID(),
 				},
-				SignalName: common.StringPtr(signalName),
+				SignalName: signalName,
 				Input:      signalInput,
 				Identity:   "",
 			})
@@ -1478,10 +1462,8 @@ func (s *integrationClustersTestSuite) TestUserTimerFailover() {
 
 	// Update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterName[1]),
-		},
+		Name: domainName,
+		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
 	s.NoError(err)
@@ -1653,10 +1635,8 @@ func (s *integrationClustersTestSuite) TestActivityHeartbeatFailover() {
 
 	// Update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterName[1]),
-		},
+		Name: domainName,
+		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
 	s.NoError(err)
@@ -1810,10 +1790,8 @@ func (s *integrationClustersTestSuite) TestTransientDecisionFailover() {
 
 	// Update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterName[1]),
-		},
+		Name: domainName,
+		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
 	s.NoError(err)
@@ -1903,10 +1881,8 @@ func (s *integrationClustersTestSuite) TestCronWorkflowFailover() {
 	// Failover during backoff
 	// Update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterName[1]),
-		},
+		Name: domainName,
+		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
 	s.NoError(err)
@@ -2012,10 +1988,8 @@ func (s *integrationClustersTestSuite) TestWorkflowRetryFailover() {
 
 	// Update domain to fail over
 	updateReq := &types.UpdateDomainRequest{
-		Name: common.StringPtr(domainName),
-		ReplicationConfiguration: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterName[1]),
-		},
+		Name: domainName,
+		ActiveClusterName: common.StringPtr(clusterName[1]),
 	}
 	updateResp, err := client1.UpdateDomain(createContext(), updateReq)
 	s.NoError(err)
