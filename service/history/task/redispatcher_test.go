@@ -64,7 +64,7 @@ func (s *redispatcherSuite) SetupTest() {
 	s.mockProcessor = NewMockProcessor(s.controller)
 
 	s.metricsScope = metrics.NewClient(tally.NoopScope, metrics.History).Scope(0)
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 
 	s.redispatcher = s.newTestRedispatcher()
 	s.redispatcher.Start()

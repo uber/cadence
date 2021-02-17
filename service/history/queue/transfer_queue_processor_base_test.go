@@ -78,7 +78,7 @@ func (s *transferQueueProcessorBaseSuite) SetupTest() {
 	s.mockQueueSplitPolicy = NewMockProcessingQueueSplitPolicy(s.controller)
 	s.mockTaskProcessor = task.NewMockProcessor(s.controller)
 
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 	s.metricsClient = metrics.NewClient(tally.NoopScope, metrics.History)
 	s.metricsScope = s.metricsClient.Scope(metrics.TransferQueueProcessorScope)
 }

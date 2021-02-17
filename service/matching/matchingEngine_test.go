@@ -80,7 +80,7 @@ func TestMatchingEngineSuite(t *testing.T) {
 }
 
 func (s *matchingEngineSuite) SetupSuite() {
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 	http.Handle("/test/tasks", http.HandlerFunc(s.TasksHandler))
 }
 
@@ -115,7 +115,7 @@ func (s *matchingEngineSuite) SetupTest() {
 		&types.TaskList{Name: matchingTestTaskList, Kind: &tlKindNormal},
 		metrics.NewClient(tally.NoopScope, metrics.Matching),
 		metrics.MatchingTaskListMgrScope,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 	)
 
 	s.matchingEngine = s.newMatchingEngine(defaultTestConfig(), s.taskManager)
