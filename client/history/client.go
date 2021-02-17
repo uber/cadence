@@ -22,7 +22,6 @@ package history
 
 import (
 	"context"
-	"strconv"
 	"sync"
 	"time"
 
@@ -1049,7 +1048,7 @@ func (c *clientImpl) getClientForDomainID(domainID string) (Client, error) {
 }
 
 func (c *clientImpl) getClientForShardID(shardID int) (Client, error) {
-	client, err := c.clients.GetClientForKey(strconv.Itoa(shardID))
+	client, err := c.clients.GetClientForKey(string(rune(shardID)))
 	if err != nil {
 		return nil, err
 	}
