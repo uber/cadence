@@ -250,7 +250,7 @@ func InitializeHistoryEventGenerator(
 		historyEvent := getDefaultHistoryEvent(EventID, version)
 		historyEvent.EventType = types.EventTypeWorkflowExecutionSignaled.Ptr()
 		historyEvent.WorkflowExecutionSignaledEventAttributes = &types.WorkflowExecutionSignaledEventAttributes{
-			SignalName: common.StringPtr(signal),
+			SignalName: signal,
 			Identity:   identity,
 		}
 		return historyEvent
@@ -825,7 +825,7 @@ func InitializeHistoryEventGenerator(
 				WorkflowID: externalWorkflowID,
 				RunID:      uuid.New(),
 			},
-			SignalName:        common.StringPtr("signal"),
+			SignalName:        "signal",
 			ChildWorkflowOnly: false,
 		}
 		return historyEvent
