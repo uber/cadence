@@ -136,7 +136,7 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(int32(retentionDays)),
 		Clusters:                               clusters,
 		ActiveClusterName:                      activeClusterName,
-		SecurityToken:                          common.StringPtr(securityToken),
+		SecurityToken:                          securityToken,
 		HistoryArchivalStatus:                  archivalStatus(c, FlagHistoryArchivalStatus),
 		HistoryArchivalURI:                     common.StringPtr(c.String(FlagHistoryArchivalURI)),
 		VisibilityArchivalStatus:               archivalStatus(c, FlagVisibilityArchivalStatus),
@@ -270,7 +270,7 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 	}
 
 	securityToken := c.String(FlagSecurityToken)
-	updateRequest.SecurityToken = common.StringPtr(securityToken)
+	updateRequest.SecurityToken = securityToken
 	_, err := d.updateDomain(ctx, updateRequest)
 	if err != nil {
 		if _, ok := err.(*s.EntityNotExistsError); !ok {

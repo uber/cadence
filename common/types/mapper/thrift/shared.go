@@ -1467,7 +1467,7 @@ func FromDeprecateDomainRequest(t *types.DeprecateDomainRequest) *shared.Depreca
 	}
 	return &shared.DeprecateDomainRequest{
 		Name:          t.Name,
-		SecurityToken: t.SecurityToken,
+		SecurityToken: &t.SecurityToken,
 	}
 }
 
@@ -1478,7 +1478,7 @@ func ToDeprecateDomainRequest(t *shared.DeprecateDomainRequest) *types.Deprecate
 	}
 	return &types.DeprecateDomainRequest{
 		Name:          t.Name,
-		SecurityToken: t.SecurityToken,
+		SecurityToken: t.GetSecurityToken(),
 	}
 }
 
@@ -3818,7 +3818,7 @@ func FromRegisterDomainRequest(t *types.RegisterDomainRequest) *shared.RegisterD
 		Clusters:                               FromClusterReplicationConfigurationArray(t.Clusters),
 		ActiveClusterName:                      t.ActiveClusterName,
 		Data:                                   t.Data,
-		SecurityToken:                          t.SecurityToken,
+		SecurityToken:                          &t.SecurityToken,
 		IsGlobalDomain:                         t.IsGlobalDomain,
 		HistoryArchivalStatus:                  FromArchivalStatus(t.HistoryArchivalStatus),
 		HistoryArchivalURI:                     t.HistoryArchivalURI,
@@ -3841,7 +3841,7 @@ func ToRegisterDomainRequest(t *shared.RegisterDomainRequest) *types.RegisterDom
 		Clusters:                               ToClusterReplicationConfigurationArray(t.Clusters),
 		ActiveClusterName:                      t.ActiveClusterName,
 		Data:                                   t.Data,
-		SecurityToken:                          t.SecurityToken,
+		SecurityToken:                          t.GetSecurityToken(),
 		IsGlobalDomain:                         t.IsGlobalDomain,
 		HistoryArchivalStatus:                  ToArchivalStatus(t.HistoryArchivalStatus),
 		HistoryArchivalURI:                     t.HistoryArchivalURI,
@@ -5481,7 +5481,7 @@ func FromUpdateDomainRequest(t *types.UpdateDomainRequest) *shared.UpdateDomainR
 	}
 	request := shared.UpdateDomainRequest{
 		Name:                     &t.Name,
-		SecurityToken:            t.SecurityToken,
+		SecurityToken:            &t.SecurityToken,
 		DeleteBadBinary:          t.DeleteBadBinary,
 		FailoverTimeoutInSeconds: t.FailoverTimeoutInSeconds,
 	}
@@ -5525,7 +5525,7 @@ func ToUpdateDomainRequest(t *shared.UpdateDomainRequest) *types.UpdateDomainReq
 	}
 	request := types.UpdateDomainRequest{
 		Name:                     t.GetName(),
-		SecurityToken:            t.SecurityToken,
+		SecurityToken:            t.GetSecurityToken(),
 		DeleteBadBinary:          t.DeleteBadBinary,
 		FailoverTimeoutInSeconds: t.FailoverTimeoutInSeconds,
 	}

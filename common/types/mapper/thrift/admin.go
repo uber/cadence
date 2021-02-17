@@ -33,7 +33,7 @@ func FromAddSearchAttributeRequest(t *types.AddSearchAttributeRequest) *admin.Ad
 	}
 	return &admin.AddSearchAttributeRequest{
 		SearchAttribute: FromIndexedValueTypeMap(t.SearchAttribute),
-		SecurityToken:   t.SecurityToken,
+		SecurityToken:   &t.SecurityToken,
 	}
 }
 
@@ -44,7 +44,7 @@ func ToAddSearchAttributeRequest(t *admin.AddSearchAttributeRequest) *types.AddS
 	}
 	return &types.AddSearchAttributeRequest{
 		SearchAttribute: ToIndexedValueTypeMap(t.SearchAttribute),
-		SecurityToken:   t.SecurityToken,
+		SecurityToken:   t.GetSecurityToken(),
 	}
 }
 

@@ -2253,7 +2253,7 @@ const (
 // DeprecateDomainRequest is an internal type (TBD...)
 type DeprecateDomainRequest struct {
 	Name          *string `json:"name,omitempty"`
-	SecurityToken *string `json:"securityToken,omitempty"`
+	SecurityToken string  `json:"securityToken,omitempty"`
 }
 
 // GetName is an internal getter (TBD...)
@@ -2266,8 +2266,8 @@ func (v *DeprecateDomainRequest) GetName() (o string) {
 
 // GetSecurityToken is an internal getter (TBD...)
 func (v *DeprecateDomainRequest) GetSecurityToken() (o string) {
-	if v != nil && v.SecurityToken != nil {
-		return *v.SecurityToken
+	if v != nil {
+		return v.SecurityToken
 	}
 	return
 }
@@ -5896,7 +5896,7 @@ type RegisterDomainRequest struct {
 	Clusters                               []*ClusterReplicationConfiguration `json:"clusters,omitempty"`
 	ActiveClusterName                      *string                            `json:"activeClusterName,omitempty"`
 	Data                                   map[string]string                  `json:"data,omitempty"`
-	SecurityToken                          *string                            `json:"securityToken,omitempty"`
+	SecurityToken                          string                             `json:"securityToken,omitempty"`
 	IsGlobalDomain                         *bool                              `json:"isGlobalDomain,omitempty"`
 	HistoryArchivalStatus                  *ArchivalStatus                    `json:"historyArchivalStatus,omitempty"`
 	HistoryArchivalURI                     *string                            `json:"historyArchivalURI,omitempty"`
@@ -5971,8 +5971,8 @@ func (v *RegisterDomainRequest) GetData() (o map[string]string) {
 
 // GetSecurityToken is an internal getter (TBD...)
 func (v *RegisterDomainRequest) GetSecurityToken() (o string) {
-	if v != nil && v.SecurityToken != nil {
-		return *v.SecurityToken
+	if v != nil {
+		return v.SecurityToken
 	}
 	return
 }
@@ -8799,7 +8799,7 @@ type UpdateDomainRequest struct {
 	VisibilityArchivalURI                  *string                            `json:"visibilityArchivalURI,omitempty"`
 	ActiveClusterName                      *string                            `json:"activeClusterName,omitempty"`
 	Clusters                               []*ClusterReplicationConfiguration `json:"clusters,omitempty"`
-	SecurityToken                          *string                            `json:"securityToken,omitempty"`
+	SecurityToken                          string                             `json:"securityToken,omitempty"`
 	DeleteBadBinary                        *string                            `json:"deleteBadBinary,omitempty"`
 	FailoverTimeoutInSeconds               *int32                             `json:"failoverTimeoutInSeconds,omitempty"`
 }
@@ -8814,8 +8814,8 @@ func (v *UpdateDomainRequest) GetName() (o string) {
 
 // GetSecurityToken is an internal getter (TBD...)
 func (v *UpdateDomainRequest) GetSecurityToken() (o string) {
-	if v != nil && v.SecurityToken != nil {
-		return *v.SecurityToken
+	if v != nil {
+		return v.SecurityToken
 	}
 	return
 }

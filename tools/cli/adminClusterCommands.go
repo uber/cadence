@@ -26,7 +26,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -50,7 +49,7 @@ func AdminAddSearchAttribute(c *cli.Context) {
 		SearchAttribute: map[string]types.IndexedValueType{
 			key: types.IndexedValueType(valType),
 		},
-		SecurityToken: common.StringPtr(c.String(FlagSecurityToken)),
+		SecurityToken: c.String(FlagSecurityToken),
 	}
 
 	err := adminClient.AddSearchAttribute(ctx, request)

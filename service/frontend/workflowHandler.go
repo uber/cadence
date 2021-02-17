@@ -3951,14 +3951,14 @@ func (wh *WorkflowHandler) GetClusterInfo(
 
 func checkPermission(
 	config *Config,
-	securityToken *string,
+	securityToken string,
 ) error {
 	if config.EnableAdminProtection() {
-		if securityToken == nil {
+		if securityToken == "" {
 			return errNoPermission
 		}
 		requiredToken := config.AdminOperationToken()
-		if *securityToken != requiredToken {
+		if securityToken != requiredToken {
 			return errNoPermission
 		}
 	}
