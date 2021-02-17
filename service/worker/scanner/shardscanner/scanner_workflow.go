@@ -26,11 +26,11 @@ import (
 	"context"
 	"errors"
 
+	"go.uber.org/cadence/workflow"
+
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
-
-	"go.uber.org/cadence/workflow"
 )
 
 const (
@@ -53,7 +53,6 @@ type ManagerCB func(
 	context.Context,
 	persistence.Retryer,
 	ScanShardActivityParams,
-	ScannerConfig,
 ) invariant.Manager
 
 // IteratorCB is a function which returns iterator for scanner.
@@ -61,7 +60,6 @@ type IteratorCB func(
 	context.Context,
 	persistence.Retryer,
 	ScanShardActivityParams,
-	ScannerConfig,
 ) pagination.Iterator
 
 // ScannerWorkflow is a workflow which scans and checks entities in a shard.
@@ -118,7 +116,6 @@ func (wf *ScannerWorkflow) Start(ctx workflow.Context) error {
 	var resolvedConfig ResolvedScannerWorkflowConfig
 	if err := workflow.ExecuteActivity(activityCtx, ActivityScannerConfig, ScannerConfigActivityParams{
 		Overwrites: wf.Params.ScannerWorkflowConfigOverwrites,
-		ContextKey: ScannerContextKey(wf.Name),
 	}).Get(ctx, &resolvedConfig); err != nil {
 		return err
 	}
@@ -139,7 +136,6 @@ func (wf *ScannerWorkflow) Start(ctx workflow.Context) error {
 					Shards:                  batch,
 					PageSize:                resolvedConfig.GenericScannerConfig.PageSize,
 					BlobstoreFlushThreshold: resolvedConfig.GenericScannerConfig.BlobstoreFlushThreshold,
-					ContextKey:              ScannerContextKey(wf.Name),
 					ScannerConfig:           resolvedConfig.CustomScannerConfig,
 				}).Get(ctx, &reports); err != nil {
 					errStr := err.Error()
@@ -173,16 +169,14 @@ func (wf *ScannerWorkflow) Start(ctx workflow.Context) error {
 
 	activityCtx = getShortActivityContext(ctx)
 	summary := wf.Aggregator.GetStatusSummary()
-	if err := workflow.ExecuteActivity(activityCtx, ActivityScannerEmitMetrics, ScannerEmitMetricsActivityParams{
+
+	return workflow.ExecuteActivity(activityCtx, ActivityScannerEmitMetrics, ScannerEmitMetricsActivityParams{
 		ShardSuccessCount:            summary[ShardStatusSuccess],
 		ShardControlFlowFailureCount: summary[ShardStatusControlFlowFailure],
 		AggregateReportResult:        wf.Aggregator.GetAggregateReport(),
 		ShardDistributionStats:       wf.Aggregator.GetShardDistributionStats(),
-		ContextKey:                   ScannerContextKey(wf.Name),
-	}).Get(ctx, nil); err != nil {
-		return err
-	}
-	return nil
+	}).Get(ctx, nil)
+
 }
 
 func getScanHandlers(aggregator *ShardScanResultAggregator) map[string]interface{} {

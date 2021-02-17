@@ -37,8 +37,6 @@ import (
 )
 
 const (
-	scannerContextKey = "scannerContextKey"
-
 	maxConcurrentActivityExecutionSize     = 10
 	maxConcurrentDecisionTaskExecutionSize = 10
 	infiniteDuration                       = 20 * 365 * 24 * time.Hour
@@ -126,23 +124,28 @@ func HistoryScavengerActivity(
 	activityCtx context.Context,
 ) (history.ScavengerHeartbeatDetails, error) {
 
-	ctx := activityCtx.Value(scannerContextKey).(scannerContext)
+	ctx, err := GetScannerContext(activityCtx)
+	if err != nil {
+		return history.ScavengerHeartbeatDetails{}, err
+	}
+
 	rps := ctx.cfg.ScannerPersistenceMaxQPS()
+	res := ctx.resource
 
 	hbd := history.ScavengerHeartbeatDetails{}
 	if activity.HasHeartbeatDetails(activityCtx) {
 		if err := activity.GetHeartbeatDetails(activityCtx, &hbd); err != nil {
-			ctx.GetLogger().Error("Failed to recover from last heartbeat, start over from beginning", tag.Error(err))
+			res.GetLogger().Error("Failed to recover from last heartbeat, start over from beginning", tag.Error(err))
 		}
 	}
 
 	scavenger := history.NewScavenger(
-		ctx.GetHistoryManager(),
+		res.GetHistoryManager(),
 		rps,
-		ctx.GetHistoryClient(),
+		res.GetHistoryClient(),
 		hbd,
-		ctx.GetMetricsClient(),
-		ctx.GetLogger(),
+		res.GetMetricsClient(),
+		res.GetLogger(),
 	)
 	return scavenger.Run(activityCtx)
 }
@@ -151,15 +154,18 @@ func HistoryScavengerActivity(
 func TaskListScavengerActivity(
 	activityCtx context.Context,
 ) error {
-
-	ctx := activityCtx.Value(scannerContextKey).(scannerContext)
-	scavenger := tasklist.NewScavenger(activityCtx, ctx.GetTaskManager(), ctx.GetMetricsClient(), ctx.GetLogger())
-	ctx.GetLogger().Info("Starting task list scavenger")
+	ctx, err := GetScannerContext(activityCtx)
+	if err != nil {
+		return err
+	}
+	res := ctx.resource
+	scavenger := tasklist.NewScavenger(activityCtx, res.GetTaskManager(), res.GetMetricsClient(), res.GetLogger())
+	res.GetLogger().Info("Starting task list scavenger")
 	scavenger.Start()
 	for scavenger.Alive() {
 		activity.RecordHeartbeat(activityCtx)
 		if activityCtx.Err() != nil {
-			ctx.GetLogger().Info("activity context error, stopping scavenger", tag.Error(activityCtx.Err()))
+			res.GetLogger().Info("activity context error, stopping scavenger", tag.Error(activityCtx.Err()))
 			scavenger.Stop()
 			return activityCtx.Err()
 		}
