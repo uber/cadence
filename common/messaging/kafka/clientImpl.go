@@ -169,7 +169,7 @@ func (c *clientImpl) initAuth(saramaConfig *sarama.Config) error {
 	return nil
 }
 
-// convertTLSConfig convert tls config
+// convertTLSConfig converts tls config
 func convertTLSConfig(authConfig auth.TLS) (*tls.Config, error) {
 	if !authConfig.Enabled {
 		return nil, nil
