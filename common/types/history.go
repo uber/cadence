@@ -718,7 +718,7 @@ type RecordActivityTaskStartedRequest struct {
 	DomainUUID        string                      `json:"domainUUID,omitempty"`
 	WorkflowExecution *WorkflowExecution          `json:"workflowExecution,omitempty"`
 	ScheduleID        *int64                      `json:"scheduleId,omitempty"`
-	TaskID            *int64                      `json:"taskId,omitempty"`
+	TaskID            int64                       `json:"taskId,omitempty"`
 	RequestID         string                      `json:"requestId,omitempty"`
 	PollRequest       *PollForActivityTaskRequest `json:"pollRequest,omitempty"`
 }
@@ -749,8 +749,8 @@ func (v *RecordActivityTaskStartedRequest) GetScheduleID() (o int64) {
 
 // GetTaskID is an internal getter (TBD...)
 func (v *RecordActivityTaskStartedRequest) GetTaskID() (o int64) {
-	if v != nil && v.TaskID != nil {
-		return *v.TaskID
+	if v != nil {
+		return v.TaskID
 	}
 	return
 }
@@ -892,7 +892,7 @@ type RecordDecisionTaskStartedRequest struct {
 	DomainUUID        string                      `json:"domainUUID,omitempty"`
 	WorkflowExecution *WorkflowExecution          `json:"workflowExecution,omitempty"`
 	ScheduleID        *int64                      `json:"scheduleId,omitempty"`
-	TaskID            *int64                      `json:"taskId,omitempty"`
+	TaskID            int64                       `json:"taskId,omitempty"`
 	RequestID         string                      `json:"requestId,omitempty"`
 	PollRequest       *PollForDecisionTaskRequest `json:"pollRequest,omitempty"`
 }
@@ -923,8 +923,8 @@ func (v *RecordDecisionTaskStartedRequest) GetScheduleID() (o int64) {
 
 // GetTaskID is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedRequest) GetTaskID() (o int64) {
-	if v != nil && v.TaskID != nil {
-		return *v.TaskID
+	if v != nil {
+		return v.TaskID
 	}
 	return
 }

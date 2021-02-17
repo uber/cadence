@@ -740,7 +740,7 @@ func (e *mutableStateBuilder) assignTaskIDToEvents() error {
 		for index, event := range e.hBuilder.transientHistory {
 			if event.GetTaskID() == common.EmptyEventTaskID {
 				taskID := taskIDs[index]
-				event.TaskID = common.Int64Ptr(taskID)
+				event.TaskID = taskID
 				e.executionInfo.LastEventTaskID = taskID
 			}
 		}
@@ -757,7 +757,7 @@ func (e *mutableStateBuilder) assignTaskIDToEvents() error {
 		for index, event := range e.hBuilder.history {
 			if event.GetTaskID() == common.EmptyEventTaskID {
 				taskID := taskIDs[index]
-				event.TaskID = common.Int64Ptr(taskID)
+				event.TaskID = taskID
 				e.executionInfo.LastEventTaskID = taskID
 			}
 		}
@@ -833,7 +833,7 @@ func (e *mutableStateBuilder) CreateNewHistoryEventWithTimestamp(
 	historyEvent.Timestamp = ts
 	historyEvent.EventType = &eventType
 	historyEvent.Version = e.GetCurrentVersion()
-	historyEvent.TaskID = common.Int64Ptr(common.EmptyEventTaskID)
+	historyEvent.TaskID = common.EmptyEventTaskID
 
 	return historyEvent
 }

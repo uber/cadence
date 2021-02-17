@@ -143,7 +143,7 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 			WorkflowID:   task.GetWorkflowID(),
 			RunID:        task.GetRunID(),
 			TaskType:     common.Int16Ptr(int16(task.GetTaskType())),
-			TaskID:       common.Int64Ptr(task.GetTaskID()),
+			TaskID:       task.GetTaskID(),
 			Version:      common.Int64Ptr(task.GetVersion()),
 			FirstEventID: common.Int64Ptr(task.FirstEventID),
 			NextEventID:  common.Int64Ptr(task.NextEventID),

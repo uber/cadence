@@ -300,7 +300,7 @@ func FromHistoryTaskV2Attributes(t *types.HistoryTaskV2Attributes) *replicator.H
 		return nil
 	}
 	return &replicator.HistoryTaskV2Attributes{
-		TaskId:              t.TaskID,
+		TaskId:              &t.TaskID,
 		DomainId:            &t.DomainID,
 		WorkflowId:          &t.WorkflowID,
 		RunId:               &t.RunID,
@@ -316,7 +316,7 @@ func ToHistoryTaskV2Attributes(t *replicator.HistoryTaskV2Attributes) *types.His
 		return nil
 	}
 	return &types.HistoryTaskV2Attributes{
-		TaskID:              t.TaskId,
+		TaskID:              t.GetTaskId(),
 		DomainID:            t.GetDomainId(),
 		WorkflowID:          t.GetWorkflowId(),
 		RunID:               t.GetRunId(),
@@ -491,7 +491,7 @@ func FromReplicationTask(t *types.ReplicationTask) *replicator.ReplicationTask {
 	}
 	return &replicator.ReplicationTask{
 		TaskType:                      FromReplicationTaskType(t.TaskType),
-		SourceTaskId:                  t.SourceTaskID,
+		SourceTaskId:                  &t.SourceTaskID,
 		DomainTaskAttributes:          FromDomainTaskAttributes(t.DomainTaskAttributes),
 		SyncShardStatusTaskAttributes: FromSyncShardStatusTaskAttributes(t.SyncShardStatusTaskAttributes),
 		SyncActivityTaskAttributes:    FromSyncActivityTaskAttributes(t.SyncActivityTaskAttributes),
@@ -508,7 +508,7 @@ func ToReplicationTask(t *replicator.ReplicationTask) *types.ReplicationTask {
 	}
 	return &types.ReplicationTask{
 		TaskType:                      ToReplicationTaskType(t.TaskType),
-		SourceTaskID:                  t.SourceTaskId,
+		SourceTaskID:                  t.GetSourceTaskId(),
 		DomainTaskAttributes:          ToDomainTaskAttributes(t.DomainTaskAttributes),
 		SyncShardStatusTaskAttributes: ToSyncShardStatusTaskAttributes(t.SyncShardStatusTaskAttributes),
 		SyncActivityTaskAttributes:    ToSyncActivityTaskAttributes(t.SyncActivityTaskAttributes),
@@ -528,7 +528,7 @@ func FromReplicationTaskInfo(t *types.ReplicationTaskInfo) *replicator.Replicati
 		WorkflowID:   &t.WorkflowID,
 		RunID:        &t.RunID,
 		TaskType:     t.TaskType,
-		TaskID:       t.TaskID,
+		TaskID:       &t.TaskID,
 		Version:      t.Version,
 		FirstEventID: t.FirstEventID,
 		NextEventID:  t.NextEventID,
@@ -546,7 +546,7 @@ func ToReplicationTaskInfo(t *replicator.ReplicationTaskInfo) *types.Replication
 		WorkflowID:   t.GetWorkflowID(),
 		RunID:        t.GetRunID(),
 		TaskType:     t.TaskType,
-		TaskID:       t.TaskID,
+		TaskID:       t.GetTaskID(),
 		Version:      t.Version,
 		FirstEventID: t.FirstEventID,
 		NextEventID:  t.NextEventID,

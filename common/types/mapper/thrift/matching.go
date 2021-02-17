@@ -300,7 +300,7 @@ func FromMatchingRespondQueryTaskCompletedRequest(t *types.MatchingRespondQueryT
 	return &matching.RespondQueryTaskCompletedRequest{
 		DomainUUID:       &t.DomainUUID,
 		TaskList:         FromTaskList(t.TaskList),
-		TaskID:           t.TaskID,
+		TaskID:           &t.TaskID,
 		CompletedRequest: FromRespondQueryTaskCompletedRequest(t.CompletedRequest),
 	}
 }
@@ -313,7 +313,7 @@ func ToMatchingRespondQueryTaskCompletedRequest(t *matching.RespondQueryTaskComp
 	return &types.MatchingRespondQueryTaskCompletedRequest{
 		DomainUUID:       t.GetDomainUUID(),
 		TaskList:         ToTaskList(t.TaskList),
-		TaskID:           t.TaskID,
+		TaskID:           t.GetTaskID(),
 		CompletedRequest: ToRespondQueryTaskCompletedRequest(t.CompletedRequest),
 	}
 }

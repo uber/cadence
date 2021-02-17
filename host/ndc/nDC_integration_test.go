@@ -145,18 +145,18 @@ func (s *nDCIntegrationTestSuite) GetReplicationMessagesMock(
 	select {
 	case task := <-s.standByReplicationTasksChan:
 		taskID := atomic.AddInt64(&s.standByTaskID, 1)
-		task.SourceTaskID = common.Int64Ptr(taskID)
+		task.SourceTaskID = taskID
 		tasks := []*types.ReplicationTask{task}
 		for len(s.standByReplicationTasksChan) > 0 {
 			task = <-s.standByReplicationTasksChan
 			taskID := atomic.AddInt64(&s.standByTaskID, 1)
-			task.SourceTaskID = common.Int64Ptr(taskID)
+			task.SourceTaskID = taskID
 			tasks = append(tasks, task)
 		}
 
 		replicationMessage := &types.ReplicationMessages{
 			ReplicationTasks:       tasks,
-			LastRetrievedMessageID: tasks[len(tasks)-1].SourceTaskID,
+			LastRetrievedMessageID: &tasks[len(tasks)-1].SourceTaskID,
 			HasMore:                true,
 		}
 
@@ -1083,7 +1083,7 @@ func (s *nDCIntegrationTestSuite) TestEventsReapply_UpdateNonCurrentBranch() {
 					EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   baseBranchLastEvent.GetVersion(), // dummy event from other cluster
-					TaskID:    common.Int64Ptr(taskID),
+					TaskID:    taskID,
 					WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 						SignalName: "signal",
 						Input:      []byte{},
@@ -1619,7 +1619,7 @@ func (s *nDCIntegrationTestSuite) generateNewRunHistory(
 		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 		EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 		Version:   version,
-		TaskID:    common.Int64Ptr(1),
+		TaskID:    1,
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
 			WorkflowType:         &types.WorkflowType{Name: workflowType},
 			ParentWorkflowDomain: common.StringPtr(domain),
@@ -1740,9 +1740,9 @@ func (s *nDCIntegrationTestSuite) applyEventsThroughFetcher(
 		taskType := types.ReplicationTaskTypeHistoryV2
 		replicationTask := &types.ReplicationTask{
 			TaskType:     &taskType,
-			SourceTaskID: common.Int64Ptr(1),
+			SourceTaskID: 1,
 			HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
-				TaskID:              common.Int64Ptr(1),
+				TaskID:              1,
 				DomainID:            s.domainID,
 				WorkflowID:          workflowID,
 				RunID:               runID,

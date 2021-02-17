@@ -98,7 +98,7 @@ func AdminGetDLQMessages(c *cli.Context) {
 			ErrorAndExit(fmt.Sprintf("fail to encode dlq message. Last read message id: %v", lastReadMessageID), err)
 		}
 
-		lastReadMessageID = int(*task.SourceTaskID)
+		lastReadMessageID = int(task.SourceTaskID)
 		remainingMessageCount--
 		_, err = outputFile.WriteString(fmt.Sprintf("%v\n", string(taskStr)))
 		if err != nil {
