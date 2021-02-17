@@ -34,12 +34,12 @@ import (
 	"github.com/dgryski/go-farm"
 	"go.uber.org/yarpc/yarpcerrors"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
+	workflow "github.com/uber/cadence/gen/go/shared"
 )
 
 const (

@@ -31,7 +31,6 @@ import (
 
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/codec"
@@ -44,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
+	"github.com/uber/cadence/gen/go/shared"
 )
 
 const (

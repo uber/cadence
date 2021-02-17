@@ -23,10 +23,10 @@ package execution
 import (
 	"fmt"
 
-	checksumgen "github.com/uber/cadence/.gen/go/checksum"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/types/mapper/thrift"
+	checksumgen "github.com/uber/cadence/gen/go/checksum"
 )
 
 const (

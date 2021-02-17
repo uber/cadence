@@ -22,7 +22,7 @@ syntax = "proto3";
 
 package uber.cadence.history.v1;
 
-option go_package = "github.com/uber/cadence/.gen/proto/history/v1;historyv1";
+option go_package = "github.com/uber/cadence/gen/proto/history/v1;historyv1";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";

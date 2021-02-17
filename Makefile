@@ -105,12 +105,12 @@ $(BIN)/protoc: | $(BIN)
 	cp $(BIN)/protoc-zip/bin/protoc $(BIN)/protoc
 
 # any generated file - they all depend on each other / are generated at once, so any will work
-PROTO_GEN_SRC = ./.gen/proto/admin/v1/service.pb.go
+PROTO_GEN_SRC = ./gen/proto/admin/v1/service.pb.go
 
-THRIFT_GENDIR=.gen/go
+THRIFT_GENDIR=gen/go
 THRIFT_SRCS := $(shell find idls -name '*.thrift')
 # concrete targets to build / the "sentinel" go files that need to be produced per thrift file.
-# idls/thrift/thing.thrift -> thing.thrift -> thing -> ./.gen/go/thing/thing.go
+# idls/thrift/thing.thrift -> thing.thrift -> thing -> ./gen/go/thing/thing.go
 THRIFT_GEN_SRC := $(foreach tsrc,$(basename $(subst idls/thrift/,,$(THRIFT_SRCS))),./$(THRIFT_GENDIR)/$(tsrc)/$(tsrc).go)
 
 # this is a "false" dependency chain, but it convinces make that "need to make thriftrw(-plugin-yarpc)"
@@ -130,7 +130,7 @@ $(THRIFT_SRCS): $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc
 # how to generate each thrift file.
 # note that each generated file depends on ALL thrift files - this is necessary because they can import each other.
 $(THRIFT_GEN_SRC): $(THRIFT_SRCS) go.mod
-	@# .gen/go/thing/thing.go -> thing.go -> "thing " -> thing -> idls/thrift/thing.thrift
+	@# gen/go/thing/thing.go -> thing.go -> "thing " -> thing -> idls/thrift/thing.thrift
 	@echo 'thriftrw for idls/thrift/$(strip $(basename $(notdir $@))).thrift...'
 	@$(BIN_PATH) $(BIN)/thriftrw \
 		--plugin=yarpc \
@@ -163,7 +163,7 @@ ALL_SRC := $(FRESH_ALL_SRC)
 ALL_SRC += $(THRIFT_GEN_SRC)
 ALL_SRC += $(PROTO_GEN_SRC)
 ALL_SRC := $(sort $(ALL_SRC)) # dedup
-LINT_SRC := $(filter-out %_test.go ./.gen/%, $(ALL_SRC))
+LINT_SRC := $(filter-out %_test.go ./gen/%, $(ALL_SRC))
 # all directories with *_test.go files in them (exclude host/xdc)
 TEST_DIRS := $(filter-out $(INTEG_TEST_XDC_ROOT)%, $(sort $(dir $(filter %_test.go,$(ALL_SRC)))))
 # all tests other than end-to-end integration test fall into the pkg_test category
@@ -201,7 +201,7 @@ thriftc: $(THRIFT_GEN_SRC) copyright ## rebuild thrift-generated source files
 proto: proto-lint proto-compile fmt copyright
 
 PROTO_ROOT := proto
-PROTO_OUT := .gen/proto
+PROTO_OUT := gen/proto
 PROTO_FILES = $(shell find ./$(PROTO_ROOT) -name "*.proto" | grep -v "persistenceblobs")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 
@@ -342,13 +342,13 @@ cover_ndc_profile: clean bins_nothrift
 
 $(COVER_ROOT)/cover.out: $(UNIT_COVER_FILE) $(INTEG_COVER_FILE_CASS) $(INTEG_COVER_FILE_MYSQL) $(INTEG_COVER_FILE_POSTGRES) $(INTEG_NDC_COVER_FILE_CASS) $(INTEG_NDC_COVER_FILE_MYSQL) $(INTEG_NDC_COVER_FILE_POSTGRES)
 	@echo "mode: atomic" > $(COVER_ROOT)/cover.out
-	cat $(UNIT_COVER_FILE) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_COVER_FILE_CASS) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_COVER_FILE_MYSQL) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_COVER_FILE_POSTGRES) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_NDC_COVER_FILE_CASS) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_NDC_COVER_FILE_MYSQL) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
-	cat $(INTEG_NDC_COVER_FILE_POSTGRES) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(UNIT_COVER_FILE) | grep -v "^mode: \w\+" | grep -vP "gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_COVER_FILE_CASS) | grep -v "^mode: \w\+" | grep -vP "gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_COVER_FILE_MYSQL) | grep -v "^mode: \w\+" | grep -vP "gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_COVER_FILE_POSTGRES) | grep -v "^mode: \w\+" | grep -vP "gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_NDC_COVER_FILE_CASS) | grep -v "^mode: \w\+" | grep -vP "gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_NDC_COVER_FILE_MYSQL) | grep -v "^mode: \w\+" | grep -vP "gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
+	cat $(INTEG_NDC_COVER_FILE_POSTGRES) | grep -v "^mode: \w\+" | grep -vP "gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
 
 cover: $(COVER_ROOT)/cover.out
 	go tool cover -html=$(COVER_ROOT)/cover.out;

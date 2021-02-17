@@ -28,7 +28,7 @@ import (
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
 
-	"github.com/uber/cadence/.gen/go/sqlblobs"
+	"github.com/uber/cadence/gen/go/sqlblobs"
 )
 
 type (

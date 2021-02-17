@@ -37,8 +37,6 @@ import (
 	"go.uber.org/thriftrw/protocol"
 	"go.uber.org/thriftrw/wire"
 
-	"github.com/uber/cadence/.gen/go/indexer"
-	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/auth"
@@ -49,6 +47,8 @@ import (
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
+	"github.com/uber/cadence/gen/go/indexer"
+	"github.com/uber/cadence/gen/go/replicator"
 )
 
 type (

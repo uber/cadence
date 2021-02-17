@@ -24,13 +24,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/replicator"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
+	"github.com/uber/cadence/gen/go/history"
+	"github.com/uber/cadence/gen/go/replicator"
+	workflow "github.com/uber/cadence/gen/go/shared"
 )
 
 type (

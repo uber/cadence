@@ -25,12 +25,12 @@ package fetcher
 import (
 	"context"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/gen/go/shared"
 )
 
 // ConcreteExecutionIterator is used to retrieve Concrete executions.

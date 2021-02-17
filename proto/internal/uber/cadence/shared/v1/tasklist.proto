@@ -22,7 +22,7 @@ syntax = "proto3";
 
 package uber.cadence.shared.v1;
 
-option go_package = "github.com/uber/cadence/.gen/proto/shared/v1;sharedv1";
+option go_package = "github.com/uber/cadence/gen/proto/shared/v1;sharedv1";
 
 // TaskSource is the source from which a task was produced.
 enum TaskSource {
