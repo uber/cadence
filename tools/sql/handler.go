@@ -115,12 +115,6 @@ func updateSchema(cli *cli.Context) error {
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
-	if cfg.DatabaseName == schema.DryrunDBName {
-		if err := doCreateDatabase(cfg, cfg.DatabaseName); err != nil {
-			return handleErr(fmt.Errorf("error creating dryrun database: %v", err))
-		}
-		defer doDropDatabase(cfg, cfg.DatabaseName)
-	}
 	conn, err := NewConnection(cfg)
 	if err != nil {
 		return handleErr(err)
@@ -230,10 +224,7 @@ func ValidateConnectConfig(cfg *config.SQL, isDryRun bool) error {
 		return schema.NewConfigError("missing sql endpoint argument " + flag(schema.CLIOptEndpoint))
 	}
 	if cfg.DatabaseName == "" {
-		if !isDryRun {
-			return schema.NewConfigError("missing " + flag(schema.CLIOptDatabase) + " argument")
-		}
-		cfg.DatabaseName = schema.DryrunDBName
+		return schema.NewConfigError("missing " + flag(schema.CLIOptDatabase) + " argument")
 	}
 	if cfg.TLS != nil && cfg.TLS.Enabled {
 		enabledCaFile := cfg.TLS.CaFile != ""

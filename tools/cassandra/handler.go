@@ -116,13 +116,6 @@ func updateSchema(cli *cli.Context) error {
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
-	if config.Keyspace == schema.DryrunDBName {
-		cfg := *config
-		if err := doCreateKeyspace(cfg, cfg.Keyspace); err != nil {
-			return handleErr(fmt.Errorf("error creating dryrun Keyspace: %v", err))
-		}
-		defer doDropKeyspace(cfg, cfg.Keyspace)
-	}
 	client, err := newCQLClient(config)
 	if err != nil {
 		return handleErr(err)
@@ -207,10 +200,7 @@ func validateCQLClientConfig(config *CQLClientConfig, isDryRun bool) error {
 		return schema.NewConfigError("missing cassandra endpoint argument " + flag(schema.CLIOptEndpoint))
 	}
 	if config.Keyspace == "" {
-		if !isDryRun {
-			return schema.NewConfigError("missing " + flag(schema.CLIOptKeyspace) + " argument ")
-		}
-		config.Keyspace = schema.DryrunDBName
+		return schema.NewConfigError("missing " + flag(schema.CLIOptKeyspace) + " argument ")
 	}
 	if config.Port == 0 {
 		config.Port = defaultCassandraPort

@@ -154,9 +154,6 @@ const (
 	CLIFlagTLSEnableHostVerification = "tls-enable-host-verification"
 )
 
-// DryrunDBName is the db name used for dryrun
-const DryrunDBName = "_cadence_dryrun_"
-
 var rmspaceRegex = regexp.MustCompile(`\s+`)
 
 // NewConfigError creates and returns an instance of ConfigError
