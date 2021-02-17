@@ -261,6 +261,10 @@ cadence-canary: $(ALL_SRC)
 	@echo "compiling cadence-canary with OS: $(GOOS), ARCH: $(GOARCH)"
 	go build -o cadence-canary cmd/canary/main.go
 
+cadence-bench: $(ALL_SRC)
+	@echo "compling cadence-bench with OS: $(GOOS), ARCH: $(GOARCH)"
+	go build -o cadence-bench cmd/bench/main.go
+
 go-generate-format: go-generate fmt
 
 go-generate: $(BIN)/mockgen $(BIN)/enumer
@@ -278,7 +282,7 @@ fmt: $(BIN)/goimports $(ALL_SRC)
 	@# use FRESH_ALL_SRC so it won't miss any generated files produced earlier
 	@$(BIN)/goimports -local "github.com/uber/cadence" -w $(FRESH_ALL_SRC)
 
-bins_nothrift: fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server cadence-canary
+bins_nothrift: fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server cadence-canary cadence-bench
 
 bins: thriftc bins_nothrift ## Build, format, and lint everything.  Also regenerates thrift.
 
@@ -360,6 +364,7 @@ clean: ## Clean binaries and build folder
 	rm -f cadence
 	rm -f cadence-server
 	rm -f cadence-canary
+	rm -f cadence-bench
 	rm -f cadence-sql-tool
 	rm -f cadence-cassandra-tool
 	rm -Rf $(BUILD)
@@ -427,6 +432,9 @@ start-cdc-other: bins
 
 start-canary: bins
 	./cadence-canary start
+
+start-bench: bins
+	./cadence-bench start
 
 start-mysql: bins
 	./cadence-server --zone mysql start
