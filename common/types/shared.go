@@ -4573,7 +4573,7 @@ func (v *ListWorkflowExecutionsResponse) GetNextPageToken() (o []byte) {
 
 // MarkerRecordedEventAttributes is an internal type (TBD...)
 type MarkerRecordedEventAttributes struct {
-	MarkerName                   *string `json:"markerName,omitempty"`
+	MarkerName                   string  `json:"markerName,omitempty"`
 	Details                      []byte  `json:"details,omitempty"`
 	DecisionTaskCompletedEventID int64   `json:"decisionTaskCompletedEventId,omitempty"`
 	Header                       *Header `json:"header,omitempty"`
@@ -4581,8 +4581,8 @@ type MarkerRecordedEventAttributes struct {
 
 // GetMarkerName is an internal getter (TBD...)
 func (v *MarkerRecordedEventAttributes) GetMarkerName() (o string) {
-	if v != nil && v.MarkerName != nil {
-		return *v.MarkerName
+	if v != nil {
+		return v.MarkerName
 	}
 	return
 }
@@ -5835,15 +5835,15 @@ func (v *RecordActivityTaskHeartbeatResponse) GetCancelRequested() (o bool) {
 
 // RecordMarkerDecisionAttributes is an internal type (TBD...)
 type RecordMarkerDecisionAttributes struct {
-	MarkerName *string `json:"markerName,omitempty"`
+	MarkerName string  `json:"markerName,omitempty"`
 	Details    []byte  `json:"details,omitempty"`
 	Header     *Header `json:"header,omitempty"`
 }
 
 // GetMarkerName is an internal getter (TBD...)
 func (v *RecordMarkerDecisionAttributes) GetMarkerName() (o string) {
-	if v != nil && v.MarkerName != nil {
-		return *v.MarkerName
+	if v != nil {
+		return v.MarkerName
 	}
 	return
 }

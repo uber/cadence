@@ -3022,7 +3022,7 @@ func FromMarkerRecordedEventAttributes(t *types.MarkerRecordedEventAttributes) *
 		return nil
 	}
 	return &shared.MarkerRecordedEventAttributes{
-		MarkerName:                   t.MarkerName,
+		MarkerName:                   &t.MarkerName,
 		Details:                      t.Details,
 		DecisionTaskCompletedEventId: &t.DecisionTaskCompletedEventID,
 		Header:                       FromHeader(t.Header),
@@ -3035,7 +3035,7 @@ func ToMarkerRecordedEventAttributes(t *shared.MarkerRecordedEventAttributes) *t
 		return nil
 	}
 	return &types.MarkerRecordedEventAttributes{
-		MarkerName:                   t.MarkerName,
+		MarkerName:                   t.GetMarkerName(),
 		Details:                      t.Details,
 		DecisionTaskCompletedEventID: t.GetDecisionTaskCompletedEventId(),
 		Header:                       ToHeader(t.Header),
@@ -3764,7 +3764,7 @@ func FromRecordMarkerDecisionAttributes(t *types.RecordMarkerDecisionAttributes)
 		return nil
 	}
 	return &shared.RecordMarkerDecisionAttributes{
-		MarkerName: t.MarkerName,
+		MarkerName: &t.MarkerName,
 		Details:    t.Details,
 		Header:     FromHeader(t.Header),
 	}
@@ -3776,7 +3776,7 @@ func ToRecordMarkerDecisionAttributes(t *shared.RecordMarkerDecisionAttributes) 
 		return nil
 	}
 	return &types.RecordMarkerDecisionAttributes{
-		MarkerName: t.MarkerName,
+		MarkerName: t.GetMarkerName(),
 		Details:    t.Details,
 		Header:     ToHeader(t.Header),
 	}

@@ -1072,7 +1072,7 @@ func (s *historyBuilderSuite) addMarkerRecordedEvent(decisionCompletedEventID in
 		}
 	}
 	event, err := s.msBuilder.AddRecordMarkerEvent(decisionCompletedEventID, &types.RecordMarkerDecisionAttributes{
-		MarkerName: common.StringPtr(markerName),
+		MarkerName: markerName,
 		Details:    details,
 		Header: &types.Header{
 			Fields: fields,

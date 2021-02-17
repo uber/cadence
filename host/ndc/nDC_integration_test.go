@@ -425,7 +425,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 				Version:   21,
 				EventType: types.EventTypeMarkerRecorded.Ptr(),
 				MarkerRecordedEventAttributes: &types.MarkerRecordedEventAttributes{
-					MarkerName:                   common.StringPtr("some marker name"),
+					MarkerName:                   "some marker name",
 					Details:                      []byte("some marker details"),
 					DecisionTaskCompletedEventID: 4,
 				},
@@ -730,7 +730,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				Version:   21,
 				EventType: types.EventTypeMarkerRecorded.Ptr(),
 				MarkerRecordedEventAttributes: &types.MarkerRecordedEventAttributes{
-					MarkerName:                   common.StringPtr("some marker name"),
+					MarkerName:                   "some marker name",
 					Details:                      []byte("some marker details"),
 					DecisionTaskCompletedEventID: 4,
 				},
@@ -1197,7 +1197,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				Version:   21,
 				EventType: types.EventTypeMarkerRecorded.Ptr(),
 				MarkerRecordedEventAttributes: &types.MarkerRecordedEventAttributes{
-					MarkerName:                   common.StringPtr("some marker name"),
+					MarkerName:                   "some marker name",
 					Details:                      []byte("some marker details"),
 					DecisionTaskCompletedEventID: 4,
 				},

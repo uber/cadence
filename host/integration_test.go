@@ -588,7 +588,7 @@ func (s *integrationSuite) TestCompleteDecisionTaskAndCreateNewOne() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-					MarkerName: common.StringPtr("test-marker"),
+					MarkerName: "test-marker",
 				},
 			}}, nil
 		}
@@ -2919,7 +2919,7 @@ func (s *integrationSuite) TestRelayDecisionTimeout() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-					MarkerName: common.StringPtr("test-marker"),
+					MarkerName: "test-marker",
 				},
 			}}, nil
 		}
@@ -3147,7 +3147,7 @@ func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-					MarkerName: common.StringPtr("local activity marker"),
+					MarkerName: "local activity marker",
 					Details:    []byte("local activity data"),
 				},
 			}}, nil
@@ -3321,7 +3321,7 @@ func (s *integrationSuite) TestStickyTasklistResetThenTimeout() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-					MarkerName: common.StringPtr("local activity marker"),
+					MarkerName: "local activity marker",
 					Details:    []byte("local activity data"),
 				},
 			}}, nil
@@ -3483,7 +3483,7 @@ func (s *integrationSuite) TestBufferedEventsOutOfOrder() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-					MarkerName: common.StringPtr("some random marker name"),
+					MarkerName: "some random marker name",
 					Details:    []byte("some random marker details"),
 				},
 			}, {
@@ -3507,7 +3507,7 @@ func (s *integrationSuite) TestBufferedEventsOutOfOrder() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-					MarkerName: common.StringPtr("some random marker name"),
+					MarkerName: "some random marker name",
 					Details:    []byte("some random marker details"),
 				},
 			}}, nil

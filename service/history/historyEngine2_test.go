@@ -874,7 +874,7 @@ func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
 	decisions := []*types.Decision{{
 		DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 		RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-			MarkerName: common.StringPtr(markerName),
+			MarkerName: markerName,
 			Details:    markerDetails,
 		},
 	}}
