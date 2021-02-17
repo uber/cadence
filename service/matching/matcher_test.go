@@ -23,7 +23,6 @@ package matching
 import (
 	"context"
 	"math/rand"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -87,7 +86,7 @@ func (t *MatcherTestSuite) TestLocalSyncMatch() {
 	<-t.fwdr.AddReqTokenC()
 	<-t.fwdr.PollReqTokenC()
 
-	ensureAsyncReady(time.Second, func(ctx context.Context) {
+	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.Poll(ctx)
 		if err == nil {
 			task.finish(nil)
@@ -98,6 +97,7 @@ func (t *MatcherTestSuite) TestLocalSyncMatch() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	syncMatch, err := t.matcher.Offer(ctx, task)
 	cancel()
+	wait()
 	t.NoError(err)
 	t.True(syncMatch)
 }
@@ -113,16 +113,16 @@ func (t *MatcherTestSuite) TestRemoteSyncMatchBlocking() {
 func (t *MatcherTestSuite) testRemoteSyncMatch(taskSource types.TaskSource) {
 	pollSigC := make(chan struct{})
 
+	bgctx, bgcancel := context.WithTimeout(context.Background(), time.Second)
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		<-pollSigC
 		if taskSource == types.TaskSourceDbBacklog {
 			// when task is from dbBacklog, sync match SHOULD block
 			// so lets delay polling by a bit to verify that
 			time.Sleep(time.Millisecond * 10)
 		}
-		task, err := t.matcher.Poll(ctx)
-		cancel()
+		task, err := t.matcher.Poll(bgctx)
+		bgcancel()
 		if err == nil && !task.isStarted() {
 			task.finish(nil)
 		}
@@ -166,6 +166,7 @@ func (t *MatcherTestSuite) testRemoteSyncMatch(taskSource types.TaskSource) {
 	_, err0 := t.matcher.Offer(ctx, task)
 	t.NoError(err0)
 	cancel()
+	<-bgctx.Done() // wait for async work to finish
 	t.NotNil(req)
 	t.NoError(err)
 	t.True(remoteSyncMatch)
@@ -196,7 +197,7 @@ func (t *MatcherTestSuite) TestQueryLocalSyncMatch() {
 	<-t.fwdr.AddReqTokenC()
 	<-t.fwdr.PollReqTokenC()
 
-	ensureAsyncReady(time.Second, func(ctx context.Context) {
+	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.PollForQuery(ctx)
 		if err == nil && task.isQuery() {
 			task.finish(nil)
@@ -207,19 +208,20 @@ func (t *MatcherTestSuite) TestQueryLocalSyncMatch() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	resp, err := t.matcher.OfferQuery(ctx, task)
 	cancel()
+	wait()
 	t.NoError(err)
 	t.Nil(resp)
 }
 
 func (t *MatcherTestSuite) TestQueryRemoteSyncMatch() {
-	ready := ensureAsyncAfterReady(time.Second, func(ctx context.Context) {
+	ready, wait := ensureAsyncAfterReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.PollForQuery(ctx)
 		if err == nil && task.isQuery() {
 			task.finish(nil)
 		}
 	})
 
-	var remotePollResp atomic.Value
+	var remotePollResp *types.MatchingPollForDecisionTaskResponse
 	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(arg0 context.Context, arg1 *types.MatchingPollForDecisionTaskRequest) (*types.MatchingPollForDecisionTaskResponse, error) {
 			task, err := t.rootMatcher.PollForQuery(arg0)
@@ -230,7 +232,7 @@ func (t *MatcherTestSuite) TestQueryRemoteSyncMatch() {
 				res := &types.MatchingPollForDecisionTaskResponse{
 					Query: &types.WorkflowQuery{},
 				}
-				remotePollResp.Store(res)
+				remotePollResp = res
 				return res, nil
 			}
 			return nil, nil
@@ -252,10 +254,11 @@ func (t *MatcherTestSuite) TestQueryRemoteSyncMatch() {
 
 	result, err := t.matcher.OfferQuery(ctx, task)
 	cancel()
+	wait()
 	t.NotNil(req)
 	t.NoError(err)
 	t.NotNil(result)
-	t.NotNil(remotePollResp.Load().(*types.MatchingPollForDecisionTaskResponse).Query)
+	t.NotNil(remotePollResp.Query)
 	t.Equal("answer", string(result.QueryResult))
 	t.Equal(t.taskList.name, req.GetForwardedFrom())
 	t.Equal(t.taskList.Parent(20), req.GetTaskList().GetName())
@@ -264,13 +267,11 @@ func (t *MatcherTestSuite) TestQueryRemoteSyncMatch() {
 func (t *MatcherTestSuite) TestQueryRemoteSyncMatchError() {
 	<-t.fwdr.PollReqTokenC()
 
-	var matched atomic.Value
-	matched.Store(false)
-
-	ready := ensureAsyncAfterReady(time.Second, func(ctx context.Context) {
+	matched := false
+	ready, wait := ensureAsyncAfterReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.PollForQuery(ctx)
 		if err == nil && task.isQuery() {
-			matched.Store(true)
+			matched = true
 			task.finish(nil)
 		}
 	})
@@ -288,10 +289,11 @@ func (t *MatcherTestSuite) TestQueryRemoteSyncMatchError() {
 
 	result, err := t.matcher.OfferQuery(ctx, task)
 	cancel()
+	wait()
 	t.NotNil(req)
 	t.NoError(err)
 	t.Nil(result)
-	t.True(matched.Load().(bool))
+	t.True(matched)
 }
 
 func (t *MatcherTestSuite) TestMustOfferLocalMatch() {
@@ -299,7 +301,7 @@ func (t *MatcherTestSuite) TestMustOfferLocalMatch() {
 	<-t.fwdr.AddReqTokenC()
 	<-t.fwdr.PollReqTokenC()
 
-	ensureAsyncReady(time.Second, func(ctx context.Context) {
+	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.Poll(ctx)
 		if err == nil {
 			task.finish(nil)
@@ -310,6 +312,7 @@ func (t *MatcherTestSuite) TestMustOfferLocalMatch() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	err := t.matcher.MustOffer(ctx, task)
 	cancel()
+	wait()
 	t.NoError(err)
 }
 
@@ -373,15 +376,15 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 func (t *MatcherTestSuite) TestRemotePoll() {
 	pollToken := <-t.fwdr.PollReqTokenC()
 
-	var req atomic.Value
+	var req *types.MatchingPollForDecisionTaskRequest
 	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(arg0 context.Context, arg1 *types.MatchingPollForDecisionTaskRequest) (*types.MatchingPollForDecisionTaskResponse, error) {
-			req.Store(arg1)
+			req = arg1
 			return nil, nil
 		},
 	)
 
-	ready := ensureAsyncAfterReady(0, func(_ context.Context) {
+	ready, wait := ensureAsyncAfterReady(0, func(_ context.Context) {
 		pollToken.release()
 	})
 
@@ -389,8 +392,9 @@ func (t *MatcherTestSuite) TestRemotePoll() {
 	ready()
 	task, err := t.matcher.Poll(ctx)
 	cancel()
+	wait()
 	t.NoError(err)
-	t.NotNil(req.Load().(*types.MatchingPollForDecisionTaskRequest))
+	t.NotNil(req)
 	t.NotNil(task)
 	t.True(task.isStarted())
 }
@@ -398,15 +402,15 @@ func (t *MatcherTestSuite) TestRemotePoll() {
 func (t *MatcherTestSuite) TestRemotePollForQuery() {
 	pollToken := <-t.fwdr.PollReqTokenC()
 
-	var req atomic.Value
+	var req *types.MatchingPollForDecisionTaskRequest
 	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(arg0 context.Context, arg1 *types.MatchingPollForDecisionTaskRequest) (*types.MatchingPollForDecisionTaskResponse, error) {
-			req.Store(arg1)
+			req = arg1
 			return nil, nil
 		},
 	)
 
-	ready := ensureAsyncAfterReady(0, func(_ context.Context) {
+	ready, wait := ensureAsyncAfterReady(0, func(_ context.Context) {
 		pollToken.release()
 	})
 
@@ -414,8 +418,9 @@ func (t *MatcherTestSuite) TestRemotePollForQuery() {
 	defer cancel()
 	ready()
 	task, err := t.matcher.PollForQuery(ctx)
+	wait()
 	t.NoError(err)
-	t.NotNil(req.Load().(*types.MatchingPollForDecisionTaskRequest))
+	t.NotNil(req)
 	t.NotNil(task)
 	t.True(task.isStarted())
 }
@@ -448,10 +453,10 @@ func (t *MatcherTestSuite) newTaskInfo() *persistence.TaskInfo {
 // In case of flakiness, increase the time.Sleep and hope for the best.
 //
 // Note that adding fmt.Println() calls touches synchronization code (for I/O), so it may change behavior.
-func ensureAsyncAfterReady(ctxTimeout time.Duration, cb func(ctx context.Context)) (ready func()) {
-	return func() {
+func ensureAsyncAfterReady(ctxTimeout time.Duration, cb func(ctx context.Context)) (ready func(), wait func()) {
+	ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
+	ready = func() {
 		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
 			defer cancel()
 
 			// since `go func()` is non-blocking, the ready()-ing goroutine should generally continue,
@@ -460,8 +465,13 @@ func ensureAsyncAfterReady(ctxTimeout time.Duration, cb func(ctx context.Context
 			time.Sleep(1 * time.Millisecond)
 
 			cb(ctx)
+
 		}()
 	}
+	wait = func() {
+		<-ctx.Done()
+	}
+	return ready, wait
 }
 
 // Try to ensure a blocking callback is actively blocked in a goroutine before returning, so tests can
@@ -472,10 +482,10 @@ func ensureAsyncAfterReady(ctxTimeout time.Duration, cb func(ctx context.Context
 // In case of flakiness, increase the time.Sleep and hope for the best.
 //
 // Note that adding fmt.Println() calls touches synchronization code (for I/O), so it may change behavior.
-func ensureAsyncReady(ctxTimeout time.Duration, cb func(ctx context.Context)) {
+func ensureAsyncReady(ctxTimeout time.Duration, cb func(ctx context.Context)) (wait func()) {
 	running := make(chan struct{})
+	ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
 		defer cancel()
 
 		close(running)
@@ -487,4 +497,8 @@ func ensureAsyncReady(ctxTimeout time.Duration, cb func(ctx context.Context)) {
 	// but there is still a race to reach whatever blocking sync point exists between the code being tested.
 	// In many cases this sleep is completely unnecessary (especially with -cpu=1), but it does help.
 	time.Sleep(1 * time.Millisecond)
+
+	return func() {
+		<-ctx.Done()
+	}
 }
