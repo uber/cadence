@@ -909,7 +909,7 @@ func FromCountWorkflowExecutionsRequest(t *types.CountWorkflowExecutionsRequest)
 	}
 	return &shared.CountWorkflowExecutionsRequest{
 		Domain: &t.Domain,
-		Query:  t.Query,
+		Query:  &t.Query,
 	}
 }
 
@@ -920,7 +920,7 @@ func ToCountWorkflowExecutionsRequest(t *shared.CountWorkflowExecutionsRequest) 
 	}
 	return &types.CountWorkflowExecutionsRequest{
 		Domain: t.GetDomain(),
-		Query:  t.Query,
+		Query:  t.GetQuery(),
 	}
 }
 
@@ -2492,7 +2492,7 @@ func FromHistoryEvent(t *types.HistoryEvent) *shared.HistoryEvent {
 		Timestamp:                               t.Timestamp,
 		EventType:                               FromEventType(t.EventType),
 		Version:                                 &t.Version,
-		TaskId:                                  t.TaskID,
+		TaskId:                                  &t.TaskID,
 		WorkflowExecutionStartedEventAttributes: FromWorkflowExecutionStartedEventAttributes(t.WorkflowExecutionStartedEventAttributes),
 		WorkflowExecutionCompletedEventAttributes:                      FromWorkflowExecutionCompletedEventAttributes(t.WorkflowExecutionCompletedEventAttributes),
 		WorkflowExecutionFailedEventAttributes:                         FromWorkflowExecutionFailedEventAttributes(t.WorkflowExecutionFailedEventAttributes),
@@ -2548,7 +2548,7 @@ func ToHistoryEvent(t *shared.HistoryEvent) *types.HistoryEvent {
 		Timestamp:                               t.Timestamp,
 		EventType:                               ToEventType(t.EventType),
 		Version:                                 t.GetVersion(),
-		TaskID:                                  t.TaskId,
+		TaskID:                                  t.GetTaskId(),
 		WorkflowExecutionStartedEventAttributes: ToWorkflowExecutionStartedEventAttributes(t.WorkflowExecutionStartedEventAttributes),
 		WorkflowExecutionCompletedEventAttributes:                      ToWorkflowExecutionCompletedEventAttributes(t.WorkflowExecutionCompletedEventAttributes),
 		WorkflowExecutionFailedEventAttributes:                         ToWorkflowExecutionFailedEventAttributes(t.WorkflowExecutionFailedEventAttributes),
@@ -2735,7 +2735,7 @@ func FromListArchivedWorkflowExecutionsRequest(t *types.ListArchivedWorkflowExec
 		Domain:        &t.Domain,
 		PageSize:      &t.PageSize,
 		NextPageToken: t.NextPageToken,
-		Query:         t.Query,
+		Query:         &t.Query,
 	}
 }
 
@@ -2748,7 +2748,7 @@ func ToListArchivedWorkflowExecutionsRequest(t *shared.ListArchivedWorkflowExecu
 		Domain:        t.GetDomain(),
 		PageSize:      t.GetPageSize(),
 		NextPageToken: t.NextPageToken,
-		Query:         t.Query,
+		Query:         t.GetQuery(),
 	}
 }
 
@@ -2977,7 +2977,7 @@ func FromListWorkflowExecutionsRequest(t *types.ListWorkflowExecutionsRequest) *
 		Domain:        &t.Domain,
 		PageSize:      &t.PageSize,
 		NextPageToken: t.NextPageToken,
-		Query:         t.Query,
+		Query:         &t.Query,
 	}
 }
 
@@ -2990,7 +2990,7 @@ func ToListWorkflowExecutionsRequest(t *shared.ListWorkflowExecutionsRequest) *t
 		Domain:        t.GetDomain(),
 		PageSize:      t.GetPageSize(),
 		NextPageToken: t.NextPageToken,
-		Query:         t.Query,
+		Query:         t.GetQuery(),
 	}
 }
 
@@ -4648,7 +4648,7 @@ func FromSignalExternalWorkflowExecutionDecisionAttributes(t *types.SignalExtern
 	return &shared.SignalExternalWorkflowExecutionDecisionAttributes{
 		Domain:            &t.Domain,
 		Execution:         FromWorkflowExecution(t.Execution),
-		SignalName:        t.SignalName,
+		SignalName:        &t.SignalName,
 		Input:             t.Input,
 		Control:           t.Control,
 		ChildWorkflowOnly: &t.ChildWorkflowOnly,
@@ -4663,7 +4663,7 @@ func ToSignalExternalWorkflowExecutionDecisionAttributes(t *shared.SignalExterna
 	return &types.SignalExternalWorkflowExecutionDecisionAttributes{
 		Domain:            t.GetDomain(),
 		Execution:         ToWorkflowExecution(t.Execution),
-		SignalName:        t.SignalName,
+		SignalName:        t.GetSignalName(),
 		Input:             t.Input,
 		Control:           t.Control,
 		ChildWorkflowOnly: t.GetChildWorkflowOnly(),
@@ -4735,7 +4735,7 @@ func FromSignalExternalWorkflowExecutionInitiatedEventAttributes(t *types.Signal
 		DecisionTaskCompletedEventId: &t.DecisionTaskCompletedEventID,
 		Domain:                       &t.Domain,
 		WorkflowExecution:            FromWorkflowExecution(t.WorkflowExecution),
-		SignalName:                   t.SignalName,
+		SignalName:                   &t.SignalName,
 		Input:                        t.Input,
 		Control:                      t.Control,
 		ChildWorkflowOnly:            &t.ChildWorkflowOnly,
@@ -4751,7 +4751,7 @@ func ToSignalExternalWorkflowExecutionInitiatedEventAttributes(t *shared.SignalE
 		DecisionTaskCompletedEventID: t.GetDecisionTaskCompletedEventId(),
 		Domain:                       t.GetDomain(),
 		WorkflowExecution:            ToWorkflowExecution(t.WorkflowExecution),
-		SignalName:                   t.SignalName,
+		SignalName:                   t.GetSignalName(),
 		Input:                        t.Input,
 		Control:                      t.Control,
 		ChildWorkflowOnly:            t.GetChildWorkflowOnly(),
@@ -4774,7 +4774,7 @@ func FromSignalWithStartWorkflowExecutionRequest(t *types.SignalWithStartWorkflo
 		Identity:                            &t.Identity,
 		RequestId:                           &t.RequestID,
 		WorkflowIdReusePolicy:               FromWorkflowIDReusePolicy(t.WorkflowIDReusePolicy),
-		SignalName:                          t.SignalName,
+		SignalName:                          &t.SignalName,
 		SignalInput:                         t.SignalInput,
 		Control:                             t.Control,
 		RetryPolicy:                         FromRetryPolicy(t.RetryPolicy),
@@ -4801,7 +4801,7 @@ func ToSignalWithStartWorkflowExecutionRequest(t *shared.SignalWithStartWorkflow
 		Identity:                            t.GetIdentity(),
 		RequestID:                           t.GetRequestId(),
 		WorkflowIDReusePolicy:               ToWorkflowIDReusePolicy(t.WorkflowIdReusePolicy),
-		SignalName:                          t.SignalName,
+		SignalName:                          t.GetSignalName(),
 		SignalInput:                         t.SignalInput,
 		Control:                             t.Control,
 		RetryPolicy:                         ToRetryPolicy(t.RetryPolicy),
@@ -4820,7 +4820,7 @@ func FromSignalWorkflowExecutionRequest(t *types.SignalWorkflowExecutionRequest)
 	return &shared.SignalWorkflowExecutionRequest{
 		Domain:            &t.Domain,
 		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
-		SignalName:        t.SignalName,
+		SignalName:        &t.SignalName,
 		Input:             t.Input,
 		Identity:          &t.Identity,
 		RequestId:         &t.RequestID,
@@ -4836,7 +4836,7 @@ func ToSignalWorkflowExecutionRequest(t *shared.SignalWorkflowExecutionRequest) 
 	return &types.SignalWorkflowExecutionRequest{
 		Domain:            t.GetDomain(),
 		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
-		SignalName:        t.SignalName,
+		SignalName:        t.GetSignalName(),
 		Input:             t.Input,
 		Identity:          t.GetIdentity(),
 		RequestID:         t.GetRequestId(),
@@ -6048,7 +6048,7 @@ func FromWorkflowExecutionSignaledEventAttributes(t *types.WorkflowExecutionSign
 		return nil
 	}
 	return &shared.WorkflowExecutionSignaledEventAttributes{
-		SignalName: t.SignalName,
+		SignalName: &t.SignalName,
 		Input:      t.Input,
 		Identity:   &t.Identity,
 	}
@@ -6060,7 +6060,7 @@ func ToWorkflowExecutionSignaledEventAttributes(t *shared.WorkflowExecutionSigna
 		return nil
 	}
 	return &types.WorkflowExecutionSignaledEventAttributes{
-		SignalName: t.SignalName,
+		SignalName: t.GetSignalName(),
 		Input:      t.Input,
 		Identity:   t.GetIdentity(),
 	}

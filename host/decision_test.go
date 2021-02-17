@@ -319,7 +319,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionSta
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		SignalName:        common.StringPtr("sig-for-integ-test"),
+		SignalName:        "sig-for-integ-test",
 		Input:             []byte(""),
 		Identity:          "integ test",
 		RequestID:         uuid.New(),
@@ -405,7 +405,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		SignalName:        common.StringPtr("sig-for-integ-test"),
+		SignalName:        "sig-for-integ-test",
 		Input:             []byte(""),
 		Identity:          "integ test",
 		RequestID:         uuid.New(),
@@ -482,7 +482,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		SignalName:        common.StringPtr("sig-for-integ-test"),
+		SignalName:        "sig-for-integ-test",
 		Input:             []byte(""),
 		Identity:          "integ test",
 		RequestID:         uuid.New(),
@@ -583,7 +583,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		SignalName:        common.StringPtr("sig-for-integ-test"),
+		SignalName:        "sig-for-integ-test",
 		Input:             []byte(""),
 		Identity:          "integ test",
 		RequestID:         uuid.New(),
@@ -699,7 +699,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		SignalName:        common.StringPtr("sig-for-integ-test"),
+		SignalName:        "sig-for-integ-test",
 		Input:             []byte(""),
 		Identity:          "integ test",
 		RequestID:         uuid.New(),
@@ -801,7 +801,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		SignalName:        common.StringPtr("sig-for-integ-test"),
+		SignalName:        "sig-for-integ-test",
 		Input:             []byte(""),
 		Identity:          "integ test",
 		RequestID:         uuid.New(),

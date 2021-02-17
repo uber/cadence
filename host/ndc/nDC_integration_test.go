@@ -145,18 +145,18 @@ func (s *nDCIntegrationTestSuite) GetReplicationMessagesMock(
 	select {
 	case task := <-s.standByReplicationTasksChan:
 		taskID := atomic.AddInt64(&s.standByTaskID, 1)
-		task.SourceTaskID = common.Int64Ptr(taskID)
+		task.SourceTaskID = taskID
 		tasks := []*types.ReplicationTask{task}
 		for len(s.standByReplicationTasksChan) > 0 {
 			task = <-s.standByReplicationTasksChan
 			taskID := atomic.AddInt64(&s.standByTaskID, 1)
-			task.SourceTaskID = common.Int64Ptr(taskID)
+			task.SourceTaskID = taskID
 			tasks = append(tasks, task)
 		}
 
 		replicationMessage := &types.ReplicationMessages{
 			ReplicationTasks:       tasks,
-			LastRetrievedMessageID: tasks[len(tasks)-1].SourceTaskID,
+			LastRetrievedMessageID: &tasks[len(tasks)-1].SourceTaskID,
 			HasMore:                true,
 		}
 
@@ -466,7 +466,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 				Version:   21,
 				EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 				WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-					SignalName: common.StringPtr("some signal name 1"),
+					SignalName: "some signal name 1",
 					Input:      []byte("some signal details 1"),
 					Identity:   identity,
 				},
@@ -510,7 +510,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranches() {
 				Version:   21,
 				EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 				WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-					SignalName: common.StringPtr("some signal name 2"),
+					SignalName: "some signal name 2",
 					Input:      []byte("some signal details 2"),
 					Identity:   identity,
 				},
@@ -771,7 +771,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				Version:   21,
 				EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 				WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-					SignalName: common.StringPtr("some signal name 1"),
+					SignalName: "some signal name 1",
 					Input:      []byte("some signal details 1"),
 					Identity:   identity,
 				},
@@ -815,7 +815,7 @@ func (s *nDCIntegrationTestSuite) TestHandcraftedMultipleBranchesWithZombieConti
 				Version:   21,
 				EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 				WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-					SignalName: common.StringPtr("some signal name 2"),
+					SignalName: "some signal name 2",
 					Input:      []byte("some signal details 2"),
 					Identity:   identity,
 				},
@@ -1083,9 +1083,9 @@ func (s *nDCIntegrationTestSuite) TestEventsReapply_UpdateNonCurrentBranch() {
 					EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   baseBranchLastEvent.GetVersion(), // dummy event from other cluster
-					TaskID:    common.Int64Ptr(taskID),
+					TaskID:    taskID,
 					WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-						SignalName: common.StringPtr("signal"),
+						SignalName: "signal",
 						Input:      []byte{},
 						Identity:   "ndc_integration_test",
 					},
@@ -1238,7 +1238,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				Version:   21,
 				EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 				WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-					SignalName: common.StringPtr("some signal name 1"),
+					SignalName: "some signal name 1",
 					Input:      []byte("some signal details 1"),
 					Identity:   identity,
 				},
@@ -1282,7 +1282,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 				Version:   21,
 				EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 				WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
-					SignalName: common.StringPtr("some signal name 2"),
+					SignalName: "some signal name 2",
 					Input:      []byte("some signal details 2"),
 					Identity:   identity,
 				},
@@ -1619,7 +1619,7 @@ func (s *nDCIntegrationTestSuite) generateNewRunHistory(
 		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 		EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 		Version:   version,
-		TaskID:    common.Int64Ptr(1),
+		TaskID:    1,
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
 			WorkflowType:         &types.WorkflowType{Name: workflowType},
 			ParentWorkflowDomain: common.StringPtr(domain),
@@ -1740,9 +1740,9 @@ func (s *nDCIntegrationTestSuite) applyEventsThroughFetcher(
 		taskType := types.ReplicationTaskTypeHistoryV2
 		replicationTask := &types.ReplicationTask{
 			TaskType:     &taskType,
-			SourceTaskID: common.Int64Ptr(1),
+			SourceTaskID: 1,
 			HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
-				TaskID:              common.Int64Ptr(1),
+				TaskID:              1,
 				DomainID:            s.domainID,
 				WorkflowID:          workflowID,
 				RunID:               runID,

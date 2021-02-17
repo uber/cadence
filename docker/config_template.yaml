@@ -203,7 +203,7 @@ clusterMetadata:
             enabled: true
             initialFailoverVersion: 0
             rpcName: "cadence-frontend"
-            rpcAddress: "127.0.0.1:7933"
+            rpcAddress: {{ default .Env.BIND_ON_IP "127.0.0.1" }}:7933
 
 dcRedirectionPolicy:
     policy: {{ default .Env.DC_REDIRECT_POLICY "selected-apis-forwarding" }}

@@ -1253,7 +1253,7 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionWithRetry(
 				RunID:      task.TargetRunID,
 			},
 			Identity:   execution.IdentityHistoryService,
-			SignalName: common.StringPtr(signalInfo.SignalName),
+			SignalName: signalInfo.SignalName,
 			Input:      signalInfo.Input,
 			// Use same request ID to deduplicate SignalWorkflowExecution calls
 			RequestID: signalInfo.SignalRequestID,

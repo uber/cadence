@@ -1320,7 +1320,7 @@ func (s *integrationSuite) TestActivityCancellationNotStarted() {
 			WorkflowID: id,
 			RunID:      we.RunID,
 		},
-		SignalName: common.StringPtr(signalName),
+		SignalName: signalName,
 		Input:      signalInput,
 		Identity:   identity,
 	})
