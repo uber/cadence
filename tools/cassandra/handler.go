@@ -154,20 +154,6 @@ func doCreateKeyspace(cfg CQLClientConfig, name string) error {
 	return client.createKeyspace(name)
 }
 
-func doDropKeyspace(cfg CQLClientConfig, name string) {
-	cfg.Keyspace = systemKeyspace
-	client, err := newCQLClient(&cfg)
-	if err != nil {
-		logErr(fmt.Errorf("error creating client: %v", err))
-		return
-	}
-	err = client.dropKeyspace(name)
-	if err != nil {
-		logErr(fmt.Errorf("error dropping keyspace %v: %v", name, err))
-	}
-	client.Close()
-}
-
 func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 	config := new(CQLClientConfig)
 	config.Hosts = cli.GlobalString(schema.CLIOptEndpoint)
@@ -188,14 +174,13 @@ func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 		}
 	}
 
-	isDryRun := cli.Bool(schema.CLIOptDryrun)
-	if err := validateCQLClientConfig(config, isDryRun); err != nil {
+	if err := validateCQLClientConfig(config); err != nil {
 		return nil, err
 	}
 	return config, nil
 }
 
-func validateCQLClientConfig(config *CQLClientConfig, isDryRun bool) error {
+func validateCQLClientConfig(config *CQLClientConfig) error {
 	if len(config.Hosts) == 0 {
 		return schema.NewConfigError("missing cassandra endpoint argument " + flag(schema.CLIOptEndpoint))
 	}

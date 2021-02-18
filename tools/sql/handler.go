@@ -153,20 +153,6 @@ func doCreateDatabase(cfg *config.SQL, name string) error {
 	return conn.CreateDatabase(name)
 }
 
-func doDropDatabase(cfg *config.SQL, name string) {
-	cfg.DatabaseName = ""
-	conn, err := NewConnection(cfg)
-	if err != nil {
-		logErr(err)
-		return
-	}
-	err = conn.DropDatabase(name)
-	if err != nil {
-		logErr(err)
-	}
-	conn.Close()
-}
-
 func parseConnectConfig(cli *cli.Context) (*config.SQL, error) {
 	cfg := new(config.SQL)
 
@@ -177,7 +163,6 @@ func parseConnectConfig(cli *cli.Context) (*config.SQL, error) {
 	cfg.Password = cli.GlobalString(schema.CLIOptPassword)
 	cfg.DatabaseName = cli.GlobalString(schema.CLIOptDatabase)
 	cfg.PluginName = cli.GlobalString(schema.CLIOptPluginName)
-	isDryRun := cli.Bool(schema.CLIOptDryrun)
 
 	if cfg.ConnectAttributes == nil {
 		cfg.ConnectAttributes = map[string]string{}
@@ -207,7 +192,7 @@ func parseConnectConfig(cli *cli.Context) (*config.SQL, error) {
 		}
 	}
 
-	if err := ValidateConnectConfig(cfg, isDryRun); err != nil {
+	if err := ValidateConnectConfig(cfg); err != nil {
 		return nil, err
 	}
 
@@ -215,7 +200,7 @@ func parseConnectConfig(cli *cli.Context) (*config.SQL, error) {
 }
 
 // ValidateConnectConfig validates params
-func ValidateConnectConfig(cfg *config.SQL, isDryRun bool) error {
+func ValidateConnectConfig(cfg *config.SQL) error {
 	host, _, err := net.SplitHostPort(cfg.ConnectAddr)
 	if err != nil {
 		return schema.NewConfigError("invalid host and port " + cfg.ConnectAddr)
