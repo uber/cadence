@@ -25,9 +25,10 @@ import (
 	"time"
 
 	"github.com/uber-go/tally"
-	"github.com/uber/cadence/common"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
+
+	"github.com/uber/cadence/common"
 )
 
 // counters go here
