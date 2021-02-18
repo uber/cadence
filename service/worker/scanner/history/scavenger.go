@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -53,7 +54,7 @@ type (
 		hbd                        ScavengerHeartbeatDetails
 		rps                        int
 		limiter                    *rate.Limiter
-		maxWorkflowRetentionInDays int
+		maxWorkflowRetentionInDays dynamicconfig.IntPropertyFn
 		metrics                    metrics.Client
 		logger                     log.Logger
 		isInTest                   bool
@@ -100,7 +101,7 @@ func NewScavenger(
 	hbd ScavengerHeartbeatDetails,
 	metricsClient metrics.Client,
 	logger log.Logger,
-	maxWorkflowRetentionInDays int,
+	maxWorkflowRetentionInDays dynamicconfig.IntPropertyFn,
 ) *Scavenger {
 
 	rateLimiter := rate.NewLimiter(rate.Limit(rps), rps)
@@ -141,7 +142,7 @@ func (s *Scavenger) Run(ctx context.Context) (ScavengerHeartbeatDetails, error) 
 		errorsOnSplitting := 0
 		// send all tasks
 		for _, br := range resp.Branches {
-			if time.Now().Add(-1 * getHistoryCleanupThreshold(s.maxWorkflowRetentionInDays)).Before(br.ForkTime) {
+			if time.Now().Add(-1 * getHistoryCleanupThreshold(s.maxWorkflowRetentionInDays())).Before(br.ForkTime) {
 				batchCount--
 				skips++
 				s.metrics.IncCounter(metrics.HistoryScavengerScope, metrics.HistoryScavengerSkipCount)

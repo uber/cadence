@@ -146,7 +146,7 @@ func HistoryScavengerActivity(
 		hbd,
 		res.GetMetricsClient(),
 		res.GetLogger(),
-		ctx.cfg.MaxWorkflowRetentionInDays(),
+		ctx.cfg.MaxWorkflowRetentionInDays,
 	)
 	return scavenger.Run(activityCtx)
 }

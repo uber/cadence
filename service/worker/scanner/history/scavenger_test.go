@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -67,7 +68,10 @@ func (s *ScavengerTestSuite) createTestScavenger(rps int) (*mocks.HistoryV2Manag
 	db := &mocks.HistoryV2Manager{}
 	controller := gomock.NewController(s.T())
 	workflowClient := history.NewMockClient(controller)
-	scvgr := NewScavenger(db, 100, workflowClient, ScavengerHeartbeatDetails{}, s.metric, s.logger, common.DefaultMaxWorkflowRetentionInDays)
+
+	dynamicConfigColleciton := dynamicconfig.NewNopCollection()
+	maxWorkflowRetentionInDays := dynamicConfigColleciton.GetIntProperty(0, common.DefaultMaxWorkflowRetentionInDays)
+	scvgr := NewScavenger(db, 100, workflowClient, ScavengerHeartbeatDetails{}, s.metric, s.logger, maxWorkflowRetentionInDays)
 	scvgr.isInTest = true
 	return db, workflowClient, scvgr, controller
 }
