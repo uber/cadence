@@ -109,7 +109,7 @@ func (task *UpdateTask) Run() error {
 	}
 
 	if config.IsDryRun {
-		log.Println("In DryRun mode, this command will only print queries without executing....")
+		log.Println("In DryRun mode, this command will only print queries without executing.....")
 		if len(updates) == 0 {
 			log.Println("Found zero updates to run")
 		}
