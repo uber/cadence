@@ -135,7 +135,6 @@ func (s *timersWorkflowsSuite) TestScannerWorkflow_Success() {
 		//var customc shardscanner.CustomScannerConfig
 		env.OnActivity(shardscanner.ActivityScanShard, mock.Anything, shardscanner.ScanShardActivityParams{
 			Shards:        batch,
-			ContextKey:    ScannerWFTypeName,
 			ScannerConfig: cconfig,
 		}).Return(reports, nil)
 	}
