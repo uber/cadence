@@ -1,0 +1,9 @@
+{
+  "totalLaunchCount": 100,
+  "routineCount": 1,
+  "chainSequence": 4,
+  "concurrentCount": 1,
+  "payloadSizeBytes": 1024,
+  "contextTimeoutInSeconds": 3,
+  "failureThreshold": 0.01
+}
