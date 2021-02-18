@@ -30,7 +30,6 @@ import (
 	"github.com/uber/cadence/common/auth"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/environment"
-	"github.com/uber/cadence/tools/common/schema"
 	"github.com/uber/cadence/tools/sql"
 )
 
@@ -67,8 +66,6 @@ func (s *HandlerTestSuite) TestValidateConnectConfig() {
 		strconv.Itoa(environment.GetMySQLPort()),
 	)
 	s.NotNil(sql.ValidateConnectConfig(cfg, false))
-	s.Nil(sql.ValidateConnectConfig(cfg, true))
-	s.Equal(schema.DryrunDBName, cfg.DatabaseName)
 
 	cfg.DatabaseName = "foobar"
 	s.Nil(sql.ValidateConnectConfig(cfg, false))
