@@ -125,8 +125,6 @@ const (
 	// CriticalLongPollTimeout is a threshold for the context timeout passed into long poll API,
 	// below which a warning will be logged
 	CriticalLongPollTimeout = time.Second * 20
-	// MaxRetentionDays is a shared config in both Frontend and Worker, they need the same default value
-	DefaultMaxWorkflowRetentionInDays = 30
 )
 
 const (
