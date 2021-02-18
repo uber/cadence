@@ -62,7 +62,6 @@ type Config struct {
 	EnableClientVersionCheck        dynamicconfig.BoolPropertyFn
 	DisallowQuery                   dynamicconfig.BoolPropertyFnWithDomainFilter
 	ShutdownDrainDuration           dynamicconfig.DurationPropertyFn
-	MaxWorkflowRetentionInDays      dynamicconfig.IntPropertyFn
 
 	// Persistence settings
 	HistoryMgrNumConns dynamicconfig.IntPropertyFn
@@ -124,7 +123,6 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		BlobSizeLimitWarn:                           dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitWarn, 256*1024),
 		ThrottledLogRPS:                             dc.GetIntProperty(dynamicconfig.FrontendThrottledLogRPS, 20),
 		ShutdownDrainDuration:                       dc.GetDurationProperty(dynamicconfig.FrontendShutdownDrainDuration, 0),
-		MaxWorkflowRetentionInDays:                  dc.GetIntProperty(dynamicconfig.MaxRetentionDays, common.DefaultMaxWorkflowRetentionInDays),
 		EnableDomainNotActiveAutoForwarding:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableDomainNotActiveAutoForwarding, true),
 		EnableGracefulFailover:                      dc.GetBoolProperty(dynamicconfig.EnableGracefulFailover, false),
 		DomainFailoverRefreshInterval:               dc.GetDurationProperty(dynamicconfig.DomainFailoverRefreshInterval, 10*time.Second),
@@ -140,6 +138,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		domainConfig: domain.Config{
 			MaxBadBinaryCount: dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries, domain.MaxBadBinaries),
 			MinRetentionDays:  dc.GetIntProperty(dynamicconfig.MinRetentionDays, domain.MinRetentionDays),
+			MaxRetentionDays:  dc.GetIntProperty(dynamicconfig.MaxRetentionDays, common.DefaultMaxWorkflowRetentionInDays),
 			FailoverCoolDown:  dc.GetDurationPropertyFilteredByDomain(dynamicconfig.FrontendFailoverCoolDown, domain.FailoverCoolDown),
 		},
 	}

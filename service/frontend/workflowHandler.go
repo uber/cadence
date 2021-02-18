@@ -265,7 +265,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 		return errRequestNotSet
 	}
 
-	if registerRequest.GetWorkflowExecutionRetentionPeriodInDays() > int32(wh.config.MaxWorkflowRetentionInDays()) {
+	if registerRequest.GetWorkflowExecutionRetentionPeriodInDays() > int32(wh.config.domainConfig.MaxRetentionDays()) {
 		return errInvalidRetention
 	}
 
