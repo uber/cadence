@@ -220,7 +220,7 @@ service HistoryAPI {
 message StartWorkflowExecutionRequest {
   api.v1.StartWorkflowExecutionRequest request = 1;
   string domain_id = 2;
-  shared.v1.ParentExecutionInfo parent_execution_info = 3;
+  api.v1.ParentExecutionInfo parent_execution_info = 3;
   int32 attempt = 4;
   google.protobuf.Timestamp expiration_time = 5;
   api.v1.ContinueAsNewInitiator continue_as_new_initiator = 6;

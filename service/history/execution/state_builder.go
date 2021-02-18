@@ -132,7 +132,9 @@ func (b *stateBuilderImpl) ApplyEvents(
 		case types.EventTypeWorkflowExecutionStarted:
 			attributes := event.WorkflowExecutionStartedEventAttributes
 			var parentDomainID *string
-			if attributes.ParentWorkflowDomain != nil {
+			if attributes.ParentWorkflowDomainID != nil {
+				parentDomainID = attributes.ParentWorkflowDomainID
+			} else if attributes.ParentWorkflowDomain != nil {
 				parentDomainEntry, err := b.domainCache.GetDomain(
 					attributes.GetParentWorkflowDomain(),
 				)

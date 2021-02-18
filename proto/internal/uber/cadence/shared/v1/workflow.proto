@@ -24,15 +24,6 @@ package uber.cadence.shared.v1;
 
 option go_package = "github.com/uber/cadence/.gen/proto/shared/v1;sharedv1";
 
-import "uber/cadence/api/v1/common.proto";
-
-message ParentExecutionInfo {
-  string domain_id = 1;
-  string domain_name = 2;
-  api.v1.WorkflowExecution workflow_execution = 3;
-  int64 initiated_id = 4;
-}
-
 enum WorkflowState {
   WORKFLOW_STATE_INVALID = 0;
   WORKFLOW_STATE_CREATED = 1;

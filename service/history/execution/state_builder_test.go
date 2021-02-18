@@ -208,8 +208,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_Wi
 	now := time.Now()
 	evenType := types.EventTypeWorkflowExecutionStarted
 	startWorkflowAttribute := &types.WorkflowExecutionStartedEventAttributes{
-		ParentWorkflowDomain: common.StringPtr(constants.TestParentDomainName),
-		Initiator:            types.ContinueAsNewInitiatorCronSchedule.Ptr(),
+		ParentWorkflowDomainID: common.StringPtr(constants.TestParentDomainID),
+		ParentWorkflowDomain:   common.StringPtr(constants.TestParentDomainName),
+		Initiator:              types.ContinueAsNewInitiatorCronSchedule.Ptr(),
 		FirstDecisionTaskBackoffSeconds: common.Int32Ptr(
 			int32(backoff.GetBackoffForNextSchedule(cronSchedule, now, now).Seconds()),
 		),
@@ -223,7 +224,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_Wi
 		WorkflowExecutionStartedEventAttributes: startWorkflowAttribute,
 	}
 
-	s.mockDomainCache.EXPECT().GetDomain(constants.TestParentDomainName).Return(constants.TestGlobalParentDomainEntry, nil).Times(1)
+	s.mockDomainCache.EXPECT().GetDomain(constants.TestParentDomainName).Return(constants.TestGlobalParentDomainEntry, nil).Times(0)
 	s.mockMutableState.EXPECT().ReplicateWorkflowExecutionStartedEvent(&constants.TestParentDomainID, workflowExecution, requestID, event).Return(nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(executionInfo).AnyTimes()
@@ -429,7 +430,8 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		Timestamp: common.Int64Ptr(now.UnixNano()),
 		EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
-			ParentWorkflowDomain: common.StringPtr(constants.TestParentDomainName),
+			ParentWorkflowDomainID: common.StringPtr(constants.TestParentDomainID),
+			ParentWorkflowDomain:   common.StringPtr(constants.TestParentDomainName),
 			ParentWorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: parentWorkflowID,
 				RunID:      parentRunID,
