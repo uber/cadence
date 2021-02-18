@@ -97,7 +97,6 @@ func (s *fixerWorkflowSuite) TestNewFixerHooks() {
 				ctx context.Context,
 				retryer persistence.Retryer,
 				params FixShardActivityParams,
-				config ScannerConfig,
 			) invariant.Manager {
 				return nil
 			},
@@ -110,11 +109,15 @@ func (s *fixerWorkflowSuite) TestNewFixerHooks() {
 				ctx context.Context,
 				retryer persistence.Retryer,
 				params FixShardActivityParams,
-				config ScannerConfig,
 			) invariant.Manager {
 				return nil
 			},
-			iterator: func(ctx context.Context, client blobstore.Client, keys store.Keys, params FixShardActivityParams, config ScannerConfig) store.ScanOutputIterator {
+			iterator: func(
+				ctx context.Context,
+				client blobstore.Client,
+				keys store.Keys,
+				params FixShardActivityParams,
+			) store.ScanOutputIterator {
 				return nil
 			},
 			wantErr: false,
