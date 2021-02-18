@@ -403,6 +403,8 @@ github.com/uber/ringpop-go v0.8.5/go.mod h1:zVI6eGO6L7pG14GkntHsSOfmUAWQ7B4lvmzl
 github.com/uber/tchannel-go v1.14.0/go.mod h1:Rrgz1eL8kMjW/nEzZos0t+Heq0O4LhnUJVA32OvWKHo=
 github.com/uber/tchannel-go v1.16.0 h1:B7dirDs15/vJJYDeoHpv3xaEUjuRZ38Rvt1qq9g7pSo=
 github.com/uber/tchannel-go v1.16.0/go.mod h1:Rrgz1eL8kMjW/nEzZos0t+Heq0O4LhnUJVA32OvWKHo=
+github.com/uber/tcheck v1.1.0 h1:Sf5jbtsSg03DZNe8vECLPtFCflAJVg/IYwIxyM9qL/o=
+github.com/uber/tcheck v1.1.0/go.mod h1:ytWRjtMoI4Rb/0aZxYeLQHhGyv3uxJk8UR39lq5RqNc=
 github.com/urfave/cli v1.22.4 h1:u7tSpNPPswAFymm8IehJhy4uJMlUuU/GmqSkvJ1InXA=
 github.com/urfave/cli v1.22.4/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=
 github.com/valyala/fastjson v1.4.1 h1:hrltpHpIpkaxll8QltMU8c3QZ5+qIiCL8yKqPFJI/yE=
