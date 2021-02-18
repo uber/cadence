@@ -70,9 +70,8 @@ func (s *ScavengerTestSuite) createTestScavenger(rps int) (*mocks.HistoryV2Manag
 	controller := gomock.NewController(s.T())
 	workflowClient := history.NewMockClient(controller)
 
-	dynamicConfigColleciton := dynamicconfig.NewNopCollection()
-	maxWorkflowRetentionInDays := dynamicConfigColleciton.GetIntProperty(0, domain.DefaultMaxWorkflowRetentionInDays)
-	scvgr := NewScavenger(db, 100, workflowClient, ScavengerHeartbeatDetails{}, s.metric, s.logger, maxWorkflowRetentionInDays)
+	maxWorkflowRetentionInDays := dynamicconfig.GetIntPropertyFn(domain.DefaultMaxWorkflowRetentionInDays)
+	scvgr := NewScavenger(db, rps, workflowClient, ScavengerHeartbeatDetails{}, s.metric, s.logger, maxWorkflowRetentionInDays)
 	scvgr.isInTest = true
 	return db, workflowClient, scvgr, controller
 }
