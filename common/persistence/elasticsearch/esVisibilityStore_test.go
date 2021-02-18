@@ -34,8 +34,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/valyala/fastjson"
 
-	"github.com/uber/cadence/.gen/go/indexer"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	es "github.com/uber/cadence/common/elasticsearch"
@@ -47,6 +45,8 @@ import (
 	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
+	"github.com/uber/cadence/gen/go/indexer"
+	workflow "github.com/uber/cadence/gen/go/shared"
 )
 
 type ESVisibilitySuite struct {

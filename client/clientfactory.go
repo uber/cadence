@@ -25,10 +25,6 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
-	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
-	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
-	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
@@ -38,6 +34,10 @@ import (
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/gen/go/admin/adminserviceclient"
+	"github.com/uber/cadence/gen/go/cadence/workflowserviceclient"
+	"github.com/uber/cadence/gen/go/history/historyserviceclient"
+	"github.com/uber/cadence/gen/go/matching/matchingserviceclient"
 )
 
 const (

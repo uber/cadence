@@ -26,8 +26,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	workflow "github.com/uber/cadence/gen/go/shared"
 )
 
 type (

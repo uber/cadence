@@ -25,9 +25,9 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
+	"github.com/uber/cadence/gen/go/admin/adminserviceclient"
 )
 
 type thriftClient struct {

@@ -33,7 +33,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
@@ -49,6 +48,7 @@ import (
 	"github.com/uber/cadence/common/resource"
 	dc "github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/gen/go/shared"
 )
 
 const (

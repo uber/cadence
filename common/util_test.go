@@ -33,8 +33,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/yarpcerrors"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/types"
+	workflow "github.com/uber/cadence/gen/go/shared"
 )
 
 func TestIsServiceTransientError_ContextTimeout(t *testing.T) {

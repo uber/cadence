@@ -27,7 +27,6 @@ import (
 
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/collection"
@@ -36,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/gen/go/indexer"
 )
 
 type (

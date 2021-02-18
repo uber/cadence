@@ -22,7 +22,7 @@ syntax = "proto3";
 
 package uber.cadence.indexer.v1;
 
-option go_package = "github.com/uber/cadence/.gen/proto/indexer/v1;indexerv1";
+option go_package = "github.com/uber/cadence/gen/proto/indexer/v1;indexerv1";
 
 import "uber/cadence/api/v1/common.proto";
 

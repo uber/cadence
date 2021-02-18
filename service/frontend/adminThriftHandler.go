@@ -25,11 +25,11 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/.gen/go/admin"
-	"github.com/uber/cadence/.gen/go/admin/adminserviceserver"
-	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/types/mapper/thrift"
+	"github.com/uber/cadence/gen/go/admin"
+	"github.com/uber/cadence/gen/go/admin/adminserviceserver"
+	"github.com/uber/cadence/gen/go/replicator"
+	"github.com/uber/cadence/gen/go/shared"
 )
 
 // AdminThriftHandler wrap underlying handler and handles Thrift related type conversions

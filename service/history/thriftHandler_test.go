@@ -24,12 +24,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/uber/cadence/.gen/go/health"
-	hist "github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/replicator"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/gen/go/health"
+	hist "github.com/uber/cadence/gen/go/history"
+	"github.com/uber/cadence/gen/go/replicator"
+	"github.com/uber/cadence/gen/go/shared"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"

@@ -34,11 +34,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	workflow "github.com/uber/cadence/gen/go/shared"
 )
 
 type (
