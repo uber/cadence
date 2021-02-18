@@ -312,7 +312,7 @@ message GetMutableStateResponse {
   api.v1.WorkflowExecution workflow_execution = 1;
   api.v1.WorkflowType workflow_type = 2;
   int64 next_event_id = 3;
-  int64 previous_started_event_id = 4;
+  google.protobuf.Int64Value previous_started_event_id = 4;
   int64 last_first_event_id = 5;
   api.v1.TaskList task_list = 6;
   api.v1.TaskList sticky_task_list = 7;
@@ -339,7 +339,7 @@ message PollMutableStateResponse {
   api.v1.WorkflowExecution workflow_execution = 1;
   api.v1.WorkflowType workflow_type = 2;
   int64 next_event_id = 3;
-  int64 previous_started_event_id = 4;
+  google.protobuf.Int64Value previous_started_event_id = 4;
   int64 last_first_event_id = 5;
   api.v1.TaskList task_list = 6;
   api.v1.TaskList sticky_task_list = 7;
@@ -365,7 +365,7 @@ message RecordDecisionTaskStartedRequest {
 
 message RecordDecisionTaskStartedResponse {
   api.v1.WorkflowType workflow_type = 1;
-  int64 previous_started_event_id = 2;
+  google.protobuf.Int64Value previous_started_event_id = 2;
   int64 scheduled_event_id = 3;
   int64 started_event_id = 4;
   int64 next_event_id = 5;
