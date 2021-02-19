@@ -83,7 +83,7 @@ func (s *timerQueueProcessorBaseSuite) SetupTest() {
 	s.mockTaskProcessor = task.NewMockProcessor(s.controller)
 
 	s.clusterName = cluster.TestCurrentClusterName
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 	s.metricsClient = metrics.NewClient(tally.NoopScope, metrics.History)
 	s.metricsScope = s.metricsClient.Scope(metrics.TimerQueueProcessorScope)
 }

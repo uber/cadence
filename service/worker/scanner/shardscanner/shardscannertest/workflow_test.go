@@ -101,8 +101,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Failure_ScanShard() {
 			}
 		}
 		env.OnActivity(shardscanner.ActivityScanShard, mock.Anything, shardscanner.ScanShardActivityParams{
-			ContextKey: "test-workflow",
-			Shards:     batch,
+			Shards: batch,
 		}).Return(reports, err)
 	}
 	env.ExecuteWorkflow(NewTestWorkflow, "test-workflow", shardscanner.ScannerWorkflowParams{
@@ -248,7 +247,6 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 		env.OnActivity(shardscanner.ActivityFixShard, mock.Anything, shardscanner.FixShardActivityParams{
 			CorruptedKeysEntries:        corruptedKeys,
 			ResolvedFixerWorkflowConfig: resolvedFixerWorkflowConfig,
-			ContextKey:                  "test-fixer",
 		}).Return(reports, nil)
 	}
 
@@ -256,7 +254,6 @@ func (s *workflowsSuite) TestFixerWorkflow_Success() {
 		ScannerWorkflowWorkflowID:     "test_wid",
 		ScannerWorkflowRunID:          "test_rid",
 		FixerWorkflowConfigOverwrites: fixerWorkflowConfigOverwrites,
-		ContextKey:                    "test-fixer",
 	})
 	s.True(env.IsWorkflowCompleted())
 	s.NoError(env.GetWorkflowError())

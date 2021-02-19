@@ -1,0 +1,8 @@
+bench:
+  name: "cadence-bench"
+  domains: ["cadence-bench", "cadence-bench-sync", "cadence-bench-batch"]
+  numTaskLists: 2
+
+cadence:
+  service: "cadence-frontend"
+  host: "127.0.0.1:7933"

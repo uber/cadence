@@ -86,6 +86,7 @@ type (
 	// Config is the domain config for domain handler
 	Config struct {
 		MinRetentionDays  dynamicconfig.IntPropertyFn
+		MaxRetentionDays  dynamicconfig.IntPropertyFn
 		MaxBadBinaryCount dynamicconfig.IntPropertyFnWithDomainFilter
 		FailoverCoolDown  dynamicconfig.DurationPropertyFnWithDomainFilter
 	}

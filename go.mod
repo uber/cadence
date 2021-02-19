@@ -56,7 +56,7 @@ require (
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.uber.org/atomic v1.5.1
-	go.uber.org/cadence v0.14.1
+	go.uber.org/cadence v0.16.0
 	go.uber.org/multierr v1.3.0
 	go.uber.org/net/metrics v1.2.0 // indirect
 	go.uber.org/thriftrw v1.20.2

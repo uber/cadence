@@ -119,7 +119,6 @@ func (s *concreteExectionsWorkflowsSuite) TestScannerWorkflow_Success() {
 		var customc shardscanner.CustomScannerConfig
 		env.OnActivity(shardscanner.ActivityScanShard, mock.Anything, shardscanner.ScanShardActivityParams{
 			Shards:        batch,
-			ContextKey:    "cadence-sys-executions-scanner-workflow",
 			ScannerConfig: customc,
 		}).Return(reports, nil)
 	}
