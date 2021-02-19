@@ -88,7 +88,7 @@ func (s *taskFetcherSuite) TearDownTest() {
 func (s *taskFetcherSuite) TestGetMessages() {
 	requestByShard := make(map[int32]*request)
 	token := &types.ReplicationToken{
-		ShardID:                common.Int32Ptr(0),
+		ShardID:                0,
 		LastProcessedMessageID: common.Int64Ptr(1),
 		LastRetrievedMessageID: common.Int64Ptr(2),
 	}
@@ -115,7 +115,7 @@ func (s *taskFetcherSuite) TestGetMessages() {
 func (s *taskFetcherSuite) TestFetchAndDistributeTasks() {
 	requestByShard := make(map[int32]*request)
 	token := &types.ReplicationToken{
-		ShardID:                common.Int32Ptr(0),
+		ShardID:                0,
 		LastProcessedMessageID: common.Int64Ptr(1),
 		LastRetrievedMessageID: common.Int64Ptr(2),
 	}

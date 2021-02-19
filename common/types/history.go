@@ -1757,7 +1757,7 @@ func (v *SyncActivityRequest) GetVersionHistory() (o *VersionHistory) {
 // SyncShardStatusRequest is an internal type (TBD...)
 type SyncShardStatusRequest struct {
 	SourceCluster *string `json:"sourceCluster,omitempty"`
-	ShardID       *int64  `json:"shardId,omitempty"`
+	ShardID       int64   `json:"shardId,omitempty"`
 	Timestamp     *int64  `json:"timestamp,omitempty"`
 }
 
@@ -1771,8 +1771,8 @@ func (v *SyncShardStatusRequest) GetSourceCluster() (o string) {
 
 // GetShardID is an internal getter (TBD...)
 func (v *SyncShardStatusRequest) GetShardID() (o int64) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }

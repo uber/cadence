@@ -423,7 +423,7 @@ func (v *HistoryTaskV2Attributes) GetNewRunEvents() (o *DataBlob) {
 // MergeDLQMessagesRequest is an internal type (TBD...)
 type MergeDLQMessagesRequest struct {
 	Type                  *DLQType `json:"type,omitempty"`
-	ShardID               *int32   `json:"shardID,omitempty"`
+	ShardID               int32    `json:"shardID,omitempty"`
 	SourceCluster         *string  `json:"sourceCluster,omitempty"`
 	InclusiveEndMessageID *int64   `json:"inclusiveEndMessageID,omitempty"`
 	MaximumPageSize       *int32   `json:"maximumPageSize,omitempty"`
@@ -440,8 +440,8 @@ func (v *MergeDLQMessagesRequest) GetType() (o DLQType) {
 
 // GetShardID is an internal getter (TBD...)
 func (v *MergeDLQMessagesRequest) GetShardID() (o int32) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }
@@ -494,7 +494,7 @@ func (v *MergeDLQMessagesResponse) GetNextPageToken() (o []byte) {
 // PurgeDLQMessagesRequest is an internal type (TBD...)
 type PurgeDLQMessagesRequest struct {
 	Type                  *DLQType `json:"type,omitempty"`
-	ShardID               *int32   `json:"shardID,omitempty"`
+	ShardID               int32    `json:"shardID,omitempty"`
 	SourceCluster         *string  `json:"sourceCluster,omitempty"`
 	InclusiveEndMessageID *int64   `json:"inclusiveEndMessageID,omitempty"`
 }
@@ -509,8 +509,8 @@ func (v *PurgeDLQMessagesRequest) GetType() (o DLQType) {
 
 // GetShardID is an internal getter (TBD...)
 func (v *PurgeDLQMessagesRequest) GetShardID() (o int32) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }
@@ -534,7 +534,7 @@ func (v *PurgeDLQMessagesRequest) GetInclusiveEndMessageID() (o int64) {
 // ReadDLQMessagesRequest is an internal type (TBD...)
 type ReadDLQMessagesRequest struct {
 	Type                  *DLQType `json:"type,omitempty"`
-	ShardID               *int32   `json:"shardID,omitempty"`
+	ShardID               int32    `json:"shardID,omitempty"`
 	SourceCluster         *string  `json:"sourceCluster,omitempty"`
 	InclusiveEndMessageID *int64   `json:"inclusiveEndMessageID,omitempty"`
 	MaximumPageSize       *int32   `json:"maximumPageSize,omitempty"`
@@ -551,8 +551,8 @@ func (v *ReadDLQMessagesRequest) GetType() (o DLQType) {
 
 // GetShardID is an internal getter (TBD...)
 func (v *ReadDLQMessagesRequest) GetShardID() (o int32) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }
@@ -918,15 +918,15 @@ const (
 
 // ReplicationToken is an internal type (TBD...)
 type ReplicationToken struct {
-	ShardID                *int32 `json:"shardID,omitempty"`
+	ShardID                int32  `json:"shardID,omitempty"`
 	LastRetrievedMessageID *int64 `json:"lastRetrievedMessageId,omitempty"`
 	LastProcessedMessageID *int64 `json:"lastProcessedMessageId,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
 func (v *ReplicationToken) GetShardID() (o int32) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }
@@ -1102,7 +1102,7 @@ func (v *SyncShardStatus) GetTimestamp() (o int64) {
 // SyncShardStatusTaskAttributes is an internal type (TBD...)
 type SyncShardStatusTaskAttributes struct {
 	SourceCluster *string `json:"sourceCluster,omitempty"`
-	ShardID       *int64  `json:"shardId,omitempty"`
+	ShardID       int64   `json:"shardId,omitempty"`
 	Timestamp     *int64  `json:"timestamp,omitempty"`
 }
 
@@ -1116,8 +1116,8 @@ func (v *SyncShardStatusTaskAttributes) GetSourceCluster() (o string) {
 
 // GetShardID is an internal getter (TBD...)
 func (v *SyncShardStatusTaskAttributes) GetShardID() (o int64) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }

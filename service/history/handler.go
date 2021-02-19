@@ -123,7 +123,6 @@ var (
 	errWorkflowIDNotSet        = &types.BadRequestError{Message: "WorkflowId is not set on request."}
 	errRunIDNotValid           = &types.BadRequestError{Message: "RunID is not valid UUID."}
 	errSourceClusterNotSet     = &types.BadRequestError{Message: "Source Cluster not set on request."}
-	errShardIDNotSet           = &types.BadRequestError{Message: "Shard ID not set on request."}
 	errTimestampNotSet         = &types.BadRequestError{Message: "Timestamp not set on request."}
 	errInvalidTaskType         = &types.BadRequestError{Message: "Invalid task type"}
 	errHistoryHostThrottle     = &types.ServiceBusyError{Message: "History host rps exceeded"}
@@ -1520,10 +1519,6 @@ func (h *handlerImpl) SyncShardStatus(
 
 	if syncShardStatusRequest.SourceCluster == nil {
 		return h.error(errSourceClusterNotSet, scope, "", "")
-	}
-
-	if syncShardStatusRequest.ShardID == nil {
-		return h.error(errShardIDNotSet, scope, "", "")
 	}
 
 	if syncShardStatusRequest.Timestamp == nil {
