@@ -449,7 +449,7 @@ func FromCancelTimerFailedEventAttributes(t *types.CancelTimerFailedEventAttribu
 	}
 	return &shared.CancelTimerFailedEventAttributes{
 		TimerId:                      &t.TimerID,
-		Cause:                        t.Cause,
+		Cause:                        &t.Cause,
 		DecisionTaskCompletedEventId: &t.DecisionTaskCompletedEventID,
 		Identity:                     &t.Identity,
 	}
@@ -462,7 +462,7 @@ func ToCancelTimerFailedEventAttributes(t *shared.CancelTimerFailedEventAttribut
 	}
 	return &types.CancelTimerFailedEventAttributes{
 		TimerID:                      t.GetTimerId(),
-		Cause:                        t.Cause,
+		Cause:                        t.GetCause(),
 		DecisionTaskCompletedEventID: t.GetDecisionTaskCompletedEventId(),
 		Identity:                     t.GetIdentity(),
 	}
@@ -3923,7 +3923,7 @@ func FromRequestCancelActivityTaskFailedEventAttributes(t *types.RequestCancelAc
 	}
 	return &shared.RequestCancelActivityTaskFailedEventAttributes{
 		ActivityId:                   &t.ActivityID,
-		Cause:                        t.Cause,
+		Cause:                        &t.Cause,
 		DecisionTaskCompletedEventId: &t.DecisionTaskCompletedEventID,
 	}
 }
@@ -3935,7 +3935,7 @@ func ToRequestCancelActivityTaskFailedEventAttributes(t *shared.RequestCancelAct
 	}
 	return &types.RequestCancelActivityTaskFailedEventAttributes{
 		ActivityID:                   t.GetActivityId(),
-		Cause:                        t.Cause,
+		Cause:                        t.GetCause(),
 		DecisionTaskCompletedEventID: t.GetDecisionTaskCompletedEventId(),
 	}
 }
@@ -4172,7 +4172,7 @@ func FromResetWorkflowExecutionRequest(t *types.ResetWorkflowExecutionRequest) *
 	return &shared.ResetWorkflowExecutionRequest{
 		Domain:                &t.Domain,
 		WorkflowExecution:     FromWorkflowExecution(t.WorkflowExecution),
-		Reason:                t.Reason,
+		Reason:                &t.Reason,
 		DecisionFinishEventId: &t.DecisionFinishEventID,
 		RequestId:             &t.RequestID,
 		SkipSignalReapply:     &t.SkipSignalReapply,
@@ -4187,7 +4187,7 @@ func ToResetWorkflowExecutionRequest(t *shared.ResetWorkflowExecutionRequest) *t
 	return &types.ResetWorkflowExecutionRequest{
 		Domain:                t.GetDomain(),
 		WorkflowExecution:     ToWorkflowExecution(t.WorkflowExecution),
-		Reason:                t.Reason,
+		Reason:                t.GetReason(),
 		DecisionFinishEventID: t.GetDecisionFinishEventId(),
 		RequestID:             t.GetRequestId(),
 		SkipSignalReapply:     t.GetSkipSignalReapply(),
@@ -5316,7 +5316,7 @@ func FromTerminateWorkflowExecutionRequest(t *types.TerminateWorkflowExecutionRe
 	return &shared.TerminateWorkflowExecutionRequest{
 		Domain:            &t.Domain,
 		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
-		Reason:            t.Reason,
+		Reason:            &t.Reason,
 		Details:           t.Details,
 		Identity:          &t.Identity,
 	}
@@ -5330,7 +5330,7 @@ func ToTerminateWorkflowExecutionRequest(t *shared.TerminateWorkflowExecutionReq
 	return &types.TerminateWorkflowExecutionRequest{
 		Domain:            t.GetDomain(),
 		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
-		Reason:            t.Reason,
+		Reason:            t.GetReason(),
 		Details:           t.Details,
 		Identity:          t.GetIdentity(),
 	}
@@ -5760,7 +5760,7 @@ func FromWorkflowExecutionCancelRequestedEventAttributes(t *types.WorkflowExecut
 		return nil
 	}
 	return &shared.WorkflowExecutionCancelRequestedEventAttributes{
-		Cause:                     t.Cause,
+		Cause:                     &t.Cause,
 		ExternalInitiatedEventId:  t.ExternalInitiatedEventID,
 		ExternalWorkflowExecution: FromWorkflowExecution(t.ExternalWorkflowExecution),
 		Identity:                  &t.Identity,
@@ -5773,7 +5773,7 @@ func ToWorkflowExecutionCancelRequestedEventAttributes(t *shared.WorkflowExecuti
 		return nil
 	}
 	return &types.WorkflowExecutionCancelRequestedEventAttributes{
-		Cause:                     t.Cause,
+		Cause:                     t.GetCause(),
 		ExternalInitiatedEventID:  t.ExternalInitiatedEventId,
 		ExternalWorkflowExecution: ToWorkflowExecution(t.ExternalWorkflowExecution),
 		Identity:                  t.GetIdentity(),
@@ -6140,7 +6140,7 @@ func FromWorkflowExecutionTerminatedEventAttributes(t *types.WorkflowExecutionTe
 		return nil
 	}
 	return &shared.WorkflowExecutionTerminatedEventAttributes{
-		Reason:   t.Reason,
+		Reason:   &t.Reason,
 		Details:  t.Details,
 		Identity: &t.Identity,
 	}
@@ -6152,7 +6152,7 @@ func ToWorkflowExecutionTerminatedEventAttributes(t *shared.WorkflowExecutionTer
 		return nil
 	}
 	return &types.WorkflowExecutionTerminatedEventAttributes{
-		Reason:   t.Reason,
+		Reason:   t.GetReason(),
 		Details:  t.Details,
 		Identity: t.GetIdentity(),
 	}
