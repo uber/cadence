@@ -81,7 +81,7 @@ $(BIN)/protoc-gen-go-grpc: go.mod | $(BIN)
 	$(call get_tool,google.golang.org/grpc/cmd/protoc-gen-go-grpc)
 
 $(BIN)/goveralls: go.mod | $(BIN)
-	$(call get_tool,github.com/dmetzgar/goveralls)
+	$(call get_tool,github.com/mattn/goveralls)
 
 # https://docs.buf.build/
 BUF_VERSION = 0.36.0
