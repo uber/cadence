@@ -191,16 +191,16 @@ func (s *domainHandlerCommonSuite) TestMergeDomainData_Nil() {
 func (s *domainHandlerCommonSuite) TestMergeBadBinaries_Overriding() {
 	out := s.handler.mergeBadBinaries(
 		map[string]*types.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason0")},
+			"k0": {Reason: "reason0"},
 		},
 		map[string]*types.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason2")},
+			"k0": {Reason: "reason2"},
 		}, nowInt64,
 	)
 
 	assert.Equal(s.T(), types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason2"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
+			"k0": {Reason: "reason2", CreatedTimeNano: common.Int64Ptr(nowInt64)},
 		},
 	}, out)
 }
@@ -208,17 +208,17 @@ func (s *domainHandlerCommonSuite) TestMergeBadBinaries_Overriding() {
 func (s *domainHandlerCommonSuite) TestMergeBadBinaries_Adding() {
 	out := s.handler.mergeBadBinaries(
 		map[string]*types.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason0")},
+			"k0": {Reason: "reason0"},
 		},
 		map[string]*types.BadBinaryInfo{
-			"k1": {Reason: common.StringPtr("reason2")},
+			"k1": {Reason: "reason2"},
 		}, nowInt64,
 	)
 
 	expected := types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason0")},
-			"k1": {Reason: common.StringPtr("reason2"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
+			"k0": {Reason: "reason0"},
+			"k1": {Reason: "reason2", CreatedTimeNano: common.Int64Ptr(nowInt64)},
 		},
 	}
 	assert.Equal(s.T(), expected, out)
@@ -227,18 +227,18 @@ func (s *domainHandlerCommonSuite) TestMergeBadBinaries_Adding() {
 func (s *domainHandlerCommonSuite) TestMergeBadBinaries_Merging() {
 	out := s.handler.mergeBadBinaries(
 		map[string]*types.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason0")},
+			"k0": {Reason: "reason0"},
 		},
 		map[string]*types.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason1")},
-			"k1": {Reason: common.StringPtr("reason2")},
+			"k0": {Reason: "reason1"},
+			"k1": {Reason: "reason2"},
 		}, nowInt64,
 	)
 
 	assert.Equal(s.T(), types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason1"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
-			"k1": {Reason: common.StringPtr("reason2"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
+			"k0": {Reason: "reason1", CreatedTimeNano: common.Int64Ptr(nowInt64)},
+			"k1": {Reason: "reason2", CreatedTimeNano: common.Int64Ptr(nowInt64)},
 		},
 	}, out)
 }
@@ -247,15 +247,15 @@ func (s *domainHandlerCommonSuite) TestMergeBadBinaries_Nil() {
 	out := s.handler.mergeBadBinaries(
 		nil,
 		map[string]*types.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason1")},
-			"k1": {Reason: common.StringPtr("reason2")},
+			"k0": {Reason: "reason1"},
+			"k1": {Reason: "reason2"},
 		}, nowInt64,
 	)
 
 	assert.Equal(s.T(), types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
-			"k0": {Reason: common.StringPtr("reason1"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
-			"k1": {Reason: common.StringPtr("reason2"), CreatedTimeNano: common.Int64Ptr(nowInt64)},
+			"k0": {Reason: "reason1", CreatedTimeNano: common.Int64Ptr(nowInt64)},
+			"k1": {Reason: "reason2", CreatedTimeNano: common.Int64Ptr(nowInt64)},
 		},
 	}, out)
 }
