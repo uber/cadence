@@ -28,7 +28,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
@@ -123,7 +122,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_Is
 		TaskType: &taskType,
 		DomainTaskAttributes: &types.DomainTaskAttributes{
 			DomainOperation: &domainOperation,
-			ID:              common.StringPtr(id),
+			ID:              id,
 			Info: &types.DomainInfo{
 				Name:        name,
 				Status:      &status,
@@ -144,9 +143,9 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_Is
 				ActiveClusterName: clusterActive,
 				Clusters:          s.domainReplicator.convertClusterReplicationConfigToThrift(clusters),
 			},
-			ConfigVersion:           common.Int64Ptr(configVersion),
-			FailoverVersion:         common.Int64Ptr(failoverVersion),
-			PreviousFailoverVersion: common.Int64Ptr(previousFailoverVersion),
+			ConfigVersion:           configVersion,
+			FailoverVersion:         failoverVersion,
+			PreviousFailoverVersion: previousFailoverVersion,
 		},
 	}).Return(nil).Once()
 
@@ -284,7 +283,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_IsGl
 		TaskType: &taskType,
 		DomainTaskAttributes: &types.DomainTaskAttributes{
 			DomainOperation: &domainOperation,
-			ID:              common.StringPtr(id),
+			ID:              id,
 			Info: &types.DomainInfo{
 				Name:        name,
 				Status:      &status,
@@ -305,9 +304,9 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_IsGl
 				ActiveClusterName: clusterActive,
 				Clusters:          s.domainReplicator.convertClusterReplicationConfigToThrift(clusters),
 			},
-			ConfigVersion:           common.Int64Ptr(configVersion),
-			FailoverVersion:         common.Int64Ptr(failoverVersion),
-			PreviousFailoverVersion: common.Int64Ptr(previousFailoverVersion),
+			ConfigVersion:           configVersion,
+			FailoverVersion:         failoverVersion,
+			PreviousFailoverVersion: previousFailoverVersion,
 		},
 	}).Return(nil).Once()
 

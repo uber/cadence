@@ -102,7 +102,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_RegisterDomainTask_Name
 
 	task := &types.DomainTaskAttributes{
 		DomainOperation: &operation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
 			Name:        name,
 			Status:      &status,
@@ -122,20 +122,20 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_RegisterDomainTask_Name
 			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
-		ConfigVersion:   common.Int64Ptr(configVersion),
-		FailoverVersion: common.Int64Ptr(failoverVersion),
+		ConfigVersion:   configVersion,
+		FailoverVersion: failoverVersion,
 	}
 
 	err := s.domainReplicator.Execute(task)
 	s.Nil(err)
 
-	task.ID = common.StringPtr(uuid.New())
+	task.ID = uuid.New()
 	task.Info.Name = name
 	err = s.domainReplicator.Execute(task)
 	s.NotNil(err)
 	s.IsType(&types.BadRequestError{}, err)
 
-	task.ID = common.StringPtr(id)
+	task.ID = id
 	task.Info.Name = "other random domain test name"
 	err = s.domainReplicator.Execute(task)
 	s.NotNil(err)
@@ -171,7 +171,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_RegisterDomainTask() {
 
 	task := &types.DomainTaskAttributes{
 		DomainOperation: &operation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
 			Name:        name,
 			Status:      &status,
@@ -191,8 +191,8 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_RegisterDomainTask() {
 			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
-		ConfigVersion:   common.Int64Ptr(configVersion),
-		FailoverVersion: common.Int64Ptr(failoverVersion),
+		ConfigVersion:   configVersion,
+		FailoverVersion: failoverVersion,
 	}
 
 	metadata, err := s.MetadataManager.GetMetadata(context.Background())
@@ -257,7 +257,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Domain
 
 	updateTask := &types.DomainTaskAttributes{
 		DomainOperation: &operation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
 			Name:        name,
 			Status:      &status,
@@ -277,8 +277,8 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Domain
 			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
-		ConfigVersion:   common.Int64Ptr(configVersion),
-		FailoverVersion: common.Int64Ptr(failoverVersion),
+		ConfigVersion:   configVersion,
+		FailoverVersion: failoverVersion,
 	}
 
 	metadata, err := s.MetadataManager.GetMetadata(context.Background())
@@ -339,7 +339,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 
 	createTask := &types.DomainTaskAttributes{
 		DomainOperation: &operation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
 			Name:        name,
 			Status:      &status,
@@ -359,8 +359,8 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
-		ConfigVersion:   common.Int64Ptr(configVersion),
-		FailoverVersion: common.Int64Ptr(failoverVersion),
+		ConfigVersion:   configVersion,
+		FailoverVersion: failoverVersion,
 	}
 
 	err := s.domainReplicator.Execute(createTask)
@@ -392,7 +392,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 	}
 	updateTask := &types.DomainTaskAttributes{
 		DomainOperation: &updateOperation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
 			Name:        name,
 			Status:      &updateStatus,
@@ -412,8 +412,8 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 			ActiveClusterName: updateClusterActive,
 			Clusters:          updateClusters,
 		},
-		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
-		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
+		ConfigVersion:   updateConfigVersion,
+		FailoverVersion: updateFailoverVersion,
 	}
 	metadata, err := s.MetadataManager.GetMetadata(context.Background())
 	s.Nil(err)
@@ -473,7 +473,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 
 	createTask := &types.DomainTaskAttributes{
 		DomainOperation: &operation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
 			Name:        name,
 			Status:      &status,
@@ -493,8 +493,8 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
-		ConfigVersion:   common.Int64Ptr(configVersion),
-		FailoverVersion: common.Int64Ptr(failoverVersion),
+		ConfigVersion:   configVersion,
+		FailoverVersion: failoverVersion,
 	}
 
 	err := s.domainReplicator.Execute(createTask)
@@ -526,7 +526,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 	}
 	updateTask := &types.DomainTaskAttributes{
 		DomainOperation: &updateOperation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
 			Name:        name,
 			Status:      &updateStatus,
@@ -546,9 +546,9 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 			ActiveClusterName: updateClusterActive,
 			Clusters:          updateClusters,
 		},
-		ConfigVersion:           common.Int64Ptr(updateConfigVersion),
-		FailoverVersion:         common.Int64Ptr(updateFailoverVersion),
-		PreviousFailoverVersion: common.Int64Ptr(previousFailoverVersion),
+		ConfigVersion:           updateConfigVersion,
+		FailoverVersion:         updateFailoverVersion,
+		PreviousFailoverVersion: previousFailoverVersion,
 	}
 	metadata, err := s.MetadataManager.GetMetadata(context.Background())
 	s.Nil(err)
@@ -609,7 +609,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 
 	createTask := &types.DomainTaskAttributes{
 		DomainOperation: &operation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
 			Name:        name,
 			Status:      &status,
@@ -629,9 +629,9 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
-		ConfigVersion:           common.Int64Ptr(configVersion),
-		FailoverVersion:         common.Int64Ptr(failoverVersion),
-		PreviousFailoverVersion: common.Int64Ptr(previousFailoverVersion),
+		ConfigVersion:           configVersion,
+		FailoverVersion:         failoverVersion,
+		PreviousFailoverVersion: previousFailoverVersion,
 	}
 
 	err := s.domainReplicator.Execute(createTask)
@@ -679,7 +679,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 	}
 	updateTask := &types.DomainTaskAttributes{
 		DomainOperation: &updateOperation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
 			Name:        name,
 			Status:      &updateStatus,
@@ -699,9 +699,9 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 			ActiveClusterName: updateClusterActive,
 			Clusters:          updateClusters,
 		},
-		ConfigVersion:           common.Int64Ptr(updateConfigVersion),
-		FailoverVersion:         common.Int64Ptr(updateFailoverVersion),
-		PreviousFailoverVersion: common.Int64Ptr(failoverVersion),
+		ConfigVersion:           updateConfigVersion,
+		FailoverVersion:         updateFailoverVersion,
+		PreviousFailoverVersion: failoverVersion,
 	}
 	metadata, err := s.MetadataManager.GetMetadata(context.Background())
 	s.Nil(err)
@@ -762,7 +762,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 
 	createTask := &types.DomainTaskAttributes{
 		DomainOperation: &operation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
 			Name:        name,
 			Status:      &status,
@@ -782,8 +782,8 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
-		ConfigVersion:   common.Int64Ptr(configVersion),
-		FailoverVersion: common.Int64Ptr(failoverVersion),
+		ConfigVersion:   configVersion,
+		FailoverVersion: failoverVersion,
 	}
 	metadata, err := s.MetadataManager.GetMetadata(context.Background())
 	s.Nil(err)
@@ -813,7 +813,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 	}
 	updateTask := &types.DomainTaskAttributes{
 		DomainOperation: &updateOperation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
 			Name:        name,
 			Status:      &updateStatus,
@@ -833,9 +833,9 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 			ActiveClusterName: updateClusterActive,
 			Clusters:          updateClusters,
 		},
-		ConfigVersion:           common.Int64Ptr(updateConfigVersion),
-		FailoverVersion:         common.Int64Ptr(updateFailoverVersion),
-		PreviousFailoverVersion: common.Int64Ptr(previousFailoverVersion),
+		ConfigVersion:           updateConfigVersion,
+		FailoverVersion:         updateFailoverVersion,
+		PreviousFailoverVersion: previousFailoverVersion,
 	}
 	err = s.domainReplicator.Execute(updateTask)
 	s.Nil(err)
