@@ -29,7 +29,12 @@ import (
 
 	"github.com/uber/cadence/bench/lib"
 	"github.com/uber/cadence/bench/load/basic"
+	"github.com/uber/cadence/bench/load/cancellation"
 	"github.com/uber/cadence/bench/load/common"
+	"github.com/uber/cadence/bench/load/concurrentexec"
+	"github.com/uber/cadence/bench/load/cron"
+	"github.com/uber/cadence/bench/load/signal"
+	"github.com/uber/cadence/bench/load/timer"
 )
 
 type (
@@ -132,8 +137,17 @@ func (w *loadTestWorker) newActivityContext(domainName string) context.Context {
 func registerWorkers(w worker.Worker) {
 	common.RegisterWorker(w)
 	basic.RegisterWorker(w)
+	signal.RegisterWorker(w)
+	timer.RegisterWorker(w)
+	concurrentexec.RegisterWorker(w)
+	cancellation.RegisterWorker(w)
 }
 
 func registerLaunchers(w worker.Worker) {
+	cron.RegisterLauncher(w)
+	signal.RegisterLauncher(w)
 	basic.RegisterLauncher(w)
+	timer.RegisterLauncher(w)
+	concurrentexec.RegisterLauncher(w)
+	cancellation.RegisterLauncher(w)
 }

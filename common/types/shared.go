@@ -1136,13 +1136,13 @@ func (v *ClientVersionNotSupportedError) GetSupportedVersions() (o string) {
 
 // CloseShardRequest is an internal type (TBD...)
 type CloseShardRequest struct {
-	ShardID *int32 `json:"shardID,omitempty"`
+	ShardID int32 `json:"shardID,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
 func (v *CloseShardRequest) GetShardID() (o int32) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }
@@ -2425,15 +2425,15 @@ func (v *DescribeHistoryHostResponse) GetAddress() (o string) {
 
 // DescribeQueueRequest is an internal type (TBD...)
 type DescribeQueueRequest struct {
-	ShardID     *int32 `json:"shardID,omitempty"`
+	ShardID     int32  `json:"shardID,omitempty"`
 	ClusterName string `json:"clusterName,omitempty"`
 	Type        *int32 `json:"type,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
 func (v *DescribeQueueRequest) GetShardID() (o int32) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }
@@ -6032,7 +6032,7 @@ func (v *RemoteSyncMatchedError) GetMessage() (o string) {
 
 // RemoveTaskRequest is an internal type (TBD...)
 type RemoveTaskRequest struct {
-	ShardID             *int32 `json:"shardID,omitempty"`
+	ShardID             int32  `json:"shardID,omitempty"`
 	Type                *int32 `json:"type,omitempty"`
 	TaskID              *int64 `json:"taskID,omitempty"`
 	VisibilityTimestamp *int64 `json:"visibilityTimestamp,omitempty"`
@@ -6040,8 +6040,8 @@ type RemoveTaskRequest struct {
 
 // GetShardID is an internal getter (TBD...)
 func (v *RemoveTaskRequest) GetShardID() (o int32) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }
@@ -6383,15 +6383,15 @@ func (v *ResetPoints) GetPoints() (o []*ResetPointInfo) {
 
 // ResetQueueRequest is an internal type (TBD...)
 type ResetQueueRequest struct {
-	ShardID     *int32 `json:"shardID,omitempty"`
+	ShardID     int32  `json:"shardID,omitempty"`
 	ClusterName string `json:"clusterName,omitempty"`
 	Type        *int32 `json:"type,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
 func (v *ResetQueueRequest) GetShardID() (o int32) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }
