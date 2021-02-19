@@ -27,6 +27,8 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
+
+	"github.com/uber/cadence/common"
 )
 
 // counters go here
@@ -84,7 +86,7 @@ func RecordActivityStart(
 	scheduledTimeNanos int64,
 ) (tally.Scope, tally.Stopwatch) {
 	scope = scope.Tagged(map[string]string{"operation": name})
-	elapsed := MaxInt64(0, time.Now().UnixNano()-scheduledTimeNanos)
+	elapsed := common.MaxInt64(0, time.Now().UnixNano()-scheduledTimeNanos)
 	scope.Timer(startLatency).Record(time.Duration(elapsed))
 	scope.Counter(startedCount).Inc(1)
 	sw := scope.Timer(latency).Start()
@@ -123,7 +125,7 @@ func recordWorkflowStart(
 ) *WorkflowMetricsProfile {
 	now := workflow.Now(ctx).UnixNano()
 	scope := workflowMetricScope(ctx, wfType)
-	elapsed := MaxInt64(0, now-scheduledTimeNanos)
+	elapsed := common.MaxInt64(0, now-scheduledTimeNanos)
 	scope.Timer(startLatency).Record(time.Duration(elapsed))
 	scope.Counter(startedCount).Inc(1)
 	return &WorkflowMetricsProfile{

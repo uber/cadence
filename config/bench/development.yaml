@@ -1,6 +1,6 @@
 bench:
   name: "cadence-bench"
-  domains: ["cadence-bench"]
+  domains: ["cadence-bench", "cadence-bench-sync", "cadence-bench-batch"]
   numTaskLists: 2
 
 cadence:

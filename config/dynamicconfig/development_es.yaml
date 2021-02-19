@@ -33,5 +33,6 @@ frontend.validSearchAttributes:
       RolloutID: 1
       CadenceChangeVersion: 1
       BinaryChecksums: 1
+      Passed: 4
 system.minRetentionDays:
     - value: 0
