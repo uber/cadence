@@ -34,4 +34,11 @@ import (
 	_ "github.com/golang/mock/mockgen"
 	// enumer for generating utility methods for const enums
 	_ "github.com/dmarkham/enumer"
+	// replaces golint - configurable and much faster
+	_ "github.com/mgechev/revive"
+	// coverage reporting
+	_ "github.com/dmetzgar/goveralls"
+
+	// health check for docker containers
+	_ "github.com/uber/tcheck"
 )
