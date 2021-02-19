@@ -6,23 +6,10 @@ ARG GOPROXY
 # Build tcheck binary
 FROM golang:1.13.6-alpine AS tcheck
 
-RUN apk add --update --no-cache ca-certificates git curl
-
-ENV GO111MODULE=off
-
-RUN curl https://glide.sh/get | sh
-
-ENV TCHECK_VERSION=v1.1.0
-
-RUN go get -d github.com/uber/tcheck
-RUN cd /go/src/github.com/uber/tcheck && git checkout ${TCHECK_VERSION}
-
 WORKDIR /go/src/github.com/uber/tcheck
 
-RUN glide install
-
-RUN go install
-
+COPY go.* ./
+RUN go build -mod=readonly -o /go/bin/tcheck github.com/uber/tcheck
 
 # Build Cadence binaries
 FROM golang:1.13.6-alpine AS builder
