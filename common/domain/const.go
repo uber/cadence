@@ -23,8 +23,11 @@ package domain
 import "time"
 
 const (
-	// MinRetentionDays is the minimal retention days for any domain
-	MinRetentionDays = 1
+	// DefaultMinWorkflowRetentionInDays is the minimal retention days for any domain
+	DefaultMinWorkflowRetentionInDays = 1
+
+	// DefaultMaxWorkflowRetentionInDays is a shared config in both Frontend and Worker, they need the same default value
+	DefaultMaxWorkflowRetentionInDays = 30
 
 	// MaxBadBinaries is the maximal number of bad client binaries stored in a domain
 	MaxBadBinaries = 10

@@ -36,7 +36,7 @@ func RunTool(args []string) error {
 
 // SetupSchema setups the cassandra schema
 func SetupSchema(config *SetupSchemaConfig) error {
-	if err := validateCQLClientConfig(&config.CQLClientConfig, false); err != nil {
+	if err := validateCQLClientConfig(&config.CQLClientConfig); err != nil {
 		return err
 	}
 	db, err := newCQLClient(&config.CQLClientConfig)
