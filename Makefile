@@ -2,13 +2,13 @@
 MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
-# set a V=1 env var for verbose output. V=0 (or empty) disables.
-# this is used to make a verbose flag, suitable for `$(if $(verbose),...)`.
-V ?= 0
-ifneq (0,$(V))
-verbose = 1
+# set a VERBOSE=1 env var for verbose output. VERBOSE=0 (or empty) disables.
+# this is used to make verbose flags, suitable for `$(if $(test_v),...)`.
+VERBOSE ?= 0
+ifneq (0,$(VERBOSE))
+test_v = 1
 else
-verbose =
+test_v =
 endif
 
 # a literal space value, for makefile purposes
@@ -25,7 +25,7 @@ GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
 TEST_TIMEOUT = 20m
-TEST_ARG ?= -race $(if $(verbose),-v) -timeout $(TEST_TIMEOUT)
+TEST_ARG ?= -race $(if $(test_v),-v) -timeout $(TEST_TIMEOUT)
 BUILD := .build
 BIN := $(BUILD)/bin
 TOOLS_CMD_ROOT=./cmd/tools
