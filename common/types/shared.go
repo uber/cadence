@@ -252,7 +252,7 @@ func (v *ActivityTaskFailedEventAttributes) GetIdentity() (o string) {
 type ActivityTaskScheduledEventAttributes struct {
 	ActivityID                    string        `json:"activityId,omitempty"`
 	ActivityType                  *ActivityType `json:"activityType,omitempty"`
-	Domain                        *string       `json:"domain,omitempty"`
+	Domain                        string        `json:"domain,omitempty"`
 	TaskList                      *TaskList     `json:"taskList,omitempty"`
 	Input                         []byte        `json:"input,omitempty"`
 	ScheduleToCloseTimeoutSeconds *int32        `json:"scheduleToCloseTimeoutSeconds,omitempty"`
@@ -282,8 +282,8 @@ func (v *ActivityTaskScheduledEventAttributes) GetActivityType() (o *ActivityTyp
 
 // GetDomain is an internal getter (TBD...)
 func (v *ActivityTaskScheduledEventAttributes) GetDomain() (o string) {
-	if v != nil && v.Domain != nil {
-		return *v.Domain
+	if v != nil {
+		return v.Domain
 	}
 	return
 }
