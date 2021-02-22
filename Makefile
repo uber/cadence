@@ -81,7 +81,7 @@ $(BIN)/protoc-gen-go-grpc: go.mod | $(BIN)
 	$(call get_tool,google.golang.org/grpc/cmd/protoc-gen-go-grpc)
 
 $(BIN)/goveralls: go.mod | $(BIN)
-	$(call get_tool,github.com/dmetzgar/goveralls)
+	$(call get_tool,github.com/mattn/goveralls)
 
 # https://docs.buf.build/
 BUF_VERSION = 0.36.0
@@ -442,8 +442,37 @@ start-mysql: bins
 start-postgres: bins
 	./cadence-server --zone postgres start
 
+# broken up into multiple += so I can interleave comments.
+# this all becomes a single line of output.
+# you must not use single-quotes within the string in this var.
+JQ_DEPS_AGE = jq '
+# only deal with things with updates
+JQ_DEPS_AGE += select(.Update)
+# allow additional filtering, e.g. DEPS_FILTER='$(JQ_DEPS_ONLY_DIRECT)'
+JQ_DEPS_AGE += $(DEPS_FILTER)
+# add "days between current version and latest version"
+JQ_DEPS_AGE += | . + {Age:(((.Update.Time | fromdate) - (.Time | fromdate))/60/60/24 | floor)}
+# add "days between latest version and now"
+JQ_DEPS_AGE += | . + {Available:((now - (.Update.Time | fromdate))/60/60/24 | floor)}
+# 123 days: library 	old_version -> new_version
+JQ_DEPS_AGE += | ([.Age, .Available] | max | tostring) + " days: " + .Path + "  \t" + .Version + " -> " + .Update.Version
+JQ_DEPS_AGE += '
+# remove surrounding quotes from output
+JQ_DEPS_AGE += --raw-output
+
+# exclude `"Indirect": true` dependencies.  direct ones have no "Indirect" key at all.
+JQ_DEPS_ONLY_DIRECT = | select(has("Indirect") | not)
+
+deps: ## Check for dependency updates, for things that are directly imported
+	@make --no-print-directory DEPS_FILTER='$(JQ_DEPS_ONLY_DIRECT)' deps-all
+
+deps-all: ## Check for all dependency updates
+	@go list -u -m -json all \
+		| $(JQ_DEPS_AGE) \
+		| sort -n
+
 help:
 	@# print help first, so it's visible
 	@printf "\033[36m%-20s\033[0m %s\n" 'help' 'Prints a help message showing any specially-commented targets'
 	@# then everything matching "target: ## magic comments"
-	@cat $(MAKEFILE_LIST) | grep -e "^[a-zA-Z_\-]*:.* ## .*" | sort | awk 'BEGIN {FS = ":.*? ## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@cat $(MAKEFILE_LIST) | grep -e "^[a-zA-Z_\-]*:.* ## .*" | awk 'BEGIN {FS = ":.*? ## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' | sort

@@ -15,7 +15,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2
 	github.com/dmarkham/enumer v1.5.1
-	github.com/dmetzgar/goveralls v0.0.3
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/emirpasic/gods v0.0.0-20190624094223-e689965507ab
 	github.com/fatih/color v1.10.0
@@ -35,6 +34,7 @@ require (
 	github.com/m3db/prometheus_common v0.1.0 // indirect
 	github.com/m3db/prometheus_procfs v0.8.1 // indirect
 	github.com/mattn/go-sqlite3 v1.11.0 // indirect
+	github.com/mattn/goveralls v0.0.7
 	github.com/mgechev/revive v1.0.3
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/olivere/elastic v6.2.21+incompatible
@@ -51,6 +51,7 @@ require (
 	github.com/uber-go/tally v3.3.15+incompatible
 	github.com/uber/ringpop-go v0.8.5
 	github.com/uber/tchannel-go v1.16.0
+	github.com/uber/tcheck v1.1.0
 	github.com/urfave/cli v1.22.4
 	github.com/valyala/fastjson v1.4.1
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c

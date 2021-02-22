@@ -555,23 +555,23 @@ func (v *BadBinaries) GetBinaries() (o map[string]*BadBinaryInfo) {
 
 // BadBinaryInfo is an internal type (TBD...)
 type BadBinaryInfo struct {
-	Reason          *string `json:"reason,omitempty"`
-	Operator        *string `json:"operator,omitempty"`
-	CreatedTimeNano *int64  `json:"createdTimeNano,omitempty"`
+	Reason          string `json:"reason,omitempty"`
+	Operator        string `json:"operator,omitempty"`
+	CreatedTimeNano *int64 `json:"createdTimeNano,omitempty"`
 }
 
 // GetReason is an internal getter (TBD...)
 func (v *BadBinaryInfo) GetReason() (o string) {
-	if v != nil && v.Reason != nil {
-		return *v.Reason
+	if v != nil {
+		return v.Reason
 	}
 	return
 }
 
 // GetOperator is an internal getter (TBD...)
 func (v *BadBinaryInfo) GetOperator() (o string) {
-	if v != nil && v.Operator != nil {
-		return *v.Operator
+	if v != nil {
+		return v.Operator
 	}
 	return
 }

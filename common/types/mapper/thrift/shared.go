@@ -358,8 +358,8 @@ func FromBadBinaryInfo(t *types.BadBinaryInfo) *shared.BadBinaryInfo {
 		return nil
 	}
 	return &shared.BadBinaryInfo{
-		Reason:          t.Reason,
-		Operator:        t.Operator,
+		Reason:          &t.Reason,
+		Operator:        &t.Operator,
 		CreatedTimeNano: t.CreatedTimeNano,
 	}
 }
@@ -370,8 +370,8 @@ func ToBadBinaryInfo(t *shared.BadBinaryInfo) *types.BadBinaryInfo {
 		return nil
 	}
 	return &types.BadBinaryInfo{
-		Reason:          t.Reason,
-		Operator:        t.Operator,
+		Reason:          t.GetReason(),
+		Operator:        t.GetOperator(),
 		CreatedTimeNano: t.CreatedTimeNano,
 	}
 }
