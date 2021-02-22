@@ -312,7 +312,7 @@ func (s *esCrossDCTestSuite) TestSearchAttributes() {
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 		},
-		Reason:   common.StringPtr(terminateReason),
+		Reason:   terminateReason,
 		Details:  terminateDetails,
 		Identity: identity,
 	})
@@ -340,7 +340,7 @@ GetHistoryLoop:
 		}
 
 		terminateEventAttributes := lastEvent.WorkflowExecutionTerminatedEventAttributes
-		s.Equal(terminateReason, *terminateEventAttributes.Reason)
+		s.Equal(terminateReason, terminateEventAttributes.Reason)
 		s.Equal(terminateDetails, terminateEventAttributes.Details)
 		s.Equal(identity, terminateEventAttributes.Identity)
 		executionTerminated = true
@@ -359,7 +359,7 @@ GetHistoryLoop2:
 			lastEvent := history.Events[len(history.Events)-1]
 			if *lastEvent.EventType == types.EventTypeWorkflowExecutionTerminated {
 				terminateEventAttributes := lastEvent.WorkflowExecutionTerminatedEventAttributes
-				s.Equal(terminateReason, *terminateEventAttributes.Reason)
+				s.Equal(terminateReason, terminateEventAttributes.Reason)
 				s.Equal(terminateDetails, terminateEventAttributes.Details)
 				s.Equal(identity, terminateEventAttributes.Identity)
 				eventsReplicated = true

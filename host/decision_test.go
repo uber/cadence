@@ -342,7 +342,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionSta
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		Reason:            common.StringPtr("test-reason"),
+		Reason:            "test-reason",
 	})
 	s.Nil(err)
 
@@ -417,7 +417,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		Reason:            common.StringPtr("test-reason"),
+		Reason:            "test-reason",
 	})
 	s.Nil(err)
 
@@ -503,7 +503,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		Reason:            common.StringPtr("test-reason"),
+		Reason:            "test-reason",
 	})
 	s.Nil(err)
 
@@ -606,7 +606,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		Reason:            common.StringPtr("test-reason"),
+		Reason:            "test-reason",
 	})
 	s.Nil(err)
 
@@ -711,7 +711,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		Reason:            common.StringPtr("test-reason"),
+		Reason:            "test-reason",
 	})
 	s.Nil(err)
 
@@ -822,7 +822,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		Reason:            common.StringPtr("test-reason"),
+		Reason:            "test-reason",
 	})
 	s.Nil(err)
 

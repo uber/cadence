@@ -65,7 +65,8 @@ type (
 		// HistoryScannerEnabled indicates if history scanner should be started as part of scanner
 		HistoryScannerEnabled dynamicconfig.BoolPropertyFn
 		// ShardScanners is a list of shard scanner configs
-		ShardScanners []*shardscanner.ScannerConfig
+		ShardScanners              []*shardscanner.ScannerConfig
+		MaxWorkflowRetentionInDays dynamicconfig.IntPropertyFn
 	}
 
 	// BootstrapParams contains the set of params needed to bootstrap

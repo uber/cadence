@@ -65,7 +65,7 @@ func AdminGetDLQMessages(c *cli.Context) {
 		resp, err := adminClient.ReadDLQMessages(ctx, &types.ReadDLQMessagesRequest{
 			Type:                  toQueueType(dlqType),
 			SourceCluster:         common.StringPtr(sourceCluster),
-			ShardID:               common.Int32Ptr(int32(shardID)),
+			ShardID:               int32(shardID),
 			InclusiveEndMessageID: common.Int64Ptr(lastMessageID),
 			MaximumPageSize:       common.Int32Ptr(defaultPageSize),
 			NextPageToken:         paginationToken,
@@ -149,7 +149,7 @@ func AdminPurgeDLQMessages(c *cli.Context) {
 		if err := adminClient.PurgeDLQMessages(ctx, &types.PurgeDLQMessagesRequest{
 			Type:                  toQueueType(dlqType),
 			SourceCluster:         common.StringPtr(sourceCluster),
-			ShardID:               common.Int32Ptr(int32(shardID)),
+			ShardID:               int32(shardID),
 			InclusiveEndMessageID: lastMessageID,
 		}); err != nil {
 			cancel()
@@ -178,7 +178,7 @@ func AdminMergeDLQMessages(c *cli.Context) {
 		request := &types.MergeDLQMessagesRequest{
 			Type:                  toQueueType(dlqType),
 			SourceCluster:         common.StringPtr(sourceCluster),
-			ShardID:               common.Int32Ptr(int32(shardID)),
+			ShardID:               int32(shardID),
 			InclusiveEndMessageID: lastMessageID,
 			MaximumPageSize:       common.Int32Ptr(defaultPageSize),
 		}

@@ -207,8 +207,8 @@ func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByName() {
 			BadBinaries: types.BadBinaries{
 				Binaries: map[string]*types.BadBinaryInfo{
 					"abc": {
-						Reason:          common.StringPtr("test reason"),
-						Operator:        common.StringPtr("test operator"),
+						Reason:          "test reason",
+						Operator:        "test operator",
 						CreatedTimeNano: common.Int64Ptr(123),
 					},
 				},

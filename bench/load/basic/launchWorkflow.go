@@ -37,6 +37,7 @@ import (
 
 	"github.com/uber/cadence/bench/lib"
 	"github.com/uber/cadence/bench/load/common"
+	c "github.com/uber/cadence/common"
 )
 
 const (
@@ -259,14 +260,14 @@ func verifyResultActivity(
 
 	// verify if any open workflow
 	listWorkflowRequest := &shared.ListOpenWorkflowExecutionsRequest{
-		Domain:          lib.StringPtr(info.WorkflowDomain),
+		Domain:          c.StringPtr(info.WorkflowDomain),
 		MaximumPageSize: &maxPageSize,
 		StartTimeFilter: &shared.StartTimeFilter{
-			EarliestTime: lib.Int64Ptr(params.WorkflowStartTime),
-			LatestTime:   lib.Int64Ptr(time.Now().UnixNano()),
+			EarliestTime: c.Int64Ptr(params.WorkflowStartTime),
+			LatestTime:   c.Int64Ptr(time.Now().UnixNano()),
 		},
 		TypeFilter: &shared.WorkflowTypeFilter{
-			Name: lib.StringPtr(stressWorkflowName),
+			Name: c.StringPtr(stressWorkflowName),
 		},
 	}
 	openWorkflow, err := cc.ListOpenWorkflow(ctx, listWorkflowRequest)
@@ -291,7 +292,7 @@ func verifyResultActivity(
 		params.WorkflowStartTime,
 		time.Now().UnixNano())
 	request := &shared.CountWorkflowExecutionsRequest{
-		Domain: lib.StringPtr(info.WorkflowDomain),
+		Domain: c.StringPtr(info.WorkflowDomain),
 		Query:  &query,
 	}
 	resp, err := cc.CountWorkflow(ctx, request)

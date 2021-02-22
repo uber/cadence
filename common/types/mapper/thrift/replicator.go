@@ -97,13 +97,13 @@ func FromDomainTaskAttributes(t *types.DomainTaskAttributes) *replicator.DomainT
 	}
 	return &replicator.DomainTaskAttributes{
 		DomainOperation:         FromDomainOperation(t.DomainOperation),
-		ID:                      t.ID,
+		ID:                      &t.ID,
 		Info:                    FromDomainInfo(t.Info),
 		Config:                  FromDomainConfiguration(t.Config),
 		ReplicationConfig:       FromDomainReplicationConfiguration(t.ReplicationConfig),
-		ConfigVersion:           t.ConfigVersion,
-		FailoverVersion:         t.FailoverVersion,
-		PreviousFailoverVersion: t.PreviousFailoverVersion,
+		ConfigVersion:           &t.ConfigVersion,
+		FailoverVersion:         &t.FailoverVersion,
+		PreviousFailoverVersion: &t.PreviousFailoverVersion,
 	}
 }
 
@@ -114,13 +114,13 @@ func ToDomainTaskAttributes(t *replicator.DomainTaskAttributes) *types.DomainTas
 	}
 	return &types.DomainTaskAttributes{
 		DomainOperation:         ToDomainOperation(t.DomainOperation),
-		ID:                      t.ID,
+		ID:                      t.GetID(),
 		Info:                    ToDomainInfo(t.Info),
 		Config:                  ToDomainConfiguration(t.Config),
 		ReplicationConfig:       ToDomainReplicationConfiguration(t.ReplicationConfig),
-		ConfigVersion:           t.ConfigVersion,
-		FailoverVersion:         t.FailoverVersion,
-		PreviousFailoverVersion: t.PreviousFailoverVersion,
+		ConfigVersion:           t.GetConfigVersion(),
+		FailoverVersion:         t.GetFailoverVersion(),
+		PreviousFailoverVersion: t.GetPreviousFailoverVersion(),
 	}
 }
 
@@ -333,7 +333,7 @@ func FromMergeDLQMessagesRequest(t *types.MergeDLQMessagesRequest) *replicator.M
 	}
 	return &replicator.MergeDLQMessagesRequest{
 		Type:                  FromDLQType(t.Type),
-		ShardID:               t.ShardID,
+		ShardID:               &t.ShardID,
 		SourceCluster:         t.SourceCluster,
 		InclusiveEndMessageID: t.InclusiveEndMessageID,
 		MaximumPageSize:       t.MaximumPageSize,
@@ -348,7 +348,7 @@ func ToMergeDLQMessagesRequest(t *replicator.MergeDLQMessagesRequest) *types.Mer
 	}
 	return &types.MergeDLQMessagesRequest{
 		Type:                  ToDLQType(t.Type),
-		ShardID:               t.ShardID,
+		ShardID:               t.GetShardID(),
 		SourceCluster:         t.SourceCluster,
 		InclusiveEndMessageID: t.InclusiveEndMessageID,
 		MaximumPageSize:       t.MaximumPageSize,
@@ -383,7 +383,7 @@ func FromPurgeDLQMessagesRequest(t *types.PurgeDLQMessagesRequest) *replicator.P
 	}
 	return &replicator.PurgeDLQMessagesRequest{
 		Type:                  FromDLQType(t.Type),
-		ShardID:               t.ShardID,
+		ShardID:               &t.ShardID,
 		SourceCluster:         t.SourceCluster,
 		InclusiveEndMessageID: t.InclusiveEndMessageID,
 	}
@@ -396,7 +396,7 @@ func ToPurgeDLQMessagesRequest(t *replicator.PurgeDLQMessagesRequest) *types.Pur
 	}
 	return &types.PurgeDLQMessagesRequest{
 		Type:                  ToDLQType(t.Type),
-		ShardID:               t.ShardID,
+		ShardID:               t.GetShardID(),
 		SourceCluster:         t.SourceCluster,
 		InclusiveEndMessageID: t.InclusiveEndMessageID,
 	}
@@ -409,7 +409,7 @@ func FromReadDLQMessagesRequest(t *types.ReadDLQMessagesRequest) *replicator.Rea
 	}
 	return &replicator.ReadDLQMessagesRequest{
 		Type:                  FromDLQType(t.Type),
-		ShardID:               t.ShardID,
+		ShardID:               &t.ShardID,
 		SourceCluster:         t.SourceCluster,
 		InclusiveEndMessageID: t.InclusiveEndMessageID,
 		MaximumPageSize:       t.MaximumPageSize,
@@ -424,7 +424,7 @@ func ToReadDLQMessagesRequest(t *replicator.ReadDLQMessagesRequest) *types.ReadD
 	}
 	return &types.ReadDLQMessagesRequest{
 		Type:                  ToDLQType(t.Type),
-		ShardID:               t.ShardID,
+		ShardID:               t.GetShardID(),
 		SourceCluster:         t.SourceCluster,
 		InclusiveEndMessageID: t.InclusiveEndMessageID,
 		MaximumPageSize:       t.MaximumPageSize,
@@ -622,7 +622,7 @@ func FromReplicationToken(t *types.ReplicationToken) *replicator.ReplicationToke
 		return nil
 	}
 	return &replicator.ReplicationToken{
-		ShardID:                t.ShardID,
+		ShardID:                &t.ShardID,
 		LastRetrievedMessageId: t.LastRetrievedMessageID,
 		LastProcessedMessageId: t.LastProcessedMessageID,
 	}
@@ -634,7 +634,7 @@ func ToReplicationToken(t *replicator.ReplicationToken) *types.ReplicationToken 
 		return nil
 	}
 	return &types.ReplicationToken{
-		ShardID:                t.ShardID,
+		ShardID:                t.GetShardID(),
 		LastRetrievedMessageID: t.LastRetrievedMessageId,
 		LastProcessedMessageID: t.LastProcessedMessageId,
 	}
@@ -715,7 +715,7 @@ func FromSyncShardStatusTaskAttributes(t *types.SyncShardStatusTaskAttributes) *
 	}
 	return &replicator.SyncShardStatusTaskAttributes{
 		SourceCluster: t.SourceCluster,
-		ShardId:       t.ShardID,
+		ShardId:       &t.ShardID,
 		Timestamp:     t.Timestamp,
 	}
 }
@@ -727,7 +727,7 @@ func ToSyncShardStatusTaskAttributes(t *replicator.SyncShardStatusTaskAttributes
 	}
 	return &types.SyncShardStatusTaskAttributes{
 		SourceCluster: t.SourceCluster,
-		ShardID:       t.ShardId,
+		ShardID:       t.GetShardId(),
 		Timestamp:     t.Timestamp,
 	}
 }

@@ -168,7 +168,7 @@ func BuildCLIOptions() *cli.App {
 				},
 				cli.BoolFlag{
 					Name:  schema.CLIFlagDryrun,
-					Usage: "do a dryrun",
+					Usage: "do a dryrun, which will print queries only without executing them",
 				},
 			},
 			Action: func(c *cli.Context) {

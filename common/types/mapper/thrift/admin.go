@@ -98,7 +98,7 @@ func FromAdminDescribeWorkflowExecutionResponse(t *types.AdminDescribeWorkflowEx
 		return nil
 	}
 	return &admin.DescribeWorkflowExecutionResponse{
-		ShardId:                t.ShardID,
+		ShardId:                &t.ShardID,
 		HistoryAddr:            t.HistoryAddr,
 		MutableStateInCache:    t.MutableStateInCache,
 		MutableStateInDatabase: t.MutableStateInDatabase,
@@ -111,7 +111,7 @@ func ToAdminDescribeWorkflowExecutionResponse(t *admin.DescribeWorkflowExecution
 		return nil
 	}
 	return &types.AdminDescribeWorkflowExecutionResponse{
-		ShardID:                t.ShardId,
+		ShardID:                t.GetShardId(),
 		HistoryAddr:            t.HistoryAddr,
 		MutableStateInCache:    t.MutableStateInCache,
 		MutableStateInDatabase: t.MutableStateInDatabase,
