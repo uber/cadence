@@ -156,7 +156,7 @@ func (s *nDCIntegrationTestSuite) GetReplicationMessagesMock(
 
 		replicationMessage := &types.ReplicationMessages{
 			ReplicationTasks:       tasks,
-			LastRetrievedMessageID: &tasks[len(tasks)-1].SourceTaskID,
+			LastRetrievedMessageID: tasks[len(tasks)-1].SourceTaskID,
 			HasMore:                true,
 		}
 
