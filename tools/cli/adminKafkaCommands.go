@@ -493,7 +493,7 @@ func doRereplicate(
 			DomainID:      domainID,
 			WorkflowID:    wid,
 			RunID:         rid,
-			RemoteCluster: common.StringPtr(sourceCluster),
+			RemoteCluster: sourceCluster,
 			EndEventID:    common.Int64Ptr(endEventID + 1),
 			EndVersion:    common.Int64Ptr(endEventVersion),
 		},

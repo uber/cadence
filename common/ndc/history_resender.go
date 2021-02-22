@@ -28,7 +28,6 @@ import (
 	"time"
 
 	adminClient "github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
@@ -291,7 +290,7 @@ func (n *HistoryResenderImpl) getHistory(
 		StartEventVersion: startEventVersion,
 		EndEventID:        endEventID,
 		EndEventVersion:   endEventVersion,
-		MaximumPageSize:   common.Int32Ptr(pageSize),
+		MaximumPageSize:   pageSize,
 		NextPageToken:     token,
 	})
 	if err != nil {

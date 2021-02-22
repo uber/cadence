@@ -239,7 +239,7 @@ func (wh *WorkflowHandler) Health(ctx context.Context) (*types.HealthStatus, err
 
 	return &types.HealthStatus{
 		Ok:  status == HealthStatusOK,
-		Msg: &msg,
+		Msg: msg,
 	}, nil
 }
 
@@ -1681,15 +1681,15 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 			TaskToken:     completeRequest.TaskToken,
 			CompletedType: types.QueryTaskCompletedTypeFailed.Ptr(),
 			QueryResult:   nil,
-			ErrorMessage:  common.StringPtr(err.Error()),
+			ErrorMessage:  err.Error(),
 		}
 	}
 
 	call := yarpc.CallFromContext(ctx)
 
 	completeRequest.WorkerVersionInfo = &types.WorkerVersionInfo{
-		Impl:           common.StringPtr(call.Header(common.ClientImplHeaderName)),
-		FeatureVersion: common.StringPtr(call.Header(common.FeatureVersionHeaderName)),
+		Impl:           call.Header(common.ClientImplHeaderName),
+		FeatureVersion: call.Header(common.FeatureVersionHeaderName),
 	}
 	matchingRequest := &types.MatchingRespondQueryTaskCompletedRequest{
 		DomainUUID:       queryTaskToken.DomainID,
@@ -3943,8 +3943,8 @@ func (wh *WorkflowHandler) GetClusterInfo(
 
 	return &types.ClusterInfo{
 		SupportedClientVersions: &types.SupportedClientVersions{
-			GoSdk:   common.StringPtr(client.SupportedGoSDKVersion),
-			JavaSdk: common.StringPtr(client.SupportedJavaSDKVersion),
+			GoSdk:   client.SupportedGoSDKVersion,
+			JavaSdk: client.SupportedJavaSDKVersion,
 		},
 	}, nil
 }

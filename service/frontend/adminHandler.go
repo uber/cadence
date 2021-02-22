@@ -268,7 +268,7 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	}
 	return &types.AdminDescribeWorkflowExecutionResponse{
 		ShardID:                shardIDForOutput,
-		HistoryAddr:            common.StringPtr(historyAddr),
+		HistoryAddr:            historyAddr,
 		MutableStateInDatabase: resp2.MutableStateInDatabase,
 		MutableStateInCache:    resp2.MutableStateInCache,
 	}, err
@@ -284,7 +284,7 @@ func (adh *adminHandlerImpl) RemoveTask(
 	scope, sw := adh.startRequestProfile(metrics.AdminRemoveTaskScope)
 	defer sw.Stop()
 
-	if request == nil || request.Type == nil || request.TaskID == nil {
+	if request == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
 	err := adh.GetHistoryClient().RemoveTask(ctx, request)
@@ -318,7 +318,7 @@ func (adh *adminHandlerImpl) ResetQueue(
 	scope, sw := adh.startRequestProfile(metrics.AdminResetQueueScope)
 	defer sw.Stop()
 
-	if request == nil || request.Type == nil {
+	if request == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
 	if request.GetClusterName() == "" {
@@ -339,7 +339,7 @@ func (adh *adminHandlerImpl) DescribeQueue(
 	scope, sw := adh.startRequestProfile(metrics.AdminDescribeQueueScope)
 	defer sw.Stop()
 
-	if request == nil || request.Type == nil {
+	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 	if request.GetClusterName() == "" {
@@ -524,7 +524,7 @@ func (adh *adminHandlerImpl) DescribeCluster(
 		}
 
 		membershipInfo.CurrentHost = &types.HostInfo{
-			Identity: common.StringPtr(currentHost.Identity()),
+			Identity: currentHost.Identity(),
 		}
 
 		members, err := monitor.GetReachableMembers()
@@ -544,13 +544,13 @@ func (adh *adminHandlerImpl) DescribeCluster(
 			var servers []*types.HostInfo
 			for _, server := range resolver.Members() {
 				servers = append(servers, &types.HostInfo{
-					Identity: common.StringPtr(server.Identity()),
+					Identity: server.Identity(),
 				})
 			}
 
 			rings = append(rings, &types.RingInfo{
-				Role:        common.StringPtr(role),
-				MemberCount: common.Int32Ptr(int32(resolver.MemberCount())),
+				Role:        role,
+				MemberCount: int32(resolver.MemberCount()),
 				Members:     servers,
 			})
 		}
@@ -559,8 +559,8 @@ func (adh *adminHandlerImpl) DescribeCluster(
 
 	return &types.DescribeClusterResponse{
 		SupportedClientVersions: &types.SupportedClientVersions{
-			GoSdk:   common.StringPtr(client.SupportedGoSDKVersion),
-			JavaSdk: common.StringPtr(client.SupportedJavaSDKVersion),
+			GoSdk:   client.SupportedGoSDKVersion,
+			JavaSdk: client.SupportedJavaSDKVersion,
 		},
 		MembershipInfo: membershipInfo,
 	}, nil
@@ -736,7 +736,7 @@ func (adh *adminHandlerImpl) ReadDLQMessages(
 	}
 
 	if request.GetMaximumPageSize() <= 0 {
-		request.MaximumPageSize = common.Int32Ptr(common.ReadDLQMessagesPageSize)
+		request.MaximumPageSize = common.ReadDLQMessagesPageSize
 	}
 
 	if request.InclusiveEndMessageID == nil {

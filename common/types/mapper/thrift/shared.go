@@ -1562,11 +1562,11 @@ func FromDescribeHistoryHostResponse(t *types.DescribeHistoryHostResponse) *shar
 		return nil
 	}
 	return &shared.DescribeHistoryHostResponse{
-		NumberOfShards:        t.NumberOfShards,
+		NumberOfShards:        &t.NumberOfShards,
 		ShardIDs:              t.ShardIDs,
 		DomainCache:           FromDomainCacheInfo(t.DomainCache),
-		ShardControllerStatus: t.ShardControllerStatus,
-		Address:               t.Address,
+		ShardControllerStatus: &t.ShardControllerStatus,
+		Address:               &t.Address,
 	}
 }
 
@@ -1576,11 +1576,11 @@ func ToDescribeHistoryHostResponse(t *shared.DescribeHistoryHostResponse) *types
 		return nil
 	}
 	return &types.DescribeHistoryHostResponse{
-		NumberOfShards:        t.NumberOfShards,
+		NumberOfShards:        t.GetNumberOfShards(),
 		ShardIDs:              t.ShardIDs,
 		DomainCache:           ToDomainCacheInfo(t.DomainCache),
-		ShardControllerStatus: t.ShardControllerStatus,
-		Address:               t.Address,
+		ShardControllerStatus: t.GetShardControllerStatus(),
+		Address:               t.GetAddress(),
 	}
 }
 
@@ -1592,7 +1592,7 @@ func FromDescribeQueueRequest(t *types.DescribeQueueRequest) *shared.DescribeQue
 	return &shared.DescribeQueueRequest{
 		ShardID:     &t.ShardID,
 		ClusterName: &t.ClusterName,
-		Type:        t.Type,
+		Type:        &t.Type,
 	}
 }
 
@@ -1604,7 +1604,7 @@ func ToDescribeQueueRequest(t *shared.DescribeQueueRequest) *types.DescribeQueue
 	return &types.DescribeQueueRequest{
 		ShardID:     t.GetShardID(),
 		ClusterName: t.GetClusterName(),
-		Type:        t.Type,
+		Type:        t.GetType(),
 	}
 }
 
@@ -1752,8 +1752,8 @@ func FromDomainCacheInfo(t *types.DomainCacheInfo) *shared.DomainCacheInfo {
 		return nil
 	}
 	return &shared.DomainCacheInfo{
-		NumOfItemsInCacheByID:   t.NumOfItemsInCacheByID,
-		NumOfItemsInCacheByName: t.NumOfItemsInCacheByName,
+		NumOfItemsInCacheByID:   &t.NumOfItemsInCacheByID,
+		NumOfItemsInCacheByName: &t.NumOfItemsInCacheByName,
 	}
 }
 
@@ -1763,8 +1763,8 @@ func ToDomainCacheInfo(t *shared.DomainCacheInfo) *types.DomainCacheInfo {
 		return nil
 	}
 	return &types.DomainCacheInfo{
-		NumOfItemsInCacheByID:   t.NumOfItemsInCacheByID,
-		NumOfItemsInCacheByName: t.NumOfItemsInCacheByName,
+		NumOfItemsInCacheByID:   t.GetNumOfItemsInCacheByID(),
+		NumOfItemsInCacheByName: t.GetNumOfItemsInCacheByName(),
 	}
 }
 
@@ -1955,8 +1955,8 @@ func FromEntityNotExistsError(t *types.EntityNotExistsError) *shared.EntityNotEx
 	}
 	return &shared.EntityNotExistsError{
 		Message:        t.Message,
-		CurrentCluster: t.CurrentCluster,
-		ActiveCluster:  t.ActiveCluster,
+		CurrentCluster: &t.CurrentCluster,
+		ActiveCluster:  &t.ActiveCluster,
 	}
 }
 
@@ -1967,8 +1967,8 @@ func ToEntityNotExistsError(t *shared.EntityNotExistsError) *types.EntityNotExis
 	}
 	return &types.EntityNotExistsError{
 		Message:        t.Message,
-		CurrentCluster: t.CurrentCluster,
-		ActiveCluster:  t.ActiveCluster,
+		CurrentCluster: t.GetCurrentCluster(),
+		ActiveCluster:  t.GetActiveCluster(),
 	}
 }
 
@@ -3191,7 +3191,7 @@ func FromPendingChildExecutionInfo(t *types.PendingChildExecutionInfo) *shared.P
 		WorkflowID:        &t.WorkflowID,
 		RunID:             &t.RunID,
 		WorkflowTypName:   &t.WorkflowTypName,
-		InitiatedID:       t.InitiatedID,
+		InitiatedID:       &t.InitiatedID,
 		ParentClosePolicy: FromParentClosePolicy(t.ParentClosePolicy),
 	}
 }
@@ -3205,7 +3205,7 @@ func ToPendingChildExecutionInfo(t *shared.PendingChildExecutionInfo) *types.Pen
 		WorkflowID:        t.GetWorkflowID(),
 		RunID:             t.GetRunID(),
 		WorkflowTypName:   t.GetWorkflowTypName(),
-		InitiatedID:       t.InitiatedID,
+		InitiatedID:       t.GetInitiatedID(),
 		ParentClosePolicy: ToParentClosePolicy(t.ParentClosePolicy),
 	}
 }
@@ -3384,7 +3384,7 @@ func FromPollForDecisionTaskResponse(t *types.PollForDecisionTaskResponse) *shar
 		PreviousStartedEventId:    t.PreviousStartedEventID,
 		StartedEventId:            &t.StartedEventID,
 		Attempt:                   &t.Attempt,
-		BacklogCountHint:          t.BacklogCountHint,
+		BacklogCountHint:          &t.BacklogCountHint,
 		History:                   FromHistory(t.History),
 		NextPageToken:             t.NextPageToken,
 		Query:                     FromWorkflowQuery(t.Query),
@@ -3407,7 +3407,7 @@ func ToPollForDecisionTaskResponse(t *shared.PollForDecisionTaskResponse) *types
 		PreviousStartedEventID:    t.PreviousStartedEventId,
 		StartedEventID:            t.GetStartedEventId(),
 		Attempt:                   t.GetAttempt(),
-		BacklogCountHint:          t.BacklogCountHint,
+		BacklogCountHint:          t.GetBacklogCountHint(),
 		History:                   ToHistory(t.History),
 		NextPageToken:             t.NextPageToken,
 		Query:                     ToWorkflowQuery(t.Query),
@@ -3877,8 +3877,8 @@ func FromRemoveTaskRequest(t *types.RemoveTaskRequest) *shared.RemoveTaskRequest
 	}
 	return &shared.RemoveTaskRequest{
 		ShardID:             &t.ShardID,
-		Type:                t.Type,
-		TaskID:              t.TaskID,
+		Type:                &t.Type,
+		TaskID:              &t.TaskID,
 		VisibilityTimestamp: t.VisibilityTimestamp,
 	}
 }
@@ -3890,8 +3890,8 @@ func ToRemoveTaskRequest(t *shared.RemoveTaskRequest) *types.RemoveTaskRequest {
 	}
 	return &types.RemoveTaskRequest{
 		ShardID:             t.GetShardID(),
-		Type:                t.Type,
-		TaskID:              t.TaskID,
+		Type:                t.GetType(),
+		TaskID:              t.GetTaskID(),
 		VisibilityTimestamp: t.VisibilityTimestamp,
 	}
 }
@@ -4110,7 +4110,7 @@ func FromResetQueueRequest(t *types.ResetQueueRequest) *shared.ResetQueueRequest
 	return &shared.ResetQueueRequest{
 		ShardID:     &t.ShardID,
 		ClusterName: &t.ClusterName,
-		Type:        t.Type,
+		Type:        &t.Type,
 	}
 }
 
@@ -4122,7 +4122,7 @@ func ToResetQueueRequest(t *shared.ResetQueueRequest) *types.ResetQueueRequest {
 	return &types.ResetQueueRequest{
 		ShardID:     t.GetShardID(),
 		ClusterName: t.GetClusterName(),
-		Type:        t.Type,
+		Type:        t.GetType(),
 	}
 }
 
@@ -4475,7 +4475,7 @@ func FromRespondQueryTaskCompletedRequest(t *types.RespondQueryTaskCompletedRequ
 		TaskToken:         t.TaskToken,
 		CompletedType:     FromQueryTaskCompletedType(t.CompletedType),
 		QueryResult:       t.QueryResult,
-		ErrorMessage:      t.ErrorMessage,
+		ErrorMessage:      &t.ErrorMessage,
 		WorkerVersionInfo: FromWorkerVersionInfo(t.WorkerVersionInfo),
 	}
 }
@@ -4489,7 +4489,7 @@ func ToRespondQueryTaskCompletedRequest(t *shared.RespondQueryTaskCompletedReque
 		TaskToken:         t.TaskToken,
 		CompletedType:     ToQueryTaskCompletedType(t.CompletedType),
 		QueryResult:       t.QueryResult,
-		ErrorMessage:      t.ErrorMessage,
+		ErrorMessage:      t.GetErrorMessage(),
 		WorkerVersionInfo: ToWorkerVersionInfo(t.WorkerVersionInfo),
 	}
 }
@@ -5114,8 +5114,8 @@ func FromSupportedClientVersions(t *types.SupportedClientVersions) *shared.Suppo
 		return nil
 	}
 	return &shared.SupportedClientVersions{
-		GoSdk:   t.GoSdk,
-		JavaSdk: t.JavaSdk,
+		GoSdk:   &t.GoSdk,
+		JavaSdk: &t.JavaSdk,
 	}
 }
 
@@ -5125,8 +5125,8 @@ func ToSupportedClientVersions(t *shared.SupportedClientVersions) *types.Support
 		return nil
 	}
 	return &types.SupportedClientVersions{
-		GoSdk:   t.GoSdk,
-		JavaSdk: t.JavaSdk,
+		GoSdk:   t.GetGoSdk(),
+		JavaSdk: t.GetJavaSdk(),
 	}
 }
 
@@ -5136,8 +5136,8 @@ func FromTaskIDBlock(t *types.TaskIDBlock) *shared.TaskIDBlock {
 		return nil
 	}
 	return &shared.TaskIDBlock{
-		StartID: t.StartID,
-		EndID:   t.EndID,
+		StartID: &t.StartID,
+		EndID:   &t.EndID,
 	}
 }
 
@@ -5147,8 +5147,8 @@ func ToTaskIDBlock(t *shared.TaskIDBlock) *types.TaskIDBlock {
 		return nil
 	}
 	return &types.TaskIDBlock{
-		StartID: t.StartID,
-		EndID:   t.EndID,
+		StartID: t.GetStartID(),
+		EndID:   t.GetEndID(),
 	}
 }
 
@@ -5232,8 +5232,8 @@ func FromTaskListPartitionMetadata(t *types.TaskListPartitionMetadata) *shared.T
 		return nil
 	}
 	return &shared.TaskListPartitionMetadata{
-		Key:           t.Key,
-		OwnerHostName: t.OwnerHostName,
+		Key:           &t.Key,
+		OwnerHostName: &t.OwnerHostName,
 	}
 }
 
@@ -5243,8 +5243,8 @@ func ToTaskListPartitionMetadata(t *shared.TaskListPartitionMetadata) *types.Tas
 		return nil
 	}
 	return &types.TaskListPartitionMetadata{
-		Key:           t.Key,
-		OwnerHostName: t.OwnerHostName,
+		Key:           t.GetKey(),
+		OwnerHostName: t.GetOwnerHostName(),
 	}
 }
 
@@ -5254,10 +5254,10 @@ func FromTaskListStatus(t *types.TaskListStatus) *shared.TaskListStatus {
 		return nil
 	}
 	return &shared.TaskListStatus{
-		BacklogCountHint: t.BacklogCountHint,
-		ReadLevel:        t.ReadLevel,
-		AckLevel:         t.AckLevel,
-		RatePerSecond:    t.RatePerSecond,
+		BacklogCountHint: &t.BacklogCountHint,
+		ReadLevel:        &t.ReadLevel,
+		AckLevel:         &t.AckLevel,
+		RatePerSecond:    &t.RatePerSecond,
 		TaskIDBlock:      FromTaskIDBlock(t.TaskIDBlock),
 	}
 }
@@ -5268,10 +5268,10 @@ func ToTaskListStatus(t *shared.TaskListStatus) *types.TaskListStatus {
 		return nil
 	}
 	return &types.TaskListStatus{
-		BacklogCountHint: t.BacklogCountHint,
-		ReadLevel:        t.ReadLevel,
-		AckLevel:         t.AckLevel,
-		RatePerSecond:    t.RatePerSecond,
+		BacklogCountHint: t.GetBacklogCountHint(),
+		ReadLevel:        t.GetReadLevel(),
+		AckLevel:         t.GetAckLevel(),
+		RatePerSecond:    t.GetRatePerSecond(),
 		TaskIDBlock:      ToTaskIDBlock(t.TaskIDBlock),
 	}
 }
@@ -5626,7 +5626,7 @@ func FromVersionHistories(t *types.VersionHistories) *shared.VersionHistories {
 		return nil
 	}
 	return &shared.VersionHistories{
-		CurrentVersionHistoryIndex: t.CurrentVersionHistoryIndex,
+		CurrentVersionHistoryIndex: &t.CurrentVersionHistoryIndex,
 		Histories:                  FromVersionHistoryArray(t.Histories),
 	}
 }
@@ -5637,7 +5637,7 @@ func ToVersionHistories(t *shared.VersionHistories) *types.VersionHistories {
 		return nil
 	}
 	return &types.VersionHistories{
-		CurrentVersionHistoryIndex: t.CurrentVersionHistoryIndex,
+		CurrentVersionHistoryIndex: t.GetCurrentVersionHistoryIndex(),
 		Histories:                  ToVersionHistoryArray(t.Histories),
 	}
 }
@@ -5692,8 +5692,8 @@ func FromWorkerVersionInfo(t *types.WorkerVersionInfo) *shared.WorkerVersionInfo
 		return nil
 	}
 	return &shared.WorkerVersionInfo{
-		Impl:           t.Impl,
-		FeatureVersion: t.FeatureVersion,
+		Impl:           &t.Impl,
+		FeatureVersion: &t.FeatureVersion,
 	}
 }
 
@@ -5703,8 +5703,8 @@ func ToWorkerVersionInfo(t *shared.WorkerVersionInfo) *types.WorkerVersionInfo {
 		return nil
 	}
 	return &types.WorkerVersionInfo{
-		Impl:           t.Impl,
-		FeatureVersion: t.FeatureVersion,
+		Impl:           t.GetImpl(),
+		FeatureVersion: t.GetFeatureVersion(),
 	}
 }
 
@@ -5736,7 +5736,7 @@ func FromWorkflowExecutionAlreadyStartedError(t *types.WorkflowExecutionAlreadyS
 		return nil
 	}
 	return &shared.WorkflowExecutionAlreadyStartedError{
-		Message:        t.Message,
+		Message:        &t.Message,
 		StartRequestId: &t.StartRequestID,
 		RunId:          &t.RunID,
 	}
@@ -5748,7 +5748,7 @@ func ToWorkflowExecutionAlreadyStartedError(t *shared.WorkflowExecutionAlreadySt
 		return nil
 	}
 	return &types.WorkflowExecutionAlreadyStartedError{
-		Message:        t.Message,
+		Message:        t.GetMessage(),
 		StartRequestID: t.GetStartRequestId(),
 		RunID:          t.GetRunId(),
 	}
@@ -5982,8 +5982,8 @@ func FromWorkflowExecutionFilter(t *types.WorkflowExecutionFilter) *shared.Workf
 		return nil
 	}
 	return &shared.WorkflowExecutionFilter{
-		WorkflowId: t.WorkflowID,
-		RunId:      t.RunID,
+		WorkflowId: &t.WorkflowID,
+		RunId:      &t.RunID,
 	}
 }
 
@@ -5993,8 +5993,8 @@ func ToWorkflowExecutionFilter(t *shared.WorkflowExecutionFilter) *types.Workflo
 		return nil
 	}
 	return &types.WorkflowExecutionFilter{
-		WorkflowID: t.WorkflowId,
-		RunID:      t.RunId,
+		WorkflowID: t.GetWorkflowId(),
+		RunID:      t.GetRunId(),
 	}
 }
 
@@ -6009,14 +6009,14 @@ func FromWorkflowExecutionInfo(t *types.WorkflowExecutionInfo) *shared.WorkflowE
 		StartTime:        t.StartTime,
 		CloseTime:        t.CloseTime,
 		CloseStatus:      FromWorkflowExecutionCloseStatus(t.CloseStatus),
-		HistoryLength:    t.HistoryLength,
+		HistoryLength:    &t.HistoryLength,
 		ParentDomainId:   t.ParentDomainID,
 		ParentExecution:  FromWorkflowExecution(t.ParentExecution),
 		ExecutionTime:    t.ExecutionTime,
 		Memo:             FromMemo(t.Memo),
 		SearchAttributes: FromSearchAttributes(t.SearchAttributes),
 		AutoResetPoints:  FromResetPoints(t.AutoResetPoints),
-		TaskList:         t.TaskList,
+		TaskList:         &t.TaskList,
 	}
 }
 
@@ -6031,14 +6031,14 @@ func ToWorkflowExecutionInfo(t *shared.WorkflowExecutionInfo) *types.WorkflowExe
 		StartTime:        t.StartTime,
 		CloseTime:        t.CloseTime,
 		CloseStatus:      ToWorkflowExecutionCloseStatus(t.CloseStatus),
-		HistoryLength:    t.HistoryLength,
+		HistoryLength:    t.GetHistoryLength(),
 		ParentDomainID:   t.ParentDomainId,
 		ParentExecution:  ToWorkflowExecution(t.ParentExecution),
 		ExecutionTime:    t.ExecutionTime,
 		Memo:             ToMemo(t.Memo),
 		SearchAttributes: ToSearchAttributes(t.SearchAttributes),
 		AutoResetPoints:  ToResetPoints(t.AutoResetPoints),
-		TaskList:         t.TaskList,
+		TaskList:         t.GetTaskList(),
 	}
 }
 
@@ -6228,7 +6228,7 @@ func FromWorkflowQuery(t *types.WorkflowQuery) *shared.WorkflowQuery {
 		return nil
 	}
 	return &shared.WorkflowQuery{
-		QueryType: t.QueryType,
+		QueryType: &t.QueryType,
 		QueryArgs: t.QueryArgs,
 	}
 }
@@ -6239,7 +6239,7 @@ func ToWorkflowQuery(t *shared.WorkflowQuery) *types.WorkflowQuery {
 		return nil
 	}
 	return &types.WorkflowQuery{
-		QueryType: t.QueryType,
+		QueryType: t.GetQueryType(),
 		QueryArgs: t.QueryArgs,
 	}
 }

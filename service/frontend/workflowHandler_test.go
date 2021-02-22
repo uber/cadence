@@ -157,7 +157,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 		},
 		ExecutionFilter: &types.WorkflowExecutionFilter{
-			WorkflowID: common.StringPtr("wid"),
+			WorkflowID: "wid",
 		},
 	}
 	_, err := wh.ListOpenWorkflowExecutions(context.Background(), listRequest)
@@ -181,7 +181,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 		},
 		ExecutionFilter: &types.WorkflowExecutionFilter{
-			WorkflowID: common.StringPtr("wid"),
+			WorkflowID: "wid",
 		},
 	}
 	_, err = wh.ListClosedWorkflowExecutions(context.Background(), listRequest2)

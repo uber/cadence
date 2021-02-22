@@ -165,7 +165,7 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 			},
 			StartEventID:      common.Int64Ptr(startEventID),
 			StartEventVersion: common.Int64Ptr(startEventVersion),
-			MaximumPageSize:   common.Int32Ptr(pageSize),
+			MaximumPageSize:   pageSize,
 			NextPageToken:     nil,
 		}).Return(&types.GetWorkflowExecutionRawHistoryV2Response{
 		HistoryBatches: []*types.DataBlob{blob},
@@ -185,7 +185,7 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 			},
 			StartEventID:      common.Int64Ptr(startEventID),
 			StartEventVersion: common.Int64Ptr(startEventVersion),
-			MaximumPageSize:   common.Int32Ptr(pageSize),
+			MaximumPageSize:   pageSize,
 			NextPageToken:     token,
 		}).Return(&types.GetWorkflowExecutionRawHistoryV2Response{
 		HistoryBatches: []*types.DataBlob{blob},
@@ -334,7 +334,7 @@ func (s *historyResenderSuite) TestGetHistory() {
 		StartEventVersion: common.Int64Ptr(version),
 		EndEventID:        common.Int64Ptr(endEventID),
 		EndEventVersion:   common.Int64Ptr(version),
-		MaximumPageSize:   common.Int32Ptr(pageSize),
+		MaximumPageSize:   pageSize,
 		NextPageToken:     nextTokenIn,
 	}).Return(response, nil).Times(1)
 

@@ -362,7 +362,7 @@ func (p *taskProcessorImpl) handleSyncShardStatus(
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
 	return p.historyEngine.SyncShardStatus(ctx, &types.SyncShardStatusRequest{
-		SourceCluster: common.StringPtr(p.sourceCluster),
+		SourceCluster: p.sourceCluster,
 		ShardID:       int64(p.shard.GetShardID()),
 		Timestamp:     status.Timestamp,
 	})

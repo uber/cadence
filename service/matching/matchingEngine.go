@@ -665,8 +665,8 @@ func (e *matchingEngineImpl) listTaskListPartitions(
 		host, _ := e.getHostInfo(partition)
 		partitionHostInfo = append(partitionHostInfo,
 			&types.TaskListPartitionMetadata{
-				Key:           common.StringPtr(partition),
-				OwnerHostName: common.StringPtr(host),
+				Key:           partition,
+				OwnerHostName: host,
 			})
 	}
 	return partitionHostInfo, nil
@@ -766,7 +766,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 	if task.query != nil {
 		response.Query = task.query.request.QueryRequest.Query
 	}
-	response.BacklogCountHint = common.Int64Ptr(task.backlogCountHint)
+	response.BacklogCountHint = task.backlogCountHint
 	return response
 }
 
@@ -829,7 +829,7 @@ func (e *matchingEngineImpl) recordDecisionTaskStarted(
 	request := &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        task.event.DomainID,
 		WorkflowExecution: task.workflowExecution(),
-		ScheduleID:        &task.event.ScheduleID,
+		ScheduleID:        task.event.ScheduleID,
 		TaskID:            task.event.TaskID,
 		RequestID:         uuid.New(),
 		PollRequest:       pollReq,
@@ -858,7 +858,7 @@ func (e *matchingEngineImpl) recordActivityTaskStarted(
 	request := &types.RecordActivityTaskStartedRequest{
 		DomainUUID:        task.event.DomainID,
 		WorkflowExecution: task.workflowExecution(),
-		ScheduleID:        &task.event.ScheduleID,
+		ScheduleID:        task.event.ScheduleID,
 		TaskID:            task.event.TaskID,
 		RequestID:         uuid.New(),
 		PollRequest:       pollReq,

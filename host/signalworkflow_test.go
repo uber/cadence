@@ -1363,7 +1363,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 		},
 		ExecutionFilter: &types.WorkflowExecutionFilter{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 	}
 	listResp, err := s.engine.ListOpenWorkflowExecutions(createContext(), listOpenRequest)
@@ -1400,7 +1400,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 			LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 		},
 		ExecutionFilter: &types.WorkflowExecutionFilter{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 	}
 	listClosedResp, err := s.engine.ListClosedWorkflowExecutions(createContext(), listClosedRequest)

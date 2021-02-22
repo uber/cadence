@@ -245,7 +245,7 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 		WorkflowType:           &workflowType,
 		PreviousStartedEventID: common.Int64Ptr(scheduleID),
 		Attempt:                0,
-		BacklogCountHint:       common.Int64Ptr(1),
+		BacklogCountHint:       1,
 		StickyExecutionEnabled: true,
 		WorkflowExecutionTaskList: &types.TaskList{
 			Name: tl,
@@ -491,7 +491,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 		func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest) (*types.RecordActivityTaskStartedResponse, error) {
 			s.logger.Debug("Mock Received RecordActivityTaskStartedRequest")
 			resp := &types.RecordActivityTaskStartedResponse{
-				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
+				ScheduledEvent: newActivityTaskScheduledEvent(taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
 						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: taskList.Name},
@@ -604,7 +604,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 		func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest) (*types.RecordActivityTaskStartedResponse, error) {
 			s.logger.Debug("Mock Received RecordActivityTaskStartedRequest")
 			return &types.RecordActivityTaskStartedResponse{
-				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
+				ScheduledEvent: newActivityTaskScheduledEvent(taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
 						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: taskList.Name},
@@ -826,7 +826,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 		func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest) (*types.RecordActivityTaskStartedResponse, error) {
 			s.logger.Debug("Mock Received RecordActivityTaskStartedRequest")
 			return &types.RecordActivityTaskStartedResponse{
-				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
+				ScheduledEvent: newActivityTaskScheduledEvent(taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
 						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: taskList.Name},
@@ -1131,7 +1131,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 
 			startedTasks[taskRequest.TaskID] = true
 			return &types.RecordActivityTaskStartedResponse{
-				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
+				ScheduledEvent: newActivityTaskScheduledEvent(taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
 						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: taskList.Name},
@@ -1606,7 +1606,7 @@ func (s *matchingEngineSuite) setupRecordActivityTaskStartedMock(tlName string) 
 		func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest) (*types.RecordActivityTaskStartedResponse, error) {
 			s.logger.Debug("Mock Received RecordActivityTaskStartedRequest")
 			return &types.RecordActivityTaskStartedResponse{
-				ScheduledEvent: newActivityTaskScheduledEvent(*taskRequest.ScheduleID, 0,
+				ScheduledEvent: newActivityTaskScheduledEvent(taskRequest.ScheduleID, 0,
 					&types.ScheduleActivityTaskDecisionAttributes{
 						ActivityID:                    activityID,
 						TaskList:                      &types.TaskList{Name: tlName},

@@ -511,8 +511,8 @@ var describeTaskListResponse = &shared.DescribeTaskListResponse{
 func (s *cliAppSuite) TestAdminDescribeWorkflow() {
 	resp := &types.AdminDescribeWorkflowExecutionResponse{
 		ShardID:                "test-shard-id",
-		HistoryAddr:            common.StringPtr("ip:port"),
-		MutableStateInDatabase: common.StringPtr("{\"ExecutionInfo\":{\"BranchToken\":\"WQsACgAAACQ2MzI5YzEzMi1mMGI0LTQwZmUtYWYxMS1hODVmMDA3MzAzODQLABQAAAAkOWM5OWI1MjItMGEyZi00NTdmLWEyNDgtMWU0OTA0ZDg4YzVhDwAeDAAAAAAA\"}}"),
+		HistoryAddr:            "ip:port",
+		MutableStateInDatabase: "{\"ExecutionInfo\":{\"BranchToken\":\"WQsACgAAACQ2MzI5YzEzMi1mMGI0LTQwZmUtYWYxMS1hODVmMDA3MzAzODQLABQAAAAkOWM5OWI1MjItMGEyZi00NTdmLWEyNDgtMWU0OTA0ZDg4YzVhDwAeDAAAAAAA\"}}",
 	}
 
 	s.serverAdminClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil)

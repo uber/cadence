@@ -1138,7 +1138,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 			StartEventVersion: startEventVersion,
 			EndEventID:        endEventID,
 			EndEventVersion:   endEventVersion,
-			MaximumPageSize:   common.Int32Ptr(int32(pageSize)),
+			MaximumPageSize:   int32(pageSize),
 			NextPageToken:     token,
 		})
 	}

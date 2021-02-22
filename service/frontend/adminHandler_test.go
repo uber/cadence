@@ -156,7 +156,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 			StartEventVersion: common.Int64Ptr(100),
 			EndEventID:        common.Int64Ptr(10),
 			EndEventVersion:   common.Int64Ptr(100),
-			MaximumPageSize:   common.Int32Ptr(1),
+			MaximumPageSize:   1,
 			NextPageToken:     nil,
 		})
 	s.Error(err)
@@ -175,7 +175,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 			StartEventVersion: common.Int64Ptr(100),
 			EndEventID:        common.Int64Ptr(10),
 			EndEventVersion:   common.Int64Ptr(100),
-			MaximumPageSize:   common.Int32Ptr(1),
+			MaximumPageSize:   1,
 			NextPageToken:     nil,
 		})
 	s.Error(err)
@@ -194,7 +194,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnInvali
 			StartEventVersion: common.Int64Ptr(100),
 			EndEventID:        common.Int64Ptr(10),
 			EndEventVersion:   common.Int64Ptr(100),
-			MaximumPageSize:   common.Int32Ptr(-1),
+			MaximumPageSize:   -1,
 			NextPageToken:     nil,
 		})
 	s.Error(err)
@@ -214,7 +214,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnDomain
 			StartEventVersion: common.Int64Ptr(100),
 			EndEventID:        common.Int64Ptr(10),
 			EndEventVersion:   common.Int64Ptr(100),
-			MaximumPageSize:   common.Int32Ptr(1),
+			MaximumPageSize:   1,
 			NextPageToken:     nil,
 		})
 	s.Error(err)
@@ -252,7 +252,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 			StartEventVersion: common.Int64Ptr(100),
 			EndEventID:        common.Int64Ptr(10),
 			EndEventVersion:   common.Int64Ptr(100),
-			MaximumPageSize:   common.Int32Ptr(10),
+			MaximumPageSize:   10,
 			NextPageToken:     nil,
 		})
 	s.NoError(err)
@@ -283,7 +283,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_SameStartIDAnd
 			},
 			StartEventID:      common.Int64Ptr(10),
 			StartEventVersion: common.Int64Ptr(100),
-			MaximumPageSize:   common.Int32Ptr(1),
+			MaximumPageSize:   1,
 			NextPageToken:     nil,
 		})
 	s.Nil(resp.NextPageToken)
@@ -309,7 +309,7 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 		StartEventVersion: common.Int64Ptr(inputStartVersion),
 		EndEventID:        common.Int64Ptr(inputEndEventID),
 		EndEventVersion:   common.Int64Ptr(inputEndVersion),
-		MaximumPageSize:   common.Int32Ptr(10),
+		MaximumPageSize:   10,
 		NextPageToken:     nil,
 	}
 
@@ -342,7 +342,7 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 		StartEventVersion: nil,
 		EndEventID:        common.Int64Ptr(inputEndEventID),
 		EndEventVersion:   common.Int64Ptr(inputEndVersion),
-		MaximumPageSize:   common.Int32Ptr(10),
+		MaximumPageSize:   10,
 		NextPageToken:     nil,
 	}
 
@@ -375,7 +375,7 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 		StartEventVersion: common.Int64Ptr(inputStartVersion),
 		EndEventID:        nil,
 		EndEventVersion:   nil,
-		MaximumPageSize:   common.Int32Ptr(10),
+		MaximumPageSize:   10,
 		NextPageToken:     nil,
 	}
 
@@ -413,7 +413,7 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 		StartEventVersion: common.Int64Ptr(20),
 		EndEventID:        common.Int64Ptr(inputEndEventID),
 		EndEventVersion:   common.Int64Ptr(inputEndVersion),
-		MaximumPageSize:   common.Int32Ptr(10),
+		MaximumPageSize:   10,
 		NextPageToken:     nil,
 	}
 
