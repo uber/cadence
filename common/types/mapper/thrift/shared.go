@@ -1513,7 +1513,7 @@ func FromDescribeDomainResponse(t *types.DescribeDomainResponse) *shared.Describ
 		DomainInfo:               FromDomainInfo(t.DomainInfo),
 		Configuration:            FromDomainConfiguration(t.Configuration),
 		ReplicationConfiguration: FromDomainReplicationConfiguration(t.ReplicationConfiguration),
-		FailoverVersion:          t.FailoverVersion,
+		FailoverVersion:          &t.FailoverVersion,
 		IsGlobalDomain:           &t.IsGlobalDomain,
 	}
 }
@@ -1527,7 +1527,7 @@ func ToDescribeDomainResponse(t *shared.DescribeDomainResponse) *types.DescribeD
 		DomainInfo:               ToDomainInfo(t.DomainInfo),
 		Configuration:            ToDomainConfiguration(t.Configuration),
 		ReplicationConfiguration: ToDomainReplicationConfiguration(t.ReplicationConfiguration),
-		FailoverVersion:          t.FailoverVersion,
+		FailoverVersion:          t.GetFailoverVersion(),
 		IsGlobalDomain:           t.GetIsGlobalDomain(),
 	}
 }
@@ -5559,7 +5559,7 @@ func FromUpdateDomainResponse(t *types.UpdateDomainResponse) *shared.UpdateDomai
 		DomainInfo:               FromDomainInfo(t.DomainInfo),
 		Configuration:            FromDomainConfiguration(t.Configuration),
 		ReplicationConfiguration: FromDomainReplicationConfiguration(t.ReplicationConfiguration),
-		FailoverVersion:          t.FailoverVersion,
+		FailoverVersion:          &t.FailoverVersion,
 		IsGlobalDomain:           &t.IsGlobalDomain,
 	}
 }
@@ -5573,7 +5573,7 @@ func ToUpdateDomainResponse(t *shared.UpdateDomainResponse) *types.UpdateDomainR
 		DomainInfo:               ToDomainInfo(t.DomainInfo),
 		Configuration:            ToDomainConfiguration(t.Configuration),
 		ReplicationConfiguration: ToDomainReplicationConfiguration(t.ReplicationConfiguration),
-		FailoverVersion:          t.FailoverVersion,
+		FailoverVersion:          t.GetFailoverVersion(),
 		IsGlobalDomain:           t.GetIsGlobalDomain(),
 	}
 }

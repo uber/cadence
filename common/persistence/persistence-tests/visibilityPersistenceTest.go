@@ -768,7 +768,7 @@ func (s *VisibilityPersistenceSuite) assertOpenExecutionEquals(
 	s.Equal(s.nanosToMillis(req.StartTimestamp), s.nanosToMillis(resp.GetStartTime()))
 	s.Nil(resp.CloseTime)
 	s.Nil(resp.CloseStatus)
-	s.Nil(resp.HistoryLength)
+	s.Zero(resp.HistoryLength)
 }
 
 func (s *VisibilityPersistenceSuite) nanosToMillis(nanos int64) int64 {

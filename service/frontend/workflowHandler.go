@@ -3818,7 +3818,7 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 			}
 		}
 		if failoverVersion == nil {
-			failoverVersion = resp.FailoverVersion
+			failoverVersion = &resp.FailoverVersion
 		}
 		if *failoverVersion != resp.GetFailoverVersion() {
 			return &types.BadRequestError{

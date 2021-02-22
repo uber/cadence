@@ -2299,7 +2299,7 @@ type DescribeDomainResponse struct {
 	DomainInfo               *DomainInfo                     `json:"domainInfo,omitempty"`
 	Configuration            *DomainConfiguration            `json:"configuration,omitempty"`
 	ReplicationConfiguration *DomainReplicationConfiguration `json:"replicationConfiguration,omitempty"`
-	FailoverVersion          *int64                          `json:"failoverVersion,omitempty"`
+	FailoverVersion          int64                           `json:"failoverVersion,omitempty"`
 	IsGlobalDomain           bool                            `json:"isGlobalDomain,omitempty"`
 }
 
@@ -2329,8 +2329,8 @@ func (v *DescribeDomainResponse) GetReplicationConfiguration() (o *DomainReplica
 
 // GetFailoverVersion is an internal getter (TBD...)
 func (v *DescribeDomainResponse) GetFailoverVersion() (o int64) {
-	if v != nil && v.FailoverVersion != nil {
-		return *v.FailoverVersion
+	if v != nil {
+		return v.FailoverVersion
 	}
 	return
 }
@@ -8857,7 +8857,7 @@ type UpdateDomainResponse struct {
 	DomainInfo               *DomainInfo                     `json:"domainInfo,omitempty"`
 	Configuration            *DomainConfiguration            `json:"configuration,omitempty"`
 	ReplicationConfiguration *DomainReplicationConfiguration `json:"replicationConfiguration,omitempty"`
-	FailoverVersion          *int64                          `json:"failoverVersion,omitempty"`
+	FailoverVersion          int64                           `json:"failoverVersion,omitempty"`
 	IsGlobalDomain           bool                            `json:"isGlobalDomain,omitempty"`
 }
 
@@ -8887,8 +8887,8 @@ func (v *UpdateDomainResponse) GetReplicationConfiguration() (o *DomainReplicati
 
 // GetFailoverVersion is an internal getter (TBD...)
 func (v *UpdateDomainResponse) GetFailoverVersion() (o int64) {
-	if v != nil && v.FailoverVersion != nil {
-		return *v.FailoverVersion
+	if v != nil {
+		return v.FailoverVersion
 	}
 	return
 }
