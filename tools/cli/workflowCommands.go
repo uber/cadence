@@ -1536,7 +1536,7 @@ func ResetWorkflow(c *cli.Context) {
 			WorkflowID: wid,
 			RunID:      resetBaseRunID,
 		},
-		Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), reason)),
+		Reason:                fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), reason),
 		DecisionFinishEventID: decisionFinishID,
 		RequestID:             uuid.New(),
 		SkipSignalReapply:     c.Bool(FlagSkipSignalReapply),
@@ -1806,7 +1806,7 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 			},
 			DecisionFinishEventID: decisionFinishID,
 			RequestID:             uuid.New(),
-			Reason:                common.StringPtr(fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), params.reason)),
+			Reason:                fmt.Sprintf("%v:%v", getCurrentUserFromEnv(), params.reason),
 			SkipSignalReapply:     params.skipSignalReapply,
 		})
 
