@@ -167,7 +167,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 	// test list open by workflow type
 	listRequest.ExecutionFilter = nil
 	listRequest.TypeFilter = &types.WorkflowTypeFilter{
-		Name: common.StringPtr("workflow-type"),
+		Name: "workflow-type",
 	}
 	_, err = wh.ListOpenWorkflowExecutions(context.Background(), listRequest)
 	s.Error(err)
@@ -191,7 +191,7 @@ func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
 	// test list close by workflow type
 	listRequest2.ExecutionFilter = nil
 	listRequest2.TypeFilter = &types.WorkflowTypeFilter{
-		Name: common.StringPtr("workflow-type"),
+		Name: "workflow-type",
 	}
 	_, err = wh.ListClosedWorkflowExecutions(context.Background(), listRequest2)
 	s.Error(err)

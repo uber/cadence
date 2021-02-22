@@ -32,7 +32,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/metrics"
@@ -148,7 +147,7 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks() {
 					},
 				},
 			},
-			LastRetrievedMessageID: common.Int64Ptr(lastMessageID),
+			LastRetrievedMessageID: lastMessageID,
 		},
 	}
 	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(resp, nil)
@@ -188,7 +187,7 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks_FailedOnExecuti
 					},
 				},
 			},
-			LastRetrievedMessageID: common.Int64Ptr(lastMessageID),
+			LastRetrievedMessageID: lastMessageID,
 		},
 	}
 	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(resp, nil)
@@ -220,7 +219,7 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks_FailedOnDLQ() {
 					},
 				},
 			},
-			LastRetrievedMessageID: common.Int64Ptr(lastMessageID),
+			LastRetrievedMessageID: lastMessageID,
 		},
 	}
 	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(resp, nil)

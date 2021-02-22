@@ -930,7 +930,7 @@ func FromCountWorkflowExecutionsResponse(t *types.CountWorkflowExecutionsRespons
 		return nil
 	}
 	return &shared.CountWorkflowExecutionsResponse{
-		Count: t.Count,
+		Count: &t.Count,
 	}
 }
 
@@ -940,7 +940,7 @@ func ToCountWorkflowExecutionsResponse(t *shared.CountWorkflowExecutionsResponse
 		return nil
 	}
 	return &types.CountWorkflowExecutionsResponse{
-		Count: t.Count,
+		Count: t.GetCount(),
 	}
 }
 
@@ -3426,7 +3426,7 @@ func FromPollerInfo(t *types.PollerInfo) *shared.PollerInfo {
 	return &shared.PollerInfo{
 		LastAccessTime: t.LastAccessTime,
 		Identity:       &t.Identity,
-		RatePerSecond:  t.RatePerSecond,
+		RatePerSecond:  &t.RatePerSecond,
 	}
 }
 
@@ -3438,7 +3438,7 @@ func ToPollerInfo(t *shared.PollerInfo) *types.PollerInfo {
 	return &types.PollerInfo{
 		LastAccessTime: t.LastAccessTime,
 		Identity:       t.GetIdentity(),
-		RatePerSecond:  t.RatePerSecond,
+		RatePerSecond:  t.GetRatePerSecond(),
 	}
 }
 
@@ -6252,7 +6252,7 @@ func FromWorkflowQueryResult(t *types.WorkflowQueryResult) *shared.WorkflowQuery
 	return &shared.WorkflowQueryResult{
 		ResultType:   FromQueryResultType(t.ResultType),
 		Answer:       t.Answer,
-		ErrorMessage: t.ErrorMessage,
+		ErrorMessage: &t.ErrorMessage,
 	}
 }
 
@@ -6264,7 +6264,7 @@ func ToWorkflowQueryResult(t *shared.WorkflowQueryResult) *types.WorkflowQueryRe
 	return &types.WorkflowQueryResult{
 		ResultType:   ToQueryResultType(t.ResultType),
 		Answer:       t.Answer,
-		ErrorMessage: t.ErrorMessage,
+		ErrorMessage: t.GetErrorMessage(),
 	}
 }
 
@@ -6294,7 +6294,7 @@ func FromWorkflowTypeFilter(t *types.WorkflowTypeFilter) *shared.WorkflowTypeFil
 		return nil
 	}
 	return &shared.WorkflowTypeFilter{
-		Name: t.Name,
+		Name: &t.Name,
 	}
 }
 
@@ -6304,7 +6304,7 @@ func ToWorkflowTypeFilter(t *shared.WorkflowTypeFilter) *types.WorkflowTypeFilte
 		return nil
 	}
 	return &types.WorkflowTypeFilter{
-		Name: t.Name,
+		Name: t.GetName(),
 	}
 }
 

@@ -1407,13 +1407,13 @@ func (v *CountWorkflowExecutionsRequest) GetQuery() (o string) {
 
 // CountWorkflowExecutionsResponse is an internal type (TBD...)
 type CountWorkflowExecutionsResponse struct {
-	Count *int64 `json:"count,omitempty"`
+	Count int64 `json:"count,omitempty"`
 }
 
 // GetCount is an internal getter (TBD...)
 func (v *CountWorkflowExecutionsResponse) GetCount() (o int64) {
-	if v != nil && v.Count != nil {
-		return *v.Count
+	if v != nil {
+		return v.Count
 	}
 	return
 }
@@ -5370,9 +5370,9 @@ func (v *PollForDecisionTaskResponse) GetQueries() (o map[string]*WorkflowQuery)
 
 // PollerInfo is an internal type (TBD...)
 type PollerInfo struct {
-	LastAccessTime *int64   `json:"lastAccessTime,omitempty"`
-	Identity       string   `json:"identity,omitempty"`
-	RatePerSecond  *float64 `json:"ratePerSecond,omitempty"`
+	LastAccessTime *int64  `json:"lastAccessTime,omitempty"`
+	Identity       string  `json:"identity,omitempty"`
+	RatePerSecond  float64 `json:"ratePerSecond,omitempty"`
 }
 
 // GetLastAccessTime is an internal getter (TBD...)
@@ -5393,8 +5393,8 @@ func (v *PollerInfo) GetIdentity() (o string) {
 
 // GetRatePerSecond is an internal getter (TBD...)
 func (v *PollerInfo) GetRatePerSecond() (o float64) {
-	if v != nil && v.RatePerSecond != nil {
-		return *v.RatePerSecond
+	if v != nil {
+		return v.RatePerSecond
 	}
 	return
 }
@@ -9980,7 +9980,7 @@ func (v *WorkflowQuery) GetQueryArgs() (o []byte) {
 type WorkflowQueryResult struct {
 	ResultType   *QueryResultType `json:"resultType,omitempty"`
 	Answer       []byte           `json:"answer,omitempty"`
-	ErrorMessage *string          `json:"errorMessage,omitempty"`
+	ErrorMessage string           `json:"errorMessage,omitempty"`
 }
 
 // GetResultType is an internal getter (TBD...)
@@ -10001,8 +10001,8 @@ func (v *WorkflowQueryResult) GetAnswer() (o []byte) {
 
 // GetErrorMessage is an internal getter (TBD...)
 func (v *WorkflowQueryResult) GetErrorMessage() (o string) {
-	if v != nil && v.ErrorMessage != nil {
-		return *v.ErrorMessage
+	if v != nil {
+		return v.ErrorMessage
 	}
 	return
 }
@@ -10022,13 +10022,13 @@ func (v *WorkflowType) GetName() (o string) {
 
 // WorkflowTypeFilter is an internal type (TBD...)
 type WorkflowTypeFilter struct {
-	Name *string `json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 // GetName is an internal getter (TBD...)
 func (v *WorkflowTypeFilter) GetName() (o string) {
-	if v != nil && v.Name != nil {
-		return *v.Name
+	if v != nil {
+		return v.Name
 	}
 	return
 }

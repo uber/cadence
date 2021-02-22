@@ -275,8 +275,8 @@ func (p *taskProcessorImpl) sendFetchMessageRequest() <-chan *types.ReplicationM
 	p.requestChan <- &request{
 		token: &types.ReplicationToken{
 			ShardID:                int32(p.shard.GetShardID()),
-			LastRetrievedMessageID: common.Int64Ptr(p.lastRetrievedMessageID),
-			LastProcessedMessageID: common.Int64Ptr(p.lastProcessedMessageID),
+			LastRetrievedMessageID: p.lastRetrievedMessageID,
+			LastProcessedMessageID: p.lastProcessedMessageID,
 		},
 		respChan: respChan,
 	}

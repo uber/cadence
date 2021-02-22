@@ -3012,7 +3012,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 	}
 
 	resp = &types.CountWorkflowExecutionsResponse{
-		Count: common.Int64Ptr(persistenceResp.Count),
+		Count: persistenceResp.Count,
 	}
 	return resp, nil
 }

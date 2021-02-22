@@ -648,7 +648,7 @@ func (adh *adminHandlerImpl) GetDomainReplicationMessages(
 	return &types.GetDomainReplicationMessagesResponse{
 		Messages: &types.ReplicationMessages{
 			ReplicationTasks:       replicationTasks,
-			LastRetrievedMessageID: common.Int64Ptr(int64(lastMessageID)),
+			LastRetrievedMessageID: lastMessageID,
 		},
 	}, nil
 }

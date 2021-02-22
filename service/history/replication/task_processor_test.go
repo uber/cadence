@@ -135,7 +135,7 @@ func (s *taskProcessorSuite) TearDownTest() {
 
 func (s *taskProcessorSuite) TestProcessResponse_NoTask() {
 	response := &types.ReplicationMessages{
-		LastRetrievedMessageID: common.Int64Ptr(100),
+		LastRetrievedMessageID: 100,
 	}
 
 	s.taskProcessor.processResponse(response)

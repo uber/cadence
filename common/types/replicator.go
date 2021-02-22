@@ -632,7 +632,7 @@ func (v *ReadDLQMessagesResponse) GetNextPageToken() (o []byte) {
 // ReplicationMessages is an internal type (TBD...)
 type ReplicationMessages struct {
 	ReplicationTasks       []*ReplicationTask `json:"replicationTasks,omitempty"`
-	LastRetrievedMessageID *int64             `json:"lastRetrievedMessageId,omitempty"`
+	LastRetrievedMessageID int64              `json:"lastRetrievedMessageId,omitempty"`
 	HasMore                bool               `json:"hasMore,omitempty"`
 	SyncShardStatus        *SyncShardStatus   `json:"syncShardStatus,omitempty"`
 }
@@ -647,8 +647,8 @@ func (v *ReplicationMessages) GetReplicationTasks() (o []*ReplicationTask) {
 
 // GetLastRetrievedMessageID is an internal getter (TBD...)
 func (v *ReplicationMessages) GetLastRetrievedMessageID() (o int64) {
-	if v != nil && v.LastRetrievedMessageID != nil {
-		return *v.LastRetrievedMessageID
+	if v != nil {
+		return v.LastRetrievedMessageID
 	}
 	return
 }
@@ -918,9 +918,9 @@ const (
 
 // ReplicationToken is an internal type (TBD...)
 type ReplicationToken struct {
-	ShardID                int32  `json:"shardID,omitempty"`
-	LastRetrievedMessageID *int64 `json:"lastRetrievedMessageId,omitempty"`
-	LastProcessedMessageID *int64 `json:"lastProcessedMessageId,omitempty"`
+	ShardID                int32 `json:"shardID,omitempty"`
+	LastRetrievedMessageID int64 `json:"lastRetrievedMessageId,omitempty"`
+	LastProcessedMessageID int64 `json:"lastProcessedMessageId,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -933,16 +933,16 @@ func (v *ReplicationToken) GetShardID() (o int32) {
 
 // GetLastRetrievedMessageID is an internal getter (TBD...)
 func (v *ReplicationToken) GetLastRetrievedMessageID() (o int64) {
-	if v != nil && v.LastRetrievedMessageID != nil {
-		return *v.LastRetrievedMessageID
+	if v != nil {
+		return v.LastRetrievedMessageID
 	}
 	return
 }
 
 // GetLastProcessedMessageID is an internal getter (TBD...)
 func (v *ReplicationToken) GetLastProcessedMessageID() (o int64) {
-	if v != nil && v.LastProcessedMessageID != nil {
-		return *v.LastProcessedMessageID
+	if v != nil {
+		return v.LastProcessedMessageID
 	}
 	return
 }

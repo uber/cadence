@@ -4433,7 +4433,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	}
 	result2 := &types.WorkflowQueryResult{
 		ResultType:   types.QueryResultTypeFailed.Ptr(),
-		ErrorMessage: common.StringPtr("error reason"),
+		ErrorMessage: "error reason",
 	}
 	queryResults := map[string]*types.WorkflowQueryResult{
 		id1: result1,

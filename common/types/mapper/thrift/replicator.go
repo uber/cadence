@@ -465,7 +465,7 @@ func FromReplicationMessages(t *types.ReplicationMessages) *replicator.Replicati
 	}
 	return &replicator.ReplicationMessages{
 		ReplicationTasks:       FromReplicationTaskArray(t.ReplicationTasks),
-		LastRetrievedMessageId: t.LastRetrievedMessageID,
+		LastRetrievedMessageId: &t.LastRetrievedMessageID,
 		HasMore:                &t.HasMore,
 		SyncShardStatus:        FromSyncShardStatus(t.SyncShardStatus),
 	}
@@ -478,7 +478,7 @@ func ToReplicationMessages(t *replicator.ReplicationMessages) *types.Replication
 	}
 	return &types.ReplicationMessages{
 		ReplicationTasks:       ToReplicationTaskArray(t.ReplicationTasks),
-		LastRetrievedMessageID: t.LastRetrievedMessageId,
+		LastRetrievedMessageID: t.GetLastRetrievedMessageId(),
 		HasMore:                t.GetHasMore(),
 		SyncShardStatus:        ToSyncShardStatus(t.SyncShardStatus),
 	}
@@ -623,8 +623,8 @@ func FromReplicationToken(t *types.ReplicationToken) *replicator.ReplicationToke
 	}
 	return &replicator.ReplicationToken{
 		ShardID:                &t.ShardID,
-		LastRetrievedMessageId: t.LastRetrievedMessageID,
-		LastProcessedMessageId: t.LastProcessedMessageID,
+		LastRetrievedMessageId: &t.LastRetrievedMessageID,
+		LastProcessedMessageId: &t.LastProcessedMessageID,
 	}
 }
 
@@ -635,8 +635,8 @@ func ToReplicationToken(t *replicator.ReplicationToken) *types.ReplicationToken 
 	}
 	return &types.ReplicationToken{
 		ShardID:                t.GetShardID(),
-		LastRetrievedMessageID: t.LastRetrievedMessageId,
-		LastProcessedMessageID: t.LastProcessedMessageId,
+		LastRetrievedMessageID: t.GetLastRetrievedMessageId(),
+		LastProcessedMessageID: t.GetLastProcessedMessageId(),
 	}
 }
 

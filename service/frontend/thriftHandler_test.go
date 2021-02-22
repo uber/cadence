@@ -54,7 +54,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("CountWorkflowExecutions", func(t *testing.T) {
 		h.EXPECT().CountWorkflowExecutions(ctx, &types.CountWorkflowExecutionsRequest{}).Return(&types.CountWorkflowExecutionsResponse{}, internalErr).Times(1)
 		resp, err := th.CountWorkflowExecutions(ctx, &shared.CountWorkflowExecutionsRequest{})
-		assert.Equal(t, shared.CountWorkflowExecutionsResponse{}, *resp)
+		assert.Equal(t, shared.CountWorkflowExecutionsResponse{Count: common.Int64Ptr(0)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("DeprecateDomain", func(t *testing.T) {
