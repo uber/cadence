@@ -26,6 +26,17 @@ import (
 	"github.com/uber/cadence/common/service/config"
 )
 
+const (
+	// EnvKeyRoot the environment variable key for runtime root dir
+	EnvKeyRoot = "CADENCE_BENCH_ROOT"
+	// EnvKeyConfigDir the environment variable key for config dir
+	EnvKeyConfigDir = "CADENCE_BENCH_CONFIG_DIR"
+	// EnvKeyEnvironment is the environment variable key for environment
+	EnvKeyEnvironment = "CADENCE_BENCH_ENVIRONMENT"
+	// EnvKeyAvailabilityZone is the environment variable key for AZ
+	EnvKeyAvailabilityZone = "CADENCE_BENCH_AVAILABILITY_ZONE"
+)
+
 type (
 	// Config contains the configuration for cadence bench
 	Config struct {

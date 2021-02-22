@@ -239,8 +239,8 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 			binBinaries = &types.BadBinaries{
 				Binaries: map[string]*types.BadBinaryInfo{
 					binChecksum: {
-						Reason:   common.StringPtr(reason),
-						Operator: common.StringPtr(operator),
+						Reason:   reason,
+						Operator: operator,
 					},
 				},
 			}

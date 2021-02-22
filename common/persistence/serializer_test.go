@@ -104,8 +104,8 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 		Binaries: map[string]*types.BadBinaryInfo{
 			"bad-binary-cs": {
 				CreatedTimeNano: common.Int64Ptr(456),
-				Operator:        common.StringPtr("test-operattor"),
-				Reason:          common.StringPtr("test-reason"),
+				Operator:        "test-operattor",
+				Reason:          "test-reason",
 			},
 		},
 	}

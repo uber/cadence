@@ -210,7 +210,7 @@ GetHistoryLoop:
 			WorkflowID: id,
 			RunID:      we1.RunID,
 		},
-		Reason:   common.StringPtr("kill workflow"),
+		Reason:   "kill workflow",
 		Identity: identity,
 	})
 	s.Nil(err)
@@ -373,7 +373,7 @@ func (s *integrationSuite) TestTerminateWorkflow() {
 			WorkflowID: id,
 			RunID:      we.RunID,
 		},
-		Reason:   common.StringPtr(terminateReason),
+		Reason:   terminateReason,
 		Details:  terminateDetails,
 		Identity: identity,
 	})
@@ -400,7 +400,7 @@ GetHistoryLoop:
 		}
 
 		terminateEventAttributes := lastEvent.WorkflowExecutionTerminatedEventAttributes
-		s.Equal(terminateReason, *terminateEventAttributes.Reason)
+		s.Equal(terminateReason, terminateEventAttributes.Reason)
 		s.Equal(terminateDetails, terminateEventAttributes.Details)
 		s.Equal(identity, terminateEventAttributes.Identity)
 		executionTerminated = true

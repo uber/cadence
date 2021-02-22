@@ -359,7 +359,7 @@ func startTaskProcessor(
 								WorkflowID: workflowID,
 								RunID:      runID,
 							},
-							Reason:   common.StringPtr(batchParams.Reason),
+							Reason:   batchParams.Reason,
 							Identity: BatchWFTypeName,
 						}, yarpcCallOptions...)
 					})

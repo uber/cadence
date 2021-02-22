@@ -1,4 +1,5 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2017-2021 Uber Technologies, Inc.
+// Portions of the Software are attributed to Copyright (c) 2021 Temporal Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -2397,6 +2398,9 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 			// Check mutable state to make sure child execution is in pending child executions
 			ci, isRunning := mutableState.GetChildExecutionInfo(initiatedID)
 			if !isRunning || ci.StartedID == common.EmptyEventID {
+				return &types.EntityNotExistsError{Message: "Pending child execution not found."}
+			}
+			if ci.StartedWorkflowID != completedExecution.GetWorkflowID() {
 				return &types.EntityNotExistsError{Message: "Pending child execution not found."}
 			}
 
