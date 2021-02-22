@@ -237,9 +237,9 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 	m.IsType(&types.EntityNotExistsError{}, err0)
 	testBinaries := types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
-			"abc": &types.BadBinaryInfo{
-				Reason:          common.StringPtr("test-reason"),
-				Operator:        common.StringPtr("test-operator"),
+			"abc": {
+				Reason:          "test-reason",
+				Operator:        "test-operator",
 				CreatedTimeNano: common.Int64Ptr(123),
 			},
 		},
@@ -405,9 +405,9 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 
 	testBinaries := types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
-			"abc": &types.BadBinaryInfo{
-				Reason:          common.StringPtr("test-reason"),
-				Operator:        common.StringPtr("test-operator"),
+			"abc": {
+				Reason:          "test-reason",
+				Operator:        "test-operator",
 				CreatedTimeNano: common.Int64Ptr(123),
 			},
 		},
@@ -559,9 +559,9 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentUpdateDomain() {
 
 	testBinaries := types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
-			"abc": &types.BadBinaryInfo{
-				Reason:          common.StringPtr("test-reason"),
-				Operator:        common.StringPtr("test-operator"),
+			"abc": {
+				Reason:          "test-reason",
+				Operator:        "test-operator",
 				CreatedTimeNano: common.Int64Ptr(123),
 			},
 		},
@@ -753,9 +753,9 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	}
 	testBinaries := types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
-			"abc": &types.BadBinaryInfo{
-				Reason:          common.StringPtr("test-reason"),
-				Operator:        common.StringPtr("test-operator"),
+			"abc": {
+				Reason:          "test-reason",
+				Operator:        "test-operator",
 				CreatedTimeNano: common.Int64Ptr(123),
 			},
 		},
@@ -1066,18 +1066,18 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 
 	testBinaries1 := types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
-			"abc": &types.BadBinaryInfo{
-				Reason:          common.StringPtr("test-reason1"),
-				Operator:        common.StringPtr("test-operator1"),
+			"abc": {
+				Reason:          "test-reason1",
+				Operator:        "test-operator1",
 				CreatedTimeNano: common.Int64Ptr(123),
 			},
 		},
 	}
 	testBinaries2 := types.BadBinaries{
 		Binaries: map[string]*types.BadBinaryInfo{
-			"efg": &types.BadBinaryInfo{
-				Reason:          common.StringPtr("test-reason2"),
-				Operator:        common.StringPtr("test-operator2"),
+			"efg": {
+				Reason:          "test-reason2",
+				Operator:        "test-operator2",
 				CreatedTimeNano: common.Int64Ptr(456),
 			},
 		},
