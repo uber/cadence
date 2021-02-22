@@ -576,9 +576,9 @@ func (b *HistoryBuilder) newWorkflowExecutionStartedEvent(
 
 	parentInfo := startRequest.ParentExecutionInfo
 	if parentInfo != nil {
-		attributes.ParentWorkflowDomain = parentInfo.Domain
+		attributes.ParentWorkflowDomain = &parentInfo.Domain
 		attributes.ParentWorkflowExecution = parentInfo.Execution
-		attributes.ParentInitiatedEventID = parentInfo.InitiatedID
+		attributes.ParentInitiatedEventID = &parentInfo.InitiatedID
 	}
 	historyEvent.WorkflowExecutionStartedEventAttributes = attributes
 

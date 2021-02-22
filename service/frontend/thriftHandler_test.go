@@ -65,7 +65,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("DescribeDomain", func(t *testing.T) {
 		h.EXPECT().DescribeDomain(ctx, &types.DescribeDomainRequest{}).Return(&types.DescribeDomainResponse{}, internalErr).Times(1)
 		resp, err := th.DescribeDomain(ctx, &shared.DescribeDomainRequest{})
-		assert.Equal(t, shared.DescribeDomainResponse{IsGlobalDomain: common.BoolPtr(false)}, *resp)
+		assert.Equal(t, shared.DescribeDomainResponse{IsGlobalDomain: common.BoolPtr(false), FailoverVersion: common.Int64Ptr(0)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("DescribeTaskList", func(t *testing.T) {
@@ -263,7 +263,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("UpdateDomain", func(t *testing.T) {
 		h.EXPECT().UpdateDomain(ctx, &types.UpdateDomainRequest{}).Return(&types.UpdateDomainResponse{}, internalErr).Times(1)
 		resp, err := th.UpdateDomain(ctx, &shared.UpdateDomainRequest{})
-		assert.Equal(t, shared.UpdateDomainResponse{IsGlobalDomain: common.BoolPtr(false)}, *resp)
+		assert.Equal(t, shared.UpdateDomainResponse{IsGlobalDomain: common.BoolPtr(false), FailoverVersion: common.Int64Ptr(0)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 }

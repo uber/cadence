@@ -262,10 +262,10 @@ func FromParentExecutionInfo(t *types.ParentExecutionInfo) *history.ParentExecut
 		return nil
 	}
 	return &history.ParentExecutionInfo{
-		DomainUUID:  t.DomainUUID,
-		Domain:      t.Domain,
+		DomainUUID:  &t.DomainUUID,
+		Domain:      &t.Domain,
 		Execution:   FromWorkflowExecution(t.Execution),
-		InitiatedId: t.InitiatedID,
+		InitiatedId: &t.InitiatedID,
 	}
 }
 
@@ -275,10 +275,10 @@ func ToParentExecutionInfo(t *history.ParentExecutionInfo) *types.ParentExecutio
 		return nil
 	}
 	return &types.ParentExecutionInfo{
-		DomainUUID:  t.DomainUUID,
-		Domain:      t.Domain,
+		DomainUUID:  t.GetDomainUUID(),
+		Domain:      t.GetDomain(),
 		Execution:   ToWorkflowExecution(t.Execution),
-		InitiatedID: t.InitiatedId,
+		InitiatedID: t.GetInitiatedId(),
 	}
 }
 

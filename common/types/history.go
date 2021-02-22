@@ -364,24 +364,24 @@ func (v *NotifyFailoverMarkersRequest) GetFailoverMarkerTokens() (o []*FailoverM
 
 // ParentExecutionInfo is an internal type (TBD...)
 type ParentExecutionInfo struct {
-	DomainUUID  *string            `json:"domainUUID,omitempty"`
-	Domain      *string            `json:"domain,omitempty"`
+	DomainUUID  string             `json:"domainUUID,omitempty"`
+	Domain      string             `json:"domain,omitempty"`
 	Execution   *WorkflowExecution `json:"execution,omitempty"`
-	InitiatedID *int64             `json:"initiatedId,omitempty"`
+	InitiatedID int64              `json:"initiatedId,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *ParentExecutionInfo) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
 
 // GetDomain is an internal getter (TBD...)
 func (v *ParentExecutionInfo) GetDomain() (o string) {
-	if v != nil && v.Domain != nil {
-		return *v.Domain
+	if v != nil {
+		return v.Domain
 	}
 	return
 }
@@ -396,8 +396,8 @@ func (v *ParentExecutionInfo) GetExecution() (o *WorkflowExecution) {
 
 // GetInitiatedID is an internal getter (TBD...)
 func (v *ParentExecutionInfo) GetInitiatedID() (o int64) {
-	if v != nil && v.InitiatedID != nil {
-		return *v.InitiatedID
+	if v != nil {
+		return v.InitiatedID
 	}
 	return
 }
