@@ -97,13 +97,13 @@ func FromDomainTaskAttributes(t *types.DomainTaskAttributes) *replicator.DomainT
 	}
 	return &replicator.DomainTaskAttributes{
 		DomainOperation:         FromDomainOperation(t.DomainOperation),
-		ID:                      t.ID,
+		ID:                      &t.ID,
 		Info:                    FromDomainInfo(t.Info),
 		Config:                  FromDomainConfiguration(t.Config),
 		ReplicationConfig:       FromDomainReplicationConfiguration(t.ReplicationConfig),
-		ConfigVersion:           t.ConfigVersion,
-		FailoverVersion:         t.FailoverVersion,
-		PreviousFailoverVersion: t.PreviousFailoverVersion,
+		ConfigVersion:           &t.ConfigVersion,
+		FailoverVersion:         &t.FailoverVersion,
+		PreviousFailoverVersion: &t.PreviousFailoverVersion,
 	}
 }
 
@@ -114,13 +114,13 @@ func ToDomainTaskAttributes(t *replicator.DomainTaskAttributes) *types.DomainTas
 	}
 	return &types.DomainTaskAttributes{
 		DomainOperation:         ToDomainOperation(t.DomainOperation),
-		ID:                      t.ID,
+		ID:                      t.GetID(),
 		Info:                    ToDomainInfo(t.Info),
 		Config:                  ToDomainConfiguration(t.Config),
 		ReplicationConfig:       ToDomainReplicationConfiguration(t.ReplicationConfig),
-		ConfigVersion:           t.ConfigVersion,
-		FailoverVersion:         t.FailoverVersion,
-		PreviousFailoverVersion: t.PreviousFailoverVersion,
+		ConfigVersion:           t.GetConfigVersion(),
+		FailoverVersion:         t.GetFailoverVersion(),
+		PreviousFailoverVersion: t.GetPreviousFailoverVersion(),
 	}
 }
 

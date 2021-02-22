@@ -131,13 +131,13 @@ const (
 // DomainTaskAttributes is an internal type (TBD...)
 type DomainTaskAttributes struct {
 	DomainOperation         *DomainOperation                `json:"domainOperation,omitempty"`
-	ID                      *string                         `json:"id,omitempty"`
+	ID                      string                          `json:"id,omitempty"`
 	Info                    *DomainInfo                     `json:"info,omitempty"`
 	Config                  *DomainConfiguration            `json:"config,omitempty"`
 	ReplicationConfig       *DomainReplicationConfiguration `json:"replicationConfig,omitempty"`
-	ConfigVersion           *int64                          `json:"configVersion,omitempty"`
-	FailoverVersion         *int64                          `json:"failoverVersion,omitempty"`
-	PreviousFailoverVersion *int64                          `json:"previousFailoverVersion,omitempty"`
+	ConfigVersion           int64                           `json:"configVersion,omitempty"`
+	FailoverVersion         int64                           `json:"failoverVersion,omitempty"`
+	PreviousFailoverVersion int64                           `json:"previousFailoverVersion,omitempty"`
 }
 
 // GetDomainOperation is an internal getter (TBD...)
@@ -150,8 +150,8 @@ func (v *DomainTaskAttributes) GetDomainOperation() (o DomainOperation) {
 
 // GetID is an internal getter (TBD...)
 func (v *DomainTaskAttributes) GetID() (o string) {
-	if v != nil && v.ID != nil {
-		return *v.ID
+	if v != nil {
+		return v.ID
 	}
 	return
 }
@@ -182,24 +182,24 @@ func (v *DomainTaskAttributes) GetReplicationConfig() (o *DomainReplicationConfi
 
 // GetConfigVersion is an internal getter (TBD...)
 func (v *DomainTaskAttributes) GetConfigVersion() (o int64) {
-	if v != nil && v.ConfigVersion != nil {
-		return *v.ConfigVersion
+	if v != nil {
+		return v.ConfigVersion
 	}
 	return
 }
 
 // GetFailoverVersion is an internal getter (TBD...)
 func (v *DomainTaskAttributes) GetFailoverVersion() (o int64) {
-	if v != nil && v.FailoverVersion != nil {
-		return *v.FailoverVersion
+	if v != nil {
+		return v.FailoverVersion
 	}
 	return
 }
 
 // GetPreviousFailoverVersion is an internal getter (TBD...)
 func (v *DomainTaskAttributes) GetPreviousFailoverVersion() (o int64) {
-	if v != nil && v.PreviousFailoverVersion != nil {
-		return *v.PreviousFailoverVersion
+	if v != nil {
+		return v.PreviousFailoverVersion
 	}
 	return
 }

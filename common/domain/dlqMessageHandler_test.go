@@ -30,7 +30,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/types"
 )
@@ -183,7 +182,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages() {
 	messageID := int64(11)
 
 	domainAttribute := &types.DomainTaskAttributes{
-		ID: common.StringPtr(uuid.New()),
+		ID: uuid.New(),
 	}
 
 	tasks := []*types.ReplicationTask{
@@ -212,7 +211,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnGetDLQAckLevel() 
 	messageID := int64(11)
 	testError := fmt.Errorf("test")
 	domainAttribute := &types.DomainTaskAttributes{
-		ID: common.StringPtr(uuid.New()),
+		ID: uuid.New(),
 	}
 
 	tasks := []*types.ReplicationTask{
@@ -262,10 +261,10 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnHandleReceivingTa
 	messageID2 := int64(12)
 	testError := fmt.Errorf("test")
 	domainAttribute1 := &types.DomainTaskAttributes{
-		ID: common.StringPtr(uuid.New()),
+		ID: uuid.New(),
 	}
 	domainAttribute2 := &types.DomainTaskAttributes{
-		ID: common.StringPtr(uuid.New()),
+		ID: uuid.New(),
 	}
 	tasks := []*types.ReplicationTask{
 		{
@@ -302,10 +301,10 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnDeleteMessages() 
 	messageID2 := int64(12)
 	testError := fmt.Errorf("test")
 	domainAttribute1 := &types.DomainTaskAttributes{
-		ID: common.StringPtr(uuid.New()),
+		ID: uuid.New(),
 	}
 	domainAttribute2 := &types.DomainTaskAttributes{
-		ID: common.StringPtr(uuid.New()),
+		ID: uuid.New(),
 	}
 	tasks := []*types.ReplicationTask{
 		{
@@ -340,7 +339,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_IgnoreErrorOnUpdateDLQAckLeve
 	messageID := int64(11)
 	testError := fmt.Errorf("test")
 	domainAttribute := &types.DomainTaskAttributes{
-		ID: common.StringPtr(uuid.New()),
+		ID: uuid.New(),
 	}
 
 	tasks := []*types.ReplicationTask{
