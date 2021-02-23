@@ -974,7 +974,7 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 
 	// expectedNextEventID is 0 when caller want to get the current next event ID without blocking
 	expectedNextEventID := common.FirstEventID
-	if request.ExpectedNextEventID != nil {
+	if request.ExpectedNextEventID != 0 {
 		expectedNextEventID = request.GetExpectedNextEventID()
 	}
 

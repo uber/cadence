@@ -164,7 +164,7 @@ func FromGetMutableStateRequest(t *types.GetMutableStateRequest) *history.GetMut
 	return &history.GetMutableStateRequest{
 		DomainUUID:          &t.DomainUUID,
 		Execution:           FromWorkflowExecution(t.Execution),
-		ExpectedNextEventId: t.ExpectedNextEventID,
+		ExpectedNextEventId: &t.ExpectedNextEventID,
 		CurrentBranchToken:  t.CurrentBranchToken,
 	}
 }
@@ -177,7 +177,7 @@ func ToGetMutableStateRequest(t *history.GetMutableStateRequest) *types.GetMutab
 	return &types.GetMutableStateRequest{
 		DomainUUID:          t.GetDomainUUID(),
 		Execution:           ToWorkflowExecution(t.Execution),
-		ExpectedNextEventID: t.ExpectedNextEventId,
+		ExpectedNextEventID: t.GetExpectedNextEventId(),
 		CurrentBranchToken:  t.CurrentBranchToken,
 	}
 }
@@ -290,7 +290,7 @@ func FromPollMutableStateRequest(t *types.PollMutableStateRequest) *history.Poll
 	return &history.PollMutableStateRequest{
 		DomainUUID:          &t.DomainUUID,
 		Execution:           FromWorkflowExecution(t.Execution),
-		ExpectedNextEventId: t.ExpectedNextEventID,
+		ExpectedNextEventId: &t.ExpectedNextEventID,
 		CurrentBranchToken:  t.CurrentBranchToken,
 	}
 }
@@ -303,7 +303,7 @@ func ToPollMutableStateRequest(t *history.PollMutableStateRequest) *types.PollMu
 	return &types.PollMutableStateRequest{
 		DomainUUID:          t.GetDomainUUID(),
 		Execution:           ToWorkflowExecution(t.Execution),
-		ExpectedNextEventID: t.ExpectedNextEventId,
+		ExpectedNextEventID: t.GetExpectedNextEventId(),
 		CurrentBranchToken:  t.CurrentBranchToken,
 	}
 }

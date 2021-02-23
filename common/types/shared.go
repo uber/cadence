@@ -9625,7 +9625,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 	Input                               []byte                  `json:"input,omitempty"`
 	ExecutionStartToCloseTimeoutSeconds *int32                  `json:"executionStartToCloseTimeoutSeconds,omitempty"`
 	TaskStartToCloseTimeoutSeconds      *int32                  `json:"taskStartToCloseTimeoutSeconds,omitempty"`
-	ContinuedExecutionRunID             *string                 `json:"continuedExecutionRunId,omitempty"`
+	ContinuedExecutionRunID             string                  `json:"continuedExecutionRunId,omitempty"`
 	Initiator                           *ContinueAsNewInitiator `json:"initiator,omitempty"`
 	ContinuedFailureReason              *string                 `json:"continuedFailureReason,omitempty"`
 	ContinuedFailureDetails             []byte                  `json:"continuedFailureDetails,omitempty"`
@@ -9710,8 +9710,8 @@ func (v *WorkflowExecutionStartedEventAttributes) GetTaskStartToCloseTimeoutSeco
 
 // GetContinuedExecutionRunID is an internal getter (TBD...)
 func (v *WorkflowExecutionStartedEventAttributes) GetContinuedExecutionRunID() (o string) {
-	if v != nil && v.ContinuedExecutionRunID != nil {
-		return *v.ContinuedExecutionRunID
+	if v != nil {
+		return v.ContinuedExecutionRunID
 	}
 	return
 }

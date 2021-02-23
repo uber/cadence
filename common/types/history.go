@@ -147,7 +147,7 @@ func (v *FailoverMarkerToken) GetFailoverMarker() (o *FailoverMarkerAttributes) 
 type GetMutableStateRequest struct {
 	DomainUUID          string             `json:"domainUUID,omitempty"`
 	Execution           *WorkflowExecution `json:"execution,omitempty"`
-	ExpectedNextEventID *int64             `json:"expectedNextEventId,omitempty"`
+	ExpectedNextEventID int64              `json:"expectedNextEventId,omitempty"`
 	CurrentBranchToken  []byte             `json:"currentBranchToken,omitempty"`
 }
 
@@ -169,8 +169,8 @@ func (v *GetMutableStateRequest) GetExecution() (o *WorkflowExecution) {
 
 // GetExpectedNextEventID is an internal getter (TBD...)
 func (v *GetMutableStateRequest) GetExpectedNextEventID() (o int64) {
-	if v != nil && v.ExpectedNextEventID != nil {
-		return *v.ExpectedNextEventID
+	if v != nil {
+		return v.ExpectedNextEventID
 	}
 	return
 }
@@ -406,7 +406,7 @@ func (v *ParentExecutionInfo) GetInitiatedID() (o int64) {
 type PollMutableStateRequest struct {
 	DomainUUID          string             `json:"domainUUID,omitempty"`
 	Execution           *WorkflowExecution `json:"execution,omitempty"`
-	ExpectedNextEventID *int64             `json:"expectedNextEventId,omitempty"`
+	ExpectedNextEventID int64              `json:"expectedNextEventId,omitempty"`
 	CurrentBranchToken  []byte             `json:"currentBranchToken,omitempty"`
 }
 
@@ -428,8 +428,8 @@ func (v *PollMutableStateRequest) GetExecution() (o *WorkflowExecution) {
 
 // GetExpectedNextEventID is an internal getter (TBD...)
 func (v *PollMutableStateRequest) GetExpectedNextEventID() (o int64) {
-	if v != nil && v.ExpectedNextEventID != nil {
-		return *v.ExpectedNextEventID
+	if v != nil {
+		return v.ExpectedNextEventID
 	}
 	return
 }

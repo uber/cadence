@@ -1907,7 +1907,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		response, err := wh.GetHistoryClient().PollMutableState(ctx, &types.PollMutableStateRequest{
 			DomainUUID:          domainUUID,
 			Execution:           execution,
-			ExpectedNextEventID: common.Int64Ptr(expectedNextEventID),
+			ExpectedNextEventID: expectedNextEventID,
 			CurrentBranchToken:  currentBranchToken,
 		})
 

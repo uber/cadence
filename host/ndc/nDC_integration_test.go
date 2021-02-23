@@ -1634,7 +1634,7 @@ func (s *nDCIntegrationTestSuite) generateNewRunHistory(
 			},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
-			ContinuedExecutionRunID:             common.StringPtr(runID),
+			ContinuedExecutionRunID:             runID,
 			Initiator:                           types.ContinueAsNewInitiatorCronSchedule.Ptr(),
 			OriginalExecutionRunID:              runID,
 			Identity:                            "NDC-test",
