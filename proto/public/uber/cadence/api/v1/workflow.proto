@@ -60,6 +60,11 @@ message ParentExecutionInfo {
   int64 initiated_id = 4;
 }
 
+message ExternalExecutionInfo {
+  api.v1.WorkflowExecution workflow_execution = 1;
+  int64 initiated_id = 2;
+}
+
 message PendingActivityInfo {
   string activity_id = 1;
   ActivityType activity_type = 2;

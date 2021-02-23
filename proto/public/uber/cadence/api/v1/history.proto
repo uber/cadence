@@ -278,9 +278,8 @@ message WorkflowExecutionContinuedAsNewEventAttributes {
 
 message WorkflowExecutionCancelRequestedEventAttributes {
   string cause = 1;
-  int64 external_initiated_event_id = 2;
-  WorkflowExecution external_workflow_execution = 3;
-  string identity = 4;
+  string identity = 2;
+  ExternalExecutionInfo external_execution_info = 3;
 }
 
 message WorkflowExecutionCanceledEventAttributes {

@@ -462,9 +462,8 @@ message RemoveSignalMutableStateResponse {
 message RequestCancelWorkflowExecutionRequest {
   string domain_id = 1;
   api.v1.RequestCancelWorkflowExecutionRequest cancel_request = 2;
-  int64 external_initiated_event_id = 3;
-  api.v1.WorkflowExecution external_workflow_execution = 4;
-  bool child_workflow_only = 5;
+  api.v1.ExternalExecutionInfo external_execution_info = 3;
+  bool child_workflow_only = 4;
 }
 
 message RequestCancelWorkflowExecutionResponse {
