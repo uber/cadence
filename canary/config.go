@@ -21,7 +21,7 @@
 package canary
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
@@ -76,7 +76,7 @@ type (
 // Validate validates canary configration
 func (c *Config) Validate() error {
 	if len(c.Canary.Domains) == 0 {
-		return fmt.Errorf("missing value for domains property")
+		return errors.New("missing value for domains property")
 	}
 	return nil
 }

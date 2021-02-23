@@ -41,5 +41,8 @@ import (
 	// replaces golint - configurable and much faster
 	_ "github.com/mgechev/revive"
 	// coverage reporting
-	_ "github.com/dmetzgar/goveralls"
+	_ "github.com/mattn/goveralls"
+
+	// health check for docker containers
+	_ "github.com/uber/tcheck"
 )

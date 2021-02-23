@@ -1,0 +1,17 @@
+{
+  "loaderCount": 10,
+  "loadTestWorkflowCount": 1000,
+  "signalCount": 50,
+  "signalDataSize": 2700,
+  "rateLimit": 7,
+  "workflowExecutionTimeoutInSeconds": 600,
+  "decisionTaskTimeoutInSeconds": 30,
+  "campaignCount": 30,
+  "actionRate": 0.02,
+  "failureRate": 0,
+  "signalBeforeContinueAsNew": 10,
+  "enableRollingWindow": false,
+  "maxSignalDelayInSeconds": 5,
+  "maxSignalDelayCount": 5,
+  "failureThreshold": 0.05
+}

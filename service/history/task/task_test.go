@@ -84,7 +84,7 @@ func (s *taskSuite) SetupTest() {
 	s.mockTaskInfo.EXPECT().GetDomainID().Return(constants.TestDomainID).AnyTimes()
 	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
 
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 	s.timeSource = clock.NewRealTimeSource()
 	s.maxRetryCount = dynamicconfig.GetIntPropertyFn(10)
 }

@@ -1135,7 +1135,7 @@ func FromSyncShardStatusRequest(t *types.SyncShardStatusRequest) *history.SyncSh
 	}
 	return &history.SyncShardStatusRequest{
 		SourceCluster: t.SourceCluster,
-		ShardId:       t.ShardID,
+		ShardId:       &t.ShardID,
 		Timestamp:     t.Timestamp,
 	}
 }
@@ -1147,7 +1147,7 @@ func ToSyncShardStatusRequest(t *history.SyncShardStatusRequest) *types.SyncShar
 	}
 	return &types.SyncShardStatusRequest{
 		SourceCluster: t.SourceCluster,
-		ShardID:       t.ShardId,
+		ShardID:       t.GetShardId(),
 		Timestamp:     t.Timestamp,
 	}
 }

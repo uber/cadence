@@ -28,7 +28,6 @@ import (
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -117,7 +116,7 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 						WorkflowID: execution.WorkflowID,
 						RunID:      execution.RunID,
 					},
-					Reason:   common.StringPtr("by parent close policy"),
+					Reason:   "by parent close policy",
 					Identity: processorWFTypeName,
 				},
 			})

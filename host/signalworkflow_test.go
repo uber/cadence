@@ -207,7 +207,7 @@ func (s *integrationSuite) TestSignalWorkflow() {
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 		},
-		Reason:   common.StringPtr("test signal"),
+		Reason:   "test signal",
 		Details:  nil,
 		Identity: identity,
 	})
@@ -1299,7 +1299,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 		},
-		Reason:   common.StringPtr("test signal"),
+		Reason:   "test signal",
 		Details:  nil,
 		Identity: identity,
 	})
@@ -1376,7 +1376,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow() {
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 		},
-		Reason:   common.StringPtr("kill workflow"),
+		Reason:   "kill workflow",
 		Details:  nil,
 		Identity: identity,
 	})
@@ -1549,7 +1549,7 @@ func (s *integrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: id,
 			},
-			Reason:   common.StringPtr("test WorkflowIDReusePolicyAllowDuplicateFailedOnly"),
+			Reason:   "test WorkflowIDReusePolicyAllowDuplicateFailedOnly",
 			Details:  nil,
 			Identity: identity,
 		})

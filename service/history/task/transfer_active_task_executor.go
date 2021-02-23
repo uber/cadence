@@ -1495,7 +1495,7 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 					WorkflowID: childInfo.StartedWorkflowID,
 					RunID:      childInfo.StartedRunID,
 				},
-				Reason:   common.StringPtr("by parent close policy"),
+				Reason:   "by parent close policy",
 				Identity: execution.IdentityHistoryService,
 			},
 		})
