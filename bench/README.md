@@ -1,7 +1,7 @@
 Cadence Bench Tests
 ===================
 
-This README describes different types of Cadence bench tests, their configurations and how to run them.
+This README describes how to set up Cadence bench, different types of bench loads, and how to start the load.
 
 Setup
 -----------
@@ -11,7 +11,7 @@ Bench tests requires Cadence server with ElasticSearch. You can run it through:
 - Build from source: Please check `docs/setup/CONTRIBUTING.md` for how to build and run Cadence server from source. Please also make sure Kafka and ElasticSearch are running before starting the server with `./cadence-server --zone es start`. If ElasticSearch v7 is used, change the value for `--zone` flag to `es_v7`.
 
 ### Search Attributes
-One of the bench tests (called `cron`), which is responsible for running other tests as a cron job and tracking the results, requires an search attribute called `Passed`. 
+One of the bench tests (called `Cron`), which is responsible for running other tests as a cron job and tracking the results, requires an search attribute named `Passed`. 
 
 For local development environment, this search attribute has already been added to the ES index template and the list of valid search attributes.
 
@@ -37,31 +37,33 @@ For now there's no docker image for bench workers. The only way to run bench wor
    ```
    ./cadence-bench start
    ```
-   By default, it will read the configuration in `config/bench/development.yaml`. Please run `./cadence-bench -h` for details on how to change the configuration directory and file used.
+   By default, it will load the configuration in `config/bench/development.yaml`. Please run `./cadence-bench -h` for details on how to change the configuration directory and file used.
 3. Note that, unlike canary, starting bench worker will not automatically start a bench test. Next two sections will cover how to start and configure it.
 
 Worker Configurations
 ----------------------
 Bench workers configuration contains two parts:
 - **Bench**: this part controls the client side, including the bench service name, which domains bench workers are responsible for and how many taskLists each domain should use.
-- **Cadence**: this control how bench worker should talk to Cadence server, and includes the server's service name and address.
+- **Cadence**: this control how bench worker should talk to Cadence server, which includes the server's service name and address.
 
-Note that when starting bench workers, it will try to register a **local domain with archival feature disabled** for each domain name listed in the configuration, if not already exists. If your want to performance of global domains and/or archival feature, please register the domains first before starting the worker.
+Note:
+1.  When starting bench workers, it will try to register a **local domain with archival feature disabled** for each domain name listed in the configuration, if not already exists. If your want to test the performance of global domains and/or archival feature, please register the domains first before starting the worker.
+2.  Bench workers will only poll from task lists whose name start with `cadence-bench-tl-`. If in the configuration, `numTaskLists` is specified to be 2, then workers will only listen to `cadence-bench-tl-0` and `cadence-bench-tl-1`. So make sure you use a valid task list name when starting the bench load.
 
 Bench Loads
 -----------
 This section briefly describes the purpose of each bench load and provides a sample command for running the load. Detailed descriptions for each test's configuration can be found in `bench/lib/config.go`
 
-Please note that all configurations lined below is for only local development and illustration purpose, it does not reflect the actual capability of Cadence server.
+Please note that all load configurations in `config/bench` is for only local development and illustration purpose, it does not reflect the actual capability of Cadence server.
 
 ### Cron
 `Cron` itself is not a test. It is responsible for running multiple other tests in parallel or sequential according a cron schedule. 
 
-Tests in `Cron` are divided to into multiple test suites. Tests in different test suites will be run in parallel, while tests within a test suite will be run in sequential but the order is random. Different test suites can also be run in different domains, which provides a way for testing the multi-tenant performance for Cadence server. 
+Tests in `Cron` are divided to into multiple test suites. Tests in different test suites will be run in parallel, while tests within a test suite will be run in a random sequential order. Different test suites can also be run in different domains, which provides a way for testing the multi-tenant performance of Cadence server. 
 
 On the completion of each test, `Cron` will be signaled with the result of the test, which can be queried through:
 ```
-cadence --do <domain running the Cron workflow> wf query --wid <workflowID of the Cron workflow> --qt test-results
+cadence --do <domain> wf query --wid <workflowID of the Cron workflow> --qt test-results
 ```
 This command will show the result of all completed tests.
 
@@ -73,7 +75,7 @@ cadence --do <domain> wf start --tl cadence-bench-tl-0 --wt cron-test-workflow -
 ```
 
 ### Basic
-As the name suggests, this load tests the basic case of starting workflows and running activities in sequential/parallel. Once all test workflows are started, it will wait  test workflow timeout + 5 mins before checking the status of all test workflows. If the failure rate is too high, or any open workflows found, the test will fail.
+As the name suggests, this load tests the basic case of starting workflows and running activities in sequential/parallel. Once all test workflows are started, it will wait test workflow timeout + 5 mins before checking the status of all test workflows. If the failure rate is too high, or if there's any open workflows found, the test will fail.
 
 The basic load can also be run in "panic" mode by setting `"panicStressWorkflow": true,` to test if server can handle large number of panic workflows (which can be caused by a bad worker deployment).
 
@@ -83,7 +85,7 @@ cadence --do <domain> wf start --tl cadence-bench-tl-0 --wt basic-load-test-work
 ```
 
 ### Cancellation
-The load tests the StartWorkflowExecution and CancelWorkflowExecution API, and validates the number of cancelled workflows and if there's any open workflow.
+The load tests the StartWorkflowExecution and CancelWorkflowExecution sync API, and validates the number of cancelled workflows and if there's any open workflow.
 
 Sample configuration can be found in `config/bench/cancellation.json` and it can be started with
 ```
@@ -91,7 +93,7 @@ cadence --do <domain> wf start --tl cadence-bench-tl-0 --wt cancellation-load-te
 ```
 
 ### Signal
-The load tests the SignalWorkflowExecution and SignalWithStartWorkflowExecution API, and validates the latency for signaling, number of successfully completed workflows and if there's any open workflow.
+The load tests the SignalWorkflowExecution and SignalWithStartWorkflowExecution sync API, and validates the latency of signaling, the number of successfully completed workflows and if there's any open workflow.
 
 Sample configuration can be found in `config/bench/signal.json` and it can be started with
 ```
@@ -100,7 +102,7 @@ cadence --do cadence-bench wf start --tl cadence-bench-tl-0 --wt signal-load-tes
 
 
 ### Concurrent Execution
-The purpose of this load is to test when a workflow schedules a large number of activities or child workflows in a single decision batch, whether server can properly throttle the processing of this workflow without affect the execution of workflows in other domains. It will also check if the delayed period is within limit or not and fail the test if it takes too long.
+The purpose of this load is to test when a workflow schedules a large number of activities or child workflows in a single decision batch, whether server can properly throttle the processing of this workflow without affecting the execution of workflows in other domains. It will also check if the delayed period is within limit or not and fail the test if it takes too long.
 
 A typical usage will be run this load and another load for testing sync APIs (for example, basic, cancellation or signal) in two different test suites/domains (so that they are run in parallel in two domains). Apply proper task processing throttling configuration to the domain that is running the concurrent execution test and see if tests in the other domain can still pass or not. 
 
@@ -110,9 +112,9 @@ cadence --do <domain> wf start --tl cadence-bench-tl-0 --wt concurrent-execution
 ```
 
 ### Timer
-This load tests if Cadence server can properly handle the case when one domain fires a large number of timers in a short period of time. Ideally timer from that domain should be throttled and delayed without affecting the workflow in another domain.
+This load tests if Cadence server can properly handle the case when one domain fires a large number of timers in a short period of time. Ideally timer from that domain should be throttled and delayed without affecting workflows in other domains. It will also check if the delayed period is within limit or not and fail the test if the timer latency is too high.
 
-Typical usage is the same as the concurrent execution load above. Run it in parallel with another test and see if the other test can pass or not.
+Typical usage is the same as the concurrent execution load above. Run it in parallel with another sync API test and see if the other test can pass or not.
 
 Sample configuration can be found in `config/bench/timer.json` and it can be started with
 ```
