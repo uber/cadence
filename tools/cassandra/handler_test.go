@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/environment"
-	"github.com/uber/cadence/tools/common/schema"
 )
 
 type (
@@ -47,15 +46,11 @@ func (s *HandlerTestSuite) SetupTest() {
 
 func (s *HandlerTestSuite) TestValidateCQLClientConfig() {
 	config := new(CQLClientConfig)
-	s.NotNil(validateCQLClientConfig(config, false))
-	s.NotNil(validateCQLClientConfig(config, true))
+	s.NotNil(validateCQLClientConfig(config))
 
 	config.Hosts = environment.GetCassandraAddress()
-	s.NotNil(validateCQLClientConfig(config, false))
-	s.Nil(validateCQLClientConfig(config, true))
-	s.Equal(schema.DryrunDBName, config.Keyspace)
+	s.NotNil(validateCQLClientConfig(config))
 
 	config.Keyspace = "foobar"
-	s.Nil(validateCQLClientConfig(config, false))
-	s.Nil(validateCQLClientConfig(config, true))
+	s.Nil(validateCQLClientConfig(config))
 }

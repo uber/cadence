@@ -207,7 +207,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 			{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-					MarkerName: common.StringPtr("localActivity1"),
+					MarkerName: "localActivity1",
 					Details:    []byte("abc"),
 				},
 			},
@@ -227,7 +227,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 			{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-					MarkerName: common.StringPtr("localActivity2"),
+					MarkerName: "localActivity2",
 					Details:    []byte("abc"),
 				},
 			},
@@ -319,7 +319,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionSta
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		SignalName:        common.StringPtr("sig-for-integ-test"),
+		SignalName:        "sig-for-integ-test",
 		Input:             []byte(""),
 		Identity:          "integ test",
 		RequestID:         uuid.New(),
@@ -342,7 +342,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionSta
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		Reason:            common.StringPtr("test-reason"),
+		Reason:            "test-reason",
 	})
 	s.Nil(err)
 
@@ -405,7 +405,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		SignalName:        common.StringPtr("sig-for-integ-test"),
+		SignalName:        "sig-for-integ-test",
 		Input:             []byte(""),
 		Identity:          "integ test",
 		RequestID:         uuid.New(),
@@ -417,7 +417,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		Reason:            common.StringPtr("test-reason"),
+		Reason:            "test-reason",
 	})
 	s.Nil(err)
 
@@ -482,7 +482,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		SignalName:        common.StringPtr("sig-for-integ-test"),
+		SignalName:        "sig-for-integ-test",
 		Input:             []byte(""),
 		Identity:          "integ test",
 		RequestID:         uuid.New(),
@@ -503,7 +503,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		Reason:            common.StringPtr("test-reason"),
+		Reason:            "test-reason",
 	})
 	s.Nil(err)
 
@@ -583,7 +583,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		SignalName:        common.StringPtr("sig-for-integ-test"),
+		SignalName:        "sig-for-integ-test",
 		Input:             []byte(""),
 		Identity:          "integ test",
 		RequestID:         uuid.New(),
@@ -606,7 +606,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		Reason:            common.StringPtr("test-reason"),
+		Reason:            "test-reason",
 	})
 	s.Nil(err)
 
@@ -699,7 +699,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		SignalName:        common.StringPtr("sig-for-integ-test"),
+		SignalName:        "sig-for-integ-test",
 		Input:             []byte(""),
 		Identity:          "integ test",
 		RequestID:         uuid.New(),
@@ -711,7 +711,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		Reason:            common.StringPtr("test-reason"),
+		Reason:            "test-reason",
 	})
 	s.Nil(err)
 
@@ -801,7 +801,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	err0 = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		SignalName:        common.StringPtr("sig-for-integ-test"),
+		SignalName:        "sig-for-integ-test",
 		Input:             []byte(""),
 		Identity:          "integ test",
 		RequestID:         uuid.New(),
@@ -822,7 +822,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	err := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: we,
-		Reason:            common.StringPtr("test-reason"),
+		Reason:            "test-reason",
 	})
 	s.Nil(err)
 

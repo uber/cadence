@@ -244,7 +244,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 		WorkflowID:     workflowID,
 		RunID:          runID,
 		Version:        common.Int64Ptr(version),
-		ScheduledID:    common.Int64Ptr(scheduleID),
+		ScheduledID:    scheduleID,
 		VersionHistory: versionHistory2.ToInternalType(),
 	}
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
@@ -295,7 +295,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 		WorkflowID:  workflowID,
 		RunID:       runID,
 		Version:     common.Int64Ptr(version),
-		ScheduledID: common.Int64Ptr(scheduleID),
+		ScheduledID: scheduleID,
 	}
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	s.mockMutableState.EXPECT().GetNextEventID().Return(nextEventID).AnyTimes()
@@ -357,7 +357,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingVers
 		WorkflowID:     workflowID,
 		RunID:          runID,
 		Version:        common.Int64Ptr(version),
-		ScheduledID:    common.Int64Ptr(scheduleID),
+		ScheduledID:    scheduleID,
 		VersionHistory: incomingVersionHistory.ToInternalType(),
 	}
 	localVersionHistories := &persistence.VersionHistories{
@@ -436,7 +436,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_DifferentVersionHistories_Inc
 		WorkflowID:     workflowID,
 		RunID:          runID,
 		Version:        common.Int64Ptr(version),
-		ScheduledID:    common.Int64Ptr(scheduleID),
+		ScheduledID:    scheduleID,
 		VersionHistory: incomingVersionHistory.ToInternalType(),
 	}
 	localVersionHistories := &persistence.VersionHistories{
@@ -526,7 +526,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingSche
 		WorkflowID:     workflowID,
 		RunID:          runID,
 		Version:        common.Int64Ptr(version),
-		ScheduledID:    common.Int64Ptr(scheduleID),
+		ScheduledID:    scheduleID,
 		VersionHistory: incomingVersionHistory.ToInternalType(),
 	}
 	localVersionHistories := &persistence.VersionHistories{
@@ -612,7 +612,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_SameSchedule
 		WorkflowID:     workflowID,
 		RunID:          runID,
 		Version:        common.Int64Ptr(version),
-		ScheduledID:    common.Int64Ptr(scheduleID),
+		ScheduledID:    scheduleID,
 		VersionHistory: incomingVersionHistory.ToInternalType(),
 	}
 	localVersionHistories := &persistence.VersionHistories{
@@ -685,7 +685,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_LocalVersion
 		WorkflowID:     workflowID,
 		RunID:          runID,
 		Version:        common.Int64Ptr(version),
-		ScheduledID:    common.Int64Ptr(scheduleID),
+		ScheduledID:    scheduleID,
 		VersionHistory: incomingVersionHistory.ToInternalType(),
 	}
 	localVersionHistories := &persistence.VersionHistories{
@@ -759,7 +759,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 		WorkflowID:     workflowID,
 		RunID:          runID,
 		Version:        common.Int64Ptr(version),
-		ScheduledID:    common.Int64Ptr(scheduleID),
+		ScheduledID:    scheduleID,
 		VersionHistory: versionHistory.ToInternalType(),
 	}
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
@@ -816,7 +816,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivity
 		WorkflowID:     workflowID,
 		RunID:          runID,
 		Version:        common.Int64Ptr(version),
-		ScheduledID:    common.Int64Ptr(scheduleID),
+		ScheduledID:    scheduleID,
 		VersionHistory: versionHistory.ToInternalType(),
 	}
 	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
@@ -880,9 +880,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 		WorkflowID:        workflowID,
 		RunID:             runID,
 		Version:           common.Int64Ptr(version),
-		ScheduledID:       common.Int64Ptr(scheduleID),
+		ScheduledID:       scheduleID,
 		ScheduledTime:     common.Int64Ptr(scheduledTime.UnixNano()),
-		StartedID:         common.Int64Ptr(startedID),
+		StartedID:         startedID,
 		StartedTime:       common.Int64Ptr(startedTime.UnixNano()),
 		Attempt:           attempt,
 		LastHeartbeatTime: common.Int64Ptr(heartBeatUpdatedTime.UnixNano()),
@@ -957,9 +957,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 		WorkflowID:        workflowID,
 		RunID:             runID,
 		Version:           common.Int64Ptr(version),
-		ScheduledID:       common.Int64Ptr(scheduleID),
+		ScheduledID:       scheduleID,
 		ScheduledTime:     common.Int64Ptr(scheduledTime.UnixNano()),
-		StartedID:         common.Int64Ptr(startedID),
+		StartedID:         startedID,
 		StartedTime:       common.Int64Ptr(startedTime.UnixNano()),
 		Attempt:           attempt,
 		LastHeartbeatTime: common.Int64Ptr(heartBeatUpdatedTime.UnixNano()),
@@ -1034,9 +1034,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_Larger
 		WorkflowID:        workflowID,
 		RunID:             runID,
 		Version:           common.Int64Ptr(version),
-		ScheduledID:       common.Int64Ptr(scheduleID),
+		ScheduledID:       scheduleID,
 		ScheduledTime:     common.Int64Ptr(scheduledTime.UnixNano()),
-		StartedID:         common.Int64Ptr(startedID),
+		StartedID:         startedID,
 		StartedTime:       common.Int64Ptr(startedTime.UnixNano()),
 		Attempt:           attempt,
 		LastHeartbeatTime: common.Int64Ptr(heartBeatUpdatedTime.UnixNano()),
@@ -1110,9 +1110,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning() {
 		WorkflowID:        workflowID,
 		RunID:             runID,
 		Version:           common.Int64Ptr(version),
-		ScheduledID:       common.Int64Ptr(scheduleID),
+		ScheduledID:       scheduleID,
 		ScheduledTime:     common.Int64Ptr(scheduledTime.UnixNano()),
-		StartedID:         common.Int64Ptr(startedID),
+		StartedID:         startedID,
 		StartedTime:       common.Int64Ptr(startedTime.UnixNano()),
 		Attempt:           attempt,
 		LastHeartbeatTime: common.Int64Ptr(heartBeatUpdatedTime.UnixNano()),
@@ -1199,9 +1199,9 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_ZombieWorkflo
 		WorkflowID:        workflowID,
 		RunID:             runID,
 		Version:           common.Int64Ptr(version),
-		ScheduledID:       common.Int64Ptr(scheduleID),
+		ScheduledID:       scheduleID,
 		ScheduledTime:     common.Int64Ptr(scheduledTime.UnixNano()),
-		StartedID:         common.Int64Ptr(startedID),
+		StartedID:         startedID,
 		StartedTime:       common.Int64Ptr(startedTime.UnixNano()),
 		Attempt:           attempt,
 		LastHeartbeatTime: common.Int64Ptr(heartBeatUpdatedTime.UnixNano()),

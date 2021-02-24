@@ -250,7 +250,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 	if startOver {
 		resp, err := client.CountWorkflowExecutions(ctx, &types.CountWorkflowExecutionsRequest{
 			Domain: batchParams.DomainName,
-			Query:  common.StringPtr(batchParams.Query),
+			Query:  batchParams.Query,
 		})
 		if err != nil {
 			return HeartBeatDetails{}, err
@@ -272,7 +272,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 			Domain:        batchParams.DomainName,
 			PageSize:      int32(pageSize),
 			NextPageToken: hbd.PageToken,
-			Query:         common.StringPtr(batchParams.Query),
+			Query:         batchParams.Query,
 		})
 		if err != nil {
 			return HeartBeatDetails{}, err
@@ -359,7 +359,7 @@ func startTaskProcessor(
 								WorkflowID: workflowID,
 								RunID:      runID,
 							},
-							Reason:   common.StringPtr(batchParams.Reason),
+							Reason:   batchParams.Reason,
 							Identity: BatchWFTypeName,
 						}, yarpcCallOptions...)
 					})
@@ -388,7 +388,7 @@ func startTaskProcessor(
 							},
 							Identity:   BatchWFTypeName,
 							RequestID:  requestID,
-							SignalName: common.StringPtr(batchParams.SignalParams.SignalName),
+							SignalName: batchParams.SignalParams.SignalName,
 							Input:      []byte(batchParams.SignalParams.Input),
 						}, yarpcCallOptions...)
 					})

@@ -830,7 +830,7 @@ func (e *matchingEngineImpl) recordDecisionTaskStarted(
 		DomainUUID:        task.event.DomainID,
 		WorkflowExecution: task.workflowExecution(),
 		ScheduleID:        &task.event.ScheduleID,
-		TaskID:            &task.event.TaskID,
+		TaskID:            task.event.TaskID,
 		RequestID:         uuid.New(),
 		PollRequest:       pollReq,
 	}
@@ -859,7 +859,7 @@ func (e *matchingEngineImpl) recordActivityTaskStarted(
 		DomainUUID:        task.event.DomainID,
 		WorkflowExecution: task.workflowExecution(),
 		ScheduleID:        &task.event.ScheduleID,
-		TaskID:            &task.event.TaskID,
+		TaskID:            task.event.TaskID,
 		RequestID:         uuid.New(),
 		PollRequest:       pollReq,
 	}

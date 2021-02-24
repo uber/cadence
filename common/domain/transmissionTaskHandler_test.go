@@ -28,7 +28,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
@@ -59,7 +58,7 @@ func (s *transmissionTaskSuite) SetupTest() {
 	s.kafkaProducer = &mocks.KafkaProducer{}
 	s.domainReplicator = NewDomainReplicator(
 		s.kafkaProducer,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 	).(*domainReplicatorImpl)
 }
 
@@ -123,30 +122,30 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_Is
 		TaskType: &taskType,
 		DomainTaskAttributes: &types.DomainTaskAttributes{
 			DomainOperation: &domainOperation,
-			ID:              common.StringPtr(id),
+			ID:              id,
 			Info: &types.DomainInfo{
-				Name:        common.StringPtr(name),
+				Name:        name,
 				Status:      &status,
-				Description: common.StringPtr(description),
-				OwnerEmail:  common.StringPtr(ownerEmail),
+				Description: description,
+				OwnerEmail:  ownerEmail,
 				Data:        data,
 			},
 			Config: &types.DomainConfiguration{
-				WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-				EmitMetric:                             common.BoolPtr(emitMetric),
+				WorkflowExecutionRetentionPeriodInDays: retention,
+				EmitMetric:                             emitMetric,
 				HistoryArchivalStatus:                  historyArchivalStatus.Ptr(),
-				HistoryArchivalURI:                     common.StringPtr(historyArchivalURI),
+				HistoryArchivalURI:                     historyArchivalURI,
 				VisibilityArchivalStatus:               visibilityArchivalStatus.Ptr(),
-				VisibilityArchivalURI:                  common.StringPtr(visibilityArchivalURI),
+				VisibilityArchivalURI:                  visibilityArchivalURI,
 				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 			},
 			ReplicationConfig: &types.DomainReplicationConfiguration{
-				ActiveClusterName: common.StringPtr(clusterActive),
+				ActiveClusterName: clusterActive,
 				Clusters:          s.domainReplicator.convertClusterReplicationConfigToThrift(clusters),
 			},
-			ConfigVersion:           common.Int64Ptr(configVersion),
-			FailoverVersion:         common.Int64Ptr(failoverVersion),
-			PreviousFailoverVersion: common.Int64Ptr(previousFailoverVersion),
+			ConfigVersion:           configVersion,
+			FailoverVersion:         failoverVersion,
+			PreviousFailoverVersion: previousFailoverVersion,
 		},
 	}).Return(nil).Once()
 
@@ -284,30 +283,30 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_IsGl
 		TaskType: &taskType,
 		DomainTaskAttributes: &types.DomainTaskAttributes{
 			DomainOperation: &domainOperation,
-			ID:              common.StringPtr(id),
+			ID:              id,
 			Info: &types.DomainInfo{
-				Name:        common.StringPtr(name),
+				Name:        name,
 				Status:      &status,
-				Description: common.StringPtr(description),
-				OwnerEmail:  common.StringPtr(ownerEmail),
+				Description: description,
+				OwnerEmail:  ownerEmail,
 				Data:        data,
 			},
 			Config: &types.DomainConfiguration{
-				WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-				EmitMetric:                             common.BoolPtr(emitMetric),
+				WorkflowExecutionRetentionPeriodInDays: retention,
+				EmitMetric:                             emitMetric,
 				HistoryArchivalStatus:                  historyArchivalStatus.Ptr(),
-				HistoryArchivalURI:                     common.StringPtr(historyArchivalURI),
+				HistoryArchivalURI:                     historyArchivalURI,
 				VisibilityArchivalStatus:               visibilityArchivalStatus.Ptr(),
-				VisibilityArchivalURI:                  common.StringPtr(visibilityArchivalURI),
+				VisibilityArchivalURI:                  visibilityArchivalURI,
 				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
 			},
 			ReplicationConfig: &types.DomainReplicationConfiguration{
-				ActiveClusterName: common.StringPtr(clusterActive),
+				ActiveClusterName: clusterActive,
 				Clusters:          s.domainReplicator.convertClusterReplicationConfigToThrift(clusters),
 			},
-			ConfigVersion:           common.Int64Ptr(configVersion),
-			FailoverVersion:         common.Int64Ptr(failoverVersion),
-			PreviousFailoverVersion: common.Int64Ptr(previousFailoverVersion),
+			ConfigVersion:           configVersion,
+			FailoverVersion:         failoverVersion,
+			PreviousFailoverVersion: previousFailoverVersion,
 		},
 	}).Return(nil).Once()
 

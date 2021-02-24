@@ -463,9 +463,9 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Failure_InvalidArchivalURI() {
 
 	req := registerDomainRequest(
 		types.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr(testHistoryArchivalURI),
+		testHistoryArchivalURI,
 		types.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr(testVisibilityArchivalURI),
+		testVisibilityArchivalURI,
 	)
 	err := wh.RegisterDomain(context.Background(), req)
 	s.Error(err)
@@ -488,7 +488,7 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_EnabledWithNoArchivalU
 
 	wh := s.getWorkflowHandler(s.newConfig())
 
-	req := registerDomainRequest(types.ArchivalStatusEnabled.Ptr(), nil, types.ArchivalStatusEnabled.Ptr(), nil)
+	req := registerDomainRequest(types.ArchivalStatusEnabled.Ptr(), "", types.ArchivalStatusEnabled.Ptr(), "")
 	err := wh.RegisterDomain(context.Background(), req)
 	s.NoError(err)
 }
@@ -512,9 +512,9 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_EnabledWithArchivalURI
 
 	req := registerDomainRequest(
 		types.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr(testHistoryArchivalURI),
+		testHistoryArchivalURI,
 		types.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr(testVisibilityArchivalURI),
+		testVisibilityArchivalURI,
 	)
 	err := wh.RegisterDomain(context.Background(), req)
 	s.NoError(err)
@@ -535,9 +535,9 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_ClusterNotConfiguredFo
 
 	req := registerDomainRequest(
 		types.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr(testVisibilityArchivalURI),
+		testVisibilityArchivalURI,
 		types.ArchivalStatusEnabled.Ptr(),
-		common.StringPtr("invalidURI"),
+		"invalidURI",
 	)
 	err := wh.RegisterDomain(context.Background(), req)
 	s.NoError(err)
@@ -556,7 +556,7 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_NotEnabled() {
 
 	wh := s.getWorkflowHandler(s.newConfig())
 
-	req := registerDomainRequest(nil, nil, nil, nil)
+	req := registerDomainRequest(nil, "", nil, "")
 	err := wh.RegisterDomain(context.Background(), req)
 	s.NoError(err)
 }
@@ -937,15 +937,15 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetFirstPage() {
 	nextPageToken := []byte{'1', '2', '3'}
 	historyBatch1 := &types.History{
 		Events: []*types.HistoryEvent{
-			{EventID: common.Int64Ptr(1)},
-			{EventID: common.Int64Ptr(2)},
+			{EventID: 1},
+			{EventID: 2},
 		},
 	}
 	historyBatch2 := &types.History{
 		Events: []*types.HistoryEvent{
-			{EventID: common.Int64Ptr(3)},
-			{EventID: common.Int64Ptr(4)},
-			{EventID: common.Int64Ptr(5)},
+			{EventID: 3},
+			{EventID: 4},
+			{EventID: 5},
 		},
 	}
 	history := &types.History{}
@@ -989,7 +989,7 @@ func (s *workflowHandlerSuite) TestGetHistory() {
 	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, req).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents: []*types.HistoryEvent{
 			{
-				EventID: common.Int64Ptr(int64(100)),
+				EventID: int64(100),
 			},
 		},
 		NextPageToken:    []byte{},
@@ -1105,16 +1105,16 @@ func (s *workflowHandlerSuite) TestGetSearchAttributes() {
 func (s *workflowHandlerSuite) TestGetWorkflowExecutionHistory__Success__RawHistoryEnabledTransientDecisionEmitted() {
 	var nextEventID int64 = 5
 	s.getWorkflowExecutionHistory(5, &types.TransientDecisionInfo{
-		StartedEvent:   &types.HistoryEvent{EventID: common.Int64Ptr(nextEventID + 1)},
-		ScheduledEvent: &types.HistoryEvent{EventID: common.Int64Ptr(nextEventID)},
+		StartedEvent:   &types.HistoryEvent{EventID: nextEventID + 1},
+		ScheduledEvent: &types.HistoryEvent{EventID: nextEventID},
 	}, []*types.HistoryEvent{{}, {}, {}})
 }
 
 func (s *workflowHandlerSuite) TestGetWorkflowExecutionHistory__Success__RawHistoryEnabledNoTransientDecisionEmitted() {
 	var nextEventID int64 = 5
 	s.getWorkflowExecutionHistory(5, &types.TransientDecisionInfo{
-		StartedEvent:   &types.HistoryEvent{EventID: common.Int64Ptr(nextEventID + 1)},
-		ScheduledEvent: &types.HistoryEvent{EventID: common.Int64Ptr(nextEventID)},
+		StartedEvent:   &types.HistoryEvent{EventID: nextEventID + 1},
+		ScheduledEvent: &types.HistoryEvent{EventID: nextEventID},
 	}, []*types.HistoryEvent{{}, {}, {}})
 }
 
@@ -1192,13 +1192,13 @@ func (s *workflowHandlerSuite) TestListWorkflowExecutions() {
 	ctx := context.Background()
 
 	query := "WorkflowID = 'wid'"
-	listRequest.Query = common.StringPtr(query)
+	listRequest.Query = query
 	_, err := wh.ListWorkflowExecutions(ctx, listRequest)
 	s.NoError(err)
 	s.Equal(query, listRequest.GetQuery())
 
 	query = "InvalidKey = 'a'"
-	listRequest.Query = common.StringPtr(query)
+	listRequest.Query = query
 	_, err = wh.ListWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 
@@ -1221,13 +1221,13 @@ func (s *workflowHandlerSuite) TestScantWorkflowExecutions() {
 	ctx := context.Background()
 
 	query := "WorkflowID = 'wid'"
-	listRequest.Query = common.StringPtr(query)
+	listRequest.Query = query
 	_, err := wh.ScanWorkflowExecutions(ctx, listRequest)
 	s.NoError(err)
 	s.Equal(query, listRequest.GetQuery())
 
 	query = "InvalidKey = 'a'"
-	listRequest.Query = common.StringPtr(query)
+	listRequest.Query = query
 	_, err = wh.ScanWorkflowExecutions(ctx, listRequest)
 	s.NotNil(err)
 
@@ -1248,13 +1248,13 @@ func (s *workflowHandlerSuite) TestCountWorkflowExecutions() {
 	ctx := context.Background()
 
 	query := "WorkflowID = 'wid'"
-	countRequest.Query = common.StringPtr(query)
+	countRequest.Query = query
 	_, err := wh.CountWorkflowExecutions(ctx, countRequest)
 	s.NoError(err)
 	s.Equal(query, countRequest.GetQuery())
 
 	query = "InvalidKey = 'a'"
-	countRequest.Query = common.StringPtr(query)
+	countRequest.Query = query
 	_, err = wh.CountWorkflowExecutions(ctx, countRequest)
 	s.NotNil(err)
 }
@@ -1310,7 +1310,7 @@ func (s *workflowHandlerSuite) TestConvertIndexedKeyToThrift() {
 func (s *workflowHandlerSuite) TestVerifyHistoryIsComplete() {
 	events := make([]*types.HistoryEvent, 50)
 	for i := 0; i < len(events); i++ {
-		events[i] = &types.HistoryEvent{EventID: common.Int64Ptr(int64(i + 1))}
+		events[i] = &types.HistoryEvent{EventID: int64(i + 1)}
 	}
 	var eventsWithHoles []*types.HistoryEvent
 	eventsWithHoles = append(eventsWithHoles, events[9:12]...)
@@ -1379,13 +1379,11 @@ func updateRequest(
 	visibilityArchivalStatus *types.ArchivalStatus,
 ) *types.UpdateDomainRequest {
 	return &types.UpdateDomainRequest{
-		Name: common.StringPtr("test-name"),
-		Configuration: &types.DomainConfiguration{
-			HistoryArchivalStatus:    historyArchivalStatus,
-			HistoryArchivalURI:       historyArchivalURI,
-			VisibilityArchivalStatus: visibilityArchivalStatus,
-			VisibilityArchivalURI:    visibilityArchivalURI,
-		},
+		Name:                     "test-name",
+		HistoryArchivalStatus:    historyArchivalStatus,
+		HistoryArchivalURI:       historyArchivalURI,
+		VisibilityArchivalStatus: visibilityArchivalStatus,
+		VisibilityArchivalURI:    visibilityArchivalURI,
 	}
 }
 
@@ -1425,29 +1423,29 @@ func persistenceGetDomainResponse(historyArchivalState, visibilityArchivalState 
 
 func registerDomainRequest(
 	historyArchivalStatus *types.ArchivalStatus,
-	historyArchivalURI *string,
+	historyArchivalURI string,
 	visibilityArchivalStatus *types.ArchivalStatus,
-	visibilityArchivalURI *string,
+	visibilityArchivalURI string,
 ) *types.RegisterDomainRequest {
 	return &types.RegisterDomainRequest{
-		Name:                                   common.StringPtr("test-domain"),
-		Description:                            common.StringPtr("test-description"),
-		OwnerEmail:                             common.StringPtr("test-owner-email"),
-		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(10),
+		Name:                                   "test-domain",
+		Description:                            "test-description",
+		OwnerEmail:                             "test-owner-email",
+		WorkflowExecutionRetentionPeriodInDays: 10,
 		EmitMetric:                             common.BoolPtr(true),
 		Clusters: []*types.ClusterReplicationConfiguration{
 			{
 				ClusterName: cluster.TestCurrentClusterName,
 			},
 		},
-		ActiveClusterName:        common.StringPtr(cluster.TestCurrentClusterName),
+		ActiveClusterName:        cluster.TestCurrentClusterName,
 		Data:                     make(map[string]string),
-		SecurityToken:            common.StringPtr("token"),
+		SecurityToken:            "token",
 		HistoryArchivalStatus:    historyArchivalStatus,
 		HistoryArchivalURI:       historyArchivalURI,
 		VisibilityArchivalStatus: visibilityArchivalStatus,
 		VisibilityArchivalURI:    visibilityArchivalURI,
-		IsGlobalDomain:           common.BoolPtr(false),
+		IsGlobalDomain:           false,
 	}
 }
 
@@ -1465,6 +1463,6 @@ func listArchivedWorkflowExecutionsTestRequest() *types.ListArchivedWorkflowExec
 	return &types.ListArchivedWorkflowExecutionsRequest{
 		Domain:   "some random domain name",
 		PageSize: 10,
-		Query:    common.StringPtr("some random query string"),
+		Query:    "some random query string",
 	}
 }

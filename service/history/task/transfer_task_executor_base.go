@@ -100,7 +100,7 @@ func (t *transferTaskExecutorBase) pushActivity(
 			RunID:      task.RunID,
 		},
 		TaskList:                      &types.TaskList{Name: task.TaskList},
-		ScheduleID:                    &task.ScheduleID,
+		ScheduleID:                    task.ScheduleID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(activityScheduleToStartTimeout),
 	})
 }
@@ -126,7 +126,7 @@ func (t *transferTaskExecutorBase) pushDecision(
 			RunID:      task.RunID,
 		},
 		TaskList:                      tasklist,
-		ScheduleID:                    common.Int64Ptr(task.ScheduleID),
+		ScheduleID:                    task.ScheduleID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(decisionScheduleToStartTimeout),
 	})
 }

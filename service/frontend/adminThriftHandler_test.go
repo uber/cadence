@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/.gen/go/admin"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -74,7 +75,7 @@ func TestAdminThriftHandler(t *testing.T) {
 	t.Run("DescribeWorkflowExecution", func(t *testing.T) {
 		h.EXPECT().DescribeWorkflowExecution(ctx, &types.AdminDescribeWorkflowExecutionRequest{}).Return(&types.AdminDescribeWorkflowExecutionResponse{}, internalErr).Times(1)
 		resp, err := th.DescribeWorkflowExecution(ctx, &admin.DescribeWorkflowExecutionRequest{})
-		assert.Equal(t, admin.DescribeWorkflowExecutionResponse{}, *resp)
+		assert.Equal(t, admin.DescribeWorkflowExecutionResponse{ShardId: common.StringPtr("")}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("GetDLQReplicationMessages", func(t *testing.T) {

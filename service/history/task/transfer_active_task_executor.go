@@ -343,7 +343,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 				WorkflowID: parentWorkflowID,
 				RunID:      parentRunID,
 			},
-			InitiatedID: common.Int64Ptr(initiatedID),
+			InitiatedID: initiatedID,
 			CompletedExecution: &types.WorkflowExecution{
 				WorkflowID: task.WorkflowID,
 				RunID:      task.RunID,
@@ -1253,7 +1253,7 @@ func (t *transferActiveTaskExecutor) signalExternalExecutionWithRetry(
 				RunID:      task.TargetRunID,
 			},
 			Identity:   execution.IdentityHistoryService,
-			SignalName: common.StringPtr(signalInfo.SignalName),
+			SignalName: signalInfo.SignalName,
 			Input:      signalInfo.Input,
 			// Use same request ID to deduplicate SignalWorkflowExecution calls
 			RequestID: signalInfo.SignalRequestID,
@@ -1495,7 +1495,7 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 					WorkflowID: childInfo.StartedWorkflowID,
 					RunID:      childInfo.StartedRunID,
 				},
-				Reason:   common.StringPtr("by parent close policy"),
+				Reason:   "by parent close policy",
 				Identity: execution.IdentityHistoryService,
 			},
 		})

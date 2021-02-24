@@ -230,7 +230,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 	rawVersionHistories := persistence.NewVersionHistories(versionHistory)
 	versionHistories := rawVersionHistories.ToInternalType()
 	mState := &types.GetMutableStateResponse{
-		NextEventID:        common.Int64Ptr(11),
+		NextEventID:        11,
 		CurrentBranchToken: branchToken,
 		VersionHistories:   versionHistories,
 	}
@@ -268,7 +268,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_SameStartIDAnd
 	rawVersionHistories := persistence.NewVersionHistories(versionHistory)
 	versionHistories := rawVersionHistories.ToInternalType()
 	mState := &types.GetMutableStateResponse{
-		NextEventID:        common.Int64Ptr(11),
+		NextEventID:        11,
 		CurrentBranchToken: branchToken,
 		VersionHistories:   versionHistories,
 	}
@@ -563,14 +563,14 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Permission() {
 		{
 			Name: "unknown token",
 			Request: &types.AddSearchAttributeRequest{
-				SecurityToken: common.StringPtr("unknown"),
+				SecurityToken: "unknown",
 			},
 			Expected: errNoPermission,
 		},
 		{
 			Name: "correct token",
 			Request: &types.AddSearchAttributeRequest{
-				SecurityToken: common.StringPtr(common.DefaultAdminOperationToken),
+				SecurityToken: common.DefaultAdminOperationToken,
 			},
 			Expected: &types.BadRequestError{Message: "SearchAttributes are not provided"},
 		},

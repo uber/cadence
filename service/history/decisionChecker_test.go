@@ -133,7 +133,7 @@ func (s *decisionAttrValidatorSuite) TestValidateSignalExternalWorkflowExecution
 	s.EqualError(err, "BadRequestError{Message: Invalid RunId set on decision.}")
 	attributes.Execution.RunID = constants.TestRunID
 
-	attributes.SignalName = common.StringPtr("my signal name")
+	attributes.SignalName = "my signal name"
 	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(s.testDomainID, s.testTargetDomainID, attributes)
 	s.NoError(err)
 

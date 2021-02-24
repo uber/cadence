@@ -427,7 +427,7 @@ func AdminRemoveTask(c *cli.Context) {
 	defer cancel()
 
 	req := &types.RemoveTaskRequest{
-		ShardID:             common.Int32Ptr(int32(shardID)),
+		ShardID:             int32(shardID),
 		Type:                common.Int32Ptr(int32(typeID)),
 		TaskID:              common.Int64Ptr(taskID),
 		VisibilityTimestamp: common.Int64Ptr(visibilityTimestamp),
@@ -500,7 +500,7 @@ func AdminCloseShard(c *cli.Context) {
 	defer cancel()
 
 	req := &types.CloseShardRequest{}
-	req.ShardID = common.Int32Ptr(int32(sid))
+	req.ShardID = int32(sid)
 
 	err := adminClient.CloseShard(ctx, req)
 	if err != nil {
@@ -584,7 +584,7 @@ func AdminResetQueue(c *cli.Context) {
 	defer cancel()
 
 	req := &types.ResetQueueRequest{
-		ShardID:     common.Int32Ptr(int32(shardID)),
+		ShardID:     int32(shardID),
 		ClusterName: clusterName,
 		Type:        common.Int32Ptr(int32(typeID)),
 	}
@@ -608,7 +608,7 @@ func AdminDescribeQueue(c *cli.Context) {
 	defer cancel()
 
 	req := &types.DescribeQueueRequest{
-		ShardID:     common.Int32Ptr(int32(shardID)),
+		ShardID:     int32(shardID),
 		ClusterName: clusterName,
 		Type:        common.Int32Ptr(int32(typeID)),
 	}

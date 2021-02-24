@@ -86,7 +86,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("PollForDecisionTask", func(t *testing.T) {
 		h.EXPECT().PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{}).Return(&types.MatchingPollForDecisionTaskResponse{}, internalErr).Times(1)
 		resp, err := th.PollForDecisionTask(ctx, &m.PollForDecisionTaskRequest{})
-		assert.Equal(t, m.PollForDecisionTaskResponse{Attempt: common.Int64Ptr(0), StickyExecutionEnabled: common.BoolPtr(false)}, *resp)
+		assert.Equal(t, m.PollForDecisionTaskResponse{StartedEventId: common.Int64Ptr(0), NextEventId: common.Int64Ptr(0), Attempt: common.Int64Ptr(0), StickyExecutionEnabled: common.BoolPtr(false)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("QueryWorkflow", func(t *testing.T) {

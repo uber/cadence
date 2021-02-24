@@ -102,41 +102,41 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_RegisterDomainTask_Name
 
 	task := &types.DomainTaskAttributes{
 		DomainOperation: &operation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
-			Name:        common.StringPtr(name),
+			Name:        name,
 			Status:      &status,
-			Description: common.StringPtr(description),
-			OwnerEmail:  common.StringPtr(ownerEmail),
+			Description: description,
+			OwnerEmail:  ownerEmail,
 			Data:        data,
 		},
 		Config: &types.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-			EmitMetric:                             common.BoolPtr(emitMetric),
+			WorkflowExecutionRetentionPeriodInDays: retention,
+			EmitMetric:                             emitMetric,
 			HistoryArchivalStatus:                  historyArchivalStatus.Ptr(),
-			HistoryArchivalURI:                     common.StringPtr(historyArchivalURI),
+			HistoryArchivalURI:                     historyArchivalURI,
 			VisibilityArchivalStatus:               visibilityArchivalStatus.Ptr(),
-			VisibilityArchivalURI:                  common.StringPtr(visibilityArchivalURI),
+			VisibilityArchivalURI:                  visibilityArchivalURI,
 		},
 		ReplicationConfig: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterActive),
+			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
-		ConfigVersion:   common.Int64Ptr(configVersion),
-		FailoverVersion: common.Int64Ptr(failoverVersion),
+		ConfigVersion:   configVersion,
+		FailoverVersion: failoverVersion,
 	}
 
 	err := s.domainReplicator.Execute(task)
 	s.Nil(err)
 
-	task.ID = common.StringPtr(uuid.New())
-	task.Info.Name = common.StringPtr(name)
+	task.ID = uuid.New()
+	task.Info.Name = name
 	err = s.domainReplicator.Execute(task)
 	s.NotNil(err)
 	s.IsType(&types.BadRequestError{}, err)
 
-	task.ID = common.StringPtr(id)
-	task.Info.Name = common.StringPtr("other random domain test name")
+	task.ID = id
+	task.Info.Name = "other random domain test name"
 	err = s.domainReplicator.Execute(task)
 	s.NotNil(err)
 	s.IsType(&types.BadRequestError{}, err)
@@ -171,28 +171,28 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_RegisterDomainTask() {
 
 	task := &types.DomainTaskAttributes{
 		DomainOperation: &operation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
-			Name:        common.StringPtr(name),
+			Name:        name,
 			Status:      &status,
-			Description: common.StringPtr(description),
-			OwnerEmail:  common.StringPtr(ownerEmail),
+			Description: description,
+			OwnerEmail:  ownerEmail,
 			Data:        data,
 		},
 		Config: &types.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-			EmitMetric:                             common.BoolPtr(emitMetric),
+			WorkflowExecutionRetentionPeriodInDays: retention,
+			EmitMetric:                             emitMetric,
 			HistoryArchivalStatus:                  historyArchivalStatus.Ptr(),
-			HistoryArchivalURI:                     common.StringPtr(historyArchivalURI),
+			HistoryArchivalURI:                     historyArchivalURI,
 			VisibilityArchivalStatus:               visibilityArchivalStatus.Ptr(),
-			VisibilityArchivalURI:                  common.StringPtr(visibilityArchivalURI),
+			VisibilityArchivalURI:                  visibilityArchivalURI,
 		},
 		ReplicationConfig: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterActive),
+			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
-		ConfigVersion:   common.Int64Ptr(configVersion),
-		FailoverVersion: common.Int64Ptr(failoverVersion),
+		ConfigVersion:   configVersion,
+		FailoverVersion: failoverVersion,
 	}
 
 	metadata, err := s.MetadataManager.GetMetadata(context.Background())
@@ -257,28 +257,28 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Domain
 
 	updateTask := &types.DomainTaskAttributes{
 		DomainOperation: &operation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
-			Name:        common.StringPtr(name),
+			Name:        name,
 			Status:      &status,
-			Description: common.StringPtr(description),
-			OwnerEmail:  common.StringPtr(ownerEmail),
+			Description: description,
+			OwnerEmail:  ownerEmail,
 			Data:        domainData,
 		},
 		Config: &types.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-			EmitMetric:                             common.BoolPtr(emitMetric),
+			WorkflowExecutionRetentionPeriodInDays: retention,
+			EmitMetric:                             emitMetric,
 			HistoryArchivalStatus:                  historyArchivalStatus.Ptr(),
-			HistoryArchivalURI:                     common.StringPtr(historyArchivalURI),
+			HistoryArchivalURI:                     historyArchivalURI,
 			VisibilityArchivalStatus:               visibilityArchivalStatus.Ptr(),
-			VisibilityArchivalURI:                  common.StringPtr(visibilityArchivalURI),
+			VisibilityArchivalURI:                  visibilityArchivalURI,
 		},
 		ReplicationConfig: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterActive),
+			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
-		ConfigVersion:   common.Int64Ptr(configVersion),
-		FailoverVersion: common.Int64Ptr(failoverVersion),
+		ConfigVersion:   configVersion,
+		FailoverVersion: failoverVersion,
 	}
 
 	metadata, err := s.MetadataManager.GetMetadata(context.Background())
@@ -339,28 +339,28 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 
 	createTask := &types.DomainTaskAttributes{
 		DomainOperation: &operation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
-			Name:        common.StringPtr(name),
+			Name:        name,
 			Status:      &status,
-			Description: common.StringPtr(description),
-			OwnerEmail:  common.StringPtr(ownerEmail),
+			Description: description,
+			OwnerEmail:  ownerEmail,
 			Data:        data,
 		},
 		Config: &types.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-			EmitMetric:                             common.BoolPtr(emitMetric),
+			WorkflowExecutionRetentionPeriodInDays: retention,
+			EmitMetric:                             emitMetric,
 			HistoryArchivalStatus:                  historyArchivalStatus.Ptr(),
-			HistoryArchivalURI:                     common.StringPtr(historyArchivalURI),
+			HistoryArchivalURI:                     historyArchivalURI,
 			VisibilityArchivalStatus:               visibilityArchivalStatus.Ptr(),
-			VisibilityArchivalURI:                  common.StringPtr(visibilityArchivalURI),
+			VisibilityArchivalURI:                  visibilityArchivalURI,
 		},
 		ReplicationConfig: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterActive),
+			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
-		ConfigVersion:   common.Int64Ptr(configVersion),
-		FailoverVersion: common.Int64Ptr(failoverVersion),
+		ConfigVersion:   configVersion,
+		FailoverVersion: failoverVersion,
 	}
 
 	err := s.domainReplicator.Execute(createTask)
@@ -392,28 +392,28 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 	}
 	updateTask := &types.DomainTaskAttributes{
 		DomainOperation: &updateOperation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
-			Name:        common.StringPtr(name),
+			Name:        name,
 			Status:      &updateStatus,
-			Description: common.StringPtr(updateDescription),
-			OwnerEmail:  common.StringPtr(updateOwnerEmail),
+			Description: updateDescription,
+			OwnerEmail:  updateOwnerEmail,
 			Data:        updatedData,
 		},
 		Config: &types.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(updateRetention),
-			EmitMetric:                             common.BoolPtr(updateEmitMetric),
+			WorkflowExecutionRetentionPeriodInDays: updateRetention,
+			EmitMetric:                             updateEmitMetric,
 			HistoryArchivalStatus:                  updateHistoryArchivalStatus.Ptr(),
-			HistoryArchivalURI:                     common.StringPtr(updateHistoryArchivalURI),
+			HistoryArchivalURI:                     updateHistoryArchivalURI,
 			VisibilityArchivalStatus:               updateVisibilityArchivalStatus.Ptr(),
-			VisibilityArchivalURI:                  common.StringPtr(updateVisibilityArchivalURI),
+			VisibilityArchivalURI:                  updateVisibilityArchivalURI,
 		},
 		ReplicationConfig: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(updateClusterActive),
+			ActiveClusterName: updateClusterActive,
 			Clusters:          updateClusters,
 		},
-		ConfigVersion:   common.Int64Ptr(updateConfigVersion),
-		FailoverVersion: common.Int64Ptr(updateFailoverVersion),
+		ConfigVersion:   updateConfigVersion,
+		FailoverVersion: updateFailoverVersion,
 	}
 	metadata, err := s.MetadataManager.GetMetadata(context.Background())
 	s.Nil(err)
@@ -473,28 +473,28 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 
 	createTask := &types.DomainTaskAttributes{
 		DomainOperation: &operation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
-			Name:        common.StringPtr(name),
+			Name:        name,
 			Status:      &status,
-			Description: common.StringPtr(description),
-			OwnerEmail:  common.StringPtr(ownerEmail),
+			Description: description,
+			OwnerEmail:  ownerEmail,
 			Data:        data,
 		},
 		Config: &types.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-			EmitMetric:                             common.BoolPtr(emitMetric),
+			WorkflowExecutionRetentionPeriodInDays: retention,
+			EmitMetric:                             emitMetric,
 			HistoryArchivalStatus:                  historyArchivalStatus.Ptr(),
-			HistoryArchivalURI:                     common.StringPtr(historyArchivalURI),
+			HistoryArchivalURI:                     historyArchivalURI,
 			VisibilityArchivalStatus:               visibilityArchivalStatus.Ptr(),
-			VisibilityArchivalURI:                  common.StringPtr(visibilityArchivalURI),
+			VisibilityArchivalURI:                  visibilityArchivalURI,
 		},
 		ReplicationConfig: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterActive),
+			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
-		ConfigVersion:   common.Int64Ptr(configVersion),
-		FailoverVersion: common.Int64Ptr(failoverVersion),
+		ConfigVersion:   configVersion,
+		FailoverVersion: failoverVersion,
 	}
 
 	err := s.domainReplicator.Execute(createTask)
@@ -526,29 +526,29 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 	}
 	updateTask := &types.DomainTaskAttributes{
 		DomainOperation: &updateOperation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
-			Name:        common.StringPtr(name),
+			Name:        name,
 			Status:      &updateStatus,
-			Description: common.StringPtr(updateDescription),
-			OwnerEmail:  common.StringPtr(updateOwnerEmail),
+			Description: updateDescription,
+			OwnerEmail:  updateOwnerEmail,
 			Data:        updateData,
 		},
 		Config: &types.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(updateRetention),
-			EmitMetric:                             common.BoolPtr(updateEmitMetric),
+			WorkflowExecutionRetentionPeriodInDays: updateRetention,
+			EmitMetric:                             updateEmitMetric,
 			HistoryArchivalStatus:                  updateHistoryArchivalStatus.Ptr(),
-			HistoryArchivalURI:                     common.StringPtr(updateHistoryArchivalURI),
+			HistoryArchivalURI:                     updateHistoryArchivalURI,
 			VisibilityArchivalStatus:               updateVisibilityArchivalStatus.Ptr(),
-			VisibilityArchivalURI:                  common.StringPtr(updateVisibilityArchivalURI),
+			VisibilityArchivalURI:                  updateVisibilityArchivalURI,
 		},
 		ReplicationConfig: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(updateClusterActive),
+			ActiveClusterName: updateClusterActive,
 			Clusters:          updateClusters,
 		},
-		ConfigVersion:           common.Int64Ptr(updateConfigVersion),
-		FailoverVersion:         common.Int64Ptr(updateFailoverVersion),
-		PreviousFailoverVersion: common.Int64Ptr(previousFailoverVersion),
+		ConfigVersion:           updateConfigVersion,
+		FailoverVersion:         updateFailoverVersion,
+		PreviousFailoverVersion: previousFailoverVersion,
 	}
 	metadata, err := s.MetadataManager.GetMetadata(context.Background())
 	s.Nil(err)
@@ -609,29 +609,29 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 
 	createTask := &types.DomainTaskAttributes{
 		DomainOperation: &operation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
-			Name:        common.StringPtr(name),
+			Name:        name,
 			Status:      &status,
-			Description: common.StringPtr(description),
-			OwnerEmail:  common.StringPtr(ownerEmail),
+			Description: description,
+			OwnerEmail:  ownerEmail,
 			Data:        data,
 		},
 		Config: &types.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-			EmitMetric:                             common.BoolPtr(emitMetric),
+			WorkflowExecutionRetentionPeriodInDays: retention,
+			EmitMetric:                             emitMetric,
 			HistoryArchivalStatus:                  historyArchivalStatus.Ptr(),
-			HistoryArchivalURI:                     common.StringPtr(historyArchivalURI),
+			HistoryArchivalURI:                     historyArchivalURI,
 			VisibilityArchivalStatus:               visibilityArchivalStatus.Ptr(),
-			VisibilityArchivalURI:                  common.StringPtr(visibilityArchivalURI),
+			VisibilityArchivalURI:                  visibilityArchivalURI,
 		},
 		ReplicationConfig: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterActive),
+			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
-		ConfigVersion:           common.Int64Ptr(configVersion),
-		FailoverVersion:         common.Int64Ptr(failoverVersion),
-		PreviousFailoverVersion: common.Int64Ptr(previousFailoverVersion),
+		ConfigVersion:           configVersion,
+		FailoverVersion:         failoverVersion,
+		PreviousFailoverVersion: previousFailoverVersion,
 	}
 
 	err := s.domainReplicator.Execute(createTask)
@@ -679,29 +679,29 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 	}
 	updateTask := &types.DomainTaskAttributes{
 		DomainOperation: &updateOperation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
-			Name:        common.StringPtr(name),
+			Name:        name,
 			Status:      &updateStatus,
-			Description: common.StringPtr(updateDescription),
-			OwnerEmail:  common.StringPtr(updateOwnerEmail),
+			Description: updateDescription,
+			OwnerEmail:  updateOwnerEmail,
 			Data:        updatedData,
 		},
 		Config: &types.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(updateRetention),
-			EmitMetric:                             common.BoolPtr(updateEmitMetric),
+			WorkflowExecutionRetentionPeriodInDays: updateRetention,
+			EmitMetric:                             updateEmitMetric,
 			HistoryArchivalStatus:                  historyArchivalStatus.Ptr(),
-			HistoryArchivalURI:                     common.StringPtr(historyArchivalURI),
+			HistoryArchivalURI:                     historyArchivalURI,
 			VisibilityArchivalStatus:               visibilityArchivalStatus.Ptr(),
-			VisibilityArchivalURI:                  common.StringPtr(visibilityArchivalURI),
+			VisibilityArchivalURI:                  visibilityArchivalURI,
 		},
 		ReplicationConfig: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(updateClusterActive),
+			ActiveClusterName: updateClusterActive,
 			Clusters:          updateClusters,
 		},
-		ConfigVersion:           common.Int64Ptr(updateConfigVersion),
-		FailoverVersion:         common.Int64Ptr(updateFailoverVersion),
-		PreviousFailoverVersion: common.Int64Ptr(failoverVersion),
+		ConfigVersion:           updateConfigVersion,
+		FailoverVersion:         updateFailoverVersion,
+		PreviousFailoverVersion: failoverVersion,
 	}
 	metadata, err := s.MetadataManager.GetMetadata(context.Background())
 	s.Nil(err)
@@ -762,28 +762,28 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 
 	createTask := &types.DomainTaskAttributes{
 		DomainOperation: &operation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
-			Name:        common.StringPtr(name),
+			Name:        name,
 			Status:      &status,
-			Description: common.StringPtr(description),
-			OwnerEmail:  common.StringPtr(ownerEmail),
+			Description: description,
+			OwnerEmail:  ownerEmail,
 			Data:        data,
 		},
 		Config: &types.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retention),
-			EmitMetric:                             common.BoolPtr(emitMetric),
+			WorkflowExecutionRetentionPeriodInDays: retention,
+			EmitMetric:                             emitMetric,
 			HistoryArchivalStatus:                  historyArchivalStatus.Ptr(),
-			HistoryArchivalURI:                     common.StringPtr(historyArchivalURI),
+			HistoryArchivalURI:                     historyArchivalURI,
 			VisibilityArchivalStatus:               visibilityArchivalStatus.Ptr(),
-			VisibilityArchivalURI:                  common.StringPtr(visibilityArchivalURI),
+			VisibilityArchivalURI:                  visibilityArchivalURI,
 		},
 		ReplicationConfig: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(clusterActive),
+			ActiveClusterName: clusterActive,
 			Clusters:          clusters,
 		},
-		ConfigVersion:   common.Int64Ptr(configVersion),
-		FailoverVersion: common.Int64Ptr(failoverVersion),
+		ConfigVersion:   configVersion,
+		FailoverVersion: failoverVersion,
 	}
 	metadata, err := s.MetadataManager.GetMetadata(context.Background())
 	s.Nil(err)
@@ -813,29 +813,29 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 	}
 	updateTask := &types.DomainTaskAttributes{
 		DomainOperation: &updateOperation,
-		ID:              common.StringPtr(id),
+		ID:              id,
 		Info: &types.DomainInfo{
-			Name:        common.StringPtr(name),
+			Name:        name,
 			Status:      &updateStatus,
-			Description: common.StringPtr(updateDescription),
-			OwnerEmail:  common.StringPtr(updateOwnerEmail),
+			Description: updateDescription,
+			OwnerEmail:  updateOwnerEmail,
 			Data:        updatedData,
 		},
 		Config: &types.DomainConfiguration{
-			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(updateRetention),
-			EmitMetric:                             common.BoolPtr(updateEmitMetric),
+			WorkflowExecutionRetentionPeriodInDays: updateRetention,
+			EmitMetric:                             updateEmitMetric,
 			HistoryArchivalStatus:                  historyArchivalStatus.Ptr(),
-			HistoryArchivalURI:                     common.StringPtr(historyArchivalURI),
+			HistoryArchivalURI:                     historyArchivalURI,
 			VisibilityArchivalStatus:               visibilityArchivalStatus.Ptr(),
-			VisibilityArchivalURI:                  common.StringPtr(visibilityArchivalURI),
+			VisibilityArchivalURI:                  visibilityArchivalURI,
 		},
 		ReplicationConfig: &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(updateClusterActive),
+			ActiveClusterName: updateClusterActive,
 			Clusters:          updateClusters,
 		},
-		ConfigVersion:           common.Int64Ptr(updateConfigVersion),
-		FailoverVersion:         common.Int64Ptr(updateFailoverVersion),
-		PreviousFailoverVersion: common.Int64Ptr(previousFailoverVersion),
+		ConfigVersion:           updateConfigVersion,
+		FailoverVersion:         updateFailoverVersion,
+		PreviousFailoverVersion: previousFailoverVersion,
 	}
 	err = s.domainReplicator.Execute(updateTask)
 	s.Nil(err)

@@ -45,10 +45,6 @@ var (
 	ErrInvalidDomainConfig = &types.BadRequestError{Message: "invalid domain config attribute"}
 	// ErrInvalidDomainReplicationConfig is the error to indicate empty replication config attribute
 	ErrInvalidDomainReplicationConfig = &types.BadRequestError{Message: "invalid domain replication config attribute"}
-	// ErrInvalidDomainConfigVersion is the error to indicate empty config version attribute
-	ErrInvalidDomainConfigVersion = &types.BadRequestError{Message: "invalid domain config version attribute"}
-	// ErrInvalidDomainFailoverVersion is the error to indicate empty failover version attribute
-	ErrInvalidDomainFailoverVersion = &types.BadRequestError{Message: "invalid domain failover version attribute"}
 	// ErrInvalidDomainStatus is the error to indicate invalid domain status
 	ErrInvalidDomainStatus = &types.BadRequestError{Message: "invalid domain status attribute"}
 	// ErrNameUUIDCollision is the error to indicate domain name / UUID collision
@@ -279,7 +275,7 @@ func (h *domainReplicationTaskExecutorImpl) validateDomainReplicationTask(task *
 
 	if task.DomainOperation == nil {
 		return ErrInvalidDomainOperation
-	} else if task.ID == nil {
+	} else if task.ID == "" {
 		return ErrInvalidDomainID
 	} else if task.Info == nil {
 		return ErrInvalidDomainInfo
@@ -287,10 +283,6 @@ func (h *domainReplicationTaskExecutorImpl) validateDomainReplicationTask(task *
 		return ErrInvalidDomainConfig
 	} else if task.ReplicationConfig == nil {
 		return ErrInvalidDomainReplicationConfig
-	} else if task.ConfigVersion == nil {
-		return ErrInvalidDomainConfigVersion
-	} else if task.FailoverVersion == nil {
-		return ErrInvalidDomainFailoverVersion
 	}
 	return nil
 }

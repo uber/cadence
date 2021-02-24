@@ -89,7 +89,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("GetMutableState", func(t *testing.T) {
 		h.EXPECT().GetMutableState(ctx, &types.GetMutableStateRequest{}).Return(&types.GetMutableStateResponse{}, internalErr).Times(1)
 		resp, err := th.GetMutableState(ctx, &hist.GetMutableStateRequest{})
-		assert.Equal(t, hist.GetMutableStateResponse{IsWorkflowRunning: common.BoolPtr(false), IsStickyTaskListEnabled: common.BoolPtr(false)}, *resp)
+		assert.Equal(t, hist.GetMutableStateResponse{IsWorkflowRunning: common.BoolPtr(false), NextEventId: common.Int64Ptr(0), LastFirstEventId: common.Int64Ptr(0), IsStickyTaskListEnabled: common.BoolPtr(false)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("GetReplicationMessages", func(t *testing.T) {
@@ -112,7 +112,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("PollMutableState", func(t *testing.T) {
 		h.EXPECT().PollMutableState(ctx, &types.PollMutableStateRequest{}).Return(&types.PollMutableStateResponse{}, internalErr).Times(1)
 		resp, err := th.PollMutableState(ctx, &hist.PollMutableStateRequest{})
-		assert.Equal(t, hist.PollMutableStateResponse{}, *resp)
+		assert.Equal(t, hist.PollMutableStateResponse{NextEventId: common.Int64Ptr(0), LastFirstEventId: common.Int64Ptr(0)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("PurgeDLQMessages", func(t *testing.T) {
@@ -157,7 +157,12 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("RecordDecisionTaskStarted", func(t *testing.T) {
 		h.EXPECT().RecordDecisionTaskStarted(ctx, &types.RecordDecisionTaskStartedRequest{}).Return(&types.RecordDecisionTaskStartedResponse{}, internalErr).Times(1)
 		resp, err := th.RecordDecisionTaskStarted(ctx, &hist.RecordDecisionTaskStartedRequest{})
-		assert.Equal(t, hist.RecordDecisionTaskStartedResponse{Attempt: common.Int64Ptr(0), StickyExecutionEnabled: common.BoolPtr(false)}, *resp)
+		assert.Equal(t, hist.RecordDecisionTaskStartedResponse{
+			ScheduledEventId: common.Int64Ptr(0),
+			StartedEventId:   common.Int64Ptr(0),
+			NextEventId:      common.Int64Ptr(0),
+			Attempt:          common.Int64Ptr(0), StickyExecutionEnabled: common.BoolPtr(false)},
+			*resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("RefreshWorkflowTasks", func(t *testing.T) {

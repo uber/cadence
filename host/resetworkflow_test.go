@@ -169,8 +169,8 @@ func (s *integrationSuite) TestResetWorkflow() {
 			WorkflowID: id,
 			RunID:      we.RunID,
 		},
-		Reason:                common.StringPtr("reset execution from test"),
-		DecisionFinishEventID: common.Int64Ptr(lastDecisionCompleted.GetEventID()),
+		Reason:                "reset execution from test",
+		DecisionFinishEventID: lastDecisionCompleted.GetEventID(),
 		RequestID:             uuid.New(),
 	})
 	s.NoError(err)
@@ -207,8 +207,8 @@ func (s *integrationSuite) TestResetWorkflow() {
 			WorkflowID: id,
 			RunID:      we.GetRunID(),
 		},
-		Reason:                common.StringPtr("reset execution from test"),
-		DecisionFinishEventID: common.Int64Ptr(lastDecisionCompleted.GetEventID()),
+		Reason:                "reset execution from test",
+		DecisionFinishEventID: lastDecisionCompleted.GetEventID(),
 		RequestID:             uuid.New(),
 	})
 	s.NoError(err)
@@ -240,8 +240,8 @@ func (s *integrationSuite) TestResetWorkflow() {
 			WorkflowID: id,
 			RunID:      newRunID,
 		},
-		Reason:                common.StringPtr("reset execution from test"),
-		DecisionFinishEventID: common.Int64Ptr(lastDecisionCompleted.GetEventID()),
+		Reason:                "reset execution from test",
+		DecisionFinishEventID: lastDecisionCompleted.GetEventID(),
 		RequestID:             uuid.New(),
 	})
 	s.NoError(err)
@@ -292,8 +292,8 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 			WorkflowID: id,
 			RunID:      we.RunID,
 		},
-		Reason:                common.StringPtr("reset execution from test"),
-		DecisionFinishEventID: common.Int64Ptr(lastDecisionScheduled.GetEventID() + 1),
+		Reason:                "reset execution from test",
+		DecisionFinishEventID: lastDecisionScheduled.GetEventID() + 1,
 		RequestID:             uuid.New(),
 	})
 	s.NoError(err)
@@ -317,8 +317,8 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 			WorkflowID: id,
 			RunID:      we.GetRunID(),
 		},
-		Reason:                common.StringPtr("reset execution from test"),
-		DecisionFinishEventID: common.Int64Ptr(lastDecisionScheduled.GetEventID() + 1),
+		Reason:                "reset execution from test",
+		DecisionFinishEventID: lastDecisionScheduled.GetEventID() + 1,
 		RequestID:             uuid.New(),
 	})
 	s.NoError(err)

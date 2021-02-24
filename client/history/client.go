@@ -22,7 +22,6 @@ package history
 
 import (
 	"context"
-	"strconv"
 	"sync"
 	"time"
 
@@ -185,13 +184,9 @@ func (c *clientImpl) RemoveTask(
 	request *types.RemoveTaskRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	var err error
-	var client Client
-	if request.ShardID != nil {
-		client, err = c.getClientForShardID(int(request.GetShardID()))
-		if err != nil {
-			return err
-		}
+	client, err := c.getClientForShardID(int(request.GetShardID()))
+	if err != nil {
+		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client Client) error {
@@ -211,14 +206,9 @@ func (c *clientImpl) CloseShard(
 	request *types.CloseShardRequest,
 	opts ...yarpc.CallOption,
 ) error {
-
-	var err error
-	var client Client
-	if request.ShardID != nil {
-		client, err = c.getClientForShardID(int(request.GetShardID()))
-		if err != nil {
-			return err
-		}
+	client, err := c.getClientForShardID(int(request.GetShardID()))
+	if err != nil {
+		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client Client) error {
@@ -241,14 +231,9 @@ func (c *clientImpl) ResetQueue(
 	request *types.ResetQueueRequest,
 	opts ...yarpc.CallOption,
 ) error {
-
-	var err error
-	var client Client
-	if request.ShardID != nil {
-		client, err = c.getClientForShardID(int(request.GetShardID()))
-		if err != nil {
-			return err
-		}
+	client, err := c.getClientForShardID(int(request.GetShardID()))
+	if err != nil {
+		return err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	op := func(ctx context.Context, client Client) error {
@@ -271,14 +256,9 @@ func (c *clientImpl) DescribeQueue(
 	request *types.DescribeQueueRequest,
 	opts ...yarpc.CallOption,
 ) (*types.DescribeQueueResponse, error) {
-
-	var err error
-	var client Client
-	if request.ShardID != nil {
-		client, err = c.getClientForShardID(int(request.GetShardID()))
-		if err != nil {
-			return nil, err
-		}
+	client, err := c.getClientForShardID(int(request.GetShardID()))
+	if err != nil {
+		return nil, err
 	}
 	opts = common.AggregateYarpcOptions(ctx, opts...)
 	var response *types.DescribeQueueResponse
@@ -1049,7 +1029,7 @@ func (c *clientImpl) getClientForDomainID(domainID string) (Client, error) {
 }
 
 func (c *clientImpl) getClientForShardID(shardID int) (Client, error) {
-	client, err := c.clients.GetClientForKey(strconv.Itoa(shardID))
+	client, err := c.clients.GetClientForKey(string(rune(shardID)))
 	if err != nil {
 		return nil, err
 	}

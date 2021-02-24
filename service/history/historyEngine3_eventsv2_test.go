@@ -164,7 +164,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -189,7 +189,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 		DomainUUID:        domainID,
 		WorkflowExecution: &we,
 		ScheduleID:        common.Int64Ptr(2),
-		TaskID:            common.Int64Ptr(100),
+		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: &types.TaskList{
@@ -205,10 +205,10 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	if executionInfo.LastProcessedEvent != common.EmptyEventID {
 		expectedResponse.PreviousStartedEventID = common.Int64Ptr(executionInfo.LastProcessedEvent)
 	}
-	expectedResponse.ScheduledEventID = common.Int64Ptr(di.ScheduleID)
-	expectedResponse.StartedEventID = common.Int64Ptr(di.ScheduleID + 1)
+	expectedResponse.ScheduledEventID = di.ScheduleID
+	expectedResponse.StartedEventID = di.ScheduleID + 1
 	expectedResponse.StickyExecutionEnabled = true
-	expectedResponse.NextEventID = common.Int64Ptr(msBuilder.GetNextEventID() + 1)
+	expectedResponse.NextEventID = msBuilder.GetNextEventID() + 1
 	expectedResponse.Attempt = di.Attempt
 	expectedResponse.WorkflowExecutionTaskList = &types.TaskList{
 		Name: executionInfo.TaskList,
@@ -284,14 +284,14 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 			Domain:     domainID,
 			WorkflowID: workflowID,
 			Identity:   identity,
-			SignalName: common.StringPtr(signalName),
+			SignalName: signalName,
 			Input:      input,
 		},
 	}
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		runID,
 		constants.TestLocalDomainEntry,
 	)
@@ -341,7 +341,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
 			Identity:                            identity,
-			SignalName:                          common.StringPtr(signalName),
+			SignalName:                          signalName,
 			Input:                               input,
 			RequestID:                           requestID,
 		},

@@ -156,7 +156,7 @@ func (s *taskProcessorSuite) TestHandleSyncShardStatus() {
 	now := time.Now()
 	s.mockEngine.EXPECT().SyncShardStatus(gomock.Any(), &types.SyncShardStatusRequest{
 		SourceCluster: common.StringPtr("standby"),
-		ShardID:       common.Int64Ptr(0),
+		ShardID:       0,
 		Timestamp:     common.Int64Ptr(now.UnixNano()),
 	}).Return(nil).Times(1)
 
@@ -198,8 +198,8 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTas
 	runID := uuid.New()
 	events := []*types.HistoryEvent{
 		{
-			EventID: common.Int64Ptr(1),
-			Version: common.Int64Ptr(1),
+			EventID: 1,
+			Version: 1,
 		},
 	}
 	serializer := s.mockShard.GetPayloadSerializer()
@@ -240,8 +240,8 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeHistoryV2
 	runID := uuid.New()
 	events := []*types.HistoryEvent{
 		{
-			EventID: common.Int64Ptr(1),
-			Version: common.Int64Ptr(1),
+			EventID: 1,
+			Version: 1,
 		},
 	}
 	serializer := s.mockShard.GetPayloadSerializer()
@@ -281,7 +281,7 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeSyncActiv
 			DomainID:    domainID,
 			WorkflowID:  workflowID,
 			RunID:       runID,
-			ScheduledID: common.Int64Ptr(1),
+			ScheduledID: 1,
 		},
 	}
 	request, err := s.taskProcessor.generateDLQRequest(task)

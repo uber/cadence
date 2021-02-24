@@ -385,12 +385,9 @@ func FailoverActivity(ctx context.Context, params *FailoverActivityParams) (*Fai
 	var successDomains []string
 	var failedDomains []string
 	for _, domain := range domains {
-		replicationConfig := &types.DomainReplicationConfiguration{
-			ActiveClusterName: common.StringPtr(params.TargetCluster),
-		}
 		updateRequest := &types.UpdateDomainRequest{
-			Name:                     common.StringPtr(domain),
-			ReplicationConfiguration: replicationConfig,
+			Name:              domain,
+			ActiveClusterName: common.StringPtr(params.TargetCluster),
 		}
 		_, err := feClient.UpdateDomain(ctx, updateRequest)
 		if err != nil {

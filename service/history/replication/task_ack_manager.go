@@ -227,19 +227,19 @@ func (t *taskAckManagerImpl) toReplicationTask(
 	case persistence.ReplicationTaskTypeSyncActivity:
 		task, err := t.generateSyncActivityTask(ctx, task)
 		if task != nil {
-			task.SourceTaskID = common.Int64Ptr(taskInfo.GetTaskID())
+			task.SourceTaskID = taskInfo.GetTaskID()
 		}
 		return task, err
 	case persistence.ReplicationTaskTypeHistory:
 		task, err := t.generateHistoryReplicationTask(ctx, task)
 		if task != nil {
-			task.SourceTaskID = common.Int64Ptr(taskInfo.GetTaskID())
+			task.SourceTaskID = taskInfo.GetTaskID()
 		}
 		return task, err
 	case persistence.ReplicationTaskTypeFailoverMarker:
 		task := t.generateFailoverMarkerTask(task)
 		if task != nil {
-			task.SourceTaskID = common.Int64Ptr(taskInfo.GetTaskID())
+			task.SourceTaskID = taskInfo.GetTaskID()
 		}
 		return task, nil
 	default:
@@ -468,7 +468,7 @@ func (t *taskAckManagerImpl) generateFailoverMarkerTask(
 
 	return &types.ReplicationTask{
 		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeFailoverMarker),
-		SourceTaskID: common.Int64Ptr(taskInfo.GetTaskID()),
+		SourceTaskID: taskInfo.GetTaskID(),
 		FailoverMarkerAttributes: &types.FailoverMarkerAttributes{
 			DomainID:        taskInfo.GetDomainID(),
 			FailoverVersion: common.Int64Ptr(taskInfo.GetVersion()),
@@ -520,9 +520,9 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 					WorkflowID:         taskInfo.GetWorkflowID(),
 					RunID:              taskInfo.GetRunID(),
 					Version:            common.Int64Ptr(activityInfo.Version),
-					ScheduledID:        common.Int64Ptr(activityInfo.ScheduleID),
+					ScheduledID:        activityInfo.ScheduleID,
 					ScheduledTime:      scheduledTime,
-					StartedID:          common.Int64Ptr(activityInfo.StartedID),
+					StartedID:          activityInfo.StartedID,
 					StartedTime:        startedTime,
 					LastHeartbeatTime:  heartbeatTime,
 					Details:            activityInfo.Details,
@@ -599,7 +599,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 			replicationTask := &types.ReplicationTask{
 				TaskType: types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeHistoryV2),
 				HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
-					TaskID:              common.Int64Ptr(task.FirstEventID),
+					TaskID:              task.FirstEventID,
 					DomainID:            task.DomainID,
 					WorkflowID:          task.WorkflowID,
 					RunID:               task.RunID,

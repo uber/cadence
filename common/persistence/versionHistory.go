@@ -67,8 +67,8 @@ func (item *VersionHistoryItem) Duplicate() *VersionHistoryItem {
 func (item *VersionHistoryItem) ToInternalType() *types.VersionHistoryItem {
 
 	return &types.VersionHistoryItem{
-		EventID: common.Int64Ptr(item.EventID),
-		Version: common.Int64Ptr(item.Version),
+		EventID: item.EventID,
+		Version: item.Version,
 	}
 }
 

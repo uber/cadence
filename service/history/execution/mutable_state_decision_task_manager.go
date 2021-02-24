@@ -561,8 +561,8 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskFailedEvent(
 ) (*types.HistoryEvent, error) {
 	opTag := tag.WorkflowActionDecisionTaskFailed
 	attr := types.DecisionTaskFailedEventAttributes{
-		ScheduledEventID: common.Int64Ptr(scheduleEventID),
-		StartedEventID:   common.Int64Ptr(startedEventID),
+		ScheduledEventID: scheduleEventID,
+		StartedEventID:   startedEventID,
 		Cause:            cause.Ptr(),
 		Details:          details,
 		Identity:         identity,
@@ -570,7 +570,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskFailedEvent(
 		BinaryChecksum:   binChecksum,
 		BaseRunID:        baseRunID,
 		NewRunID:         newRunID,
-		ForkEventVersion: common.Int64Ptr(forkEventVersion),
+		ForkEventVersion: forkEventVersion,
 	}
 
 	dt, ok := m.GetDecisionInfo(scheduleEventID)

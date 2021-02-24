@@ -210,7 +210,7 @@ GetHistoryLoop:
 			WorkflowID: id,
 			RunID:      we1.RunID,
 		},
-		Reason:   common.StringPtr("kill workflow"),
+		Reason:   "kill workflow",
 		Identity: identity,
 	})
 	s.Nil(err)
@@ -373,7 +373,7 @@ func (s *integrationSuite) TestTerminateWorkflow() {
 			WorkflowID: id,
 			RunID:      we.RunID,
 		},
-		Reason:   common.StringPtr(terminateReason),
+		Reason:   terminateReason,
 		Details:  terminateDetails,
 		Identity: identity,
 	})
@@ -400,7 +400,7 @@ GetHistoryLoop:
 		}
 
 		terminateEventAttributes := lastEvent.WorkflowExecutionTerminatedEventAttributes
-		s.Equal(terminateReason, *terminateEventAttributes.Reason)
+		s.Equal(terminateReason, terminateEventAttributes.Reason)
 		s.Equal(terminateDetails, terminateEventAttributes.Details)
 		s.Equal(identity, terminateEventAttributes.Identity)
 		executionTerminated = true
@@ -588,7 +588,7 @@ func (s *integrationSuite) TestCompleteDecisionTaskAndCreateNewOne() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-					MarkerName: common.StringPtr("test-marker"),
+					MarkerName: "test-marker",
 				},
 			}}, nil
 		}
@@ -1546,7 +1546,7 @@ func (s *integrationSuite) TestBufferedEvents() {
 					WorkflowExecution: &types.WorkflowExecution{
 						WorkflowID: id,
 					},
-					SignalName: common.StringPtr("buffered-signal"),
+					SignalName: "buffered-signal",
 					Input:      []byte("buffered-signal-input"),
 					Identity:   identity,
 				})
@@ -1617,7 +1617,7 @@ func (s *integrationSuite) TestBufferedEvents() {
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 	s.NotNil(signalEvent)
-	s.Equal(signalName, *signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
+	s.Equal(signalName, signalEvent.WorkflowExecutionSignaledEventAttributes.SignalName)
 	s.Equal(identity, signalEvent.WorkflowExecutionSignaledEventAttributes.Identity)
 	s.True(workflowComplete)
 }
@@ -2825,7 +2825,7 @@ func (s *integrationSuite) TestNoTransientDecisionAfterFlushBufferedEvents() {
 					WorkflowExecution: &types.WorkflowExecution{
 						WorkflowID: id,
 					},
-					SignalName: common.StringPtr("buffered-signal-1"),
+					SignalName: "buffered-signal-1",
 					Input:      []byte("buffered-signal-input"),
 					Identity:   identity,
 				})
@@ -2919,7 +2919,7 @@ func (s *integrationSuite) TestRelayDecisionTimeout() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-					MarkerName: common.StringPtr("test-marker"),
+					MarkerName: "test-marker",
 				},
 			}}, nil
 		}
@@ -3147,7 +3147,7 @@ func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-					MarkerName: common.StringPtr("local activity marker"),
+					MarkerName: "local activity marker",
 					Details:    []byte("local activity data"),
 				},
 			}}, nil
@@ -3197,7 +3197,7 @@ func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
 	err = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: workflowExecution,
-		SignalName:        common.StringPtr("signalA"),
+		SignalName:        "signalA",
 		Input:             []byte("signal input"),
 		Identity:          identity,
 		RequestID:         uuid.New(),
@@ -3228,7 +3228,7 @@ WaitForStickyTimeoutLoop:
 	err = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: workflowExecution,
-		SignalName:        common.StringPtr("signalB"),
+		SignalName:        "signalB",
 		Input:             []byte("signal input"),
 		Identity:          identity,
 		RequestID:         uuid.New(),
@@ -3321,7 +3321,7 @@ func (s *integrationSuite) TestStickyTasklistResetThenTimeout() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-					MarkerName: common.StringPtr("local activity marker"),
+					MarkerName: "local activity marker",
 					Details:    []byte("local activity data"),
 				},
 			}}, nil
@@ -3359,7 +3359,7 @@ func (s *integrationSuite) TestStickyTasklistResetThenTimeout() {
 	err = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: workflowExecution,
-		SignalName:        common.StringPtr("signalA"),
+		SignalName:        "signalA",
 		Input:             []byte("signal input"),
 		Identity:          identity,
 		RequestID:         uuid.New(),
@@ -3396,7 +3396,7 @@ WaitForStickyTimeoutLoop:
 	err = s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            s.domainName,
 		WorkflowExecution: workflowExecution,
-		SignalName:        common.StringPtr("signalB"),
+		SignalName:        "signalB",
 		Input:             []byte("signal input"),
 		Identity:          identity,
 		RequestID:         uuid.New(),
@@ -3483,7 +3483,7 @@ func (s *integrationSuite) TestBufferedEventsOutOfOrder() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-					MarkerName: common.StringPtr("some random marker name"),
+					MarkerName: "some random marker name",
 					Details:    []byte("some random marker details"),
 				},
 			}, {
@@ -3507,7 +3507,7 @@ func (s *integrationSuite) TestBufferedEventsOutOfOrder() {
 			return nil, []*types.Decision{{
 				DecisionType: types.DecisionTypeRecordMarker.Ptr(),
 				RecordMarkerDecisionAttributes: &types.RecordMarkerDecisionAttributes{
-					MarkerName: common.StringPtr("some random marker name"),
+					MarkerName: "some random marker name",
 					Details:    []byte("some random marker details"),
 				},
 			}}, nil
@@ -3665,7 +3665,7 @@ func (s *integrationSuite) TestSignalWithStartWithMemo() {
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		SignalName:                          common.StringPtr(signalName),
+		SignalName:                          signalName,
 		SignalInput:                         signalInput,
 		Identity:                            identity,
 		Memo:                                memo,
@@ -4067,7 +4067,7 @@ func (s *integrationSuite) sendSignal(domainName string, execution *types.Workfl
 	return s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            domainName,
 		WorkflowExecution: execution,
-		SignalName:        common.StringPtr(signalName),
+		SignalName:        signalName,
 		Input:             input,
 		Identity:          identity,
 	})

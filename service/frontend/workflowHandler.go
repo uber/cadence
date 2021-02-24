@@ -265,7 +265,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 		return errRequestNotSet
 	}
 
-	if registerRequest.GetWorkflowExecutionRetentionPeriodInDays() > common.MaxWorkflowRetentionPeriodInDays {
+	if registerRequest.GetWorkflowExecutionRetentionPeriodInDays() > int32(wh.config.domainConfig.MaxRetentionDays()) {
 		return errInvalidRetention
 	}
 
@@ -378,7 +378,7 @@ func (wh *WorkflowHandler) UpdateDomain(
 	if isGraceFailoverRequest(updateRequest) {
 		if err := wh.checkOngoingFailover(
 			ctx,
-			updateRequest.Name,
+			&updateRequest.Name,
 		); err != nil {
 			return nil, err
 		}
@@ -1694,7 +1694,7 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	matchingRequest := &types.MatchingRespondQueryTaskCompletedRequest{
 		DomainUUID:       queryTaskToken.DomainID,
 		TaskList:         &types.TaskList{Name: queryTaskToken.TaskList},
-		TaskID:           common.StringPtr(queryTaskToken.TaskID),
+		TaskID:           queryTaskToken.TaskID,
 		CompletedRequest: completeRequest,
 	}
 
@@ -3764,7 +3764,7 @@ func createServiceBusyError() *types.ServiceBusyError {
 }
 
 func isFailoverRequest(updateRequest *types.UpdateDomainRequest) bool {
-	return updateRequest.ReplicationConfiguration != nil && updateRequest.ReplicationConfiguration.ActiveClusterName != nil
+	return updateRequest.ActiveClusterName != nil
 }
 
 func isGraceFailoverRequest(updateRequest *types.UpdateDomainRequest) bool {
@@ -3951,14 +3951,14 @@ func (wh *WorkflowHandler) GetClusterInfo(
 
 func checkPermission(
 	config *Config,
-	securityToken *string,
+	securityToken string,
 ) error {
 	if config.EnableAdminProtection() {
-		if securityToken == nil {
+		if securityToken == "" {
 			return errNoPermission
 		}
 		requiredToken := config.AdminOperationToken()
-		if *securityToken != requiredToken {
+		if securityToken != requiredToken {
 			return errNoPermission
 		}
 	}

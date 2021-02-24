@@ -657,7 +657,7 @@ func (e *mutableStateBuilder) assignEventIDToBufferedEvents() {
 		}
 
 		eventID := e.executionInfo.NextEventID
-		event.EventID = common.Int64Ptr(eventID)
+		event.EventID = eventID
 		e.executionInfo.IncreaseNextEventID()
 
 		switch event.GetEventType() {
@@ -680,47 +680,47 @@ func (e *mutableStateBuilder) assignEventIDToBufferedEvents() {
 		case types.EventTypeActivityTaskCompleted:
 			attributes := event.ActivityTaskCompletedEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetScheduledEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		case types.EventTypeActivityTaskFailed:
 			attributes := event.ActivityTaskFailedEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetScheduledEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		case types.EventTypeActivityTaskTimedOut:
 			attributes := event.ActivityTaskTimedOutEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetScheduledEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		case types.EventTypeActivityTaskCanceled:
 			attributes := event.ActivityTaskCanceledEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetScheduledEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		case types.EventTypeChildWorkflowExecutionCompleted:
 			attributes := event.ChildWorkflowExecutionCompletedEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetInitiatedEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		case types.EventTypeChildWorkflowExecutionFailed:
 			attributes := event.ChildWorkflowExecutionFailedEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetInitiatedEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		case types.EventTypeChildWorkflowExecutionTimedOut:
 			attributes := event.ChildWorkflowExecutionTimedOutEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetInitiatedEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		case types.EventTypeChildWorkflowExecutionCanceled:
 			attributes := event.ChildWorkflowExecutionCanceledEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetInitiatedEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		case types.EventTypeChildWorkflowExecutionTerminated:
 			attributes := event.ChildWorkflowExecutionTerminatedEventAttributes
 			if startedID, ok := scheduledIDToStartedID[attributes.GetInitiatedEventID()]; ok {
-				attributes.StartedEventID = common.Int64Ptr(startedID)
+				attributes.StartedEventID = startedID
 			}
 		}
 	}
@@ -740,7 +740,7 @@ func (e *mutableStateBuilder) assignTaskIDToEvents() error {
 		for index, event := range e.hBuilder.transientHistory {
 			if event.GetTaskID() == common.EmptyEventTaskID {
 				taskID := taskIDs[index]
-				event.TaskID = common.Int64Ptr(taskID)
+				event.TaskID = taskID
 				e.executionInfo.LastEventTaskID = taskID
 			}
 		}
@@ -757,7 +757,7 @@ func (e *mutableStateBuilder) assignTaskIDToEvents() error {
 		for index, event := range e.hBuilder.history {
 			if event.GetTaskID() == common.EmptyEventTaskID {
 				taskID := taskIDs[index]
-				event.TaskID = common.Int64Ptr(taskID)
+				event.TaskID = taskID
 				e.executionInfo.LastEventTaskID = taskID
 			}
 		}
@@ -829,11 +829,11 @@ func (e *mutableStateBuilder) CreateNewHistoryEventWithTimestamp(
 
 	ts := common.Int64Ptr(timestamp)
 	historyEvent := &types.HistoryEvent{}
-	historyEvent.EventID = common.Int64Ptr(eventID)
+	historyEvent.EventID = eventID
 	historyEvent.Timestamp = ts
 	historyEvent.EventType = &eventType
-	historyEvent.Version = common.Int64Ptr(e.GetCurrentVersion())
-	historyEvent.TaskID = common.Int64Ptr(common.EmptyEventTaskID)
+	historyEvent.Version = e.GetCurrentVersion()
+	historyEvent.TaskID = common.EmptyEventTaskID
 
 	return historyEvent
 }
@@ -1954,7 +1954,7 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 	info := &types.ResetPointInfo{
 		BinaryChecksum:           binChecksum,
 		RunID:                    exeInfo.RunID,
-		FirstDecisionCompletedID: common.Int64Ptr(event.GetEventID()),
+		FirstDecisionCompletedID: event.GetEventID(),
 		CreatedTimeNano:          common.Int64Ptr(e.timeSource.Now().UnixNano()),
 		Resettable:               resettable,
 	}
@@ -2150,7 +2150,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 
 	attributes := event.ActivityTaskScheduledEventAttributes
 	targetDomainID := e.executionInfo.DomainID
-	if attributes.Domain != nil {
+	if attributes.Domain != "" {
 		targetDomainEntry, err := e.shard.GetDomainCache().GetDomain(attributes.GetDomain())
 		if err != nil {
 			return nil, err

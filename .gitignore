@@ -28,5 +28,6 @@ test_eventsV2_xdc.log
 /cadence
 /cadence-server
 /cadence-canary
+/cadence-bench
 /cadence-cassandra-tool
 /cadence-sql-tool
