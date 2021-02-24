@@ -154,6 +154,7 @@ func (s *engineSuite) SetupTest() {
 	h := &historyEngineImpl{
 		currentClusterName:   s.mockShard.GetClusterMetadata().GetCurrentClusterName(),
 		shard:                s.mockShard,
+		timeSource:           s.mockShard.GetTimeSource(),
 		clusterMetadata:      s.mockClusterMetadata,
 		executionManager:     s.mockExecutionMgr,
 		historyV2Mgr:         s.mockHistoryV2Mgr,
@@ -170,7 +171,7 @@ func (s *engineSuite) SetupTest() {
 		workflowResetter:     s.mockWorkflowResetter,
 	}
 	s.mockShard.SetEngine(h)
-	h.decisionHandler = newDecisionHandler(h)
+	h.decisionHandler = NewDecisionHandler(s.mockShard, h.executionCache, h.tokenSerializer)
 
 	h.historyEventNotifier.Start()
 
