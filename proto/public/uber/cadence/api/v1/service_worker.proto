@@ -29,6 +29,7 @@ option java_package = "com.uber.cadence.api.v1";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
 import "uber/cadence/api/v1/common.proto";
 import "uber/cadence/api/v1/decision.proto";
 import "uber/cadence/api/v1/history.proto";
@@ -153,7 +154,7 @@ message PollForDecisionTaskResponse {
   bytes task_token = 1;
   WorkflowExecution workflow_execution = 2;
   WorkflowType workflow_type = 3;
-  int64 previous_started_event_id = 4;
+  google.protobuf.Int64Value previous_started_event_id = 4;
   int64 started_event_id = 5;
   int64 attempt = 6;
   int64 backlog_count_hint = 7;
