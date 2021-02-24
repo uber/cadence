@@ -106,9 +106,11 @@ message DescribeWorkflowExecutionResponse {
 }
 
 message DescribeHistoryHostRequest {
-  string host_address = 1;
-  int32 shard_id = 2;
-  api.v1.WorkflowExecution workflow_execution = 3;
+  oneof describe_by {
+    string host_address = 1;
+    int32 shard_id = 2;
+    api.v1.WorkflowExecution workflow_execution = 3;
+  }
 }
 
 message DescribeHistoryHostResponse {
