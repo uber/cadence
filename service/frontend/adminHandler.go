@@ -284,7 +284,7 @@ func (adh *adminHandlerImpl) RemoveTask(
 	scope, sw := adh.startRequestProfile(metrics.AdminRemoveTaskScope)
 	defer sw.Stop()
 
-	if request == nil {
+	if request == nil || request.Type == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
 	err := adh.GetHistoryClient().RemoveTask(ctx, request)
@@ -318,7 +318,7 @@ func (adh *adminHandlerImpl) ResetQueue(
 	scope, sw := adh.startRequestProfile(metrics.AdminResetQueueScope)
 	defer sw.Stop()
 
-	if request == nil {
+	if request == nil || request.Type == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
 	if request.GetClusterName() == "" {
@@ -339,7 +339,7 @@ func (adh *adminHandlerImpl) DescribeQueue(
 	scope, sw := adh.startRequestProfile(metrics.AdminDescribeQueueScope)
 	defer sw.Stop()
 
-	if request == nil {
+	if request == nil || request.Type == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 	if request.GetClusterName() == "" {

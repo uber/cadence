@@ -2427,7 +2427,7 @@ func (v *DescribeHistoryHostResponse) GetAddress() (o string) {
 type DescribeQueueRequest struct {
 	ShardID     int32  `json:"shardID,omitempty"`
 	ClusterName string `json:"clusterName,omitempty"`
-	Type        int32  `json:"type,omitempty"`
+	Type        *int32 `json:"type,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -2448,8 +2448,8 @@ func (v *DescribeQueueRequest) GetClusterName() (o string) {
 
 // GetType is an internal getter (TBD...)
 func (v *DescribeQueueRequest) GetType() (o int32) {
-	if v != nil {
-		return v.Type
+	if v != nil && v.Type != nil {
+		return *v.Type
 	}
 	return
 }
@@ -6033,7 +6033,7 @@ func (v *RemoteSyncMatchedError) GetMessage() (o string) {
 // RemoveTaskRequest is an internal type (TBD...)
 type RemoveTaskRequest struct {
 	ShardID             int32  `json:"shardID,omitempty"`
-	Type                int32  `json:"type,omitempty"`
+	Type                *int32 `json:"type,omitempty"`
 	TaskID              int64  `json:"taskID,omitempty"`
 	VisibilityTimestamp *int64 `json:"visibilityTimestamp,omitempty"`
 }
@@ -6048,8 +6048,8 @@ func (v *RemoveTaskRequest) GetShardID() (o int32) {
 
 // GetType is an internal getter (TBD...)
 func (v *RemoveTaskRequest) GetType() (o int32) {
-	if v != nil {
-		return v.Type
+	if v != nil && v.Type != nil {
+		return *v.Type
 	}
 	return
 }
@@ -6385,7 +6385,7 @@ func (v *ResetPoints) GetPoints() (o []*ResetPointInfo) {
 type ResetQueueRequest struct {
 	ShardID     int32  `json:"shardID,omitempty"`
 	ClusterName string `json:"clusterName,omitempty"`
-	Type        int32  `json:"type,omitempty"`
+	Type        *int32 `json:"type,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -6406,8 +6406,8 @@ func (v *ResetQueueRequest) GetClusterName() (o string) {
 
 // GetType is an internal getter (TBD...)
 func (v *ResetQueueRequest) GetType() (o int32) {
-	if v != nil {
-		return v.Type
+	if v != nil && v.Type != nil {
+		return *v.Type
 	}
 	return
 }

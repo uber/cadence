@@ -1592,7 +1592,7 @@ func FromDescribeQueueRequest(t *types.DescribeQueueRequest) *shared.DescribeQue
 	return &shared.DescribeQueueRequest{
 		ShardID:     &t.ShardID,
 		ClusterName: &t.ClusterName,
-		Type:        &t.Type,
+		Type:        t.Type,
 	}
 }
 
@@ -1604,7 +1604,7 @@ func ToDescribeQueueRequest(t *shared.DescribeQueueRequest) *types.DescribeQueue
 	return &types.DescribeQueueRequest{
 		ShardID:     t.GetShardID(),
 		ClusterName: t.GetClusterName(),
-		Type:        t.GetType(),
+		Type:        t.Type,
 	}
 }
 
@@ -3877,7 +3877,7 @@ func FromRemoveTaskRequest(t *types.RemoveTaskRequest) *shared.RemoveTaskRequest
 	}
 	return &shared.RemoveTaskRequest{
 		ShardID:             &t.ShardID,
-		Type:                &t.Type,
+		Type:                t.Type,
 		TaskID:              &t.TaskID,
 		VisibilityTimestamp: t.VisibilityTimestamp,
 	}
@@ -3890,7 +3890,7 @@ func ToRemoveTaskRequest(t *shared.RemoveTaskRequest) *types.RemoveTaskRequest {
 	}
 	return &types.RemoveTaskRequest{
 		ShardID:             t.GetShardID(),
-		Type:                t.GetType(),
+		Type:                t.Type,
 		TaskID:              t.GetTaskID(),
 		VisibilityTimestamp: t.VisibilityTimestamp,
 	}
@@ -4110,7 +4110,7 @@ func FromResetQueueRequest(t *types.ResetQueueRequest) *shared.ResetQueueRequest
 	return &shared.ResetQueueRequest{
 		ShardID:     &t.ShardID,
 		ClusterName: &t.ClusterName,
-		Type:        &t.Type,
+		Type:        t.Type,
 	}
 }
 
@@ -4122,7 +4122,7 @@ func ToResetQueueRequest(t *shared.ResetQueueRequest) *types.ResetQueueRequest {
 	return &types.ResetQueueRequest{
 		ShardID:     t.GetShardID(),
 		ClusterName: t.GetClusterName(),
-		Type:        t.GetType(),
+		Type:        t.Type,
 	}
 }
 
