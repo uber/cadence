@@ -651,7 +651,12 @@ func (c *cadenceImpl) startWorkerReplicator(params *service.BootstrapParams, ser
 }
 
 func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, service service.Service, domainCache cache.DomainCache) {
-	workerConfig := worker.NewConfig(params)
+	dc := dynamicconfig.NewCollection(
+		params.DynamicConfig,
+		params.Logger,
+		dynamicconfig.ClusterNameFilter(params.ClusterMetadata.GetCurrentClusterName()),
+	)
+	workerConfig := worker.NewConfig(params, dc)
 	workerConfig.ArchiverConfig.ArchiverConcurrency = dynamicconfig.GetIntPropertyFn(10)
 	historyArchiverBootstrapContainer := &carchiver.HistoryBootstrapContainer{
 		HistoryV2Manager: c.historyV2Mgr,
@@ -683,7 +688,12 @@ func (c *cadenceImpl) startWorkerClientWorker(params *service.BootstrapParams, s
 
 func (c *cadenceImpl) startWorkerIndexer(params *service.BootstrapParams, service service.Service) {
 	params.DynamicConfig.UpdateValue(dynamicconfig.AdvancedVisibilityWritingMode, common.AdvancedVisibilityWritingModeDual)
-	workerConfig := worker.NewConfig(params)
+	dc := dynamicconfig.NewCollection(
+		params.DynamicConfig,
+		params.Logger,
+		dynamicconfig.ClusterNameFilter(params.ClusterMetadata.GetCurrentClusterName()),
+	)
+	workerConfig := worker.NewConfig(params, dc)
 	c.indexer = indexer.NewIndexer(
 		workerConfig.IndexerCfg,
 		c.messagingClient,
