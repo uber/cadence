@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package workflow
 
 import (
 	"context"
@@ -27,8 +27,8 @@ import (
 )
 
 type (
-	// WorkflowContext is an helper interface on top of execution.Context
-	WorkflowContext interface {
+	// Context is an helper interface on top of execution.Context
+	Context interface {
 		GetContext() execution.Context
 		GetMutableState() execution.MutableState
 		ReloadMutableState(ctx context.Context) (execution.MutableState, error)
@@ -37,36 +37,36 @@ type (
 		GetRunID() string
 	}
 
-	workflowContextImpl struct {
+	contextImpl struct {
 		context      execution.Context
 		mutableState execution.MutableState
 		releaseFn    execution.ReleaseFunc
 	}
 )
 
-// NewWorkflowContext creates a new helper instance on top of execution.Context
-func NewWorkflowContext(
+// NewContext creates a new helper instance on top of execution.Context
+func NewContext(
 	context execution.Context,
 	releaseFn execution.ReleaseFunc,
 	mutableState execution.MutableState,
-) WorkflowContext {
+) Context {
 
-	return &workflowContextImpl{
+	return &contextImpl{
 		context:      context,
 		releaseFn:    releaseFn,
 		mutableState: mutableState,
 	}
 }
 
-func (w *workflowContextImpl) GetContext() execution.Context {
+func (w *contextImpl) GetContext() execution.Context {
 	return w.context
 }
 
-func (w *workflowContextImpl) GetMutableState() execution.MutableState {
+func (w *contextImpl) GetMutableState() execution.MutableState {
 	return w.mutableState
 }
 
-func (w *workflowContextImpl) ReloadMutableState(ctx context.Context) (execution.MutableState, error) {
+func (w *contextImpl) ReloadMutableState(ctx context.Context) (execution.MutableState, error) {
 	mutableState, err := w.GetContext().LoadWorkflowExecution(ctx)
 	if err != nil {
 		return nil, err
@@ -75,14 +75,14 @@ func (w *workflowContextImpl) ReloadMutableState(ctx context.Context) (execution
 	return mutableState, nil
 }
 
-func (w *workflowContextImpl) GetReleaseFn() execution.ReleaseFunc {
+func (w *contextImpl) GetReleaseFn() execution.ReleaseFunc {
 	return w.releaseFn
 }
 
-func (w *workflowContextImpl) GetWorkflowID() string {
+func (w *contextImpl) GetWorkflowID() string {
 	return w.GetContext().GetExecution().GetWorkflowID()
 }
 
-func (w *workflowContextImpl) GetRunID() string {
+func (w *contextImpl) GetRunID() string {
 	return w.GetContext().GetExecution().GetRunID()
 }

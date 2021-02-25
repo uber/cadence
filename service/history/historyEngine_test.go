@@ -60,6 +60,7 @@ import (
 	"github.com/uber/cadence/service/history/reset"
 	"github.com/uber/cadence/service/history/shard"
 	test "github.com/uber/cadence/service/history/testing"
+	"github.com/uber/cadence/service/history/workflow"
 )
 
 type (
@@ -1205,7 +1206,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 		},
 	}}
 
-	for i := 0; i < conditionalRetryCount; i++ {
+	for i := 0; i < workflow.ConditionalRetryCount; i++ {
 		ms := execution.CreatePersistenceMutableState(msBuilder)
 		gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
@@ -1225,7 +1226,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 		},
 	})
 	s.NotNil(err)
-	s.Equal(ErrMaxAttemptsExceeded, err)
+	s.Equal(workflow.ErrMaxAttemptsExceeded, err)
 }
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
@@ -2747,7 +2748,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedMaxAttemptsExceeded() {
 		activityType, tl, activityInput, 100, 10, 1, 5)
 	test.AddActivityTaskStartedEvent(msBuilder, activityScheduledEvent.EventID, identity)
 
-	for i := 0; i < conditionalRetryCount; i++ {
+	for i := 0; i < workflow.ConditionalRetryCount; i++ {
 		ms := execution.CreatePersistenceMutableState(msBuilder)
 		gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
@@ -2764,7 +2765,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedMaxAttemptsExceeded() {
 			Identity:  identity,
 		},
 	})
-	s.Equal(ErrMaxAttemptsExceeded, err)
+	s.Equal(workflow.ErrMaxAttemptsExceeded, err)
 }
 
 func (s *engineSuite) TestRespondActivityTaskCompletedSuccess() {
@@ -3321,7 +3322,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedMaxAttemptsExceeded() {
 		activityType, tl, activityInput, 100, 10, 1, 5)
 	test.AddActivityTaskStartedEvent(msBuilder, activityScheduledEvent.EventID, identity)
 
-	for i := 0; i < conditionalRetryCount; i++ {
+	for i := 0; i < workflow.ConditionalRetryCount; i++ {
 		ms := execution.CreatePersistenceMutableState(msBuilder)
 		gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
@@ -3337,7 +3338,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedMaxAttemptsExceeded() {
 			Identity:  identity,
 		},
 	})
-	s.Equal(ErrMaxAttemptsExceeded, err)
+	s.Equal(workflow.ErrMaxAttemptsExceeded, err)
 }
 
 func (s *engineSuite) TestRespondActivityTaskFailedSuccess() {

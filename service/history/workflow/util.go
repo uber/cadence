@@ -18,10 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package workflow
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -33,33 +34,42 @@ import (
 	"github.com/uber/cadence/service/history/shard"
 )
 
+var ConditionalRetryCount = 5
+
+var (
+	// ErrStaleState is the error returned during state update indicating that cached mutable state could be stale
+	ErrStaleState = errors.New("cache mutable state could potentially be stale")
+	// ErrMaxAttemptsExceeded is exported temporarily for integration test
+	ErrMaxAttemptsExceeded = errors.New("maximum attempts exceeded to update history")
+)
+
 type (
-	UpdateWorkflowAction struct {
+	UpdateAction struct {
 		Noop           bool
 		CreateDecision bool
 	}
 
-	UpdateWorkflowActionFunc func(execution.Context, execution.MutableState) (*UpdateWorkflowAction, error)
+	UpdateActionFunc func(execution.Context, execution.MutableState) (*UpdateAction, error)
 )
 
 var (
-	UpdateWorkflowWithNewDecision = &UpdateWorkflowAction{
+	UpdateWithNewDecision = &UpdateAction{
 		CreateDecision: true,
 	}
-	UpdateWorkflowWithoutDecision = &UpdateWorkflowAction{
+	UpdateWithoutDecision = &UpdateAction{
 		CreateDecision: false,
 	}
 )
 
 ///////////////////  Util function for loading workflow ///////////////////
 
-func LoadWorkflowOnce(
+func LoadOnce(
 	ctx context.Context,
 	cache *execution.Cache,
 	domainID string,
 	workflowID string,
 	runID string,
-) (WorkflowContext, error) {
+) (Context, error) {
 
 	wfContext, release, err := cache.GetOrCreateWorkflowExecution(
 		ctx,
@@ -79,25 +89,25 @@ func LoadWorkflowOnce(
 		return nil, err
 	}
 
-	return NewWorkflowContext(wfContext, release, mutableState), nil
+	return NewContext(wfContext, release, mutableState), nil
 }
 
-func LoadWorkflow(
+func Load(
 	ctx context.Context,
 	cache *execution.Cache,
 	executionManager persistence.ExecutionManager,
 	domainID string,
 	workflowID string,
 	runID string,
-) (WorkflowContext, error) {
+) (Context, error) {
 
 	if runID != "" {
-		return LoadWorkflowOnce(ctx, cache, domainID, workflowID, runID)
+		return LoadOnce(ctx, cache, domainID, workflowID, runID)
 	}
 
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
+	for attempt := 0; attempt < ConditionalRetryCount; attempt++ {
 
-		workflowContext, err := LoadWorkflowOnce(ctx, cache, domainID, workflowID, "")
+		workflowContext, err := LoadOnce(ctx, cache, domainID, workflowID, "")
 		if err != nil {
 			return nil, err
 		}
@@ -130,45 +140,51 @@ func LoadWorkflow(
 
 ///////////////////  Util function for updating workflows ///////////////////
 
-func UpdateWorkflowExecutionWithAction(
+// UpdateWithActionFunc updates the given workflow execution.
+// If runID is empty, it only tries to load the current workflow once.
+// If the update should always be applied to the current run, use UpdateCurrentWithActionFunc instead.
+func UpdateWithActionFunc(
 	ctx context.Context,
 	cache *execution.Cache,
 	domainID string,
 	execution types.WorkflowExecution,
 	now time.Time,
-	action UpdateWorkflowActionFunc,
+	action UpdateActionFunc,
 ) (retError error) {
 
-	workflowContext, err := LoadWorkflowOnce(ctx, cache, domainID, execution.GetWorkflowID(), execution.GetRunID())
+	workflowContext, err := LoadOnce(ctx, cache, domainID, execution.GetWorkflowID(), execution.GetRunID())
 	if err != nil {
 		return err
 	}
 	defer func() { workflowContext.GetReleaseFn()(retError) }()
 
-	return updateWorkflowHelper(ctx, workflowContext, now, action)
+	return updateHelper(ctx, workflowContext, now, action)
 }
 
-func UpdateWorkflow(
+// UpdateCurrentWithActionFunc updates the given workflow execution or current execution if runID is empty.
+// It's the same as UpdateWithActionFunc if runID is not empty.
+// This function is suitable for the case when the change should always be applied to the current execution.
+func UpdateCurrentWithActionFunc(
 	ctx context.Context,
 	cache *execution.Cache,
 	executionManager persistence.ExecutionManager,
 	domainID string,
 	execution types.WorkflowExecution,
 	now time.Time,
-	action UpdateWorkflowActionFunc,
+	action UpdateActionFunc,
 ) (retError error) {
 
-	workflowContext, err := LoadWorkflow(ctx, cache, executionManager, domainID, execution.GetWorkflowID(), execution.GetRunID())
+	workflowContext, err := Load(ctx, cache, executionManager, domainID, execution.GetWorkflowID(), execution.GetRunID())
 	if err != nil {
 		return err
 	}
 	defer func() { workflowContext.GetReleaseFn()(retError) }()
 
-	return updateWorkflowHelper(ctx, workflowContext, now, action)
+	return updateHelper(ctx, workflowContext, now, action)
 }
 
-// TODO: remove and use updateWorkflowExecutionWithAction
-func UpdateWorkflowExecution(
+// TODO: deprecate and use UpdateWithActionFunc
+func UpdateWithAction(
 	ctx context.Context,
 	cache *execution.Cache,
 	domainID string,
@@ -178,42 +194,42 @@ func UpdateWorkflowExecution(
 	action func(wfContext execution.Context, mutableState execution.MutableState) error,
 ) error {
 
-	return UpdateWorkflowExecutionWithAction(
+	return UpdateWithActionFunc(
 		ctx,
 		cache,
 		domainID,
 		execution,
 		now,
-		getUpdateWorkflowActionFunc(createDecisionTask, action),
+		getUpdateActionFunc(createDecisionTask, action),
 	)
 }
 
-func getUpdateWorkflowActionFunc(
+func getUpdateActionFunc(
 	createDecisionTask bool,
 	action func(wfContext execution.Context, mutableState execution.MutableState) error,
-) UpdateWorkflowActionFunc {
+) UpdateActionFunc {
 
-	return func(wfContext execution.Context, mutableState execution.MutableState) (*UpdateWorkflowAction, error) {
+	return func(wfContext execution.Context, mutableState execution.MutableState) (*UpdateAction, error) {
 		err := action(wfContext, mutableState)
 		if err != nil {
 			return nil, err
 		}
-		postActions := &UpdateWorkflowAction{
+		postActions := &UpdateAction{
 			CreateDecision: createDecisionTask,
 		}
 		return postActions, nil
 	}
 }
 
-func updateWorkflowHelper(
+func updateHelper(
 	ctx context.Context,
-	workflowContext WorkflowContext,
+	workflowContext Context,
 	now time.Time,
-	action UpdateWorkflowActionFunc,
+	action UpdateActionFunc,
 ) (retError error) {
 
 UpdateHistoryLoop:
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
+	for attempt := 0; attempt < ConditionalRetryCount; attempt++ {
 		wfContext := workflowContext.GetContext()
 		mutableState := workflowContext.GetMutableState()
 
@@ -224,7 +240,7 @@ UpdateHistoryLoop:
 				// Handler detected that cached workflow mutable could potentially be stale
 				// Reload workflow execution history
 				workflowContext.GetContext().Clear()
-				if attempt != conditionalRetryCount-1 {
+				if attempt != ConditionalRetryCount-1 {
 					_, err = workflowContext.ReloadMutableState(ctx)
 					if err != nil {
 						return err
@@ -252,7 +268,7 @@ UpdateHistoryLoop:
 
 		err = workflowContext.GetContext().UpdateWorkflowExecutionAsActive(ctx, now)
 		if err == execution.ErrConflict {
-			if attempt != conditionalRetryCount-1 {
+			if attempt != ConditionalRetryCount-1 {
 				_, err = workflowContext.ReloadMutableState(ctx)
 				if err != nil {
 					return err
@@ -272,12 +288,11 @@ func GetActiveDomainEntry(
 	domainUUID string,
 ) (*cache.DomainCacheEntry, error) {
 
-	domainID, err := ValidateDomainUUID(domainUUID)
-	if err != nil {
+	if err := ValidateDomainUUID(domainUUID); err != nil {
 		return nil, err
 	}
 
-	domainEntry, err := shard.GetDomainCache().GetDomainByID(domainID)
+	domainEntry, err := shard.GetDomainCache().GetDomainByID(domainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -287,32 +302,14 @@ func GetActiveDomainEntry(
 	return domainEntry, nil
 }
 
-func GetPendingActiveDomainEntry(
-	shard shard.Context,
-	domainUUID string,
-) (bool, error) {
-
-	domainID, err := ValidateDomainUUID(domainUUID)
-	if err != nil {
-		return false, err
-	}
-
-	domainEntry, err := shard.GetDomainCache().GetDomainByID(domainID)
-	if err != nil {
-		return false, err
-	}
-
-	return domainEntry.IsDomainPendingActive(), nil
-}
-
 func ValidateDomainUUID(
 	domainUUID string,
-) (string, error) {
+) error {
 
 	if domainUUID == "" {
-		return "", &types.BadRequestError{Message: "Missing domain UUID."}
+		return &types.BadRequestError{Message: "Missing domain UUID."}
 	} else if uuid.Parse(domainUUID) == nil {
-		return "", &types.BadRequestError{Message: "Invalid domain UUID."}
+		return &types.BadRequestError{Message: "Invalid domain UUID."}
 	}
-	return domainUUID, nil
+	return nil
 }

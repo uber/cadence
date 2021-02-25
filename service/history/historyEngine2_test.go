@@ -54,6 +54,7 @@ import (
 	"github.com/uber/cadence/service/history/queue"
 	"github.com/uber/cadence/service/history/shard"
 	test "github.com/uber/cadence/service/history/testing"
+	"github.com/uber/cadence/service/history/workflow"
 )
 
 type (
@@ -582,7 +583,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedMaxAttemptsExceeded() {
 	identity := "testIdentity"
 
 	msBuilder := s.createExecutionStartedState(workflowExecution, tl, identity, false)
-	for i := 0; i < conditionalRetryCount; i++ {
+	for i := 0; i < workflow.ConditionalRetryCount; i++ {
 		ms := execution.CreatePersistenceMutableState(msBuilder)
 		gwmsResponse := &p.GetWorkflowExecutionResponse{State: ms}
 
@@ -590,9 +591,9 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedMaxAttemptsExceeded() {
 	}
 
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Times(
-		conditionalRetryCount)
+		workflow.ConditionalRetryCount)
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(nil,
-		&p.ConditionFailedError{}).Times(conditionalRetryCount)
+		&p.ConditionFailedError{}).Times(workflow.ConditionalRetryCount)
 
 	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        domainID,
@@ -610,7 +611,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedMaxAttemptsExceeded() {
 
 	s.NotNil(err)
 	s.Nil(response)
-	s.Equal(ErrMaxAttemptsExceeded, err)
+	s.Equal(workflow.ErrMaxAttemptsExceeded, err)
 }
 
 func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
