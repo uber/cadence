@@ -46,19 +46,25 @@ type pollerHistory struct {
 	// poller ID -> pollerInfo
 	// pollers map[pollerID]pollerInfo
 	history cache.Cache
+
+	// OnHistoryUpdatedFunc is a function called when the poller history was updated
+	onHistoryUpdatedFunc HistoryUpdatedFunc
 }
 
-func newPollerHistory(historyUpdatedFunc cache.OnCacheUpdatedFunc) *pollerHistory {
+// HistoryUpdatedFunc is a type for notifying applications when the poller history was updated
+type HistoryUpdatedFunc func()
+
+func newPollerHistory(historyUpdatedFunc HistoryUpdatedFunc) *pollerHistory {
 	opts := &cache.Options{
-		InitialCapacity:    pollerHistoryInitSize,
-		TTL:                pollerHistoryTTL,
-		Pin:                false,
-		MaxCount:           pollerHistoryInitMaxSize,
-		OnCacheUpdatedFunc: historyUpdatedFunc,
+		InitialCapacity: pollerHistoryInitSize,
+		TTL:             pollerHistoryTTL,
+		Pin:             false,
+		MaxCount:        pollerHistoryInitMaxSize,
 	}
 
 	return &pollerHistory{
-		history: cache.New(opts),
+		history:              cache.New(opts),
+		onHistoryUpdatedFunc: historyUpdatedFunc,
 	}
 }
 
@@ -68,6 +74,7 @@ func (pollers *pollerHistory) updatePollerInfo(id pollerIdentity, ratePerSecond 
 		rps = *ratePerSecond
 	}
 	pollers.history.Put(id, &pollerInfo{ratePerSecond: rps})
+	pollers.onHistoryUpdatedFunc()
 }
 
 func (pollers *pollerHistory) getAllPollerInfo() []*types.PollerInfo {
