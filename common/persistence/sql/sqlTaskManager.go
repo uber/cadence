@@ -309,7 +309,7 @@ func (m *sqlTaskManager) ListTaskList(
 			TaskType: lastRow.TaskType,
 		})
 	case pageToken.ShardID+1 < m.nShards:
-		nextPageToken, err = gobSerialize(&taskListPageToken{ShardID: pageToken.ShardID + 1, TaskType: math.MinInt16})
+		nextPageToken, err = gobSerialize(&taskListPageToken{ShardID: pageToken.ShardID + 1, TaskType: math.MinInt16, DomainID: minUUID})
 	}
 
 	if err != nil {
