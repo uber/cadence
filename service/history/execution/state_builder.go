@@ -132,6 +132,8 @@ func (b *stateBuilderImpl) ApplyEvents(
 		case types.EventTypeWorkflowExecutionStarted:
 			attributes := event.WorkflowExecutionStartedEventAttributes
 			var parentDomainID *string
+			// If ParentWorkflowDomainID is present use it, otherwise fallback to ParentWorkflowDomain
+			// as ParentWorkflowDomainID will not be present on older histories.
 			if attributes.ParentWorkflowDomainID != nil {
 				parentDomainID = attributes.ParentWorkflowDomainID
 			} else if attributes.ParentWorkflowDomain != nil {
