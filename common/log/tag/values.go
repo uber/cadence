@@ -100,6 +100,7 @@ var (
 	ComponentTaskList                 = component("tasklist")
 	ComponentHistoryEngine            = component("history-engine")
 	ComponentHistoryCache             = component("history-cache")
+	ComponentDecisionHandler          = component("decision-handler")
 	ComponentEventsCache              = component("events-cache")
 	ComponentTransferQueue            = component("transfer-queue-processor")
 	ComponentTimerQueue               = component("timer-queue-processor")
