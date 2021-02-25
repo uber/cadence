@@ -86,8 +86,13 @@ type (
 func NewService(
 	params *service.BootstrapParams,
 ) (resource.Resource, error) {
+	dc := dynamicconfig.NewCollection(
+		params.DynamicConfig,
+		params.Logger,
+		dynamicconfig.ClusterNameFilter(params.ClusterMetadata.GetCurrentClusterName()),
+	)
 
-	serviceConfig := NewConfig(params)
+	serviceConfig := NewConfig(params, dc)
 
 	serviceResource, err := resource.New(
 		params,
@@ -116,12 +121,7 @@ func NewService(
 }
 
 // NewConfig builds the new Config for cadence-worker service
-func NewConfig(params *service.BootstrapParams) *Config {
-	dc := dynamicconfig.NewCollection(
-		params.DynamicConfig,
-		params.Logger,
-		dynamicconfig.ClusterNameFilter(params.ClusterMetadata.GetCurrentClusterName()),
-	)
+func NewConfig(params *service.BootstrapParams, dc *dynamicconfig.Collection) *Config {
 	config := &Config{
 		ArchiverConfig: &archiver.Config{
 			ArchiverConcurrency:           dc.GetIntProperty(dynamicconfig.WorkerArchiverConcurrency, 50),
@@ -129,17 +129,15 @@ func NewConfig(params *service.BootstrapParams) *Config {
 			TimeLimitPerArchivalIteration: dc.GetDurationProperty(dynamicconfig.WorkerTimeLimitPerArchivalIteration, archiver.MaxArchivalIterationTimeout()),
 		},
 		ScannerCfg: &scanner.Config{
-			ScannerPersistenceMaxQPS: dc.GetIntProperty(dynamicconfig.ScannerPersistenceMaxQPS, 5),
-			Persistence:              &params.PersistenceConfig,
-			ClusterMetadata:          params.ClusterMetadata,
-			TaskListScannerEnabled:   dc.GetBoolProperty(dynamicconfig.TaskListScannerEnabled, true),
-			HistoryScannerEnabled:    dc.GetBoolProperty(dynamicconfig.HistoryScannerEnabled, false),
+			DC:                     dc,
+			Persistence:            &params.PersistenceConfig,
+			TaskListScannerEnabled: dc.GetBoolProperty(dynamicconfig.TaskListScannerEnabled, true),
+			HistoryScannerEnabled:  dc.GetBoolProperty(dynamicconfig.HistoryScannerEnabled, false),
 			ShardScanners: []*shardscanner.ScannerConfig{
 				executions.ConcreteExecutionScannerConfig(dc),
 				executions.CurrentExecutionScannerConfig(dc),
 				timers.ScannerConfig(dc),
 			},
-			MaxWorkflowRetentionInDays: dc.GetIntProperty(dynamicconfig.MaxRetentionDays, domain.DefaultMaxWorkflowRetentionInDays),
 		},
 		BatcherCfg: &batcher.Config{
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),

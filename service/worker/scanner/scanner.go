@@ -22,51 +22,44 @@ package scanner
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/uber-go/tally"
 	"go.uber.org/zap"
 
 	"go.uber.org/cadence/.gen/go/shared"
-	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/worker"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/service/worker/scanner/history"
 	"github.com/uber/cadence/service/worker/scanner/shardscanner"
+	"github.com/uber/cadence/service/worker/scanner/tasklist"
 )
 
 const (
-	// scannerStartUpDelay is to let services warm up
-	scannerStartUpDelay = time.Second * 4
+	maxConcurrentActivityExecutionSize     = 10
+	maxConcurrentDecisionTaskExecutionSize = 10
 )
 
 type (
-	contextKey string
-
 	// Config defines the configuration for scanner
 	Config struct {
-		// ScannerPersistenceMaxQPS the max rate of calls to persistence
-		// Right now is being used by historyScanner to determine the rate of persistence API calls
-		ScannerPersistenceMaxQPS dynamicconfig.IntPropertyFn
+		// DC provides dynamic collection
+		DC *dynamicconfig.Collection
 		// Persistence contains the persistence configuration
 		Persistence *config.Persistence
-		// ClusterMetadata contains the metadata for this cluster
-		ClusterMetadata cluster.Metadata
 		// TaskListScannerEnabled indicates if taskList scanner should be started as part of scanner
 		TaskListScannerEnabled dynamicconfig.BoolPropertyFn
 		// HistoryScannerEnabled indicates if history scanner should be started as part of scanner
 		HistoryScannerEnabled dynamicconfig.BoolPropertyFn
 		// ShardScanners is a list of shard scanner configs
-		ShardScanners              []*shardscanner.ScannerConfig
-		MaxWorkflowRetentionInDays dynamicconfig.IntPropertyFn
+		ShardScanners []*shardscanner.ScannerConfig
 	}
 
 	// BootstrapParams contains the set of params needed to bootstrap
@@ -78,18 +71,12 @@ type (
 		TallyScope tally.Scope
 	}
 
-	// scannerContext is the context object that get's
-	// passed around within the scanner workflows / activities
-	scannerContext struct {
-		resource resource.Resource
-		cfg      Config
-	}
-
 	// Scanner is the background sub-system that does full scans
 	// of database tables to cleanup resources, monitor anomalies
 	// and emit stats for analytics
 	Scanner struct {
-		context    scannerContext
+		resource   resource.Resource
+		cfg        Config
 		tallyScope tally.Scope
 		zapLogger  *zap.Logger
 	}
@@ -104,16 +91,14 @@ func New(
 	resource resource.Resource,
 	params *BootstrapParams,
 ) *Scanner {
-
 	zapLogger, err := zap.NewProduction()
 	if err != nil {
 		resource.GetLogger().Fatal("failed to initialize zap logger", tag.Error(err))
 	}
+
 	return &Scanner{
-		context: scannerContext{
-			resource: resource,
-			cfg:      params.Config,
-		},
+		resource:   resource,
+		cfg:        params.Config,
 		tallyScope: params.TallyScope,
 		zapLogger:  zapLogger.Named("scanner"),
 	}
@@ -122,32 +107,34 @@ func New(
 
 // Start starts the scanner
 func (s *Scanner) Start() error {
+	switch s.cfg.Persistence.DefaultStoreType() {
+	case config.StoreTypeSQL:
+		if s.cfg.TaskListScannerEnabled() {
+			w := s.newWorker(tasklist.WFStartOptions.TaskList)
+			tasklist.NewTaskListScanner(w, s.resource)
+			if err := w.Start(); err != nil {
+				return err
+			}
+			go s.startWorkflowWithRetry(tasklist.WFStartOptions, tasklist.WFTypeName, nil)
+		}
+	case config.StoreTypeCassandra:
+		if s.cfg.HistoryScannerEnabled() {
+			w := s.newWorker(history.WFStartOptions.TaskList)
+			history.NewHistoryScanner(w, s.resource, s.cfg.DC)
+			if err := w.Start(); err != nil {
+				return err
+			}
+			go s.startWorkflowWithRetry(history.WFStartOptions, history.WFTypeName, nil)
+		}
+	}
+
 	ctx := context.Background()
 	var workerTaskListNames []string
 	var wtl []string
 
-	for _, sc := range s.context.cfg.ShardScanners {
+	for _, sc := range s.cfg.ShardScanners {
 		ctx, wtl = s.startShardScanner(ctx, sc)
 		workerTaskListNames = append(workerTaskListNames, wtl...)
-	}
-
-	switch s.context.cfg.Persistence.DefaultStoreType() {
-	case config.StoreTypeSQL:
-		if s.context.cfg.TaskListScannerEnabled() {
-			ctx = s.startScanner(
-				ctx,
-				tlScannerWFStartOptions,
-				tlScannerWFTypeName)
-			workerTaskListNames = append(workerTaskListNames, tlScannerTaskListName)
-		}
-	case config.StoreTypeCassandra:
-		if s.context.cfg.HistoryScannerEnabled() {
-			ctx = s.startScanner(
-				ctx,
-				historyScannerWFStartOptions,
-				historyScannerWFTypeName)
-			workerTaskListNames = append(workerTaskListNames, historyScannerTaskListName)
-		}
 	}
 
 	workerOpts := worker.Options{
@@ -159,16 +146,11 @@ func (s *Scanner) Start() error {
 	}
 
 	for _, tl := range workerTaskListNames {
-		if err := worker.New(s.context.resource.GetSDKClient(), common.SystemLocalDomainName, tl, workerOpts).Start(); err != nil {
+		if err := worker.New(s.resource.GetSDKClient(), common.SystemLocalDomainName, tl, workerOpts).Start(); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func (s *Scanner) startScanner(ctx context.Context, options client.StartWorkflowOptions, workflowName string) context.Context {
-	go s.startWorkflowWithRetry(options, workflowName, nil)
-	return NewScannerContext(ctx, workflowName, s.context)
 }
 
 func (s *Scanner) startShardScanner(
@@ -180,7 +162,7 @@ func (s *Scanner) startShardScanner(
 		ctx = shardscanner.NewScannerContext(
 			ctx,
 			config.ScannerWFTypeName,
-			shardscanner.NewShardScannerContext(s.context.resource, config),
+			shardscanner.NewShardScannerContext(s.resource, config),
 		)
 		go s.startWorkflowWithRetry(
 			config.StartWorkflowOptions,
@@ -189,7 +171,7 @@ func (s *Scanner) startShardScanner(
 				Shards: shardscanner.Shards{
 					Range: &shardscanner.ShardRange{
 						Min: 0,
-						Max: s.context.cfg.Persistence.NumHistoryShards,
+						Max: s.cfg.Persistence.NumHistoryShards,
 					},
 				},
 			})
@@ -201,7 +183,7 @@ func (s *Scanner) startShardScanner(
 		ctx = shardscanner.NewFixerContext(
 			ctx,
 			config.FixerWFTypeName,
-			shardscanner.NewShardFixerContext(s.context.resource, config),
+			shardscanner.NewShardFixerContext(s.resource, config),
 		)
 		go s.startWorkflowWithRetry(
 			config.StartFixerOptions,
@@ -222,9 +204,7 @@ func (s *Scanner) startWorkflowWithRetry(
 	workflowType string,
 	workflowArg interface{},
 ) {
-	// let history / matching service warm up
-	time.Sleep(scannerStartUpDelay)
-	res := s.context.resource
+	res := s.resource
 	sdkClient := client.NewClient(
 		res.GetSDKClient(),
 		common.SystemLocalDomainName,
@@ -270,22 +250,14 @@ func (s *Scanner) startWorkflow(
 	}
 }
 
-// NewScannerContext provides context to be used as background activity context
-// it uses typed, private key to reduce access scope
-func NewScannerContext(ctx context.Context, workflowName string, scannerContext scannerContext) context.Context {
-	return context.WithValue(ctx, contextKey(workflowName), scannerContext)
-}
+func (s *Scanner) newWorker(tasklist string) worker.Worker {
+	// default worker options
+	workerOpts := worker.Options{
+		Logger:                                 s.zapLogger,
+		MetricsScope:                           s.tallyScope,
+		MaxConcurrentActivityExecutionSize:     maxConcurrentActivityExecutionSize,
+		MaxConcurrentDecisionTaskExecutionSize: maxConcurrentDecisionTaskExecutionSize,
+	}
 
-// GetScannerContext extracts scanner context from activity context
-// it uses typed, private key to reduce access scope
-func GetScannerContext(ctx context.Context) (scannerContext, error) {
-	info := activity.GetInfo(ctx)
-	if info.WorkflowType == nil {
-		return scannerContext{}, fmt.Errorf("workflowType is nil")
-	}
-	val, ok := ctx.Value(contextKey(info.WorkflowType.Name)).(scannerContext)
-	if !ok {
-		return scannerContext{}, fmt.Errorf("context type is not %T for a key %q", val, info.WorkflowType.Name)
-	}
-	return val, nil
+	return worker.New(s.resource.GetSDKClient(), common.SystemLocalDomainName, tasklist, workerOpts)
 }
