@@ -1,0 +1,11 @@
+{
+  "totalLaunchCount": 5000,
+  "routineCount": 5,
+  "chainSequence": 4,
+  "concurrentCount": 1,
+  "payloadSizeBytes": 1024,
+  "contextTimeoutInSeconds": 3,
+  "executionStartToCloseTimeoutInSeconds": 1200,
+  "panicStressWorkflow": true,
+  "failureThreshold": 0.05
+}

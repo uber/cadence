@@ -26,6 +26,7 @@ option go_package = "github.com/uber/cadence/.gen/proto/history/v1;historyv1";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
 import "uber/cadence/api/v1/common.proto";
 import "uber/cadence/api/v1/history.proto";
 import "uber/cadence/api/v1/query.proto";
@@ -311,7 +312,7 @@ message GetMutableStateResponse {
   api.v1.WorkflowExecution workflow_execution = 1;
   api.v1.WorkflowType workflow_type = 2;
   int64 next_event_id = 3;
-  int64 previous_started_event_id = 4;
+  google.protobuf.Int64Value previous_started_event_id = 4;
   int64 last_first_event_id = 5;
   api.v1.TaskList task_list = 6;
   api.v1.TaskList sticky_task_list = 7;
@@ -338,7 +339,7 @@ message PollMutableStateResponse {
   api.v1.WorkflowExecution workflow_execution = 1;
   api.v1.WorkflowType workflow_type = 2;
   int64 next_event_id = 3;
-  int64 previous_started_event_id = 4;
+  google.protobuf.Int64Value previous_started_event_id = 4;
   int64 last_first_event_id = 5;
   api.v1.TaskList task_list = 6;
   api.v1.TaskList sticky_task_list = 7;
@@ -364,7 +365,7 @@ message RecordDecisionTaskStartedRequest {
 
 message RecordDecisionTaskStartedResponse {
   api.v1.WorkflowType workflow_type = 1;
-  int64 previous_started_event_id = 2;
+  google.protobuf.Int64Value previous_started_event_id = 2;
   int64 scheduled_event_id = 3;
   int64 started_event_id = 4;
   int64 next_event_id = 5;
@@ -545,9 +546,6 @@ message DescribeMutableStateResponse {
 }
 
 message DescribeHistoryHostRequest {
-  string host_address = 1;
-  int32 shard_id = 2;
-  api.v1.WorkflowExecution workflow_execution = 3;
 }
 
 message DescribeHistoryHostResponse {
@@ -634,7 +632,7 @@ message ReadDLQMessagesRequest {
   shared.v1.DLQType type = 1;
   int32 shard_id = 2;
   string source_cluster = 3;
-  int64 inclusive_end_message_id = 4;
+  google.protobuf.Int64Value inclusive_end_message_id = 4;
   int32 page_size = 5;
   bytes next_page_token = 6;
 }
@@ -649,7 +647,7 @@ message PurgeDLQMessagesRequest {
   shared.v1.DLQType type = 1;
   int32 shard_id = 2;
   string source_cluster = 3;
-  int64 inclusive_end_message_id = 4;
+  google.protobuf.Int64Value inclusive_end_message_id = 4;
 }
 
 message PurgeDLQMessagesResponse {
@@ -659,7 +657,7 @@ message MergeDLQMessagesRequest {
   shared.v1.DLQType type = 1;
   int32 shard_id = 2;
   string source_cluster = 3;
-  int64 inclusive_end_message_id = 4;
+  google.protobuf.Int64Value inclusive_end_message_id = 4;
   int32 page_size = 5;
   bytes next_page_token = 6;
 }

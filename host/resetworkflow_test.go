@@ -169,7 +169,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 			WorkflowID: id,
 			RunID:      we.RunID,
 		},
-		Reason:                common.StringPtr("reset execution from test"),
+		Reason:                "reset execution from test",
 		DecisionFinishEventID: lastDecisionCompleted.GetEventID(),
 		RequestID:             uuid.New(),
 	})
@@ -207,7 +207,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 			WorkflowID: id,
 			RunID:      we.GetRunID(),
 		},
-		Reason:                common.StringPtr("reset execution from test"),
+		Reason:                "reset execution from test",
 		DecisionFinishEventID: lastDecisionCompleted.GetEventID(),
 		RequestID:             uuid.New(),
 	})
@@ -240,7 +240,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 			WorkflowID: id,
 			RunID:      newRunID,
 		},
-		Reason:                common.StringPtr("reset execution from test"),
+		Reason:                "reset execution from test",
 		DecisionFinishEventID: lastDecisionCompleted.GetEventID(),
 		RequestID:             uuid.New(),
 	})
@@ -292,7 +292,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 			WorkflowID: id,
 			RunID:      we.RunID,
 		},
-		Reason:                common.StringPtr("reset execution from test"),
+		Reason:                "reset execution from test",
 		DecisionFinishEventID: lastDecisionScheduled.GetEventID() + 1,
 		RequestID:             uuid.New(),
 	})
@@ -317,7 +317,7 @@ func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 			WorkflowID: id,
 			RunID:      we.GetRunID(),
 		},
-		Reason:                common.StringPtr("reset execution from test"),
+		Reason:                "reset execution from test",
 		DecisionFinishEventID: lastDecisionScheduled.GetEventID() + 1,
 		RequestID:             uuid.New(),
 	})

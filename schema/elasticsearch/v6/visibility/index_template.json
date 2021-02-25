@@ -64,7 +64,8 @@
             "CustomDomain": { "type": "keyword"},
             "Operator": { "type": "keyword"},
             "RolloutID": { "type": "keyword"},
-            "BinaryChecksums": { "type": "keyword"}
+            "BinaryChecksums": { "type": "keyword"},
+            "Passed": { "type": "boolean" }
           }
         }
       }

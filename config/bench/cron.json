@@ -1,0 +1,115 @@
+{
+  "testSuites": [
+    {
+      "name": "syncAPI",
+      "domain": "cadence-bench-sync",
+      "configs": [
+        {
+          "name": "basic",
+          "timeoutInSeconds": 600,
+          "basic": {
+            "totalLaunchCount": 10,
+            "routineCount": 1,
+            "chainSequence": 4,
+            "concurrentCount": 1,
+            "payloadSizeBytes": 1024,
+            "executionStartToCloseTimeoutInSeconds": 60,
+            "contextTimeoutInSeconds": 3
+          }
+        },
+        {
+          "name": "basic",
+          "description": "panic workflow test",
+          "timeoutInSeconds": 600,
+          "basic": {
+            "totalLaunchCount": 10,
+            "routineCount": 1,
+            "chainSequence": 4,
+            "concurrentCount": 1,
+            "payloadSizeBytes": 1024,
+            "executionStartToCloseTimeoutInSeconds": 180,
+            "contextTimeoutInSeconds": 3,
+            "panicStressWorkflow": true
+          }
+        },
+        {
+          "name": "cancellation",
+          "timeoutInSeconds": 600,
+          "cancellation": {
+            "totalLaunchCount": 3000,
+            "concurrency": 1,
+            "contextTimeoutInSeconds": 2
+          }
+        },
+        {
+          "name": "signal",
+          "timeoutInSeconds": 1800,
+          "signal": {
+            "loaderCount": 10,
+            "loadTestWorkflowCount": 1000,
+            "signalCount": 50,
+            "signalDataSize": 2700,
+            "rateLimit": 7,
+            "workflowExecutionTimeoutInSeconds": 600,
+            "decisionTaskTimeoutInSeconds": 30,
+            "campaignCount": 30,
+            "actionRate": 0.02,
+            "failureRate": 0,
+            "signalBeforeContinueAsNew": 10,
+            "enableRollingWindow": true,
+            "maxSignalDelayInSeconds": 5,
+            "maxSignalDelayCount": 5,
+            "failureThreshold": 0.05
+          }
+        }
+      ]
+    },
+    {
+      "name": "batchOp",
+      "domain": "cadence-bench-batch",
+      "configs": [
+        {
+          "name": "timer",
+          "timeoutInSeconds": 600,
+          "timer": {
+            "TotalTimerCount": 100,
+            "TimerPerWorkflow": 1,
+            "ShortestTimerDurationInSeconds": 300,
+            "LongestTimerDurationInSeconds": 300,
+            "MaxTimerLatencyInSeconds": 2,
+            "TimerTimeoutInSeconds": 60,
+            "RoutineCount": 2
+          }
+        },
+        {
+          "name": "concurrent-execution",
+          "description": "batch of activities",
+          "timeoutInSeconds": 600,
+          "concurrentExec": {
+            "totalBatches": 15,
+            "concurrency": 5,
+            "batchType": "activity",
+            "batchSize": 100,
+            "batchPeriodInSeconds": 60,
+            "batchMaxLatencyInSeconds": 10,
+            "batchTimeoutInSeconds": 30
+          }
+        },
+        {
+          "name": "concurrent-execution",
+          "description": "batch of child workflows",
+          "timeoutInSeconds": 600,
+          "concurrentExec": {
+            "totalBatches": 15,
+            "concurrency": 5,
+            "batchType": "childWorkflow",
+            "batchSize": 100,
+            "batchPeriodInSeconds": 60,
+            "batchMaxLatencyInSeconds": 10,
+            "batchTimeoutInSeconds": 30
+          }
+        }
+      ]
+    }
+  ]
+}

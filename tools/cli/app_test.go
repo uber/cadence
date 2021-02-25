@@ -510,7 +510,7 @@ var describeTaskListResponse = &shared.DescribeTaskListResponse{
 
 func (s *cliAppSuite) TestAdminDescribeWorkflow() {
 	resp := &types.AdminDescribeWorkflowExecutionResponse{
-		ShardID:                common.StringPtr("test-shard-id"),
+		ShardID:                "test-shard-id",
 		HistoryAddr:            common.StringPtr("ip:port"),
 		MutableStateInDatabase: common.StringPtr("{\"ExecutionInfo\":{\"BranchToken\":\"WQsACgAAACQ2MzI5YzEzMi1mMGI0LTQwZmUtYWYxMS1hODVmMDA3MzAzODQLABQAAAAkOWM5OWI1MjItMGEyZi00NTdmLWEyNDgtMWU0OTA0ZDg4YzVhDwAeDAAAAAAA\"}}"),
 	}

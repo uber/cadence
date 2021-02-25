@@ -1,0 +1,9 @@
+{
+  "totalTimerCount": 100,
+  "timerPerWorkflow": 1,
+  "shortestTimerDurationInSeconds": 300,
+  "longestTimerDurationInSeconds": 300,
+  "maxTimerLatencyInSeconds": 2,
+  "timerTimeoutInSeconds": 60,
+  "routineCount": 2
+}

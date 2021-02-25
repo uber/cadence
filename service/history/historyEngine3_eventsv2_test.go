@@ -135,7 +135,7 @@ func (s *engine3Suite) SetupTest() {
 		timerProcessor:       s.mockTimerProcessor,
 	}
 	s.mockShard.SetEngine(h)
-	h.decisionHandler = newDecisionHandler(h)
+	h.decisionHandler = NewDecisionHandler(s.mockShard, h.executionCache, h.tokenSerializer)
 
 	s.historyEngine = h
 }
@@ -164,7 +164,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -291,7 +291,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		runID,
 		constants.TestLocalDomainEntry,
 	)

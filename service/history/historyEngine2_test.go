@@ -146,7 +146,7 @@ func (s *engine2Suite) SetupTest() {
 		timerProcessor:       s.mockTimerProcessor,
 	}
 	s.mockShard.SetEngine(h)
-	h.decisionHandler = newDecisionHandler(h)
+	h.decisionHandler = NewDecisionHandler(s.mockShard, h.executionCache, h.tokenSerializer)
 
 	s.historyEngine = h
 }
@@ -168,7 +168,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyExpired() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -240,7 +240,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -863,7 +863,7 @@ func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		we.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
@@ -1189,7 +1189,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		runID,
 		constants.TestLocalDomainEntry,
 	)
@@ -1325,7 +1325,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		runID,
 		constants.TestLocalDomainEntry,
 	)
@@ -1375,7 +1375,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_DuplicateReque
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		runID,
 		constants.TestLocalDomainEntry,
 	)
@@ -1433,7 +1433,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_WorkflowAlread
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
 		s.historyEngine.shard,
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		runID,
 		constants.TestLocalDomainEntry,
 	)

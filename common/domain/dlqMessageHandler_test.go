@@ -29,9 +29,7 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/types"
 )
@@ -65,12 +63,10 @@ func (s *dlqMessageHandlerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 	s.controller = gomock.NewController(s.T())
 
-	zapLogger, err := zap.NewDevelopment()
-	s.Require().NoError(err)
 	s.mockReplicationTaskExecutor = NewMockReplicationTaskExecutor(s.controller)
 	s.mockReplicationQueue = NewMockReplicationQueue(s.controller)
 
-	logger := loggerimpl.NewLogger(zapLogger)
+	logger := loggerimpl.NewLoggerForTest(s.Suite)
 	s.dlqMessageHandler = NewDLQMessageHandler(
 		s.mockReplicationTaskExecutor,
 		s.mockReplicationQueue,
@@ -186,7 +182,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages() {
 	messageID := int64(11)
 
 	domainAttribute := &types.DomainTaskAttributes{
-		ID: common.StringPtr(uuid.New()),
+		ID: uuid.New(),
 	}
 
 	tasks := []*types.ReplicationTask{
@@ -215,7 +211,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnGetDLQAckLevel() 
 	messageID := int64(11)
 	testError := fmt.Errorf("test")
 	domainAttribute := &types.DomainTaskAttributes{
-		ID: common.StringPtr(uuid.New()),
+		ID: uuid.New(),
 	}
 
 	tasks := []*types.ReplicationTask{
@@ -265,10 +261,10 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnHandleReceivingTa
 	messageID2 := int64(12)
 	testError := fmt.Errorf("test")
 	domainAttribute1 := &types.DomainTaskAttributes{
-		ID: common.StringPtr(uuid.New()),
+		ID: uuid.New(),
 	}
 	domainAttribute2 := &types.DomainTaskAttributes{
-		ID: common.StringPtr(uuid.New()),
+		ID: uuid.New(),
 	}
 	tasks := []*types.ReplicationTask{
 		{
@@ -305,10 +301,10 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_ThrowErrorOnDeleteMessages() 
 	messageID2 := int64(12)
 	testError := fmt.Errorf("test")
 	domainAttribute1 := &types.DomainTaskAttributes{
-		ID: common.StringPtr(uuid.New()),
+		ID: uuid.New(),
 	}
 	domainAttribute2 := &types.DomainTaskAttributes{
-		ID: common.StringPtr(uuid.New()),
+		ID: uuid.New(),
 	}
 	tasks := []*types.ReplicationTask{
 		{
@@ -343,7 +339,7 @@ func (s *dlqMessageHandlerSuite) TestMergeMessages_IgnoreErrorOnUpdateDLQAckLeve
 	messageID := int64(11)
 	testError := fmt.Errorf("test")
 	domainAttribute := &types.DomainTaskAttributes{
-		ID: common.StringPtr(uuid.New()),
+		ID: uuid.New(),
 	}
 
 	tasks := []*types.ReplicationTask{

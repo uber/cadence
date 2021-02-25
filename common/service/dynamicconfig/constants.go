@@ -73,6 +73,7 @@ var keys = map[Key]string{
 	EnableGracefulFailover:              "system.enableGracefulFailover",
 	TransactionSizeLimit:                "system.transactionSizeLimit",
 	PersistenceErrorInjectionRate:       "system.persistenceErrorInjectionRate",
+	MaxRetentionDays:                    "system.maxRetentionDays",
 	MinRetentionDays:                    "system.minRetentionDays",
 	MaxDecisionStartToCloseSeconds:      "system.maxDecisionStartToCloseSeconds",
 	DisallowQuery:                       "system.disallowQuery",
@@ -406,6 +407,10 @@ const (
 	TransactionSizeLimit
 	// PersistenceErrorInjectionRate is the rate for injecting random error in persistence
 	PersistenceErrorInjectionRate
+	// MaxRetentionDays is the maximum retention allowed when registering a domain
+	// !!! Do NOT simply decrease this number, because it is being used by history scavenger to avoid race condition against history archival.
+	//	Check more details in history scanner(scavenger)
+	MaxRetentionDays
 	// MinRetentionDays is the minimal allowed retention days for domain
 	MinRetentionDays
 	// MaxDecisionStartToCloseSeconds is the minimal allowed decision start to close timeout in seconds

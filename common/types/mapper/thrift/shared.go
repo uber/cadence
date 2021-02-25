@@ -186,7 +186,7 @@ func FromActivityTaskScheduledEventAttributes(t *types.ActivityTaskScheduledEven
 	return &shared.ActivityTaskScheduledEventAttributes{
 		ActivityId:                    &t.ActivityID,
 		ActivityType:                  FromActivityType(t.ActivityType),
-		Domain:                        t.Domain,
+		Domain:                        &t.Domain,
 		TaskList:                      FromTaskList(t.TaskList),
 		Input:                         t.Input,
 		ScheduleToCloseTimeoutSeconds: t.ScheduleToCloseTimeoutSeconds,
@@ -207,7 +207,7 @@ func ToActivityTaskScheduledEventAttributes(t *shared.ActivityTaskScheduledEvent
 	return &types.ActivityTaskScheduledEventAttributes{
 		ActivityID:                    t.GetActivityId(),
 		ActivityType:                  ToActivityType(t.ActivityType),
-		Domain:                        t.Domain,
+		Domain:                        t.GetDomain(),
 		TaskList:                      ToTaskList(t.TaskList),
 		Input:                         t.Input,
 		ScheduleToCloseTimeoutSeconds: t.ScheduleToCloseTimeoutSeconds,
@@ -358,8 +358,8 @@ func FromBadBinaryInfo(t *types.BadBinaryInfo) *shared.BadBinaryInfo {
 		return nil
 	}
 	return &shared.BadBinaryInfo{
-		Reason:          t.Reason,
-		Operator:        t.Operator,
+		Reason:          &t.Reason,
+		Operator:        &t.Operator,
 		CreatedTimeNano: t.CreatedTimeNano,
 	}
 }
@@ -370,8 +370,8 @@ func ToBadBinaryInfo(t *shared.BadBinaryInfo) *types.BadBinaryInfo {
 		return nil
 	}
 	return &types.BadBinaryInfo{
-		Reason:          t.Reason,
-		Operator:        t.Operator,
+		Reason:          t.GetReason(),
+		Operator:        t.GetOperator(),
 		CreatedTimeNano: t.CreatedTimeNano,
 	}
 }
@@ -449,7 +449,7 @@ func FromCancelTimerFailedEventAttributes(t *types.CancelTimerFailedEventAttribu
 	}
 	return &shared.CancelTimerFailedEventAttributes{
 		TimerId:                      &t.TimerID,
-		Cause:                        t.Cause,
+		Cause:                        &t.Cause,
 		DecisionTaskCompletedEventId: &t.DecisionTaskCompletedEventID,
 		Identity:                     &t.Identity,
 	}
@@ -462,7 +462,7 @@ func ToCancelTimerFailedEventAttributes(t *shared.CancelTimerFailedEventAttribut
 	}
 	return &types.CancelTimerFailedEventAttributes{
 		TimerID:                      t.GetTimerId(),
-		Cause:                        t.Cause,
+		Cause:                        t.GetCause(),
 		DecisionTaskCompletedEventID: t.GetDecisionTaskCompletedEventId(),
 		Identity:                     t.GetIdentity(),
 	}
@@ -742,7 +742,7 @@ func FromCloseShardRequest(t *types.CloseShardRequest) *shared.CloseShardRequest
 		return nil
 	}
 	return &shared.CloseShardRequest{
-		ShardID: t.ShardID,
+		ShardID: &t.ShardID,
 	}
 }
 
@@ -752,7 +752,7 @@ func ToCloseShardRequest(t *shared.CloseShardRequest) *types.CloseShardRequest {
 		return nil
 	}
 	return &types.CloseShardRequest{
-		ShardID: t.ShardID,
+		ShardID: t.GetShardID(),
 	}
 }
 
@@ -1590,7 +1590,7 @@ func FromDescribeQueueRequest(t *types.DescribeQueueRequest) *shared.DescribeQue
 		return nil
 	}
 	return &shared.DescribeQueueRequest{
-		ShardID:     t.ShardID,
+		ShardID:     &t.ShardID,
 		ClusterName: &t.ClusterName,
 		Type:        t.Type,
 	}
@@ -1602,7 +1602,7 @@ func ToDescribeQueueRequest(t *shared.DescribeQueueRequest) *types.DescribeQueue
 		return nil
 	}
 	return &types.DescribeQueueRequest{
-		ShardID:     t.ShardID,
+		ShardID:     t.GetShardID(),
 		ClusterName: t.GetClusterName(),
 		Type:        t.Type,
 	}
@@ -3876,7 +3876,7 @@ func FromRemoveTaskRequest(t *types.RemoveTaskRequest) *shared.RemoveTaskRequest
 		return nil
 	}
 	return &shared.RemoveTaskRequest{
-		ShardID:             t.ShardID,
+		ShardID:             &t.ShardID,
 		Type:                t.Type,
 		TaskID:              t.TaskID,
 		VisibilityTimestamp: t.VisibilityTimestamp,
@@ -3889,7 +3889,7 @@ func ToRemoveTaskRequest(t *shared.RemoveTaskRequest) *types.RemoveTaskRequest {
 		return nil
 	}
 	return &types.RemoveTaskRequest{
-		ShardID:             t.ShardID,
+		ShardID:             t.GetShardID(),
 		Type:                t.Type,
 		TaskID:              t.TaskID,
 		VisibilityTimestamp: t.VisibilityTimestamp,
@@ -3923,7 +3923,7 @@ func FromRequestCancelActivityTaskFailedEventAttributes(t *types.RequestCancelAc
 	}
 	return &shared.RequestCancelActivityTaskFailedEventAttributes{
 		ActivityId:                   &t.ActivityID,
-		Cause:                        t.Cause,
+		Cause:                        &t.Cause,
 		DecisionTaskCompletedEventId: &t.DecisionTaskCompletedEventID,
 	}
 }
@@ -3935,7 +3935,7 @@ func ToRequestCancelActivityTaskFailedEventAttributes(t *shared.RequestCancelAct
 	}
 	return &types.RequestCancelActivityTaskFailedEventAttributes{
 		ActivityID:                   t.GetActivityId(),
-		Cause:                        t.Cause,
+		Cause:                        t.GetCause(),
 		DecisionTaskCompletedEventID: t.GetDecisionTaskCompletedEventId(),
 	}
 }
@@ -4108,7 +4108,7 @@ func FromResetQueueRequest(t *types.ResetQueueRequest) *shared.ResetQueueRequest
 		return nil
 	}
 	return &shared.ResetQueueRequest{
-		ShardID:     t.ShardID,
+		ShardID:     &t.ShardID,
 		ClusterName: &t.ClusterName,
 		Type:        t.Type,
 	}
@@ -4120,7 +4120,7 @@ func ToResetQueueRequest(t *shared.ResetQueueRequest) *types.ResetQueueRequest {
 		return nil
 	}
 	return &types.ResetQueueRequest{
-		ShardID:     t.ShardID,
+		ShardID:     t.GetShardID(),
 		ClusterName: t.GetClusterName(),
 		Type:        t.Type,
 	}
@@ -4172,7 +4172,7 @@ func FromResetWorkflowExecutionRequest(t *types.ResetWorkflowExecutionRequest) *
 	return &shared.ResetWorkflowExecutionRequest{
 		Domain:                &t.Domain,
 		WorkflowExecution:     FromWorkflowExecution(t.WorkflowExecution),
-		Reason:                t.Reason,
+		Reason:                &t.Reason,
 		DecisionFinishEventId: &t.DecisionFinishEventID,
 		RequestId:             &t.RequestID,
 		SkipSignalReapply:     &t.SkipSignalReapply,
@@ -4187,7 +4187,7 @@ func ToResetWorkflowExecutionRequest(t *shared.ResetWorkflowExecutionRequest) *t
 	return &types.ResetWorkflowExecutionRequest{
 		Domain:                t.GetDomain(),
 		WorkflowExecution:     ToWorkflowExecution(t.WorkflowExecution),
-		Reason:                t.Reason,
+		Reason:                t.GetReason(),
 		DecisionFinishEventID: t.GetDecisionFinishEventId(),
 		RequestID:             t.GetRequestId(),
 		SkipSignalReapply:     t.GetSkipSignalReapply(),
@@ -5316,7 +5316,7 @@ func FromTerminateWorkflowExecutionRequest(t *types.TerminateWorkflowExecutionRe
 	return &shared.TerminateWorkflowExecutionRequest{
 		Domain:            &t.Domain,
 		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
-		Reason:            t.Reason,
+		Reason:            &t.Reason,
 		Details:           t.Details,
 		Identity:          &t.Identity,
 	}
@@ -5330,7 +5330,7 @@ func ToTerminateWorkflowExecutionRequest(t *shared.TerminateWorkflowExecutionReq
 	return &types.TerminateWorkflowExecutionRequest{
 		Domain:            t.GetDomain(),
 		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
-		Reason:            t.Reason,
+		Reason:            t.GetReason(),
 		Details:           t.Details,
 		Identity:          t.GetIdentity(),
 	}
@@ -5760,7 +5760,7 @@ func FromWorkflowExecutionCancelRequestedEventAttributes(t *types.WorkflowExecut
 		return nil
 	}
 	return &shared.WorkflowExecutionCancelRequestedEventAttributes{
-		Cause:                     t.Cause,
+		Cause:                     &t.Cause,
 		ExternalInitiatedEventId:  t.ExternalInitiatedEventID,
 		ExternalWorkflowExecution: FromWorkflowExecution(t.ExternalWorkflowExecution),
 		Identity:                  &t.Identity,
@@ -5773,7 +5773,7 @@ func ToWorkflowExecutionCancelRequestedEventAttributes(t *shared.WorkflowExecuti
 		return nil
 	}
 	return &types.WorkflowExecutionCancelRequestedEventAttributes{
-		Cause:                     t.Cause,
+		Cause:                     t.GetCause(),
 		ExternalInitiatedEventID:  t.ExternalInitiatedEventId,
 		ExternalWorkflowExecution: ToWorkflowExecution(t.ExternalWorkflowExecution),
 		Identity:                  t.GetIdentity(),
@@ -6140,7 +6140,7 @@ func FromWorkflowExecutionTerminatedEventAttributes(t *types.WorkflowExecutionTe
 		return nil
 	}
 	return &shared.WorkflowExecutionTerminatedEventAttributes{
-		Reason:   t.Reason,
+		Reason:   &t.Reason,
 		Details:  t.Details,
 		Identity: &t.Identity,
 	}
@@ -6152,7 +6152,7 @@ func ToWorkflowExecutionTerminatedEventAttributes(t *shared.WorkflowExecutionTer
 		return nil
 	}
 	return &types.WorkflowExecutionTerminatedEventAttributes{
-		Reason:   t.Reason,
+		Reason:   t.GetReason(),
 		Details:  t.Details,
 		Identity: t.GetIdentity(),
 	}

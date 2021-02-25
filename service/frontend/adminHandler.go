@@ -267,7 +267,7 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 		return &types.AdminDescribeWorkflowExecutionResponse{}, err
 	}
 	return &types.AdminDescribeWorkflowExecutionResponse{
-		ShardID:                common.StringPtr(shardIDForOutput),
+		ShardID:                shardIDForOutput,
 		HistoryAddr:            common.StringPtr(historyAddr),
 		MutableStateInDatabase: resp2.MutableStateInDatabase,
 		MutableStateInCache:    resp2.MutableStateInCache,
@@ -284,7 +284,7 @@ func (adh *adminHandlerImpl) RemoveTask(
 	scope, sw := adh.startRequestProfile(metrics.AdminRemoveTaskScope)
 	defer sw.Stop()
 
-	if request == nil || request.ShardID == nil || request.Type == nil || request.TaskID == nil {
+	if request == nil || request.Type == nil || request.TaskID == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
 	err := adh.GetHistoryClient().RemoveTask(ctx, request)
@@ -301,7 +301,7 @@ func (adh *adminHandlerImpl) CloseShard(
 	scope, sw := adh.startRequestProfile(metrics.AdminCloseShardScope)
 	defer sw.Stop()
 
-	if request == nil || request.ShardID == nil {
+	if request == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
 	err := adh.GetHistoryClient().CloseShard(ctx, request)
@@ -318,7 +318,7 @@ func (adh *adminHandlerImpl) ResetQueue(
 	scope, sw := adh.startRequestProfile(metrics.AdminResetQueueScope)
 	defer sw.Stop()
 
-	if request == nil || request.ShardID == nil || request.Type == nil {
+	if request == nil || request.Type == nil {
 		return adh.error(errRequestNotSet, scope)
 	}
 	if request.GetClusterName() == "" {
@@ -339,7 +339,7 @@ func (adh *adminHandlerImpl) DescribeQueue(
 	scope, sw := adh.startRequestProfile(metrics.AdminDescribeQueueScope)
 	defer sw.Stop()
 
-	if request == nil || request.ShardID == nil || request.Type == nil {
+	if request == nil || request.Type == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 	if request.GetClusterName() == "" {

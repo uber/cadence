@@ -88,7 +88,7 @@ func (v *AdminDescribeWorkflowExecutionRequest) GetExecution() (o *WorkflowExecu
 
 // AdminDescribeWorkflowExecutionResponse is an internal type (TBD...)
 type AdminDescribeWorkflowExecutionResponse struct {
-	ShardID                *string `json:"shardId,omitempty"`
+	ShardID                string  `json:"shardId,omitempty"`
 	HistoryAddr            *string `json:"historyAddr,omitempty"`
 	MutableStateInCache    *string `json:"mutableStateInCache,omitempty"`
 	MutableStateInDatabase *string `json:"mutableStateInDatabase,omitempty"`
@@ -96,8 +96,8 @@ type AdminDescribeWorkflowExecutionResponse struct {
 
 // GetShardID is an internal getter (TBD...)
 func (v *AdminDescribeWorkflowExecutionResponse) GetShardID() (o string) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }

@@ -72,7 +72,7 @@ func (s *domainCacheSuite) TearDownSuite() {
 func (s *domainCacheSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
-	s.logger = loggerimpl.NewDevelopmentForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 	s.clusterMetadata = &mocks.ClusterMetadata{}
 	s.metadataMgr = &mocks.MetadataManager{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
@@ -207,8 +207,8 @@ func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByName() {
 			BadBinaries: types.BadBinaries{
 				Binaries: map[string]*types.BadBinaryInfo{
 					"abc": {
-						Reason:          common.StringPtr("test reason"),
-						Operator:        common.StringPtr("test operator"),
+						Reason:          "test reason",
+						Operator:        "test operator",
 						CreatedTimeNano: common.Int64Ptr(123),
 					},
 				},

@@ -300,7 +300,7 @@ func (b *HistoryBuilder) AddRequestCancelActivityTaskFailedEvent(decisionComplet
 	attributes := &types.RequestCancelActivityTaskFailedEventAttributes{}
 	attributes.ActivityID = ActivityID
 	attributes.DecisionTaskCompletedEventID = decisionCompletedEventID
-	attributes.Cause = common.StringPtr(cause)
+	attributes.Cause = cause
 
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeRequestCancelActivityTaskFailed)
 	event.RequestCancelActivityTaskFailedEventAttributes = attributes
@@ -348,7 +348,7 @@ func (b *HistoryBuilder) AddCancelTimerFailedEvent(TimerID string, DecisionTaskC
 	attributes := &types.CancelTimerFailedEventAttributes{}
 	attributes.TimerID = TimerID
 	attributes.DecisionTaskCompletedEventID = DecisionTaskCompletedEventID
-	attributes.Cause = common.StringPtr(cause)
+	attributes.Cause = cause
 	attributes.Identity = identity
 
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeCancelTimerFailed)
@@ -645,7 +645,7 @@ func (b *HistoryBuilder) newDecisionTaskTimedOutEvent(
 	attributes.BaseRunID = baseRunID
 	attributes.NewRunID = newRunID
 	attributes.ForkEventVersion = forkEventVersion
-	attributes.Reason = common.StringPtr(reason)
+	attributes.Reason = reason
 	attributes.Cause = cause.Ptr()
 	historyEvent.DecisionTaskTimedOutEventAttributes = attributes
 
@@ -795,7 +795,7 @@ func (b *HistoryBuilder) newWorkflowExecutionTerminatedEvent(
 	reason string, details []byte, identity string) *types.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(types.EventTypeWorkflowExecutionTerminated)
 	attributes := &types.WorkflowExecutionTerminatedEventAttributes{}
-	attributes.Reason = common.StringPtr(reason)
+	attributes.Reason = reason
 	attributes.Details = details
 	attributes.Identity = identity
 	historyEvent.WorkflowExecutionTerminatedEventAttributes = attributes
@@ -820,7 +820,7 @@ func (b *HistoryBuilder) newWorkflowExecutionCancelRequestedEvent(cause string,
 	request *types.HistoryRequestCancelWorkflowExecutionRequest) *types.HistoryEvent {
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeWorkflowExecutionCancelRequested)
 	attributes := &types.WorkflowExecutionCancelRequestedEventAttributes{}
-	attributes.Cause = common.StringPtr(cause)
+	attributes.Cause = cause
 	attributes.Identity = request.CancelRequest.Identity
 	if request.ExternalInitiatedEventID != nil {
 		attributes.ExternalInitiatedEventID = common.Int64Ptr(*request.ExternalInitiatedEventID)

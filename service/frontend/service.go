@@ -137,7 +137,8 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		SendRawWorkflowHistory:                      dc.GetBoolPropertyFilteredByDomain(dynamicconfig.SendRawWorkflowHistory, sendRawWorkflowHistory),
 		domainConfig: domain.Config{
 			MaxBadBinaryCount: dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries, domain.MaxBadBinaries),
-			MinRetentionDays:  dc.GetIntProperty(dynamicconfig.MinRetentionDays, domain.MinRetentionDays),
+			MinRetentionDays:  dc.GetIntProperty(dynamicconfig.MinRetentionDays, domain.DefaultMinWorkflowRetentionInDays),
+			MaxRetentionDays:  dc.GetIntProperty(dynamicconfig.MaxRetentionDays, domain.DefaultMaxWorkflowRetentionInDays),
 			FailoverCoolDown:  dc.GetDurationPropertyFilteredByDomain(dynamicconfig.FrontendFailoverCoolDown, domain.FailoverCoolDown),
 		},
 	}

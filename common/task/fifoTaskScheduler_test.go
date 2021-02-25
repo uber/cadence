@@ -63,7 +63,7 @@ func (s *fifoTaskSchedulerSuite) SetupTest() {
 
 	s.queueSize = 2
 	s.scheduler = NewFIFOTaskScheduler(
-		loggerimpl.NewDevelopmentForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.Suite),
 		metrics.NewClient(tally.NoopScope, metrics.Common),
 		&FIFOTaskSchedulerOptions{
 			QueueSize:       s.queueSize,

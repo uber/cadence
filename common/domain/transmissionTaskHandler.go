@@ -23,7 +23,6 @@ package domain
 import (
 	"context"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
@@ -89,7 +88,7 @@ func (domainReplicator *domainReplicatorImpl) HandleTransmissionTask(
 	taskType := types.ReplicationTaskTypeDomain
 	task := &types.DomainTaskAttributes{
 		DomainOperation: &domainOperation,
-		ID:              common.StringPtr(info.ID),
+		ID:              info.ID,
 		Info: &types.DomainInfo{
 			Name:        info.Name,
 			Status:      status,
@@ -110,9 +109,9 @@ func (domainReplicator *domainReplicatorImpl) HandleTransmissionTask(
 			ActiveClusterName: replicationConfig.ActiveClusterName,
 			Clusters:          domainReplicator.convertClusterReplicationConfigToThrift(replicationConfig.Clusters),
 		},
-		ConfigVersion:           common.Int64Ptr(configVersion),
-		FailoverVersion:         common.Int64Ptr(failoverVersion),
-		PreviousFailoverVersion: common.Int64Ptr(previousFailoverVersion),
+		ConfigVersion:           configVersion,
+		FailoverVersion:         failoverVersion,
+		PreviousFailoverVersion: previousFailoverVersion,
 	}
 
 	return domainReplicator.replicationMessageSink.Publish(

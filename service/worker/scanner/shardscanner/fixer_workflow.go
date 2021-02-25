@@ -47,7 +47,6 @@ type FixerManagerCB func(
 	context.Context,
 	persistence.Retryer,
 	FixShardActivityParams,
-	ScannerConfig,
 ) invariant.Manager
 
 // FixerIteratorCB is a function which returns ScanOutputIterator for fixer.
@@ -56,7 +55,6 @@ type FixerIteratorCB func(
 	blobstore.Client,
 	store.Keys,
 	FixShardActivityParams,
-	ScannerConfig,
 ) store.ScanOutputIterator
 
 // FixerHooks holds callback functions for shard scanner workflow implementation.
@@ -96,8 +94,6 @@ func NewFixerWorkflow(
 	if len(name) < 1 {
 		return nil, errors.New("workflow name is not provided")
 	}
-
-	params.ContextKey = ScannerContextKey(name)
 
 	wf := FixerWorkflow{
 		Params: params,
@@ -139,7 +135,6 @@ func (fx *FixerWorkflow) Start(ctx workflow.Context) error {
 				if err := workflow.ExecuteActivity(activityCtx, ActivityFixShard, FixShardActivityParams{
 					CorruptedKeysEntries:        batch,
 					ResolvedFixerWorkflowConfig: resolvedConfig,
-					ContextKey:                  fx.Params.ContextKey,
 				}).Get(ctx, &reports); err != nil {
 					errStr := err.Error()
 					shardReportChan.Send(ctx, FixReportError{

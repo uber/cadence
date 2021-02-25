@@ -2,6 +2,15 @@
 MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
+# set a VERBOSE=1 env var for verbose output. VERBOSE=0 (or unset) disables.
+# this is used to make verbose flags, suitable for `$(if $(test_v),...)`.
+VERBOSE ?= 0
+ifneq (0,$(VERBOSE))
+test_v = 1
+else
+test_v =
+endif
+
 # a literal space value, for makefile purposes
 SPACE :=
 SPACE +=
@@ -16,7 +25,7 @@ GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
 TEST_TIMEOUT = 20m
-TEST_ARG ?= -race -v -timeout $(TEST_TIMEOUT)
+TEST_ARG ?= -race $(if $(test_v),-v) -timeout $(TEST_TIMEOUT)
 BUILD := .build
 BIN := $(BUILD)/bin
 TOOLS_CMD_ROOT=./cmd/tools
@@ -81,7 +90,7 @@ $(BIN)/protoc-gen-go-grpc: go.mod | $(BIN)
 	$(call get_tool,google.golang.org/grpc/cmd/protoc-gen-go-grpc)
 
 $(BIN)/goveralls: go.mod | $(BIN)
-	$(call get_tool,github.com/dmetzgar/goveralls)
+	$(call get_tool,github.com/mattn/goveralls)
 
 # https://docs.buf.build/
 BUF_VERSION = 0.36.0
@@ -261,6 +270,10 @@ cadence-canary: $(ALL_SRC)
 	@echo "compiling cadence-canary with OS: $(GOOS), ARCH: $(GOARCH)"
 	go build -o cadence-canary cmd/canary/main.go
 
+cadence-bench: $(ALL_SRC)
+	@echo "compling cadence-bench with OS: $(GOOS), ARCH: $(GOARCH)"
+	go build -o cadence-bench cmd/bench/main.go
+
 go-generate-format: go-generate fmt
 
 go-generate: $(BIN)/mockgen $(BIN)/enumer
@@ -278,7 +291,7 @@ fmt: $(BIN)/goimports $(ALL_SRC)
 	@# use FRESH_ALL_SRC so it won't miss any generated files produced earlier
 	@$(BIN)/goimports -local "github.com/uber/cadence" -w $(FRESH_ALL_SRC)
 
-bins_nothrift: fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server cadence-canary
+bins_nothrift: fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server cadence-canary cadence-bench
 
 bins: thriftc bins_nothrift ## Build, format, and lint everything.  Also regenerates thrift.
 
@@ -360,6 +373,7 @@ clean: ## Clean binaries and build folder
 	rm -f cadence
 	rm -f cadence-server
 	rm -f cadence-canary
+	rm -f cadence-bench
 	rm -f cadence-sql-tool
 	rm -f cadence-cassandra-tool
 	rm -Rf $(BUILD)
@@ -428,14 +442,46 @@ start-cdc-other: bins
 start-canary: bins
 	./cadence-canary start
 
+start-bench: bins
+	./cadence-bench start
+
 start-mysql: bins
 	./cadence-server --zone mysql start
 
 start-postgres: bins
 	./cadence-server --zone postgres start
 
+# broken up into multiple += so I can interleave comments.
+# this all becomes a single line of output.
+# you must not use single-quotes within the string in this var.
+JQ_DEPS_AGE = jq '
+# only deal with things with updates
+JQ_DEPS_AGE += select(.Update)
+# allow additional filtering, e.g. DEPS_FILTER='$(JQ_DEPS_ONLY_DIRECT)'
+JQ_DEPS_AGE += $(DEPS_FILTER)
+# add "days between current version and latest version"
+JQ_DEPS_AGE += | . + {Age:(((.Update.Time | fromdate) - (.Time | fromdate))/60/60/24 | floor)}
+# add "days between latest version and now"
+JQ_DEPS_AGE += | . + {Available:((now - (.Update.Time | fromdate))/60/60/24 | floor)}
+# 123 days: library 	old_version -> new_version
+JQ_DEPS_AGE += | ([.Age, .Available] | max | tostring) + " days: " + .Path + "  \t" + .Version + " -> " + .Update.Version
+JQ_DEPS_AGE += '
+# remove surrounding quotes from output
+JQ_DEPS_AGE += --raw-output
+
+# exclude `"Indirect": true` dependencies.  direct ones have no "Indirect" key at all.
+JQ_DEPS_ONLY_DIRECT = | select(has("Indirect") | not)
+
+deps: ## Check for dependency updates, for things that are directly imported
+	@make --no-print-directory DEPS_FILTER='$(JQ_DEPS_ONLY_DIRECT)' deps-all
+
+deps-all: ## Check for all dependency updates
+	@go list -u -m -json all \
+		| $(JQ_DEPS_AGE) \
+		| sort -n
+
 help:
 	@# print help first, so it's visible
 	@printf "\033[36m%-20s\033[0m %s\n" 'help' 'Prints a help message showing any specially-commented targets'
 	@# then everything matching "target: ## magic comments"
-	@cat $(MAKEFILE_LIST) | grep -e "^[a-zA-Z_\-]*:.* ## .*" | sort | awk 'BEGIN {FS = ":.*? ## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@cat $(MAKEFILE_LIST) | grep -e "^[a-zA-Z_\-]*:.* ## .*" | awk 'BEGIN {FS = ":.*? ## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' | sort

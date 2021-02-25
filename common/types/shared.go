@@ -252,7 +252,7 @@ func (v *ActivityTaskFailedEventAttributes) GetIdentity() (o string) {
 type ActivityTaskScheduledEventAttributes struct {
 	ActivityID                    string        `json:"activityId,omitempty"`
 	ActivityType                  *ActivityType `json:"activityType,omitempty"`
-	Domain                        *string       `json:"domain,omitempty"`
+	Domain                        string        `json:"domain,omitempty"`
 	TaskList                      *TaskList     `json:"taskList,omitempty"`
 	Input                         []byte        `json:"input,omitempty"`
 	ScheduleToCloseTimeoutSeconds *int32        `json:"scheduleToCloseTimeoutSeconds,omitempty"`
@@ -282,8 +282,8 @@ func (v *ActivityTaskScheduledEventAttributes) GetActivityType() (o *ActivityTyp
 
 // GetDomain is an internal getter (TBD...)
 func (v *ActivityTaskScheduledEventAttributes) GetDomain() (o string) {
-	if v != nil && v.Domain != nil {
-		return *v.Domain
+	if v != nil {
+		return v.Domain
 	}
 	return
 }
@@ -555,23 +555,23 @@ func (v *BadBinaries) GetBinaries() (o map[string]*BadBinaryInfo) {
 
 // BadBinaryInfo is an internal type (TBD...)
 type BadBinaryInfo struct {
-	Reason          *string `json:"reason,omitempty"`
-	Operator        *string `json:"operator,omitempty"`
-	CreatedTimeNano *int64  `json:"createdTimeNano,omitempty"`
+	Reason          string `json:"reason,omitempty"`
+	Operator        string `json:"operator,omitempty"`
+	CreatedTimeNano *int64 `json:"createdTimeNano,omitempty"`
 }
 
 // GetReason is an internal getter (TBD...)
 func (v *BadBinaryInfo) GetReason() (o string) {
-	if v != nil && v.Reason != nil {
-		return *v.Reason
+	if v != nil {
+		return v.Reason
 	}
 	return
 }
 
 // GetOperator is an internal getter (TBD...)
 func (v *BadBinaryInfo) GetOperator() (o string) {
-	if v != nil && v.Operator != nil {
-		return *v.Operator
+	if v != nil {
+		return v.Operator
 	}
 	return
 }
@@ -656,10 +656,10 @@ func (v *CancelTimerDecisionAttributes) GetTimerID() (o string) {
 
 // CancelTimerFailedEventAttributes is an internal type (TBD...)
 type CancelTimerFailedEventAttributes struct {
-	TimerID                      string  `json:"timerId,omitempty"`
-	Cause                        *string `json:"cause,omitempty"`
-	DecisionTaskCompletedEventID int64   `json:"decisionTaskCompletedEventId,omitempty"`
-	Identity                     string  `json:"identity,omitempty"`
+	TimerID                      string `json:"timerId,omitempty"`
+	Cause                        string `json:"cause,omitempty"`
+	DecisionTaskCompletedEventID int64  `json:"decisionTaskCompletedEventId,omitempty"`
+	Identity                     string `json:"identity,omitempty"`
 }
 
 // GetTimerID is an internal getter (TBD...)
@@ -672,8 +672,8 @@ func (v *CancelTimerFailedEventAttributes) GetTimerID() (o string) {
 
 // GetCause is an internal getter (TBD...)
 func (v *CancelTimerFailedEventAttributes) GetCause() (o string) {
-	if v != nil && v.Cause != nil {
-		return *v.Cause
+	if v != nil {
+		return v.Cause
 	}
 	return
 }
@@ -1136,13 +1136,13 @@ func (v *ClientVersionNotSupportedError) GetSupportedVersions() (o string) {
 
 // CloseShardRequest is an internal type (TBD...)
 type CloseShardRequest struct {
-	ShardID *int32 `json:"shardID,omitempty"`
+	ShardID int32 `json:"shardID,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
 func (v *CloseShardRequest) GetShardID() (o int32) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }
@@ -2054,7 +2054,7 @@ type DecisionTaskTimedOutEventAttributes struct {
 	BaseRunID        string                     `json:"baseRunId,omitempty"`
 	NewRunID         string                     `json:"newRunId,omitempty"`
 	ForkEventVersion int64                      `json:"forkEventVersion,omitempty"`
-	Reason           *string                    `json:"reason,omitempty"`
+	Reason           string                     `json:"reason,omitempty"`
 	Cause            *DecisionTaskTimedOutCause `json:"cause,omitempty"`
 }
 
@@ -2108,8 +2108,8 @@ func (v *DecisionTaskTimedOutEventAttributes) GetForkEventVersion() (o int64) {
 
 // GetReason is an internal getter (TBD...)
 func (v *DecisionTaskTimedOutEventAttributes) GetReason() (o string) {
-	if v != nil && v.Reason != nil {
-		return *v.Reason
+	if v != nil {
+		return v.Reason
 	}
 	return
 }
@@ -2425,15 +2425,15 @@ func (v *DescribeHistoryHostResponse) GetAddress() (o string) {
 
 // DescribeQueueRequest is an internal type (TBD...)
 type DescribeQueueRequest struct {
-	ShardID     *int32 `json:"shardID,omitempty"`
+	ShardID     int32  `json:"shardID,omitempty"`
 	ClusterName string `json:"clusterName,omitempty"`
 	Type        *int32 `json:"type,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
 func (v *DescribeQueueRequest) GetShardID() (o int32) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }
@@ -6032,7 +6032,7 @@ func (v *RemoteSyncMatchedError) GetMessage() (o string) {
 
 // RemoveTaskRequest is an internal type (TBD...)
 type RemoveTaskRequest struct {
-	ShardID             *int32 `json:"shardID,omitempty"`
+	ShardID             int32  `json:"shardID,omitempty"`
 	Type                *int32 `json:"type,omitempty"`
 	TaskID              *int64 `json:"taskID,omitempty"`
 	VisibilityTimestamp *int64 `json:"visibilityTimestamp,omitempty"`
@@ -6040,8 +6040,8 @@ type RemoveTaskRequest struct {
 
 // GetShardID is an internal getter (TBD...)
 func (v *RemoveTaskRequest) GetShardID() (o int32) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }
@@ -6085,9 +6085,9 @@ func (v *RequestCancelActivityTaskDecisionAttributes) GetActivityID() (o string)
 
 // RequestCancelActivityTaskFailedEventAttributes is an internal type (TBD...)
 type RequestCancelActivityTaskFailedEventAttributes struct {
-	ActivityID                   string  `json:"activityId,omitempty"`
-	Cause                        *string `json:"cause,omitempty"`
-	DecisionTaskCompletedEventID int64   `json:"decisionTaskCompletedEventId,omitempty"`
+	ActivityID                   string `json:"activityId,omitempty"`
+	Cause                        string `json:"cause,omitempty"`
+	DecisionTaskCompletedEventID int64  `json:"decisionTaskCompletedEventId,omitempty"`
 }
 
 // GetActivityID is an internal getter (TBD...)
@@ -6100,8 +6100,8 @@ func (v *RequestCancelActivityTaskFailedEventAttributes) GetActivityID() (o stri
 
 // GetCause is an internal getter (TBD...)
 func (v *RequestCancelActivityTaskFailedEventAttributes) GetCause() (o string) {
-	if v != nil && v.Cause != nil {
-		return *v.Cause
+	if v != nil {
+		return v.Cause
 	}
 	return
 }
@@ -6383,15 +6383,15 @@ func (v *ResetPoints) GetPoints() (o []*ResetPointInfo) {
 
 // ResetQueueRequest is an internal type (TBD...)
 type ResetQueueRequest struct {
-	ShardID     *int32 `json:"shardID,omitempty"`
+	ShardID     int32  `json:"shardID,omitempty"`
 	ClusterName string `json:"clusterName,omitempty"`
 	Type        *int32 `json:"type,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
 func (v *ResetQueueRequest) GetShardID() (o int32) {
-	if v != nil && v.ShardID != nil {
-		return *v.ShardID
+	if v != nil {
+		return v.ShardID
 	}
 	return
 }
@@ -6442,7 +6442,7 @@ type ResetStickyTaskListResponse struct {
 type ResetWorkflowExecutionRequest struct {
 	Domain                string             `json:"domain,omitempty"`
 	WorkflowExecution     *WorkflowExecution `json:"workflowExecution,omitempty"`
-	Reason                *string            `json:"reason,omitempty"`
+	Reason                string             `json:"reason,omitempty"`
 	DecisionFinishEventID int64              `json:"decisionFinishEventId,omitempty"`
 	RequestID             string             `json:"requestId,omitempty"`
 	SkipSignalReapply     bool               `json:"skipSignalReapply,omitempty"`
@@ -6466,8 +6466,8 @@ func (v *ResetWorkflowExecutionRequest) GetWorkflowExecution() (o *WorkflowExecu
 
 // GetReason is an internal getter (TBD...)
 func (v *ResetWorkflowExecutionRequest) GetReason() (o string) {
-	if v != nil && v.Reason != nil {
-		return *v.Reason
+	if v != nil {
+		return v.Reason
 	}
 	return
 }
@@ -8559,7 +8559,7 @@ const (
 type TerminateWorkflowExecutionRequest struct {
 	Domain            string             `json:"domain,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
-	Reason            *string            `json:"reason,omitempty"`
+	Reason            string             `json:"reason,omitempty"`
 	Details           []byte             `json:"details,omitempty"`
 	Identity          string             `json:"identity,omitempty"`
 }
@@ -8582,8 +8582,8 @@ func (v *TerminateWorkflowExecutionRequest) GetWorkflowExecution() (o *WorkflowE
 
 // GetReason is an internal getter (TBD...)
 func (v *TerminateWorkflowExecutionRequest) GetReason() (o string) {
-	if v != nil && v.Reason != nil {
-		return *v.Reason
+	if v != nil {
+		return v.Reason
 	}
 	return
 }
@@ -9079,7 +9079,7 @@ func (v *WorkflowExecutionAlreadyStartedError) GetRunID() (o string) {
 
 // WorkflowExecutionCancelRequestedEventAttributes is an internal type (TBD...)
 type WorkflowExecutionCancelRequestedEventAttributes struct {
-	Cause                     *string            `json:"cause,omitempty"`
+	Cause                     string             `json:"cause,omitempty"`
 	ExternalInitiatedEventID  *int64             `json:"externalInitiatedEventId,omitempty"`
 	ExternalWorkflowExecution *WorkflowExecution `json:"externalWorkflowExecution,omitempty"`
 	Identity                  string             `json:"identity,omitempty"`
@@ -9087,8 +9087,8 @@ type WorkflowExecutionCancelRequestedEventAttributes struct {
 
 // GetCause is an internal getter (TBD...)
 func (v *WorkflowExecutionCancelRequestedEventAttributes) GetCause() (o string) {
-	if v != nil && v.Cause != nil {
-		return *v.Cause
+	if v != nil {
+		return v.Cause
 	}
 	return
 }
@@ -9850,15 +9850,15 @@ func (v *WorkflowExecutionStartedEventAttributes) GetHeader() (o *Header) {
 
 // WorkflowExecutionTerminatedEventAttributes is an internal type (TBD...)
 type WorkflowExecutionTerminatedEventAttributes struct {
-	Reason   *string `json:"reason,omitempty"`
-	Details  []byte  `json:"details,omitempty"`
-	Identity string  `json:"identity,omitempty"`
+	Reason   string `json:"reason,omitempty"`
+	Details  []byte `json:"details,omitempty"`
+	Identity string `json:"identity,omitempty"`
 }
 
 // GetReason is an internal getter (TBD...)
 func (v *WorkflowExecutionTerminatedEventAttributes) GetReason() (o string) {
-	if v != nil && v.Reason != nil {
-		return *v.Reason
+	if v != nil {
+		return v.Reason
 	}
 	return
 }
