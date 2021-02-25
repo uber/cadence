@@ -25,13 +25,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/pborman/uuid"
-
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
-	"github.com/uber/cadence/service/history/shard"
 )
 
 var ConditionalRetryCount = 5
@@ -60,8 +56,6 @@ var (
 		CreateDecision: false,
 	}
 )
-
-///////////////////  Util function for loading workflow ///////////////////
 
 func LoadOnce(
 	ctx context.Context,
@@ -279,37 +273,4 @@ UpdateHistoryLoop:
 		return err
 	}
 	return ErrMaxAttemptsExceeded
-}
-
-///////////////////  Util function for getting domain entry ///////////////////
-
-func GetActiveDomainEntry(
-	shard shard.Context,
-	domainUUID string,
-) (*cache.DomainCacheEntry, error) {
-
-	if err := ValidateDomainUUID(domainUUID); err != nil {
-		return nil, err
-	}
-
-	domainEntry, err := shard.GetDomainCache().GetDomainByID(domainUUID)
-	if err != nil {
-		return nil, err
-	}
-	if err = domainEntry.GetDomainNotActiveErr(); err != nil {
-		return domainEntry, err
-	}
-	return domainEntry, nil
-}
-
-func ValidateDomainUUID(
-	domainUUID string,
-) error {
-
-	if domainUUID == "" {
-		return &types.BadRequestError{Message: "Missing domain UUID."}
-	} else if uuid.Parse(domainUUID) == nil {
-		return &types.BadRequestError{Message: "Invalid domain UUID."}
-	}
-	return nil
 }

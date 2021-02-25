@@ -103,7 +103,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskScheduled(
 	req *types.ScheduleDecisionTaskRequest,
 ) error {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(handler.shard, req.DomainUUID)
+	domainEntry, err := handler.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskStarted(
 	req *types.RecordDecisionTaskStartedRequest,
 ) (*types.RecordDecisionTaskStartedResponse, error) {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(handler.shard, req.DomainUUID)
+	domainEntry, err := handler.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +246,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskFailed(
 	req *types.HistoryRespondDecisionTaskFailedRequest,
 ) (retError error) {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(handler.shard, req.DomainUUID)
+	domainEntry, err := handler.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -286,7 +286,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskCompleted(
 	req *types.HistoryRespondDecisionTaskCompletedRequest,
 ) (resp *types.HistoryRespondDecisionTaskCompletedResponse, retError error) {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(handler.shard, req.DomainUUID)
+	domainEntry, err := handler.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return nil, err
 	}

@@ -526,7 +526,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 	startRequest *types.HistoryStartWorkflowExecutionRequest,
 ) (resp *types.StartWorkflowExecutionResponse, retError error) {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(e.shard, startRequest.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(startRequest.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -950,7 +950,7 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 	request *types.GetMutableStateRequest,
 ) (*types.GetMutableStateResponse, error) {
 
-	if err := workflow.ValidateDomainUUID(request.DomainUUID); err != nil {
+	if err := common.ValidateDomainUUID(request.DomainUUID); err != nil {
 		return nil, err
 	}
 	domainID := request.DomainUUID
@@ -1358,7 +1358,7 @@ func (e *historyEngineImpl) DescribeMutableState(
 	request *types.DescribeMutableStateRequest,
 ) (response *types.DescribeMutableStateResponse, retError error) {
 
-	if err := workflow.ValidateDomainUUID(request.DomainUUID); err != nil {
+	if err := common.ValidateDomainUUID(request.DomainUUID); err != nil {
 		return nil, err
 	}
 
@@ -1421,7 +1421,7 @@ func (e *historyEngineImpl) ResetStickyTaskList(
 	resetRequest *types.HistoryResetStickyTaskListRequest,
 ) (*types.HistoryResetStickyTaskListResponse, error) {
 
-	if err := workflow.ValidateDomainUUID(resetRequest.DomainUUID); err != nil {
+	if err := common.ValidateDomainUUID(resetRequest.DomainUUID); err != nil {
 		return nil, err
 	}
 	domainID := resetRequest.DomainUUID
@@ -1448,7 +1448,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	request *types.HistoryDescribeWorkflowExecutionRequest,
 ) (retResp *types.DescribeWorkflowExecutionResponse, retError error) {
 
-	if err := workflow.ValidateDomainUUID(request.DomainUUID); err != nil {
+	if err := common.ValidateDomainUUID(request.DomainUUID); err != nil {
 		return nil, err
 	}
 
@@ -1596,7 +1596,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 	request *types.RecordActivityTaskStartedRequest,
 ) (*types.RecordActivityTaskStartedResponse, error) {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(e.shard, request.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(request.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -1727,7 +1727,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 	req *types.HistoryRespondActivityTaskCompletedRequest,
 ) error {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(e.shard, req.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -1808,7 +1808,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 	req *types.HistoryRespondActivityTaskFailedRequest,
 ) error {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(e.shard, req.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -1905,7 +1905,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 	req *types.HistoryRespondActivityTaskCanceledRequest,
 ) error {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(e.shard, req.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -1995,7 +1995,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 	req *types.HistoryRecordActivityTaskHeartbeatRequest,
 ) (*types.RecordActivityTaskHeartbeatResponse, error) {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(e.shard, req.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -2072,7 +2072,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 	req *types.HistoryRequestCancelWorkflowExecutionRequest,
 ) error {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(e.shard, req.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2126,7 +2126,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 	signalRequest *types.HistorySignalWorkflowExecutionRequest,
 ) error {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(e.shard, signalRequest.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(signalRequest.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2204,7 +2204,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	signalWithStartRequest *types.HistorySignalWithStartWorkflowExecutionRequest,
 ) (retResp *types.StartWorkflowExecutionResponse, retError error) {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(e.shard, signalWithStartRequest.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(signalWithStartRequest.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -2318,7 +2318,7 @@ func (e *historyEngineImpl) RemoveSignalMutableState(
 	request *types.RemoveSignalMutableStateRequest,
 ) error {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(e.shard, request.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(request.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2346,7 +2346,7 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 	terminateRequest *types.HistoryTerminateWorkflowExecutionRequest,
 ) error {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(e.shard, terminateRequest.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(terminateRequest.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2387,7 +2387,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 	completionRequest *types.RecordChildExecutionCompletedRequest,
 ) error {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(e.shard, completionRequest.DomainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(completionRequest.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2927,7 +2927,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 	reapplyEvents []*types.HistoryEvent,
 ) error {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(e.shard, domainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(domainUUID)
 	if err != nil {
 		switch {
 		case domainEntry != nil && domainEntry.IsDomainPendingActive():
@@ -3124,7 +3124,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 	workflowExecution types.WorkflowExecution,
 ) (retError error) {
 
-	domainEntry, err := workflow.GetActiveDomainEntry(e.shard, domainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(domainUUID)
 	if err != nil {
 		return err
 	}

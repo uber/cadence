@@ -26,143 +26,16 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
-	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
-
-func TestValidateDomainUUID(t *testing.T) {
-	testCases := []struct {
-		msg        string
-		domainUUID string
-		valid      bool
-	}{
-		{
-			msg:        "empty",
-			domainUUID: "",
-			valid:      false,
-		},
-		{
-			msg:        "invalid",
-			domainUUID: "some random uuid",
-			valid:      false,
-		},
-		{
-			msg:        "valid",
-			domainUUID: uuid.New(),
-			valid:      true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.msg, func(t *testing.T) {
-			err := ValidateDomainUUID(tc.domainUUID)
-			if tc.valid {
-				require.NoError(t, err)
-			} else {
-				require.Error(t, err)
-			}
-		})
-	}
-}
-
-func TestGetActiveDomainEntry(t *testing.T) {
-	testCases := []struct {
-		msg              string
-		domainCacheEntry *cache.DomainCacheEntry
-		expectErr        bool
-	}{
-		{
-			msg:              "local domain",
-			domainCacheEntry: constants.TestLocalDomainEntry,
-			expectErr:        false,
-		},
-		{
-			msg: "active global domain",
-			domainCacheEntry: cache.NewGlobalDomainCacheEntryForTest(
-				&persistence.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName},
-				nil,
-				&persistence.DomainReplicationConfig{
-					ActiveClusterName: cluster.TestCurrentClusterName,
-					Clusters: []*persistence.ClusterReplicationConfig{
-						{ClusterName: cluster.TestCurrentClusterName},
-						{ClusterName: cluster.TestAlternativeClusterName},
-					},
-				},
-				constants.TestVersion,
-				cluster.GetTestClusterMetadata(true, true),
-			),
-			expectErr: false,
-		},
-		{
-			msg: "passive global domain",
-			domainCacheEntry: cache.NewGlobalDomainCacheEntryForTest(
-				&persistence.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName},
-				nil,
-				&persistence.DomainReplicationConfig{
-					ActiveClusterName: cluster.TestCurrentClusterName,
-					Clusters: []*persistence.ClusterReplicationConfig{
-						{ClusterName: cluster.TestCurrentClusterName},
-						{ClusterName: cluster.TestAlternativeClusterName},
-					},
-				},
-				constants.TestVersion,
-				cluster.NewMetadata(
-					loggerimpl.NewNopLogger(),
-					dynamicconfig.GetBoolPropertyFn(true),
-					int64(10),
-					cluster.TestCurrentClusterName,
-					cluster.TestAlternativeClusterName,
-					cluster.TestAllClusterInfo,
-				),
-			),
-			expectErr: true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.msg, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			mockShard := shard.NewTestContext(
-				controller,
-				&persistence.ShardInfo{
-					ShardID: 10,
-					RangeID: 1,
-				},
-				nil,
-			)
-			mockDomainCache := mockShard.Resource.DomainCache
-
-			domainID := tc.domainCacheEntry.GetInfo().ID
-			mockDomainCache.EXPECT().GetDomainByID(domainID).Return(tc.domainCacheEntry, nil).Times(1)
-
-			entry, err := GetActiveDomainEntry(mockShard, domainID)
-			if tc.expectErr {
-				require.Error(t, err)
-				require.IsType(t, &types.DomainNotActiveError{}, err)
-				return
-			}
-
-			require.NoError(t, err)
-			require.Equal(t, tc.domainCacheEntry, entry)
-
-			controller.Finish()
-		})
-	}
-
-}
 
 func TestUpdateHelper(t *testing.T) {
 	testCases := []struct {
