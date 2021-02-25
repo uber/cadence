@@ -48,7 +48,7 @@ task_type = :task_type
 
 	listTaskListQry = `SELECT domain_id, range_id, name, task_type, data, data_encoding ` +
 		`FROM task_lists ` +
-		`WHERE shard_id = $1 AND domain_id > $2 AND name > $3 AND task_type > $4 ORDER BY domain_id,name,task_type LIMIT $5`
+		`WHERE shard_id = $1 AND domain_id >= $2 AND name > $3 AND task_type >= $4 ORDER BY domain_id,task_type,name LIMIT $5`
 
 	getTaskListQry = `SELECT domain_id, range_id, name, task_type, data, data_encoding ` +
 		`FROM task_lists ` +
