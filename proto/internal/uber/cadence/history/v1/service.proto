@@ -641,7 +641,8 @@ message ReadDLQMessagesRequest {
 message ReadDLQMessagesResponse {
   shared.v1.DLQType type = 1;
   repeated shared.v1.ReplicationTask replication_tasks = 2;
-  bytes next_page_token = 3;
+  repeated shared.v1.ReplicationTaskInfo replication_tasks_info = 3;
+  bytes next_page_token = 4;
 }
 
 message PurgeDLQMessagesRequest {
