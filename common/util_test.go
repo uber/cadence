@@ -129,3 +129,38 @@ func TestConvertIndexedValueTypeToThriftType(t *testing.T) {
 		require.Equal(t, expected[i], ConvertIndexedValueTypeToThriftType(float64(i), nil))
 	}
 }
+
+func TestValidateDomainUUID(t *testing.T) {
+	testCases := []struct {
+		msg        string
+		domainUUID string
+		valid      bool
+	}{
+		{
+			msg:        "empty",
+			domainUUID: "",
+			valid:      false,
+		},
+		{
+			msg:        "invalid",
+			domainUUID: "some random uuid",
+			valid:      false,
+		},
+		{
+			msg:        "valid",
+			domainUUID: uuid.New(),
+			valid:      true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.msg, func(t *testing.T) {
+			err := ValidateDomainUUID(tc.domainUUID)
+			if tc.valid {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
