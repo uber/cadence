@@ -9465,19 +9465,21 @@ func (v *WorkflowExecutionFilter) GetRunID() (o string) {
 
 // WorkflowExecutionInfo is an internal type (TBD...)
 type WorkflowExecutionInfo struct {
-	Execution        *WorkflowExecution            `json:"execution,omitempty"`
-	Type             *WorkflowType                 `json:"type,omitempty"`
-	StartTime        *int64                        `json:"startTime,omitempty"`
-	CloseTime        *int64                        `json:"closeTime,omitempty"`
-	CloseStatus      *WorkflowExecutionCloseStatus `json:"closeStatus,omitempty"`
-	HistoryLength    int64                         `json:"historyLength,omitempty"`
+	Execution         *WorkflowExecution            `json:"execution,omitempty"`
+	Type              *WorkflowType                 `json:"type,omitempty"`
+	StartTime         *int64                        `json:"startTime,omitempty"`
+	CloseTime         *int64                        `json:"closeTime,omitempty"`
+	CloseStatus       *WorkflowExecutionCloseStatus `json:"closeStatus,omitempty"`
+	HistoryLength     int64                         `json:"historyLength,omitempty"`
 	ParentDomainID   *string                       `json:"parentDomainId,omitempty"`
-	ParentExecution  *WorkflowExecution            `json:"parentExecution,omitempty"`
-	ExecutionTime    *int64                        `json:"executionTime,omitempty"`
-	Memo             *Memo                         `json:"memo,omitempty"`
-	SearchAttributes *SearchAttributes             `json:"searchAttributes,omitempty"`
-	AutoResetPoints  *ResetPoints                  `json:"autoResetPoints,omitempty"`
-	TaskList         string                        `json:"taskList,omitempty"`
+	ParentDomain      *string                       `json:"parentDomain,omitempty"`
+	ParentExecution   *WorkflowExecution            `json:"parentExecution,omitempty"`
+	ParentInitiatedID *int64                        `json:"parentInitiatedId,omitempty"`
+	ExecutionTime     *int64                        `json:"executionTime,omitempty"`
+	Memo              *Memo                         `json:"memo,omitempty"`
+	SearchAttributes  *SearchAttributes             `json:"searchAttributes,omitempty"`
+	AutoResetPoints   *ResetPoints                  `json:"autoResetPoints,omitempty"`
+	TaskList          string                        `json:"taskList,omitempty"`
 }
 
 // GetExecution is an internal getter (TBD...)
@@ -9618,6 +9620,7 @@ func (v *WorkflowExecutionSignaledEventAttributes) GetIdentity() (o string) {
 // WorkflowExecutionStartedEventAttributes is an internal type (TBD...)
 type WorkflowExecutionStartedEventAttributes struct {
 	WorkflowType                        *WorkflowType           `json:"workflowType,omitempty"`
+	ParentWorkflowDomainID              *string                 `json:"parentWorkflowDomainID,omitempty"`
 	ParentWorkflowDomain                *string                 `json:"parentWorkflowDomain,omitempty"`
 	ParentWorkflowExecution             *WorkflowExecution      `json:"parentWorkflowExecution,omitempty"`
 	ParentInitiatedEventID              *int64                  `json:"parentInitiatedEventId,omitempty"`
