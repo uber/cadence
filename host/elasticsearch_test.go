@@ -117,7 +117,7 @@ func (s *elasticsearchIntegrationSuite) TestListOpenWorkflow() {
 			MaximumPageSize: defaultTestValueOfESIndexMaxResultWindow,
 			StartTimeFilter: startFilter,
 			ExecutionFilter: &types.WorkflowExecutionFilter{
-				WorkflowID: common.StringPtr(id),
+				WorkflowID: id,
 			},
 		})
 		s.Nil(err)

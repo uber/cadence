@@ -239,7 +239,7 @@ func (wh *WorkflowHandler) Health(ctx context.Context) (*types.HealthStatus, err
 
 	return &types.HealthStatus{
 		Ok:  status == HealthStatusOK,
-		Msg: &msg,
+		Msg: msg,
 	}, nil
 }
 
@@ -1681,15 +1681,15 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 			TaskToken:     completeRequest.TaskToken,
 			CompletedType: types.QueryTaskCompletedTypeFailed.Ptr(),
 			QueryResult:   nil,
-			ErrorMessage:  common.StringPtr(err.Error()),
+			ErrorMessage:  err.Error(),
 		}
 	}
 
 	call := yarpc.CallFromContext(ctx)
 
 	completeRequest.WorkerVersionInfo = &types.WorkerVersionInfo{
-		Impl:           common.StringPtr(call.Header(common.ClientImplHeaderName)),
-		FeatureVersion: common.StringPtr(call.Header(common.FeatureVersionHeaderName)),
+		Impl:           call.Header(common.ClientImplHeaderName),
+		FeatureVersion: call.Header(common.FeatureVersionHeaderName),
 	}
 	matchingRequest := &types.MatchingRespondQueryTaskCompletedRequest{
 		DomainUUID:       queryTaskToken.DomainID,
@@ -1907,7 +1907,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		response, err := wh.GetHistoryClient().PollMutableState(ctx, &types.PollMutableStateRequest{
 			DomainUUID:          domainUUID,
 			Execution:           execution,
-			ExpectedNextEventID: common.Int64Ptr(expectedNextEventID),
+			ExpectedNextEventID: expectedNextEventID,
 			CurrentBranchToken:  currentBranchToken,
 		})
 
@@ -3012,7 +3012,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 	}
 
 	resp = &types.CountWorkflowExecutionsResponse{
-		Count: common.Int64Ptr(persistenceResp.Count),
+		Count: persistenceResp.Count,
 	}
 	return resp, nil
 }
@@ -3818,7 +3818,7 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 			}
 		}
 		if failoverVersion == nil {
-			failoverVersion = resp.FailoverVersion
+			failoverVersion = &resp.FailoverVersion
 		}
 		if *failoverVersion != resp.GetFailoverVersion() {
 			return &types.BadRequestError{
@@ -3943,8 +3943,8 @@ func (wh *WorkflowHandler) GetClusterInfo(
 
 	return &types.ClusterInfo{
 		SupportedClientVersions: &types.SupportedClientVersions{
-			GoSdk:   common.StringPtr(client.SupportedGoSDKVersion),
-			JavaSdk: common.StringPtr(client.SupportedJavaSDKVersion),
+			GoSdk:   client.SupportedGoSDKVersion,
+			JavaSdk: client.SupportedJavaSDKVersion,
 		},
 	}, nil
 }

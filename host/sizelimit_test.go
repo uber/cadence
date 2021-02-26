@@ -183,7 +183,7 @@ func (s *sizeLimitIntegrationSuite) TestTerminateWorkflowCausedBySizeLimit() {
 				LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 			},
 			ExecutionFilter: &types.WorkflowExecutionFilter{
-				WorkflowID: common.StringPtr(id),
+				WorkflowID: id,
 			},
 		})
 		s.Nil(err1)

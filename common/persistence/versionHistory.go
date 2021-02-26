@@ -439,7 +439,7 @@ func (h *VersionHistories) ToInternalType() *types.VersionHistories {
 	}
 
 	return &types.VersionHistories{
-		CurrentVersionHistoryIndex: common.Int32Ptr(int32(currentVersionHistoryIndex)),
+		CurrentVersionHistoryIndex: int32(currentVersionHistoryIndex),
 		Histories:                  histories,
 	}
 }

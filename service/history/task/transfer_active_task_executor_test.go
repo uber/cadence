@@ -653,10 +653,10 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent() 
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
 			ParentExecutionInfo: &types.ParentExecutionInfo{
-				DomainUUID:  common.StringPtr(parentDomainID),
-				Domain:      common.StringPtr(parentDomainName),
+				DomainUUID:  parentDomainID,
+				Domain:      parentDomainName,
 				Execution:   &parentExecution,
-				InitiatedID: common.Int64Ptr(parentInitiatedID),
+				InitiatedID: parentInitiatedID,
 			},
 		},
 	)
@@ -2258,10 +2258,10 @@ func (s *transferActiveTaskExecutorSuite) createChildWorkflowExecutionRequest(
 	}
 
 	parentInfo := &types.ParentExecutionInfo{
-		DomainUUID:  common.StringPtr(task.DomainID),
-		Domain:      common.StringPtr(domainName),
+		DomainUUID:  task.DomainID,
+		Domain:      domainName,
 		Execution:   &workflowExecution,
-		InitiatedID: common.Int64Ptr(task.ScheduleID),
+		InitiatedID: task.ScheduleID,
 	}
 
 	historyStartReq := common.CreateHistoryStartWorkflowRequest(

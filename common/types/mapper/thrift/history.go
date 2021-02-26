@@ -54,8 +54,8 @@ func FromDescribeMutableStateResponse(t *types.DescribeMutableStateResponse) *hi
 		return nil
 	}
 	return &history.DescribeMutableStateResponse{
-		MutableStateInCache:    t.MutableStateInCache,
-		MutableStateInDatabase: t.MutableStateInDatabase,
+		MutableStateInCache:    &t.MutableStateInCache,
+		MutableStateInDatabase: &t.MutableStateInDatabase,
 	}
 }
 
@@ -65,8 +65,8 @@ func ToDescribeMutableStateResponse(t *history.DescribeMutableStateResponse) *ty
 		return nil
 	}
 	return &types.DescribeMutableStateResponse{
-		MutableStateInCache:    t.MutableStateInCache,
-		MutableStateInDatabase: t.MutableStateInDatabase,
+		MutableStateInCache:    t.GetMutableStateInCache(),
+		MutableStateInDatabase: t.GetMutableStateInDatabase(),
 	}
 }
 
@@ -164,7 +164,7 @@ func FromGetMutableStateRequest(t *types.GetMutableStateRequest) *history.GetMut
 	return &history.GetMutableStateRequest{
 		DomainUUID:          &t.DomainUUID,
 		Execution:           FromWorkflowExecution(t.Execution),
-		ExpectedNextEventId: t.ExpectedNextEventID,
+		ExpectedNextEventId: &t.ExpectedNextEventID,
 		CurrentBranchToken:  t.CurrentBranchToken,
 	}
 }
@@ -177,7 +177,7 @@ func ToGetMutableStateRequest(t *history.GetMutableStateRequest) *types.GetMutab
 	return &types.GetMutableStateRequest{
 		DomainUUID:          t.GetDomainUUID(),
 		Execution:           ToWorkflowExecution(t.Execution),
-		ExpectedNextEventID: t.ExpectedNextEventId,
+		ExpectedNextEventID: t.GetExpectedNextEventId(),
 		CurrentBranchToken:  t.CurrentBranchToken,
 	}
 }
@@ -195,12 +195,12 @@ func FromGetMutableStateResponse(t *types.GetMutableStateResponse) *history.GetM
 		LastFirstEventId:                     &t.LastFirstEventID,
 		TaskList:                             FromTaskList(t.TaskList),
 		StickyTaskList:                       FromTaskList(t.StickyTaskList),
-		ClientLibraryVersion:                 t.ClientLibraryVersion,
-		ClientFeatureVersion:                 t.ClientFeatureVersion,
-		ClientImpl:                           t.ClientImpl,
+		ClientLibraryVersion:                 &t.ClientLibraryVersion,
+		ClientFeatureVersion:                 &t.ClientFeatureVersion,
+		ClientImpl:                           &t.ClientImpl,
 		IsWorkflowRunning:                    &t.IsWorkflowRunning,
 		StickyTaskListScheduleToStartTimeout: t.StickyTaskListScheduleToStartTimeout,
-		EventStoreVersion:                    t.EventStoreVersion,
+		EventStoreVersion:                    &t.EventStoreVersion,
 		CurrentBranchToken:                   t.CurrentBranchToken,
 		WorkflowState:                        t.WorkflowState,
 		WorkflowCloseState:                   t.WorkflowCloseState,
@@ -222,12 +222,12 @@ func ToGetMutableStateResponse(t *history.GetMutableStateResponse) *types.GetMut
 		LastFirstEventID:                     t.GetLastFirstEventId(),
 		TaskList:                             ToTaskList(t.TaskList),
 		StickyTaskList:                       ToTaskList(t.StickyTaskList),
-		ClientLibraryVersion:                 t.ClientLibraryVersion,
-		ClientFeatureVersion:                 t.ClientFeatureVersion,
-		ClientImpl:                           t.ClientImpl,
+		ClientLibraryVersion:                 t.GetClientLibraryVersion(),
+		ClientFeatureVersion:                 t.GetClientFeatureVersion(),
+		ClientImpl:                           t.GetClientImpl(),
 		IsWorkflowRunning:                    t.GetIsWorkflowRunning(),
 		StickyTaskListScheduleToStartTimeout: t.StickyTaskListScheduleToStartTimeout,
-		EventStoreVersion:                    t.EventStoreVersion,
+		EventStoreVersion:                    t.GetEventStoreVersion(),
 		CurrentBranchToken:                   t.CurrentBranchToken,
 		WorkflowState:                        t.WorkflowState,
 		WorkflowCloseState:                   t.WorkflowCloseState,
@@ -262,10 +262,10 @@ func FromParentExecutionInfo(t *types.ParentExecutionInfo) *history.ParentExecut
 		return nil
 	}
 	return &history.ParentExecutionInfo{
-		DomainUUID:  t.DomainUUID,
-		Domain:      t.Domain,
+		DomainUUID:  &t.DomainUUID,
+		Domain:      &t.Domain,
 		Execution:   FromWorkflowExecution(t.Execution),
-		InitiatedId: t.InitiatedID,
+		InitiatedId: &t.InitiatedID,
 	}
 }
 
@@ -275,10 +275,10 @@ func ToParentExecutionInfo(t *history.ParentExecutionInfo) *types.ParentExecutio
 		return nil
 	}
 	return &types.ParentExecutionInfo{
-		DomainUUID:  t.DomainUUID,
-		Domain:      t.Domain,
+		DomainUUID:  t.GetDomainUUID(),
+		Domain:      t.GetDomain(),
 		Execution:   ToWorkflowExecution(t.Execution),
-		InitiatedID: t.InitiatedId,
+		InitiatedID: t.GetInitiatedId(),
 	}
 }
 
@@ -290,7 +290,7 @@ func FromPollMutableStateRequest(t *types.PollMutableStateRequest) *history.Poll
 	return &history.PollMutableStateRequest{
 		DomainUUID:          &t.DomainUUID,
 		Execution:           FromWorkflowExecution(t.Execution),
-		ExpectedNextEventId: t.ExpectedNextEventID,
+		ExpectedNextEventId: &t.ExpectedNextEventID,
 		CurrentBranchToken:  t.CurrentBranchToken,
 	}
 }
@@ -303,7 +303,7 @@ func ToPollMutableStateRequest(t *history.PollMutableStateRequest) *types.PollMu
 	return &types.PollMutableStateRequest{
 		DomainUUID:          t.GetDomainUUID(),
 		Execution:           ToWorkflowExecution(t.Execution),
-		ExpectedNextEventID: t.ExpectedNextEventId,
+		ExpectedNextEventID: t.GetExpectedNextEventId(),
 		CurrentBranchToken:  t.CurrentBranchToken,
 	}
 }
@@ -321,9 +321,9 @@ func FromPollMutableStateResponse(t *types.PollMutableStateResponse) *history.Po
 		LastFirstEventId:                     &t.LastFirstEventID,
 		TaskList:                             FromTaskList(t.TaskList),
 		StickyTaskList:                       FromTaskList(t.StickyTaskList),
-		ClientLibraryVersion:                 t.ClientLibraryVersion,
-		ClientFeatureVersion:                 t.ClientFeatureVersion,
-		ClientImpl:                           t.ClientImpl,
+		ClientLibraryVersion:                 &t.ClientLibraryVersion,
+		ClientFeatureVersion:                 &t.ClientFeatureVersion,
+		ClientImpl:                           &t.ClientImpl,
 		StickyTaskListScheduleToStartTimeout: t.StickyTaskListScheduleToStartTimeout,
 		CurrentBranchToken:                   t.CurrentBranchToken,
 		VersionHistories:                     FromVersionHistories(t.VersionHistories),
@@ -345,9 +345,9 @@ func ToPollMutableStateResponse(t *history.PollMutableStateResponse) *types.Poll
 		LastFirstEventID:                     t.GetLastFirstEventId(),
 		TaskList:                             ToTaskList(t.TaskList),
 		StickyTaskList:                       ToTaskList(t.StickyTaskList),
-		ClientLibraryVersion:                 t.ClientLibraryVersion,
-		ClientFeatureVersion:                 t.ClientFeatureVersion,
-		ClientImpl:                           t.ClientImpl,
+		ClientLibraryVersion:                 t.GetClientLibraryVersion(),
+		ClientFeatureVersion:                 t.GetClientFeatureVersion(),
+		ClientImpl:                           t.GetClientImpl(),
 		StickyTaskListScheduleToStartTimeout: t.StickyTaskListScheduleToStartTimeout,
 		CurrentBranchToken:                   t.CurrentBranchToken,
 		VersionHistories:                     ToVersionHistories(t.VersionHistories),
@@ -496,7 +496,7 @@ func FromRecordActivityTaskStartedRequest(t *types.RecordActivityTaskStartedRequ
 	return &history.RecordActivityTaskStartedRequest{
 		DomainUUID:        &t.DomainUUID,
 		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
-		ScheduleId:        t.ScheduleID,
+		ScheduleId:        &t.ScheduleID,
 		TaskId:            &t.TaskID,
 		RequestId:         &t.RequestID,
 		PollRequest:       FromPollForActivityTaskRequest(t.PollRequest),
@@ -511,7 +511,7 @@ func ToRecordActivityTaskStartedRequest(t *history.RecordActivityTaskStartedRequ
 	return &types.RecordActivityTaskStartedRequest{
 		DomainUUID:        t.GetDomainUUID(),
 		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
-		ScheduleID:        t.ScheduleId,
+		ScheduleID:        t.GetScheduleId(),
 		TaskID:            t.GetTaskId(),
 		RequestID:         t.GetRequestId(),
 		PollRequest:       ToPollForActivityTaskRequest(t.PollRequest),
@@ -586,7 +586,7 @@ func FromRecordDecisionTaskStartedRequest(t *types.RecordDecisionTaskStartedRequ
 	return &history.RecordDecisionTaskStartedRequest{
 		DomainUUID:        &t.DomainUUID,
 		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
-		ScheduleId:        t.ScheduleID,
+		ScheduleId:        &t.ScheduleID,
 		TaskId:            &t.TaskID,
 		RequestId:         &t.RequestID,
 		PollRequest:       FromPollForDecisionTaskRequest(t.PollRequest),
@@ -601,7 +601,7 @@ func ToRecordDecisionTaskStartedRequest(t *history.RecordDecisionTaskStartedRequ
 	return &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        t.GetDomainUUID(),
 		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
-		ScheduleID:        t.ScheduleId,
+		ScheduleID:        t.GetScheduleId(),
 		TaskID:            t.GetTaskId(),
 		RequestID:         t.GetRequestId(),
 		PollRequest:       ToPollForDecisionTaskRequest(t.PollRequest),
@@ -623,7 +623,7 @@ func FromRecordDecisionTaskStartedResponse(t *types.RecordDecisionTaskStartedRes
 		StickyExecutionEnabled:    &t.StickyExecutionEnabled,
 		DecisionInfo:              FromTransientDecisionInfo(t.DecisionInfo),
 		WorkflowExecutionTaskList: FromTaskList(t.WorkflowExecutionTaskList),
-		EventStoreVersion:         t.EventStoreVersion,
+		EventStoreVersion:         &t.EventStoreVersion,
 		BranchToken:               t.BranchToken,
 		ScheduledTimestamp:        t.ScheduledTimestamp,
 		StartedTimestamp:          t.StartedTimestamp,
@@ -646,7 +646,7 @@ func ToRecordDecisionTaskStartedResponse(t *history.RecordDecisionTaskStartedRes
 		StickyExecutionEnabled:    t.GetStickyExecutionEnabled(),
 		DecisionInfo:              ToTransientDecisionInfo(t.DecisionInfo),
 		WorkflowExecutionTaskList: ToTaskList(t.WorkflowExecutionTaskList),
-		EventStoreVersion:         t.EventStoreVersion,
+		EventStoreVersion:         t.GetEventStoreVersion(),
 		BranchToken:               t.BranchToken,
 		ScheduledTimestamp:        t.ScheduledTimestamp,
 		StartedTimestamp:          t.StartedTimestamp,
@@ -978,8 +978,8 @@ func FromShardOwnershipLostError(t *types.ShardOwnershipLostError) *history.Shar
 		return nil
 	}
 	return &history.ShardOwnershipLostError{
-		Message: t.Message,
-		Owner:   t.Owner,
+		Message: &t.Message,
+		Owner:   &t.Owner,
 	}
 }
 
@@ -989,8 +989,8 @@ func ToShardOwnershipLostError(t *history.ShardOwnershipLostError) *types.ShardO
 		return nil
 	}
 	return &types.ShardOwnershipLostError{
-		Message: t.Message,
-		Owner:   t.Owner,
+		Message: t.GetMessage(),
+		Owner:   t.GetOwner(),
 	}
 }
 
@@ -1089,7 +1089,7 @@ func FromSyncActivityRequest(t *types.SyncActivityRequest) *history.SyncActivity
 		DomainId:           &t.DomainID,
 		WorkflowId:         &t.WorkflowID,
 		RunId:              &t.RunID,
-		Version:            t.Version,
+		Version:            &t.Version,
 		ScheduledId:        &t.ScheduledID,
 		ScheduledTime:      t.ScheduledTime,
 		StartedId:          &t.StartedID,
@@ -1113,7 +1113,7 @@ func ToSyncActivityRequest(t *history.SyncActivityRequest) *types.SyncActivityRe
 		DomainID:           t.GetDomainId(),
 		WorkflowID:         t.GetWorkflowId(),
 		RunID:              t.GetRunId(),
-		Version:            t.Version,
+		Version:            t.GetVersion(),
 		ScheduledID:        t.GetScheduledId(),
 		ScheduledTime:      t.ScheduledTime,
 		StartedID:          t.GetStartedId(),
@@ -1134,7 +1134,7 @@ func FromSyncShardStatusRequest(t *types.SyncShardStatusRequest) *history.SyncSh
 		return nil
 	}
 	return &history.SyncShardStatusRequest{
-		SourceCluster: t.SourceCluster,
+		SourceCluster: &t.SourceCluster,
 		ShardId:       &t.ShardID,
 		Timestamp:     t.Timestamp,
 	}
@@ -1146,7 +1146,7 @@ func ToSyncShardStatusRequest(t *history.SyncShardStatusRequest) *types.SyncShar
 		return nil
 	}
 	return &types.SyncShardStatusRequest{
-		SourceCluster: t.SourceCluster,
+		SourceCluster: t.GetSourceCluster(),
 		ShardID:       t.GetShardId(),
 		Timestamp:     t.Timestamp,
 	}

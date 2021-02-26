@@ -25,7 +25,6 @@ package replication
 import (
 	"context"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -142,12 +141,12 @@ func (r *dlqHandlerImpl) readMessagesWithAckLevel(
 			DomainID:     task.GetDomainID(),
 			WorkflowID:   task.GetWorkflowID(),
 			RunID:        task.GetRunID(),
-			TaskType:     common.Int16Ptr(int16(task.GetTaskType())),
+			TaskType:     int16(task.GetTaskType()),
 			TaskID:       task.GetTaskID(),
-			Version:      common.Int64Ptr(task.GetVersion()),
-			FirstEventID: common.Int64Ptr(task.FirstEventID),
-			NextEventID:  common.Int64Ptr(task.NextEventID),
-			ScheduledID:  common.Int64Ptr(task.ScheduledID),
+			Version:      task.GetVersion(),
+			FirstEventID: task.FirstEventID,
+			NextEventID:  task.NextEventID,
+			ScheduledID:  task.ScheduledID,
 		})
 	}
 	response := &types.GetDLQReplicationMessagesResponse{}

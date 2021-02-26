@@ -48,13 +48,13 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("Health", func(t *testing.T) {
 		h.EXPECT().Health(ctx).Return(&types.HealthStatus{}, internalErr).Times(1)
 		resp, err := th.Health(ctx)
-		assert.Equal(t, health.HealthStatus{}, *resp)
+		assert.Equal(t, health.HealthStatus{Msg: common.StringPtr("")}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("CountWorkflowExecutions", func(t *testing.T) {
 		h.EXPECT().CountWorkflowExecutions(ctx, &types.CountWorkflowExecutionsRequest{}).Return(&types.CountWorkflowExecutionsResponse{}, internalErr).Times(1)
 		resp, err := th.CountWorkflowExecutions(ctx, &shared.CountWorkflowExecutionsRequest{})
-		assert.Equal(t, shared.CountWorkflowExecutionsResponse{}, *resp)
+		assert.Equal(t, shared.CountWorkflowExecutionsResponse{Count: common.Int64Ptr(0)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("DeprecateDomain", func(t *testing.T) {
@@ -65,7 +65,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("DescribeDomain", func(t *testing.T) {
 		h.EXPECT().DescribeDomain(ctx, &types.DescribeDomainRequest{}).Return(&types.DescribeDomainResponse{}, internalErr).Times(1)
 		resp, err := th.DescribeDomain(ctx, &shared.DescribeDomainRequest{})
-		assert.Equal(t, shared.DescribeDomainResponse{IsGlobalDomain: common.BoolPtr(false)}, *resp)
+		assert.Equal(t, shared.DescribeDomainResponse{IsGlobalDomain: common.BoolPtr(false), FailoverVersion: common.Int64Ptr(0)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("DescribeTaskList", func(t *testing.T) {
@@ -143,7 +143,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("PollForDecisionTask", func(t *testing.T) {
 		h.EXPECT().PollForDecisionTask(ctx, &types.PollForDecisionTaskRequest{}).Return(&types.PollForDecisionTaskResponse{}, internalErr).Times(1)
 		resp, err := th.PollForDecisionTask(ctx, &shared.PollForDecisionTaskRequest{})
-		assert.Equal(t, shared.PollForDecisionTaskResponse{StartedEventId: common.Int64Ptr(0), Attempt: common.Int64Ptr(0)}, *resp)
+		assert.Equal(t, shared.PollForDecisionTaskResponse{StartedEventId: common.Int64Ptr(0), Attempt: common.Int64Ptr(0), BacklogCountHint: common.Int64Ptr(0)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("QueryWorkflow", func(t *testing.T) {
@@ -263,7 +263,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("UpdateDomain", func(t *testing.T) {
 		h.EXPECT().UpdateDomain(ctx, &types.UpdateDomainRequest{}).Return(&types.UpdateDomainResponse{}, internalErr).Times(1)
 		resp, err := th.UpdateDomain(ctx, &shared.UpdateDomainRequest{})
-		assert.Equal(t, shared.UpdateDomainResponse{IsGlobalDomain: common.BoolPtr(false)}, *resp)
+		assert.Equal(t, shared.UpdateDomainResponse{IsGlobalDomain: common.BoolPtr(false), FailoverVersion: common.Int64Ptr(0)}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 }

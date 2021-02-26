@@ -28,7 +28,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
@@ -89,8 +88,8 @@ func (s *taskFetcherSuite) TestGetMessages() {
 	requestByShard := make(map[int32]*request)
 	token := &types.ReplicationToken{
 		ShardID:                0,
-		LastProcessedMessageID: common.Int64Ptr(1),
-		LastRetrievedMessageID: common.Int64Ptr(2),
+		LastProcessedMessageID: 1,
+		LastRetrievedMessageID: 2,
 	}
 	requestByShard[0] = &request{
 		token: token,
@@ -116,8 +115,8 @@ func (s *taskFetcherSuite) TestFetchAndDistributeTasks() {
 	requestByShard := make(map[int32]*request)
 	token := &types.ReplicationToken{
 		ShardID:                0,
-		LastProcessedMessageID: common.Int64Ptr(1),
-		LastRetrievedMessageID: common.Int64Ptr(2),
+		LastProcessedMessageID: 1,
+		LastRetrievedMessageID: 2,
 	}
 	respChan := make(chan *types.ReplicationMessages, 1)
 	requestByShard[0] = &request{

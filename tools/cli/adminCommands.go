@@ -429,7 +429,7 @@ func AdminRemoveTask(c *cli.Context) {
 	req := &types.RemoveTaskRequest{
 		ShardID:             int32(shardID),
 		Type:                common.Int32Ptr(int32(typeID)),
-		TaskID:              common.Int64Ptr(taskID),
+		TaskID:              taskID,
 		VisibilityTimestamp: common.Int64Ptr(visibilityTimestamp),
 	}
 

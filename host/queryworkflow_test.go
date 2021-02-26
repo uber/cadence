@@ -115,7 +115,7 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 	queryHandler := func(task *types.PollForDecisionTaskResponse) ([]byte, error) {
 		s.NotNil(task.Query)
 		s.NotNil(task.Query.QueryType)
-		if *task.Query.QueryType == queryType {
+		if task.Query.QueryType == queryType {
 			return []byte("query-result"), nil
 		}
 
@@ -154,7 +154,7 @@ func (s *integrationSuite) TestQueryWorkflow_Sticky() {
 				RunID:      we.RunID,
 			},
 			Query: &types.WorkflowQuery{
-				QueryType: common.StringPtr(queryType),
+				QueryType: queryType,
 			},
 		})
 		queryResultCh <- QueryResult{Resp: queryResp, Err: err}
@@ -278,7 +278,7 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 	queryHandler := func(task *types.PollForDecisionTaskResponse) ([]byte, error) {
 		s.NotNil(task.Query)
 		s.NotNil(task.Query.QueryType)
-		if *task.Query.QueryType == queryType {
+		if task.Query.QueryType == queryType {
 			return []byte("query-result"), nil
 		}
 
@@ -317,7 +317,7 @@ func (s *integrationSuite) TestQueryWorkflow_StickyTimeout() {
 				RunID:      we.RunID,
 			},
 			Query: &types.WorkflowQuery{
-				QueryType: common.StringPtr(queryType),
+				QueryType: queryType,
 			},
 		})
 		queryResultCh <- QueryResult{Resp: queryResp, Err: err}
@@ -421,7 +421,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 	queryHandler := func(task *types.PollForDecisionTaskResponse) ([]byte, error) {
 		s.NotNil(task.Query)
 		s.NotNil(task.Query.QueryType)
-		if *task.Query.QueryType == queryType {
+		if task.Query.QueryType == queryType {
 			return []byte("query-result"), nil
 		}
 
@@ -458,7 +458,7 @@ func (s *integrationSuite) TestQueryWorkflow_NonSticky() {
 				RunID:      we.RunID,
 			},
 			Query: &types.WorkflowQuery{
-				QueryType: common.StringPtr(queryType),
+				QueryType: queryType,
 			},
 			QueryRejectCondition: rejectCondition,
 		})
@@ -636,7 +636,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 	queryHandler := func(task *types.PollForDecisionTaskResponse) ([]byte, error) {
 		s.NotNil(task.Query)
 		s.NotNil(task.Query.QueryType)
-		if *task.Query.QueryType == queryType {
+		if task.Query.QueryType == queryType {
 			return []byte("query-result"), nil
 		}
 
@@ -676,7 +676,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 				RunID:      we.RunID,
 			},
 			Query: &types.WorkflowQuery{
-				QueryType: common.StringPtr(queryType),
+				QueryType: queryType,
 			},
 			QueryRejectCondition:  rejectCondition,
 			QueryConsistencyLevel: types.QueryConsistencyLevelStrong.Ptr(),
@@ -820,7 +820,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 	queryHandler := func(task *types.PollForDecisionTaskResponse) ([]byte, error) {
 		s.NotNil(task.Query)
 		s.NotNil(task.Query.QueryType)
-		if *task.Query.QueryType == queryType {
+		if task.Query.QueryType == queryType {
 			return []byte("query-result"), nil
 		}
 
@@ -858,7 +858,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 				RunID:      we.RunID,
 			},
 			Query: &types.WorkflowQuery{
-				QueryType: common.StringPtr(queryType),
+				QueryType: queryType,
 			},
 			QueryRejectCondition:  rejectCondition,
 			QueryConsistencyLevel: types.QueryConsistencyLevelStrong.Ptr(),
@@ -984,7 +984,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 	queryHandler := func(task *types.PollForDecisionTaskResponse) ([]byte, error) {
 		s.NotNil(task.Query)
 		s.NotNil(task.Query.QueryType)
-		if *task.Query.QueryType == queryType {
+		if task.Query.QueryType == queryType {
 			return []byte("query-result"), nil
 		}
 
@@ -1022,7 +1022,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 				RunID:      we.RunID,
 			},
 			Query: &types.WorkflowQuery{
-				QueryType: common.StringPtr(queryType),
+				QueryType: queryType,
 			},
 			QueryRejectCondition:  rejectCondition,
 			QueryConsistencyLevel: types.QueryConsistencyLevelStrong.Ptr(),
@@ -1172,7 +1172,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 	queryHandler := func(task *types.PollForDecisionTaskResponse) ([]byte, error) {
 		s.NotNil(task.Query)
 		s.NotNil(task.Query.QueryType)
-		if *task.Query.QueryType == queryType {
+		if task.Query.QueryType == queryType {
 			return []byte("query-result"), nil
 		}
 
@@ -1212,7 +1212,7 @@ func (s *integrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 				RunID:      we.RunID,
 			},
 			Query: &types.WorkflowQuery{
-				QueryType: common.StringPtr(queryType),
+				QueryType: queryType,
 			},
 			QueryRejectCondition:  rejectCondition,
 			QueryConsistencyLevel: types.QueryConsistencyLevelStrong.Ptr(),
@@ -1341,7 +1341,7 @@ func (s *integrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
 		Domain:    s.domainName,
 		Execution: workflowExecution,
 		Query: &types.WorkflowQuery{
-			QueryType: common.StringPtr(queryType),
+			QueryType: queryType,
 		},
 	})
 	s.Nil(queryResp)

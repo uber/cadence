@@ -88,10 +88,10 @@ func (v *AdminDescribeWorkflowExecutionRequest) GetExecution() (o *WorkflowExecu
 
 // AdminDescribeWorkflowExecutionResponse is an internal type (TBD...)
 type AdminDescribeWorkflowExecutionResponse struct {
-	ShardID                string  `json:"shardId,omitempty"`
-	HistoryAddr            *string `json:"historyAddr,omitempty"`
-	MutableStateInCache    *string `json:"mutableStateInCache,omitempty"`
-	MutableStateInDatabase *string `json:"mutableStateInDatabase,omitempty"`
+	ShardID                string `json:"shardId,omitempty"`
+	HistoryAddr            string `json:"historyAddr,omitempty"`
+	MutableStateInCache    string `json:"mutableStateInCache,omitempty"`
+	MutableStateInDatabase string `json:"mutableStateInDatabase,omitempty"`
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -104,24 +104,24 @@ func (v *AdminDescribeWorkflowExecutionResponse) GetShardID() (o string) {
 
 // GetHistoryAddr is an internal getter (TBD...)
 func (v *AdminDescribeWorkflowExecutionResponse) GetHistoryAddr() (o string) {
-	if v != nil && v.HistoryAddr != nil {
-		return *v.HistoryAddr
+	if v != nil {
+		return v.HistoryAddr
 	}
 	return
 }
 
 // GetMutableStateInCache is an internal getter (TBD...)
 func (v *AdminDescribeWorkflowExecutionResponse) GetMutableStateInCache() (o string) {
-	if v != nil && v.MutableStateInCache != nil {
-		return *v.MutableStateInCache
+	if v != nil {
+		return v.MutableStateInCache
 	}
 	return
 }
 
 // GetMutableStateInDatabase is an internal getter (TBD...)
 func (v *AdminDescribeWorkflowExecutionResponse) GetMutableStateInDatabase() (o string) {
-	if v != nil && v.MutableStateInDatabase != nil {
-		return *v.MutableStateInDatabase
+	if v != nil {
+		return v.MutableStateInDatabase
 	}
 	return
 }
@@ -134,7 +134,7 @@ type GetWorkflowExecutionRawHistoryV2Request struct {
 	StartEventVersion *int64             `json:"startEventVersion,omitempty"`
 	EndEventID        *int64             `json:"endEventId,omitempty"`
 	EndEventVersion   *int64             `json:"endEventVersion,omitempty"`
-	MaximumPageSize   *int32             `json:"maximumPageSize,omitempty"`
+	MaximumPageSize   int32              `json:"maximumPageSize,omitempty"`
 	NextPageToken     []byte             `json:"nextPageToken,omitempty"`
 }
 
@@ -188,8 +188,8 @@ func (v *GetWorkflowExecutionRawHistoryV2Request) GetEndEventVersion() (o int64)
 
 // GetMaximumPageSize is an internal getter (TBD...)
 func (v *GetWorkflowExecutionRawHistoryV2Request) GetMaximumPageSize() (o int32) {
-	if v != nil && v.MaximumPageSize != nil {
-		return *v.MaximumPageSize
+	if v != nil {
+		return v.MaximumPageSize
 	}
 	return
 }
@@ -235,13 +235,13 @@ func (v *GetWorkflowExecutionRawHistoryV2Response) GetVersionHistory() (o *Versi
 
 // HostInfo is an internal type (TBD...)
 type HostInfo struct {
-	Identity *string `json:"Identity,omitempty"`
+	Identity string `json:"Identity,omitempty"`
 }
 
 // GetIdentity is an internal getter (TBD...)
 func (v *HostInfo) GetIdentity() (o string) {
-	if v != nil && v.Identity != nil {
-		return *v.Identity
+	if v != nil {
+		return v.Identity
 	}
 	return
 }
@@ -279,14 +279,14 @@ func (v *MembershipInfo) GetRings() (o []*RingInfo) {
 
 // ResendReplicationTasksRequest is an internal type (TBD...)
 type ResendReplicationTasksRequest struct {
-	DomainID      string  `json:"domainID,omitempty"`
-	WorkflowID    string  `json:"workflowID,omitempty"`
-	RunID         string  `json:"runID,omitempty"`
-	RemoteCluster *string `json:"remoteCluster,omitempty"`
-	StartEventID  *int64  `json:"startEventID,omitempty"`
-	StartVersion  *int64  `json:"startVersion,omitempty"`
-	EndEventID    *int64  `json:"endEventID,omitempty"`
-	EndVersion    *int64  `json:"endVersion,omitempty"`
+	DomainID      string `json:"domainID,omitempty"`
+	WorkflowID    string `json:"workflowID,omitempty"`
+	RunID         string `json:"runID,omitempty"`
+	RemoteCluster string `json:"remoteCluster,omitempty"`
+	StartEventID  *int64 `json:"startEventID,omitempty"`
+	StartVersion  *int64 `json:"startVersion,omitempty"`
+	EndEventID    *int64 `json:"endEventID,omitempty"`
+	EndVersion    *int64 `json:"endVersion,omitempty"`
 }
 
 // GetDomainID is an internal getter (TBD...)
@@ -315,8 +315,8 @@ func (v *ResendReplicationTasksRequest) GetRunID() (o string) {
 
 // GetRemoteCluster is an internal getter (TBD...)
 func (v *ResendReplicationTasksRequest) GetRemoteCluster() (o string) {
-	if v != nil && v.RemoteCluster != nil {
-		return *v.RemoteCluster
+	if v != nil {
+		return v.RemoteCluster
 	}
 	return
 }
@@ -355,23 +355,23 @@ func (v *ResendReplicationTasksRequest) GetEndVersion() (o int64) {
 
 // RingInfo is an internal type (TBD...)
 type RingInfo struct {
-	Role        *string     `json:"role,omitempty"`
-	MemberCount *int32      `json:"memberCount,omitempty"`
+	Role        string      `json:"role,omitempty"`
+	MemberCount int32       `json:"memberCount,omitempty"`
 	Members     []*HostInfo `json:"members,omitempty"`
 }
 
 // GetRole is an internal getter (TBD...)
 func (v *RingInfo) GetRole() (o string) {
-	if v != nil && v.Role != nil {
-		return *v.Role
+	if v != nil {
+		return v.Role
 	}
 	return
 }
 
 // GetMemberCount is an internal getter (TBD...)
 func (v *RingInfo) GetMemberCount() (o int32) {
-	if v != nil && v.MemberCount != nil {
-		return *v.MemberCount
+	if v != nil {
+		return v.MemberCount
 	}
 	return
 }

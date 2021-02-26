@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/query"
 	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/workflow"
 )
 
 type (
@@ -102,7 +103,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskScheduled(
 	req *types.ScheduleDecisionTaskRequest,
 ) error {
 
-	domainEntry, err := GetActiveDomainEntry(handler.shard, req.DomainUUID)
+	domainEntry, err := handler.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -113,19 +114,19 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskScheduled(
 		RunID:      req.WorkflowExecution.RunID,
 	}
 
-	return UpdateWorkflowExecutionWithAction(
+	return workflow.UpdateWithActionFunc(
 		ctx,
 		handler.executionCache,
 		domainID,
 		workflowExecution,
 		handler.timeSource.Now(),
-		func(context execution.Context, mutableState execution.MutableState) (*UpdateWorkflowAction, error) {
+		func(context execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
 			}
 
 			if mutableState.HasProcessedOrPendingDecision() {
-				return &UpdateWorkflowAction{
+				return &workflow.UpdateAction{
 					Noop: true,
 				}, nil
 			}
@@ -140,7 +141,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskScheduled(
 				return nil, err
 			}
 
-			return &UpdateWorkflowAction{}, nil
+			return &workflow.UpdateAction{}, nil
 		},
 	)
 }
@@ -150,7 +151,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskStarted(
 	req *types.RecordDecisionTaskStartedRequest,
 ) (*types.RecordDecisionTaskStartedResponse, error) {
 
-	domainEntry, err := GetActiveDomainEntry(handler.shard, req.DomainUUID)
+	domainEntry, err := handler.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -165,13 +166,13 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskStarted(
 	requestID := req.GetRequestID()
 
 	var resp *types.RecordDecisionTaskStartedResponse
-	err = UpdateWorkflowExecutionWithAction(
+	err = workflow.UpdateWithActionFunc(
 		ctx,
 		handler.executionCache,
 		domainID,
 		workflowExecution,
 		handler.timeSource.Now(),
-		func(context execution.Context, mutableState execution.MutableState) (*UpdateWorkflowAction, error) {
+		func(context execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return nil, ErrWorkflowCompleted
 			}
@@ -191,7 +192,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskStarted(
 				)
 				// Reload workflow execution history
 				// ErrStaleState will trigger updateWorkflowExecutionWithAction function to reload the mutable state
-				return nil, ErrStaleState
+				return nil, workflow.ErrStaleState
 			}
 
 			// Check execution state to make sure task is in the list of outstanding tasks and it is not yet started.  If
@@ -202,7 +203,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskStarted(
 				return nil, &types.EntityNotExistsError{Message: "Decision task not found."}
 			}
 
-			updateAction := &UpdateWorkflowAction{}
+			updateAction := &workflow.UpdateAction{}
 
 			if decision.StartedID != common.EmptyEventID {
 				// If decision is started as part of the current request scope then return a positive response
@@ -245,7 +246,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskFailed(
 	req *types.HistoryRespondDecisionTaskFailedRequest,
 ) (retError error) {
 
-	domainEntry, err := GetActiveDomainEntry(handler.shard, req.DomainUUID)
+	domainEntry, err := handler.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -262,7 +263,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskFailed(
 		RunID:      token.RunID,
 	}
 
-	return UpdateWorkflowExecution(ctx, handler.executionCache, domainID, workflowExecution, true, handler.timeSource.Now(),
+	return workflow.UpdateWithAction(ctx, handler.executionCache, domainID, workflowExecution, true, handler.timeSource.Now(),
 		func(context execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return ErrWorkflowCompleted
@@ -285,7 +286,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskCompleted(
 	req *types.HistoryRespondDecisionTaskCompletedRequest,
 ) (resp *types.HistoryRespondDecisionTaskCompletedResponse, retError error) {
 
-	domainEntry, err := GetActiveDomainEntry(handler.shard, req.DomainUUID)
+	domainEntry, err := handler.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -314,7 +315,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskCompleted(
 	defer func() { release(retError) }()
 
 Update_History_Loop:
-	for attempt := 0; attempt < conditionalRetryCount; attempt++ {
+	for attempt := 0; attempt < workflow.ConditionalRetryCount; attempt++ {
 		msBuilder, err := wfContext.LoadWorkflowExecution(ctx)
 		if err != nil {
 			return nil, err
@@ -619,7 +620,7 @@ Update_History_Loop:
 		return resp, nil
 	}
 
-	return nil, ErrMaxAttemptsExceeded
+	return nil, workflow.ErrMaxAttemptsExceeded
 }
 
 func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
