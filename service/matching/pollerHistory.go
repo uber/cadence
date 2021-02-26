@@ -74,7 +74,9 @@ func (pollers *pollerHistory) updatePollerInfo(id pollerIdentity, ratePerSecond 
 		rps = *ratePerSecond
 	}
 	pollers.history.Put(id, &pollerInfo{ratePerSecond: rps})
-	pollers.onHistoryUpdatedFunc()
+	if pollers.onHistoryUpdatedFunc != nil {
+		pollers.onHistoryUpdatedFunc()
+	}
 }
 
 func (pollers *pollerHistory) getAllPollerInfo() []*types.PollerInfo {
