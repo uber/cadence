@@ -209,7 +209,7 @@ TaskInfoLoop:
 	return &types.ReplicationMessages{
 		ReplicationTasks:       replicationTasks,
 		HasMore:                hasMore,
-		LastRetrievedMessageID: common.Int64Ptr(readLevel),
+		LastRetrievedMessageID: readLevel,
 	}, nil
 }
 
@@ -471,7 +471,7 @@ func (t *taskAckManagerImpl) generateFailoverMarkerTask(
 		SourceTaskID: taskInfo.GetTaskID(),
 		FailoverMarkerAttributes: &types.FailoverMarkerAttributes{
 			DomainID:        taskInfo.GetDomainID(),
-			FailoverVersion: common.Int64Ptr(taskInfo.GetVersion()),
+			FailoverVersion: taskInfo.GetVersion(),
 		},
 		CreationTime: common.Int64Ptr(taskInfo.CreationTime),
 	}
@@ -519,7 +519,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 					DomainID:           taskInfo.GetDomainID(),
 					WorkflowID:         taskInfo.GetWorkflowID(),
 					RunID:              taskInfo.GetRunID(),
-					Version:            common.Int64Ptr(activityInfo.Version),
+					Version:            activityInfo.Version,
 					ScheduledID:        activityInfo.ScheduleID,
 					ScheduledTime:      scheduledTime,
 					StartedID:          activityInfo.StartedID,

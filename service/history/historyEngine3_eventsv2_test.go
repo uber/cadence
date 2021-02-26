@@ -189,7 +189,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	request := types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: &we,
-		ScheduleID:        common.Int64Ptr(2),
+		ScheduleID:        2,
 		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{

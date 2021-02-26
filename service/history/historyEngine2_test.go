@@ -197,7 +197,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyExpired() {
 	request := types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: &we,
-		ScheduleID:        common.Int64Ptr(2),
+		ScheduleID:        2,
 		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
@@ -270,7 +270,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	request := types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: &we,
-		ScheduleID:        common.Int64Ptr(2),
+		ScheduleID:        2,
 		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
@@ -324,7 +324,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfNoExecution() {
 	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: workflowExecution,
-		ScheduleID:        common.Int64Ptr(2),
+		ScheduleID:        2,
 		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
@@ -354,7 +354,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfGetExecutionFailed() {
 	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: workflowExecution,
-		ScheduleID:        common.Int64Ptr(2),
+		ScheduleID:        2,
 		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
@@ -387,7 +387,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyStarted() {
 	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
-		ScheduleID:        common.Int64Ptr(2),
+		ScheduleID:        2,
 		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
@@ -424,7 +424,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedIfTaskAlreadyCompleted() {
 	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
-		ScheduleID:        common.Int64Ptr(2),
+		ScheduleID:        2,
 		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
@@ -471,7 +471,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedConflictOnUpdate() {
 	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
-		ScheduleID:        common.Int64Ptr(2),
+		ScheduleID:        2,
 		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
@@ -515,7 +515,7 @@ func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
 	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
-		ScheduleID:        common.Int64Ptr(2),
+		ScheduleID:        2,
 		TaskID:            100,
 		RequestID:         requestID,
 		PollRequest: &types.PollForDecisionTaskRequest{
@@ -560,7 +560,7 @@ func (s *engine2Suite) TestRecordDecisionTaskRetryDifferentRequest() {
 	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
-		ScheduleID:        common.Int64Ptr(2),
+		ScheduleID:        2,
 		TaskID:            100,
 		RequestID:         requestID,
 		PollRequest: &types.PollForDecisionTaskRequest{
@@ -603,7 +603,7 @@ func (s *engine2Suite) TestRecordDecisionTaskStartedMaxAttemptsExceeded() {
 	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
-		ScheduleID:        common.Int64Ptr(2),
+		ScheduleID:        2,
 		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
@@ -654,7 +654,7 @@ func (s *engine2Suite) TestRecordDecisionTaskSuccess() {
 	response, err := s.historyEngine.RecordDecisionTaskStarted(context.Background(), &types.RecordDecisionTaskStartedRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
-		ScheduleID:        common.Int64Ptr(2),
+		ScheduleID:        2,
 		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForDecisionTaskRequest{
@@ -693,7 +693,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedIfNoExecution() {
 	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &types.RecordActivityTaskStartedRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: workflowExecution,
-		ScheduleID:        common.Int64Ptr(5),
+		ScheduleID:        5,
 		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForActivityTaskRequest{
@@ -746,7 +746,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &types.RecordActivityTaskStartedRequest{
 		DomainUUID:        domainID,
 		WorkflowExecution: &workflowExecution,
-		ScheduleID:        common.Int64Ptr(5),
+		ScheduleID:        5,
 		TaskID:            100,
 		RequestID:         "reqId",
 		PollRequest: &types.PollForActivityTaskRequest{

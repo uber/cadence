@@ -937,8 +937,8 @@ func (e *historyEngineImpl) updateEntityNotExistsErrorOnPassiveCluster(err error
 			domainNotActiveErrCasted := domainNotActiveErr.(*types.DomainNotActiveError)
 			return &types.EntityNotExistsError{
 				Message:        "Workflow execution not found in non-active cluster",
-				ActiveCluster:  common.StringPtr(domainNotActiveErrCasted.GetActiveCluster()),
-				CurrentCluster: common.StringPtr(domainNotActiveErrCasted.GetCurrentCluster()),
+				ActiveCluster:  domainNotActiveErrCasted.GetActiveCluster(),
+				CurrentCluster: domainNotActiveErrCasted.GetCurrentCluster(),
 			}
 		}
 	}
@@ -975,7 +975,7 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 
 	// expectedNextEventID is 0 when caller want to get the current next event ID without blocking
 	expectedNextEventID := common.FirstEventID
-	if request.ExpectedNextEventID != nil {
+	if request.ExpectedNextEventID != 0 {
 		expectedNextEventID = request.GetExpectedNextEventID()
 	}
 
@@ -1336,9 +1336,9 @@ func (e *historyEngineImpl) getMutableState(
 		PreviousStartedEventID:               common.Int64Ptr(mutableState.GetPreviousStartedEventID()),
 		TaskList:                             &types.TaskList{Name: executionInfo.TaskList},
 		StickyTaskList:                       &types.TaskList{Name: executionInfo.StickyTaskList},
-		ClientLibraryVersion:                 common.StringPtr(executionInfo.ClientLibraryVersion),
-		ClientFeatureVersion:                 common.StringPtr(executionInfo.ClientFeatureVersion),
-		ClientImpl:                           common.StringPtr(executionInfo.ClientImpl),
+		ClientLibraryVersion:                 executionInfo.ClientLibraryVersion,
+		ClientFeatureVersion:                 executionInfo.ClientFeatureVersion,
+		ClientImpl:                           executionInfo.ClientImpl,
 		IsWorkflowRunning:                    mutableState.IsWorkflowExecutionRunning(),
 		StickyTaskListScheduleToStartTimeout: common.Int32Ptr(executionInfo.StickyScheduleToStartTimeout),
 		CurrentBranchToken:                   currentBranchToken,
@@ -1399,14 +1399,14 @@ func (e *historyEngineImpl) DescribeMutableState(
 	return response, nil
 }
 
-func (e *historyEngineImpl) toMutableStateJSON(msb execution.MutableState) (*string, error) {
+func (e *historyEngineImpl) toMutableStateJSON(msb execution.MutableState) (string, error) {
 	ms := msb.CopyToPersistence()
 
 	jsonBytes, err := json.Marshal(ms)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return common.StringPtr(string(jsonBytes)), nil
+	return string(jsonBytes), nil
 }
 
 // ResetStickyTaskList reset the volatile information in mutable state of a given types.
@@ -1480,7 +1480,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			},
 			Type:             &types.WorkflowType{Name: executionInfo.WorkflowTypeName},
 			StartTime:        common.Int64Ptr(executionInfo.StartTimestamp.UnixNano()),
-			HistoryLength:    common.Int64Ptr(mutableState.GetNextEventID() - common.FirstEventID),
+			HistoryLength:    mutableState.GetNextEventID() - common.FirstEventID,
 			AutoResetPoints:  executionInfo.AutoResetPoints,
 			Memo:             &types.Memo{Fields: executionInfo.Memo},
 			SearchAttributes: &types.SearchAttributes{IndexedFields: executionInfo.SearchAttributes},
@@ -1504,7 +1504,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 		}
 		result.WorkflowExecutionInfo.ParentDomainID = common.StringPtr(executionInfo.ParentDomainID)
 		result.WorkflowExecutionInfo.ParentInitiatedID = common.Int64Ptr(executionInfo.InitiatedID)
-		if entry, err := e.shard.GetDomainCache().GetActiveDomainByID (executionInfo.ParentDomainID); err == nil {
+		if entry, err := e.shard.GetDomainCache().GetActiveDomainByID(executionInfo.ParentDomainID); err == nil {
 			result.WorkflowExecutionInfo.ParentDomain = common.StringPtr(entry.GetInfo().Name)
 		}
 	}
@@ -1571,7 +1571,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 				WorkflowID:        ch.StartedWorkflowID,
 				RunID:             ch.StartedRunID,
 				WorkflowTypName:   ch.WorkflowTypeName,
-				InitiatedID:       common.Int64Ptr(ch.InitiatedID),
+				InitiatedID:       ch.InitiatedID,
 				ParentClosePolicy: &ch.ParentClosePolicy,
 			}
 			result.PendingChildren = append(result.PendingChildren, p)
@@ -2865,7 +2865,7 @@ func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(
 
 func getWorkflowAlreadyStartedError(errMsg string, createRequestID string, workflowID string, runID string) error {
 	return &types.WorkflowExecutionAlreadyStartedError{
-		Message:        common.StringPtr(fmt.Sprintf(errMsg, workflowID, runID)),
+		Message:        fmt.Sprintf(errMsg, workflowID, runID),
 		StartRequestID: createRequestID,
 		RunID:          runID,
 	}

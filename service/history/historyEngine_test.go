@@ -308,7 +308,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 	response, err := s.mockHistoryEngine.GetMutableState(ctx, &types.GetMutableStateRequest{
 		DomainUUID:          constants.TestDomainID,
 		Execution:           &workflowExecution,
-		ExpectedNextEventID: common.Int64Ptr(3),
+		ExpectedNextEventID: 3,
 	})
 	s.Nil(err)
 	s.Equal(int64(4), response.NextEventID)
@@ -319,7 +319,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 	pollResponse, err := s.mockHistoryEngine.PollMutableState(ctx, &types.PollMutableStateRequest{
 		DomainUUID:          constants.TestDomainID,
 		Execution:           &workflowExecution,
-		ExpectedNextEventID: common.Int64Ptr(4),
+		ExpectedNextEventID: 4,
 	})
 	s.True(time.Now().After(start.Add(time.Second * 1)))
 	s.Nil(err)
@@ -374,7 +374,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll_CurrentBranchChanged() {
 	response0, err := s.mockHistoryEngine.GetMutableState(ctx, &types.GetMutableStateRequest{
 		DomainUUID:          constants.TestDomainID,
 		Execution:           &workflowExecution,
-		ExpectedNextEventID: common.Int64Ptr(3),
+		ExpectedNextEventID: 3,
 	})
 	s.Nil(err)
 	s.Equal(int64(4), response0.GetNextEventID())
@@ -385,7 +385,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll_CurrentBranchChanged() {
 	response1, err := s.mockHistoryEngine.GetMutableState(ctx, &types.GetMutableStateRequest{
 		DomainUUID:          constants.TestDomainID,
 		Execution:           &workflowExecution,
-		ExpectedNextEventID: common.Int64Ptr(10),
+		ExpectedNextEventID: 10,
 	})
 	s.True(time.Now().After(start.Add(time.Second * 1)))
 	s.Nil(err)
@@ -420,7 +420,7 @@ func (s *engineSuite) TestGetMutableStateLongPollTimeout() {
 	response, err := s.mockHistoryEngine.GetMutableState(ctx, &types.GetMutableStateRequest{
 		DomainUUID:          constants.TestDomainID,
 		Execution:           &workflowExecution,
-		ExpectedNextEventID: common.Int64Ptr(4),
+		ExpectedNextEventID: 4,
 	})
 	s.Nil(err)
 	s.Equal(int64(4), response.GetNextEventID())
@@ -4440,7 +4440,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	}
 	result2 := &types.WorkflowQueryResult{
 		ResultType:   types.QueryResultTypeFailed.Ptr(),
-		ErrorMessage: common.StringPtr("error reason"),
+		ErrorMessage: "error reason",
 	}
 	queryResults := map[string]*types.WorkflowQueryResult{
 		id1: result1,

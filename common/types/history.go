@@ -44,22 +44,22 @@ func (v *DescribeMutableStateRequest) GetExecution() (o *WorkflowExecution) {
 
 // DescribeMutableStateResponse is an internal type (TBD...)
 type DescribeMutableStateResponse struct {
-	MutableStateInCache    *string `json:"mutableStateInCache,omitempty"`
-	MutableStateInDatabase *string `json:"mutableStateInDatabase,omitempty"`
+	MutableStateInCache    string `json:"mutableStateInCache,omitempty"`
+	MutableStateInDatabase string `json:"mutableStateInDatabase,omitempty"`
 }
 
 // GetMutableStateInCache is an internal getter (TBD...)
 func (v *DescribeMutableStateResponse) GetMutableStateInCache() (o string) {
-	if v != nil && v.MutableStateInCache != nil {
-		return *v.MutableStateInCache
+	if v != nil {
+		return v.MutableStateInCache
 	}
 	return
 }
 
 // GetMutableStateInDatabase is an internal getter (TBD...)
 func (v *DescribeMutableStateResponse) GetMutableStateInDatabase() (o string) {
-	if v != nil && v.MutableStateInDatabase != nil {
-		return *v.MutableStateInDatabase
+	if v != nil {
+		return v.MutableStateInDatabase
 	}
 	return
 }
@@ -147,7 +147,7 @@ func (v *FailoverMarkerToken) GetFailoverMarker() (o *FailoverMarkerAttributes) 
 type GetMutableStateRequest struct {
 	DomainUUID          string             `json:"domainUUID,omitempty"`
 	Execution           *WorkflowExecution `json:"execution,omitempty"`
-	ExpectedNextEventID *int64             `json:"expectedNextEventId,omitempty"`
+	ExpectedNextEventID int64              `json:"expectedNextEventId,omitempty"`
 	CurrentBranchToken  []byte             `json:"currentBranchToken,omitempty"`
 }
 
@@ -169,8 +169,8 @@ func (v *GetMutableStateRequest) GetExecution() (o *WorkflowExecution) {
 
 // GetExpectedNextEventID is an internal getter (TBD...)
 func (v *GetMutableStateRequest) GetExpectedNextEventID() (o int64) {
-	if v != nil && v.ExpectedNextEventID != nil {
-		return *v.ExpectedNextEventID
+	if v != nil {
+		return v.ExpectedNextEventID
 	}
 	return
 }
@@ -192,12 +192,12 @@ type GetMutableStateResponse struct {
 	LastFirstEventID                     int64              `json:"LastFirstEventId,omitempty"`
 	TaskList                             *TaskList          `json:"taskList,omitempty"`
 	StickyTaskList                       *TaskList          `json:"stickyTaskList,omitempty"`
-	ClientLibraryVersion                 *string            `json:"clientLibraryVersion,omitempty"`
-	ClientFeatureVersion                 *string            `json:"clientFeatureVersion,omitempty"`
-	ClientImpl                           *string            `json:"clientImpl,omitempty"`
+	ClientLibraryVersion                 string             `json:"clientLibraryVersion,omitempty"`
+	ClientFeatureVersion                 string             `json:"clientFeatureVersion,omitempty"`
+	ClientImpl                           string             `json:"clientImpl,omitempty"`
 	IsWorkflowRunning                    bool               `json:"isWorkflowRunning,omitempty"`
 	StickyTaskListScheduleToStartTimeout *int32             `json:"stickyTaskListScheduleToStartTimeout,omitempty"`
-	EventStoreVersion                    *int32             `json:"eventStoreVersion,omitempty"`
+	EventStoreVersion                    int32              `json:"eventStoreVersion,omitempty"`
 	CurrentBranchToken                   []byte             `json:"currentBranchToken,omitempty"`
 	WorkflowState                        *int32             `json:"workflowState,omitempty"`
 	WorkflowCloseState                   *int32             `json:"workflowCloseState,omitempty"`
@@ -263,24 +263,24 @@ func (v *GetMutableStateResponse) GetStickyTaskList() (o *TaskList) {
 
 // GetClientLibraryVersion is an internal getter (TBD...)
 func (v *GetMutableStateResponse) GetClientLibraryVersion() (o string) {
-	if v != nil && v.ClientLibraryVersion != nil {
-		return *v.ClientLibraryVersion
+	if v != nil {
+		return v.ClientLibraryVersion
 	}
 	return
 }
 
 // GetClientFeatureVersion is an internal getter (TBD...)
 func (v *GetMutableStateResponse) GetClientFeatureVersion() (o string) {
-	if v != nil && v.ClientFeatureVersion != nil {
-		return *v.ClientFeatureVersion
+	if v != nil {
+		return v.ClientFeatureVersion
 	}
 	return
 }
 
 // GetClientImpl is an internal getter (TBD...)
 func (v *GetMutableStateResponse) GetClientImpl() (o string) {
-	if v != nil && v.ClientImpl != nil {
-		return *v.ClientImpl
+	if v != nil {
+		return v.ClientImpl
 	}
 	return
 }
@@ -303,8 +303,8 @@ func (v *GetMutableStateResponse) GetStickyTaskListScheduleToStartTimeout() (o i
 
 // GetEventStoreVersion is an internal getter (TBD...)
 func (v *GetMutableStateResponse) GetEventStoreVersion() (o int32) {
-	if v != nil && v.EventStoreVersion != nil {
-		return *v.EventStoreVersion
+	if v != nil {
+		return v.EventStoreVersion
 	}
 	return
 }
@@ -364,24 +364,24 @@ func (v *NotifyFailoverMarkersRequest) GetFailoverMarkerTokens() (o []*FailoverM
 
 // ParentExecutionInfo is an internal type (TBD...)
 type ParentExecutionInfo struct {
-	DomainUUID  *string            `json:"domainUUID,omitempty"`
-	Domain      *string            `json:"domain,omitempty"`
+	DomainUUID  string             `json:"domainUUID,omitempty"`
+	Domain      string             `json:"domain,omitempty"`
 	Execution   *WorkflowExecution `json:"execution,omitempty"`
-	InitiatedID *int64             `json:"initiatedId,omitempty"`
+	InitiatedID int64              `json:"initiatedId,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *ParentExecutionInfo) GetDomainUUID() (o string) {
-	if v != nil && v.DomainUUID != nil {
-		return *v.DomainUUID
+	if v != nil {
+		return v.DomainUUID
 	}
 	return
 }
 
 // GetDomain is an internal getter (TBD...)
 func (v *ParentExecutionInfo) GetDomain() (o string) {
-	if v != nil && v.Domain != nil {
-		return *v.Domain
+	if v != nil {
+		return v.Domain
 	}
 	return
 }
@@ -396,8 +396,8 @@ func (v *ParentExecutionInfo) GetExecution() (o *WorkflowExecution) {
 
 // GetInitiatedID is an internal getter (TBD...)
 func (v *ParentExecutionInfo) GetInitiatedID() (o int64) {
-	if v != nil && v.InitiatedID != nil {
-		return *v.InitiatedID
+	if v != nil {
+		return v.InitiatedID
 	}
 	return
 }
@@ -406,7 +406,7 @@ func (v *ParentExecutionInfo) GetInitiatedID() (o int64) {
 type PollMutableStateRequest struct {
 	DomainUUID          string             `json:"domainUUID,omitempty"`
 	Execution           *WorkflowExecution `json:"execution,omitempty"`
-	ExpectedNextEventID *int64             `json:"expectedNextEventId,omitempty"`
+	ExpectedNextEventID int64              `json:"expectedNextEventId,omitempty"`
 	CurrentBranchToken  []byte             `json:"currentBranchToken,omitempty"`
 }
 
@@ -428,8 +428,8 @@ func (v *PollMutableStateRequest) GetExecution() (o *WorkflowExecution) {
 
 // GetExpectedNextEventID is an internal getter (TBD...)
 func (v *PollMutableStateRequest) GetExpectedNextEventID() (o int64) {
-	if v != nil && v.ExpectedNextEventID != nil {
-		return *v.ExpectedNextEventID
+	if v != nil {
+		return v.ExpectedNextEventID
 	}
 	return
 }
@@ -451,9 +451,9 @@ type PollMutableStateResponse struct {
 	LastFirstEventID                     int64              `json:"LastFirstEventId,omitempty"`
 	TaskList                             *TaskList          `json:"taskList,omitempty"`
 	StickyTaskList                       *TaskList          `json:"stickyTaskList,omitempty"`
-	ClientLibraryVersion                 *string            `json:"clientLibraryVersion,omitempty"`
-	ClientFeatureVersion                 *string            `json:"clientFeatureVersion,omitempty"`
-	ClientImpl                           *string            `json:"clientImpl,omitempty"`
+	ClientLibraryVersion                 string             `json:"clientLibraryVersion,omitempty"`
+	ClientFeatureVersion                 string             `json:"clientFeatureVersion,omitempty"`
+	ClientImpl                           string             `json:"clientImpl,omitempty"`
 	StickyTaskListScheduleToStartTimeout *int32             `json:"stickyTaskListScheduleToStartTimeout,omitempty"`
 	CurrentBranchToken                   []byte             `json:"currentBranchToken,omitempty"`
 	VersionHistories                     *VersionHistories  `json:"versionHistories,omitempty"`
@@ -519,24 +519,24 @@ func (v *PollMutableStateResponse) GetStickyTaskList() (o *TaskList) {
 
 // GetClientLibraryVersion is an internal getter (TBD...)
 func (v *PollMutableStateResponse) GetClientLibraryVersion() (o string) {
-	if v != nil && v.ClientLibraryVersion != nil {
-		return *v.ClientLibraryVersion
+	if v != nil {
+		return v.ClientLibraryVersion
 	}
 	return
 }
 
 // GetClientFeatureVersion is an internal getter (TBD...)
 func (v *PollMutableStateResponse) GetClientFeatureVersion() (o string) {
-	if v != nil && v.ClientFeatureVersion != nil {
-		return *v.ClientFeatureVersion
+	if v != nil {
+		return v.ClientFeatureVersion
 	}
 	return
 }
 
 // GetClientImpl is an internal getter (TBD...)
 func (v *PollMutableStateResponse) GetClientImpl() (o string) {
-	if v != nil && v.ClientImpl != nil {
-		return *v.ClientImpl
+	if v != nil {
+		return v.ClientImpl
 	}
 	return
 }
@@ -717,7 +717,7 @@ func (v *HistoryRecordActivityTaskHeartbeatRequest) GetHeartbeatRequest() (o *Re
 type RecordActivityTaskStartedRequest struct {
 	DomainUUID        string                      `json:"domainUUID,omitempty"`
 	WorkflowExecution *WorkflowExecution          `json:"workflowExecution,omitempty"`
-	ScheduleID        *int64                      `json:"scheduleId,omitempty"`
+	ScheduleID        int64                       `json:"scheduleId,omitempty"`
 	TaskID            int64                       `json:"taskId,omitempty"`
 	RequestID         string                      `json:"requestId,omitempty"`
 	PollRequest       *PollForActivityTaskRequest `json:"pollRequest,omitempty"`
@@ -741,8 +741,8 @@ func (v *RecordActivityTaskStartedRequest) GetWorkflowExecution() (o *WorkflowEx
 
 // GetScheduleID is an internal getter (TBD...)
 func (v *RecordActivityTaskStartedRequest) GetScheduleID() (o int64) {
-	if v != nil && v.ScheduleID != nil {
-		return *v.ScheduleID
+	if v != nil {
+		return v.ScheduleID
 	}
 	return
 }
@@ -891,7 +891,7 @@ func (v *RecordChildExecutionCompletedRequest) GetCompletionEvent() (o *HistoryE
 type RecordDecisionTaskStartedRequest struct {
 	DomainUUID        string                      `json:"domainUUID,omitempty"`
 	WorkflowExecution *WorkflowExecution          `json:"workflowExecution,omitempty"`
-	ScheduleID        *int64                      `json:"scheduleId,omitempty"`
+	ScheduleID        int64                       `json:"scheduleId,omitempty"`
 	TaskID            int64                       `json:"taskId,omitempty"`
 	RequestID         string                      `json:"requestId,omitempty"`
 	PollRequest       *PollForDecisionTaskRequest `json:"pollRequest,omitempty"`
@@ -915,8 +915,8 @@ func (v *RecordDecisionTaskStartedRequest) GetWorkflowExecution() (o *WorkflowEx
 
 // GetScheduleID is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedRequest) GetScheduleID() (o int64) {
-	if v != nil && v.ScheduleID != nil {
-		return *v.ScheduleID
+	if v != nil {
+		return v.ScheduleID
 	}
 	return
 }
@@ -956,7 +956,7 @@ type RecordDecisionTaskStartedResponse struct {
 	StickyExecutionEnabled    bool                      `json:"stickyExecutionEnabled,omitempty"`
 	DecisionInfo              *TransientDecisionInfo    `json:"decisionInfo,omitempty"`
 	WorkflowExecutionTaskList *TaskList                 `json:"WorkflowExecutionTaskList,omitempty"`
-	EventStoreVersion         *int32                    `json:"eventStoreVersion,omitempty"`
+	EventStoreVersion         int32                     `json:"eventStoreVersion,omitempty"`
 	BranchToken               []byte                    `json:"branchToken,omitempty"`
 	ScheduledTimestamp        *int64                    `json:"scheduledTimestamp,omitempty"`
 	StartedTimestamp          *int64                    `json:"startedTimestamp,omitempty"`
@@ -1037,8 +1037,8 @@ func (v *RecordDecisionTaskStartedResponse) GetWorkflowExecutionTaskList() (o *T
 
 // GetEventStoreVersion is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedResponse) GetEventStoreVersion() (o int32) {
-	if v != nil && v.EventStoreVersion != nil {
-		return *v.EventStoreVersion
+	if v != nil {
+		return v.EventStoreVersion
 	}
 	return
 }
@@ -1439,22 +1439,22 @@ func (v *ScheduleDecisionTaskRequest) GetIsFirstDecision() (o bool) {
 
 // ShardOwnershipLostError is an internal type (TBD...)
 type ShardOwnershipLostError struct {
-	Message *string `json:"message,omitempty"`
-	Owner   *string `json:"owner,omitempty"`
+	Message string `json:"message,omitempty"`
+	Owner   string `json:"owner,omitempty"`
 }
 
 // GetMessage is an internal getter (TBD...)
 func (v *ShardOwnershipLostError) GetMessage() (o string) {
-	if v != nil && v.Message != nil {
-		return *v.Message
+	if v != nil {
+		return v.Message
 	}
 	return
 }
 
 // GetOwner is an internal getter (TBD...)
 func (v *ShardOwnershipLostError) GetOwner() (o string) {
-	if v != nil && v.Owner != nil {
-		return *v.Owner
+	if v != nil {
+		return v.Owner
 	}
 	return
 }
@@ -1620,7 +1620,7 @@ type SyncActivityRequest struct {
 	DomainID           string          `json:"domainId,omitempty"`
 	WorkflowID         string          `json:"workflowId,omitempty"`
 	RunID              string          `json:"runId,omitempty"`
-	Version            *int64          `json:"version,omitempty"`
+	Version            int64           `json:"version,omitempty"`
 	ScheduledID        int64           `json:"scheduledId,omitempty"`
 	ScheduledTime      *int64          `json:"scheduledTime,omitempty"`
 	StartedID          int64           `json:"startedId,omitempty"`
@@ -1660,8 +1660,8 @@ func (v *SyncActivityRequest) GetRunID() (o string) {
 
 // GetVersion is an internal getter (TBD...)
 func (v *SyncActivityRequest) GetVersion() (o int64) {
-	if v != nil && v.Version != nil {
-		return *v.Version
+	if v != nil {
+		return v.Version
 	}
 	return
 }
@@ -1756,15 +1756,15 @@ func (v *SyncActivityRequest) GetVersionHistory() (o *VersionHistory) {
 
 // SyncShardStatusRequest is an internal type (TBD...)
 type SyncShardStatusRequest struct {
-	SourceCluster *string `json:"sourceCluster,omitempty"`
-	ShardID       int64   `json:"shardId,omitempty"`
-	Timestamp     *int64  `json:"timestamp,omitempty"`
+	SourceCluster string `json:"sourceCluster,omitempty"`
+	ShardID       int64  `json:"shardId,omitempty"`
+	Timestamp     *int64 `json:"timestamp,omitempty"`
 }
 
 // GetSourceCluster is an internal getter (TBD...)
 func (v *SyncShardStatusRequest) GetSourceCluster() (o string) {
-	if v != nil && v.SourceCluster != nil {
-		return *v.SourceCluster
+	if v != nil {
+		return v.SourceCluster
 	}
 	return
 }

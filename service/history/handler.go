@@ -251,7 +251,7 @@ func (h *handlerImpl) CreateEngine(
 func (h *handlerImpl) Health(ctx context.Context) (*types.HealthStatus, error) {
 	h.startWG.Wait()
 	h.GetLogger().Debug("History health check endpoint reached.")
-	hs := &types.HealthStatus{Ok: true, Msg: common.StringPtr("OK")}
+	hs := &types.HealthStatus{Ok: true, Msg: "OK"}
 	return hs, nil
 }
 
@@ -742,14 +742,14 @@ func (h *handlerImpl) DescribeHistoryHost(
 	}
 
 	resp = &types.DescribeHistoryHostResponse{
-		NumberOfShards: common.Int32Ptr(int32(h.controller.NumShards())),
+		NumberOfShards: int32(h.controller.NumShards()),
 		ShardIDs:       h.controller.ShardIDs(),
 		DomainCache: &types.DomainCacheInfo{
-			NumOfItemsInCacheByID:   &numOfItemsInCacheByID,
-			NumOfItemsInCacheByName: &numOfItemsInCacheByName,
+			NumOfItemsInCacheByID:   numOfItemsInCacheByID,
+			NumOfItemsInCacheByName: numOfItemsInCacheByName,
 		},
-		ShardControllerStatus: &status,
-		Address:               common.StringPtr(h.GetHostInfo().GetAddress()),
+		ShardControllerStatus: status,
+		Address:               h.GetHostInfo().GetAddress(),
 	}
 	return resp, nil
 }
@@ -1517,7 +1517,7 @@ func (h *handlerImpl) SyncShardStatus(
 		return h.error(errHistoryHostThrottle, scope, "", "")
 	}
 
-	if syncShardStatusRequest.SourceCluster == nil {
+	if syncShardStatusRequest.SourceCluster == "" {
 		return h.error(errSourceClusterNotSet, scope, "", "")
 	}
 

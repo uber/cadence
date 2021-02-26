@@ -365,14 +365,14 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 		ExecutionTime:    common.Int64Ptr(execution.ExecutionTime.UnixNano()),
 		Memo:             memo,
 		SearchAttributes: searchAttributes,
-		TaskList:         common.StringPtr(execution.TaskList),
+		TaskList:         execution.TaskList,
 	}
 
 	// for close records
 	if execution.Status != nil {
 		convertedExecution.CloseTime = common.Int64Ptr(execution.CloseTime.UnixNano())
 		convertedExecution.CloseStatus = execution.Status
-		convertedExecution.HistoryLength = common.Int64Ptr(execution.HistoryLength)
+		convertedExecution.HistoryLength = execution.HistoryLength
 	}
 
 	return convertedExecution

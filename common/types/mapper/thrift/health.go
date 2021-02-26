@@ -32,7 +32,7 @@ func FromHealthStatus(t *types.HealthStatus) *health.HealthStatus {
 	}
 	return &health.HealthStatus{
 		Ok:  t.Ok,
-		Msg: t.Msg,
+		Msg: &t.Msg,
 	}
 }
 
@@ -43,6 +43,6 @@ func ToHealthStatus(t *health.HealthStatus) *types.HealthStatus {
 	}
 	return &types.HealthStatus{
 		Ok:  t.Ok,
-		Msg: t.Msg,
+		Msg: t.GetMsg(),
 	}
 }

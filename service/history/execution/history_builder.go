@@ -542,10 +542,10 @@ func (b *HistoryBuilder) addTransientEvent(event *types.HistoryEvent) *types.His
 
 func (b *HistoryBuilder) newWorkflowExecutionStartedEvent(
 	startRequest *types.HistoryStartWorkflowExecutionRequest, previousExecution *persistence.WorkflowExecutionInfo, firstRunID, originalRunID string) *types.HistoryEvent {
-	var prevRunID *string
+	var prevRunID string
 	var resetPoints *types.ResetPoints
 	if previousExecution != nil {
-		prevRunID = common.StringPtr(previousExecution.RunID)
+		prevRunID = previousExecution.RunID
 		resetPoints = previousExecution.AutoResetPoints
 	}
 	request := startRequest.StartRequest
@@ -575,10 +575,10 @@ func (b *HistoryBuilder) newWorkflowExecutionStartedEvent(
 		SearchAttributes:                    request.SearchAttributes,
 	}
 	if parentInfo := startRequest.ParentExecutionInfo; parentInfo != nil {
-		attributes.ParentWorkflowDomainID = parentInfo.DomainUUID
-		attributes.ParentWorkflowDomain = parentInfo.Domain
+		attributes.ParentWorkflowDomainID = &parentInfo.DomainUUID
+		attributes.ParentWorkflowDomain = &parentInfo.Domain
 		attributes.ParentWorkflowExecution = parentInfo.Execution
-		attributes.ParentInitiatedEventID = parentInfo.InitiatedID
+		attributes.ParentInitiatedEventID = &parentInfo.InitiatedID
 	}
 	historyEvent.WorkflowExecutionStartedEventAttributes = attributes
 

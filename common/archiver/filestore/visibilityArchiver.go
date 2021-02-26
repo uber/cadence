@@ -335,7 +335,7 @@ func convertToExecutionInfo(record *visibilityRecord) *types.WorkflowExecutionIn
 		ExecutionTime: common.Int64Ptr(record.ExecutionTimestamp),
 		CloseTime:     common.Int64Ptr(record.CloseTimestamp),
 		CloseStatus:   record.CloseStatus.Ptr(),
-		HistoryLength: common.Int64Ptr(record.HistoryLength),
+		HistoryLength: record.HistoryLength,
 		Memo:          record.Memo,
 		SearchAttributes: &types.SearchAttributes{
 			IndexedFields: archiver.ConvertSearchAttrToBytes(record.SearchAttributes),
