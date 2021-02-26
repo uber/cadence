@@ -22,7 +22,6 @@ package workflow
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/uber/cadence/common/persistence"
@@ -31,13 +30,6 @@ import (
 )
 
 var ConditionalRetryCount = 5
-
-var (
-	// ErrStaleState is the error returned during state update indicating that cached mutable state could be stale
-	ErrStaleState = errors.New("cache mutable state could potentially be stale")
-	// ErrMaxAttemptsExceeded is exported temporarily for integration test
-	ErrMaxAttemptsExceeded = errors.New("maximum attempts exceeded to update history")
-)
 
 type (
 	UpdateAction struct {
