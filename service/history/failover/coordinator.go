@@ -290,7 +290,7 @@ func (c *coordinatorImpl) handleFailoverMarkers(
 		)
 		c.logger.Info("Updated domain from pending-active to active",
 			tag.WorkflowDomainName(domainName),
-			tag.FailoverVersion(*marker.FailoverVersion),
+			tag.FailoverVersion(marker.FailoverVersion),
 		)
 	} else {
 		c.metrics.Scope(

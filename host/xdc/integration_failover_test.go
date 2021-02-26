@@ -310,7 +310,7 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 	queryHandler := func(task *types.PollForDecisionTaskResponse) ([]byte, error) {
 		s.NotNil(task.Query)
 		s.NotNil(task.Query.QueryType)
-		if *task.Query.QueryType == queryType {
+		if task.Query.QueryType == queryType {
 			return []byte("query-result"), nil
 		}
 
@@ -359,7 +359,7 @@ func (s *integrationClustersTestSuite) TestSimpleWorkflowFailover() {
 				RunID:      we.RunID,
 			},
 			Query: &types.WorkflowQuery{
-				QueryType: common.StringPtr(queryType),
+				QueryType: queryType,
 			},
 		})
 		queryResultCh <- QueryResult{Resp: queryResp, Err: err}

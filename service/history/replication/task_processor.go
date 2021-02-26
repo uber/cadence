@@ -275,8 +275,8 @@ func (p *taskProcessorImpl) sendFetchMessageRequest() <-chan *types.ReplicationM
 	p.requestChan <- &request{
 		token: &types.ReplicationToken{
 			ShardID:                int32(p.shard.GetShardID()),
-			LastRetrievedMessageID: common.Int64Ptr(p.lastRetrievedMessageID),
-			LastProcessedMessageID: common.Int64Ptr(p.lastProcessedMessageID),
+			LastRetrievedMessageID: p.lastRetrievedMessageID,
+			LastProcessedMessageID: p.lastProcessedMessageID,
 		},
 		respChan: respChan,
 	}
@@ -362,7 +362,7 @@ func (p *taskProcessorImpl) handleSyncShardStatus(
 	ctx, cancel := context.WithTimeout(context.Background(), replicationTimeout)
 	defer cancel()
 	return p.historyEngine.SyncShardStatus(ctx, &types.SyncShardStatusRequest{
-		SourceCluster: common.StringPtr(p.sourceCluster),
+		SourceCluster: p.sourceCluster,
 		ShardID:       int64(p.shard.GetShardID()),
 		Timestamp:     status.Timestamp,
 	})

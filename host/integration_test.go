@@ -1104,7 +1104,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 		MaximumPageSize: 100,
 		StartTimeFilter: startFilter,
 		ExecutionFilter: &types.WorkflowExecutionFilter{
-			WorkflowID: common.StringPtr(id),
+			WorkflowID: id,
 		},
 	})
 	s.Nil(err)
@@ -1174,7 +1174,7 @@ func (s *integrationSuite) TestCronWorkflow() {
 			MaximumPageSize: 100,
 			StartTimeFilter: startFilter,
 			ExecutionFilter: &types.WorkflowExecutionFilter{
-				WorkflowID: common.StringPtr(id),
+				WorkflowID: id,
 			},
 		})
 		s.Nil(err)
@@ -1661,7 +1661,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 	dweResponse, err := describeWorkflowExecution()
 	s.Nil(err)
 	s.True(nil == dweResponse.WorkflowExecutionInfo.CloseTime)
-	s.Equal(int64(2), *dweResponse.WorkflowExecutionInfo.HistoryLength) // WorkflowStarted, DecisionScheduled
+	s.Equal(int64(2), dweResponse.WorkflowExecutionInfo.HistoryLength) // WorkflowStarted, DecisionScheduled
 	s.Equal(dweResponse.WorkflowExecutionInfo.GetStartTime(), dweResponse.WorkflowExecutionInfo.GetExecutionTime())
 
 	// decider logic
@@ -1721,7 +1721,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 	dweResponse, err = describeWorkflowExecution()
 	s.Nil(err)
 	s.True(nil == dweResponse.WorkflowExecutionInfo.CloseStatus)
-	s.Equal(int64(5), *dweResponse.WorkflowExecutionInfo.HistoryLength) // DecisionStarted, DecisionCompleted, ActivityScheduled
+	s.Equal(int64(5), dweResponse.WorkflowExecutionInfo.HistoryLength) // DecisionStarted, DecisionCompleted, ActivityScheduled
 	s.Equal(1, len(dweResponse.PendingActivities))
 	s.Equal("test-activity-type", dweResponse.PendingActivities[0].ActivityType.GetName())
 	s.Equal(int64(0), dweResponse.PendingActivities[0].GetLastHeartbeatTimestamp())
@@ -1732,7 +1732,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 	dweResponse, err = describeWorkflowExecution()
 	s.Nil(err)
 	s.True(nil == dweResponse.WorkflowExecutionInfo.CloseStatus)
-	s.Equal(int64(8), *dweResponse.WorkflowExecutionInfo.HistoryLength) // ActivityTaskStarted, ActivityTaskCompleted, DecisionTaskScheduled
+	s.Equal(int64(8), dweResponse.WorkflowExecutionInfo.HistoryLength) // ActivityTaskStarted, ActivityTaskCompleted, DecisionTaskScheduled
 	s.Equal(0, len(dweResponse.PendingActivities))
 
 	// Process signal in decider
@@ -1743,7 +1743,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 	dweResponse, err = describeWorkflowExecution()
 	s.Nil(err)
 	s.Equal(types.WorkflowExecutionCloseStatusCompleted, *dweResponse.WorkflowExecutionInfo.CloseStatus)
-	s.Equal(int64(11), *dweResponse.WorkflowExecutionInfo.HistoryLength) // DecisionStarted, DecisionCompleted, WorkflowCompleted
+	s.Equal(int64(11), dweResponse.WorkflowExecutionInfo.HistoryLength) // DecisionStarted, DecisionCompleted, WorkflowCompleted
 }
 
 func (s *integrationSuite) TestVisibility() {
@@ -1856,7 +1856,7 @@ func (s *integrationSuite) TestVisibility() {
 		s.Nil(err3)
 		closedCount = len(resp.Executions)
 		if closedCount == 1 {
-			historyLength = *(resp.Executions[0].HistoryLength)
+			historyLength = resp.Executions[0].HistoryLength
 			break
 		}
 		s.Logger.Info("Closed WorkflowExecution is not yet visible")
@@ -2204,7 +2204,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 			MaximumPageSize: 100,
 			StartTimeFilter: startFilter,
 			ExecutionFilter: &types.WorkflowExecutionFilter{
-				WorkflowID: common.StringPtr(childID),
+				WorkflowID: childID,
 			},
 		})
 		s.Nil(err)
@@ -3992,7 +3992,7 @@ func (s *integrationSuite) startWithMemoHelper(startFn startFunc, id string, tas
 				LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 			},
 			ExecutionFilter: &types.WorkflowExecutionFilter{
-				WorkflowID: common.StringPtr(id),
+				WorkflowID: id,
 			},
 		})
 		s.Nil(err1)
@@ -4047,7 +4047,7 @@ func (s *integrationSuite) startWithMemoHelper(startFn startFunc, id string, tas
 				LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
 			},
 			ExecutionFilter: &types.WorkflowExecutionFilter{
-				WorkflowID: common.StringPtr(id),
+				WorkflowID: id,
 			},
 		})
 		s.Nil(err1)

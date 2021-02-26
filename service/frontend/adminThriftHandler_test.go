@@ -63,7 +63,7 @@ func TestAdminThriftHandler(t *testing.T) {
 	t.Run("DescribeHistoryHost", func(t *testing.T) {
 		h.EXPECT().DescribeHistoryHost(ctx, &types.DescribeHistoryHostRequest{}).Return(&types.DescribeHistoryHostResponse{}, internalErr).Times(1)
 		resp, err := th.DescribeHistoryHost(ctx, &shared.DescribeHistoryHostRequest{})
-		assert.Equal(t, shared.DescribeHistoryHostResponse{}, *resp)
+		assert.Equal(t, shared.DescribeHistoryHostResponse{NumberOfShards: common.Int32Ptr(0), ShardControllerStatus: common.StringPtr(""), Address: common.StringPtr("")}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("DescribeQueue", func(t *testing.T) {
@@ -75,7 +75,7 @@ func TestAdminThriftHandler(t *testing.T) {
 	t.Run("DescribeWorkflowExecution", func(t *testing.T) {
 		h.EXPECT().DescribeWorkflowExecution(ctx, &types.AdminDescribeWorkflowExecutionRequest{}).Return(&types.AdminDescribeWorkflowExecutionResponse{}, internalErr).Times(1)
 		resp, err := th.DescribeWorkflowExecution(ctx, &admin.DescribeWorkflowExecutionRequest{})
-		assert.Equal(t, admin.DescribeWorkflowExecutionResponse{ShardId: common.StringPtr("")}, *resp)
+		assert.Equal(t, admin.DescribeWorkflowExecutionResponse{ShardId: common.StringPtr(""), HistoryAddr: common.StringPtr(""), MutableStateInCache: common.StringPtr(""), MutableStateInDatabase: common.StringPtr("")}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("GetDLQReplicationMessages", func(t *testing.T) {

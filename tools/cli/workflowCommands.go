@@ -973,7 +973,7 @@ type workflowExecutionInfo struct {
 	StartTime        *string // change from *int64
 	CloseTime        *string // change from *int64
 	CloseStatus      *types.WorkflowExecutionCloseStatus
-	HistoryLength    *int64
+	HistoryLength    int64
 	ParentDomainID   *string
 	ParentExecution  *types.WorkflowExecution
 	Memo             *types.Memo

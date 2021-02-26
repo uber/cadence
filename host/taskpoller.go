@@ -211,7 +211,7 @@ Loop:
 			if err != nil {
 				completeType := types.QueryTaskCompletedTypeFailed
 				completeRequest.CompletedType = &completeType
-				completeRequest.ErrorMessage = common.StringPtr(err.Error())
+				completeRequest.ErrorMessage = err.Error()
 			} else {
 				completeType := types.QueryTaskCompletedTypeCompleted
 				completeRequest.CompletedType = &completeType

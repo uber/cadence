@@ -47,7 +47,7 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("Health", func(t *testing.T) {
 		h.EXPECT().Health(ctx).Return(&types.HealthStatus{}, internalErr).Times(1)
 		resp, err := th.Health(ctx)
-		assert.Equal(t, health.HealthStatus{}, *resp)
+		assert.Equal(t, health.HealthStatus{Msg: common.StringPtr("")}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("AddActivityTask", func(t *testing.T) {
@@ -86,7 +86,14 @@ func TestThriftHandler(t *testing.T) {
 	t.Run("PollForDecisionTask", func(t *testing.T) {
 		h.EXPECT().PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{}).Return(&types.MatchingPollForDecisionTaskResponse{}, internalErr).Times(1)
 		resp, err := th.PollForDecisionTask(ctx, &m.PollForDecisionTaskRequest{})
-		assert.Equal(t, m.PollForDecisionTaskResponse{StartedEventId: common.Int64Ptr(0), NextEventId: common.Int64Ptr(0), Attempt: common.Int64Ptr(0), StickyExecutionEnabled: common.BoolPtr(false)}, *resp)
+		assert.Equal(t, m.PollForDecisionTaskResponse{
+			StartedEventId:         common.Int64Ptr(0),
+			NextEventId:            common.Int64Ptr(0),
+			Attempt:                common.Int64Ptr(0),
+			StickyExecutionEnabled: common.BoolPtr(false),
+			BacklogCountHint:       common.Int64Ptr(0),
+			EventStoreVersion:      common.Int32Ptr(0),
+		}, *resp)
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("QueryWorkflow", func(t *testing.T) {

@@ -1306,13 +1306,13 @@ func (t *transferActiveTaskExecutor) startWorkflowWithRetry(
 	historyStartReq := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, now)
 
 	historyStartReq.ParentExecutionInfo = &types.ParentExecutionInfo{
-		DomainUUID: common.StringPtr(task.DomainID),
-		Domain:     common.StringPtr(domain),
+		DomainUUID: task.DomainID,
+		Domain:     domain,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
 		},
-		InitiatedID: common.Int64Ptr(task.ScheduleID),
+		InitiatedID: task.ScheduleID,
 	}
 
 	startWorkflowCtx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
