@@ -45,7 +45,6 @@ type (
 		ttl         time.Duration
 		pin         bool
 		rmFunc      RemovedFunc
-		updatedFunc OnCacheUpdatedFunc
 		sizeFunc    GetCacheItemSizeFunc
 		maxSize     uint64
 		currSize    uint64
@@ -142,12 +141,11 @@ func New(opts *Options) Cache {
 	}
 
 	cache := &lru{
-		byAccess:    list.New(),
-		byKey:       make(map[interface{}]*list.Element, opts.InitialCapacity),
-		ttl:         opts.TTL,
-		pin:         opts.Pin,
-		rmFunc:      opts.RemovedFunc,
-		updatedFunc: opts.OnCacheUpdatedFunc,
+		byAccess: list.New(),
+		byKey:    make(map[interface{}]*list.Element, opts.InitialCapacity),
+		ttl:      opts.TTL,
+		pin:      opts.Pin,
+		rmFunc:   opts.RemovedFunc,
 	}
 
 	cache.isSizeBased = opts.GetCacheItemSizeFunc != nil && opts.MaxSize > 0
@@ -273,7 +271,6 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 			if c.pin {
 				entry.refCount++
 			}
-			c.notifyOnUpdate()
 			return existing, nil
 		}
 	}
@@ -305,7 +302,6 @@ func (c *lru) putInternal(key interface{}, value interface{}, allowUpdate bool) 
 
 		c.deleteInternal(c.byAccess.Back())
 	}
-	c.notifyOnUpdate()
 	return nil, nil
 }
 
@@ -316,7 +312,6 @@ func (c *lru) deleteInternal(element *list.Element) {
 	}
 	delete(c.byKey, entry.key)
 	c.updateSizeOnDelete(entry.key)
-	c.notifyOnUpdate()
 }
 
 func (c *lru) isEntryExpired(entry *entryImpl, currentTime time.Time) bool {
@@ -341,11 +336,5 @@ func (c *lru) updateSizeOnDelete(key interface{}) {
 	if c.isSizeBased {
 		c.currSize -= uint64(c.sizeByKey[key])
 		delete(c.sizeByKey, key)
-	}
-}
-
-func (c *lru) notifyOnUpdate() {
-	if c.updatedFunc != nil {
-		c.updatedFunc(&UpdatedState{c.byAccess.Len()})
 	}
 }
