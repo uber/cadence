@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package decision
 
 import (
 	"fmt"
@@ -40,7 +40,7 @@ import (
 )
 
 type (
-	decisionAttrValidator struct {
+	attrValidator struct {
 		config                    *config.Config
 		domainCache               cache.DomainCache
 		maxIDLengthLimit          int
@@ -65,12 +65,12 @@ type (
 	}
 )
 
-func newDecisionAttrValidator(
+func newAttrValidator(
 	domainCache cache.DomainCache,
 	config *config.Config,
 	logger log.Logger,
-) *decisionAttrValidator {
-	return &decisionAttrValidator{
+) *attrValidator {
+	return &attrValidator{
 		config:           config,
 		domainCache:      domainCache,
 		maxIDLengthLimit: config.MaxIDLengthLimit(),
@@ -184,7 +184,7 @@ func (c *workflowSizeChecker) failWorkflowSizeExceedsLimit() (bool, error) {
 	return false, nil
 }
 
-func (v *decisionAttrValidator) validateActivityScheduleAttributes(
+func (v *attrValidator) validateActivityScheduleAttributes(
 	domainID string,
 	targetDomainID string,
 	attributes *types.ScheduleActivityTaskDecisionAttributes,
@@ -324,7 +324,7 @@ func (v *decisionAttrValidator) validateActivityScheduleAttributes(
 	return nil
 }
 
-func (v *decisionAttrValidator) validateTimerScheduleAttributes(
+func (v *attrValidator) validateTimerScheduleAttributes(
 	attributes *types.StartTimerDecisionAttributes,
 ) error {
 
@@ -343,7 +343,7 @@ func (v *decisionAttrValidator) validateTimerScheduleAttributes(
 	return nil
 }
 
-func (v *decisionAttrValidator) validateActivityCancelAttributes(
+func (v *attrValidator) validateActivityCancelAttributes(
 	attributes *types.RequestCancelActivityTaskDecisionAttributes,
 ) error {
 
@@ -359,7 +359,7 @@ func (v *decisionAttrValidator) validateActivityCancelAttributes(
 	return nil
 }
 
-func (v *decisionAttrValidator) validateTimerCancelAttributes(
+func (v *attrValidator) validateTimerCancelAttributes(
 	attributes *types.CancelTimerDecisionAttributes,
 ) error {
 
@@ -375,7 +375,7 @@ func (v *decisionAttrValidator) validateTimerCancelAttributes(
 	return nil
 }
 
-func (v *decisionAttrValidator) validateRecordMarkerAttributes(
+func (v *attrValidator) validateRecordMarkerAttributes(
 	attributes *types.RecordMarkerDecisionAttributes,
 ) error {
 
@@ -392,7 +392,7 @@ func (v *decisionAttrValidator) validateRecordMarkerAttributes(
 	return nil
 }
 
-func (v *decisionAttrValidator) validateCompleteWorkflowExecutionAttributes(
+func (v *attrValidator) validateCompleteWorkflowExecutionAttributes(
 	attributes *types.CompleteWorkflowExecutionDecisionAttributes,
 ) error {
 
@@ -402,7 +402,7 @@ func (v *decisionAttrValidator) validateCompleteWorkflowExecutionAttributes(
 	return nil
 }
 
-func (v *decisionAttrValidator) validateFailWorkflowExecutionAttributes(
+func (v *attrValidator) validateFailWorkflowExecutionAttributes(
 	attributes *types.FailWorkflowExecutionDecisionAttributes,
 ) error {
 
@@ -415,7 +415,7 @@ func (v *decisionAttrValidator) validateFailWorkflowExecutionAttributes(
 	return nil
 }
 
-func (v *decisionAttrValidator) validateCancelWorkflowExecutionAttributes(
+func (v *attrValidator) validateCancelWorkflowExecutionAttributes(
 	attributes *types.CancelWorkflowExecutionDecisionAttributes,
 ) error {
 
@@ -425,7 +425,7 @@ func (v *decisionAttrValidator) validateCancelWorkflowExecutionAttributes(
 	return nil
 }
 
-func (v *decisionAttrValidator) validateCancelExternalWorkflowExecutionAttributes(
+func (v *attrValidator) validateCancelExternalWorkflowExecutionAttributes(
 	domainID string,
 	targetDomainID string,
 	attributes *types.RequestCancelExternalWorkflowExecutionDecisionAttributes,
@@ -458,7 +458,7 @@ func (v *decisionAttrValidator) validateCancelExternalWorkflowExecutionAttribute
 	return nil
 }
 
-func (v *decisionAttrValidator) validateSignalExternalWorkflowExecutionAttributes(
+func (v *attrValidator) validateSignalExternalWorkflowExecutionAttributes(
 	domainID string,
 	targetDomainID string,
 	attributes *types.SignalExternalWorkflowExecutionDecisionAttributes,
@@ -498,7 +498,7 @@ func (v *decisionAttrValidator) validateSignalExternalWorkflowExecutionAttribute
 	return nil
 }
 
-func (v *decisionAttrValidator) validateUpsertWorkflowSearchAttributes(
+func (v *attrValidator) validateUpsertWorkflowSearchAttributes(
 	domainName string,
 	attributes *types.UpsertWorkflowSearchAttributesDecisionAttributes,
 ) error {
@@ -518,7 +518,7 @@ func (v *decisionAttrValidator) validateUpsertWorkflowSearchAttributes(
 	return v.searchAttributesValidator.ValidateSearchAttributes(attributes.GetSearchAttributes(), domainName)
 }
 
-func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes(
+func (v *attrValidator) validateContinueAsNewWorkflowExecutionAttributes(
 	attributes *types.ContinueAsNewWorkflowExecutionDecisionAttributes,
 	executionInfo *persistence.WorkflowExecutionInfo,
 ) error {
@@ -565,7 +565,7 @@ func (v *decisionAttrValidator) validateContinueAsNewWorkflowExecutionAttributes
 	return v.searchAttributesValidator.ValidateSearchAttributes(attributes.GetSearchAttributes(), domainName)
 }
 
-func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
+func (v *attrValidator) validateStartChildExecutionAttributes(
 	domainID string,
 	targetDomainID string,
 	attributes *types.StartChildWorkflowExecutionDecisionAttributes,
@@ -631,7 +631,7 @@ func (v *decisionAttrValidator) validateStartChildExecutionAttributes(
 	return nil
 }
 
-func (v *decisionAttrValidator) validatedTaskList(
+func (v *attrValidator) validatedTaskList(
 	taskList *types.TaskList,
 	defaultVal string,
 ) (*types.TaskList, error) {
@@ -664,7 +664,7 @@ func (v *decisionAttrValidator) validatedTaskList(
 	return taskList, nil
 }
 
-func (v *decisionAttrValidator) validateCrossDomainCall(
+func (v *attrValidator) validateCrossDomainCall(
 	domainID string,
 	targetDomainID string,
 ) error {
@@ -703,7 +703,7 @@ func (v *decisionAttrValidator) validateCrossDomainCall(
 	return v.createCrossDomainCallError(domainEntry, targetDomainEntry)
 }
 
-func (v *decisionAttrValidator) createCrossDomainCallError(
+func (v *attrValidator) createCrossDomainCallError(
 	domainEntry *cache.DomainCacheEntry,
 	targetDomainEntry *cache.DomainCacheEntry,
 ) error {

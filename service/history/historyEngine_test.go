@@ -52,6 +52,7 @@ import (
 	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
+	"github.com/uber/cadence/service/history/decision"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/ndc"
@@ -176,7 +177,7 @@ func (s *engineSuite) SetupTest() {
 		workflowResetter:     s.mockWorkflowResetter,
 	}
 	s.mockShard.SetEngine(h)
-	h.decisionHandler = NewDecisionHandler(s.mockShard, h.executionCache, h.tokenSerializer)
+	h.decisionHandler = decision.NewHandler(s.mockShard, h.executionCache, h.tokenSerializer)
 
 	h.historyEventNotifier.Start()
 
@@ -436,13 +437,13 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnNotEnabled() {
 	}
 	resp, err := s.mockHistoryEngine.QueryWorkflow(context.Background(), request)
 	s.Nil(resp)
-	s.Equal(ErrConsistentQueryNotEnabled, err)
+	s.Equal(workflow.ErrConsistentQueryNotEnabled, err)
 
 	s.mockHistoryEngine.config.EnableConsistentQueryByDomain = dynamicconfig.GetBoolPropertyFnFilteredByDomain(true)
 	s.mockHistoryEngine.config.EnableConsistentQuery = dynamicconfig.GetBoolPropertyFn(false)
 	resp, err = s.mockHistoryEngine.QueryWorkflow(context.Background(), request)
 	s.Nil(resp)
-	s.Equal(ErrConsistentQueryNotEnabled, err)
+	s.Equal(workflow.ErrConsistentQueryNotEnabled, err)
 }
 
 func (s *engineSuite) TestQueryWorkflow_RejectBasedOnCompleted() {
@@ -566,7 +567,7 @@ func (s *engineSuite) TestQueryWorkflow_FirstDecisionNotCompleted() {
 		},
 	}
 	resp, err := s.mockHistoryEngine.QueryWorkflow(context.Background(), request)
-	s.Equal(ErrQueryWorkflowBeforeFirstDecision, err)
+	s.Equal(workflow.ErrQueryWorkflowBeforeFirstDecision, err)
 	s.Nil(resp)
 }
 
@@ -717,7 +718,7 @@ func (s *engineSuite) TestQueryWorkflow_ConsistentQueryBufferFull() {
 	}
 	resp, err := s.mockHistoryEngine.QueryWorkflow(context.Background(), request)
 	s.Nil(resp)
-	s.Equal(ErrConsistentQueryBufferExceeded, err)
+	s.Equal(workflow.ErrConsistentQueryBufferExceeded, err)
 }
 
 func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
