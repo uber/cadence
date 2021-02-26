@@ -1503,6 +1503,10 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			RunID:      executionInfo.ParentRunID,
 		}
 		result.WorkflowExecutionInfo.ParentDomainID = common.StringPtr(executionInfo.ParentDomainID)
+		result.WorkflowExecutionInfo.ParentInitiatedID = common.Int64Ptr(executionInfo.InitiatedID)
+		if entry, err := e.shard.GetDomainCache().GetActiveDomainByID (executionInfo.ParentDomainID); err == nil {
+			result.WorkflowExecutionInfo.ParentDomain = common.StringPtr(entry.GetInfo().Name)
+		}
 	}
 	if executionInfo.State == persistence.WorkflowStateCompleted {
 		// for closed workflow
