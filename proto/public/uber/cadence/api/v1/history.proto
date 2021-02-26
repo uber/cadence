@@ -153,6 +153,12 @@ message DecisionTaskTimedOutEventAttributes {
   int64 scheduled_event_id = 1;
   int64 started_event_id = 2;
   TimeoutType timeout_type = 3;
+  // For reset workflow.
+  string base_run_id = 4;
+  string new_run_id = 5;
+  int64 fork_event_version = 6;
+  string reason = 7;
+  DecisionTaskTimedOutCause cause = 8;
 }
 
 message DecisionTaskFailedEventAttributes {
