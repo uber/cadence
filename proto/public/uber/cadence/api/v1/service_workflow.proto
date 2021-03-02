@@ -142,6 +142,7 @@ message ResetWorkflowExecutionRequest {
   string reason = 3;
   int64 decision_finish_event_id = 4;
   string request_id = 5;
+  bool skip_signal_reapply = 6;
 }
 
 message ResetWorkflowExecutionResponse {

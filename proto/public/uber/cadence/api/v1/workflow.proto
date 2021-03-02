@@ -39,19 +39,30 @@ message WorkflowExecutionInfo {
   google.protobuf.Timestamp close_time = 4;
   WorkflowExecutionCloseStatus close_status = 5;
   int64 history_length = 6;
-  string parent_domain_id = 7;
-  WorkflowExecution parent_execution = 8;
-  google.protobuf.Timestamp execution_time = 9;
-  Memo memo = 10;
-  SearchAttributes search_attributes = 11;
-  ResetPoints auto_reset_points = 12;
-  string task_list = 13;
+  ParentExecutionInfo parent_execution_info = 7;
+  google.protobuf.Timestamp execution_time = 8;
+  Memo memo = 9;
+  SearchAttributes search_attributes = 10;
+  ResetPoints auto_reset_points = 11;
+  string task_list = 12;
 }
 
 message WorkflowExecutionConfiguration {
   TaskList task_list = 1;
   google.protobuf.Duration execution_start_to_close_timeout = 2;
   google.protobuf.Duration task_start_to_close_timeout = 3;
+}
+
+message ParentExecutionInfo {
+  string domain_id = 1;
+  string domain_name = 2;
+  api.v1.WorkflowExecution workflow_execution = 3;
+  int64 initiated_id = 4;
+}
+
+message ExternalExecutionInfo {
+  api.v1.WorkflowExecution workflow_execution = 1;
+  int64 initiated_id = 2;
 }
 
 message PendingActivityInfo {
@@ -171,6 +182,12 @@ enum TimeoutType {
   TIMEOUT_TYPE_SCHEDULE_TO_START = 2;
   TIMEOUT_TYPE_SCHEDULE_TO_CLOSE = 3;
   TIMEOUT_TYPE_HEARTBEAT = 4;
+}
+
+enum DecisionTaskTimedOutCause {
+  DECISION_TASK_TIMED_OUT_CAUSE_INVALID = 0;
+  DECISION_TASK_TIMED_OUT_CAUSE_TIMEOUT = 1;
+  DECISION_TASK_TIMED_OUT_CAUSE_RESET = 2;
 }
 
 enum DecisionTaskFailedCause {

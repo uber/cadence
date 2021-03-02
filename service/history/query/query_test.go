@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -84,7 +83,7 @@ func (s *QuerySuite) TestValidateTerminationState() {
 				QueryResult: &types.WorkflowQueryResult{
 					ResultType:   types.QueryResultTypeAnswered.Ptr(),
 					Answer:       []byte{1, 2, 3},
-					ErrorMessage: common.StringPtr("err"),
+					ErrorMessage: "err",
 				},
 			},
 			expectErr: true,
@@ -104,7 +103,7 @@ func (s *QuerySuite) TestValidateTerminationState() {
 				TerminationType: TerminationTypeCompleted,
 				QueryResult: &types.WorkflowQueryResult{
 					ResultType:   types.QueryResultTypeFailed.Ptr(),
-					ErrorMessage: common.StringPtr("err"),
+					ErrorMessage: "err",
 				},
 			},
 			expectErr: false,

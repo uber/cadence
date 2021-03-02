@@ -388,7 +388,7 @@ func InitializeHistoryEventGenerator(
 			ActivityType: &types.ActivityType{
 				Name: "activity",
 			},
-			Domain: common.StringPtr(domain),
+			Domain: domain,
 			TaskList: &types.TaskList{
 				Name: taskList,
 				Kind: types.TaskListKindNormal.Ptr(),

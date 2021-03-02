@@ -191,3 +191,18 @@ func (mr *MockDomainCacheMockRecorder) GetCacheSize() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCacheSize", reflect.TypeOf((*MockDomainCache)(nil).GetCacheSize))
 }
+
+// GetActiveDomainByID mocks base method
+func (m *MockDomainCache) GetActiveDomainByID(id string) (*DomainCacheEntry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetActiveDomainByID", id)
+	ret0, _ := ret[0].(*DomainCacheEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetActiveDomainByID indicates an expected call of GetActiveDomainByID
+func (mr *MockDomainCacheMockRecorder) GetActiveDomainByID(id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveDomainByID", reflect.TypeOf((*MockDomainCache)(nil).GetActiveDomainByID), id)
+}

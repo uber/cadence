@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package decision
 
 import (
 	"testing"
@@ -47,7 +47,7 @@ type (
 		controller       *gomock.Controller
 		mockMutableState *execution.MockMutableState
 
-		decisionHandler *decisionHandlerImpl
+		decisionHandler *handlerImpl
 		queryRegistry   query.Registry
 	}
 )
@@ -60,7 +60,7 @@ func (s *DecisionHandlerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 	s.controller = gomock.NewController(s.T())
 
-	s.decisionHandler = &decisionHandlerImpl{
+	s.decisionHandler = &handlerImpl{
 		versionChecker: client.NewVersionChecker(),
 		metricsClient:  metrics.NewClient(tally.NoopScope, metrics.History),
 		config:         config.NewForTest(),

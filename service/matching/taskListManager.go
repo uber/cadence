@@ -174,8 +174,9 @@ func newTaskListManager(
 	} else {
 		taskListTypeMetricScope = tlMgr.metricScope().Tagged(taskListDecisionTypeTag)
 	}
-	tlMgr.pollerHistory = newPollerHistory(func(state *cache.UpdatedState) {
-		taskListTypeMetricScope.UpdateGauge(metrics.PollerPerTaskListCounter, float64(state.NewSize))
+	tlMgr.pollerHistory = newPollerHistory(func() {
+		taskListTypeMetricScope.UpdateGauge(metrics.PollerPerTaskListCounter,
+			float64(len(tlMgr.pollerHistory.getAllPollerInfo())))
 	})
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.taskReader = newTaskReader(tlMgr)
@@ -365,13 +366,13 @@ func (c *taskListManagerImpl) DescribeTaskList(includeTaskListStatus bool) *type
 
 	taskIDBlock := c.rangeIDToTaskIDBlock(c.db.RangeID())
 	response.TaskListStatus = &types.TaskListStatus{
-		ReadLevel:        common.Int64Ptr(c.taskAckManager.GetReadLevel()),
-		AckLevel:         common.Int64Ptr(c.taskAckManager.GetAckLevel()),
-		BacklogCountHint: common.Int64Ptr(c.taskAckManager.GetBacklogCount()),
-		RatePerSecond:    common.Float64Ptr(c.matcher.Rate()),
+		ReadLevel:        c.taskAckManager.GetReadLevel(),
+		AckLevel:         c.taskAckManager.GetAckLevel(),
+		BacklogCountHint: c.taskAckManager.GetBacklogCount(),
+		RatePerSecond:    c.matcher.Rate(),
 		TaskIDBlock: &types.TaskIDBlock{
-			StartID: common.Int64Ptr(taskIDBlock.start),
-			EndID:   common.Int64Ptr(taskIDBlock.end),
+			StartID: taskIDBlock.start,
+			EndID:   taskIDBlock.end,
 		},
 	}
 

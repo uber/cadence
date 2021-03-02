@@ -156,7 +156,7 @@ func (s *nDCIntegrationTestSuite) GetReplicationMessagesMock(
 
 		replicationMessage := &types.ReplicationMessages{
 			ReplicationTasks:       tasks,
-			LastRetrievedMessageID: &tasks[len(tasks)-1].SourceTaskID,
+			LastRetrievedMessageID: tasks[len(tasks)-1].SourceTaskID,
 			HasMore:                true,
 		}
 
@@ -1138,7 +1138,7 @@ func (s *nDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 			StartEventVersion: startEventVersion,
 			EndEventID:        endEventID,
 			EndEventVersion:   endEventVersion,
-			MaximumPageSize:   common.Int32Ptr(int32(pageSize)),
+			MaximumPageSize:   int32(pageSize),
 			NextPageToken:     token,
 		})
 	}
@@ -1634,7 +1634,7 @@ func (s *nDCIntegrationTestSuite) generateNewRunHistory(
 			},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(10),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
-			ContinuedExecutionRunID:             common.StringPtr(runID),
+			ContinuedExecutionRunID:             runID,
 			Initiator:                           types.ContinueAsNewInitiatorCronSchedule.Ptr(),
 			OriginalExecutionRunID:              runID,
 			Identity:                            "NDC-test",

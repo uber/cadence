@@ -99,9 +99,9 @@ func FromAdminDescribeWorkflowExecutionResponse(t *types.AdminDescribeWorkflowEx
 	}
 	return &admin.DescribeWorkflowExecutionResponse{
 		ShardId:                &t.ShardID,
-		HistoryAddr:            t.HistoryAddr,
-		MutableStateInCache:    t.MutableStateInCache,
-		MutableStateInDatabase: t.MutableStateInDatabase,
+		HistoryAddr:            &t.HistoryAddr,
+		MutableStateInCache:    &t.MutableStateInCache,
+		MutableStateInDatabase: &t.MutableStateInDatabase,
 	}
 }
 
@@ -112,9 +112,9 @@ func ToAdminDescribeWorkflowExecutionResponse(t *admin.DescribeWorkflowExecution
 	}
 	return &types.AdminDescribeWorkflowExecutionResponse{
 		ShardID:                t.GetShardId(),
-		HistoryAddr:            t.HistoryAddr,
-		MutableStateInCache:    t.MutableStateInCache,
-		MutableStateInDatabase: t.MutableStateInDatabase,
+		HistoryAddr:            t.GetHistoryAddr(),
+		MutableStateInCache:    t.GetMutableStateInCache(),
+		MutableStateInDatabase: t.GetMutableStateInDatabase(),
 	}
 }
 
@@ -130,7 +130,7 @@ func FromGetWorkflowExecutionRawHistoryV2Request(t *types.GetWorkflowExecutionRa
 		StartEventVersion: t.StartEventVersion,
 		EndEventId:        t.EndEventID,
 		EndEventVersion:   t.EndEventVersion,
-		MaximumPageSize:   t.MaximumPageSize,
+		MaximumPageSize:   &t.MaximumPageSize,
 		NextPageToken:     t.NextPageToken,
 	}
 }
@@ -147,7 +147,7 @@ func ToGetWorkflowExecutionRawHistoryV2Request(t *admin.GetWorkflowExecutionRawH
 		StartEventVersion: t.StartEventVersion,
 		EndEventID:        t.EndEventId,
 		EndEventVersion:   t.EndEventVersion,
-		MaximumPageSize:   t.MaximumPageSize,
+		MaximumPageSize:   t.GetMaximumPageSize(),
 		NextPageToken:     t.NextPageToken,
 	}
 }
@@ -182,7 +182,7 @@ func FromHostInfo(t *types.HostInfo) *admin.HostInfo {
 		return nil
 	}
 	return &admin.HostInfo{
-		Identity: t.Identity,
+		Identity: &t.Identity,
 	}
 }
 
@@ -192,7 +192,7 @@ func ToHostInfo(t *admin.HostInfo) *types.HostInfo {
 		return nil
 	}
 	return &types.HostInfo{
-		Identity: t.Identity,
+		Identity: t.GetIdentity(),
 	}
 }
 
@@ -229,7 +229,7 @@ func FromResendReplicationTasksRequest(t *types.ResendReplicationTasksRequest) *
 		DomainID:      &t.DomainID,
 		WorkflowID:    &t.WorkflowID,
 		RunID:         &t.RunID,
-		RemoteCluster: t.RemoteCluster,
+		RemoteCluster: &t.RemoteCluster,
 		StartEventID:  t.StartEventID,
 		StartVersion:  t.StartVersion,
 		EndEventID:    t.EndEventID,
@@ -246,7 +246,7 @@ func ToResendReplicationTasksRequest(t *admin.ResendReplicationTasksRequest) *ty
 		DomainID:      t.GetDomainID(),
 		WorkflowID:    t.GetWorkflowID(),
 		RunID:         t.GetRunID(),
-		RemoteCluster: t.RemoteCluster,
+		RemoteCluster: t.GetRemoteCluster(),
 		StartEventID:  t.StartEventID,
 		StartVersion:  t.StartVersion,
 		EndEventID:    t.EndEventID,
@@ -260,8 +260,8 @@ func FromRingInfo(t *types.RingInfo) *admin.RingInfo {
 		return nil
 	}
 	return &admin.RingInfo{
-		Role:        t.Role,
-		MemberCount: t.MemberCount,
+		Role:        &t.Role,
+		MemberCount: &t.MemberCount,
 		Members:     FromHostInfoArray(t.Members),
 	}
 }
@@ -272,8 +272,8 @@ func ToRingInfo(t *admin.RingInfo) *types.RingInfo {
 		return nil
 	}
 	return &types.RingInfo{
-		Role:        t.Role,
-		MemberCount: t.MemberCount,
+		Role:        t.GetRole(),
+		MemberCount: t.GetMemberCount(),
 		Members:     ToHostInfoArray(t.Members),
 	}
 }

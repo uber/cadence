@@ -1664,7 +1664,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 	// History event only has domainName so domainID has to be passed in explicitly to update the mutable state
 	var parentDomainID *string
 	if parentExecutionInfo != nil {
-		parentDomainID = parentExecutionInfo.DomainUUID
+		parentDomainID = &parentExecutionInfo.DomainUUID
 	}
 
 	event := e.hBuilder.AddWorkflowExecutionStartedEvent(req, previousExecutionInfo, firstRunID, execution.GetRunID())
@@ -1727,7 +1727,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(
 
 	var parentDomainID *string
 	if startRequest.ParentExecutionInfo != nil {
-		parentDomainID = startRequest.ParentExecutionInfo.DomainUUID
+		parentDomainID = &startRequest.ParentExecutionInfo.DomainUUID
 	}
 	if err := e.ReplicateWorkflowExecutionStartedEvent(
 		parentDomainID,
@@ -2150,7 +2150,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 
 	attributes := event.ActivityTaskScheduledEventAttributes
 	targetDomainID := e.executionInfo.DomainID
-	if attributes.Domain != nil {
+	if attributes.Domain != "" {
 		targetDomainEntry, err := e.shard.GetDomainCache().GetDomain(attributes.GetDomain())
 		if err != nil {
 			return nil, err
@@ -3298,13 +3298,13 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	var parentInfo *types.ParentExecutionInfo
 	if e.HasParentExecution() {
 		parentInfo = &types.ParentExecutionInfo{
-			DomainUUID: common.StringPtr(e.executionInfo.ParentDomainID),
-			Domain:     common.StringPtr(parentDomainName),
+			DomainUUID: e.executionInfo.ParentDomainID,
+			Domain:     parentDomainName,
 			Execution: &types.WorkflowExecution{
 				WorkflowID: e.executionInfo.ParentWorkflowID,
 				RunID:      e.executionInfo.ParentRunID,
 			},
-			InitiatedID: common.Int64Ptr(e.executionInfo.InitiatedID),
+			InitiatedID: e.executionInfo.InitiatedID,
 		}
 	}
 
