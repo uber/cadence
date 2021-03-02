@@ -574,12 +574,6 @@ func (d *handlerImpl) DeprecateDomain(
 	deprecateRequest *types.DeprecateDomainRequest,
 ) error {
 
-	clusterMetadata := d.clusterMetadata
-	// TODO remove the IsGlobalDomainEnabled check once cross DC is public
-	if clusterMetadata.IsGlobalDomainEnabled() && !clusterMetadata.IsMasterCluster() {
-		return errNotMasterCluster
-	}
-
 	// must get the metadata (notificationVersion) first
 	// this version can be regarded as the lock on the v2 domain table
 	// and since we do not know which table will return the domain afterwards
@@ -594,8 +588,19 @@ func (d *handlerImpl) DeprecateDomain(
 		return err
 	}
 
+	isGlobalDomain := getResponse.IsGlobalDomain
+	if isGlobalDomain && !d.clusterMetadata.IsMasterCluster() {
+		return errNotMasterCluster
+	}
 	getResponse.ConfigVersion = getResponse.ConfigVersion + 1
 	getResponse.Info.Status = persistence.DomainStatusDeprecated
+	lastUpdatedTime := time.Unix(0, getResponse.LastUpdatedTime)
+	now := d.timeSource.Now()
+	// Check the failover cool down time
+	if lastUpdatedTime.Add(d.config.FailoverCoolDown(getResponse.Info.Name)).After(now) {
+		return errFailoverTooFrequent
+	}
+	lastUpdatedTime = now
 	updateReq := &persistence.UpdateDomainRequest{
 		Info:                        getResponse.Info,
 		Config:                      getResponse.Config,
@@ -603,12 +608,36 @@ func (d *handlerImpl) DeprecateDomain(
 		ConfigVersion:               getResponse.ConfigVersion,
 		FailoverVersion:             getResponse.FailoverVersion,
 		FailoverNotificationVersion: getResponse.FailoverNotificationVersion,
+		FailoverEndTime:             getResponse.FailoverEndTime,
+		PreviousFailoverVersion:     getResponse.PreviousFailoverVersion,
+		LastUpdatedTime:             lastUpdatedTime.UnixNano(),
 		NotificationVersion:         notificationVersion,
 	}
 	err = d.metadataMgr.UpdateDomain(ctx, updateReq)
 	if err != nil {
 		return err
 	}
+
+	if isGlobalDomain {
+		if err := d.domainReplicator.HandleTransmissionTask(
+			ctx,
+			types.DomainOperationUpdate,
+			getResponse.Info,
+			getResponse.Config,
+			getResponse.ReplicationConfig,
+			getResponse.ConfigVersion,
+			getResponse.FailoverVersion,
+			getResponse.PreviousFailoverVersion,
+			isGlobalDomain,
+		); err != nil {
+			return err
+		}
+	}
+
+	d.logger.Info("DeprecateDomain domain succeeded",
+		tag.WorkflowDomainName(getResponse.Info.Name),
+		tag.WorkflowDomainID(getResponse.Info.ID),
+	)
 	return nil
 }
 

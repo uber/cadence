@@ -461,6 +461,79 @@ func (s *domainHandlerGlobalDomainDisabledSuite) TestUpdateGetDomain_AllAttrSet(
 	)
 }
 
+func (s *domainHandlerGlobalDomainDisabledSuite) TestDeprecateGetDomain() {
+	domainName := s.getRandomDomainName()
+	description := "some random description"
+	email := "some random email"
+	retention := int32(7)
+	emitMetric := true
+	data := map[string]string{"some random key": "some random value"}
+	var clusters []*types.ClusterReplicationConfiguration
+	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+		clusters = append(clusters, &types.ClusterReplicationConfiguration{
+			ClusterName: replicationConfig.ClusterName,
+		})
+	}
+
+	err := s.handler.RegisterDomain(context.Background(), &types.RegisterDomainRequest{
+		Name:                                   domainName,
+		Description:                            description,
+		OwnerEmail:                             email,
+		WorkflowExecutionRetentionPeriodInDays: retention,
+		EmitMetric:                             common.BoolPtr(emitMetric),
+		Clusters:                               clusters,
+		ActiveClusterName:                      s.ClusterMetadata.GetCurrentClusterName(),
+		Data:                                   data,
+	})
+	s.Nil(err)
+
+	fnTest := func(info *types.DomainInfo, config *types.DomainConfiguration,
+		replicationConfig *types.DomainReplicationConfiguration, isGlobalDomain bool, failoverVersion int64) {
+		s.NotEmpty(info.GetUUID())
+		info.UUID = ""
+		s.Equal(&types.DomainInfo{
+			Name:        domainName,
+			Status:      types.DomainStatusDeprecated.Ptr(),
+			Description: description,
+			OwnerEmail:  email,
+			Data:        data,
+			UUID:        "",
+		}, info)
+		s.Equal(&types.DomainConfiguration{
+			WorkflowExecutionRetentionPeriodInDays: retention,
+			EmitMetric:                             emitMetric,
+			HistoryArchivalStatus:                  types.ArchivalStatusDisabled.Ptr(),
+			HistoryArchivalURI:                     "",
+			VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
+			VisibilityArchivalURI:                  "",
+			BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+		}, config)
+		s.Equal(&types.DomainReplicationConfiguration{
+			ActiveClusterName: s.ClusterMetadata.GetCurrentClusterName(),
+			Clusters:          clusters,
+		}, replicationConfig)
+		s.Equal(common.EmptyVersion, failoverVersion)
+		s.False(isGlobalDomain)
+	}
+
+	err = s.handler.DeprecateDomain(context.Background(), &types.DeprecateDomainRequest{
+		Name: domainName,
+	})
+	s.Nil(err)
+
+	getResp, err := s.handler.DescribeDomain(context.Background(), &types.DescribeDomainRequest{
+		Name: common.StringPtr(domainName),
+	})
+	s.Nil(err)
+	fnTest(
+		getResp.DomainInfo,
+		getResp.Configuration,
+		getResp.ReplicationConfiguration,
+		getResp.GetIsGlobalDomain(),
+		getResp.GetFailoverVersion(),
+	)
+}
+
 func (s *domainHandlerGlobalDomainDisabledSuite) getRandomDomainName() string {
 	return "domain" + uuid.New()
 }
