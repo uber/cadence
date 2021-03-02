@@ -29,7 +29,7 @@ import (
 // DefaultHistogramBuckets is the default histogram buckets used when
 // creating a new Histogram in the prometheus registry.
 // Cadence uses Histogram to report both latency and non-latency metrics(like history_count/history_size).
-// The buckets need to set correct boundary for both.
+// The buckets need to set correct boundary for both
 // See more in https://github.com/uber/cadence/issues/4006
 func DefaultHistogramBuckets() []prometheus.HistogramObjective {
 
