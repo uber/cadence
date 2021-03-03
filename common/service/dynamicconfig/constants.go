@@ -80,6 +80,7 @@ var keys = map[Key]string{
 	EnableBatcher:                       "worker.enableBatcher",
 	EnableParentClosePolicyWorker:       "system.enableParentClosePolicyWorker",
 	EnableFailoverManager:               "system.enableFailoverManager",
+	EnableWorkflowShadower:              "system.enableWorkflowShadower",
 	EnableStickyQuery:                   "system.enableStickyQuery",
 	EnableDebugMode:                     "system.enableDebugMode",
 
@@ -891,6 +892,8 @@ const (
 	EnableStickyQuery
 	// EnableFailoverManager indicates if failover manager is enabled
 	EnableFailoverManager
+	// EnableWorkflowShadower indicates if workflow shadower is enabled
+	EnableWorkflowShadower
 
 	//ReplicationTaskFetcherParallelism determines how many go routines we spin up for fetching tasks
 	ReplicationTaskFetcherParallelism
