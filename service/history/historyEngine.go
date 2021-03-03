@@ -25,7 +25,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -51,6 +50,7 @@ import (
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
+	"github.com/uber/cadence/service/history/decision"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/execution"
@@ -67,12 +67,10 @@ import (
 )
 
 const (
-	activityCancellationMsgActivityIDUnknown  = "ACTIVITY_ID_UNKNOWN"
-	activityCancellationMsgActivityNotStarted = "ACTIVITY_ID_NOT_STARTED"
-	defaultQueryFirstDecisionTaskWaitTime     = time.Second
-	queryFirstDecisionTaskCheckInterval       = 200 * time.Millisecond
-	replicationTimeout                        = 30 * time.Second
-	contextLockTimeout                        = 500 * time.Millisecond
+	defaultQueryFirstDecisionTaskWaitTime = time.Second
+	queryFirstDecisionTaskCheckInterval   = 200 * time.Millisecond
+	replicationTimeout                    = 30 * time.Second
+	contextLockTimeout                    = 500 * time.Millisecond
 
 	// TerminateIfRunningReason reason for terminateIfRunning
 	TerminateIfRunningReason = "TerminateIfRunning Policy"
@@ -85,7 +83,7 @@ type (
 		currentClusterName        string
 		shard                     shard.Context
 		timeSource                clock.TimeSource
-		decisionHandler           DecisionHandler
+		decisionHandler           decision.Handler
 		clusterMetadata           cluster.Metadata
 		historyV2Mgr              persistence.HistoryManager
 		executionManager          persistence.ExecutionManager
@@ -119,36 +117,6 @@ type (
 var _ engine.Engine = (*historyEngineImpl)(nil)
 
 var (
-	// ErrDuplicate is exported temporarily for integration test
-	ErrDuplicate = errors.New("duplicate task, completing it")
-
-	// ErrActivityTaskNotFound is the error to indicate activity task could be duplicate and activity already completed
-	ErrActivityTaskNotFound = &types.EntityNotExistsError{Message: "activity task not found"}
-	// ErrWorkflowCompleted is the error to indicate workflow execution already completed
-	ErrWorkflowCompleted = &types.EntityNotExistsError{Message: "workflow execution already completed"}
-	// ErrWorkflowParent is the error to parent execution is given and mismatch
-	ErrWorkflowParent = &types.EntityNotExistsError{Message: "workflow parent does not match"}
-	// ErrDeserializingToken is the error to indicate task token is invalid
-	ErrDeserializingToken = &types.BadRequestError{Message: "error deserializing task token"}
-	// ErrSerializingToken is the error to indicate task token can not be serialized
-	ErrSerializingToken = &types.BadRequestError{Message: "error serializing task token"}
-	// ErrSignalOverSize is the error to indicate signal input size is > 256K
-	ErrSignalOverSize = &types.BadRequestError{Message: "signal input size is over 256K"}
-	// ErrCancellationAlreadyRequested is the error indicating cancellation for target workflow is already requested
-	ErrCancellationAlreadyRequested = &types.CancellationAlreadyRequestedError{Message: "cancellation already requested for this workflow execution"}
-	// ErrSignalsLimitExceeded is the error indicating limit reached for maximum number of signal events
-	ErrSignalsLimitExceeded = &types.LimitExceededError{Message: "exceeded workflow execution limit for signal events"}
-	// ErrQueryEnteredInvalidState is error indicating query entered invalid state
-	ErrQueryEnteredInvalidState = &types.BadRequestError{Message: "query entered invalid state, this should be impossible"}
-	// ErrQueryWorkflowBeforeFirstDecision is error indicating that query was attempted before first decision task completed
-	ErrQueryWorkflowBeforeFirstDecision = &types.QueryFailedError{Message: "workflow must handle at least one decision task before it can be queried"}
-	// ErrConsistentQueryNotEnabled is error indicating that consistent query was requested but either cluster or domain does not enable consistent query
-	ErrConsistentQueryNotEnabled = &types.BadRequestError{Message: "cluster or domain does not enable strongly consistent query but strongly consistent query was requested"}
-	// ErrConsistentQueryBufferExceeded is error indicating that too many consistent queries have been buffered and until buffered queries are finished new consistent queries cannot be buffered
-	ErrConsistentQueryBufferExceeded = &types.InternalServiceError{Message: "consistent query buffer is full, cannot accept new consistent queries"}
-	// ErrConcurrentStartRequest is error indicating there is an outstanding start workflow request. The incoming request fails to acquires the lock before the outstanding request finishes.
-	ErrConcurrentStartRequest = &types.ServiceBusyError{Message: "an outstanding start workflow request is in-progress. Failed to acquire the resource."}
-
 	// FailedWorkflowCloseState is a set of failed workflow close states, used for start workflow policy
 	// for start workflow execution API
 	FailedWorkflowCloseState = map[int]bool{
@@ -219,7 +187,7 @@ func NewEngineWithShardContext(
 			executionCache,
 		),
 	}
-	historyEngImpl.decisionHandler = NewDecisionHandler(
+	historyEngImpl.decisionHandler = decision.NewHandler(
 		shard,
 		historyEngImpl.executionCache,
 		historyEngImpl.tokenSerializer,
@@ -587,7 +555,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {
-			return nil, ErrConcurrentStartRequest
+			return nil, workflow.ErrConcurrentStartRequest
 		}
 		return nil, err
 	}
@@ -769,7 +737,7 @@ func (e *historyEngineImpl) terminateAndStartWorkflow(
 UpdateWorkflowLoop:
 	for attempt := 0; attempt < workflow.ConditionalRetryCount; attempt++ {
 		if !runningMutableState.IsWorkflowExecutionRunning() {
-			return nil, ErrWorkflowCompleted
+			return nil, workflow.ErrAlreadyCompleted
 		}
 
 		if err := execution.TerminateWorkflow(
@@ -1045,7 +1013,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 
 	consistentQueryEnabled := e.config.EnableConsistentQuery() && e.config.EnableConsistentQueryByDomain(request.GetRequest().GetDomain())
 	if request.GetRequest().GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong && !consistentQueryEnabled {
-		return nil, ErrConsistentQueryNotEnabled
+		return nil, workflow.ErrConsistentQueryNotEnabled
 	}
 
 	execution := *request.GetRequest().GetExecution()
@@ -1091,7 +1059,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 
 	if mutableStateResp.GetPreviousStartedEventID() <= 0 {
 		scope.IncCounter(metrics.QueryBeforeFirstDecisionCount)
-		return nil, ErrQueryWorkflowBeforeFirstDecision
+		return nil, workflow.ErrQueryWorkflowBeforeFirstDecision
 	}
 
 	de, err := e.shard.GetDomainCache().GetDomainByID(request.GetDomainUUID())
@@ -1141,7 +1109,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 	queryReg := mutableState.GetQueryRegistry()
 	if len(queryReg.GetBufferedIDs()) >= e.config.MaxBufferedQueryCount() {
 		scope.IncCounter(metrics.QueryBufferExceededCount)
-		return nil, ErrConsistentQueryBufferExceeded
+		return nil, workflow.ErrConsistentQueryBufferExceeded
 	}
 	queryID, termCh := queryReg.BufferQuery(req.GetQuery())
 	defer queryReg.RemoveQuery(queryID)
@@ -1167,7 +1135,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 				return nil, &types.QueryFailedError{Message: result.GetErrorMessage()}
 			default:
 				scope.IncCounter(metrics.QueryRegistryInvalidStateCount)
-				return nil, ErrQueryEnteredInvalidState
+				return nil, workflow.ErrQueryEnteredInvalidState
 			}
 		case query.TerminationTypeUnblocked:
 			msResp, err := e.getMutableState(ctx, request.GetDomainUUID(), execution)
@@ -1180,7 +1148,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 			return nil, state.Failure
 		default:
 			scope.IncCounter(metrics.QueryRegistryInvalidStateCount)
-			return nil, ErrQueryEnteredInvalidState
+			return nil, workflow.ErrQueryEnteredInvalidState
 		}
 	case <-ctx.Done():
 		scope.IncCounter(metrics.ConsistentQueryTimeoutCount)
@@ -1256,7 +1224,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 			})
 			clearStickinessStopWatch.Stop()
 			cancel()
-			if err != nil && err != ErrWorkflowCompleted {
+			if err != nil && err != workflow.ErrAlreadyCompleted {
 				return nil, err
 			}
 			scope.IncCounter(metrics.DirectQueryDispatchClearStickinessSuccessCount)
@@ -1429,7 +1397,7 @@ func (e *historyEngineImpl) ResetStickyTaskList(
 	err := workflow.UpdateWithAction(ctx, e.executionCache, domainID, *resetRequest.Execution, false, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return ErrWorkflowCompleted
+				return workflow.ErrAlreadyCompleted
 			}
 			mutableState.ClearStickyness()
 			return nil
@@ -1619,7 +1587,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 	err = workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, false, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return ErrWorkflowCompleted
+				return workflow.ErrAlreadyCompleted
 			}
 
 			scheduleID := request.GetScheduleID()
@@ -1646,7 +1614,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 				// Looks like ActivityTask already completed as a result of another call.
 				// It is OK to drop the task at this point.
 				e.logger.Debug("Potentially duplicate task.", tag.TaskID(request.GetTaskID()), tag.WorkflowScheduleID(scheduleID), tag.TaskType(persistence.TransferTaskTypeActivityTask))
-				return ErrActivityTaskNotFound
+				return workflow.ErrActivityTaskNotFound
 			}
 
 			scheduledEvent, err := mutableState.GetActivityScheduledEvent(ctx, scheduleID)
@@ -1741,7 +1709,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 	request := req.CompleteRequest
 	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
 	if err0 != nil {
-		return ErrDeserializingToken
+		return workflow.ErrDeserializingToken
 	}
 
 	workflowExecution := types.WorkflowExecution{
@@ -1754,7 +1722,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 	err = workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, true, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return ErrWorkflowCompleted
+				return workflow.ErrAlreadyCompleted
 			}
 
 			scheduleID := token.ScheduleID
@@ -1782,7 +1750,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 
 			if !isRunning || ai.StartedID == common.EmptyEventID ||
 				(token.ScheduleID != common.EmptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
-				return ErrActivityTaskNotFound
+				return workflow.ErrActivityTaskNotFound
 			}
 
 			if _, err := mutableState.AddActivityTaskCompletedEvent(scheduleID, ai.StartedID, request); err != nil {
@@ -1822,7 +1790,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 	request := req.FailedRequest
 	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
 	if err0 != nil {
-		return ErrDeserializingToken
+		return workflow.ErrDeserializingToken
 	}
 
 	workflowExecution := types.WorkflowExecution{
@@ -1840,7 +1808,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 		e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, ErrWorkflowCompleted
+				return nil, workflow.ErrAlreadyCompleted
 			}
 
 			scheduleID := token.ScheduleID
@@ -1868,7 +1836,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 
 			if !isRunning || ai.StartedID == common.EmptyEventID ||
 				(token.ScheduleID != common.EmptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
-				return nil, ErrActivityTaskNotFound
+				return nil, workflow.ErrActivityTaskNotFound
 			}
 
 			postActions := &workflow.UpdateAction{}
@@ -1919,7 +1887,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 	request := req.CancelRequest
 	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
 	if err0 != nil {
-		return ErrDeserializingToken
+		return workflow.ErrDeserializingToken
 	}
 
 	workflowExecution := types.WorkflowExecution{
@@ -1932,7 +1900,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 	err = workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, true, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return ErrWorkflowCompleted
+				return workflow.ErrAlreadyCompleted
 			}
 
 			scheduleID := token.ScheduleID
@@ -1960,7 +1928,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 
 			if !isRunning || ai.StartedID == common.EmptyEventID ||
 				(token.ScheduleID != common.EmptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
-				return ErrActivityTaskNotFound
+				return workflow.ErrActivityTaskNotFound
 			}
 
 			if _, err := mutableState.AddActivityTaskCanceledEvent(
@@ -2008,7 +1976,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 	request := req.HeartbeatRequest
 	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
 	if err0 != nil {
-		return nil, ErrDeserializingToken
+		return nil, workflow.ErrDeserializingToken
 	}
 
 	workflowExecution := types.WorkflowExecution{
@@ -2021,7 +1989,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				e.logger.Debug("Heartbeat failed")
-				return ErrWorkflowCompleted
+				return workflow.ErrAlreadyCompleted
 			}
 
 			scheduleID := token.ScheduleID
@@ -2049,7 +2017,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 
 			if !isRunning || ai.StartedID == common.EmptyEventID ||
 				(token.ScheduleID != common.EmptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
-				return ErrActivityTaskNotFound
+				return workflow.ErrActivityTaskNotFound
 			}
 
 			cancelRequested = ai.CancelRequested
@@ -2093,7 +2061,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 	return workflow.UpdateCurrentWithActionFunc(ctx, e.executionCache, e.executionManager, domainID, workflowExecution, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, ErrWorkflowCompleted
+				return nil, workflow.ErrAlreadyCompleted
 			}
 
 			executionInfo := mutableState.GetExecutionInfo()
@@ -2102,7 +2070,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 				parentRunID := executionInfo.ParentRunID
 				if parentExecution.GetWorkflowID() != parentWorkflowID ||
 					parentExecution.GetRunID() != parentRunID {
-					return nil, ErrWorkflowParent
+					return nil, workflow.ErrParentMismatch
 				}
 			}
 
@@ -2114,7 +2082,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 				}
 				// if we consider workflow cancellation idempotent, then this error is redundant
 				// this error maybe useful if this API is invoked by external, not decision from transfer queue
-				return nil, ErrCancellationAlreadyRequested
+				return nil, workflow.ErrCancellationAlreadyRequested
 			}
 
 			if _, err := mutableState.AddWorkflowExecutionCancelRequestedEvent("", req); err != nil {
@@ -2163,7 +2131,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 			}
 
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, ErrWorkflowCompleted
+				return nil, workflow.ErrAlreadyCompleted
 			}
 
 			maxAllowedSignals := e.config.MaximumSignalsPerExecution(domainEntry.GetInfo().Name)
@@ -2172,7 +2140,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 					tag.WorkflowID(workflowExecution.GetWorkflowID()),
 					tag.WorkflowRunID(workflowExecution.GetRunID()),
 					tag.WorkflowDomainID(domainID))
-				return nil, ErrSignalsLimitExceeded
+				return nil, workflow.ErrSignalsLimitExceeded
 			}
 
 			if childWorkflowOnly {
@@ -2180,7 +2148,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 				parentRunID := executionInfo.ParentRunID
 				if parentExecution.GetWorkflowID() != parentWorkflowID ||
 					parentExecution.GetRunID() != parentRunID {
-					return nil, ErrWorkflowParent
+					return nil, workflow.ErrParentMismatch
 				}
 			}
 
@@ -2263,7 +2231,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 					tag.WorkflowID(workflowExecution.GetWorkflowID()),
 					tag.WorkflowRunID(workflowExecution.GetRunID()),
 					tag.WorkflowDomainID(domainID))
-				return nil, ErrSignalsLimitExceeded
+				return nil, workflow.ErrSignalsLimitExceeded
 			}
 
 			if _, err := mutableState.AddWorkflowExecutionSignaled(
@@ -2336,7 +2304,7 @@ func (e *historyEngineImpl) RemoveSignalMutableState(
 	return workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, false, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return ErrWorkflowCompleted
+				return workflow.ErrAlreadyCompleted
 			}
 
 			mutableState.DeleteSignalRequested(request.GetRequestID())
@@ -2371,7 +2339,7 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 		e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, ErrWorkflowCompleted
+				return nil, workflow.ErrAlreadyCompleted
 			}
 
 			eventBatchFirstEventID := mutableState.GetNextEventID()
@@ -2405,7 +2373,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 	return workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, true, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return ErrWorkflowCompleted
+				return workflow.ErrAlreadyCompleted
 			}
 
 			initiatedID := completionRequest.InitiatedID

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package decision
 
 import (
 	"testing"
@@ -41,14 +41,14 @@ import (
 )
 
 type (
-	decisionAttrValidatorSuite struct {
+	attrValidatorSuite struct {
 		suite.Suite
 		*require.Assertions
 
 		controller      *gomock.Controller
 		mockDomainCache *cache.MockDomainCache
 
-		validator *decisionAttrValidator
+		validator *attrValidator
 
 		testDomainID       string
 		testTargetDomainID string
@@ -57,21 +57,21 @@ type (
 	}
 )
 
-func TestDecisionAttrValidatorSuite(t *testing.T) {
-	s := new(decisionAttrValidatorSuite)
+func TestAttrValidatorSuite(t *testing.T) {
+	s := new(attrValidatorSuite)
 	suite.Run(t, s)
 }
 
-func (s *decisionAttrValidatorSuite) SetupSuite() {
+func (s *attrValidatorSuite) SetupSuite() {
 	s.testDomainID = "test domain ID"
 	s.testTargetDomainID = "test target domain ID"
 	s.testActivityMaxScheduleToStartTimeoutForRetryInSeconds = 1800
 }
 
-func (s *decisionAttrValidatorSuite) TearDownSuite() {
+func (s *attrValidatorSuite) TearDownSuite() {
 }
 
-func (s *decisionAttrValidatorSuite) SetupTest() {
+func (s *attrValidatorSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
@@ -86,18 +86,18 @@ func (s *decisionAttrValidatorSuite) SetupTest() {
 			time.Duration(s.testActivityMaxScheduleToStartTimeoutForRetryInSeconds) * time.Second,
 		),
 	}
-	s.validator = newDecisionAttrValidator(
+	s.validator = newAttrValidator(
 		s.mockDomainCache,
 		config,
 		log.NewNoop(),
 	)
 }
 
-func (s *decisionAttrValidatorSuite) TearDownTest() {
+func (s *attrValidatorSuite) TearDownTest() {
 	s.controller.Finish()
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateSignalExternalWorkflowExecutionAttributes() {
+func (s *attrValidatorSuite) TestValidateSignalExternalWorkflowExecutionAttributes() {
 	domainEntry := cache.NewLocalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: s.testDomainID},
 		nil,
@@ -142,7 +142,7 @@ func (s *decisionAttrValidatorSuite) TestValidateSignalExternalWorkflowExecution
 	s.NoError(err)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateUpsertWorkflowSearchAttributes() {
+func (s *attrValidatorSuite) TestValidateUpsertWorkflowSearchAttributes() {
 	domainName := "testDomain"
 	var attributes *types.UpsertWorkflowSearchAttributesDecisionAttributes
 
@@ -162,7 +162,7 @@ func (s *decisionAttrValidatorSuite) TestValidateUpsertWorkflowSearchAttributes(
 	s.Nil(err)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_LocalToLocal() {
+func (s *attrValidatorSuite) TestValidateCrossDomainCall_LocalToLocal() {
 	domainEntry := cache.NewLocalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: s.testDomainID},
 		nil,
@@ -183,7 +183,7 @@ func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_LocalToLocal() 
 	s.Nil(err)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_LocalToEffectiveLocal_SameCluster() {
+func (s *attrValidatorSuite) TestValidateCrossDomainCall_LocalToEffectiveLocal_SameCluster() {
 	domainEntry := cache.NewLocalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: s.testDomainID},
 		nil,
@@ -208,7 +208,7 @@ func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_LocalToEffectiv
 	s.Nil(err)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_LocalToEffectiveLocal_DiffCluster() {
+func (s *attrValidatorSuite) TestValidateCrossDomainCall_LocalToEffectiveLocal_DiffCluster() {
 	domainEntry := cache.NewLocalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: s.testDomainID},
 		nil,
@@ -233,7 +233,7 @@ func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_LocalToEffectiv
 	s.IsType(&types.BadRequestError{}, err)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_LocalToGlobal() {
+func (s *attrValidatorSuite) TestValidateCrossDomainCall_LocalToGlobal() {
 	domainEntry := cache.NewLocalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: s.testDomainID},
 		nil,
@@ -261,7 +261,7 @@ func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_LocalToGlobal()
 	s.IsType(&types.BadRequestError{}, err)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_EffectiveLocalToLocal_SameCluster() {
+func (s *attrValidatorSuite) TestValidateCrossDomainCall_EffectiveLocalToLocal_SameCluster() {
 	domainEntry := cache.NewGlobalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: s.testDomainID},
 		nil,
@@ -286,7 +286,7 @@ func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_EffectiveLocalT
 	s.Nil(err)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_EffectiveLocalToLocal_DiffCluster() {
+func (s *attrValidatorSuite) TestValidateCrossDomainCall_EffectiveLocalToLocal_DiffCluster() {
 	domainEntry := cache.NewGlobalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: s.testDomainID},
 		nil,
@@ -311,7 +311,7 @@ func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_EffectiveLocalT
 	s.IsType(&types.BadRequestError{}, err)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_EffectiveLocalToEffectiveLocal_SameCluster() {
+func (s *attrValidatorSuite) TestValidateCrossDomainCall_EffectiveLocalToEffectiveLocal_SameCluster() {
 	domainEntry := cache.NewGlobalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: s.testDomainID},
 		nil,
@@ -340,7 +340,7 @@ func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_EffectiveLocalT
 	s.Nil(err)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_EffectiveLocalToEffectiveLocal_DiffCluster() {
+func (s *attrValidatorSuite) TestValidateCrossDomainCall_EffectiveLocalToEffectiveLocal_DiffCluster() {
 	domainEntry := cache.NewGlobalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: s.testDomainID},
 		nil,
@@ -369,7 +369,7 @@ func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_EffectiveLocalT
 	s.IsType(&types.BadRequestError{}, err)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_EffectiveLocalToGlobal() {
+func (s *attrValidatorSuite) TestValidateCrossDomainCall_EffectiveLocalToGlobal() {
 	domainEntry := cache.NewGlobalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: s.testDomainID},
 		nil,
@@ -403,7 +403,7 @@ func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_EffectiveLocalT
 	s.IsType(&types.BadRequestError{}, err)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_GlobalToLocal() {
+func (s *attrValidatorSuite) TestValidateCrossDomainCall_GlobalToLocal() {
 	domainEntry := cache.NewGlobalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: s.testDomainID},
 		nil,
@@ -431,7 +431,7 @@ func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_GlobalToLocal()
 	s.IsType(&types.BadRequestError{}, err)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_GlobalToEffectiveLocal() {
+func (s *attrValidatorSuite) TestValidateCrossDomainCall_GlobalToEffectiveLocal() {
 	domainEntry := cache.NewGlobalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: s.testDomainID},
 		nil,
@@ -465,7 +465,7 @@ func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_GlobalToEffecti
 	s.IsType(&types.BadRequestError{}, err)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_GlobalToGlobal_DiffDomain() {
+func (s *attrValidatorSuite) TestValidateCrossDomainCall_GlobalToGlobal_DiffDomain() {
 	domainEntry := cache.NewGlobalDomainCacheEntryForTest(
 		&persistence.DomainInfo{Name: s.testDomainID},
 		nil,
@@ -500,14 +500,14 @@ func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_GlobalToGlobal_
 	s.IsType(&types.BadRequestError{}, err)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateCrossDomainCall_GlobalToGlobal_SameDomain() {
+func (s *attrValidatorSuite) TestValidateCrossDomainCall_GlobalToGlobal_SameDomain() {
 	targetDomainID := s.testDomainID
 
 	err := s.validator.validateCrossDomainCall(s.testDomainID, targetDomainID)
 	s.Nil(err)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateTaskListName() {
+func (s *attrValidatorSuite) TestValidateTaskListName() {
 	taskList := func(name string) *types.TaskList {
 		kind := types.TaskListKindNormal
 		return &types.TaskList{Name: name, Kind: &kind}
@@ -551,7 +551,7 @@ func (s *decisionAttrValidatorSuite) TestValidateTaskListName() {
 	}
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_NoRetryPolicy() {
+func (s *attrValidatorSuite) TestValidateActivityScheduleAttributes_NoRetryPolicy() {
 	wfTimeout := int32(5)
 	attributes := &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID: "some random activityID",
@@ -606,7 +606,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_NoRe
 	s.Equal(expectedAttributesAfterValidation, attributes)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_WithRetryPolicy_ScheduleToStartRetryable() {
+func (s *attrValidatorSuite) TestValidateActivityScheduleAttributes_WithRetryPolicy_ScheduleToStartRetryable() {
 	s.mockDomainCache.EXPECT().GetDomainName(s.testDomainID).Return("some random domain name", nil).Times(1)
 
 	wfTimeout := int32(3000)
@@ -670,7 +670,7 @@ func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_With
 	s.Equal(expectedAttributesAfterValidation, attributes)
 }
 
-func (s *decisionAttrValidatorSuite) TestValidateActivityScheduleAttributes_WithRetryPolicy_ScheduleToStartNonRetryable() {
+func (s *attrValidatorSuite) TestValidateActivityScheduleAttributes_WithRetryPolicy_ScheduleToStartNonRetryable() {
 	wfTimeout := int32(1000)
 	attributes := &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID: "some random activityID",

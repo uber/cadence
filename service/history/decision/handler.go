@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package decision
 
 import (
 	"context"
@@ -44,8 +44,8 @@ import (
 )
 
 type (
-	// DecisionHandler contains decision business logic
-	DecisionHandler interface {
+	// Handler contains decision business logic
+	Handler interface {
 		HandleDecisionTaskScheduled(context.Context, *types.ScheduleDecisionTaskRequest) error
 		HandleDecisionTaskStarted(context.Context,
 			*types.RecordDecisionTaskStartedRequest) (*types.RecordDecisionTaskStartedResponse, error)
@@ -56,30 +56,30 @@ type (
 		// TODO also include the handle of decision timeout here
 	}
 
-	decisionHandlerImpl struct {
-		config                *config.Config
-		shard                 shard.Context
-		timeSource            clock.TimeSource
-		domainCache           cache.DomainCache
-		executionCache        *execution.Cache
-		tokenSerializer       common.TaskTokenSerializer
-		metricsClient         metrics.Client
-		logger                log.Logger
-		throttledLogger       log.Logger
-		decisionAttrValidator *decisionAttrValidator
-		versionChecker        client.VersionChecker
+	handlerImpl struct {
+		config          *config.Config
+		shard           shard.Context
+		timeSource      clock.TimeSource
+		domainCache     cache.DomainCache
+		executionCache  *execution.Cache
+		tokenSerializer common.TaskTokenSerializer
+		metricsClient   metrics.Client
+		logger          log.Logger
+		throttledLogger log.Logger
+		attrValidator   *attrValidator
+		versionChecker  client.VersionChecker
 	}
 )
 
-// NewDecisionHandler creates a new DecisionHandler for handling decision business logic
-func NewDecisionHandler(
+// NewHandler creates a new Handler for handling decision business logic
+func NewHandler(
 	shard shard.Context,
 	executionCache *execution.Cache,
 	tokenSerializer common.TaskTokenSerializer,
-) DecisionHandler {
+) Handler {
 	config := shard.GetConfig()
 	logger := shard.GetLogger().WithTags(tag.ComponentDecisionHandler)
-	return &decisionHandlerImpl{
+	return &handlerImpl{
 		config:          config,
 		shard:           shard,
 		timeSource:      shard.GetTimeSource(),
@@ -89,7 +89,7 @@ func NewDecisionHandler(
 		metricsClient:   shard.GetMetricsClient(),
 		logger:          shard.GetLogger().WithTags(tag.ComponentDecisionHandler),
 		throttledLogger: shard.GetThrottledLogger().WithTags(tag.ComponentDecisionHandler),
-		decisionAttrValidator: newDecisionAttrValidator(
+		attrValidator: newAttrValidator(
 			shard.GetDomainCache(),
 			config,
 			logger,
@@ -98,7 +98,7 @@ func NewDecisionHandler(
 	}
 }
 
-func (handler *decisionHandlerImpl) HandleDecisionTaskScheduled(
+func (handler *handlerImpl) HandleDecisionTaskScheduled(
 	ctx context.Context,
 	req *types.ScheduleDecisionTaskRequest,
 ) error {
@@ -122,7 +122,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskScheduled(
 		handler.timeSource.Now(),
 		func(context execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, ErrWorkflowCompleted
+				return nil, workflow.ErrAlreadyCompleted
 			}
 
 			if mutableState.HasProcessedOrPendingDecision() {
@@ -146,7 +146,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskScheduled(
 	)
 }
 
-func (handler *decisionHandlerImpl) HandleDecisionTaskStarted(
+func (handler *handlerImpl) HandleDecisionTaskStarted(
 	ctx context.Context,
 	req *types.RecordDecisionTaskStartedRequest,
 ) (*types.RecordDecisionTaskStartedResponse, error) {
@@ -174,7 +174,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskStarted(
 		handler.timeSource.Now(),
 		func(context execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return nil, ErrWorkflowCompleted
+				return nil, workflow.ErrAlreadyCompleted
 			}
 
 			decision, isRunning := mutableState.GetDecisionInfo(scheduleID)
@@ -241,7 +241,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskStarted(
 	return resp, nil
 }
 
-func (handler *decisionHandlerImpl) HandleDecisionTaskFailed(
+func (handler *handlerImpl) HandleDecisionTaskFailed(
 	ctx context.Context,
 	req *types.HistoryRespondDecisionTaskFailedRequest,
 ) (retError error) {
@@ -255,7 +255,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskFailed(
 	request := req.FailedRequest
 	token, err := handler.tokenSerializer.Deserialize(request.TaskToken)
 	if err != nil {
-		return ErrDeserializingToken
+		return workflow.ErrDeserializingToken
 	}
 
 	workflowExecution := types.WorkflowExecution{
@@ -266,7 +266,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskFailed(
 	return workflow.UpdateWithAction(ctx, handler.executionCache, domainID, workflowExecution, true, handler.timeSource.Now(),
 		func(context execution.Context, mutableState execution.MutableState) error {
 			if !mutableState.IsWorkflowExecutionRunning() {
-				return ErrWorkflowCompleted
+				return workflow.ErrAlreadyCompleted
 			}
 
 			scheduleID := token.ScheduleID
@@ -281,7 +281,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskFailed(
 		})
 }
 
-func (handler *decisionHandlerImpl) HandleDecisionTaskCompleted(
+func (handler *handlerImpl) HandleDecisionTaskCompleted(
 	ctx context.Context,
 	req *types.HistoryRespondDecisionTaskCompletedRequest,
 ) (resp *types.HistoryRespondDecisionTaskCompletedResponse, retError error) {
@@ -295,7 +295,7 @@ func (handler *decisionHandlerImpl) HandleDecisionTaskCompleted(
 	request := req.CompleteRequest
 	token, err0 := handler.tokenSerializer.Deserialize(request.TaskToken)
 	if err0 != nil {
-		return nil, ErrDeserializingToken
+		return nil, workflow.ErrDeserializingToken
 	}
 
 	workflowExecution := types.WorkflowExecution{
@@ -321,7 +321,7 @@ Update_History_Loop:
 			return nil, err
 		}
 		if !msBuilder.IsWorkflowExecutionRunning() {
-			return nil, ErrWorkflowCompleted
+			return nil, workflow.ErrAlreadyCompleted
 		}
 		executionStats, err := wfContext.LoadExecutionStats(ctx)
 		if err != nil {
@@ -439,7 +439,7 @@ Update_History_Loop:
 				completedEvent.GetEventID(),
 				domainEntry,
 				msBuilder,
-				handler.decisionAttrValidator,
+				handler.attrValidator,
 				workflowSizeChecker,
 				handler.tokenSerializer,
 				handler.logger,
@@ -623,7 +623,7 @@ Update_History_Loop:
 	return nil, workflow.ErrMaxAttemptsExceeded
 }
 
-func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
+func (handler *handlerImpl) createRecordDecisionTaskStartedResponse(
 	domainID string,
 	msBuilder execution.MutableState,
 	decision *execution.DecisionInfo,
@@ -679,7 +679,7 @@ func (handler *decisionHandlerImpl) createRecordDecisionTaskStartedResponse(
 	return response, nil
 }
 
-func (handler *decisionHandlerImpl) handleBufferedQueries(
+func (handler *handlerImpl) handleBufferedQueries(
 	msBuilder execution.MutableState,
 	clientImpl string,
 	clientFeatureVersion string,
