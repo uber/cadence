@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package history
+package decision
 
 import (
 	"context"
@@ -35,12 +35,18 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/workflow"
+)
+
+const (
+	activityCancellationMsgActivityIDUnknown  = "ACTIVITY_ID_UNKNOWN"
+	activityCancellationMsgActivityNotStarted = "ACTIVITY_ID_NOT_STARTED"
 )
 
 type (
-	decisionAttrValidationFn func() error
+	attrValidationFn func() error
 
-	decisionTaskHandlerImpl struct {
+	taskHandlerImpl struct {
 		identity                string
 		decisionTaskCompletedID int64
 		domainEntry             *cache.DomainCacheEntry
@@ -56,7 +62,7 @@ type (
 		mutableState                      execution.MutableState
 
 		// validation
-		attrValidator    *decisionAttrValidator
+		attrValidator    *attrValidator
 		sizeLimitChecker *workflowSizeChecker
 
 		tokenSerializer common.TaskTokenSerializer
@@ -77,16 +83,16 @@ func newDecisionTaskHandler(
 	decisionTaskCompletedID int64,
 	domainEntry *cache.DomainCacheEntry,
 	mutableState execution.MutableState,
-	attrValidator *decisionAttrValidator,
+	attrValidator *attrValidator,
 	sizeLimitChecker *workflowSizeChecker,
 	tokenSerializer common.TaskTokenSerializer,
 	logger log.Logger,
 	domainCache cache.DomainCache,
 	metricsClient metrics.Client,
 	config *config.Config,
-) *decisionTaskHandlerImpl {
+) *taskHandlerImpl {
 
-	return &decisionTaskHandlerImpl{
+	return &taskHandlerImpl{
 		identity:                identity,
 		decisionTaskCompletedID: decisionTaskCompletedID,
 		domainEntry:             domainEntry,
@@ -114,7 +120,7 @@ func newDecisionTaskHandler(
 	}
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecisions(
+func (handler *taskHandlerImpl) handleDecisions(
 	ctx context.Context,
 	executionContext []byte,
 	decisions []*types.Decision,
@@ -141,7 +147,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisions(
 	return results, nil
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecisionWithResult(
+func (handler *taskHandlerImpl) handleDecisionWithResult(
 	ctx context.Context,
 	decision *types.Decision,
 ) (*decisionResult, error) {
@@ -153,7 +159,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionWithResult(
 	}
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecision(
+func (handler *taskHandlerImpl) handleDecision(
 	ctx context.Context,
 	decision *types.Decision,
 ) error {
@@ -200,7 +206,7 @@ func (handler *decisionTaskHandlerImpl) handleDecision(
 	}
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
+func (handler *taskHandlerImpl) handleDecisionScheduleActivity(
 	ctx context.Context,
 	attr *types.ScheduleActivityTaskDecisionAttributes,
 ) (*decisionResult, error) {
@@ -266,7 +272,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 			}
 			activityDispatchInfo.TaskToken, err = handler.tokenSerializer.Serialize(token)
 			if err != nil {
-				return nil, ErrSerializingToken
+				return nil, workflow.ErrSerializingToken
 			}
 			activityDispatchInfo.ScheduledTimestamp = common.Int64Ptr(ai.ScheduledTime.UnixNano())
 			activityDispatchInfo.ScheduledTimestampOfThisAttempt = common.Int64Ptr(ai.ScheduledTime.UnixNano())
@@ -283,7 +289,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionScheduleActivity(
 	}
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelActivity(
+func (handler *taskHandlerImpl) handleDecisionRequestCancelActivity(
 	ctx context.Context,
 	attr *types.RequestCancelActivityTaskDecisionAttributes,
 ) error {
@@ -338,7 +344,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelActivity(
 	}
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecisionStartTimer(
+func (handler *taskHandlerImpl) handleDecisionStartTimer(
 	ctx context.Context,
 	attr *types.StartTimerDecisionAttributes,
 ) error {
@@ -370,7 +376,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionStartTimer(
 	}
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecisionCompleteWorkflow(
+func (handler *taskHandlerImpl) handleDecisionCompleteWorkflow(
 	ctx context.Context,
 	attr *types.CompleteWorkflowExecutionDecisionAttributes,
 ) error {
@@ -448,7 +454,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionCompleteWorkflow(
 	)
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecisionFailWorkflow(
+func (handler *taskHandlerImpl) handleDecisionFailWorkflow(
 	ctx context.Context,
 	attr *types.FailWorkflowExecutionDecisionAttributes,
 ) error {
@@ -534,7 +540,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionFailWorkflow(
 	)
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecisionCancelTimer(
+func (handler *taskHandlerImpl) handleDecisionCancelTimer(
 	ctx context.Context,
 	attr *types.CancelTimerDecisionAttributes,
 ) error {
@@ -577,7 +583,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionCancelTimer(
 	}
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecisionCancelWorkflow(
+func (handler *taskHandlerImpl) handleDecisionCancelWorkflow(
 	ctx context.Context,
 	attr *types.CancelWorkflowExecutionDecisionAttributes,
 ) error {
@@ -616,7 +622,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionCancelWorkflow(
 	return err
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelExternalWorkflow(
+func (handler *taskHandlerImpl) handleDecisionRequestCancelExternalWorkflow(
 	ctx context.Context,
 	attr *types.RequestCancelExternalWorkflowExecutionDecisionAttributes,
 ) error {
@@ -659,7 +665,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionRequestCancelExternalWorkf
 	return err
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecisionRecordMarker(
+func (handler *taskHandlerImpl) handleDecisionRecordMarker(
 	ctx context.Context,
 	attr *types.RecordMarkerDecisionAttributes,
 ) error {
@@ -692,7 +698,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionRecordMarker(
 	return err
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecisionContinueAsNewWorkflow(
+func (handler *taskHandlerImpl) handleDecisionContinueAsNewWorkflow(
 	ctx context.Context,
 	attr *types.ContinueAsNewWorkflowExecutionDecisionAttributes,
 ) error {
@@ -769,7 +775,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionContinueAsNewWorkflow(
 	return nil
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecisionStartChildWorkflow(
+func (handler *taskHandlerImpl) handleDecisionStartChildWorkflow(
 	ctx context.Context,
 	attr *types.StartChildWorkflowExecutionDecisionAttributes,
 ) error {
@@ -838,7 +844,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionStartChildWorkflow(
 	return err
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecisionSignalExternalWorkflow(
+func (handler *taskHandlerImpl) handleDecisionSignalExternalWorkflow(
 	ctx context.Context,
 	attr *types.SignalExternalWorkflowExecutionDecisionAttributes,
 ) error {
@@ -891,7 +897,7 @@ func (handler *decisionTaskHandlerImpl) handleDecisionSignalExternalWorkflow(
 	return err
 }
 
-func (handler *decisionTaskHandlerImpl) handleDecisionUpsertWorkflowSearchAttributes(
+func (handler *taskHandlerImpl) handleDecisionUpsertWorkflowSearchAttributes(
 	ctx context.Context,
 	attr *types.UpsertWorkflowSearchAttributesDecisionAttributes,
 ) error {
@@ -951,7 +957,7 @@ func convertSearchAttributesToByteArray(fields map[string][]byte) []byte {
 	return result
 }
 
-func (handler *decisionTaskHandlerImpl) retryCronContinueAsNew(
+func (handler *taskHandlerImpl) retryCronContinueAsNew(
 	ctx context.Context,
 	attr *types.WorkflowExecutionStartedEventAttributes,
 	backoffInterval int32,
@@ -993,8 +999,8 @@ func (handler *decisionTaskHandlerImpl) retryCronContinueAsNew(
 	return nil
 }
 
-func (handler *decisionTaskHandlerImpl) validateDecisionAttr(
-	validationFn decisionAttrValidationFn,
+func (handler *taskHandlerImpl) validateDecisionAttr(
+	validationFn attrValidationFn,
 	failedCause types.DecisionTaskFailedCause,
 ) error {
 
@@ -1008,7 +1014,7 @@ func (handler *decisionTaskHandlerImpl) validateDecisionAttr(
 	return nil
 }
 
-func (handler *decisionTaskHandlerImpl) handlerFailDecision(
+func (handler *taskHandlerImpl) handlerFailDecision(
 	failedCause types.DecisionTaskFailedCause,
 	failMessage string,
 ) error {
