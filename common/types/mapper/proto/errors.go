@@ -31,12 +31,12 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func FromError(err error) *status.Status {
+func FromError(err error) error {
 	st, conversionErr := errorToStatus(err)
 	if conversionErr != nil {
-		return status.Newf(codes.Internal, "failed to convert error to proto status: %s", err.Error())
+		return conversionErr
 	}
-	return st
+	return st.Err()
 }
 
 func errorToStatus(err error) (*status.Status, error) {
@@ -109,7 +109,8 @@ func errorToStatus(err error) (*status.Status, error) {
 	return status.New(codes.Unknown, err.Error()), nil
 }
 
-func ToError(status *status.Status) error {
+func ToError(err error) error {
+	status := status.Convert(err)
 	if status == nil || status.Code() == codes.OK {
 		return nil
 	}
