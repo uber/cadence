@@ -12,7 +12,7 @@ persistence:
     {{- end }}
     datastores:
         {{- $db := default .Env.DB "cassandra" | lower -}}
-        {{- if eq $db "cassandra" }}
+        {{- if or (eq $db "cassandra") (eq $db "scylla") }}
         default:
             cassandra:
                 hosts: {{ default .Env.CASSANDRA_SEEDS "" }}
