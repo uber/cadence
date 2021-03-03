@@ -71,8 +71,7 @@ COMMA := ,
 
 PROJECT_ROOT = github.com/uber/cadence
 
-# override if not doing unit tests.  integration take on the order of 20m.
-TEST_TIMEOUT ?= 1m
+TEST_TIMEOUT ?= 20m
 TEST_ARG ?= -race $(if $(test_v),-v) -timeout $(TEST_TIMEOUT)
 
 # helper for executing bins that need other bins, just `$(BIN_PATH) the_command ...`
@@ -391,6 +390,52 @@ clean: ## Clean binaries and build folder
 #                untouched
 #
 # -------------------------------------------
+
+TOOLS_CMD_ROOT=./cmd/tools
+INTEG_TEST_ROOT=./host
+INTEG_TEST_DIR=host
+INTEG_TEST_XDC_ROOT=./host/xdc
+INTEG_TEST_XDC_DIR=hostxdc
+INTEG_TEST_NDC_ROOT=./host/ndc
+INTEG_TEST_NDC_DIR=hostndc
+
+# TODO to be consistent, use nosql as PERSISTENCE_TYPE and cassandra PERSISTENCE_PLUGIN
+# file names like integ_cassandra__cover should become integ_nosql_cassandra_cover
+# for https://github.com/uber/cadence/issues/3514
+PERSISTENCE_TYPE ?= cassandra
+TEST_RUN_COUNT ?= 1
+ifdef TEST_TAG
+override TEST_TAG := -tags $(TEST_TAG)
+endif
+
+# all directories with *_test.go files in them (exclude host/xdc)
+TEST_DIRS := $(filter-out $(INTEG_TEST_XDC_ROOT)%, $(sort $(dir $(filter %_test.go,$(ALL_SRC)))))
+# all tests other than end-to-end integration test fall into the pkg_test category
+PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
+
+# Code coverage output files
+COVER_ROOT                      := $(BUILD)/coverage
+UNIT_COVER_FILE                 := $(COVER_ROOT)/unit_cover.out
+
+INTEG_COVER_FILE                := $(COVER_ROOT)/integ_$(PERSISTENCE_TYPE)_$(PERSISTENCE_PLUGIN)_cover.out
+INTEG_COVER_FILE_CASS           := $(COVER_ROOT)/integ_cassandra__cover.out
+INTEG_COVER_FILE_MYSQL          := $(COVER_ROOT)/integ_sql_mysql_cover.out
+INTEG_COVER_FILE_POSTGRES       := $(COVER_ROOT)/integ_sql_postgres_cover.out
+
+INTEG_NDC_COVER_FILE            := $(COVER_ROOT)/integ_ndc_$(PERSISTENCE_TYPE)_$(PERSISTENCE_PLUGIN)_cover.out
+INTEG_NDC_COVER_FILE_CASS       := $(COVER_ROOT)/integ_ndc_cassandra__cover.out
+INTEG_NDC_COVER_FILE_MYSQL      := $(COVER_ROOT)/integ_ndc_sql_mysql_cover.out
+INTEG_NDC_COVER_FILE_POSTGRES   := $(COVER_ROOT)/integ_ndc_sql_postgres_cover.out
+
+# Need the following option to have integration tests
+# count towards coverage. godoc below:
+# -coverpkg pkg1,pkg2,pkg3
+#   Apply coverage analysis in each test to the given list of packages.
+#   The default is for each test to analyze only the package being tested.
+#   Packages are specified as import paths.
+COVER_PKGS = client common host service tools
+# pkg -> pkg/... -> github.com/uber/cadence/pkg/... -> join with commas
+GOCOVERPKG_ARG := -coverpkg="$(subst $(SPACE),$(COMMA),$(addprefix $(PROJECT_ROOT)/,$(addsuffix /...,$(COVER_PKGS))))"
 
 test: bins ## Build and run all tests
 	@rm -f test
