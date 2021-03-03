@@ -2,6 +2,59 @@
 MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
+.PHONY: git-submodules test bins clean cover cover_ci help
+default: help
+
+# ###########################################
+#                TL;DR DOCS:
+# ###########################################
+# - targets should never, EVER be *actual source files*.  always use bookkeeping files in $(BUILD).
+# - prerequisites should depend on those bookkeeping files, not source files that are prerequisites for those bookkeeping.  depend on .build/fmt, not $(ALL_SRC).
+# - be super. duper. strict. about order of operations.  no exceptions ever.
+# - if you must fake prerequisites (e.g. skipping codegen for release builds), touch the appropriate bookkeeping files and any of their nonexistent prerequisites, and then build.  the order you do this matters, so be careful.
+#
+# if you follow these rules strictly, things should be simple and correct.
+# for rationale, see [an architecture doc I have not yet written].
+
+
+# STUFF TO DO:
+# - gut all variables
+# - gut all targets, rewrite core ones
+# - explicitly-correct chains of dependencies
+# - make incorrect chains for buildkite, e.g. for proto gen, don't hax it
+# - --- THEN ---
+# - modernize tests, as it is conceptually different.
+
+# temporary build products and book-keeping targets that are always good to / safe to clean.
+BUILD := .build
+# less-than-temporary build products, e.g. tools.
+# usually unnecessary to clean, and may require downloads to restore, so this folder is not automatically cleaned.
+BIN := .bin
+
+# ====================================
+# book-keeping files that are used to control sequencing.
+# you MUST use these in most cases, not the source files themselves.
+# these are defined in roughly the reverse order that they are executed, for easier reading.
+#
+# recipes and any other prerequisites are defined only once, further below.
+# ====================================
+
+# all bins depend on: $(BUILD)/lint
+# tests and coverage are .PHONY and essentially rely only on $(BUILD)/fmt.
+# note that vars that do not yet exist are empty, so any prerequisites defined below are ineffective here.
+# stick to fully-defined names, as those work reliably
+$(BUILD)/lint: $(BUILD)/fmt # lint will fail if fmt fails, so fmt first
+$(BUILD)/proto-lint:
+$(BUILD)/fmt: $(BUILD)/copyright # formatting must occur only after all source file modifications are done
+$(BUILD)/copyright: $(BUILD)/codegen # must add copyright to generated code
+$(BUILD)/codegen: $(BUILD)/thrift $(BUILD)/protoc
+$(BUILD)/thrift:
+$(BUILD)/protoc:
+
+# =====================================
+# helper vars
+# =====================================
+
 # set a VERBOSE=1 env var for verbose output. VERBOSE=0 (or unset) disables.
 # this is used to make verbose flags, suitable for `$(if $(test_v),...)`.
 VERBOSE ?= 0
@@ -16,139 +69,21 @@ SPACE :=
 SPACE +=
 COMMA := ,
 
-.PHONY: git-submodules test bins clean cover cover_ci help
-default: help
-
 PROJECT_ROOT = github.com/uber/cadence
 
-GOOS ?= $(shell go env GOOS)
-GOARCH ?= $(shell go env GOARCH)
-
-TEST_TIMEOUT = 20m
+# override if not doing unit tests.  integration take on the order of 20m.
+TEST_TIMEOUT ?= 1m
 TEST_ARG ?= -race $(if $(test_v),-v) -timeout $(TEST_TIMEOUT)
-BUILD := .build
-BIN := $(BUILD)/bin
-TOOLS_CMD_ROOT=./cmd/tools
-INTEG_TEST_ROOT=./host
-INTEG_TEST_DIR=host
-INTEG_TEST_XDC_ROOT=./host/xdc
-INTEG_TEST_XDC_DIR=hostxdc
-INTEG_TEST_NDC_ROOT=./host/ndc
-INTEG_TEST_NDC_DIR=hostndc
 
 # helper for executing bins that need other bins, just `$(BIN_PATH) the_command ...`
 # I'd recommend not exporting this in general, to reduce the chance of accidentally using non-versioned tools.
 BIN_PATH := PATH="$(abspath $(BIN)):$$PATH"
 
-GO_BUILD_LDFLAGS_CMD      := $(abspath ./scripts/go-build-ldflags.sh)
-GO_BUILD_LDFLAGS          := $(shell $(GO_BUILD_LDFLAGS_CMD) LDFLAG)
+# version, git sha, etc flags.
+# reasonable to make a :=, but it's only used in one place, so just leave it lazy or do it inline.
+GO_BUILD_LDFLAGS = $(shell ./scripts/go-build-ldflags.sh LDFLAG)
 
-# TODO to be consistent, use nosql as PERSISTENCE_TYPE and cassandra PERSISTENCE_PLUGIN
-# file names like integ_cassandra__cover should become integ_nosql_cassandra_cover
-# for https://github.com/uber/cadence/issues/3514
-PERSISTENCE_TYPE ?= cassandra
-TEST_RUN_COUNT ?= 1
-ifdef TEST_TAG
-override TEST_TAG := -tags $(TEST_TAG)
-endif
-
-# downloads and builds a go-gettable tool, versioned by go.mod, and installs
-# it into the build folder, named the same as the last portion of the URL.
-define get_tool
-@echo "building $(notdir $(1)) from $(1)..."
-@go build -mod=readonly -o $(BIN)/$(notdir $(1)) $(1)
-endef
-
-$(BIN):
-	@mkdir -p $(BIN)
-
-$(BIN)/thriftrw: go.mod | $(BIN)
-	$(call get_tool,go.uber.org/thriftrw)
-
-$(BIN)/thriftrw-plugin-yarpc: go.mod | $(BIN)
-	$(call get_tool,go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc)
-
-$(BIN)/copyright: cmd/tools/copyright/licensegen.go | $(BIN)
-	go build -o $@ ./cmd/tools/copyright/licensegen.go
-
-$(BIN)/mockgen: go.mod | $(BIN)
-	$(call get_tool,github.com/golang/mock/mockgen)
-
-$(BIN)/enumer: go.mod | $(BIN)
-	$(call get_tool,github.com/dmarkham/enumer)
-
-$(BIN)/goimports: go.mod | $(BIN)
-	$(call get_tool,golang.org/x/tools/cmd/goimports)
-
-$(BIN)/revive: go.mod | $(BIN)
-	$(call get_tool,github.com/mgechev/revive)
-
-$(BIN)/protoc-gen-go: go.mod | $(BIN)
-	$(call get_tool,google.golang.org/protobuf/cmd/protoc-gen-go)
-
-$(BIN)/protoc-gen-go-grpc: go.mod | $(BIN)
-	$(call get_tool,google.golang.org/grpc/cmd/protoc-gen-go-grpc)
-
-$(BIN)/goveralls: go.mod | $(BIN)
-	$(call get_tool,github.com/mattn/goveralls)
-
-# https://docs.buf.build/
-BUF_VERSION = 0.36.0
-BUF_URL = https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-$(OS)-$(ARCH)
-$(BIN)/buf: | $(BIN)
-	@echo "Getting buf $(BUF_VERSION)"
-	curl -sSL $(BUF_URL) -o $(BIN)/buf
-	chmod +x $(BIN)/buf
-
-# https://www.grpc.io/docs/languages/go/quickstart/
-# protoc-gen-go(-grpc) are versioned via tools.go + go.mod (built above)
-PROTOC_VERSION = 3.14.0
-OS = $(shell uname -s)
-ARCH = $(shell uname -m)
-PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(subst Darwin,osx,$(OS))-$(ARCH).zip
-$(BIN)/protoc: | $(BIN)
-	@echo "Getting protoc $(PROTOC_VERSION)"
-	rm -rf $(BIN)/protoc.zip $(BIN)/protoc-zip
-	curl -sSL $(PROTOC_URL) -o $(BIN)/protoc.zip
-	unzip -q $(BIN)/protoc.zip -d $(BIN)/protoc-zip
-	cp $(BIN)/protoc-zip/bin/protoc $(BIN)/protoc
-
-# any generated file - they all depend on each other / are generated at once, so any will work
-PROTO_GEN_SRC = ./.gen/proto/admin/v1/service.pb.go
-
-THRIFT_GENDIR=.gen/go
-THRIFT_SRCS := $(shell find idls -name '*.thrift')
-# concrete targets to build / the "sentinel" go files that need to be produced per thrift file.
-# idls/thrift/thing.thrift -> thing.thrift -> thing -> ./.gen/go/thing/thing.go
-THRIFT_GEN_SRC := $(foreach tsrc,$(basename $(subst idls/thrift/,,$(THRIFT_SRCS))),./$(THRIFT_GENDIR)/$(tsrc)/$(tsrc).go)
-
-# this is a "false" dependency chain, but it convinces make that "need to make thriftrw(-plugin-yarpc)"
-# does not mean "need to update generated code" because there is no rule body for the thrift files, i.e.:
-#     No recipe for 'idls/thrift/admin.thrift' and no prerequisites actually changed.
-#     No need to remake target 'idls/thrift/admin.thrift'
-# therefore it does not cause a remake any of $(THRIFT_GEN_SRC).
-# note that this relies on thrift files having NO build rules whatsoever, including anywhere else.
-#
-# this is a little weird, but useful.  it means we download and build the tools in all cases, but do
-# not actually run the generators unless the generated files are missing (or older than their .thrift file).
-#
-# on its own, this would mean that changes to the binaries themselves (i.e. go.mod version changes)
-# would not trigger a re-generation pass.  that is corrected by making thrift-gen-srcs depend on go.mod.
-$(THRIFT_SRCS): $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc
-
-# how to generate each thrift file.
-# note that each generated file depends on ALL thrift files - this is necessary because they can import each other.
-$(THRIFT_GEN_SRC): $(THRIFT_SRCS) go.mod
-	@# .gen/go/thing/thing.go -> thing.go -> "thing " -> thing -> idls/thrift/thing.thrift
-	@echo 'thriftrw for idls/thrift/$(strip $(basename $(notdir $@))).thrift...'
-	@$(BIN_PATH) $(BIN)/thriftrw \
-		--plugin=yarpc \
-		--pkg-prefix=$(PROJECT_ROOT)/$(THRIFT_GENDIR) \
-		--out=$(THRIFT_GENDIR) \
-		--no-recurse \
-		idls/thrift/$(strip $(basename $(notdir $@))).thrift
-
-# automatically gather all srcs that currently exist.
+# automatically gather all source files that currently exist.
 # works by ignoring everything in the parens (and does not descend into matching folders) due to `-prune`,
 # and everything else goes to the other side of the `-o` branch, which is `-print`ed.
 # this is dramatically faster than a `find . | grep -v vendor` pipeline, and scales far better.
@@ -156,125 +91,295 @@ FRESH_ALL_SRC = $(shell \
 	find . \
 	\( \
 		-path './vendor/*' \
+		-o -path './.build/*' \
+		-o -path './.bin/*' \
 	\) \
 	-prune \
 	-o -name '*.go' -print \
 )
 # most things can use a cached copy, e.g. all dependencies.
 # this will not include any files that are created during a `make` run, e.g. via protoc,
-# but that doesn't always matter (e.g. dependencies are computed at parse time, so it
+# but that generally should not matter (e.g. dependencies are computed at parse time, so it
 # won't affect behavior either way - choose the fast option).
 #
-# if you require a fully up-to-date list, use FRESH_ALL_SRC instead.
+# if you require a fully up-to-date list, e.g. for shell commands, use FRESH_ALL_SRC instead.
 ALL_SRC := $(FRESH_ALL_SRC)
-
-# make sure sentinel thrift-generated + proto-generated files are in ALL_SRC, so they are (re)generated if necessary
-ALL_SRC += $(THRIFT_GEN_SRC)
-ALL_SRC += $(PROTO_GEN_SRC)
-ALL_SRC := $(sort $(ALL_SRC)) # dedup
+# as lint ignores generated code, it can use the cached copy in all cases
 LINT_SRC := $(filter-out %_test.go ./.gen/%, $(ALL_SRC))
-# all directories with *_test.go files in them (exclude host/xdc)
-TEST_DIRS := $(filter-out $(INTEG_TEST_XDC_ROOT)%, $(sort $(dir $(filter %_test.go,$(ALL_SRC)))))
-# all tests other than end-to-end integration test fall into the pkg_test category
-PKG_TEST_DIRS := $(filter-out $(INTEG_TEST_ROOT)%,$(TEST_DIRS))
 
-# Code coverage output files
-COVER_ROOT                      := $(BUILD)/coverage
-UNIT_COVER_FILE                 := $(COVER_ROOT)/unit_cover.out
+# =====================================
+# $(BIN) targets
+# =====================================
 
-INTEG_COVER_FILE                := $(COVER_ROOT)/integ_$(PERSISTENCE_TYPE)_$(PERSISTENCE_PLUGIN)_cover.out
-INTEG_COVER_FILE_CASS           := $(COVER_ROOT)/integ_cassandra__cover.out
-INTEG_COVER_FILE_MYSQL          := $(COVER_ROOT)/integ_sql_mysql_cover.out
-INTEG_COVER_FILE_POSTGRES       := $(COVER_ROOT)/integ_sql_postgres_cover.out
+# downloads and builds a go-gettable tool, versioned by go.mod, and installs
+# it into the build folder, named the same as the last portion of the URL.
+define go_build_tool
+@echo "building $(notdir $(1)) from $(1)..."
+@go build -mod=readonly -o $(BIN)/$(notdir $(1)) $(1)
+endef
 
-INTEG_NDC_COVER_FILE            := $(COVER_ROOT)/integ_ndc_$(PERSISTENCE_TYPE)_$(PERSISTENCE_PLUGIN)_cover.out
-INTEG_NDC_COVER_FILE_CASS       := $(COVER_ROOT)/integ_ndc_cassandra__cover.out
-INTEG_NDC_COVER_FILE_MYSQL      := $(COVER_ROOT)/integ_ndc_sql_mysql_cover.out
-INTEG_NDC_COVER_FILE_POSTGRES   := $(COVER_ROOT)/integ_ndc_sql_postgres_cover.out
+# utility target.
+# use as an order-only prerequisite for targets that do not implicitly create these folders.
+$(BIN) $(BUILD):
+	@mkdir -p $@
 
-# Need the following option to have integration tests
-# count towards coverage. godoc below:
-# -coverpkg pkg1,pkg2,pkg3
-#   Apply coverage analysis in each test to the given list of packages.
-#   The default is for each test to analyze only the package being tested.
-#   Packages are specified as import paths.
-COVER_PKGS = client common host service tools
-# pkg -> pkg/... -> github.com/uber/cadence/pkg/... -> join with commas
-GOCOVERPKG_ARG := -coverpkg="$(subst $(SPACE),$(COMMA),$(addprefix $(PROJECT_ROOT)/,$(addsuffix /...,$(COVER_PKGS))))"
+$(BIN)/thriftrw: go.mod
+	$(call go_build_tool,go.uber.org/thriftrw)
 
-git-submodules:
-	git submodule update --init --recursive
+$(BIN)/thriftrw-plugin-yarpc: go.mod
+	$(call go_build_tool,go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc)
 
-thriftc: $(THRIFT_GEN_SRC) copyright ## rebuild thrift-generated source files
+$(BIN)/mockgen: go.mod
+	$(call go_build_tool,github.com/golang/mock/mockgen)
 
-proto: proto-lint proto-compile fmt copyright
+$(BIN)/enumer: go.mod
+	$(call go_build_tool,github.com/dmarkham/enumer)
+
+$(BIN)/goimports: go.mod
+	$(call go_build_tool,golang.org/x/tools/cmd/goimports)
+
+$(BIN)/revive: go.mod
+	$(call go_build_tool,github.com/mgechev/revive)
+
+$(BIN)/protoc-gen-go: go.mod
+	$(call go_build_tool,google.golang.org/protobuf/cmd/protoc-gen-go)
+
+$(BIN)/protoc-gen-go-grpc: go.mod
+	$(call go_build_tool,google.golang.org/grpc/cmd/protoc-gen-go-grpc)
+
+$(BIN)/goveralls: go.mod
+	$(call go_build_tool,github.com/mattn/goveralls)
+
+# copyright header checker/writer.  only requires stdlib, so no other dependencies are needed.
+$(BIN)/copyright: cmd/tools/copyright/licensegen.go
+	go build -o $@ ./cmd/tools/copyright/licensegen.go
+
+# https://docs.buf.build/
+# changing BUF_VERSION will automatically download and use the specified version.
+BUF_VERSION = 0.36.0
+OS = $(shell uname -s)
+ARCH = $(shell uname -m)
+BUF_URL = https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-$(OS)-$(ARCH)
+# use BUF_VERSION_BIN as a prerequisite, not "buf", so the correct version will be used.
+# otherwise this must be a .PHONY rule, or the buf bin / symlink could become out of date.
+BUF_VERSION_BIN = buf-$(BUF_VERSION)
+$(BIN)/$(BUF_VERSION_BIN): | $(BIN)
+	@echo "Getting buf $(BUF_VERSION)"
+	curl -sSL $(BUF_URL) -o $@
+	chmod +x $@
+
+# https://www.grpc.io/docs/languages/go/quickstart/
+# protoc-gen-go(-grpc) are versioned via tools.go + go.mod (built above)
+PROTOC_VERSION = 3.14.0
+PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(subst Darwin,osx,$(OS))-$(ARCH).zip
+# the zip contains an /include folder that we need to use to learn the well-known types
+PROTOC_UNZIP_DIR = $(BIN)/protoc-zip
+$(BIN)/protoc: | $(BIN)
+	@echo "Getting protoc $(PROTOC_VERSION)"
+	@# recover from partial success
+	rm -rf $(BIN)/protoc.zip $(PROTOC_UNZIP_DIR)
+	@# download, unzip, copy to a normal location
+	curl -sSL $(PROTOC_URL) -o $(BIN)/protoc.zip
+	unzip -q $(BIN)/protoc.zip -d $(PROTOC_UNZIP_DIR)
+	cp $(PROTOC_UNZIP_DIR)/bin/protoc $(BIN)/protoc
+
+# =============================
+# Codegen targets
+# =============================
+
+# codegen is done when thrift and protoc are done
+$(BUILD)/codegen: $(BUILD)/thrift $(BUILD)/protoc | $(BUILD)
+	touch $@
+
+THRIFT_SRCS := $(shell find idls -name '*.thrift')
+# book-keeping targets to build.  one per thrift file.
+# idls/thrift/thing.thrift -> .build/thing.thrift
+THRIFT_GEN := $(subst idls/thrift/,.build/,$(THRIFT_SRCS))
+
+# thrift is done when all sub-thrifts are done
+$(BUILD)/thrift: $(THRIFT_GEN) | $(BUILD)
+	@touch $@
+
+# how to generate each thrift book-keeping file.
+# this does NOT use the generated file as a target, as that would make behavior dependent on e.g. git file modification times.
+#
+# as --no-recurse is specified, these can be done in parallel, since output files will not overwrite each other.
+# note that each generated file depends on ALL thrift files - this is necessary because they can import each other.
+$(THRIFT_GEN): $(THRIFT_SRCS) $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc | $(BUILD)
+	@# .gen/go/thing/thing.go -> thing.go -> "thing " -> thing -> idls/thrift/thing.thrift
+	@echo 'thriftrw for $(subst .build/,idls/thrift/,$@)...'
+	@$(BIN_PATH) $(BIN)/thriftrw \
+		--plugin=yarpc \
+		--pkg-prefix=$(PROJECT_ROOT)/.gen/go \
+		--out=.gen/go \
+		--no-recurse \
+		$(subst .build/,idls/thrift/,$@)
+	@touch $@
+
 
 PROTO_ROOT := proto
+# output location is defined by `option go_package` in the proto files, all must stay in sync with this
 PROTO_OUT := .gen/proto
 PROTO_FILES = $(shell find ./$(PROTO_ROOT) -name "*.proto" | grep -v "persistenceblobs")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 
-proto-lint: $(BIN)/buf
-	cd $(PROTO_ROOT) && ../$(BIN)/buf lint
-
-# same trick as for thrift.
-#
-# for proto though, it's important that this works because the alpine images used to build release
-# binaries are not compatible with the protoc tool (glibc vs musl issues).
-#
-# for this reason, proto *must not* be executed in those release builds, unless for some reason the
-# files are not up to date (in which case a failure is probably correct behavior).
-# the tools can still be downloaded and built safely, though it's wasted effort to do so.
-$(PROTO_FILES): $(BIN)/protoc $(BIN)/protoc-gen-go $(BIN)/protoc-gen-go-grpc
-
-# this line: -I=$(BIN)/protoc-zip/include
-# includes the well-known protobuf types, e.g. timestamp, wrappers, and the language meta-definition for extensions.
-# they're part of the protoc zip, and "normally" are installed globally and found implicitly.
-# since they're in an abnormal location, passing that path explicitly lets protoc find them.
-$(PROTO_GEN_SRC): $(PROTO_FILES) go.mod
+# protoc generates everything in one shot, so we don't benefit from per-file targets.
+# so just do it all in here.
+$(BUILD)/protoc: $(PROTO_FILES) $(BIN)/protoc $(BIN)/protoc-gen-go $(BIN)/protoc-gen-go-grpc | $(BUILD)
 	@mkdir -p $(PROTO_OUT)
 	$(BIN)/protoc \
 		--plugin $(BIN)/protoc-gen-go \
 		--plugin $(BIN)/protoc-gen-go-grpc \
 		-I=$(PROTO_ROOT)/public \
 		-I=$(PROTO_ROOT)/internal \
-		-I=$(BIN)/protoc-zip/include \
+		-I=$(PROTOC_UNZIP_DIR)/include \
 		--go_out=. \
 		--go_opt=module=$(PROJECT_ROOT) \
 		--go-grpc_out=. \
 		--go-grpc_opt=module=$(PROJECT_ROOT) \
-		$$(find $(PROTO_DIRS) -name '*.proto')
+		$(PROTO_FILES)
 
-proto-compile: $(PROTO_GEN_SRC)
+	touch $@
 
-copyright: $(BIN)/copyright
+# =============================
+# Rule-breaking targets intended ONLY for special cases with no good alternatives.
+# =============================
+
+.PHONY: .fake-codegen .fake-protoc .fake-thriftrw
+
+# ============
+# hopefully not necessary, but useful
+# ============
+# creates one or more files older than all other files:
+#   $(call touch_older_than,$(FILES_TO_CONSIDER),$(FILES_TO_CREATE))
+#
+# `stat --format %Y` prints unix timestamps.
+# `date --date "@1234"` interprets unix timestamps.
+# `$(( a - 1 ))` subtracts 1 from a number.
+# so find the minimum file timestamp, subtract a second, and use that as the time to create.
+define touch_older_than
+stat --format '%y' $(1)
+touch --date '$(shell \
+	date --date "@$$(( \
+		$$( \
+			stat --format '%Y' $(1) \
+			| sort -n \
+			| head -n 1 \
+		) - 1 \
+	))" \
+)' $(2)
+endef
+
+# buildkite / release-only target to avoid building / running codegen tools (protoc is unable to be run on alpine).
+# run before any other targets.
+# builds will still fail if code is not regenerated appropriately.
+.fake-codegen: .fake-protoc .fake-thrift
+
+# "build" fake binaries, and touch the book-keeping files, so Make thinks codegen has been run.
+.fake-protoc:  | $(BIN) $(BUILD)
+	touch $(BIN)/protoc $(BIN)/protoc-gen-go $(BIN)/protoc-gen-go-grpc
+	touch $(BUILD)/protoc
+
+.fake-thrift:  | $(BIN) $(BUILD)
+	touch $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc
+	touch $(BUILD)/thrift
+	touch $(THRIFT_GEN)
+
+# ============================
+# other intermediates
+# ============================
+
+$(BUILD)/proto-lint: $(PROTO_FILES) $(BIN)/$(BUF_VERSION_BIN) | $(BUILD)
+	cd $(PROTO_ROOT) && ../$(BIN)/$(BUF_VERSION_BIN) lint
+	touch $@
+
+$(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
+	$(BIN)/revive -config revive.toml -exclude './canary/...' -exclude './vendor/...' -formatter unix ./... | sort
+	touch $@
+
+$(BUILD)/fmt: $(ALL_SRC) $(BIN)/goimports | $(BUILD)
+	@echo "running goimports"
+	@# use FRESH_ALL_SRC so it won't miss any generated files produced earlier
+	@$(BIN)/goimports -local "github.com/uber/cadence" -w $(FRESH_ALL_SRC)
+	touch $@
+
+$(BUILD)/copyright: $(ALL_SRC) $(BIN)/copyright | $(BUILD)
 	$(BIN)/copyright --verifyOnly
+	touch $@
 
-cadence-cassandra-tool: $(ALL_SRC)
+# ============================
+# dev-friendly targets
+#
+# many of these share logic with other intermediates, but are useful to make .PHONY for output on demand.
+# as the Makefile is fast, simply delete the book-keeping file and `$(call remake,lint)` the intermediate target.
+# this way the effort is shared with future `make` runs.
+# ============================
+
+# "re-make" a target by deleting and re-building book-keeping files.
+# the + is necessary for parallelism flags to be propagated
+define remake
+rm -f $(addprefix $(BUILD)/,$(1))
++$(MAKE) --no-print-directory $(addprefix $(BUILD)/,$(1))
+endef
+
+lint: ## run the revive linter
+	$(call remake,proto-lint lint)
+
+fmt: ## run goimports
+	$(call remake,fmt)
+
+copyright: ## update copyright headers
+	@# not identical to the intermediate target, but does provide the same codegen (or more)
+	$(BIN)/copyright
+	touch $(BUILD)/copyright
+
+# ============================
+# binaries
+#
+# generally these should depend only on codegen, to keep builds simple.
+# use other targets for full verification.
+# ============================
+GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
+
+BINS =
+TOOLS =
+
+BINS += cadence-cassandra-tool
+TOOLS += cadence-cassandra-tool
+cadence-cassandra-tool: $(BUILD)/fmt
 	@echo "compiling cadence-cassandra-tool with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -o cadence-cassandra-tool cmd/tools/cassandra/main.go
+	go build -o $@ cmd/tools/cassandra/main.go
 
-cadence-sql-tool: $(ALL_SRC)
+BINS += cadence-sql-tool
+TOOLS += cadence-sql-tool
+cadence-sql-tool: $(BUILD)/fmt
 	@echo "compiling cadence-sql-tool with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -o cadence-sql-tool cmd/tools/sql/main.go
+	go build -o $@ cmd/tools/sql/main.go
 
-cadence: $(ALL_SRC)
+BINS += cadence
+TOOLS += cadence
+cadence: $(BUILD)/fmt
 	@echo "compiling cadence with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -o cadence cmd/tools/cli/main.go
+	go build -o $@ cmd/tools/cli/main.go
 
-cadence-server: $(ALL_SRC)
+BINS += cadence-server
+cadence-server: $(BUILD)/fmt
 	@echo "compiling cadence-server with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -ldflags '$(GO_BUILD_LDFLAGS)' -o cadence-server cmd/server/main.go
+	go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/server/main.go
 
-cadence-canary: $(ALL_SRC)
+BINS += cadence-canary
+cadence-canary: $(BUILD)/fmt
 	@echo "compiling cadence-canary with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -o cadence-canary cmd/canary/main.go
+	go build -o $@ cmd/canary/main.go
 
-cadence-bench: $(ALL_SRC)
+BINS += cadence-bench
+cadence-bench: $(BUILD)/fmt
 	@echo "compling cadence-bench with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -o cadence-bench cmd/bench/main.go
+	go build -o $@ cmd/bench/main.go
 
-go-generate-format: go-generate fmt
+bins: $(BINS)
+tools: $(TOOLS)
 
 go-generate: $(BIN)/mockgen $(BIN)/enumer
 	@echo "running go generate ./..., this takes almost 5 minutes..."
@@ -283,19 +388,21 @@ go-generate: $(BIN)/mockgen $(BIN)/enumer
 	@echo "updating copyright headers"
 	@$(MAKE) --no-print-directory copyright
 
-lint: $(BIN)/revive
-	$(BIN)/revive -config revive.toml -exclude './canary/...' -exclude './vendor/...' -formatter unix ./... | sort
+release: ## Re-generate generated code and run tests
+	$(MAKE) --no-print-directory go-generate
+	$(MAKE) --no-print-directory test
 
-fmt: $(BIN)/goimports $(ALL_SRC)
-	@echo "running goimports"
-	@# use FRESH_ALL_SRC so it won't miss any generated files produced earlier
-	@$(BIN)/goimports -local "github.com/uber/cadence" -w $(FRESH_ALL_SRC)
+clean: ## Clean binaries and build folder
+	rm -f $(BINS)
+	rm -Rf $(BUILD)
+	@# $(BIN) usually does not need re-generating even when `make clean` is requested, as they generally do not change between branches / commits.
+	@echo -e '\nNot removing tools dir, it is rarely necessary: $(BIN)'
 
-bins_nothrift: fmt lint copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server cadence-canary cadence-bench
-
-bins: thriftc bins_nothrift ## Build, format, and lint everything.  Also regenerates thrift.
-
-tools: cadence-cassandra-tool cadence-sql-tool cadence
+# -------------------------------------------
+#
+#                untouched
+#
+# -------------------------------------------
 
 test: bins ## Build and run all tests
 	@rm -f test
@@ -303,8 +410,6 @@ test: bins ## Build and run all tests
 	@for dir in $(PKG_TEST_DIRS); do \
 		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
-
-release: go-generate test ## Re-generate generated code and run tests
 
 test_e2e: bins
 	@rm -f test
@@ -368,15 +473,6 @@ cover: $(COVER_ROOT)/cover.out
 
 cover_ci: $(COVER_ROOT)/cover.out $(BIN)/goveralls
 	$(BIN)/goveralls -coverprofile=$(COVER_ROOT)/cover.out -service=buildkite || echo Coveralls failed;
-
-clean: ## Clean binaries and build folder
-	rm -f cadence
-	rm -f cadence-server
-	rm -f cadence-canary
-	rm -f cadence-bench
-	rm -f cadence-sql-tool
-	rm -f cadence-cassandra-tool
-	rm -Rf $(BUILD)
 
 install-schema: cadence-cassandra-tool
 	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence --rf 1
