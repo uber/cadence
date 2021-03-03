@@ -8,22 +8,19 @@ default: help
 # ###########################################
 #                TL;DR DOCS:
 # ###########################################
-# - targets should never, EVER be *actual source files*.  always use bookkeeping files in $(BUILD).
-# - prerequisites should depend on those bookkeeping files, not source files that are prerequisites for those bookkeeping.  depend on .build/fmt, not $(ALL_SRC).
-# - be super. duper. strict. about order of operations.  no exceptions ever.
-# - if you must fake prerequisites (e.g. skipping codegen for release builds), touch the appropriate bookkeeping files and any of their nonexistent prerequisites, and then build.  the order you do this matters, so be careful.
+# - targets should never, EVER be *actual source files*.
+#   always use book-keeping files in $(BUILD).
+# - prerequisites should depend on those book-keeping files,
+#   not source files that are prerequisites for those book-keeping.
+#   e.g. depend on .build/fmt, not $(ALL_SRC).
+# - be super. duper. strict. about order of operations.
+#   no exceptions ever.
+# - if you must fake prerequisites (e.g. skipping codegen for release builds),
+#   touch the appropriate book-keeping files and any of their nonexistent prerequisites,
+#   and then build.  the order you do this matters, so be careful.
 #
 # if you follow these rules strictly, things should be simple and correct.
 # for rationale, see [an architecture doc I have not yet written].
-
-
-# STUFF TO DO:
-# - gut all variables
-# - gut all targets, rewrite core ones
-# - explicitly-correct chains of dependencies
-# - make incorrect chains for buildkite, e.g. for proto gen, don't hax it
-# - --- THEN ---
-# - modernize tests, as it is conceptually different.
 
 # temporary build products and book-keeping targets that are always good to / safe to clean.
 BUILD := .build
@@ -160,7 +157,7 @@ BUF_VERSION = 0.36.0
 OS = $(shell uname -s)
 ARCH = $(shell uname -m)
 BUF_URL = https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-$(OS)-$(ARCH)
-# use BUF_VERSION_BIN as a prerequisite, not "buf", so the correct version will be used.
+# use BUF_VERSION_BIN as a bin prerequisite, not "buf", so the correct version will be used.
 # otherwise this must be a .PHONY rule, or the buf bin / symlink could become out of date.
 BUF_VERSION_BIN = buf-$(BUF_VERSION)
 $(BIN)/$(BUF_VERSION_BIN): | $(BIN)
@@ -169,19 +166,23 @@ $(BIN)/$(BUF_VERSION_BIN): | $(BIN)
 	chmod +x $@
 
 # https://www.grpc.io/docs/languages/go/quickstart/
-# protoc-gen-go(-grpc) are versioned via tools.go + go.mod (built above)
+# protoc-gen-go(-grpc) are versioned via tools.go + go.mod (built above) and will be rebuilt as needed.
+# changing PROTOC_VERSION will automatically download and use the specified version
 PROTOC_VERSION = 3.14.0
 PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(subst Darwin,osx,$(OS))-$(ARCH).zip
 # the zip contains an /include folder that we need to use to learn the well-known types
-PROTOC_UNZIP_DIR = $(BIN)/protoc-zip
-$(BIN)/protoc: | $(BIN)
+PROTOC_UNZIP_DIR = $(BIN)/protoc-$(PROTOC_VERSION)-zip
+# use PROTOC_VERSION_BIN as a bin prerequisite, not "protoc", so the correct version will be used.
+# otherwise this must be a .PHONY rule, or the buf bin / symlink could become out of date.
+PROTOC_VERSION_BIN = protoc-$(PROTOC_VERSION)
+$(BIN)/$(PROTOC_VERSION_BIN): | $(BIN)
 	@echo "Getting protoc $(PROTOC_VERSION)"
 	@# recover from partial success
 	rm -rf $(BIN)/protoc.zip $(PROTOC_UNZIP_DIR)
 	@# download, unzip, copy to a normal location
 	curl -sSL $(PROTOC_URL) -o $(BIN)/protoc.zip
 	unzip -q $(BIN)/protoc.zip -d $(PROTOC_UNZIP_DIR)
-	cp $(PROTOC_UNZIP_DIR)/bin/protoc $(BIN)/protoc
+	cp $(PROTOC_UNZIP_DIR)/bin/protoc $@
 
 # =============================
 # Codegen targets
@@ -194,6 +195,7 @@ $(BUILD)/codegen: $(BUILD)/thrift $(BUILD)/protoc | $(BUILD)
 THRIFT_SRCS := $(shell find idls -name '*.thrift')
 # book-keeping targets to build.  one per thrift file.
 # idls/thrift/thing.thrift -> .build/thing.thrift
+# the reverse is done in the recipe.
 THRIFT_GEN := $(subst idls/thrift/,.build/,$(THRIFT_SRCS))
 
 # thrift is done when all sub-thrifts are done
@@ -206,7 +208,6 @@ $(BUILD)/thrift: $(THRIFT_GEN) | $(BUILD)
 # as --no-recurse is specified, these can be done in parallel, since output files will not overwrite each other.
 # note that each generated file depends on ALL thrift files - this is necessary because they can import each other.
 $(THRIFT_GEN): $(THRIFT_SRCS) $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc | $(BUILD)
-	@# .gen/go/thing/thing.go -> thing.go -> "thing " -> thing -> idls/thrift/thing.thrift
 	@echo 'thriftrw for $(subst .build/,idls/thrift/,$@)...'
 	@$(BIN_PATH) $(BIN)/thriftrw \
 		--plugin=yarpc \
@@ -223,11 +224,10 @@ PROTO_OUT := .gen/proto
 PROTO_FILES = $(shell find ./$(PROTO_ROOT) -name "*.proto" | grep -v "persistenceblobs")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 
-# protoc generates everything in one shot, so we don't benefit from per-file targets.
-# so just do it all in here.
-$(BUILD)/protoc: $(PROTO_FILES) $(BIN)/protoc $(BIN)/protoc-gen-go $(BIN)/protoc-gen-go-grpc | $(BUILD)
+# protoc generates everything in one shot, so we don't need thrift's per-target stuff.
+$(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-go $(BIN)/protoc-gen-go-grpc | $(BUILD)
 	@mkdir -p $(PROTO_OUT)
-	$(BIN)/protoc \
+	$(BIN)/$(PROTOC_VERSION_BIN) \
 		--plugin $(BIN)/protoc-gen-go \
 		--plugin $(BIN)/protoc-gen-go-grpc \
 		-I=$(PROTO_ROOT)/public \
@@ -238,7 +238,6 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/protoc $(BIN)/protoc-gen-go $(BIN)/protoc
 		--go-grpc_out=. \
 		--go-grpc_opt=module=$(PROJECT_ROOT) \
 		$(PROTO_FILES)
-
 	touch $@
 
 # =============================
@@ -276,13 +275,13 @@ endef
 .fake-codegen: .fake-protoc .fake-thrift
 
 # "build" fake binaries, and touch the book-keeping files, so Make thinks codegen has been run.
-.fake-protoc:  | $(BIN) $(BUILD)
-	touch $(BIN)/protoc $(BIN)/protoc-gen-go $(BIN)/protoc-gen-go-grpc
+# order matters, as e.g. a $(BIN) newer than a $(BUILD) implies Make should run the $(BIN).
+.fake-protoc: | $(BIN) $(BUILD)
+	touch $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-go $(BIN)/protoc-gen-go-grpc
 	touch $(BUILD)/protoc
 
-.fake-thrift:  | $(BIN) $(BUILD)
+.fake-thrift: | $(BIN) $(BUILD)
 	touch $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc
-	touch $(BUILD)/thrift
 	touch $(THRIFT_GEN)
 
 # ============================
