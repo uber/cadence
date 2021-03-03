@@ -10,14 +10,17 @@ default: help
 # ###########################################
 # - targets should never, EVER be *actual source files*.
 #   always use book-keeping files in $(BUILD).
-# - prerequisites should depend on those book-keeping files,
-#   not source files that are prerequisites for those book-keeping.
-#   e.g. depend on .build/fmt, not $(ALL_SRC).
+#   otherwise e.g. changing git branches could confuse make aobut what it needs to do.
+# - prerequisites should be those book-keeping files,
+#   not source files that are prerequisites for book-keeping.
+#   e.g. depend on .build/fmt, not $(ALL_SRC), and not both.
 # - be super. duper. strict. about order of operations.
 #   no exceptions ever.
 # - if you must fake prerequisites (e.g. skipping codegen for release builds),
 #   touch the appropriate book-keeping files and any of their nonexistent prerequisites,
 #   and then build.  the order you do this matters, so be careful.
+# - test your changes with `-j 27 --output-sync` or something!
+# - check `make -d ...` output!  it should be fairly simple to read now that things are clean!
 #
 # if you follow these rules strictly, things should be simple and correct.
 # for rationale, see [an architecture doc I have not yet written].
@@ -37,13 +40,13 @@ BIN := .bin
 # ====================================
 
 # all bins depend on: $(BUILD)/lint
-# tests and coverage are .PHONY and essentially rely only on $(BUILD)/fmt.
+# tests and coverage are .PHONY and essentially rely only on $(BUILD)/fmt
 # note that vars that do not yet exist are empty, so any prerequisites defined below are ineffective here.
 # stick to fully-defined names, as those work reliably
 $(BUILD)/lint: $(BUILD)/fmt # lint will fail if fmt fails, so fmt first
 $(BUILD)/proto-lint:
 $(BUILD)/fmt: $(BUILD)/copyright # formatting must occur only after all source file modifications are done
-$(BUILD)/copyright: $(BUILD)/codegen # must add copyright to generated code
+$(BUILD)/copyright: $(BUILD)/codegen # must add copyright to generated code, sometimes needs re-formatting
 $(BUILD)/codegen: $(BUILD)/thrift $(BUILD)/protoc
 $(BUILD)/thrift:
 $(BUILD)/protoc:
@@ -246,29 +249,6 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 
 .PHONY: .fake-codegen .fake-protoc .fake-thriftrw
 
-# ============
-# hopefully not necessary, but useful
-# ============
-# creates one or more files older than all other files:
-#   $(call touch_older_than,$(FILES_TO_CONSIDER),$(FILES_TO_CREATE))
-#
-# `stat --format %Y` prints unix timestamps.
-# `date --date "@1234"` interprets unix timestamps.
-# `$(( a - 1 ))` subtracts 1 from a number.
-# so find the minimum file timestamp, subtract a second, and use that as the time to create.
-define touch_older_than
-stat --format '%y' $(1)
-touch --date '$(shell \
-	date --date "@$$(( \
-		$$( \
-			stat --format '%Y' $(1) \
-			| sort -n \
-			| head -n 1 \
-		) - 1 \
-	))" \
-)' $(2)
-endef
-
 # buildkite / release-only target to avoid building / running codegen tools (protoc is unable to be run on alpine).
 # run before any other targets.
 # builds will still fail if code is not regenerated appropriately.
@@ -312,6 +292,9 @@ $(BUILD)/copyright: $(ALL_SRC) $(BIN)/copyright | $(BUILD)
 # many of these share logic with other intermediates, but are useful to make .PHONY for output on demand.
 # as the Makefile is fast, simply delete the book-keeping file and `$(call remake,lint)` the intermediate target.
 # this way the effort is shared with future `make` runs.
+#
+# if you want to skip some steps (e.g. goimports is slower than revive), that's great, but only touch the
+# book-keeping files if you're sure it's correct.
 # ============================
 
 # "re-make" a target by deleting and re-building book-keeping files.
@@ -321,14 +304,18 @@ rm -f $(addprefix $(BUILD)/,$(1))
 +$(MAKE) --no-print-directory $(addprefix $(BUILD)/,$(1))
 endef
 
+.PHONY: lint fmt copyright
+
+# useful to actually re-run to get output again.
+# reuse the intermediates for simplicity and consistency.
 lint: ## run the revive linter
 	$(call remake,proto-lint lint)
 
-fmt: ## run goimports
-	$(call remake,fmt)
+# intentionally not re-making, goimports is slow and it's clear when it's unnecessary
+fmt: $(BUILD)/fmt ## run goimports
 
+# not identical to the intermediate target, but does provide the same codegen (or more).
 copyright: ## update copyright headers
-	@# not identical to the intermediate target, but does provide the same codegen (or more)
 	$(BIN)/copyright
 	touch $(BUILD)/copyright
 
@@ -346,36 +333,38 @@ TOOLS =
 
 BINS += cadence-cassandra-tool
 TOOLS += cadence-cassandra-tool
-cadence-cassandra-tool: $(BUILD)/fmt
+cadence-cassandra-tool: $(BUILD)/lint
 	@echo "compiling cadence-cassandra-tool with OS: $(GOOS), ARCH: $(GOARCH)"
 	go build -o $@ cmd/tools/cassandra/main.go
 
 BINS += cadence-sql-tool
 TOOLS += cadence-sql-tool
-cadence-sql-tool: $(BUILD)/fmt
+cadence-sql-tool: $(BUILD)/lint
 	@echo "compiling cadence-sql-tool with OS: $(GOOS), ARCH: $(GOARCH)"
 	go build -o $@ cmd/tools/sql/main.go
 
 BINS += cadence
 TOOLS += cadence
-cadence: $(BUILD)/fmt
+cadence: $(BUILD)/lint
 	@echo "compiling cadence with OS: $(GOOS), ARCH: $(GOARCH)"
 	go build -o $@ cmd/tools/cli/main.go
 
 BINS += cadence-server
-cadence-server: $(BUILD)/fmt
+cadence-server: $(BUILD)/lint
 	@echo "compiling cadence-server with OS: $(GOOS), ARCH: $(GOARCH)"
 	go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/server/main.go
 
 BINS += cadence-canary
-cadence-canary: $(BUILD)/fmt
+cadence-canary: $(BUILD)/lint
 	@echo "compiling cadence-canary with OS: $(GOOS), ARCH: $(GOARCH)"
 	go build -o $@ cmd/canary/main.go
 
 BINS += cadence-bench
-cadence-bench: $(BUILD)/fmt
+cadence-bench: $(BUILD)/lint
 	@echo "compling cadence-bench with OS: $(GOOS), ARCH: $(GOARCH)"
 	go build -o $@ cmd/bench/main.go
+
+.PHONY: go-generate bins tools release clean
 
 bins: $(BINS)
 tools: $(TOOLS)
