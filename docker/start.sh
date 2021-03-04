@@ -91,6 +91,15 @@ wait_for_cassandra() {
     echo 'cassandra started'
 }
 
+wait_for_scylla() {
+    server=`echo $CASSANDRA_SEEDS | awk -F ',' '{print $1}'`
+    until cqlsh -u $CASSANDRA_USER -p $CASSANDRA_PASSWORD --cqlversion=3.3.1 $server < /dev/null; do
+        echo 'waiting for scylla to start up'
+        sleep 1
+    done
+    echo 'scylla started'
+}
+
 wait_for_mysql() {
     server=`echo $MYSQL_SEEDS | awk -F ',' '{print $1}'`
     nc -z $server $DB_PORT < /dev/null
@@ -131,6 +140,8 @@ wait_for_db() {
         wait_for_mysql
     elif [ "$DB" == "postgres" ]; then
         wait_for_postgres
+    elif [ "$DB" == "scylla" ]; then
+        wait_for_scylla
     else
         wait_for_cassandra
     fi

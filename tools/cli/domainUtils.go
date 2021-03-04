@@ -174,6 +174,13 @@ var (
 		},
 	}
 
+	deprecateDomainFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:  FlagSecurityTokenWithAlias,
+			Usage: "Optional token for security check",
+		},
+	}
+
 	describeDomainFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  FlagDomainID,
@@ -203,6 +210,11 @@ var (
 
 	adminUpdateDomainFlags = append(
 		updateDomainFlags,
+		adminDomainCommonFlags...,
+	)
+
+	adminDeprecateDomainFlags = append(
+		deprecateDomainFlags,
 		adminDomainCommonFlags...,
 	)
 
