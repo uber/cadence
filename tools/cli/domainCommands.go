@@ -289,7 +289,7 @@ func (d *domainCLIImpl) DeprecateDomain(c *cli.Context) {
 	defer cancel()
 
 	err := d.deprecateDomain(ctx, &types.DeprecateDomainRequest{
-		Name: domainName,
+		Name:          domainName,
 		SecurityToken: securityToken,
 	})
 	if err != nil {
