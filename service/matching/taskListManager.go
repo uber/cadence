@@ -352,6 +352,7 @@ func (c *taskListManagerImpl) CancelPoller(pollerID string) {
 
 	if ok && cancel != nil {
 		cancel()
+		c.logger.Info("canceled outstanding poller", tag.WorkflowDomainName(c.domainName()))
 	}
 }
 

@@ -210,6 +210,26 @@ func (s *cliAppSuite) TestDomainUpdate_Failed() {
 	s.Equal(1, errorCode)
 }
 
+func (s *cliAppSuite) TestDomainDeprecate() {
+	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+	err := s.app.Run([]string{"", "--do", domainName, "domain", "deprecate"})
+	s.Nil(err)
+	err = s.app.Run([]string{"", "--do", domainName, "domain", "deprecate", "--security-token", "asdfasdf"})
+	s.Nil(err)
+}
+
+func (s *cliAppSuite) TestDomainDeprecate_DomainNotExist() {
+	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(&types.EntityNotExistsError{})
+	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
+	s.Equal(1, errorCode)
+}
+
+func (s *cliAppSuite) TestDomainDeprecate_Failed() {
+	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"faked error"})
+	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "update"})
+	s.Equal(1, errorCode)
+}
+
 func (s *cliAppSuite) TestDomainDescribe() {
 	resp := describeDomainResponseServer
 	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, nil)
