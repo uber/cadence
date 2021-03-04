@@ -565,9 +565,5 @@ func (db *cdb) deleteDomain(
 	}
 
 	query = db.session.Query(templateDeleteDomainQuery, ID).WithContext(ctx)
-	if err := query.Exec(); err != nil {
-		return err
-	}
-
-	return nil
+	return query.Exec()
 }
