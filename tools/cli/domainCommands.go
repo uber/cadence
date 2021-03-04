@@ -31,7 +31,6 @@ import (
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
-	s "go.uber.org/cadence/.gen/go/shared"
 
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
@@ -147,7 +146,7 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 	defer cancel()
 	err = d.registerDomain(ctx, request)
 	if err != nil {
-		if _, ok := err.(*s.DomainAlreadyExistsError); !ok {
+		if _, ok := err.(*types.DomainAlreadyExistsError); !ok {
 			ErrorAndExit("Register Domain operation failed.", err)
 		} else {
 			ErrorAndExit(fmt.Sprintf("Domain %s already registered.", domainName), err)
@@ -272,13 +271,35 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 	updateRequest.SecurityToken = securityToken
 	_, err := d.updateDomain(ctx, updateRequest)
 	if err != nil {
-		if _, ok := err.(*s.EntityNotExistsError); !ok {
+		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			ErrorAndExit("Operation UpdateDomain failed.", err)
 		} else {
 			ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domainName), err)
 		}
 	} else {
 		fmt.Printf("Domain %s successfully updated.\n", domainName)
+	}
+}
+
+func (d *domainCLIImpl) DeprecateDomain(c *cli.Context) {
+	domainName := getRequiredGlobalOption(c, FlagDomain)
+	securityToken := c.String(FlagSecurityToken)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	err := d.deprecateDomain(ctx, &types.DeprecateDomainRequest{
+		Name:          domainName,
+		SecurityToken: securityToken,
+	})
+	if err != nil {
+		if _, ok := err.(*types.EntityNotExistsError); !ok {
+			ErrorAndExit("Operation DeprecateDomain failed.", err)
+		} else {
+			ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domainName), err)
+		}
+	} else {
+		fmt.Printf("Domain %s successfully deprecated.\n", domainName)
 	}
 }
 
@@ -369,7 +390,7 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 		UUID: common.StringPtr(domainID),
 	})
 	if err != nil {
-		if _, ok := err.(*s.EntityNotExistsError); !ok {
+		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			ErrorAndExit("Operation DescribeDomain failed.", err)
 		}
 		ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domainName), err)
@@ -488,6 +509,18 @@ func (d *domainCLIImpl) updateDomain(
 	}
 
 	return d.domainHandler.UpdateDomain(ctx, request)
+}
+
+func (d *domainCLIImpl) deprecateDomain(
+	ctx context.Context,
+	request *types.DeprecateDomainRequest,
+) error {
+
+	if d.frontendClient != nil {
+		return d.frontendClient.DeprecateDomain(ctx, request)
+	}
+
+	return d.domainHandler.DeprecateDomain(ctx, request)
 }
 
 func (d *domainCLIImpl) describeDomain(
