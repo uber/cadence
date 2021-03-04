@@ -56,7 +56,7 @@ import (
 type (
 	// Test is the test implementation used for testing
 	Test struct {
-		MetricsScope    tally.Scope
+		MetricsScope    tally.TestScope
 		ClusterMetadata *cluster.MockMetadata
 
 		// other common resources
