@@ -78,6 +78,10 @@ const (
 	TerminateIfRunningDetailsTemplate = "New runID: %s"
 )
 
+var (
+	errDomainDeprecated = &types.BadRequestError{Message: "Domain is deprecated."}
+)
+
 type (
 	historyEngineImpl struct {
 		currentClusterName        string
@@ -532,6 +536,10 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	metricsScope int,
 	signalWithStartArg *signalWithStartArg,
 ) (resp *types.StartWorkflowExecutionResponse, retError error) {
+
+	if domainEntry.GetInfo().Status != persistence.DomainStatusRegistered {
+		return nil, errDomainDeprecated
+	}
 
 	request := startRequest.StartRequest
 	err := validateStartWorkflowExecutionRequest(request, e.config.MaxIDLengthLimit())
