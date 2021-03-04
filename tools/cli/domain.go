@@ -83,6 +83,15 @@ func newDomainCommands() []cli.Command {
 			},
 		},
 		{
+			Name:    "deprecate",
+			Aliases: []string{"dep"},
+			Usage:   "Deprecate existing workflow domain",
+			Flags:   deprecateDomainFlags,
+			Action: func(c *cli.Context) {
+				newDomainCLI(c, false).DeprecateDomain(c)
+			},
+		},
+		{
 			Name:    "describe",
 			Aliases: []string{"desc"},
 			Usage:   "Describe existing workflow domain",
