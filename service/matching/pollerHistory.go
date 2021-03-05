@@ -30,7 +30,7 @@ import (
 
 const (
 	pollerHistoryInitSize    = 0
-	pollerHistoryInitMaxSize = 1000
+	pollerHistoryInitMaxSize = 5000
 	pollerHistoryTTL         = 5 * time.Minute
 )
 
