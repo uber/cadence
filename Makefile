@@ -2,28 +2,20 @@
 MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
-.PHONY: git-submodules test bins clean cover cover_ci help
 default: help
 
 # ###########################################
 #                TL;DR DOCS:
 # ###########################################
-# - targets should never, EVER be *actual source files*.
-#   always use book-keeping files in $(BUILD).
-#   otherwise e.g. changing git branches could confuse make aobut what it needs to do.
-# - prerequisites should be those book-keeping files,
+# - Targets should never, EVER be *actual source files*.
+#   Always use book-keeping files in $(BUILD).
+#   Otherwise e.g. changing git branches could confuse Make about what it needs to do.
+# - Simiarly, prerequisites should be those book-keeping files,
 #   not source files that are prerequisites for book-keeping.
 #   e.g. depend on .build/fmt, not $(ALL_SRC), and not both.
-# - be super. duper. strict. about order of operations.
-#   no exceptions ever.
-# - if you must fake prerequisites (e.g. skipping codegen for release builds),
-#   touch the appropriate book-keeping files and any of their nonexistent prerequisites,
-#   and then build.  the order you do this matters, so be careful.
-# - test your changes with `-j 27 --output-sync` or something!
-# - check `make -d ...` output!  it should be fairly simple to read now that things are clean!
-#
-# if you follow these rules strictly, things should be simple and correct.
-# for rationale, see [an architecture doc I have not yet written].
+# - Be strict and explicit about prerequisites / order of execution / etc.
+# - Test your changes with `-j 27 --output-sync` or something!
+# - Test your changes with `make -d ...`!  It should be reasonable!
 
 # temporary build products and book-keeping targets that are always good to / safe to clean.
 BUILD := .build
@@ -33,27 +25,26 @@ BIN := .bin
 
 # ====================================
 # book-keeping files that are used to control sequencing.
-# you MUST use these in most cases, not the source files themselves.
+#
+# you should use these as prerequisites in almost all cases, not the source files themselves.
 # these are defined in roughly the reverse order that they are executed, for easier reading.
 #
 # recipes and any other prerequisites are defined only once, further below.
 # ====================================
 
 # all bins depend on: $(BUILD)/lint
-# tests and coverage are .PHONY and essentially rely only on $(BUILD)/fmt
 # note that vars that do not yet exist are empty, so any prerequisites defined below are ineffective here.
-# stick to fully-defined names, as those work reliably
 $(BUILD)/lint: $(BUILD)/fmt # lint will fail if fmt fails, so fmt first
 $(BUILD)/proto-lint:
-$(BUILD)/fmt: $(BUILD)/copyright # formatting must occur only after all source file modifications are done
+$(BUILD)/fmt: $(BUILD)/copyright # formatting must occur only after all other go-file-modifications are done
 $(BUILD)/copyright: $(BUILD)/codegen # must add copyright to generated code, sometimes needs re-formatting
 $(BUILD)/codegen: $(BUILD)/thrift $(BUILD)/protoc
 $(BUILD)/thrift:
 $(BUILD)/protoc:
 
-# =====================================
+# ====================================
 # helper vars
-# =====================================
+# ====================================
 
 # set a VERBOSE=1 env var for verbose output. VERBOSE=0 (or unset) disables.
 # this is used to make verbose flags, suitable for `$(if $(test_v),...)`.
@@ -70,9 +61,6 @@ SPACE +=
 COMMA := ,
 
 PROJECT_ROOT = github.com/uber/cadence
-
-TEST_TIMEOUT ?= 20m
-TEST_ARG ?= -race $(if $(test_v),-v) -timeout $(TEST_TIMEOUT)
 
 # helper for executing bins that need other bins, just `$(BIN_PATH) the_command ...`
 # I'd recommend not exporting this in general, to reduce the chance of accidentally using non-versioned tools.
@@ -106,9 +94,9 @@ ALL_SRC := $(FRESH_ALL_SRC)
 # as lint ignores generated code, it can use the cached copy in all cases
 LINT_SRC := $(filter-out %_test.go ./.gen/%, $(ALL_SRC))
 
-# =====================================
+# ====================================
 # $(BIN) targets
-# =====================================
+# ====================================
 
 # downloads and builds a go-gettable tool, versioned by go.mod, and installs
 # it into the build folder, named the same as the last portion of the URL.
@@ -151,7 +139,7 @@ $(BIN)/goveralls: go.mod
 
 # copyright header checker/writer.  only requires stdlib, so no other dependencies are needed.
 $(BIN)/copyright: cmd/tools/copyright/licensegen.go
-	go build -o $@ ./cmd/tools/copyright/licensegen.go
+	@go build -o $@ ./cmd/tools/copyright/licensegen.go
 
 # https://docs.buf.build/
 # changing BUF_VERSION will automatically download and use the specified version.
@@ -163,9 +151,9 @@ BUF_URL = https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-
 # otherwise this must be a .PHONY rule, or the buf bin / symlink could become out of date.
 BUF_VERSION_BIN = buf-$(BUF_VERSION)
 $(BIN)/$(BUF_VERSION_BIN): | $(BIN)
-	@echo "Getting buf $(BUF_VERSION)"
-	curl -sSL $(BUF_URL) -o $@
-	chmod +x $@
+	@echo "downloading buf $(BUF_VERSION)"
+	@curl -sSL $(BUF_URL) -o $@
+	@chmod +x $@
 
 # https://www.grpc.io/docs/languages/go/quickstart/
 # protoc-gen-go(-grpc) are versioned via tools.go + go.mod (built above) and will be rebuilt as needed.
@@ -178,38 +166,37 @@ PROTOC_UNZIP_DIR = $(BIN)/protoc-$(PROTOC_VERSION)-zip
 # otherwise this must be a .PHONY rule, or the buf bin / symlink could become out of date.
 PROTOC_VERSION_BIN = protoc-$(PROTOC_VERSION)
 $(BIN)/$(PROTOC_VERSION_BIN): | $(BIN)
-	@echo "Getting protoc $(PROTOC_VERSION)"
+	@echo "downloading protoc $(PROTOC_VERSION)"
 	@# recover from partial success
-	rm -rf $(BIN)/protoc.zip $(PROTOC_UNZIP_DIR)
+	@rm -rf $(BIN)/protoc.zip $(PROTOC_UNZIP_DIR)
 	@# download, unzip, copy to a normal location
-	curl -sSL $(PROTOC_URL) -o $(BIN)/protoc.zip
-	unzip -q $(BIN)/protoc.zip -d $(PROTOC_UNZIP_DIR)
-	cp $(PROTOC_UNZIP_DIR)/bin/protoc $@
+	@curl -sSL $(PROTOC_URL) -o $(BIN)/protoc.zip
+	@unzip -q $(BIN)/protoc.zip -d $(PROTOC_UNZIP_DIR)
+	@cp $(PROTOC_UNZIP_DIR)/bin/protoc $@
 
-# =============================
+# ====================================
 # Codegen targets
-# =============================
+# ====================================
 
 # codegen is done when thrift and protoc are done
 $(BUILD)/codegen: $(BUILD)/thrift $(BUILD)/protoc | $(BUILD)
-	touch $@
+	@touch $@
 
-THRIFT_SRCS := $(shell find idls -name '*.thrift')
+THRIFT_FILES := $(shell find idls -name '*.thrift')
 # book-keeping targets to build.  one per thrift file.
 # idls/thrift/thing.thrift -> .build/thing.thrift
 # the reverse is done in the recipe.
-THRIFT_GEN := $(subst idls/thrift/,.build/,$(THRIFT_SRCS))
+THRIFT_GEN := $(subst idls/thrift/,.build/,$(THRIFT_FILES))
 
 # thrift is done when all sub-thrifts are done
 $(BUILD)/thrift: $(THRIFT_GEN) | $(BUILD)
 	@touch $@
 
 # how to generate each thrift book-keeping file.
-# this does NOT use the generated file as a target, as that would make behavior dependent on e.g. git file modification times.
 #
-# as --no-recurse is specified, these can be done in parallel, since output files will not overwrite each other.
 # note that each generated file depends on ALL thrift files - this is necessary because they can import each other.
-$(THRIFT_GEN): $(THRIFT_SRCS) $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc | $(BUILD)
+# as --no-recurse is specified, these can be done in parallel, since output files will not overwrite each other.
+$(THRIFT_GEN): $(THRIFT_FILES) $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc | $(BUILD)
 	@echo 'thriftrw for $(subst .build/,idls/thrift/,$@)...'
 	@$(BIN_PATH) $(BIN)/thriftrw \
 		--plugin=yarpc \
@@ -219,17 +206,16 @@ $(THRIFT_GEN): $(THRIFT_SRCS) $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc | $(B
 		$(subst .build/,idls/thrift/,$@)
 	@touch $@
 
-
 PROTO_ROOT := proto
 # output location is defined by `option go_package` in the proto files, all must stay in sync with this
 PROTO_OUT := .gen/proto
 PROTO_FILES = $(shell find ./$(PROTO_ROOT) -name "*.proto" | grep -v "persistenceblobs")
-PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 
 # protoc generates everything in one shot, so we don't need thrift's per-target stuff.
 $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-go $(BIN)/protoc-gen-go-grpc | $(BUILD)
 	@mkdir -p $(PROTO_OUT)
-	$(BIN)/$(PROTOC_VERSION_BIN) \
+	@echo "protoc..."
+	@$(BIN)/$(PROTOC_VERSION_BIN) \
 		--plugin $(BIN)/protoc-gen-go \
 		--plugin $(BIN)/protoc-gen-go-grpc \
 		-I=$(PROTO_ROOT)/public \
@@ -240,17 +226,17 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 		--go-grpc_out=. \
 		--go-grpc_opt=module=$(PROJECT_ROOT) \
 		$(PROTO_FILES)
-	touch $@
+	@touch $@
 
-# =============================
+# ====================================
 # Rule-breaking targets intended ONLY for special cases with no good alternatives.
-# =============================
+# ====================================
 
 .PHONY: .fake-codegen .fake-protoc .fake-thriftrw
 
 # buildkite / release-only target to avoid building / running codegen tools (protoc is unable to be run on alpine).
-# run before any other targets.
-# builds will still fail if code is not regenerated appropriately.
+# this will ensure that committed code will be used rather than re-generating.
+# must be manually run before (nearly) any other targets.
 .fake-codegen: .fake-protoc .fake-thrift
 
 # "build" fake binaries, and touch the book-keeping files, so Make thinks codegen has been run.
@@ -263,51 +249,66 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 	touch $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc
 	touch $(THRIFT_GEN)
 
-# ============================
+# ====================================
 # other intermediates
-# ============================
+# ====================================
 
 $(BUILD)/proto-lint: $(PROTO_FILES) $(BIN)/$(BUF_VERSION_BIN) | $(BUILD)
-	cd $(PROTO_ROOT) && ../$(BIN)/$(BUF_VERSION_BIN) lint
-	touch $@
+	@cd $(PROTO_ROOT) && ../$(BIN)/$(BUF_VERSION_BIN) lint
+	@touch $@
 
+# note that LINT_SRC is fairly fake as a prerequisite.
+# it's a coarse "you probably don't need to re-lint" filter, nothing more.
 $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
-	$(BIN)/revive -config revive.toml -exclude './canary/...' -exclude './vendor/...' -formatter unix ./... | sort
-	touch $@
+	@echo "lint..."
+	@$(BIN)/revive -config revive.toml -exclude './canary/...' -exclude './vendor/...' -formatter unix ./... | sort
+	@touch $@
+
+# fmt and copyright are mutually cyclic with their inputs, so if a copyright header is modified:
+# - copyright -> makes changes
+# - fmt sees changes -> makes changes
+# - now copyright thinks it needs to run again (but does nothing)
+# - which means fmt needs to run again (but does nothing)
+# and now after two passes it's finally stable, because they stopped making changes.
+#
+# this is not fatal, we can just run 2x.
+# to be fancier though, we can detect when *both* are run, and re-touch the book-keeping files to prevent the second run.
+# this STRICTLY REQUIRES that `copyright` and `fmt` are mututally stable, and that copyright runs before fmt.
+# if either changes, this will need to change.
+MAYBE_TOUCH_COPYRIGHT=
 
 $(BUILD)/fmt: $(ALL_SRC) $(BIN)/goimports | $(BUILD)
-	@echo "running goimports"
+	@echo "goimports..."
 	@# use FRESH_ALL_SRC so it won't miss any generated files produced earlier
 	@$(BIN)/goimports -local "github.com/uber/cadence" -w $(FRESH_ALL_SRC)
-	touch $@
+	@touch $@
+	@$(MAYBE_TOUCH_COPYRIGHT)
 
 $(BUILD)/copyright: $(ALL_SRC) $(BIN)/copyright | $(BUILD)
 	$(BIN)/copyright --verifyOnly
-	touch $@
+	@$(eval MAYBE_TOUCH_COPYRIGHT=touch $@)
+	@touch $@
 
-# ============================
-# dev-friendly targets
+# ====================================
+# developer-oriented targets
 #
 # many of these share logic with other intermediates, but are useful to make .PHONY for output on demand.
-# as the Makefile is fast, simply delete the book-keeping file and `$(call remake,lint)` the intermediate target.
+# as the Makefile is fast, it's reasonable to just delete the book-keeping file recursively make.
 # this way the effort is shared with future `make` runs.
-#
-# if you want to skip some steps (e.g. goimports is slower than revive), that's great, but only touch the
-# book-keeping files if you're sure it's correct.
-# ============================
+# ====================================
 
-# "re-make" a target by deleting and re-building book-keeping files.
+# "re-make" a target by deleting and re-building book-keeping target(s).
 # the + is necessary for parallelism flags to be propagated
 define remake
-rm -f $(addprefix $(BUILD)/,$(1))
-+$(MAKE) --no-print-directory $(addprefix $(BUILD)/,$(1))
+@rm -f $(addprefix $(BUILD)/,$(1))
+@+$(MAKE) --no-print-directory $(addprefix $(BUILD)/,$(1))
 endef
 
 .PHONY: lint fmt copyright
 
 # useful to actually re-run to get output again.
 # reuse the intermediates for simplicity and consistency.
-lint: ## run the revive linter
+lint: ## (re)run the linter
 	$(call remake,proto-lint lint)
 
 # intentionally not re-making, goimports is slow and it's clear when it's unnecessary
@@ -316,52 +317,49 @@ fmt: $(BUILD)/fmt ## run goimports
 # not identical to the intermediate target, but does provide the same codegen (or more).
 copyright: ## update copyright headers
 	$(BIN)/copyright
-	touch $(BUILD)/copyright
+	@touch $(BUILD)/copyright
 
-# ============================
-# binaries
-#
-# generally these should depend only on codegen, to keep builds simple.
-# use other targets for full verification.
-# ============================
+# ====================================
+# binaries to build
+# ====================================
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
 BINS =
 TOOLS =
 
-BINS += cadence-cassandra-tool
+BINS  += cadence-cassandra-tool
 TOOLS += cadence-cassandra-tool
 cadence-cassandra-tool: $(BUILD)/lint
 	@echo "compiling cadence-cassandra-tool with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -o $@ cmd/tools/cassandra/main.go
+	@go build -o $@ cmd/tools/cassandra/main.go
 
-BINS += cadence-sql-tool
+BINS  += cadence-sql-tool
 TOOLS += cadence-sql-tool
 cadence-sql-tool: $(BUILD)/lint
 	@echo "compiling cadence-sql-tool with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -o $@ cmd/tools/sql/main.go
+	@go build -o $@ cmd/tools/sql/main.go
 
-BINS += cadence
+BINS  += cadence
 TOOLS += cadence
 cadence: $(BUILD)/lint
 	@echo "compiling cadence with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -o $@ cmd/tools/cli/main.go
+	@go build -o $@ cmd/tools/cli/main.go
 
 BINS += cadence-server
 cadence-server: $(BUILD)/lint
 	@echo "compiling cadence-server with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/server/main.go
+	@go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/server/main.go
 
 BINS += cadence-canary
 cadence-canary: $(BUILD)/lint
 	@echo "compiling cadence-canary with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -o $@ cmd/canary/main.go
+	@go build -o $@ cmd/canary/main.go
 
 BINS += cadence-bench
 cadence-bench: $(BUILD)/lint
-	@echo "compling cadence-bench with OS: $(GOOS), ARCH: $(GOARCH)"
-	go build -o $@ cmd/bench/main.go
+	@echo "compiling cadence-bench with OS: $(GOOS), ARCH: $(GOARCH)"
+	@go build -o $@ cmd/bench/main.go
 
 .PHONY: go-generate bins tools release clean
 
@@ -382,14 +380,11 @@ release: ## Re-generate generated code and run tests
 clean: ## Clean binaries and build folder
 	rm -f $(BINS)
 	rm -Rf $(BUILD)
-	@# $(BIN) usually does not need re-generating even when `make clean` is requested, as they generally do not change between branches / commits.
-	@echo -e '\nNot removing tools dir, it is rarely necessary: $(BIN)'
+	@echo '# rm -rf $(BIN) # not removing tools dir, it is rarely necessary'
 
-# -------------------------------------------
-#
-#                untouched
-#
-# -------------------------------------------
+# v----- not yet cleaned up -----v
+
+.PHONY: git-submodules test bins clean cover cover_ci help
 
 TOOLS_CMD_ROOT=./cmd/tools
 INTEG_TEST_ROOT=./host
@@ -398,6 +393,9 @@ INTEG_TEST_XDC_ROOT=./host/xdc
 INTEG_TEST_XDC_DIR=hostxdc
 INTEG_TEST_NDC_ROOT=./host/ndc
 INTEG_TEST_NDC_DIR=hostndc
+
+TEST_TIMEOUT ?= 20m
+TEST_ARG ?= -race $(if $(test_v),-v) -timeout $(TEST_TIMEOUT)
 
 # TODO to be consistent, use nosql as PERSISTENCE_TYPE and cassandra PERSISTENCE_PLUGIN
 # file names like integ_cassandra__cover should become integ_nosql_cassandra_cover
