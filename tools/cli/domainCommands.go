@@ -443,16 +443,26 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 }
 
 func (d *domainCLIImpl) ListDomains(c *cli.Context) {
-	domains := d.getAllDomains(c)
 	pageSize := c.Int(FlagPageSize)
 	printAll := c.Bool(FlagAll)
+	printDeprecated := c.Bool(FlagDeprecated)
 	printFull := c.Bool(FlagPrintFullyDetail)
+
+	if printAll && printDeprecated {
+		ErrorAndExit(fmt.Sprintf("Cannot specify %s and %s flags at the same time.", FlagAll, FlagDeprecated), nil)
+	}
+
+	domains := d.getAllDomains(c)
 
 	table := createTableForListDomains(printAll, printFull)
 
 	currentPageSize := 0
 	for i, domain := range domains {
-		if !printAll && *domain.DomainInfo.Status != types.DomainStatusRegistered {
+		if printDeprecated {
+			if *domain.DomainInfo.Status != types.DomainStatusDeprecated {
+				continue
+			}
+		} else if !printAll && *domain.DomainInfo.Status != types.DomainStatusRegistered {
 			continue
 		}
 
