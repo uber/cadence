@@ -10,7 +10,7 @@ default: help
 # - Targets should never, EVER be *actual source files*.
 #   Always use book-keeping files in $(BUILD).
 #   Otherwise e.g. changing git branches could confuse Make about what it needs to do.
-# - Simiarly, prerequisites should be those book-keeping files,
+# - Similarly, prerequisites should be those book-keeping files,
 #   not source files that are prerequisites for book-keeping.
 #   e.g. depend on .build/fmt, not $(ALL_SRC), and not both.
 # - Be strict and explicit about prerequisites / order of execution / etc.
@@ -273,7 +273,7 @@ $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 #
 # this is not fatal, we can just run 2x.
 # to be fancier though, we can detect when *both* are run, and re-touch the book-keeping files to prevent the second run.
-# this STRICTLY REQUIRES that `copyright` and `fmt` are mututally stable, and that copyright runs before fmt.
+# this STRICTLY REQUIRES that `copyright` and `fmt` are mutually stable, and that copyright runs before fmt.
 # if either changes, this will need to change.
 MAYBE_TOUCH_COPYRIGHT=
 
