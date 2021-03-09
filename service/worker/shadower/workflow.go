@@ -22,6 +22,7 @@ package shadower
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"go.uber.org/cadence"
@@ -37,6 +38,7 @@ const (
 	defaultScanWorkflowPageSize = 2000
 
 	// NOTE: do not simply change following values as it may result in workflow non-deterministic errors
+	defaultReplayConcurrency    = 1
 	defaultMaxReplayConcurrency = 50
 	defaultMaxShadowCountPerRun = 100000
 )
@@ -53,6 +55,10 @@ func shadowWorkflow(
 	ctx workflow.Context,
 	params shadower.ShadowWorkflowParams,
 ) (shadower.ShadowWorkflowResult, error) {
+	if err := validateAndFillWorkflowParams(&params); err != nil {
+		return shadower.ShadowWorkflowResult{}, err
+	}
+
 	lao := workflow.LocalActivityOptions{
 		ScheduleToCloseTimeout: time.Second * 5,
 		RetryPolicy: &cadence.RetryPolicy{
@@ -72,11 +78,6 @@ func shadowWorkflow(
 	// should be run in active or passive side
 	if !domainActive {
 		return shadower.ShadowWorkflowResult{}, nil
-	}
-
-	concurrency := params.GetConcurrency()
-	if concurrency > defaultMaxReplayConcurrency || concurrency == 0 {
-		concurrency = defaultMaxReplayConcurrency
 	}
 
 	replayStartTime := workflow.Now(ctx)
@@ -111,12 +112,15 @@ func shadowWorkflow(
 	var shadowResult shadower.ShadowWorkflowResult
 	if params.GetLastRunResult() != nil {
 		shadowResult = *params.GetLastRunResult()
-	} else {
-		shadowResult = shadower.ShadowWorkflowResult{
-			Succeeded: common.Int32Ptr(0),
-			Skipped:   common.Int32Ptr(0),
-			Failed:    common.Int32Ptr(0),
-		}
+	}
+	if shadowResult.Succeeded == nil {
+		shadowResult.Succeeded = common.Int32Ptr(0)
+	}
+	if shadowResult.Skipped == nil {
+		shadowResult.Skipped = common.Int32Ptr(0)
+	}
+	if shadowResult.Failed == nil {
+		shadowResult.Failed = common.Int32Ptr(0)
 	}
 	scanParams := shadower.ScanWorkflowActivityParams{
 		Domain:        params.Domain,
@@ -131,8 +135,8 @@ func shadowWorkflow(
 			return shadowResult, err
 		}
 
-		replayFutures := make([]workflow.Future, 0, concurrency)
-		for _, executions := range splitExecutions(scanResult.Executions, int(concurrency)) {
+		replayFutures := make([]workflow.Future, 0, params.GetConcurrency())
+		for _, executions := range splitExecutions(scanResult.Executions, int(params.GetConcurrency())) {
 			replayParams := shadower.ReplayWorkflowActivityParams{
 				Domain:     params.Domain,
 				Executions: executions,
@@ -170,6 +174,32 @@ func shadowWorkflow(
 	}
 
 	return shadowResult, nil
+}
+
+func validateAndFillWorkflowParams(
+	params *shadower.ShadowWorkflowParams,
+) error {
+	if len(params.GetDomain()) == 0 {
+		return errors.New("Domain is not set on shadower workflow params")
+	}
+
+	if len(params.GetTaskList()) == 0 {
+		return errors.New("TaskList is not set on shaoder workflow params")
+	}
+
+	if params.GetSamplingRate() == 0 {
+		params.SamplingRate = common.Float64Ptr(1)
+	}
+
+	if params.GetConcurrency() == 0 {
+		params.Concurrency = common.Int32Ptr(defaultReplayConcurrency)
+	}
+
+	if params.GetConcurrency() > defaultMaxReplayConcurrency {
+		params.Concurrency = common.Int32Ptr(defaultMaxReplayConcurrency)
+	}
+
+	return nil
 }
 
 func splitExecutions(
@@ -216,7 +246,7 @@ func exitConditionMet(
 func shouldContinueAsNew(
 	currentResult shadower.ShadowWorkflowResult,
 ) bool {
-	return currentResult.GetSucceeded()+currentResult.GetSkipped()+currentResult.GetFailed() > defaultMaxShadowCountPerRun
+	return currentResult.GetSucceeded()+currentResult.GetSkipped()+currentResult.GetFailed() >= defaultMaxShadowCountPerRun
 }
 
 func getContinueAsNewError(

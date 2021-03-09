@@ -211,7 +211,7 @@ func (s *Service) Start() {
 		s.startFailoverManager()
 	}
 	if s.config.EnableWorkflowShadower() {
-		s.ensureDomainExists(shadower.LocalDomainName)
+		s.ensureDomainExists(common.ShadowerLocalDomainName)
 		s.startWorkflowShadower()
 	}
 
@@ -400,7 +400,7 @@ func getDomainID(domain string) string {
 		domainID = common.SystemDomainID
 	case common.BatcherLocalDomainName:
 		domainID = common.BatcherDomainID
-	case shadower.LocalDomainName:
+	case common.ShadowerLocalDomainName:
 		domainID = common.ShadowerDomainID
 	}
 	return domainID

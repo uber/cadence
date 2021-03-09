@@ -26,6 +26,8 @@ import (
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/worker"
 
+	"github.com/uber/cadence/.gen/go/shadower"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 )
 
@@ -47,10 +49,6 @@ type (
 
 const (
 	workerContextKey contextKey = "shadower-worker-context"
-
-	// TODO: the following to should be moved to thrift/proto
-	LocalDomainName  = "cadence-shadower"
-	DecisionTaskList = "cadence-shadower-tl"
 )
 
 func New(params *BootstrapParams) *Worker {
@@ -60,8 +58,8 @@ func New(params *BootstrapParams) *Worker {
 	ctx := context.WithValue(context.Background(), workerContextKey, *w)
 	w.decisionWorker = worker.New(
 		params.ServiceClient,
-		LocalDomainName,
-		DecisionTaskList,
+		common.ShadowerLocalDomainName,
+		shadower.ShadowerTaskList,
 		worker.Options{
 			BackgroundActivityContext: ctx,
 		},
