@@ -154,7 +154,7 @@ func NewConfig(params *service.BootstrapParams) *Config {
 		EnableBatcher:                     dc.GetBoolProperty(dynamicconfig.EnableBatcher, false),
 		EnableParentClosePolicyWorker:     dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
 		EnableFailoverManager:             dc.GetBoolProperty(dynamicconfig.EnableFailoverManager, true),
-		EnableWorkflowShadower:            dc.GetBoolProperty(dynamicconfig.EnableWorkflowShadower, true),
+		EnableWorkflowShadower:            dc.GetBoolProperty(dynamicconfig.EnableWorkflowShadower, false),
 		ThrottledLogRPS:                   dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS, 20),
 		PersistenceGlobalMaxQPS:           dc.GetIntProperty(dynamicconfig.WorkerPersistenceGlobalMaxQPS, 0),
 		PersistenceMaxQPS:                 dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
