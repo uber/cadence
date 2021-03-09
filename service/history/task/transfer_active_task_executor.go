@@ -901,7 +901,7 @@ func (t *transferActiveTaskExecutor) processResetWorkflow(
 	// reset workflow needs to go through the history so it may take a long time.
 	// as a result it's not subject to the taskDefaultTimeout. Otherwise the task
 	// may got stuck if the workflow history is large.
-	if err := t.resetWorkflow(
+	return t.resetWorkflow(
 		task,
 		domainEntry.GetInfo().Name,
 		reason,
@@ -911,10 +911,7 @@ func (t *transferActiveTaskExecutor) processResetWorkflow(
 		currentContext,
 		currentMutableState,
 		logger,
-	); err != nil {
-		return err
-	}
-	return nil
+	)
 }
 
 func (t *transferActiveTaskExecutor) recordChildExecutionStarted(

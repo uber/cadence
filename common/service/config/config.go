@@ -429,10 +429,7 @@ func (c *Config) ValidateAndFillDefaults() error {
 	if err := c.validate(); err != nil {
 		return err
 	}
-	if err := c.fillDefaults(); err != nil {
-		return err
-	}
-	return nil
+	return c.fillDefaults()
 }
 
 func (c *Config) validate() error {

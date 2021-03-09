@@ -36,8 +36,12 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+type (
+	contextKey string
+)
+
 const (
-	failoverManagerContextKey = "failoverManagerContext"
+	failoverManagerContextKey contextKey = "failoverManagerContext"
 	// TaskListName tasklist
 	TaskListName = "cadence-sys-failoverManager-tasklist"
 	// WorkflowTypeName workflow type name
