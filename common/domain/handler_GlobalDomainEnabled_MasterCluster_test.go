@@ -437,6 +437,25 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateGetDomain
 	)
 }
 
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestDeprecateGetDomain_LocalDomain() {
+	domainName := s.getRandomDomainName()
+	domain := s.setupLocalDomain(domainName)
+
+	err := s.handler.DeprecateDomain(context.Background(), &types.DeprecateDomainRequest{
+		Name: domainName,
+	})
+	s.Nil(err)
+
+	expectedResp := domain
+	expectedResp.DomainInfo.Status = types.DomainStatusDeprecated.Ptr()
+
+	getResp, err := s.handler.DescribeDomain(context.Background(), &types.DescribeDomainRequest{
+		Name: common.StringPtr(domainName),
+	})
+	s.Nil(err)
+	assertDomainEqual(s.Suite, getResp, expectedResp)
+}
+
 func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestRegisterGetDomain_GlobalDomain_AllDefault() {
 	domainName := s.getRandomDomainName()
 	isGlobalDomain := true
@@ -915,6 +934,76 @@ func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestUpdateDomain_Co
 	s.Error(err)
 }
 
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) TestDeprecateGetDomain_GlobalDomain() {
+	domainName := s.getRandomDomainName()
+	domain := s.setupGlobalDomain(domainName)
+
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
+
+	err := s.handler.DeprecateDomain(context.Background(), &types.DeprecateDomainRequest{
+		Name: domainName,
+	})
+	s.Nil(err)
+
+	expectedResp := domain
+	expectedResp.DomainInfo.Status = types.DomainStatusDeprecated.Ptr()
+
+	getResp, err := s.handler.DescribeDomain(context.Background(), &types.DescribeDomainRequest{
+		Name: common.StringPtr(domainName),
+	})
+	s.Nil(err)
+	assertDomainEqual(s.Suite, getResp, expectedResp)
+}
+
 func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) getRandomDomainName() string {
 	return "domain" + uuid.New()
+}
+
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) setupLocalDomain(domainName string) *types.DescribeDomainResponse {
+	return setupLocalDomain(s.Suite, s.handler, s.ClusterMetadata, domainName)
+}
+
+func (s *domainHandlerGlobalDomainEnabledMasterClusterSuite) setupGlobalDomain(domainName string) *types.DescribeDomainResponse {
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
+	return setupGlobalDomain(s.Suite, s.handler, s.ClusterMetadata, domainName)
+}
+
+func setupGlobalDomain(s suite.Suite, handler *handlerImpl, clusterMetadata cluster.Metadata, domainName string) *types.DescribeDomainResponse {
+	description := "some random description"
+	email := "some random email"
+	retention := int32(7)
+	emitMetric := true
+	data := map[string]string{"some random key": "some random value"}
+	activeClusterName := ""
+	clusters := []*types.ClusterReplicationConfiguration{}
+	for clusterName := range clusterMetadata.GetAllClusterInfo() {
+		if clusterName != clusterMetadata.GetCurrentClusterName() {
+			activeClusterName = clusterName
+		}
+		clusters = append(clusters, &types.ClusterReplicationConfiguration{
+			ClusterName: clusterName,
+		})
+	}
+	s.True(len(activeClusterName) > 0)
+	s.True(len(clusters) > 1)
+	isGlobalDomain := true
+
+	err := handler.RegisterDomain(context.Background(), &types.RegisterDomainRequest{
+		Name:                                   domainName,
+		Description:                            description,
+		OwnerEmail:                             email,
+		WorkflowExecutionRetentionPeriodInDays: retention,
+		EmitMetric:                             common.BoolPtr(emitMetric),
+		Clusters:                               clusters,
+		ActiveClusterName:                      activeClusterName,
+		Data:                                   data,
+		IsGlobalDomain:                         isGlobalDomain,
+	})
+	s.Nil(err)
+
+	getResp, err := handler.DescribeDomain(context.Background(), &types.DescribeDomainRequest{
+		Name: common.StringPtr(domainName),
+	})
+	s.Nil(err)
+	return getResp
 }

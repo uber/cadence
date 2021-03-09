@@ -117,7 +117,7 @@ services:
         metrics:
             statsd:
                 hostPort: {{ .Env.STATSD_ENDPOINT }}
-                prefix: "cadence-frontend"
+                prefix: {{ default .Env.STATSD_FRONTEND_PREFIX "cadence-frontend" }}
         {{- else if .Env.PROMETHEUS_ENDPOINT }}
         metrics:
             prometheus:
@@ -138,7 +138,7 @@ services:
         metrics:
             statsd:
                 hostPort: {{ .Env.STATSD_ENDPOINT }}
-                prefix: "cadence-matching"
+                prefix: {{ default .Env.STATSD_MATCHING_PREFIX "cadence-matching" }}
         {{- else if .Env.PROMETHEUS_ENDPOINT }}
         metrics:
             prometheus:
@@ -159,7 +159,7 @@ services:
         metrics:
             statsd:
                 hostPort: {{ .Env.STATSD_ENDPOINT }}
-                prefix: "cadence-history"
+                prefix: {{ default .Env.STATSD_HISTORY_PREFIX "cadence-history" }}
         {{- else if .Env.PROMETHEUS_ENDPOINT }}
         metrics:
             prometheus:
@@ -180,7 +180,7 @@ services:
         metrics:
             statsd:
                 hostPort: {{ .Env.STATSD_ENDPOINT }}
-                prefix: "cadence-worker"
+                prefix: {{ default .Env.STATSD_WORKER_PREFIX "cadence-worker" }}
         {{- else if .Env.PROMETHEUS_ENDPOINT }}
         metrics:
             prometheus:
@@ -196,14 +196,26 @@ services:
 clusterMetadata:
     enableGlobalDomain: {{ default .Env.ENABLE_GLOBAL_DOMAIN "false" }}
     failoverVersionIncrement: 10
-    masterClusterName: "master"
-    currentClusterName: "master"
+    masterClusterName: "primary"
+    {{- if .Env.IS_NOT_PRIMARY }}
+    currentClusterName: "secondary"
+    {{- else }}
+    currentClusterName: "primary"
+    {{- end }}
     clusterInformation:
-        master:
+        primary:
             enabled: true
             initialFailoverVersion: 0
             rpcName: "cadence-frontend"
-            rpcAddress: {{ default .Env.BIND_ON_IP "127.0.0.1" }}:7933
+            rpcAddress: {{ default .Env.PRIMARY_SEEDS "cadence" }}:7933
+        {{- if .Env.ENABLE_GLOBAL_DOMAIN }}
+        secondary:
+            enabled: true
+            initialFailoverVersion: 2
+            rpcName: "cadence-frontend"
+            rpcAddress: {{ default .Env.SECONDARY_SEEDS "cadence-secondary" }}:7933
+        {{- end }}
+
 
 dcRedirectionPolicy:
     policy: {{ default .Env.DC_REDIRECT_POLICY "selected-apis-forwarding" }}
