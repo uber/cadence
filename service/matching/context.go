@@ -48,7 +48,7 @@ func newHandlerContext(
 ) *handlerContext {
 	return &handlerContext{
 		Context: ctx,
-		scope:   newPerTaskListScope(domain, taskList.GetName(), taskList.GetKind(), metricsClient, metricsScope),
+		scope:   newPerTaskListScope(domain, taskList.GetName(), taskList.GetKind(), metricsClient, metricsScope).Tagged(metrics.GetContextTags(ctx)...),
 		logger:  logger.WithTags(tag.WorkflowDomainName(domain), tag.WorkflowTaskListName(taskList.GetName())),
 	}
 }
