@@ -84,6 +84,8 @@ type (
 	RPC struct {
 		// Port is the port  on which the channel will bind to
 		Port int `yaml:"port"`
+		// GRPCPort is the port on which the grpc listener will bind to
+		GRPCPort int `yaml:"grpcPort"`
 		// BindOnLocalHost is true if localhost is the bind address
 		BindOnLocalHost bool `yaml:"bindOnLocalHost"`
 		// BindOnIP can be used to bind service on specific ip (eg. `0.0.0.0`) -

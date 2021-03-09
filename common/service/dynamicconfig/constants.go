@@ -84,6 +84,7 @@ var keys = map[Key]string{
 	EnableWorkflowShadower:              "system.enableWorkflowShadower",
 	EnableStickyQuery:                   "system.enableStickyQuery",
 	EnableDebugMode:                     "system.enableDebugMode",
+	EnableGRPCOutbound:                  "system.enableGRPCOutbound",
 
 	// size limit
 	BlobSizeLimitError:      "limit.blobSize.error",
@@ -422,6 +423,8 @@ const (
 	DisallowQuery
 	// EnableDebugMode is the key for enabling debugging components, logs and metrics
 	EnableDebugMode
+	// EnableGRPCOutbound is the key for enabling outbound GRPC traffic
+	EnableGRPCOutbound
 
 	// BlobSizeLimitError is the per event blob size limit
 	BlobSizeLimitError

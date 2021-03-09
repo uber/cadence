@@ -55,6 +55,7 @@ type (
 	RPCFactory interface {
 		GetDispatcher() *yarpc.Dispatcher
 		CreateDispatcherForOutbound(callerName, serviceName, hostName string) *yarpc.Dispatcher
+		CreateGRPCDispatcherForOutbound(callerName, serviceName, hostName string) *yarpc.Dispatcher
 	}
 )
 

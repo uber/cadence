@@ -24,6 +24,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -33,6 +35,7 @@ import (
 	cwsc "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/uber/cadence/client"
@@ -793,6 +796,7 @@ func newPProfInitializerImpl(logger log.Logger, port int) common.PProfInitialize
 
 type rpcFactoryImpl struct {
 	ch          *tchannel.ChannelTransport
+	grpc        *grpc.Transport
 	serviceName string
 	hostPort    string
 	logger      log.Logger
@@ -823,15 +827,29 @@ func (c *rpcFactoryImpl) GetDispatcher() *yarpc.Dispatcher {
 
 func (c *rpcFactoryImpl) createDispatcher() *yarpc.Dispatcher {
 	// Setup dispatcher for onebox
+	inbounds := yarpc.Inbounds{}
 	var err error
 	c.ch, err = tchannel.NewChannelTransport(
 		tchannel.ServiceName(c.serviceName), tchannel.ListenAddr(c.hostPort))
 	if err != nil {
 		c.logger.Fatal("Failed to create transport channel", tag.Error(err))
 	}
+	inbounds = append(inbounds, c.ch.NewInbound())
+
+	grpcHostPort, err := getGRPCAddress(c.hostPort)
+	if err != nil {
+		c.logger.Fatal("Failed to obtain GRPC address", tag.Error(err))
+	}
+	c.grpc = grpc.NewTransport()
+	listener, err := net.Listen("tcp", grpcHostPort)
+	if err != nil {
+		c.logger.Fatal("Failed to listen for GRPC request", tag.Error(err))
+	}
+	inbounds = append(inbounds, c.grpc.NewInbound(listener))
+
 	return yarpc.NewDispatcher(yarpc.Config{
 		Name:     c.serviceName,
-		Inbounds: yarpc.Inbounds{c.ch.NewInbound()},
+		Inbounds: inbounds,
 		// For integration tests to generate client out of the same outbound.
 		Outbounds: yarpc.Outbounds{
 			c.serviceName: {Unary: c.ch.NewSingleOutbound(c.hostPort)},
@@ -863,4 +881,42 @@ func (c *rpcFactoryImpl) CreateDispatcherForOutbound(
 		c.logger.Fatal("Failed to create outbound transport channel", tag.Error(err))
 	}
 	return d
+}
+
+func (c *rpcFactoryImpl) CreateGRPCDispatcherForOutbound(
+	callerName, serviceName, hostName string) *yarpc.Dispatcher {
+	grpcAddress, err := getGRPCAddress(hostName)
+	if err != nil {
+		c.logger.Fatal("Failed to obtain GRPC address", tag.Error(err))
+	}
+
+	// Setup dispatcher(outbound) for onebox
+	d := yarpc.NewDispatcher(yarpc.Config{
+		Name: callerName,
+		Outbounds: yarpc.Outbounds{
+			serviceName: {Unary: c.grpc.NewSingleOutbound(grpcAddress)},
+		},
+	})
+	if err := d.Start(); err != nil {
+		c.logger.Fatal("Failed to create outbound GRPC", tag.Error(err))
+	}
+	return d
+}
+
+const gprcPortOffset = 10
+
+func getGRPCAddress(hostPort string) (string, error) {
+	fmt.Println()
+	host, port, err := net.SplitHostPort(hostPort)
+	if err != nil {
+		return "", err
+	}
+
+	portInt, err := strconv.Atoi(port)
+	if err != nil {
+		return "", err
+	}
+
+	grpcAddress := net.JoinHostPort(host, strconv.Itoa(portInt+gprcPortOffset))
+	return grpcAddress, nil
 }

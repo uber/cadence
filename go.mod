@@ -23,7 +23,7 @@ require (
 	github.com/gocql/gocql v0.0.0-20191126110522-1982a06ad6b9
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.4.4
-	github.com/golang/protobuf v1.4.3
+	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/go-cmp v0.5.4 // indirect
 	github.com/google/uuid v1.1.2
 	github.com/hashicorp/go-version v1.2.0
@@ -74,7 +74,7 @@ require (
 	google.golang.org/api v0.26.0
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20201201144952-b05cb90ed32e // indirect
-	google.golang.org/grpc v1.29.1
+	google.golang.org/grpc v1.29.1 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
 	gopkg.in/jcmturner/gokrb5.v7 v7.3.0 // indirect
