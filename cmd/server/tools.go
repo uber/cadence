@@ -29,8 +29,8 @@ import (
 	_ "go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc"
 
 	// protobuf stuff
-	_ "google.golang.org/grpc/cmd/protoc-gen-go-grpc"
-	_ "google.golang.org/protobuf/cmd/protoc-gen-go"
+	_ "github.com/gogo/protobuf/protoc-gen-gofast"
+	_ "go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go"
 
 	// goimports
 	_ "golang.org/x/tools/cmd/goimports"
