@@ -46,17 +46,17 @@ const (
 func register(worker worker.Worker) {
 	worker.RegisterWorkflowWithOptions(
 		shadowWorkflow,
-		workflow.RegisterOptions{Name: shadower.ShadowWorkflowName},
+		workflow.RegisterOptions{Name: shadower.WorkflowName},
 	)
 	worker.RegisterActivity(verifyActiveDomainActivity)
 }
 
 func shadowWorkflow(
 	ctx workflow.Context,
-	params shadower.ShadowWorkflowParams,
-) (shadower.ShadowWorkflowResult, error) {
+	params shadower.WorkflowParams,
+) (shadower.WorkflowResult, error) {
 	if err := validateAndFillWorkflowParams(&params); err != nil {
-		return shadower.ShadowWorkflowResult{}, err
+		return shadower.WorkflowResult{}, err
 	}
 
 	lao := workflow.LocalActivityOptions{
@@ -71,13 +71,13 @@ func shadowWorkflow(
 
 	var domainActive bool
 	if err := workflow.ExecuteLocalActivity(ctx, verifyActiveDomainActivity, params.GetDomain()).Get(ctx, &domainActive); err != nil {
-		return shadower.ShadowWorkflowResult{}, err
+		return shadower.WorkflowResult{}, err
 	}
 
 	// TODO: we probably should make this configurable by user so that they can control is shadowing workflow
 	// should be run in active or passive side
 	if !domainActive {
-		return shadower.ShadowWorkflowResult{}, nil
+		return shadower.WorkflowResult{}, nil
 	}
 
 	replayStartTime := workflow.Now(ctx)
@@ -90,7 +90,7 @@ func shadowWorkflow(
 		NonRetriableErrorReasons: []string{
 			shadower.ErrReasonDomainNotExists,
 			shadower.ErrReasonInvalidQuery,
-			shadower.ShadowerTaskList,
+			shadower.TaskList,
 		},
 	}
 	scanWorkflowCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
@@ -109,7 +109,7 @@ func shadowWorkflow(
 		RetryPolicy:      retryPolicy,
 	})
 
-	var shadowResult shadower.ShadowWorkflowResult
+	var shadowResult shadower.WorkflowResult
 	if params.GetLastRunResult() != nil {
 		shadowResult = *params.GetLastRunResult()
 	}
@@ -169,7 +169,7 @@ func shadowWorkflow(
 		}
 	}
 
-	if params.GetShadowMode() == shadower.ShadowModeContinuous {
+	if params.GetShadowMode() == shadower.ModeContinuous {
 		return shadowResult, getContinueAsNewError(ctx, params, replayStartTime, shadowResult, nil)
 	}
 
@@ -177,7 +177,7 @@ func shadowWorkflow(
 }
 
 func validateAndFillWorkflowParams(
-	params *shadower.ShadowWorkflowParams,
+	params *shadower.WorkflowParams,
 ) error {
 	if len(params.GetDomain()) == 0 {
 		return errors.New("Domain is not set on shadower workflow params")
@@ -222,7 +222,7 @@ func exitConditionMet(
 	ctx workflow.Context,
 	exitCondition *shadower.ExitCondition,
 	startTime time.Time,
-	currentResult shadower.ShadowWorkflowResult,
+	currentResult shadower.WorkflowResult,
 ) bool {
 	if exitCondition == nil {
 		return false
@@ -244,16 +244,16 @@ func exitConditionMet(
 }
 
 func shouldContinueAsNew(
-	currentResult shadower.ShadowWorkflowResult,
+	currentResult shadower.WorkflowResult,
 ) bool {
 	return currentResult.GetSucceeded()+currentResult.GetSkipped()+currentResult.GetFailed() >= defaultMaxShadowCountPerRun
 }
 
 func getContinueAsNewError(
 	ctx workflow.Context,
-	params shadower.ShadowWorkflowParams,
+	params shadower.WorkflowParams,
 	startTime time.Time,
-	currentResult shadower.ShadowWorkflowResult,
+	currentResult shadower.WorkflowResult,
 	nextPageToken []byte,
 ) error {
 	params.NextPageToken = nextPageToken
@@ -271,7 +271,7 @@ func getContinueAsNewError(
 
 	return workflow.NewContinueAsNewError(
 		ctx,
-		shadower.ShadowWorkflowName,
+		shadower.WorkflowName,
 		params,
 	)
 }

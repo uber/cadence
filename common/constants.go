@@ -121,7 +121,7 @@ const (
 	// ShadowerDomainID is domain id for workflow shadower local domain
 	ShadowerDomainID = "59c51119-1b41-4a28-986d-d6e377716f82"
 	// ShadowerLocalDomainName
-	ShadowerLocalDomainName = shadower.ShadowerLocalDomainName
+	ShadowerLocalDomainName = shadower.LocalDomainName
 )
 
 const (

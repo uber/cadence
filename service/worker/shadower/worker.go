@@ -59,7 +59,7 @@ func New(params *BootstrapParams) *Worker {
 	w.decisionWorker = worker.New(
 		params.ServiceClient,
 		common.ShadowerLocalDomainName,
-		shadower.ShadowerTaskList,
+		shadower.TaskList,
 		worker.Options{
 			BackgroundActivityContext: ctx,
 		},

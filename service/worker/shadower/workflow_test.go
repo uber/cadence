@@ -115,7 +115,7 @@ func (s *workflowSuite) SetupTest() {
 	})
 	s.env.RegisterWorkflowWithOptions(
 		shadowWorkflow,
-		workflow.RegisterOptions{Name: shadower.ShadowWorkflowName},
+		workflow.RegisterOptions{Name: shadower.WorkflowName},
 	)
 	s.env.RegisterActivity(verifyActiveDomainActivity)
 	s.env.RegisterActivityWithOptions(
@@ -134,7 +134,7 @@ func (s *workflowSuite) TearDownTest() {
 }
 
 func (s *workflowSuite) TestShadowWorkflow_DomainNotSpecified() {
-	s.env.ExecuteWorkflow(shadowWorkflow, shadower.ShadowWorkflowParams{
+	s.env.ExecuteWorkflow(shadowWorkflow, shadower.WorkflowParams{
 		TaskList: common.StringPtr(testTaskListName),
 	})
 
@@ -143,7 +143,7 @@ func (s *workflowSuite) TestShadowWorkflow_DomainNotSpecified() {
 }
 
 func (s *workflowSuite) TestShadowWorkflow_TaskListNotSpecified() {
-	s.env.ExecuteWorkflow(shadowWorkflow, shadower.ShadowWorkflowParams{
+	s.env.ExecuteWorkflow(shadowWorkflow, shadower.WorkflowParams{
 		Domain: common.StringPtr(testStandbyDomainName),
 	})
 
@@ -152,7 +152,7 @@ func (s *workflowSuite) TestShadowWorkflow_TaskListNotSpecified() {
 }
 
 func (s *workflowSuite) TestShadowWorkflow_StandbyDomain() {
-	s.env.ExecuteWorkflow(shadowWorkflow, shadower.ShadowWorkflowParams{
+	s.env.ExecuteWorkflow(shadowWorkflow, shadower.WorkflowParams{
 		Domain:   common.StringPtr(testStandbyDomainName),
 		TaskList: common.StringPtr(testTaskListName),
 	})
@@ -160,10 +160,10 @@ func (s *workflowSuite) TestShadowWorkflow_StandbyDomain() {
 	s.True(s.env.IsWorkflowCompleted())
 	s.NoError(s.env.GetWorkflowError())
 
-	var result shadower.ShadowWorkflowResult
+	var result shadower.WorkflowResult
 	err := s.env.GetWorkflowResult(&result)
 	s.NoError(err)
-	s.Equal(shadower.ShadowWorkflowResult{}, result)
+	s.Equal(shadower.WorkflowResult{}, result)
 }
 
 func (s *workflowSuite) TestShadowWorkflow_ScanWorkflowNonRetryableError() {
@@ -171,7 +171,7 @@ func (s *workflowSuite) TestShadowWorkflow_ScanWorkflowNonRetryableError() {
 		shadower.ScanWorkflowActivityResult{},
 		cadence.NewCustomError(shadower.ErrReasonInvalidQuery, "invalid query"),
 	).Once()
-	s.env.ExecuteWorkflow(shadowWorkflow, shadower.ShadowWorkflowParams{
+	s.env.ExecuteWorkflow(shadowWorkflow, shadower.WorkflowParams{
 		Domain:        common.StringPtr(testActiveDomainName),
 		TaskList:      common.StringPtr(testTaskListName),
 		WorkflowQuery: common.StringPtr("invalid workflow query"),
@@ -196,7 +196,7 @@ func (s *workflowSuite) TestShadowWorkflow_ReplayWorkflowNonRetryableError() {
 		shadower.ReplayWorkflowActivityResult{},
 		cadence.NewCustomError(shadower.ErrReasonWorkflowTypeNotRegistered, "workflow not registered"),
 	).Once()
-	s.env.ExecuteWorkflow(shadowWorkflow, shadower.ShadowWorkflowParams{
+	s.env.ExecuteWorkflow(shadowWorkflow, shadower.WorkflowParams{
 		Domain:        common.StringPtr(testActiveDomainName),
 		TaskList:      common.StringPtr(testTaskListName),
 		WorkflowQuery: common.StringPtr(testWorkflowQuery),
@@ -221,7 +221,7 @@ func (s *workflowSuite) TestShadowWorkflow_ExitCondition_ShadowCount_NoLastResul
 		nil,
 	).Times(2)
 
-	s.env.ExecuteWorkflow(shadowWorkflow, shadower.ShadowWorkflowParams{
+	s.env.ExecuteWorkflow(shadowWorkflow, shadower.WorkflowParams{
 		Domain:        common.StringPtr(testActiveDomainName),
 		TaskList:      common.StringPtr(testTaskListName),
 		WorkflowQuery: common.StringPtr(testWorkflowQuery),
@@ -233,7 +233,7 @@ func (s *workflowSuite) TestShadowWorkflow_ExitCondition_ShadowCount_NoLastResul
 	s.True(s.env.IsWorkflowCompleted())
 	s.NoError(s.env.GetWorkflowError())
 
-	var result shadower.ShadowWorkflowResult
+	var result shadower.WorkflowResult
 	err := s.env.GetWorkflowResult(&result)
 	s.NoError(err)
 	s.True(result.GetSucceeded() >= int32(shadowCount))
@@ -253,14 +253,14 @@ func (s *workflowSuite) TestShadowWorkflow_ExitCondition_ShadowCount_WithLastRes
 		nil,
 	).Once()
 
-	s.env.ExecuteWorkflow(shadowWorkflow, shadower.ShadowWorkflowParams{
+	s.env.ExecuteWorkflow(shadowWorkflow, shadower.WorkflowParams{
 		Domain:        common.StringPtr(testActiveDomainName),
 		TaskList:      common.StringPtr(testTaskListName),
 		WorkflowQuery: common.StringPtr(testWorkflowQuery),
 		ExitCondition: &shadower.ExitCondition{
 			ShadowCount: common.Int32Ptr(int32(shadowCount)),
 		},
-		LastRunResult: &shadower.ShadowWorkflowResult{
+		LastRunResult: &shadower.WorkflowResult{
 			Failed: common.Int32Ptr(int32(shadowCount) / 2),
 		},
 	})
@@ -268,7 +268,7 @@ func (s *workflowSuite) TestShadowWorkflow_ExitCondition_ShadowCount_WithLastRes
 	s.True(s.env.IsWorkflowCompleted())
 	s.NoError(s.env.GetWorkflowError())
 
-	var result shadower.ShadowWorkflowResult
+	var result shadower.WorkflowResult
 	err := s.env.GetWorkflowResult(&result)
 	s.NoError(err)
 	s.True(result.GetSucceeded()+result.GetFailed() >= int32(shadowCount))
@@ -293,7 +293,7 @@ func (s *workflowSuite) TestShadowWorkflow_ExitCondition_ExpirationInterval() {
 	).Once()
 
 	s.env.SetStartTime(now)
-	s.env.ExecuteWorkflow(shadowWorkflow, shadower.ShadowWorkflowParams{
+	s.env.ExecuteWorkflow(shadowWorkflow, shadower.WorkflowParams{
 		Domain:        common.StringPtr(testActiveDomainName),
 		TaskList:      common.StringPtr(testTaskListName),
 		WorkflowQuery: common.StringPtr(testWorkflowQuery),
@@ -305,7 +305,7 @@ func (s *workflowSuite) TestShadowWorkflow_ExitCondition_ExpirationInterval() {
 	s.True(s.env.IsWorkflowCompleted())
 	s.NoError(s.env.GetWorkflowError())
 
-	var result shadower.ShadowWorkflowResult
+	var result shadower.WorkflowResult
 	err := s.env.GetWorkflowResult(&result)
 	s.NoError(err)
 	s.Equal(int32(numExecutions), result.GetSucceeded())
@@ -336,7 +336,7 @@ func (s *workflowSuite) TestShadowWorkflow_ContinueAsNew_MaxShadowCount() {
 		ShadowCount:                 common.Int32Ptr(defaultMaxShadowCountPerRun * 10),
 		ExpirationIntervalInSeconds: common.Int32Ptr(1 * int32(pages) * 10),
 	}
-	s.env.ExecuteWorkflow(shadowWorkflow, shadower.ShadowWorkflowParams{
+	s.env.ExecuteWorkflow(shadowWorkflow, shadower.WorkflowParams{
 		Domain:        common.StringPtr(testActiveDomainName),
 		TaskList:      common.StringPtr(testTaskListName),
 		WorkflowQuery: common.StringPtr(testWorkflowQuery),
@@ -347,14 +347,14 @@ func (s *workflowSuite) TestShadowWorkflow_ContinueAsNew_MaxShadowCount() {
 	fmt.Print("error", s.env.GetWorkflowError())
 	continueAsNewErr, ok := s.env.GetWorkflowError().(*workflow.ContinueAsNewError)
 	s.True(ok)
-	s.Equal(shadower.ShadowWorkflowName, continueAsNewErr.WorkflowType().Name)
-	shadowParams, ok := continueAsNewErr.Args()[0].(shadower.ShadowWorkflowParams)
+	s.Equal(shadower.WorkflowName, continueAsNewErr.WorkflowType().Name)
+	shadowParams, ok := continueAsNewErr.Args()[0].(shadower.WorkflowParams)
 	s.Equal(testActiveDomainName, shadowParams.GetDomain())
 	s.Equal(testTaskListName, shadowParams.GetTaskList())
 	s.Equal(testWorkflowQuery, shadowParams.GetWorkflowQuery())
 	s.NotNil(shadowParams.NextPageToken)
 	s.Equal(1.0, shadowParams.GetSamplingRate())
-	s.Equal(shadower.ShadowModeNormal, shadowParams.GetShadowMode())
+	s.Equal(shadower.ModeNormal, shadowParams.GetShadowMode())
 	shadowedWorkflows := shadowParams.GetLastRunResult().GetSucceeded() + shadowParams.GetLastRunResult().GetFailed()
 	s.Equal(exitCondition.GetShadowCount()-shadowedWorkflows, shadowParams.ExitCondition.GetShadowCount())
 	s.Equal(int32(pages)*int32(replayTimePerPage.Seconds()), exitCondition.GetExpirationIntervalInSeconds()-shadowParams.GetExitCondition().GetExpirationIntervalInSeconds())
@@ -385,11 +385,11 @@ func (s *workflowSuite) TestShadowWorkflow_ContinueAsNew_ContinuousShadowing() {
 		nil,
 	).Times(pages)
 
-	s.env.ExecuteWorkflow(shadowWorkflow, shadower.ShadowWorkflowParams{
+	s.env.ExecuteWorkflow(shadowWorkflow, shadower.WorkflowParams{
 		Domain:        common.StringPtr(testActiveDomainName),
 		TaskList:      common.StringPtr(testTaskListName),
 		WorkflowQuery: common.StringPtr("some random workflow query"),
-		ShadowMode:    shadower.ShadowModeContinuous.Ptr(),
+		ShadowMode:    shadower.ModeContinuous.Ptr(),
 		SamplingRate:  common.Float64Ptr(samplingRate),
 	})
 
@@ -397,14 +397,14 @@ func (s *workflowSuite) TestShadowWorkflow_ContinueAsNew_ContinuousShadowing() {
 	fmt.Print("error", s.env.GetWorkflowError())
 	continueAsNewErr, ok := s.env.GetWorkflowError().(*workflow.ContinueAsNewError)
 	s.True(ok)
-	s.Equal(shadower.ShadowWorkflowName, continueAsNewErr.WorkflowType().Name)
-	shadowParams, ok := continueAsNewErr.Args()[0].(shadower.ShadowWorkflowParams)
+	s.Equal(shadower.WorkflowName, continueAsNewErr.WorkflowType().Name)
+	shadowParams, ok := continueAsNewErr.Args()[0].(shadower.WorkflowParams)
 	s.Equal(testActiveDomainName, shadowParams.GetDomain())
 	s.Equal(testTaskListName, shadowParams.GetTaskList())
 	s.Equal(testWorkflowQuery, shadowParams.GetWorkflowQuery())
 	s.Nil(shadowParams.NextPageToken)
 	s.Equal(samplingRate, shadowParams.GetSamplingRate())
-	s.Equal(shadower.ShadowModeContinuous, shadowParams.GetShadowMode())
+	s.Equal(shadower.ModeContinuous, shadowParams.GetShadowMode())
 	s.Empty(shadowParams.ExitCondition)
 	s.Equal(int32(defaultReplayConcurrency), shadowParams.GetConcurrency())
 	s.Equal(int32(pages*pageSize), shadowParams.LastRunResult.GetSucceeded())
