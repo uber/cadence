@@ -461,6 +461,68 @@ func (s *domainHandlerGlobalDomainDisabledSuite) TestUpdateGetDomain_AllAttrSet(
 	)
 }
 
+func (s *domainHandlerGlobalDomainDisabledSuite) TestDeprecateGetDomain() {
+	// setup domain
+	domainName := s.getRandomDomainName()
+	domain := s.setupLocalDomain(domainName)
+
+	// execute the function to be tested
+	err := s.handler.DeprecateDomain(context.Background(), &types.DeprecateDomainRequest{
+		Name: domainName,
+	})
+	s.Nil(err)
+
+	// verify the execution result
+	expectedResp := domain
+	expectedResp.DomainInfo.Status = types.DomainStatusDeprecated.Ptr()
+
+	getResp, err := s.handler.DescribeDomain(context.Background(), &types.DescribeDomainRequest{
+		Name: common.StringPtr(domainName),
+	})
+	s.Nil(err)
+	assertDomainEqual(s.Suite, getResp, expectedResp)
+}
+
 func (s *domainHandlerGlobalDomainDisabledSuite) getRandomDomainName() string {
 	return "domain" + uuid.New()
+}
+
+func (s *domainHandlerGlobalDomainDisabledSuite) setupLocalDomain(domainName string) *types.DescribeDomainResponse {
+	return setupLocalDomain(s.Suite, s.handler, s.ClusterMetadata, domainName)
+}
+
+func setupLocalDomain(s suite.Suite, handler *handlerImpl, clusterMetadata cluster.Metadata, domainName string) *types.DescribeDomainResponse {
+	description := "some random description"
+	email := "some random email"
+	retention := int32(7)
+	emitMetric := true
+	data := map[string]string{"some random key": "some random value"}
+	var clusters []*types.ClusterReplicationConfiguration
+	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(clusterMetadata.GetCurrentClusterName(), nil) {
+		clusters = append(clusters, &types.ClusterReplicationConfiguration{
+			ClusterName: replicationConfig.ClusterName,
+		})
+	}
+	err := handler.RegisterDomain(context.Background(), &types.RegisterDomainRequest{
+		Name:                                   domainName,
+		Description:                            description,
+		OwnerEmail:                             email,
+		WorkflowExecutionRetentionPeriodInDays: retention,
+		EmitMetric:                             common.BoolPtr(emitMetric),
+		Clusters:                               clusters,
+		ActiveClusterName:                      clusterMetadata.GetCurrentClusterName(),
+		Data:                                   data,
+	})
+	s.Nil(err)
+	getResp, err := handler.DescribeDomain(context.Background(), &types.DescribeDomainRequest{
+		Name: common.StringPtr(domainName),
+	})
+	s.Nil(err)
+	return getResp
+}
+
+func assertDomainEqual(s suite.Suite, autual, expected *types.DescribeDomainResponse) {
+	s.NotEmpty(autual.DomainInfo.GetUUID())
+	expected.DomainInfo.UUID = autual.DomainInfo.GetUUID()
+	s.Equal(expected, autual)
 }
