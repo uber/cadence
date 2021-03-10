@@ -188,6 +188,11 @@ func (tr *taskReader) getTaskBatchWithRange(readLevel int64, maxReadLevel int64)
 		return tr.tlMgr.db.GetTasks(readLevel, maxReadLevel, tr.tlMgr.config.GetTasksBatchSize())
 	})
 	if err != nil {
+		tr.logger().Error("Persistent store operation failure",
+			tag.StoreOperationGetTasks,
+			tag.Error(err),
+			tag.WorkflowTaskListName(tr.tlMgr.taskListID.name),
+			tag.WorkflowTaskListType(tr.tlMgr.taskListID.taskType))
 		return nil, err
 	}
 	return response.(*persistence.GetTasksResponse).Tasks, err
