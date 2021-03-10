@@ -40,9 +40,13 @@ const (
 	decisionType   = "decisionType"
 	invariantType  = "invariantType"
 	kafkaPartition = "kafkaPartition"
+	transport      = "transport"
 
 	domainAllValue = "all"
 	unknownValue   = "_unknown_"
+
+	transportThrift = "thrift"
+	transportGRPC   = "grpc"
 )
 
 // Tag is an interface to define metrics tags
@@ -136,4 +140,14 @@ func InvariantTypeTag(value string) Tag {
 // KafkaPartitionTag returns a new KafkaPartition type tag.
 func KafkaPartitionTag(value int32) Tag {
 	return simpleMetric{key: kafkaPartition, value: strconv.Itoa(int(value))}
+}
+
+// ThriftTransportTag returns a new Thrift transport type tag.
+func ThriftTransportTag() Tag {
+	return simpleMetric{key: transport, value: transportThrift}
+}
+
+// GPRCTransportTag returns a new GRPC transport type tag.
+func GPRCTransportTag() Tag {
+	return simpleMetric{key: transport, value: transportGRPC}
 }
