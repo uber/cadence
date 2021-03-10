@@ -108,7 +108,7 @@ func (s *server) startService() common.Daemon {
 	params := service.BootstrapParams{}
 	params.Name = "cadence-" + s.name
 	params.Logger = loggerimpl.NewLogger(s.cfg.Log.NewZapLogger())
-	params.UpdateLoggerWithServiceName(s.name)
+	params.UpdateLoggerWithServiceName(params.Name)
 	params.PersistenceConfig = s.cfg.Persistence
 
 	params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger, s.doneC)
