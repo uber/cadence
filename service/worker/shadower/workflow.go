@@ -90,7 +90,7 @@ func shadowWorkflow(
 		NonRetriableErrorReasons: []string{
 			shadower.ErrReasonDomainNotExists,
 			shadower.ErrReasonInvalidQuery,
-			shadower.TaskList,
+			shadower.ErrReasonWorkflowTypeNotRegistered,
 		},
 	}
 	scanWorkflowCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{

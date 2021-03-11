@@ -55,7 +55,7 @@ func New(params *BootstrapParams) *Worker {
 	w := &Worker{
 		domainCache: params.DomainCache,
 	}
-	ctx := context.WithValue(context.Background(), workerContextKey, *w)
+	ctx := context.WithValue(context.Background(), workerContextKey, w)
 	w.decisionWorker = worker.New(
 		params.ServiceClient,
 		common.ShadowerLocalDomainName,
