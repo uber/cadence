@@ -91,6 +91,7 @@ func shadowWorkflow(
 			shadower.ErrReasonDomainNotExists,
 			shadower.ErrReasonInvalidQuery,
 			shadower.ErrReasonWorkflowTypeNotRegistered,
+			shadower.ErrNonRetryableType, // java non-retryable error type
 		},
 	}
 	scanWorkflowCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
