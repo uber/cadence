@@ -19,6 +19,15 @@ We highly recommend that you use [Cadence service docker](docker/README.md) to r
 
 Try out the sample recipes for [Go](https://github.com/uber-common/cadence-samples) or [Java](https://github.com/uber/cadence-java-samples) to get started.
 
+### Client SDKs
+Java and Golang clients are developed by Cadence team:
+* [Java Client](https://github.com/uber/cadence-java-client)
+* [Go Client](https://github.com/uber-go/cadence-client)
+
+Other clients are developed by community:
+* [Python Client](https://github.com/firdaus/cadence-python)
+* [Ruby Client](https://github.com/coinbase/cadence-ruby)
+
 ### Use CLI Tools
 Use [Cadence command-line tool](tools/cli/README.md) to perform various tasks on Cadence server cluster
 
@@ -35,11 +44,13 @@ TIPS: Run `make tools` to build all tools mentioned above.
 Try out [Cadence Web UI](https://github.com/uber/cadence-web) to view your workflows on Cadence.
 (This is already available at localhost:8088 if you run Cadence with docker compose)
 
-### Cadence docs
+## Documentation
 
-If you have a suggestion or change you would like to make to [cadenceworkflow.io](https://cadenceworkflow.io) you can visit [Cadence Docs](https://github.com/uber/cadence-docs) and raise an Issue or Pull Request there.
+Visit [cadenceworkflow.io](https://cadenceworkflow.io) for documentation.
+ 
+Join us in [Cadence Docs](https://github.com/uber/cadence-docs) project. Raise an Issue or Pull Request there.
 
-### Getting Help
+## Getting Help
 * [StackOverflow](https://stackoverflow.com/questions/tagged/cadence-workflow)
 * [Github Issues](https://github.com/uber/cadence/issues)
 * [Slack](http://t.uber.com/cadence-slack)
