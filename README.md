@@ -39,11 +39,16 @@ Try out [Cadence Web UI](https://github.com/uber/cadence-web) to view your workf
 
 If you have a suggestion or change you would like to make to [cadenceworkflow.io](https://cadenceworkflow.io) you can visit [Cadence Docs](https://github.com/uber/cadence-docs) and raise an Issue or Pull Request there.
 
+### Getting Help
+* [StackOverflow](https://stackoverflow.com/questions/tagged/cadence-workflow)
+* [Github Issues](https://github.com/uber/cadence/issues)
+* [Slack](http://t.uber.com/cadence-slack)
+
 ## Contributing
 
 We'd love your help in making Cadence great. Please review our [contribution guide](docs/setup/CONTRIBUTING.md).
 
-If you'd like to propose a new feature, first join the Cadence [discussion group](https://groups.google.com/d/forum/cadence-discussion) and [Slack channel](https://join.slack.com/t/uber-cadence/shared_invite/enQtNDczNTgxMjYxNDEzLTQyYjcxZDM2YTIxMTZkMzQ0NjgxYmI3OWY5ODhiOTliM2I5MzA4NTM4MjU4YzgzZDkwNGEzOTUzNTBlNDk3Yjc) to start a discussion and check if there are existing design discussions. Also peruse our [design docs](docs/design/index.md) in case a feature has been designed but not yet implemented. Once you're sure the proposal is not covered elsewhere, please follow our [proposal instructions](PROPOSALS.md).
+If you'd like to propose a new feature, first join the [Slack channel](http://t.uber.com/cadence-slack) to start a discussion and check if there are existing design discussions. Also peruse our [design docs](docs/design/index.md) in case a feature has been designed but not yet implemented. Once you're sure the proposal is not covered elsewhere, please follow our [proposal instructions](PROPOSALS.md).
 
 ## License
 
