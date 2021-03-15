@@ -43,6 +43,7 @@ func startHandler(c *cli.Context) {
 	env := getEnvironment(c)
 	zone := getZone(c)
 	configDir := getConfigDir(c)
+	rootDir := getRootDir(c)
 
 	log.Printf("Loading config; env=%v,zone=%v,configDir=%v\n", env, zone, configDir)
 
@@ -54,6 +55,7 @@ func startHandler(c *cli.Context) {
 	if cfg.Log.Level == "debug" {
 		log.Printf("config=\n%v\n", cfg.String())
 	}
+	cfg.DynamicConfigClient.Filepath = constructPath(rootDir, cfg.DynamicConfigClient.Filepath)
 
 	if err := cfg.ValidateAndFillDefaults(); err != nil {
 		log.Fatalf("config validation failed: %v", err)
