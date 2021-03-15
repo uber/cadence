@@ -92,7 +92,7 @@ func (s *mutableStateSuite) SetupTest() {
 
 	s.mockEventsCache = s.mockShard.GetEventsCache().(*events.MockCache)
 
-	s.testScope = s.mockShard.Resource.MetricsScope.(tally.TestScope)
+	s.testScope = s.mockShard.Resource.MetricsScope
 	s.logger = s.mockShard.GetLogger()
 
 	s.msBuilder = newMutableStateBuilder(s.mockShard, s.logger, testLocalDomainEntry)

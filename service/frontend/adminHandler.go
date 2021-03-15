@@ -480,9 +480,6 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 
 	pageToken.PersistenceToken = rawHistoryResponse.NextPageToken
 	size := rawHistoryResponse.Size
-	// N.B. - Dual emit is required here so that we can see aggregate timer stats across all
-	// domains along with the individual domains stats
-	adh.GetMetricsClient().RecordTimer(metrics.AdminGetWorkflowExecutionRawHistoryScope, metrics.HistorySize, time.Duration(size))
 	scope.RecordTimer(metrics.HistorySize, time.Duration(size))
 
 	rawBlobs := rawHistoryResponse.HistoryEventBlobs

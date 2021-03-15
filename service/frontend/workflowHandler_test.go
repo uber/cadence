@@ -1360,6 +1360,23 @@ func (s *workflowHandlerSuite) TestVerifyHistoryIsComplete() {
 	}
 }
 
+func (s *workflowHandlerSuite) TestContextMetricsTags() {
+	wh := s.getWorkflowHandler(s.newConfig())
+
+	tag := metrics.ThriftTransportTag()
+	ctx := metrics.TagContext(context.Background(), tag)
+	wh.CountWorkflowExecutions(ctx, nil)
+
+	snapshot := s.mockResource.MetricsScope.Snapshot()
+	for _, counter := range snapshot.Counters() {
+		if counter.Name() == "test.cadence_requests" {
+			s.Equal(tag.Value(), counter.Tags()[tag.Key()])
+			return
+		}
+	}
+	s.Fail("counter not found")
+}
+
 func (s *workflowHandlerSuite) newConfig() *Config {
 	return NewConfig(
 		dc.NewCollection(

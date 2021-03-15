@@ -32,8 +32,6 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"github.com/uber-go/tally"
-
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/testsuite"
@@ -152,7 +150,7 @@ func (s *activitiesSuite) TestScanShardActivity() {
 		var reports []ScanReport
 		s.NoError(report.Get(&reports))
 
-		for _, v := range s.mockResource.MetricsScope.(tally.TestScope).Snapshot().Timers() {
+		for _, v := range s.mockResource.MetricsScope.Snapshot().Timers() {
 			tags := v.Tags()
 			s.Equal("cadence-sys-shardscanner-scanshard-activity", tags["activityType"])
 			s.Equal(tc.workflowName, tags["workflowType"])

@@ -1627,6 +1627,7 @@ const (
 	EventBlobSize
 
 	ArchivalConfigFailures
+	ActiveClusterGauge
 
 	ElasticsearchRequests
 	ElasticsearchFailures
@@ -1765,7 +1766,6 @@ const (
 
 	ActivityE2ELatency
 	ActivityLostCounter
-	ActiveClusterGauge
 	AckLevelUpdateCounter
 	AckLevelUpdateFailedCounter
 	DecisionTypeScheduleActivityCounter
@@ -2090,6 +2090,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		HistoryCount:                                        {metricName: "history_count", metricType: Timer},
 		EventBlobSize:                                       {metricName: "event_blob_size", metricType: Timer},
 		ArchivalConfigFailures:                              {metricName: "archivalconfig_failures", metricType: Counter},
+		ActiveClusterGauge:                                  {metricName: "active_cluster", metricType: Gauge},
 		ElasticsearchRequests:                               {metricName: "elasticsearch_requests", metricType: Counter},
 		ElasticsearchFailures:                               {metricName: "elasticsearch_errors", metricType: Counter},
 		ElasticsearchLatency:                                {metricName: "elasticsearch_latency", metricType: Timer},
@@ -2215,7 +2216,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskLimitExceededCounter: {metricName: "task_errors_limit_exceeded_counter", metricType: Counter},
 		TaskProcessingLatency:    {metricName: "task_latency_processing", metricType: Timer},
 		TaskQueueLatency:         {metricName: "task_latency_queue", metricType: Timer},
-		ActiveClusterGauge:       {metricName: "active_cluster", metricType: Gauge},
 
 		// per domain task metrics
 
