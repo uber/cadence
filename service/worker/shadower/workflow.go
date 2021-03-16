@@ -41,6 +41,8 @@ const (
 	defaultReplayConcurrency    = 1
 	defaultMaxReplayConcurrency = 50
 	defaultMaxShadowCountPerRun = 100000
+
+	defaultWaitDurationPerIteration = 5 * time.Minute
 )
 
 func register(worker worker.Worker) {
@@ -171,6 +173,9 @@ func shadowWorkflow(
 	}
 
 	if params.GetShadowMode() == shadower.ModeContinuous {
+		if err := workflow.Sleep(ctx, defaultWaitDurationPerIteration); err != nil {
+			return shadowResult, err
+		}
 		return shadowResult, getContinueAsNewError(ctx, params, replayStartTime, shadowResult, nil)
 	}
 

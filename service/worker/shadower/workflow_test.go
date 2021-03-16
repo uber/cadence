@@ -336,6 +336,10 @@ func (s *workflowSuite) TestShadowWorkflow_ContinueAsNew_MaxShadowCount() {
 		ShadowCount:                 common.Int32Ptr(defaultMaxShadowCountPerRun * 10),
 		ExpirationIntervalInSeconds: common.Int32Ptr(1 * int32(pages) * 10),
 	}
+	timerFired := 0
+	s.env.SetOnTimerFiredListener(func(_ string) {
+		timerFired++
+	})
 	s.env.ExecuteWorkflow(shadowWorkflow, shadower.WorkflowParams{
 		Domain:        common.StringPtr(testActiveDomainName),
 		TaskList:      common.StringPtr(testTaskListName),
@@ -361,6 +365,7 @@ func (s *workflowSuite) TestShadowWorkflow_ContinueAsNew_MaxShadowCount() {
 	s.Equal(int32(defaultReplayConcurrency), shadowParams.GetConcurrency())
 	totalWorkflows := shadowedWorkflows + shadowParams.GetLastRunResult().GetSkipped()
 	s.GreaterOrEqual(totalWorkflows, int32(defaultMaxShadowCountPerRun))
+	s.Equal(0, timerFired)
 }
 
 func (s *workflowSuite) TestShadowWorkflow_ContinueAsNew_ContinuousShadowing() {
@@ -385,6 +390,11 @@ func (s *workflowSuite) TestShadowWorkflow_ContinueAsNew_ContinuousShadowing() {
 		nil,
 	).Times(pages)
 
+	timerFired := 0
+	s.env.SetOnTimerFiredListener(func(_ string) {
+		timerFired++
+	})
+
 	s.env.ExecuteWorkflow(shadowWorkflow, shadower.WorkflowParams{
 		Domain:        common.StringPtr(testActiveDomainName),
 		TaskList:      common.StringPtr(testTaskListName),
@@ -408,6 +418,7 @@ func (s *workflowSuite) TestShadowWorkflow_ContinueAsNew_ContinuousShadowing() {
 	s.Empty(shadowParams.ExitCondition)
 	s.Equal(int32(defaultReplayConcurrency), shadowParams.GetConcurrency())
 	s.Equal(int32(pages*pageSize), shadowParams.LastRunResult.GetSucceeded())
+	s.Equal(1, timerFired)
 }
 
 // dummy activity implementations for test
