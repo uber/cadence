@@ -108,9 +108,10 @@ func (s *server) startService() common.Daemon {
 	params := service.BootstrapParams{}
 	params.Name = "cadence-" + s.name
 	params.Logger = loggerimpl.NewLogger(s.cfg.Log.NewZapLogger())
+	params.UpdateLoggerWithServiceName(params.Name)
 	params.PersistenceConfig = s.cfg.Persistence
 
-	params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger.WithTags(tag.Service(params.Name)), s.doneC)
+	params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger, s.doneC)
 	if err != nil {
 		log.Printf("error creating file based dynamic config client, use no-op config client instead. error: %v", err)
 		params.DynamicConfig = dynamicconfig.NewNopClient()

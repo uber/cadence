@@ -45,8 +45,10 @@ const (
 	returnEmptyTaskTimeBudget time.Duration = time.Second
 )
 
-var taskListActivityTypeTag = metrics.TaskListTypeTag("activity")
-var taskListDecisionTypeTag = metrics.TaskListTypeTag("decision")
+var (
+	taskListActivityTypeTag = metrics.TaskListTypeTag("activity")
+	taskListDecisionTypeTag = metrics.TaskListTypeTag("decision")
+)
 
 type (
 	addTaskParams struct {
@@ -168,12 +170,9 @@ func newTaskListManager(
 			metrics.MatchingTaskListMgrScope,
 		))
 	}
-	var taskListTypeMetricScope metrics.Scope
-	if taskList.taskType == persistence.TaskListTypeActivity {
-		taskListTypeMetricScope = tlMgr.metricScope().Tagged(taskListActivityTypeTag)
-	} else {
-		taskListTypeMetricScope = tlMgr.metricScope().Tagged(taskListDecisionTypeTag)
-	}
+	taskListTypeMetricScope := tlMgr.metricScope().Tagged(
+		getTaskListTypeTag(taskList.taskType),
+	)
 	tlMgr.pollerHistory = newPollerHistory(func() {
 		taskListTypeMetricScope.UpdateGauge(metrics.PollerPerTaskListCounter,
 			float64(len(tlMgr.pollerHistory.getAllPollerInfo())))
@@ -588,6 +587,17 @@ func (c *taskListManagerImpl) tryInitDomainNameAndScope() {
 
 	c.metricScopeValue.Store(scope)
 	c.domainNameValue.Store(domainName)
+}
+
+func getTaskListTypeTag(taskListType int) metrics.Tag {
+	switch taskListType {
+	case persistence.TaskListTypeActivity:
+		return taskListActivityTypeTag
+	case persistence.TaskListTypeDecision:
+		return taskListDecisionTypeTag
+	default:
+		return metrics.TaskListTypeTag("")
+	}
 }
 
 func createServiceBusyError(msg string) *types.ServiceBusyError {

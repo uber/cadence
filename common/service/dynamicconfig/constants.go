@@ -32,6 +32,7 @@ func (k Key) String() string {
 }
 
 // Mapping from Key to keyName, where keyName are used dynamic config source.
+// !!!For developer: Make sure you also update the [documentation](https://cadenceworkflow.io/docs/operation-guide/setup/) if you add/remove any dynamic configuration.
 var keys = map[Key]string{
 	unknownKey: "unknownKey",
 
@@ -342,6 +343,7 @@ var keys = map[Key]string{
 	TimersFixerDomainAllow:                                   "worker.timersFixerDomainAllow",
 }
 
+// !!!For developer: Make sure you also update the [documentation](https://cadenceworkflow.io/docs/operation-guide/setup/) if you add/remove any dynamic configuration.
 const (
 	unknownKey Key = iota
 

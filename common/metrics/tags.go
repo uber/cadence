@@ -20,7 +20,9 @@
 
 package metrics
 
-import "strconv"
+import (
+	"strconv"
+)
 
 const (
 	revisionTag     = "revision"
