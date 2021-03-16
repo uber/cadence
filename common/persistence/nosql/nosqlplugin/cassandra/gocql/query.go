@@ -55,14 +55,14 @@ func (q *query) Exec() error {
 func (q *query) Scan(
 	dest ...interface{},
 ) error {
-	err := q.Query.Scan(dest)
+	err := q.Query.Scan(dest...)
 	return q.handleError(err)
 }
 
 func (q *query) ScanCAS(
 	dest ...interface{},
 ) (bool, error) {
-	applied, err := q.Query.ScanCAS(dest)
+	applied, err := q.Query.ScanCAS(dest...)
 	return applied, q.handleError(err)
 }
 
