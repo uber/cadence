@@ -122,8 +122,5 @@ func (q *query) Bind(v ...interface{}) Query {
 }
 
 func (q *query) handleError(err error) error {
-	if err == gocql.ErrNoConnections {
-		_ = q.session.refresh()
-	}
-	return err
+	return q.session.handleError(err)
 }
