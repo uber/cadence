@@ -24,87 +24,95 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/duration"
-	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/golang/protobuf/ptypes/wrappers"
-	"google.golang.org/protobuf/types/known/fieldmaskpb"
+	gogo "github.com/gogo/protobuf/types"
 
 	"github.com/uber/cadence/common"
 )
 
-func fromDoubleValue(v *float64) *wrappers.DoubleValue {
+func fromDoubleValue(v *float64) *gogo.DoubleValue {
 	if v == nil {
 		return nil
 	}
-	return &wrappers.DoubleValue{Value: *v}
+	return &gogo.DoubleValue{Value: *v}
 }
 
-func toDoubleValue(v *wrappers.DoubleValue) *float64 {
+func toDoubleValue(v *gogo.DoubleValue) *float64 {
 	if v == nil {
 		return nil
 	}
 	return common.Float64Ptr(v.Value)
 }
 
-func fromInt64Value(v *int64) *wrappers.Int64Value {
+func fromInt64Value(v *int64) *gogo.Int64Value {
 	if v == nil {
 		return nil
 	}
-	return &wrappers.Int64Value{Value: *v}
+	return &gogo.Int64Value{Value: *v}
 }
 
-func toInt64Value(v *wrappers.Int64Value) *int64 {
+func toInt64Value(v *gogo.Int64Value) *int64 {
 	if v == nil {
 		return nil
 	}
 	return common.Int64Ptr(v.Value)
 }
 
-func unixNanoToTime(t *int64) *timestamp.Timestamp {
+func unixNanoToTime(t *int64) *gogo.Timestamp {
 	if t == nil {
 		return nil
 	}
-	time, err := ptypes.TimestampProto(time.Unix(0, *t))
+	time, err := gogo.TimestampProto(time.Unix(0, *t))
 	if err != nil {
 		panic(err)
 	}
 	return time
 }
 
-func timeToUnixNano(t *timestamp.Timestamp) *int64 {
+func timeToUnixNano(t *gogo.Timestamp) *int64 {
 	if t == nil {
 		return nil
 	}
-	return common.Int64Ptr(t.AsTime().UnixNano())
+	timestamp, err := gogo.TimestampFromProto(t)
+	if err != nil {
+		panic(err)
+	}
+	return common.Int64Ptr(timestamp.UnixNano())
 }
 
-func daysToDuration(d *int32) *duration.Duration {
+func daysToDuration(d *int32) *gogo.Duration {
 	if d == nil {
 		return nil
 	}
-	return ptypes.DurationProto(common.DaysToDuration(*d))
+	return gogo.DurationProto(common.DaysToDuration(*d))
 }
 
-func durationToDays(d *duration.Duration) *int32 {
+func durationToDays(d *gogo.Duration) *int32 {
 	if d == nil {
 		return nil
 	}
-	return common.Int32Ptr(common.DurationToDays(d.AsDuration()))
+	duration, err := gogo.DurationFromProto(d)
+	if err != nil {
+		panic(err)
+	}
+	return common.Int32Ptr(common.DurationToDays(duration))
 }
 
-func secondsToDuration(d *int32) *duration.Duration {
+func secondsToDuration(d *int32) *gogo.Duration {
 	if d == nil {
 		return nil
 	}
-	return ptypes.DurationProto(common.SecondsToDuration(int64(*d)))
+	return gogo.DurationProto(common.SecondsToDuration(int64(*d)))
 }
 
-func durationToSeconds(d *duration.Duration) *int32 {
+func durationToSeconds(d *gogo.Duration) *int32 {
 	if d == nil {
 		return nil
 	}
-	return common.Int32Ptr(int32(common.DurationToSeconds(d.AsDuration())))
+	duration, err := gogo.DurationFromProto(d)
+	if err != nil {
+		panic(err)
+	}
+	return common.Int32Ptr(int32(common.DurationToSeconds(duration)))
 }
 
 func int32To64(v *int32) *int64 {
@@ -136,7 +144,7 @@ func int32ToString(i int32) string {
 
 type fieldSet map[string]struct{}
 
-func newFieldSet(mask *fieldmaskpb.FieldMask) fieldSet {
+func newFieldSet(mask *gogo.FieldMask) fieldSet {
 	if mask == nil {
 		return nil
 	}
@@ -153,4 +161,8 @@ func (fs fieldSet) isSet(field string) bool {
 	}
 	_, ok := fs[field]
 	return ok
+}
+
+func newFieldMask(fields []string) *gogo.FieldMask {
+	return &gogo.FieldMask{Paths: fields}
 }

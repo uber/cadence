@@ -45,8 +45,10 @@ const (
 	returnEmptyTaskTimeBudget time.Duration = time.Second
 )
 
-var taskListActivityTypeTag = metrics.TaskListTypeTag("activity")
-var taskListDecisionTypeTag = metrics.TaskListTypeTag("decision")
+var (
+	taskListActivityTypeTag = metrics.TaskListTypeTag("activity")
+	taskListDecisionTypeTag = metrics.TaskListTypeTag("decision")
+)
 
 type (
 	addTaskParams struct {
@@ -168,12 +170,9 @@ func newTaskListManager(
 			metrics.MatchingTaskListMgrScope,
 		))
 	}
-	var taskListTypeMetricScope metrics.Scope
-	if taskList.taskType == persistence.TaskListTypeActivity {
-		taskListTypeMetricScope = tlMgr.metricScope().Tagged(taskListActivityTypeTag)
-	} else {
-		taskListTypeMetricScope = tlMgr.metricScope().Tagged(taskListDecisionTypeTag)
-	}
+	taskListTypeMetricScope := tlMgr.metricScope().Tagged(
+		getTaskListTypeTag(taskList.taskType),
+	)
 	tlMgr.pollerHistory = newPollerHistory(func() {
 		taskListTypeMetricScope.UpdateGauge(metrics.PollerPerTaskListCounter,
 			float64(len(tlMgr.pollerHistory.getAllPollerInfo())))
@@ -227,6 +226,9 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 	c.startWG.Wait()
 	var syncMatch bool
 	_, err := c.executeWithRetry(func() (interface{}, error) {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 
 		domainEntry, err := c.domainCache.GetDomainByID(params.taskInfo.DomainID)
 		if err != nil {
@@ -252,9 +254,17 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 
 		return c.taskWriter.appendTask(params.execution, params.taskInfo)
 	})
-	if err == nil {
+
+	if err != nil {
+		c.logger.Error("Failed to add task",
+			tag.Error(err),
+			tag.WorkflowTaskListName(c.taskListID.name),
+			tag.WorkflowTaskListType(c.taskListID.taskType),
+		)
+	} else {
 		c.taskReader.Signal()
 	}
+
 	return syncMatch, err
 }
 
@@ -419,8 +429,7 @@ func (c *taskListManagerImpl) completeTask(task *persistence.TaskInfo, err error
 			// OK, we also failed to write to persistence.
 			// This should only happen in very extreme cases where persistence is completely down.
 			// We still can't lose the old task so we just unload the entire task list
-			c.logger.Error("Persistent store operation failure",
-				tag.StoreOperationStopTaskList,
+			c.logger.Error("Failed to complete task",
 				tag.Error(err),
 				tag.WorkflowTaskListName(c.taskListID.name),
 				tag.WorkflowTaskListType(c.taskListID.taskType))
@@ -471,16 +480,15 @@ func (c *taskListManagerImpl) allocTaskIDBlock(prevBlockEnd int64) (taskIDBlock,
 
 // Retry operation on transient error. On rangeID update by another process calls c.Stop().
 func (c *taskListManagerImpl) executeWithRetry(
-	operation func() (interface{}, error)) (result interface{}, err error) {
+	operation func() (interface{}, error),
+) (result interface{}, err error) {
 
 	op := func() error {
 		result, err = operation()
 		return err
 	}
 
-	var retryCount int64
 	err = backoff.Retry(op, persistenceOperationRetryPolicy, func(err error) bool {
-		c.logger.Debug(fmt.Sprintf("Retry executeWithRetry as task list range has changed. retryCount=%v, errType=%T", retryCount, err))
 		if _, ok := err.(*persistence.ConditionFailedError); ok {
 			return false
 		}
@@ -489,7 +497,7 @@ func (c *taskListManagerImpl) executeWithRetry(
 
 	if _, ok := err.(*persistence.ConditionFailedError); ok {
 		c.metricScope().IncCounter(metrics.ConditionFailedErrorPerTaskListCounter)
-		c.logger.Debug(fmt.Sprintf("Stopping task list due to persistence condition failure. Err: %v", err))
+		c.logger.Debug("Stopping task list due to persistence condition failure.", tag.Error(err))
 		c.Stop()
 		if c.taskListKind == types.TaskListKindSticky {
 			err = &types.InternalServiceError{Message: common.StickyTaskConditionFailedErrorMsg}
@@ -579,6 +587,17 @@ func (c *taskListManagerImpl) tryInitDomainNameAndScope() {
 
 	c.metricScopeValue.Store(scope)
 	c.domainNameValue.Store(domainName)
+}
+
+func getTaskListTypeTag(taskListType int) metrics.Tag {
+	switch taskListType {
+	case persistence.TaskListTypeActivity:
+		return taskListActivityTypeTag
+	case persistence.TaskListTypeDecision:
+		return taskListDecisionTypeTag
+	default:
+		return metrics.TaskListTypeTag("")
+	}
 }
 
 func createServiceBusyError(msg string) *types.ServiceBusyError {
