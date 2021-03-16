@@ -12,7 +12,7 @@ get started:
 **Note:** Make sure you have a Cadence server running before using the CLI.
 
 ## Homebrew
-Cadence CLI homebrew formula is maintain by [a community project](https://github.com/git-hulk/homebrew-cadence). 
+Cadence CLI homebrew formula is maintain by [a community project](https://github.com/git-hulk/homebrew-cadence): 
 ```
 % brew tap git-hulk/cadence
 % brew install cadence-cli
