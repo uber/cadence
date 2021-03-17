@@ -134,8 +134,7 @@ func (s *Scanner) Start() error {
 		workerTaskListNames = append(workerTaskListNames, wtl...)
 	}
 
-	switch s.context.cfg.Persistence.DefaultStoreType() {
-	case config.StoreTypeSQL:
+	if s.context.cfg.Persistence.DefaultStoreType() == config.StoreTypeSQL {
 		if s.context.cfg.TaskListScannerEnabled() {
 			ctx = s.startScanner(
 				ctx,
@@ -143,14 +142,13 @@ func (s *Scanner) Start() error {
 				tlScannerWFTypeName)
 			workerTaskListNames = append(workerTaskListNames, tlScannerTaskListName)
 		}
-	case config.StoreTypeCassandra:
-		if s.context.cfg.HistoryScannerEnabled() {
-			ctx = s.startScanner(
-				ctx,
-				historyScannerWFStartOptions,
-				historyScannerWFTypeName)
-			workerTaskListNames = append(workerTaskListNames, historyScannerTaskListName)
-		}
+	}
+	if s.context.cfg.HistoryScannerEnabled() {
+		ctx = s.startScanner(
+			ctx,
+			historyScannerWFStartOptions,
+			historyScannerWFTypeName)
+		workerTaskListNames = append(workerTaskListNames, historyScannerTaskListName)
 	}
 
 	workerOpts := worker.Options{

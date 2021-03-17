@@ -39,6 +39,12 @@ type sqlHistoryV2Manager struct {
 	sqlStore
 }
 
+type historyTreePageToken struct {
+	ShardID  int
+	TreeID   serialization.UUID
+	BranchID serialization.UUID
+}
+
 // newHistoryV2Persistence creates an instance of HistoryManager
 func newHistoryV2Persistence(
 	db sqlplugin.DB,
@@ -440,10 +446,48 @@ func (m *sqlHistoryV2Manager) GetAllHistoryTreeBranches(
 	ctx context.Context,
 	request *p.GetAllHistoryTreeBranchesRequest,
 ) (*p.GetAllHistoryTreeBranchesResponse, error) {
-
-	// TODO https://github.com/uber/cadence/issues/2458
-	// Implement it when we need
-	panic("not implemented yet")
+	page := historyTreePageToken{
+		ShardID:  0,
+		TreeID:   serialization.MustParseUUID(minUUID),
+		BranchID: serialization.MustParseUUID(minUUID),
+	}
+	if request.NextPageToken != nil {
+		if err := gobDeserialize(request.NextPageToken, &page); err != nil {
+			return nil, fmt.Errorf("unable to decode next page token")
+		}
+	}
+	filter := sqlplugin.HistoryTreeFilter{
+		ShardID:  page.ShardID,
+		TreeID:   page.TreeID,
+		BranchID: &page.BranchID,
+		PageSize: &request.PageSize,
+	}
+	rows, err := m.db.GetAllHistoryTreeBranches(ctx, &filter)
+	if err == sql.ErrNoRows || (err == nil && len(rows) == 0) {
+		return &p.GetAllHistoryTreeBranchesResponse{}, nil
+	}
+	resp := &p.GetAllHistoryTreeBranchesResponse{}
+	resp.Branches = make([]p.HistoryBranchDetail, len(rows))
+	for i, row := range rows {
+		treeInfo, err := m.parser.HistoryTreeInfoFromBlob(row.Data, row.DataEncoding)
+		if err != nil {
+			return nil, err
+		}
+		resp.Branches[i].TreeID = row.TreeID.String()
+		resp.Branches[i].BranchID = row.BranchID.String()
+		resp.Branches[i].ForkTime = treeInfo.GetCreatedTimestamp()
+		resp.Branches[i].Info = treeInfo.GetInfo()
+	}
+	if len(rows) >= request.PageSize {
+		// there could be more
+		lastRow := &rows[request.PageSize-1]
+		resp.NextPageToken, err = gobSerialize(&historyTreePageToken{
+			ShardID:  lastRow.ShardID,
+			TreeID:   lastRow.TreeID,
+			BranchID: lastRow.BranchID,
+		})
+	}
+	return resp, nil
 }
 
 // GetHistoryTree returns all branch information of a tree

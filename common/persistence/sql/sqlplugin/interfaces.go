@@ -371,6 +371,7 @@ type (
 		ShardID  int
 		TreeID   serialization.UUID
 		BranchID *serialization.UUID
+		PageSize *int
 	}
 
 	// ActivityInfoMapsRow represents a row in activity_info_maps table
@@ -596,6 +597,7 @@ type (
 		InsertIntoHistoryTree(ctx context.Context, row *HistoryTreeRow) (sql.Result, error)
 		SelectFromHistoryTree(ctx context.Context, filter *HistoryTreeFilter) ([]HistoryTreeRow, error)
 		DeleteFromHistoryTree(ctx context.Context, filter *HistoryTreeFilter) (sql.Result, error)
+		GetAllHistoryTreeBranches(ctx context.Context, filter *HistoryTreeFilter) ([]HistoryTreeRow, error)
 
 		InsertIntoExecutions(ctx context.Context, row *ExecutionsRow) (sql.Result, error)
 		UpdateExecutions(ctx context.Context, row *ExecutionsRow) (sql.Result, error)
