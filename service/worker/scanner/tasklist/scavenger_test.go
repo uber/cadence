@@ -85,7 +85,6 @@ func (s *ScavengerTestSuite) SetupTest() {
 	scvgrCtx, scvgrCancelFn := context.WithTimeout(context.Background(), scavengerTestTimeout)
 	s.scvgr = NewScavenger(scvgrCtx, s.taskMgr, metrics.NewClient(tally.NoopScope, metrics.Worker), logger, &MockConfig{})
 	s.scvgrCancelFn = scvgrCancelFn
-	maxTasksPerJob = 4
 	executorPollInterval = time.Millisecond * 50
 }
 
@@ -220,6 +219,12 @@ func (s *ScavengerTestSuite) setupTaskMgrMocks() {
 		func(_ context.Context, req *p.CompleteTasksLessThanRequest) int {
 			return s.taskTables[req.TaskListName].deleteLessThan(req.TaskID, req.Limit)
 		}, nil)
+	s.taskMgr.On("GetOrphanTasks", mock.Anything, mock.Anything).Return(
+		func(_ context.Context, req *p.GetOrphanTasksRequest) *p.GetOrphanTasksResponse {
+			return &p.GetOrphanTasksResponse{
+				Tasks: make([]*p.TaskKey, 0),
+			}
+		}, nil)
 }
 
 func (s *ScavengerTestSuite) setupTaskMgrMocksWithErrors() {
@@ -227,5 +232,6 @@ func (s *ScavengerTestSuite) setupTaskMgrMocksWithErrors() {
 	s.taskMgr.On("GetTasks", mock.Anything, mock.Anything).Return(nil, errTest).Once()
 	s.taskMgr.On("CompleteTasksLessThan", mock.Anything, mock.Anything).Return(0, errTest).Once()
 	s.taskMgr.On("DeleteTaskList", mock.Anything, mock.Anything).Return(errTest).Once()
+	s.taskMgr.On("GetOrphanTasks", mock.Anything, mock.Anything).Return(nil, errTest).Once()
 	s.setupTaskMgrMocks()
 }

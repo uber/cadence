@@ -299,7 +299,10 @@ func (cfg *Config) MaxTasksPerJob() int {
 
 // MaxOrphanTasks the number of orphans to query in one call
 func (cfg *Config) MaxOrphanTasks() int {
-	return cfg.MaxOrphanTasksFn()
+	if cfg.MaxOrphanTasksFn != nil {
+		return cfg.MaxOrphanTasksFn()
+	}
+	return 16
 }
 
 // TaskBatchSize the number of tasks to query per call

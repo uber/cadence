@@ -61,6 +61,7 @@ func (s *scannerWorkflowTestSuite) TestScavengerActivity() {
 	defer mockResource.Finish(s.T())
 
 	mockResource.TaskMgr.On("ListTaskList", mock.Anything, mock.Anything).Return(&p.ListTaskListResponse{}, nil)
+	mockResource.TaskMgr.On("GetOrphanTasks", mock.Anything, mock.Anything).Return(&p.GetOrphanTasksResponse{}, nil)
 	ctx := scannerContext{
 		resource: mockResource,
 	}
