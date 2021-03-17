@@ -21,6 +21,7 @@
 package tasklist
 
 import (
+	"fmt"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -47,48 +48,26 @@ const scannerTaskListPrefix = "cadence-sys-tl-scanner"
 // with the assumption that the executor will schedule this task later
 //
 // Each loop of the handler proceeds as follows
-//    - Retrieve the next batch of tasks sorted by task_id for this task-list from persistence
+//    - Attempt to delete tasks up to the persisted ACK level.
 //    - If there are 0 tasks for this task-list, try deleting the task-list if its idle
-//    - If any of the tasks in the batch isn't expired, we are done. Since tasks are retrieved
-//      in sorted order, if one of the tasks isn't expired, chances are, none of the tasks above
-//      it are expired as well - so, we give up and wait for the next run
-//    - Delete the entire batch of tasks
 //    - If the number of tasks retrieved is less than batchSize, there are no more tasks in the task-list
 //      Try deleting the task-list if its idle
-func (s *Scavenger) deleteHandler(key *taskListKey, state *taskListState) handlerStatus {
+func (s *Scavenger) deleteHandler(info *p.TaskListInfo) handlerStatus {
 	var err error
 	var nProcessed, nDeleted int
 
-	defer func() { s.deleteHandlerLog(key, state, nProcessed, nDeleted, err) }()
+	defer func() { s.deleteHandlerLog(info, nProcessed, nDeleted, err) }()
 
 	for nProcessed < maxTasksPerJob {
-		resp, err1 := s.getTasks(key, taskBatchSize)
-		if err1 != nil {
-			err = err1
+		nTasks, err := s.completeTasks(info, taskBatchSize)
+		if err != nil {
+			s.logger.Error(fmt.Sprintf("Scavenger error completing tasks: %v", err))
 			return handlerStatusErr
 		}
-
-		nTasks := len(resp.Tasks)
-		if nTasks == 0 {
-			s.tryDeleteTaskList(key, state)
-			return handlerStatusDone
-		}
-
-		for _, task := range resp.Tasks {
-			nProcessed++
-			if !s.isTaskExpired(task) {
-				return handlerStatusDone
-			}
-		}
-
-		taskID := resp.Tasks[nTasks-1].TaskID
-		if _, err = s.completeTasks(key, taskID, nTasks); err != nil {
-			return handlerStatusErr
-		}
-
+		nProcessed += nTasks
 		nDeleted += nTasks
 		if nTasks < taskBatchSize {
-			s.tryDeleteTaskList(key, state)
+			s.tryDeleteTaskList(info)
 			return handlerStatusDone
 		}
 	}
@@ -96,11 +75,11 @@ func (s *Scavenger) deleteHandler(key *taskListKey, state *taskListState) handle
 	return handlerStatusDefer
 }
 
-func (s *Scavenger) tryDeleteTaskList(key *taskListKey, state *taskListState) {
-	if strings.HasPrefix(key.Name, scannerTaskListPrefix) {
+func (s *Scavenger) tryDeleteTaskList(info *p.TaskListInfo) {
+	if strings.HasPrefix(info.Name, scannerTaskListPrefix) {
 		return // avoid deleting our own task list
 	}
-	delta := time.Now().Sub(state.lastUpdated)
+	delta := time.Now().Sub(info.LastUpdated)
 	if delta < taskListGracePeriod {
 		return
 	}
@@ -112,25 +91,25 @@ func (s *Scavenger) tryDeleteTaskList(key *taskListKey, state *taskListState) {
 	//     of idle timeout). If any new host has to take ownership of this at this time, it can only
 	//     do so by updating the rangeID
 	//   - deleteTaskList is a conditional delete where condition is the rangeID
-	if err := s.deleteTaskList(key, state.rangeID); err != nil {
+	if err := s.deleteTaskList(info); err != nil {
 		s.logger.Error("deleteTaskList error", tag.Error(err))
 		return
 	}
 	atomic.AddInt64(&s.stats.tasklist.nDeleted, 1)
-	s.logger.Info("tasklist deleted", tag.WorkflowDomainID(key.DomainID), tag.WorkflowTaskListName(key.Name), tag.TaskType(key.TaskType))
+	s.logger.Info("tasklist deleted", tag.WorkflowDomainID(info.DomainID), tag.WorkflowTaskListName(info.Name), tag.TaskType(info.TaskType))
 }
 
-func (s *Scavenger) deleteHandlerLog(key *taskListKey, state *taskListState, nProcessed int, nDeleted int, err error) {
+func (s *Scavenger) deleteHandlerLog(info *p.TaskListInfo, nProcessed int, nDeleted int, err error) {
 	atomic.AddInt64(&s.stats.task.nDeleted, int64(nDeleted))
 	atomic.AddInt64(&s.stats.task.nProcessed, int64(nProcessed))
 	if err != nil {
 		s.logger.Error("scavenger.deleteHandler processed.",
-			tag.Error(err), tag.WorkflowDomainID(key.DomainID), tag.WorkflowTaskListName(key.Name), tag.TaskType(key.TaskType), tag.NumberProcessed(nProcessed), tag.NumberDeleted(nDeleted))
+			tag.Error(err), tag.WorkflowDomainID(info.DomainID), tag.WorkflowTaskListName(info.Name), tag.TaskType(info.TaskType), tag.NumberProcessed(nProcessed), tag.NumberDeleted(nDeleted))
 		return
 	}
 	if nProcessed > 0 {
 		s.logger.Info("scavenger.deleteHandler processed.",
-			tag.WorkflowDomainID(key.DomainID), tag.WorkflowTaskListName(key.Name), tag.TaskType(key.TaskType), tag.NumberProcessed(nProcessed), tag.NumberDeleted(nDeleted))
+			tag.WorkflowDomainID(info.DomainID), tag.WorkflowTaskListName(info.Name), tag.TaskType(info.TaskType), tag.NumberProcessed(nProcessed), tag.NumberDeleted(nDeleted))
 	}
 }
 
