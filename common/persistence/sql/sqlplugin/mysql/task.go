@@ -78,6 +78,12 @@ task_type = :task_type
 	rangeDeleteTaskQry = `DELETE FROM tasks ` +
 		`WHERE domain_id = ? AND task_list_name = ? AND task_type = ? AND task_id <= ? ` +
 		`ORDER BY domain_id,task_list_name,task_type,task_id LIMIT ?`
+
+	getOrphanTaskQry = `SELECT task_id, domain_id, task_list_name, task_type FROM tasks AS t ` +
+		`WHERE NOT EXISTS ( ` +
+		`	SELECT domain_id, name, task_type FROM task_lists AS tl ` +
+		`	WHERE t.domain_id=tl.domain_id and t.task_list_name=tl.name and t.task_type=tl.task_type ` +
+		`) LIMIT ?;`
 )
 
 // InsertIntoTasks inserts one or more rows into tasks table
@@ -113,6 +119,19 @@ func (mdb *db) DeleteFromTasks(ctx context.Context, filter *sqlplugin.TasksFilte
 			filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskIDLessThanEquals, *filter.Limit)
 	}
 	return mdb.conn.ExecContext(ctx, deleteTaskQry, filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskID)
+}
+
+func (mdb *db) GetOrphanTasks(ctx context.Context, filter *sqlplugin.OrphanTasksFilter) ([]sqlplugin.TaskKeyRow, error) {
+	if filter.Limit == nil || *filter.Limit == 0 {
+		return nil, fmt.Errorf("missing limit parameter")
+	}
+	var rows []sqlplugin.TaskKeyRow
+
+	err := mdb.conn.SelectContext(ctx, &rows, getOrphanTaskQry, *filter.Limit)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
 }
 
 // InsertIntoTaskLists inserts one or more rows into task_lists table

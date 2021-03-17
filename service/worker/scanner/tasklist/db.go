@@ -46,6 +46,30 @@ func (s *Scavenger) completeTasks(info *p.TaskListInfo, limit int) (int, error) 
 	return n, err
 }
 
+func (s *Scavenger) getOrphanTasks(limit int) (*p.GetOrphanTasksResponse, error) {
+	var tasks *p.GetOrphanTasksResponse
+	var err error
+	err = s.retryForever(func() error {
+		tasks, err = s.db.GetOrphanTasks(s.ctx, &p.GetOrphanTasksRequest{
+			Limit: limit,
+		})
+		return err
+	})
+	return tasks, err
+}
+
+func (s *Scavenger) completeTask(info *p.TaskListInfo, taskid int64) error {
+	var err error
+	err = s.retryForever(func() error {
+		err = s.db.CompleteTask(s.ctx, &p.CompleteTaskRequest{
+			TaskList: info,
+			TaskID:   taskid,
+		})
+		return err
+	})
+	return err
+}
+
 func (s *Scavenger) listTaskList(pageSize int, pageToken []byte) (*p.ListTaskListResponse, error) {
 	var err error
 	var resp *p.ListTaskListResponse

@@ -183,6 +183,13 @@ func newTaskPersistence(
 	}, nil
 }
 
+func (d *cassandraTaskPersistence) GetOrphanTasks(ctx context.Context, request *p.GetOrphanTasksRequest) (*p.GetOrphanTasksResponse, error) {
+	// TODO: It's unclear if this is necessary or useful for Cassandra
+	return nil, &types.InternalServiceError{
+		Message: "Unimplemented call to GetOrphanTasks for Cassandra",
+	}
+}
+
 // From TaskManager interface
 func (d *cassandraTaskPersistence) LeaseTaskList(
 	ctx context.Context,

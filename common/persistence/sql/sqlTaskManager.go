@@ -528,6 +528,29 @@ func (m *sqlTaskManager) CompleteTasksLessThan(
 	return int(nRows), nil
 }
 
+// GetOrphanTasks gets tasks from the tasks table that belong to a task_list no longer present
+// in the task_lists table.
+func (m *sqlTaskManager) GetOrphanTasks(ctx context.Context, request *persistence.GetOrphanTasksRequest) (*persistence.GetOrphanTasksResponse, error) {
+	rows, err := m.db.GetOrphanTasks(ctx, &sqlplugin.OrphanTasksFilter{
+		Limit: &request.Limit,
+	})
+	if err != nil {
+		return nil, &types.InternalServiceError{Message: err.Error()}
+	}
+
+	var tasks = make([]*persistence.TaskKey, len(rows))
+	for i, v := range rows {
+		tasks[i] = &persistence.TaskKey{
+			DomainID:     v.DomainID.String(),
+			TaskListName: v.TaskListName,
+			TaskType:     int(v.TaskType),
+			TaskID:       v.TaskID,
+		}
+	}
+
+	return &persistence.GetOrphanTasksResponse{Tasks: tasks}, nil
+}
+
 func (m *sqlTaskManager) shardID(domainID string, name string) int {
 	id := farm.Hash32([]byte(domainID+"_"+name)) % uint32(m.nShards)
 	return int(id)

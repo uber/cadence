@@ -70,6 +70,7 @@ type (
 		//  - number of rows actually deleted, if limit is honored
 		//  - UnknownNumRowsDeleted, when all rows below value are deleted
 		CompleteTasksLessThan(ctx context.Context, request *CompleteTasksLessThanRequest) (int, error)
+		GetOrphanTasks(ctx context.Context, request *GetOrphanTasksRequest) (*GetOrphanTasksResponse, error)
 	}
 
 	// MetadataStore is a lower level of MetadataManager

@@ -1007,6 +1007,31 @@ func (p *taskErrorInjectionPersistenceClient) CompleteTasksLessThan(
 	return response, persistenceErr
 }
 
+func (p *taskErrorInjectionPersistenceClient) GetOrphanTasks(
+	ctx context.Context,
+	request *GetOrphanTasksRequest,
+) (*GetOrphanTasksResponse, error) {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var response *GetOrphanTasksResponse
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		response, persistenceErr = p.persistence.GetOrphanTasks(ctx, request)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationCompleteTask,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return nil, fakeErr
+	}
+	return response, persistenceErr
+}
+
 func (p *taskErrorInjectionPersistenceClient) LeaseTaskList(
 	ctx context.Context,
 	request *LeaseTaskListRequest,

@@ -796,6 +796,17 @@ func (p *taskPersistenceClient) CompleteTasksLessThan(
 	return result, err
 }
 
+func (p *taskPersistenceClient) GetOrphanTasks(ctx context.Context, request *GetOrphanTasksRequest) (*GetOrphanTasksResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceGetOrphanTasksScope, metrics.PersistenceRequests)
+	sw := p.metricClient.StartTimer(metrics.PersistenceGetOrphanTasksScope, metrics.PersistenceLatency)
+	result, err := p.persistence.GetOrphanTasks(ctx, request)
+	sw.Stop()
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceGetOrphanTasksScope, err)
+	}
+	return result, err
+}
+
 func (p *taskPersistenceClient) LeaseTaskList(
 	ctx context.Context,
 	request *LeaseTaskListRequest,

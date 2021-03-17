@@ -178,6 +178,14 @@ type (
 		DataEncoding string
 	}
 
+	// TaskKeyRow represents a result row giving task keys
+	TaskKeyRow struct {
+		DomainID     serialization.UUID
+		TaskListName string
+		TaskType     int64
+		TaskID       int64
+	}
+
 	// TasksRowWithTTL represents a row in tasks table with a ttl
 	TasksRowWithTTL struct {
 		TasksRow TasksRow
@@ -199,6 +207,11 @@ type (
 		TaskIDLessThanEquals *int64
 		Limit                *int
 		PageSize             *int
+	}
+
+	// OrphanTasksFilter contains the parameters controlling orphan deletion
+	OrphanTasksFilter struct {
+		Limit *int
 	}
 
 	// TaskListsRow represents a row in task_lists table
@@ -562,6 +575,7 @@ type (
 		//    - {domainID, tasklistName, taskType, taskIDLessThanEquals, limit }
 		//    - this will delete up to limit number of tasks less than or equal to the given task id
 		DeleteFromTasks(ctx context.Context, filter *TasksFilter) (sql.Result, error)
+		GetOrphanTasks(ctx context.Context, filter *OrphanTasksFilter) ([]TaskKeyRow, error)
 
 		InsertIntoTaskLists(ctx context.Context, row *TaskListsRow) (sql.Result, error)
 		InsertIntoTaskListsWithTTL(ctx context.Context, row *TaskListsRowWithTTL) (sql.Result, error)

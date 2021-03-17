@@ -65,6 +65,12 @@ type (
 		taskListInfo p.TaskListInfo
 		scvg         *Scavenger
 	}
+
+	// orphanExecutorTask is a runnable task that processes a limited block of
+	// orphans
+	orphanExecutorTask struct {
+		scvg *Scavenger
+	}
 )
 
 var (
@@ -75,6 +81,7 @@ var (
 	epochStartTime           = time.Unix(0, 0)
 	executorPollInterval     = time.Minute
 	executorMaxDeferredTasks = 10000
+	maxOrphanTasks           = 1000 // Maximum number of orphaned tasks to query for a single task
 )
 
 // NewScavenger returns an instance of executorTask list scavenger daemon
@@ -142,6 +149,9 @@ func (s *Scavenger) run() {
 		s.stopWG.Done()
 	}()
 
+	// Start a task to delete orphaned tasks from the tasks table
+	s.executor.Submit(&orphanExecutorTask{scvg: s})
+
 	var pageToken []byte
 	for {
 		resp, err := s.listTaskList(taskListBatchSize, pageToken)
@@ -202,4 +212,8 @@ func (s *Scavenger) newTask(info *p.TaskListInfo) executor.Task {
 // Run runs the task
 func (t *executorTask) Run() executor.TaskStatus {
 	return t.scvg.process(&t.taskListInfo)
+}
+
+func (t *orphanExecutorTask) Run() executor.TaskStatus {
+	return t.scvg.completeOrphanTasksHandler()
 }

@@ -589,6 +589,13 @@ func (p *taskRateLimitedPersistenceClient) CompleteTasksLessThan(
 	return p.persistence.CompleteTasksLessThan(ctx, request)
 }
 
+func (p *taskRateLimitedPersistenceClient) GetOrphanTasks(ctx context.Context, request *GetOrphanTasksRequest) (*GetOrphanTasksResponse, error) {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+	return p.persistence.GetOrphanTasks(ctx, request)
+}
+
 func (p *taskRateLimitedPersistenceClient) LeaseTaskList(
 	ctx context.Context,
 	request *LeaseTaskListRequest,

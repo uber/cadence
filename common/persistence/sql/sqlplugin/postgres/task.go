@@ -80,6 +80,12 @@ task_type = :task_type
 		`WHERE domain_id = $1 AND task_list_name = $2 AND task_type = $3 AND task_id IN (SELECT task_id FROM
 		 tasks WHERE domain_id = $1 AND task_list_name = $2 AND task_type = $3 AND task_id <= $4 ` +
 		`ORDER BY domain_id,task_list_name,task_type,task_id LIMIT $5 )`
+
+	getOrphanTaskQry = `SELECT task_id, domain_id, task_list_name, task_type FROM tasks AS t ` +
+		`WHERE NOT EXISTS ( ` +
+		`	SELECT domain_id, name, task_type FROM task_lists AS tl ` +
+		`	WHERE t.domain_id=tl.domain_id and t.task_list_name=tl.name and t.task_type=tl.task_type ` +
+		`) LIMIT $1;`
 )
 
 // InsertIntoTasks inserts one or more rows into tasks table
@@ -115,6 +121,18 @@ func (pdb *db) DeleteFromTasks(ctx context.Context, filter *sqlplugin.TasksFilte
 			filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskIDLessThanEquals, *filter.Limit)
 	}
 	return pdb.conn.ExecContext(ctx, deleteTaskQry, filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskID)
+}
+
+func (pdb *db) GetOrphanTasks(ctx context.Context, filter *sqlplugin.OrphanTasksFilter) ([]sqlplugin.TaskKeyRow, error) {
+	if filter.Limit == nil || *filter.Limit == 0 {
+		return nil, fmt.Errorf("missing limit parameter")
+	}
+	var rows []sqlplugin.TaskKeyRow
+	err := pdb.conn.SelectContext(ctx, &rows, getOrphanTaskQry, *filter.Limit)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
 }
 
 // InsertIntoTaskLists inserts one or more rows into task_lists table

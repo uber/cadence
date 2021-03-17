@@ -60,6 +60,10 @@ func (s *Scavenger) deleteHandler(info *p.TaskListInfo) handlerStatus {
 
 	for nProcessed < maxTasksPerJob {
 		nTasks, err := s.completeTasks(info, taskBatchSize)
+		if err == p.ErrPersistenceLimitExceeded {
+			s.logger.Info("scavenger.deleteHandler query was ratelimited; will retry")
+			return handlerStatusDefer
+		}
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("Scavenger error completing tasks: %v", err))
 			return handlerStatusErr
@@ -115,4 +119,40 @@ func (s *Scavenger) deleteHandlerLog(info *p.TaskListInfo, nProcessed int, nDele
 
 func (s *Scavenger) isTaskExpired(t *p.TaskInfo) bool {
 	return t.Expiry.After(epochStartTime) && time.Now().After(t.Expiry)
+}
+
+func (s *Scavenger) completeOrphanTasksHandler() handlerStatus {
+	var nDeleted int
+	resp, err := s.getOrphanTasks(maxOrphanTasks)
+	if err == p.ErrPersistenceLimitExceeded {
+		s.logger.Info("scavenger.completeOrphanTasksHandler query was ratelimited; will retry")
+		return handlerStatusDefer
+	}
+	if err != nil {
+		s.logger.Error("scavenger.completeOrphanTasksHandler error getting orphan tasks")
+		return handlerStatusErr
+	}
+	for _, taskKey := range resp.Tasks {
+		err = s.completeTask(&p.TaskListInfo{
+			DomainID: taskKey.DomainID,
+			Name:     taskKey.TaskListName,
+			TaskType: taskKey.TaskType,
+		}, taskKey.TaskID)
+		if err == p.ErrPersistenceLimitExceeded {
+			s.logger.Info("scavenger.completeOrphanTasksHandler query was ratelimited; will retry")
+			return handlerStatusDefer
+		}
+		if err != nil {
+			s.logger.Error("scavenger.completeOrphanTasksHandler error getting orphan tasks")
+			return handlerStatusErr
+		}
+		nDeleted++
+		atomic.AddInt64(&s.stats.task.nDeleted, 1)
+		atomic.AddInt64(&s.stats.task.nProcessed, 1)
+	}
+	s.logger.Info("scavenger.completeOrphanTasksHandler deleted.", tag.NumberDeleted(nDeleted))
+	if len(resp.Tasks) < maxOrphanTasks {
+		return handlerStatusDone
+	}
+	return handlerStatusDefer
 }
