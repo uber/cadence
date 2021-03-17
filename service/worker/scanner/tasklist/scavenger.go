@@ -35,6 +35,12 @@ import (
 )
 
 type (
+	// Config provides the config functions we need
+	Config interface {
+		MaxOrphanTasks() int
+		TaskBatchSize() int
+		MaxTasksPerJob() int
+	}
 	// Scavenger is the type that holds the state for task list scavenger daemon
 	Scavenger struct {
 		ctx      context.Context
@@ -46,6 +52,7 @@ type (
 		status   int32
 		stopC    chan struct{}
 		stopWG   sync.WaitGroup
+		cfg      Config
 	}
 
 	stats struct {
@@ -75,13 +82,10 @@ type (
 
 var (
 	taskListBatchSize        = 32             // maximum number of task list we process concurrently
-	taskBatchSize            = 16             // number of tasks we read from persistence in one call
-	maxTasksPerJob           = 256            // maximum number of tasks we process for a executorTask list as part of a single job
 	taskListGracePeriod      = 48 * time.Hour // amount of time a executorTask list has to be idle before it becomes a candidate for deletion
 	epochStartTime           = time.Unix(0, 0)
 	executorPollInterval     = time.Minute
 	executorMaxDeferredTasks = 10000
-	maxOrphanTasks           = 1000 // Maximum number of orphaned tasks to query for a single task
 )
 
 // NewScavenger returns an instance of executorTask list scavenger daemon
@@ -96,7 +100,7 @@ var (
 // two conditions
 //  - either all task lists are processed successfully (or)
 //  - Stop() method is called to stop the scavenger
-func NewScavenger(ctx context.Context, db p.TaskManager, metricsClient metrics.Client, logger log.Logger) *Scavenger {
+func NewScavenger(ctx context.Context, db p.TaskManager, metricsClient metrics.Client, logger log.Logger, cfg Config) *Scavenger {
 	stopC := make(chan struct{})
 	taskExecutor := executor.NewFixedSizePoolExecutor(
 		taskListBatchSize, executorMaxDeferredTasks, metricsClient, metrics.TaskListScavengerScope)
@@ -107,6 +111,7 @@ func NewScavenger(ctx context.Context, db p.TaskManager, metricsClient metrics.C
 		logger:   logger,
 		stopC:    stopC,
 		executor: taskExecutor,
+		cfg:      cfg,
 	}
 }
 

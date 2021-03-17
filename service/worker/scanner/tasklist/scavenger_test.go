@@ -55,6 +55,19 @@ const (
 
 var errTest = errors.New("transient error")
 
+type MockConfig struct {
+}
+
+func (*MockConfig) MaxTasksPerJob() int {
+	return 4
+}
+func (*MockConfig) MaxOrphanTasks() int {
+	return 16
+}
+func (*MockConfig) TaskBatchSize() int {
+	return 16
+}
+
 func TestScavengerTestSuite(t *testing.T) {
 	suite.Run(t, new(ScavengerTestSuite))
 }
@@ -70,7 +83,7 @@ func (s *ScavengerTestSuite) SetupTest() {
 	logger := loggerimpl.NewLogger(zapLogger)
 
 	scvgrCtx, scvgrCancelFn := context.WithTimeout(context.Background(), scavengerTestTimeout)
-	s.scvgr = NewScavenger(scvgrCtx, s.taskMgr, metrics.NewClient(tally.NoopScope, metrics.Worker), logger)
+	s.scvgr = NewScavenger(scvgrCtx, s.taskMgr, metrics.NewClient(tally.NoopScope, metrics.Worker), logger, &MockConfig{})
 	s.scvgrCancelFn = scvgrCancelFn
 	maxTasksPerJob = 4
 	executorPollInterval = time.Millisecond * 50

@@ -56,6 +56,9 @@ type (
 		// ScannerPersistenceMaxQPS the max rate of calls to persistence
 		// Right now is being used by historyScanner to determine the rate of persistence API calls
 		ScannerPersistenceMaxQPS dynamicconfig.IntPropertyFn
+		MaxOrphanTasksFn         dynamicconfig.IntPropertyFn
+		TaskBatchSizeFn          dynamicconfig.IntPropertyFn
+		MaxTasksPerJobFn         dynamicconfig.IntPropertyFn
 		// Persistence contains the persistence configuration
 		Persistence *config.Persistence
 		// ClusterMetadata contains the metadata for this cluster
@@ -288,4 +291,20 @@ func GetScannerContext(ctx context.Context) (scannerContext, error) {
 		return scannerContext{}, fmt.Errorf("context type is not %T for a key %q", val, info.WorkflowType.Name)
 	}
 	return val, nil
+}
+
+// MaxTasksPerJob maximum tasks to process before allowing another task list to run
+
+func (cfg *Config) MaxTasksPerJob() int {
+	return cfg.MaxTasksPerJobFn()
+}
+
+// MaxOrphanTasks the number of orphans to query in one call
+func (cfg *Config) MaxOrphanTasks() int {
+	return cfg.MaxOrphanTasksFn()
+}
+
+// TaskBatchSize the number of tasks to query per call
+func (cfg *Config) TaskBatchSize() int {
+	return cfg.TaskBatchSizeFn()
 }
