@@ -32,6 +32,7 @@ import (
 
 	"github.com/uber/cadence/common/definition"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -42,6 +43,7 @@ type (
 		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 		// not merely log an error
 		*require.Assertions
+		VisibilityMgr             p.VisibilityManager
 	}
 )
 
@@ -49,6 +51,19 @@ type (
 func (s *VisibilityPersistenceSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
+	}
+	// setup visibility manager
+	if s.VisibilityTestCluster != s.DefaultTestCluster {
+		s.VisibilityTestCluster.SetupTestDatabase()
+	}
+	clusterName := s.ClusterMetadata.GetCurrentClusterName()
+	vCfg := s.VisibilityTestCluster.Config()
+	visibilityFactory := client.NewFactory(&vCfg, nil, clusterName, nil, s.Logger)
+	// SQL currently doesn't have support for visibility manager
+	var err error
+	s.VisibilityMgr, err = visibilityFactory.NewVisibilityManager()
+	if err != nil {
+		s.fatalOnError("NewVisibilityManager", err)
 	}
 }
 
@@ -60,6 +75,12 @@ func (s *VisibilityPersistenceSuite) SetupTest() {
 
 // TearDownSuite implementation
 func (s *VisibilityPersistenceSuite) TearDownSuite() {
+	// TODO VisibilityMgr/Store is created with a separated code path, this is incorrect and may cause leaking connection
+	// And Postgres requires all connection to be closed before dropping a database
+	// https://github.com/uber/cadence/issues/2854
+	// Remove the below line after the issue is fix
+	s.VisibilityMgr.Close()
+
 	s.TearDownWorkflowStore()
 }
 
