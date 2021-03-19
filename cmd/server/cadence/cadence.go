@@ -175,7 +175,7 @@ func BuildCLI() *cli.App {
 		cli.StringFlag{
 			Name:   "config, c",
 			Value:  "config",
-			Usage:  "config dir path relative to root, or an absolute path",
+			Usage:  "config dir is a path relative to root, or an absolute path",
 			EnvVar: config.EnvKeyConfigDir,
 		},
 		cli.StringFlag{
