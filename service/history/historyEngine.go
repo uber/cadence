@@ -2110,6 +2110,9 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 	if err != nil {
 		return err
 	}
+	if domainEntry.GetInfo().Status != persistence.DomainStatusRegistered {
+		return errDomainDeprecated
+	}
 	domainID := domainEntry.GetInfo().ID
 
 	request := signalRequest.SignalRequest
@@ -2187,6 +2190,9 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(signalWithStartRequest.DomainUUID)
 	if err != nil {
 		return nil, err
+	}
+	if domainEntry.GetInfo().Status != persistence.DomainStatusRegistered {
+		return nil, errDomainDeprecated
 	}
 	domainID := domainEntry.GetInfo().ID
 
