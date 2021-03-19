@@ -442,6 +442,7 @@ func (m *sqlHistoryV2Manager) DeleteHistoryBranch(
 	})
 }
 
+// TODO: Limit the underlying query to a specific shard at a time. See https://github.com/uber/cadence/issues/4064
 func (m *sqlHistoryV2Manager) GetAllHistoryTreeBranches(
 	ctx context.Context,
 	request *p.GetAllHistoryTreeBranchesRequest,

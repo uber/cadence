@@ -46,10 +46,23 @@ name = :name AND
 task_type = :task_type
 `
 
+	// This query uses pagination that is best understood by analogy to simple numbers.
+	// Given a list of numbers
+	// 	111
+	//	112
+	//	121
+	//	211
+	// where the hundreds digit corresponds to domain_id, the tens digit
+	// corresponds to name, and the ones digit corresponds to task_type,
+	// Imagine recurring queries with a limit of 1.
+	// For the second query to skip the first result and return 112, it must allow equal values in hundreds & tens, but it's OK because the ones digit is higher.
+	// For the third query, the ones digit is now lower but that's irrelevant because the tens digit is greater.
+	// For the fourth query, the tens digit is now lower but that's again irrelevant because now the hundreds digit is higher.
+	// This technique is useful since the size of the table can easily change between calls, making SKIP an unreliable method, while other db-specific things like rowids are not portable
 	listTaskListQry = `SELECT domain_id, range_id, name, task_type, data, data_encoding ` +
 		`FROM task_lists ` +
 		`WHERE shard_id = $1 AND ((domain_id = $2 AND name = $3 AND task_type > $4) OR (domain_id=$2 AND name > $3) OR (domain_id > $2)) ` +
-		`ORDER BY domain_id,task_type,name LIMIT $5`
+		`ORDER BY domain_id,name,task_type LIMIT $5`
 
 	getTaskListQry = `SELECT domain_id, range_id, name, task_type, data, data_encoding ` +
 		`FROM task_lists ` +

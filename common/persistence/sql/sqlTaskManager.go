@@ -530,6 +530,7 @@ func (m *sqlTaskManager) CompleteTasksLessThan(
 
 // GetOrphanTasks gets tasks from the tasks table that belong to a task_list no longer present
 // in the task_lists table.
+// TODO: Limit this query to a specific shard at a time. See https://github.com/uber/cadence/issues/4064
 func (m *sqlTaskManager) GetOrphanTasks(ctx context.Context, request *persistence.GetOrphanTasksRequest) (*persistence.GetOrphanTasksResponse, error) {
 	rows, err := m.db.GetOrphanTasks(ctx, &sqlplugin.OrphanTasksFilter{
 		Limit: &request.Limit,
