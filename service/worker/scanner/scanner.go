@@ -56,7 +56,7 @@ type (
 		// ScannerPersistenceMaxQPS the max rate of calls to persistence
 		// Right now is being used by historyScanner to determine the rate of persistence API calls
 		ScannerPersistenceMaxQPS dynamicconfig.IntPropertyFn
-		MaxOrphanTasksFn         dynamicconfig.IntPropertyFn
+		GetOrphanTasksPageSizeFn dynamicconfig.IntPropertyFn
 		TaskBatchSizeFn          dynamicconfig.IntPropertyFn
 		MaxTasksPerJobFn         dynamicconfig.IntPropertyFn
 		// Persistence contains the persistence configuration
@@ -297,10 +297,10 @@ func (cfg *Config) MaxTasksPerJob() int {
 	return cfg.MaxTasksPerJobFn()
 }
 
-// MaxOrphanTasks the number of orphans to query in one call
-func (cfg *Config) MaxOrphanTasks() int {
-	if cfg.MaxOrphanTasksFn != nil {
-		return cfg.MaxOrphanTasksFn()
+// GetOrphanTasksPageSize the number of orphans to query in one call
+func (cfg *Config) GetOrphanTasksPageSize() int {
+	if cfg.GetOrphanTasksPageSizeFn != nil {
+		return cfg.GetOrphanTasksPageSizeFn()
 	}
 	return 16
 }

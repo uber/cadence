@@ -61,7 +61,7 @@ type MockConfig struct {
 func (*MockConfig) MaxTasksPerJob() int {
 	return 4
 }
-func (*MockConfig) MaxOrphanTasks() int {
+func (*MockConfig) GetOrphanTasksPageSize() int {
 	return 16
 }
 func (*MockConfig) TaskBatchSize() int {

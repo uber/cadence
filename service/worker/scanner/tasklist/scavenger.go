@@ -37,7 +37,7 @@ import (
 type (
 	// Config provides the config functions we need
 	Config interface {
-		MaxOrphanTasks() int
+		GetOrphanTasksPageSize() int
 		TaskBatchSize() int
 		MaxTasksPerJob() int
 	}

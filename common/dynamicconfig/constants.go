@@ -313,7 +313,7 @@ var keys = map[Key]string{
 	WorkerTimeLimitPerArchivalIteration:                      "worker.TimeLimitPerArchivalIteration",
 	WorkerThrottledLogRPS:                                    "worker.throttledLogRPS",
 	ScannerPersistenceMaxQPS:                                 "worker.scannerPersistenceMaxQPS",
-	ScannerMaxOrphanTasks:                                    "worker.scannerMaxOrphanTasks",
+	ScannerGetOrphanTasksPageSize:                            "worker.scannerGetOrphanTasksPageSize",
 	ScannerTaskBatchSize:                                     "worker.scannerTaskBatchSize",
 	ScannerMaxTasksPerJob:                                    "worker.scannerMaxTasksPerJob",
 	TaskListScannerEnabled:                                   "worker.taskListScannerEnabled",
@@ -831,8 +831,8 @@ const (
 	WorkerThrottledLogRPS
 	// ScannerPersistenceMaxQPS is the maximum rate of persistence calls from worker.Scanner
 	ScannerPersistenceMaxQPS
-	// ScannerMaxOrphanTasks is the maximum number of orphans to delete in one batch
-	ScannerMaxOrphanTasks
+	// ScannerGetOrphanTasksPageSize is the maximum number of orphans to delete in one batch
+	ScannerGetOrphanTasksPageSize
 	// ScannerTaskBatchSize is the number of tasks to query per call in the scavenger
 	ScannerTaskBatchSize
 	// ScannerMaxTasksPerJob is the number of tasks to process before letting another task list be processed
