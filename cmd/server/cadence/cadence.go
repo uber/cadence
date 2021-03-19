@@ -24,6 +24,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -55,7 +56,7 @@ func startHandler(c *cli.Context) {
 	if cfg.Log.Level == "debug" {
 		log.Printf("config=\n%v\n", cfg.String())
 	}
-	cfg.DynamicConfigClient.Filepath = constructPath(rootDir, cfg.DynamicConfigClient.Filepath)
+	cfg.DynamicConfigClient.Filepath = constructPathIfNeed(rootDir, cfg.DynamicConfigClient.Filepath)
 
 	if err := cfg.ValidateAndFillDefaults(); err != nil {
 		log.Fatalf("config validation failed: %v", err)
@@ -132,7 +133,7 @@ func isValidService(in string) bool {
 }
 
 func getConfigDir(c *cli.Context) string {
-	return constructPath(getRootDir(c), c.GlobalString("config"))
+	return constructPathIfNeed(getRootDir(c), c.GlobalString("config"))
 }
 
 func getRootDir(c *cli.Context) string {
@@ -147,8 +148,13 @@ func getRootDir(c *cli.Context) string {
 	return dirpath
 }
 
-func constructPath(dir string, file string) string {
-	return dir + "/" + file
+// constructPathIfNeed would append the dir as the root dir
+// when the file wasn't absolute path.
+func constructPathIfNeed(dir string, file string) string {
+	if !filepath.IsAbs(file) {
+		return dir + "/" + file
+	}
+	return file
 }
 
 // BuildCLI is the main entry point for the cadence server
@@ -169,7 +175,7 @@ func BuildCLI() *cli.App {
 		cli.StringFlag{
 			Name:   "config, c",
 			Value:  "config",
-			Usage:  "config dir path relative to root",
+			Usage:  "config dir path relative to root, or an absolute path",
 			EnvVar: config.EnvKeyConfigDir,
 		},
 		cli.StringFlag{
