@@ -50,7 +50,7 @@ const scannerTaskListPrefix = "cadence-sys-tl-scanner"
 // Each loop of the handler proceeds as follows
 //    - Attempt to delete tasks up to the persisted ACK level.
 //    - If there are 0 tasks for this task-list, try deleting the task-list if its idle
-//    - If the number of tasks retrieved is less than batchSize, there are no more tasks in the task-list
+//    - If the number of tasks completed is less than the batchSize, there are no more tasks in the task-list
 //      Try deleting the task-list if its idle
 func (s *Scavenger) deleteHandler(info *p.TaskListInfo) handlerStatus {
 	var err error

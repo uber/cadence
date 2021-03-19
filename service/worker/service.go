@@ -133,8 +133,8 @@ func NewConfig(params *service.BootstrapParams) *Config {
 		ScannerCfg: &scanner.Config{
 			ScannerPersistenceMaxQPS: dc.GetIntProperty(dynamicconfig.ScannerPersistenceMaxQPS, 5),
 			GetOrphanTasksPageSizeFn: dc.GetIntProperty(dynamicconfig.ScannerGetOrphanTasksPageSize, 1000),
-			TaskBatchSizeFn:          dc.GetIntProperty(dynamicconfig.ScannerTaskBatchSize, 16),
-			MaxTasksPerJobFn:         dc.GetIntProperty(dynamicconfig.ScannerMaxTasksPerJob, 256),
+			TaskBatchSizeFn:          dc.GetIntProperty(dynamicconfig.ScannerBatchSizeForCompleteTasksLessThanAckLevel, 16),
+			MaxTasksPerJobFn:         dc.GetIntProperty(dynamicconfig.ScannerMaxTasksProcessedPerTasklistJob, 256),
 			Persistence:              &params.PersistenceConfig,
 			ClusterMetadata:          params.ClusterMetadata,
 			TaskListScannerEnabled:   dc.GetBoolProperty(dynamicconfig.TaskListScannerEnabled, true),

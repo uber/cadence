@@ -314,8 +314,8 @@ var keys = map[Key]string{
 	WorkerThrottledLogRPS:                                    "worker.throttledLogRPS",
 	ScannerPersistenceMaxQPS:                                 "worker.scannerPersistenceMaxQPS",
 	ScannerGetOrphanTasksPageSize:                            "worker.scannerGetOrphanTasksPageSize",
-	ScannerTaskBatchSize:                                     "worker.scannerTaskBatchSize",
-	ScannerMaxTasksPerJob:                                    "worker.scannerMaxTasksPerJob",
+	ScannerBatchSizeForCompleteTasksLessThanAckLevel:         "worker.scannerBatchSizeForCompleteTasksLessThanAckLevel",
+	ScannerMaxTasksProcessedPerTasklistJob:                   "worker.scannerMaxTasksProcessedPerTasklistJob",
 	TaskListScannerEnabled:                                   "worker.taskListScannerEnabled",
 	HistoryScannerEnabled:                                    "worker.historyScannerEnabled",
 	ConcreteExecutionsScannerEnabled:                         "worker.executionsScannerEnabled",
@@ -833,10 +833,10 @@ const (
 	ScannerPersistenceMaxQPS
 	// ScannerGetOrphanTasksPageSize is the maximum number of orphans to delete in one batch
 	ScannerGetOrphanTasksPageSize
-	// ScannerTaskBatchSize is the number of tasks to query per call in the scavenger
-	ScannerTaskBatchSize
-	// ScannerMaxTasksPerJob is the number of tasks to process before letting another task list be processed
-	ScannerMaxTasksPerJob
+	// ScannerBatchSizeForCompleteTasksLessThanAckLevel is the number of tasks to query per call in the scavenger
+	ScannerBatchSizeForCompleteTasksLessThanAckLevel
+	// ScannerMaxTasksProcessedPerTasklistJob is the number of tasks to process before letting another task list be processed
+	ScannerMaxTasksProcessedPerTasklistJob
 	// TaskListScannerEnabled indicates if task list scanner should be started as part of worker.Scanner
 	TaskListScannerEnabled
 	// HistoryScannerEnabled indicates if history scanner should be started as part of worker.Scanner
