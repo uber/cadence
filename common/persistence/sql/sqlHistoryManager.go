@@ -448,8 +448,8 @@ func (m *sqlHistoryV2Manager) GetAllHistoryTreeBranches(
 ) (*p.GetAllHistoryTreeBranchesResponse, error) {
 	page := historyTreePageToken{
 		ShardID:  0,
-		TreeID:   serialization.MustParseUUID(minUUID),
-		BranchID: serialization.MustParseUUID(minUUID),
+		TreeID:   serialization.UUID{},
+		BranchID: serialization.UUID{},
 	}
 	if request.NextPageToken != nil {
 		if err := gobDeserialize(request.NextPageToken, &page); err != nil {

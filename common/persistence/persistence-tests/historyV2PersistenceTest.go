@@ -118,11 +118,6 @@ func (s *HistoryV2PersistenceSuite) TestScanAllTrees() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	// TODO https://github.com/uber/cadence/issues/2458
-	if s.HistoryV2Mgr.GetName() != "cassandra" {
-		return
-	}
-
 	resp, err := s.HistoryV2Mgr.GetAllHistoryTreeBranches(ctx, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: 1,
 	})

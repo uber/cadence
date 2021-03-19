@@ -48,7 +48,8 @@ task_type = :task_type
 
 	listTaskListQry = `SELECT domain_id, range_id, name, task_type, data, data_encoding ` +
 		`FROM task_lists ` +
-		`WHERE shard_id = ? AND domain_id > ? AND name > ? AND task_type > ? ORDER BY domain_id,name,task_type LIMIT ?`
+		`WHERE shard_id = ? AND ((domain_id = ? AND name = ? AND task_type > ?) OR (domain_id=? AND name > ?) OR (domain_id > ?)) ` +
+		`ORDER BY domain_id,task_type,name LIMIT ?`
 
 	getTaskListQry = `SELECT domain_id, range_id, name, task_type, data, data_encoding ` +
 		`FROM task_lists ` +
@@ -170,7 +171,7 @@ func (mdb *db) rangeSelectFromTaskLists(ctx context.Context, filter *sqlplugin.T
 	var err error
 	var rows []sqlplugin.TaskListsRow
 	err = mdb.conn.SelectContext(ctx, &rows, listTaskListQry,
-		filter.ShardID, *filter.DomainIDGreaterThan, *filter.NameGreaterThan, *filter.TaskTypeGreaterThan, *filter.PageSize)
+		filter.ShardID, *filter.DomainIDGreaterThan, *filter.NameGreaterThan, *filter.TaskTypeGreaterThan, *filter.DomainIDGreaterThan, *filter.NameGreaterThan, *filter.DomainIDGreaterThan, *filter.PageSize)
 	if err != nil {
 		return nil, err
 	}
