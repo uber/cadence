@@ -21,8 +21,6 @@
 package proto
 
 import (
-	"google.golang.org/protobuf/types/known/fieldmaskpb"
-
 	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
@@ -3971,11 +3969,7 @@ func FromUpdateDomainRequest(t *types.UpdateDomainRequest) *apiv1.UpdateDomainRe
 		fields = append(fields, DomainUpdateFailoverTimeoutField)
 	}
 
-	var err error
-	request.UpdateMask, err = fieldmaskpb.New(request.ProtoReflect().Interface(), fields...)
-	if err != nil {
-		panic(err)
-	}
+	request.UpdateMask = newFieldMask(fields)
 
 	return &request
 }

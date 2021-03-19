@@ -128,11 +128,11 @@ $(BIN)/goimports: go.mod
 $(BIN)/revive: go.mod
 	$(call go_build_tool,github.com/mgechev/revive)
 
-$(BIN)/protoc-gen-go: go.mod
-	$(call go_build_tool,google.golang.org/protobuf/cmd/protoc-gen-go)
+$(BIN)/protoc-gen-gofast: go.mod | $(BIN)
+	$(call go_build_tool,github.com/gogo/protobuf/protoc-gen-gofast)
 
-$(BIN)/protoc-gen-go-grpc: go.mod
-	$(call go_build_tool,google.golang.org/grpc/cmd/protoc-gen-go-grpc)
+$(BIN)/protoc-gen-yarpc-go: go.mod | $(BIN)
+	$(call go_build_tool,go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go)
 
 $(BIN)/goveralls: go.mod
 	$(call go_build_tool,github.com/mattn/goveralls)
@@ -156,7 +156,7 @@ $(BIN)/$(BUF_VERSION_BIN): | $(BIN)
 	@chmod +x $@
 
 # https://www.grpc.io/docs/languages/go/quickstart/
-# protoc-gen-go(-grpc) are versioned via tools.go + go.mod (built above) and will be rebuilt as needed.
+# protoc-gen-gofast (yarpc) are versioned via tools.go + go.mod (built above) and will be rebuilt as needed.
 # changing PROTOC_VERSION will automatically download and use the specified version
 PROTOC_VERSION = 3.14.0
 PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(subst Darwin,osx,$(OS))-$(ARCH).zip
@@ -210,22 +210,27 @@ PROTO_ROOT := proto
 # output location is defined by `option go_package` in the proto files, all must stay in sync with this
 PROTO_OUT := .gen/proto
 PROTO_FILES = $(shell find ./$(PROTO_ROOT) -name "*.proto" | grep -v "persistenceblobs")
+PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 
-# protoc generates everything in one shot, so we don't need thrift's per-target stuff.
-$(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-go $(BIN)/protoc-gen-go-grpc | $(BUILD)
+# protoc splits proto files into directories, otherwise protoc-gen-gofast is complaining about inconsistent package
+# import paths due to multiple packages being compiled at once.
+#
+# After compilation files are moved to final location, as plugins adds additional path based on proto package.
+$(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gofast $(BIN)/protoc-gen-yarpc-go | $(BUILD)
 	@mkdir -p $(PROTO_OUT)
 	@echo "protoc..."
-	@$(BIN)/$(PROTOC_VERSION_BIN) \
-		--plugin $(BIN)/protoc-gen-go \
-		--plugin $(BIN)/protoc-gen-go-grpc \
+	@$(foreach PROTO_DIR,$(PROTO_DIRS),$(BIN)/$(PROTOC_VERSION_BIN) \
+		--plugin $(BIN)/protoc-gen-gofast \
+		--plugin $(BIN)/protoc-gen-yarpc-go \
 		-I=$(PROTO_ROOT)/public \
 		-I=$(PROTO_ROOT)/internal \
 		-I=$(PROTOC_UNZIP_DIR)/include \
-		--go_out=. \
-		--go_opt=module=$(PROJECT_ROOT) \
-		--go-grpc_out=. \
-		--go-grpc_opt=module=$(PROJECT_ROOT) \
-		$(PROTO_FILES)
+		--gofast_out=Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/field_mask.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,paths=source_relative:$(PROTO_OUT) \
+		--yarpc-go_out=$(PROTO_OUT) \
+		$$(find $(PROTO_DIR) -name '*.proto');\
+	)
+	@cp -R $(PROTO_OUT)/uber/cadence/* $(PROTO_OUT)/
+	@rm -r $(PROTO_OUT)/uber
 	@touch $@
 
 # ====================================
@@ -242,7 +247,7 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 # "build" fake binaries, and touch the book-keeping files, so Make thinks codegen has been run.
 # order matters, as e.g. a $(BIN) newer than a $(BUILD) implies Make should run the $(BIN).
 .fake-protoc: | $(BIN) $(BUILD)
-	touch $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-go $(BIN)/protoc-gen-go-grpc
+	touch $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gofast $(BIN)/protoc-gen-yarpc-go
 	touch $(BUILD)/protoc
 
 .fake-thrift: | $(BIN) $(BUILD)
