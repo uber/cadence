@@ -224,14 +224,16 @@ func (db *cdb) InsertDomain(
 			db.logger.Warn("Unable to delete orphan domain record. Error", tag.Error(errDelete))
 		}
 
-		if domain, ok := previous["domain"].(map[string]interface{}); ok {
-			msg := fmt.Sprintf("Domain already exists.  DomainId: %v", domain)
-			db.logger.Warn(msg)
+		domain := previous["name"].(string)
+		if domain == domainMetadataRecordName {
+			db.logger.Warn("Create domain operation failed because of condition update failure on domain metadata record")
 			return errConditionFailed
 		}
 
-		db.logger.Warn("CreateDomain operation failed because of conditional failure.")
-		return errConditionFailed
+		db.logger.Warn("Domain already exists", tag.WorkflowDomainName(domain))
+		return &types.DomainAlreadyExistsError{
+			Message: fmt.Sprintf("Domain %v already exists", previous["domain"]),
+		}
 	}
 
 	return nil
@@ -309,7 +311,7 @@ func (db *cdb) UpdateDomain(
 		return err
 	}
 	if !applied {
-		return fmt.Errorf("UpdateDomain operation failed because of conditional failure")
+		return errConditionFailed
 	}
 	return nil
 }

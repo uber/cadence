@@ -376,9 +376,16 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
-	id := uuid.New()
+	concurrency := 16
+	numDomains := 5
+	domainIDs := make([]string, numDomains)
+	names := make([]string, numDomains)
+	registered := make([]bool, numDomains)
+	for idx := range domainIDs {
+		domainIDs[idx] = uuid.New()
+		names[idx] = "concurrent-create-domain-test-name-" + strconv.Itoa(idx)
+	}
 
-	name := "concurrent-create-domain-test-name"
 	status := p.DomainStatusRegistered
 	description := "concurrent-create-domain-test-description"
 	owner := "create-domain-test-owner"
@@ -412,17 +419,16 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 			},
 		},
 	}
-	concurrency := 16
 	successCount := int32(0)
 	var wg sync.WaitGroup
 	for i := 1; i <= concurrency; i++ {
-		newValue := fmt.Sprintf("v-%v", i)
 		wg.Add(1)
-		go func(data map[string]string) {
+		go func(idx int) {
+			data := map[string]string{"k0": fmt.Sprintf("v-%v", idx)}
 			_, err1 := m.CreateDomain(ctx,
 				&p.DomainInfo{
-					ID:          id,
-					Name:        name,
+					ID:          domainIDs[idx%numDomains],
+					Name:        names[idx%numDomains],
 					Status:      status,
 					Description: description,
 					OwnerEmail:  owner,
@@ -448,43 +454,54 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 			)
 			if err1 == nil {
 				atomic.AddInt32(&successCount, 1)
+				registered[idx%numDomains] = true
+			}
+			if _, ok := err1.(*types.DomainAlreadyExistsError); ok {
+				registered[idx%numDomains] = true
 			}
 			wg.Done()
-		}(map[string]string{"k0": newValue})
+		}(i)
 	}
 	wg.Wait()
-	m.Equal(int32(1), successCount)
+	m.GreaterOrEqual(successCount, int32(1))
 
-	resp, err3 := m.GetDomain(ctx, "", name)
-	m.NoError(err3)
-	m.NotNil(resp)
-	m.Equal(name, resp.Info.Name)
-	m.Equal(status, resp.Info.Status)
-	m.Equal(description, resp.Info.Description)
-	m.Equal(owner, resp.Info.OwnerEmail)
-	m.Equal(retention, resp.Config.Retention)
-	m.Equal(emitMetric, resp.Config.EmitMetric)
-	m.Equal(historyArchivalStatus, resp.Config.HistoryArchivalStatus)
-	m.Equal(historyArchivalURI, resp.Config.HistoryArchivalURI)
-	m.Equal(visibilityArchivalStatus, resp.Config.VisibilityArchivalStatus)
-	m.Equal(visibilityArchivalURI, resp.Config.VisibilityArchivalURI)
-	m.Equal(testBinaries, resp.Config.BadBinaries)
-	m.Equal(clusterActive, resp.ReplicationConfig.ActiveClusterName)
-	m.Equal(len(clusters), len(resp.ReplicationConfig.Clusters))
-	for index := range clusters {
-		m.Equal(clusters[index], resp.ReplicationConfig.Clusters[index])
+	for i := 0; i != numDomains; i++ {
+		if !registered[i] {
+			continue
+		}
+
+		resp, err3 := m.GetDomain(ctx, "", names[i])
+		m.NoError(err3)
+		m.NotNil(resp)
+		m.Equal(domainIDs[i], resp.Info.ID)
+		m.Equal(names[i], resp.Info.Name)
+		m.Equal(status, resp.Info.Status)
+		m.Equal(description, resp.Info.Description)
+		m.Equal(owner, resp.Info.OwnerEmail)
+		m.Equal(retention, resp.Config.Retention)
+		m.Equal(emitMetric, resp.Config.EmitMetric)
+		m.Equal(historyArchivalStatus, resp.Config.HistoryArchivalStatus)
+		m.Equal(historyArchivalURI, resp.Config.HistoryArchivalURI)
+		m.Equal(visibilityArchivalStatus, resp.Config.VisibilityArchivalStatus)
+		m.Equal(visibilityArchivalURI, resp.Config.VisibilityArchivalURI)
+		m.Equal(testBinaries, resp.Config.BadBinaries)
+		m.Equal(clusterActive, resp.ReplicationConfig.ActiveClusterName)
+		m.Equal(len(clusters), len(resp.ReplicationConfig.Clusters))
+		for index := range clusters {
+			m.Equal(clusters[index], resp.ReplicationConfig.Clusters[index])
+		}
+		m.Equal(isGlobalDomain, resp.IsGlobalDomain)
+		m.Equal(configVersion, resp.ConfigVersion)
+		m.Equal(failoverVersion, resp.FailoverVersion)
+		m.Equal(common.InitialPreviousFailoverVersion, resp.PreviousFailoverVersion)
+
+		//check domain data
+		ss := strings.Split(resp.Info.Data["k0"], "-")
+		m.Equal(2, len(ss))
+		vi, err := strconv.Atoi(ss[1])
+		m.NoError(err)
+		m.Equal(true, vi > 0 && vi <= concurrency)
 	}
-	m.Equal(isGlobalDomain, resp.IsGlobalDomain)
-	m.Equal(configVersion, resp.ConfigVersion)
-	m.Equal(failoverVersion, resp.FailoverVersion)
-	m.Equal(common.InitialPreviousFailoverVersion, resp.PreviousFailoverVersion)
-
-	//check domain data
-	ss := strings.Split(resp.Info.Data["k0"], "-")
-	m.Equal(2, len(ss))
-	vi, err := strconv.Atoi(ss[1])
-	m.NoError(err)
-	m.Equal(true, vi > 0 && vi <= concurrency)
 }
 
 // TestConcurrentUpdateDomain test
