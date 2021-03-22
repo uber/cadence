@@ -32,10 +32,12 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/zap"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -55,19 +57,6 @@ const (
 
 var errTest = errors.New("transient error")
 
-type MockConfig struct {
-}
-
-func (*MockConfig) MaxTasksPerJob() int {
-	return 4
-}
-func (*MockConfig) GetOrphanTasksPageSize() int {
-	return 16
-}
-func (*MockConfig) TaskBatchSize() int {
-	return 16
-}
-
 func TestScavengerTestSuite(t *testing.T) {
 	suite.Run(t, new(ScavengerTestSuite))
 }
@@ -83,7 +72,7 @@ func (s *ScavengerTestSuite) SetupTest() {
 	logger := loggerimpl.NewLogger(zapLogger)
 
 	scvgrCtx, scvgrCancelFn := context.WithTimeout(context.Background(), scavengerTestTimeout)
-	s.scvgr = NewScavenger(scvgrCtx, s.taskMgr, metrics.NewClient(tally.NoopScope, metrics.Worker), logger, &MockConfig{})
+	s.scvgr = NewScavenger(scvgrCtx, s.taskMgr, metrics.NewClient(tally.NoopScope, metrics.Worker), logger, dynamicconfig.GetIntPropertyFn(common.DefaultScannerGetOrphanTasksPageSize), dynamicconfig.GetIntPropertyFn(int(common.DefaultScannerBatchSizeForCompleteTasksLessThanAckLevel)), dynamicconfig.GetIntPropertyFn(common.DefaultScannerMaxTasksProcessedPerTasklistJob))
 	s.scvgrCancelFn = scvgrCancelFn
 	executorPollInterval = time.Millisecond * 50
 }

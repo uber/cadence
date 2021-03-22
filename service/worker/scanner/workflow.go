@@ -160,7 +160,7 @@ func TaskListScavengerActivity(
 		return err
 	}
 	res := ctx.resource
-	scavenger := tasklist.NewScavenger(activityCtx, res.GetTaskManager(), res.GetMetricsClient(), res.GetLogger(), &ctx.cfg)
+	scavenger := tasklist.NewScavenger(activityCtx, res.GetTaskManager(), res.GetMetricsClient(), res.GetLogger(), ctx.cfg.GetOrphanTasksPageSizeFn, ctx.cfg.TaskBatchSizeFn, ctx.cfg.MaxTasksPerJobFn)
 	res.GetLogger().Info("Starting task list scavenger")
 	scavenger.Start()
 	for scavenger.Alive() {

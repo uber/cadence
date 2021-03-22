@@ -31,28 +31,25 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/worker/scanner/executor"
 )
 
 type (
-	// Config provides the config functions we need
-	Config interface {
-		GetOrphanTasksPageSize() int
-		TaskBatchSize() int
-		MaxTasksPerJob() int
-	}
 	// Scavenger is the type that holds the state for task list scavenger daemon
 	Scavenger struct {
-		ctx      context.Context
-		db       p.TaskManager
-		executor executor.Executor
-		metrics  metrics.Client
-		logger   log.Logger
-		stats    stats
-		status   int32
-		stopC    chan struct{}
-		stopWG   sync.WaitGroup
-		cfg      Config
+		ctx                      context.Context
+		db                       p.TaskManager
+		executor                 executor.Executor
+		metrics                  metrics.Client
+		logger                   log.Logger
+		stats                    stats
+		status                   int32
+		stopC                    chan struct{}
+		stopWG                   sync.WaitGroup
+		getOrphanTasksPageSizeFn dynamicconfig.IntPropertyFn
+		taskBatchSizeFn          dynamicconfig.IntPropertyFn
+		maxTasksPerJobFn         dynamicconfig.IntPropertyFn
 	}
 
 	stats struct {
@@ -100,18 +97,20 @@ var (
 // two conditions
 //  - either all task lists are processed successfully (or)
 //  - Stop() method is called to stop the scavenger
-func NewScavenger(ctx context.Context, db p.TaskManager, metricsClient metrics.Client, logger log.Logger, cfg Config) *Scavenger {
+func NewScavenger(ctx context.Context, db p.TaskManager, metricsClient metrics.Client, logger log.Logger, getOrphanTasksPageSizeFn dynamicconfig.IntPropertyFn, taskBatchSizeFn dynamicconfig.IntPropertyFn, maxTasksPerJobFn dynamicconfig.IntPropertyFn) *Scavenger {
 	stopC := make(chan struct{})
 	taskExecutor := executor.NewFixedSizePoolExecutor(
 		taskListBatchSize, executorMaxDeferredTasks, metricsClient, metrics.TaskListScavengerScope)
 	return &Scavenger{
-		ctx:      ctx,
-		db:       db,
-		metrics:  metricsClient,
-		logger:   logger,
-		stopC:    stopC,
-		executor: taskExecutor,
-		cfg:      cfg,
+		ctx:                      ctx,
+		db:                       db,
+		metrics:                  metricsClient,
+		logger:                   logger,
+		stopC:                    stopC,
+		executor:                 taskExecutor,
+		getOrphanTasksPageSizeFn: getOrphanTasksPageSizeFn,
+		taskBatchSizeFn:          taskBatchSizeFn,
+		maxTasksPerJobFn:         maxTasksPerJobFn,
 	}
 }
 

@@ -56,8 +56,8 @@ func (s *Scavenger) deleteHandler(info *p.TaskListInfo) handlerStatus {
 	var err error
 	var nProcessed, nDeleted int
 
-	taskBatchSize := s.cfg.TaskBatchSize()
-	max := s.cfg.MaxTasksPerJob()
+	taskBatchSize := s.taskBatchSizeFn()
+	max := s.maxTasksPerJobFn()
 
 	defer func() { s.deleteHandlerLog(info, nProcessed, nDeleted, err) }()
 
@@ -126,7 +126,7 @@ func (s *Scavenger) isTaskExpired(t *p.TaskInfo) bool {
 
 func (s *Scavenger) completeOrphanTasksHandler() handlerStatus {
 	var nDeleted int
-	batchSize := s.cfg.GetOrphanTasksPageSize()
+	batchSize := s.getOrphanTasksPageSizeFn()
 	resp, err := s.getOrphanTasks(batchSize)
 	if err == p.ErrPersistenceLimitExceeded {
 		s.logger.Info("scavenger.completeOrphanTasksHandler query was ratelimited; will retry")
