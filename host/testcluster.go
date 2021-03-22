@@ -171,7 +171,8 @@ func NewCluster(options *TestClusterConfig, logger log.Logger) (*TestCluster, er
 		esVisibilityStore := pes.NewElasticSearchVisibilityStore(esClient, indexName, visProducer, visConfig, logger)
 		esVisibilityMgr = persistence.NewVisibilityManagerImpl(esVisibilityStore, logger)
 	}
-	visibilityMgr := persistence.NewVisibilityManagerWrapper(testBase.VisibilityMgr, esVisibilityMgr,
+	// TODO: the visibilityMgr is not used, the code is old and needs to be refactored
+	visibilityMgr := persistence.NewVisibilityManagerWrapper(nil, esVisibilityMgr,
 		dynamicconfig.GetBoolPropertyFnFilteredByDomain(options.WorkerConfig.EnableIndexer), advancedVisibilityWritingMode)
 
 	pConfig := testBase.Config()

@@ -42,14 +42,20 @@ const (
 	CounterBatch
 )
 
+func newBatch(
+	gocqlBatch *gocql.Batch,
+) *batch {
+	return &batch{
+		Batch: gocqlBatch,
+	}
+}
+
 func (b *batch) WithContext(ctx context.Context) Batch {
 	b2 := b.Batch.WithContext(ctx)
 	if b2 == nil {
 		return nil
 	}
-	return &batch{
-		Batch: b2,
-	}
+	return newBatch(b2)
 }
 
 func (b *batch) WithTimestamp(timestamp int64) Batch {

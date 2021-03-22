@@ -77,7 +77,6 @@ type (
 		TaskMgr                   p.TaskManager
 		HistoryV2Mgr              p.HistoryManager
 		MetadataManager           p.MetadataManager
-		VisibilityMgr             p.VisibilityManager
 		DomainReplicationQueueMgr p.QueueManager
 		ShardInfo                 *p.ShardInfo
 		TaskIDGenerator           TransferTaskIDGenerator
@@ -176,9 +175,6 @@ func (s *TestBase) Setup() {
 	clusterName := s.ClusterMetadata.GetCurrentClusterName()
 
 	s.DefaultTestCluster.SetupTestDatabase()
-	if s.VisibilityTestCluster != s.DefaultTestCluster {
-		s.VisibilityTestCluster.SetupTestDatabase()
-	}
 
 	cfg := s.DefaultTestCluster.Config()
 	scope := tally.NewTestScope(common.HistoryServiceName, make(map[string]string))
@@ -200,17 +196,6 @@ func (s *TestBase) Setup() {
 	s.ExecutionMgrFactory = factory
 	s.ExecutionManager, err = factory.NewExecutionManager(shardID)
 	s.fatalOnError("NewExecutionManager", err)
-
-	visibilityFactory := factory
-	if s.VisibilityTestCluster != s.DefaultTestCluster {
-		vCfg := s.VisibilityTestCluster.Config()
-		visibilityFactory = client.NewFactory(&vCfg, nil, clusterName, nil, s.Logger)
-	}
-	// SQL currently doesn't have support for visibility manager
-	s.VisibilityMgr, err = visibilityFactory.NewVisibilityManager()
-	if err != nil {
-		s.fatalOnError("NewVisibilityManager", err)
-	}
 
 	s.ReadLevel = 0
 	s.ReplicationReadLevel = 0
@@ -1814,11 +1799,6 @@ func (s *TestBase) CompleteTask(ctx context.Context, domainID, taskList string, 
 // TearDownWorkflowStore to cleanup
 func (s *TestBase) TearDownWorkflowStore() {
 	s.ExecutionMgrFactory.Close()
-	// TODO VisibilityMgr/Store is created with a separated code path, this is incorrect and may cause leaking connection
-	// And Postgres requires all connection to be closed before dropping a database
-	// https://github.com/uber/cadence/issues/2854
-	// Remove the below line after the issue is fix
-	s.VisibilityMgr.Close()
 
 	s.DefaultTestCluster.TearDownTestDatabase()
 }

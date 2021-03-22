@@ -46,18 +46,7 @@ func NewClient() Client {
 func (c client) CreateSession(
 	config ClusterConfig,
 ) (Session, error) {
-	cluster := newCassandraCluster(config)
-	cluster.ProtoVersion = config.ProtoVersion
-	cluster.Consistency = mustConvertConsistency(config.Consistency)
-	cluster.SerialConsistency = mustConvertSerialConsistency(config.SerialConsistency)
-	cluster.Timeout = config.Timeout
-	gocqlSession, err := cluster.CreateSession()
-	if err != nil {
-		return nil, err
-	}
-	return &session{
-		Session: gocqlSession,
-	}, nil
+	return newSession(config)
 }
 
 func (c client) IsTimeoutError(err error) bool {
