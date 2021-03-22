@@ -833,9 +833,9 @@ const (
 	ScannerPersistenceMaxQPS
 	// ScannerGetOrphanTasksPageSize is the maximum number of orphans to delete in one batch
 	ScannerGetOrphanTasksPageSize
-	// ScannerBatchSizeForCompleteTasksLessThanAckLevel is the number of tasks to query per call in the scavenger
+	// ScannerBatchSizeForCompleteTasksLessThanAckLevel is the number of tasks to query per call in the scavenger. The scavenger then uses the return of CompleteTasksLessThanAckLevel, to decide if a tasklist can be deleted. So it's better to keep it a relatively high number to let it be more efficient.
 	ScannerBatchSizeForCompleteTasksLessThanAckLevel
-	// ScannerMaxTasksProcessedPerTasklistJob is the number of tasks to process before letting another task list be processed
+	// ScannerMaxTasksProcessedPerTasklistJob is the number of tasks to process for a tasklist in each workflow run
 	ScannerMaxTasksProcessedPerTasklistJob
 	// TaskListScannerEnabled indicates if task list scanner should be started as part of worker.Scanner
 	TaskListScannerEnabled
