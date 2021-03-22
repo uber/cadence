@@ -44,8 +44,6 @@ type sqlTaskManager struct {
 }
 
 var (
-	minUUID = "00000000-0000-0000-0000-000000000000"
-
 	stickyTasksListsTTL = time.Hour * 24
 )
 
@@ -259,7 +257,7 @@ func (m *sqlTaskManager) UpdateTaskList(
 
 type taskListPageToken struct {
 	ShardID  int
-	DomainID string
+	DomainID serialization.UUID
 	Name     string
 	TaskType int64
 }
@@ -272,7 +270,7 @@ func (m *sqlTaskManager) ListTaskList(
 	ctx context.Context,
 	request *persistence.ListTaskListRequest,
 ) (*persistence.ListTaskListResponse, error) {
-	pageToken := taskListPageToken{TaskType: math.MinInt16, DomainID: minUUID}
+	pageToken := taskListPageToken{TaskType: math.MinInt16, DomainID: serialization.UUID{}}
 	if request.PageToken != nil {
 		if err := gobDeserialize(request.PageToken, &pageToken); err != nil {
 			return nil, &types.InternalServiceError{Message: fmt.Sprintf("error deserializing page token: %v", err)}
@@ -280,7 +278,7 @@ func (m *sqlTaskManager) ListTaskList(
 	}
 	var err error
 	var rows []sqlplugin.TaskListsRow
-	domainID := serialization.MustParseUUID(pageToken.DomainID)
+	domainID := pageToken.DomainID
 	for pageToken.ShardID < m.nShards {
 		rows, err = m.db.SelectFromTaskLists(ctx, &sqlplugin.TaskListsFilter{
 			ShardID:             pageToken.ShardID,
@@ -295,7 +293,7 @@ func (m *sqlTaskManager) ListTaskList(
 		if len(rows) > 0 {
 			break
 		}
-		pageToken = taskListPageToken{ShardID: pageToken.ShardID + 1, TaskType: math.MinInt16, DomainID: minUUID}
+		pageToken = taskListPageToken{ShardID: pageToken.ShardID + 1, TaskType: math.MinInt16, DomainID: serialization.UUID{}}
 	}
 
 	var nextPageToken []byte
@@ -304,12 +302,12 @@ func (m *sqlTaskManager) ListTaskList(
 		lastRow := &rows[request.PageSize-1]
 		nextPageToken, err = gobSerialize(&taskListPageToken{
 			ShardID:  pageToken.ShardID,
-			DomainID: lastRow.DomainID.String(),
+			DomainID: lastRow.DomainID,
 			Name:     lastRow.Name,
 			TaskType: lastRow.TaskType,
 		})
 	case pageToken.ShardID+1 < m.nShards:
-		nextPageToken, err = gobSerialize(&taskListPageToken{ShardID: pageToken.ShardID + 1, TaskType: math.MinInt16, DomainID: minUUID})
+		nextPageToken, err = gobSerialize(&taskListPageToken{ShardID: pageToken.ShardID + 1, TaskType: math.MinInt16, DomainID: serialization.UUID{}})
 	}
 
 	if err != nil {
