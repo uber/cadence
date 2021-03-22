@@ -536,3 +536,64 @@ func (s *MatchingPersistenceSuite) TestListWithMultipleTaskList() {
 	s.Nil(resp.NextPageToken)
 	s.Equal(0, len(resp.Items))
 }
+
+func (s *MatchingPersistenceSuite) TestGetOrphanTasks() {
+	if s.TaskMgr.GetName() == "cassandra" {
+		// GetOrphanTasks API is currently not supported in cassandra"
+		return
+	}
+	s.deleteAllTaskList()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	domainID := uuid.New()
+	name := fmt.Sprintf("test-list-with-orphans")
+	resp, err := s.TaskMgr.LeaseTaskList(ctx, &p.LeaseTaskListRequest{
+		DomainID:     domainID,
+		TaskList:     name,
+		TaskType:     p.TaskListTypeActivity,
+		TaskListKind: p.TaskListKindNormal,
+	})
+	s.NoError(err)
+
+	wid := uuid.New()
+	rid := uuid.New()
+	s.TaskMgr.CreateTasks(ctx, &p.CreateTasksRequest{
+		TaskListInfo: resp.TaskListInfo,
+		Tasks: []*p.CreateTaskInfo{
+			{
+				Execution: types.WorkflowExecution{WorkflowID: wid, RunID: rid},
+				Data: &p.TaskInfo{
+					DomainID:               domainID,
+					WorkflowID:             wid,
+					RunID:                  rid,
+					TaskID:                 0,
+					ScheduleID:             0,
+					ScheduleToStartTimeout: 0,
+					Expiry:                 time.Now(),
+					CreatedTime:            time.Now(),
+				},
+				TaskID: 0,
+			},
+		},
+	})
+
+	oresp, err := s.TaskMgr.GetOrphanTasks(ctx, &p.GetOrphanTasksRequest{Limit: 10})
+	s.NoError(err)
+
+	s.Equal(len(oresp.Tasks), 0)
+
+	s.deleteAllTaskList()
+
+	oresp, err = s.TaskMgr.GetOrphanTasks(ctx, &p.GetOrphanTasksRequest{Limit: 10})
+	s.NoError(err)
+
+	s.Equal(len(oresp.Tasks), 1)
+	for _, it := range oresp.Tasks {
+		s.Equal(domainID, it.DomainID)
+		s.Equal(p.TaskListTypeActivity, it.TaskType)
+		s.Equal(0, it.TaskID)
+		s.Equal(name, it.TaskListName)
+	}
+}
