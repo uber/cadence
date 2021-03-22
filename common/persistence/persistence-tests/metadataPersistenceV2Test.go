@@ -419,7 +419,8 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 			},
 		},
 	}
-	successCount := int32(0)
+	successCount := 0
+	var mutex sync.Mutex
 	var wg sync.WaitGroup
 	for i := 1; i <= concurrency; i++ {
 		wg.Add(1)
@@ -452,8 +453,10 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 				failoverVersion,
 				0,
 			)
+			mutex.Lock()
+			defer mutex.Unlock()
 			if err1 == nil {
-				atomic.AddInt32(&successCount, 1)
+				successCount++
 				registered[idx%numDomains] = true
 			}
 			if _, ok := err1.(*types.DomainAlreadyExistsError); ok {
@@ -463,7 +466,7 @@ func (m *MetadataPersistenceSuiteV2) TestConcurrentCreateDomain() {
 		}(i)
 	}
 	wg.Wait()
-	m.GreaterOrEqual(successCount, int32(1))
+	m.GreaterOrEqual(successCount, 1)
 
 	for i := 0; i != numDomains; i++ {
 		if !registered[i] {
