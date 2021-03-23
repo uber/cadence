@@ -230,7 +230,7 @@ func (db *cdb) InsertDomain(
 			if domain == row.Info.Name {
 				db.logger.Warn("Domain already exists", tag.WorkflowDomainName(domain))
 				return &types.DomainAlreadyExistsError{
-					Message: fmt.Sprintf("Domain %v already exists", previous["domain"]),
+					Message: fmt.Sprintf("Domain %v already exists", domain),
 				}
 			}
 
