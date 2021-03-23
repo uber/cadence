@@ -224,16 +224,32 @@ func (db *cdb) InsertDomain(
 			db.logger.Warn("Unable to delete orphan domain record. Error", tag.Error(errDelete))
 		}
 
-		domain := previous["name"].(string)
-		if domain == domainMetadataRecordName {
-			db.logger.Warn("Create domain operation failed because of condition update failure on domain metadata record")
-			return errConditionFailed
+		for {
+			// first iter MapScan is done inside MapExecuteBatchCAS
+			domain := previous["name"].(string)
+			if domain == row.Info.Name {
+				db.logger.Warn("Domain already exists", tag.WorkflowDomainName(domain))
+				return &types.DomainAlreadyExistsError{
+					Message: fmt.Sprintf("Domain %v already exists", previous["domain"]),
+				}
+			}
+
+			currentNotificationVersion := previous["notification_version"].(int64)
+			if domain == domainMetadataRecordName && currentNotificationVersion != metadataNotificationVersion {
+				db.logger.Warn("Create domain operation failed because of condition update failure on domain metadata record")
+				return errConditionFailed
+			}
+
+			previous = make(map[string]interface{})
+			if !iter.MapScan(previous) {
+				break
+			}
 		}
 
-		db.logger.Warn("Domain already exists", tag.WorkflowDomainName(domain))
-		return &types.DomainAlreadyExistsError{
-			Message: fmt.Sprintf("Domain %v already exists", previous["domain"]),
-		}
+		// this should not happen
+		// return errConditionFailed so the request can be retried
+		db.logger.Warn("Unknown conditional failure when inserting domain")
+		return errConditionFailed
 	}
 
 	return nil
