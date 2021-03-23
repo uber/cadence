@@ -22,7 +22,7 @@ package cli
 
 import "github.com/urfave/cli"
 
-// Flags used to specify cli command line arguments
+// Flags used to specify CLI arguments
 const (
 	FlagUsername                          = "username"
 	FlagPassword                          = "password"
