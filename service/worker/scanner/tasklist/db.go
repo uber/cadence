@@ -30,7 +30,7 @@ import (
 
 var retryForeverPolicy = newRetryForeverPolicy()
 
-func (s *Scavenger) completeTasks(info *p.TaskListInfo, limit int) (int, error) {
+func (s *Scavenger) completeTasks(info *p.TaskListInfo, taskID int64, limit int) (int, error) {
 	var n int
 	var err error
 	err = s.retryForever(func() error {
@@ -38,7 +38,7 @@ func (s *Scavenger) completeTasks(info *p.TaskListInfo, limit int) (int, error) 
 			DomainID:     info.DomainID,
 			TaskListName: info.Name,
 			TaskType:     info.TaskType,
-			TaskID:       info.AckLevel,
+			TaskID:       taskID,
 			Limit:        limit,
 		})
 		return err
@@ -68,6 +68,22 @@ func (s *Scavenger) completeTask(info *p.TaskListInfo, taskid int64) error {
 		return err
 	})
 	return err
+}
+
+func (s *Scavenger) getTasks(info *p.TaskListInfo, batchSize int) (*p.GetTasksResponse, error) {
+	var err error
+	var resp *p.GetTasksResponse
+	err = s.retryForever(func() error {
+		resp, err = s.db.GetTasks(&p.GetTasksRequest{
+			DomainID:  info.DomainID,
+			TaskList:  info.Name,
+			TaskType:  info.TaskType,
+			ReadLevel: -1, // get the first N tasks sorted by taskID
+			BatchSize: batchSize,
+		})
+		return err
+	})
+	return resp, err
 }
 
 func (s *Scavenger) listTaskList(pageSize int, pageToken []byte) (*p.ListTaskListResponse, error) {

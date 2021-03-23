@@ -62,7 +62,8 @@ func (s *Scavenger) deleteHandler(info *p.TaskListInfo) handlerStatus {
 	defer func() { s.deleteHandlerLog(info, nProcessed, nDeleted, err) }()
 
 	for nProcessed < max {
-		nTasks, err := s.completeTasks(info, taskBatchSize)
+		// First we complete tasks up to the persisted acklevel regardless of the task expiration
+		nTasks, err := s.completeTasks(info, info.AckLevel, taskBatchSize)
 		if err == p.ErrPersistenceLimitExceeded {
 			s.logger.Info("scavenger.deleteHandler query was ratelimited; will retry")
 			return handlerStatusDefer
@@ -74,6 +75,44 @@ func (s *Scavenger) deleteHandler(info *p.TaskListInfo) handlerStatus {
 		nProcessed += nTasks
 		nDeleted += nTasks
 		if nTasks < taskBatchSize {
+			break
+		}
+	}
+	for nProcessed < max {
+		// if we finished completing tasks below the ack level, but still have budget, then focus on expired tasks
+		resp, err1 := s.getTasks(info, taskBatchSize)
+		if err1 != nil {
+			err = err1
+			s.logger.Error(fmt.Sprintf("Scavenger error getting tasks: %v", err))
+			return handlerStatusErr
+		}
+
+		nTasks := 0
+		unexpiredTaskFound := false
+		for _, task := range resp.Tasks {
+			nProcessed++
+			if !s.isTaskExpired(task) {
+				s.logger.Info(fmt.Sprintf("Scavenger stopping at an unexpired task. (Expires %v)", task.Expiry), tag.WorkflowTaskListName(info.Name), tag.TaskType(info.TaskType), tag.WorkflowDomainID(task.DomainID), tag.WorkflowID(task.WorkflowID), tag.WorkflowRunID(task.RunID), tag.TaskID(task.TaskID))
+				unexpiredTaskFound = true
+				break
+			}
+			nTasks++
+		}
+
+		if nTasks > 0 {
+			taskID := resp.Tasks[nTasks-1].TaskID
+			if _, err = s.completeTasks(info, taskID, nTasks); err != nil {
+				return handlerStatusErr
+			}
+			nDeleted += nTasks
+		}
+
+		if unexpiredTaskFound {
+			return handlerStatusDone
+		}
+
+		if nTasks < taskBatchSize {
+			// with no unexpired tasks left, it's safe to try and delete the task list itself
 			s.tryDeleteTaskList(info)
 			return handlerStatusDone
 		}
