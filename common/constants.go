@@ -22,6 +22,8 @@ package common
 
 import (
 	"time"
+
+	"github.com/uber/cadence/.gen/go/shadower"
 )
 
 const (
@@ -116,6 +118,10 @@ const (
 	// BatcherLocalDomainName is domain name for batcher workflows running in local cluster
 	// Batcher cannot use SystemLocalDomain because auth
 	BatcherLocalDomainName = "cadence-batcher"
+	// ShadowerDomainID is domain id for workflow shadower local domain
+	ShadowerDomainID = "59c51119-1b41-4a28-986d-d6e377716f82"
+	// ShadowerLocalDomainName
+	ShadowerLocalDomainName = shadower.LocalDomainName
 )
 
 const (
