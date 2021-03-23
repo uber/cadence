@@ -227,13 +227,6 @@ func (db *cdb) InsertDomain(
 		for {
 			// first iter MapScan is done inside MapExecuteBatchCAS
 			domain := previous["name"].(string)
-			if domain == row.Info.Name {
-				db.logger.Warn("Domain already exists", tag.WorkflowDomainName(domain))
-				return &types.DomainAlreadyExistsError{
-					Message: fmt.Sprintf("Domain %v already exists", domain),
-				}
-			}
-
 			currentNotificationVersion := previous["notification_version"].(int64)
 			if domain == domainMetadataRecordName && currentNotificationVersion != metadataNotificationVersion {
 				db.logger.Warn("Create domain operation failed because of condition update failure on domain metadata record")
@@ -246,10 +239,10 @@ func (db *cdb) InsertDomain(
 			}
 		}
 
-		// this should not happen
-		// return errConditionFailed so the request can be retried
-		db.logger.Warn("Unknown conditional failure when inserting domain")
-		return errConditionFailed
+		db.logger.Warn("Domain already exists", tag.WorkflowDomainName(row.Info.Name))
+		return &types.DomainAlreadyExistsError{
+			Message: fmt.Sprintf("Domain %v already exists", row.Info.Name),
+		}
 	}
 
 	return nil
