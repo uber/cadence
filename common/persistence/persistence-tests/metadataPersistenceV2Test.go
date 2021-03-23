@@ -195,7 +195,6 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 		0,
 	)
 	m.Error(err2)
-	fmt.Println("ycyang: ", err2)
 	m.IsType(&types.DomainAlreadyExistsError{}, err2)
 	m.Nil(resp2)
 }

@@ -226,11 +226,11 @@ func (db *cdb) InsertDomain(
 
 		for {
 			// first iter MapScan is done inside MapExecuteBatchCAS
-			domain := previous["name"].(string)
-			currentNotificationVersion := previous["notification_version"].(int64)
-			if domain == domainMetadataRecordName && currentNotificationVersion != metadataNotificationVersion {
-				db.logger.Warn("Create domain operation failed because of condition update failure on domain metadata record")
-				return errConditionFailed
+			if domain, ok := previous["name"].(string); ok && domain == row.Info.Name {
+				db.logger.Warn("Domain already exists", tag.WorkflowDomainName(domain))
+				return &types.DomainAlreadyExistsError{
+					Message: fmt.Sprintf("Domain %v already exists", previous["domain"]),
+				}
 			}
 
 			previous = make(map[string]interface{})
@@ -239,10 +239,8 @@ func (db *cdb) InsertDomain(
 			}
 		}
 
-		db.logger.Warn("Domain already exists", tag.WorkflowDomainName(row.Info.Name))
-		return &types.DomainAlreadyExistsError{
-			Message: fmt.Sprintf("Domain %v already exists", row.Info.Name),
-		}
+		db.logger.Warn("Create domain operation failed because of condition update failure on domain metadata record")
+		return errConditionFailed
 	}
 
 	return nil
