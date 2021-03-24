@@ -35,8 +35,8 @@ type (
 		Clusters map[string]ClusterConfig `yaml:"clusters"`
 		Topics   map[string]TopicConfig   `yaml:"topics"`
 		// Applications describes the applications that will use the Kafka topics
-		Applications  map[string]TopicList `yaml:"applications"`
-		SaramaVersion string               `yaml:"saramaVersion"`
+		Applications map[string]TopicList `yaml:"applications"`
+		Version      string               `yaml:"version"`
 	}
 
 	// ClusterConfig describes the configuration for a single Kafka cluster
@@ -64,11 +64,11 @@ func (k *KafkaConfig) Validate(checkApp bool) {
 	if len(k.Topics) == 0 {
 		panic("Empty Topics Config")
 	}
-	if len(k.SaramaVersion) < 5 {
-		panic("Invalid Sarama Version")
+	if len(k.Version) < 5 {
+		panic("Invalid Kafka Version")
 	}
-	if _, err := sarama.ParseKafkaVersion(k.SaramaVersion); err != nil {
-		panic(fmt.Sprintf("Invalid Sarama Version %s", k.SaramaVersion))
+	if _, err := sarama.ParseKafkaVersion(k.Version); err != nil {
+		panic(fmt.Sprintf("Invalid Kafka Version %s", k.Version))
 	}
 
 	validateTopicsFn := func(topic string) {
@@ -109,7 +109,7 @@ func (k *KafkaConfig) GetTopicsForApplication(app string) TopicList {
 	return k.Applications[app]
 }
 
-// GetSaramaVersionForApplication gets sarama version from application
-func (k *KafkaConfig) GetSaramaVersionForApplication(app string) string {
-	return k.SaramaVersion
+// GetKafkaVersionForApplication gets kafka version from application
+func (k *KafkaConfig) GetKafkaVersionForApplication(app string) string {
+	return k.Version
 }
