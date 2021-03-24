@@ -86,16 +86,20 @@ func NewKafkaClient(
 // NewConsumer is used to create a Kafka consumer
 func (c *clientImpl) NewConsumer(app, consumerName string) (messaging.Consumer, error) {
 	topics := c.config.GetTopicsForApplication(app)
+	saramaVersion, err := sarama.ParseKafkaVersion(c.config.GetSaramaVersionForApplication(app))
+	if err != nil {
+		return nil, err
+	}
 	saramaConfig := sarama.NewConfig()
 	// bellow config is copied from uber/kafka-clientImpl bo keep the same behavior
-	saramaConfig.Version = sarama.V0_10_2_0
+	saramaConfig.Version = saramaVersion
 	saramaConfig.Consumer.Fetch.Default = 30 * 1024 * 1024 // 30MB.
 	saramaConfig.Consumer.Return.Errors = true
 	saramaConfig.Consumer.Offsets.CommitInterval = time.Second
 	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
 	saramaConfig.Consumer.MaxProcessingTime = 250 * time.Millisecond
 
-	err := c.initAuth(saramaConfig)
+	err = c.initAuth(saramaConfig)
 	if err != nil {
 		return nil, err
 	}

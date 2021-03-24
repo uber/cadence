@@ -23,6 +23,7 @@ package config
 import (
 	"fmt"
 
+	"github.com/Shopify/sarama"
 	"github.com/uber/cadence/common/auth"
 )
 
@@ -34,7 +35,8 @@ type (
 		Clusters map[string]ClusterConfig `yaml:"clusters"`
 		Topics   map[string]TopicConfig   `yaml:"topics"`
 		// Applications describes the applications that will use the Kafka topics
-		Applications map[string]TopicList `yaml:"applications"`
+		Applications  map[string]TopicList `yaml:"applications"`
+		SaramaVersion string               `yaml:"saramaVersion"`
 	}
 
 	// ClusterConfig describes the configuration for a single Kafka cluster
@@ -61,6 +63,12 @@ func (k *KafkaConfig) Validate(checkApp bool) {
 	}
 	if len(k.Topics) == 0 {
 		panic("Empty Topics Config")
+	}
+	if len(k.SaramaVersion) < 5 {
+		panic("Invalid Sarama Version")
+	}
+	if _, err := sarama.ParseKafkaVersion(k.SaramaVersion); err != nil {
+		panic(fmt.Sprintf("Invalid Sarama Version %s", k.SaramaVersion))
 	}
 
 	validateTopicsFn := func(topic string) {
@@ -99,4 +107,9 @@ func (k *KafkaConfig) GetBrokersForKafkaCluster(kafkaCluster string) []string {
 // GetTopicsForApplication gets topic from application
 func (k *KafkaConfig) GetTopicsForApplication(app string) TopicList {
 	return k.Applications[app]
+}
+
+// GetSaramaVersionForApplication gets sarama version from application
+func (k *KafkaConfig) GetSaramaVersionForApplication(app string) string {
+	return k.SaramaVersion
 }
