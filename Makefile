@@ -128,8 +128,8 @@ $(BIN)/goimports: go.mod
 $(BIN)/revive: go.mod
 	$(call go_build_tool,github.com/mgechev/revive)
 
-$(BIN)/protoc-gen-gofast: go.mod | $(BIN)
-	$(call go_build_tool,github.com/gogo/protobuf/protoc-gen-gofast)
+$(BIN)/protoc-gen-gogofast: go.mod | $(BIN)
+	$(call go_build_tool,github.com/gogo/protobuf/protoc-gen-gogofast)
 
 $(BIN)/protoc-gen-yarpc-go: go.mod | $(BIN)
 	$(call go_build_tool,go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go)
@@ -216,16 +216,16 @@ PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 # import paths due to multiple packages being compiled at once.
 #
 # After compilation files are moved to final location, as plugins adds additional path based on proto package.
-$(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gofast $(BIN)/protoc-gen-yarpc-go | $(BUILD)
+$(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gogofast $(BIN)/protoc-gen-yarpc-go | $(BUILD)
 	@mkdir -p $(PROTO_OUT)
 	@echo "protoc..."
 	@$(foreach PROTO_DIR,$(PROTO_DIRS),$(BIN)/$(PROTOC_VERSION_BIN) \
-		--plugin $(BIN)/protoc-gen-gofast \
+		--plugin $(BIN)/protoc-gen-gogofast \
 		--plugin $(BIN)/protoc-gen-yarpc-go \
 		-I=$(PROTO_ROOT)/public \
 		-I=$(PROTO_ROOT)/internal \
 		-I=$(PROTOC_UNZIP_DIR)/include \
-		--gofast_out=Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/field_mask.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,paths=source_relative:$(PROTO_OUT) \
+		--gogofast_out=Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/field_mask.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,paths=source_relative:$(PROTO_OUT) \
 		--yarpc-go_out=$(PROTO_OUT) \
 		$$(find $(PROTO_DIR) -name '*.proto');\
 	)
