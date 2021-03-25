@@ -23,7 +23,6 @@ package config
 import (
 	"fmt"
 
-	"github.com/Shopify/sarama"
 	"github.com/uber/cadence/common/auth"
 )
 
@@ -63,12 +62,6 @@ func (k *KafkaConfig) Validate(checkApp bool) {
 	}
 	if len(k.Topics) == 0 {
 		panic("Empty Topics Config")
-	}
-	if len(k.Version) < 5 {
-		panic("Invalid Kafka Version")
-	}
-	if _, err := sarama.ParseKafkaVersion(k.Version); err != nil {
-		panic(fmt.Sprintf("Invalid Kafka Version %s", k.Version))
 	}
 
 	validateTopicsFn := func(topic string) {
@@ -110,6 +103,6 @@ func (k *KafkaConfig) GetTopicsForApplication(app string) TopicList {
 }
 
 // GetKafkaVersionForApplication gets kafka version from application
-func (k *KafkaConfig) GetKafkaVersionForApplication(app string) string {
+func (k *KafkaConfig) GetKafkaVersionForApplication() string {
 	return k.Version
 }
