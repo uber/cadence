@@ -31,6 +31,7 @@ import (
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
+	yarpcerrors "go.uber.org/yarpc/yarpcerrors"
 
 	health "github.com/uber/cadence/.gen/go/health"
 )
@@ -73,21 +74,36 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 
 type handler struct{ impl Interface }
 
+type yarpcErrorNamer interface{ YARPCErrorName() string }
+
+type yarpcErrorCoder interface{ YARPCErrorCode() *yarpcerrors.Code }
+
 func (h handler) Health(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args health.Meta_Health_Args
 	if err := args.FromWire(body); err != nil {
-		return thrift.Response{}, err
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'Meta' procedure 'Health': %w", err)
 	}
 
-	success, err := h.impl.Health(ctx)
+	success, appErr := h.impl.Health(ctx)
 
-	hadError := err != nil
-	result, err := health.Meta_Health_Helper.WrapResponse(success, err)
+	hadError := appErr != nil
+	result, err := health.Meta_Health_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
 		response.IsApplicationError = hadError
 		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
 	}
+
 	return response, err
 }
