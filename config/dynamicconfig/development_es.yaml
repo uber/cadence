@@ -36,3 +36,6 @@ frontend.validSearchAttributes:
       Passed: 4
 system.minRetentionDays:
     - value: 0
+system.enableGRPCOutbound:
+    - value: true
+      constraints: {}
