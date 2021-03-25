@@ -95,5 +95,5 @@ func (g grpcHandler) RespondQueryTaskCompleted(ctx context.Context, request *mat
 }
 
 func withGRPCTag(ctx context.Context) context.Context {
-	return metrics.TagContext(ctx, metrics.ThriftTransportTag())
+	return metrics.TagContext(ctx, metrics.GPRCTransportTag())
 }

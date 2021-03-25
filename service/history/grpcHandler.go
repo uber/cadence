@@ -245,5 +245,5 @@ func (g grpcHandler) TerminateWorkflowExecution(ctx context.Context, request *hi
 }
 
 func withGRPCTag(ctx context.Context) context.Context {
-	return metrics.TagContext(ctx, metrics.ThriftTransportTag())
+	return metrics.TagContext(ctx, metrics.GPRCTransportTag())
 }
