@@ -9204,8 +9204,10 @@ func (e WorkflowExecutionCloseStatus) MarshalText() ([]byte, error) {
 }
 
 const (
+	// WorkflowExecutionCloseStatusNone is an option for WorkflowExecutionCloseStatus
+	WorkflowExecutionCloseStatusNone WorkflowExecutionCloseStatus = iota
 	// WorkflowExecutionCloseStatusCompleted is an option for WorkflowExecutionCloseStatus
-	WorkflowExecutionCloseStatusCompleted WorkflowExecutionCloseStatus = iota
+	WorkflowExecutionCloseStatusCompleted
 	// WorkflowExecutionCloseStatusFailed is an option for WorkflowExecutionCloseStatus
 	WorkflowExecutionCloseStatusFailed
 	// WorkflowExecutionCloseStatusCanceled is an option for WorkflowExecutionCloseStatus

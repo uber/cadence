@@ -4266,6 +4266,8 @@ func FromWorkflowExecutionCloseStatus(t *types.WorkflowExecutionCloseStatus) api
 		return apiv1.WorkflowExecutionCloseStatus_WORKFLOW_EXECUTION_CLOSE_STATUS_INVALID
 	}
 	switch *t {
+	case types.WorkflowExecutionCloseStatusNone:
+		return apiv1.WorkflowExecutionCloseStatus_WORKFLOW_EXECUTION_CLOSE_STATUS_NONE
 	case types.WorkflowExecutionCloseStatusCompleted:
 		return apiv1.WorkflowExecutionCloseStatus_WORKFLOW_EXECUTION_CLOSE_STATUS_COMPLETED
 	case types.WorkflowExecutionCloseStatusFailed:
@@ -4286,6 +4288,8 @@ func ToWorkflowExecutionCloseStatus(t apiv1.WorkflowExecutionCloseStatus) *types
 	switch t {
 	case apiv1.WorkflowExecutionCloseStatus_WORKFLOW_EXECUTION_CLOSE_STATUS_INVALID:
 		return nil
+	case apiv1.WorkflowExecutionCloseStatus_WORKFLOW_EXECUTION_CLOSE_STATUS_NONE:
+		return types.WorkflowExecutionCloseStatusNone.Ptr()
 	case apiv1.WorkflowExecutionCloseStatus_WORKFLOW_EXECUTION_CLOSE_STATUS_COMPLETED:
 		return types.WorkflowExecutionCloseStatusCompleted.Ptr()
 	case apiv1.WorkflowExecutionCloseStatus_WORKFLOW_EXECUTION_CLOSE_STATUS_FAILED:
