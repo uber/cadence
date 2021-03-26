@@ -7,18 +7,3 @@ system.minRetentionDays:
 history.EnableConsistentQueryByDomain:
 - value: true
   constraints: {}
-worker.executionsScannerEnabled:
-  - value: true
-    constraints: {}
-worker.executionsScannerInvariantCollectionMutableState:
-  - value: true
-    constraints: {}
-worker.executionsScannerInvariantCollectionHistory:
-  - value: true
-    constraints: {}
-worker.concreteExecutionFixerEnabled:
-  - value: true
-    constraints: {}
-worker.concreteExecutionFixerDomainAllow:
-  - value: true
-    constraints: {}
