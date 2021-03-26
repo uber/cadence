@@ -156,7 +156,7 @@ $(BIN)/$(BUF_VERSION_BIN): | $(BIN)
 	@chmod +x $@
 
 # https://www.grpc.io/docs/languages/go/quickstart/
-# protoc-gen-gofast (yarpc) are versioned via tools.go + go.mod (built above) and will be rebuilt as needed.
+# protoc-gen-gogofast (yarpc) are versioned via tools.go + go.mod (built above) and will be rebuilt as needed.
 # changing PROTOC_VERSION will automatically download and use the specified version
 PROTOC_VERSION = 3.14.0
 PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(subst Darwin,osx,$(OS))-$(ARCH).zip
@@ -212,7 +212,7 @@ PROTO_OUT := .gen/proto
 PROTO_FILES = $(shell find ./$(PROTO_ROOT) -name "*.proto" | grep -v "persistenceblobs")
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 
-# protoc splits proto files into directories, otherwise protoc-gen-gofast is complaining about inconsistent package
+# protoc splits proto files into directories, otherwise protoc-gen-gogofast is complaining about inconsistent package
 # import paths due to multiple packages being compiled at once.
 #
 # After compilation files are moved to final location, as plugins adds additional path based on proto package.
