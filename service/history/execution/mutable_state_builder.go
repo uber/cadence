@@ -2150,7 +2150,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 
 	attributes := event.ActivityTaskScheduledEventAttributes
 	targetDomainID := e.executionInfo.DomainID
-	if attributes.Domain != nil {
+	if attributes.GetDomain() != "" {
 		targetDomainEntry, err := e.shard.GetDomainCache().GetDomain(attributes.GetDomain())
 		if err != nil {
 			return nil, err
