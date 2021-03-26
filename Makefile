@@ -247,7 +247,7 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 # "build" fake binaries, and touch the book-keeping files, so Make thinks codegen has been run.
 # order matters, as e.g. a $(BIN) newer than a $(BUILD) implies Make should run the $(BIN).
 .fake-protoc: | $(BIN) $(BUILD)
-	touch $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gofast $(BIN)/protoc-gen-yarpc-go
+	touch $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gogofast $(BIN)/protoc-gen-yarpc-go
 	touch $(BUILD)/protoc
 
 .fake-thrift: | $(BIN) $(BUILD)
@@ -320,7 +320,7 @@ lint: ## (re)run the linter
 fmt: $(BUILD)/fmt ## run goimports
 
 # not identical to the intermediate target, but does provide the same codegen (or more).
-copyright: ## update copyright headers
+copyright: $(BIN)/copyright ## update copyright headers
 	$(BIN)/copyright
 	@touch $(BUILD)/copyright
 
