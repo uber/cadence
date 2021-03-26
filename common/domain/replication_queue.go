@@ -336,13 +336,14 @@ func (q *replicationQueueImpl) emitDLQSize() {
 				).IncCounter(
 					metrics.DomainReplicationQueueSizeErrorCount,
 				)
+			} else {
+				q.metricsClient.Scope(
+					metrics.DomainReplicationQueueScope,
+				).UpdateGauge(
+					metrics.DomainReplicationQueueSizeGauge,
+					float64(size),
+				)
 			}
-			q.metricsClient.Scope(
-				metrics.DomainReplicationQueueScope,
-			).UpdateGauge(
-				metrics.DomainReplicationQueueSizeGauge,
-				float64(size),
-			)
 		}
 	}
 }
