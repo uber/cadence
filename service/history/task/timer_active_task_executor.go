@@ -455,7 +455,7 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 		if err != nil {
 			return err
 		}
-		if scheduledEvent.ActivityTaskScheduledEventAttributes.Domain != nil {
+		if scheduledEvent.ActivityTaskScheduledEventAttributes.GetDomain() != "" {
 			domainEntry, err := t.shard.GetDomainCache().GetDomain(scheduledEvent.ActivityTaskScheduledEventAttributes.GetDomain())
 			if err != nil {
 				return &types.InternalServiceError{Message: "unable to re-schedule activity across domain."}
