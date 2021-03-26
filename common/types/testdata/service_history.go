@@ -69,7 +69,7 @@ var (
 		EventStoreVersion:                    EventStoreVersion,
 		CurrentBranchToken:                   BranchToken,
 		WorkflowState:                        common.Int32Ptr(persistence.WorkflowStateRunning),
-		WorkflowCloseState:                   common.Int32Ptr(3),
+		WorkflowCloseState:                   common.Int32Ptr(persistence.WorkflowCloseStatusTimedOut),
 		VersionHistories:                     &VersionHistories,
 		IsStickyTaskListEnabled:              true,
 	}
@@ -100,8 +100,8 @@ var (
 		StickyTaskListScheduleToStartTimeout: &Duration1,
 		CurrentBranchToken:                   BranchToken,
 		VersionHistories:                     &VersionHistories,
-		WorkflowState:                        common.Int32Ptr(2),
-		WorkflowCloseState:                   common.Int32Ptr(3),
+		WorkflowState:                        common.Int32Ptr(persistence.WorkflowStateCorrupted),
+		WorkflowCloseState:                   common.Int32Ptr(persistence.WorkflowCloseStatusTimedOut),
 	}
 	HistoryPurgeDLQMessagesRequest = AdminPurgeDLQMessagesRequest
 	HistoryQueryWorkflowRequest    = types.HistoryQueryWorkflowRequest{
