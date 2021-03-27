@@ -320,7 +320,7 @@ lint: ## (re)run the linter
 fmt: $(BUILD)/fmt ## run goimports
 
 # not identical to the intermediate target, but does provide the same codegen (or more).
-copyright: ## update copyright headers
+copyright: $(BIN)/copyright ## update copyright headers
 	$(BIN)/copyright
 	@touch $(BUILD)/copyright
 
