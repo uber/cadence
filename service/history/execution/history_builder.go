@@ -664,6 +664,7 @@ func (b *HistoryBuilder) newActivityTaskScheduledEvent(DecisionTaskCompletedEven
 	attributes := &types.ActivityTaskScheduledEventAttributes{}
 	attributes.ActivityID = scheduleAttributes.ActivityID
 	attributes.ActivityType = scheduleAttributes.ActivityType
+	attributes.Domain = scheduleAttributes.Domain
 	attributes.TaskList = scheduleAttributes.TaskList
 	attributes.Header = scheduleAttributes.Header
 	attributes.Input = scheduleAttributes.Input
