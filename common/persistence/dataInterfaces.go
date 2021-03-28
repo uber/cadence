@@ -2616,3 +2616,13 @@ func NewGetReplicationTasksFromDLQRequest(
 		},
 	}
 }
+
+// IsTransientError checks if the error is a transient persistence error
+func IsTransientError(err error) bool {
+	switch err.(type) {
+	case *types.InternalServiceError, *types.ServiceBusyError, *TimeoutError:
+		return true
+	}
+
+	return false
+}

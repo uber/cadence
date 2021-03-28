@@ -973,7 +973,7 @@ func (c *contextImpl) appendHistoryV2EventsWithRetry(
 	err := backoff.Retry(
 		op,
 		persistenceOperationRetryPolicy,
-		common.IsPersistenceTransientError,
+		persistence.IsTransientError,
 	)
 	return int64(resp), err
 }
@@ -993,7 +993,7 @@ func (c *contextImpl) createWorkflowExecutionWithRetry(
 	err := backoff.Retry(
 		op,
 		persistenceOperationRetryPolicy,
-		common.IsPersistenceTransientError,
+		persistence.IsTransientError,
 	)
 	switch err.(type) {
 	case nil:
@@ -1031,7 +1031,7 @@ func (c *contextImpl) getWorkflowExecutionWithRetry(
 	err := backoff.Retry(
 		op,
 		persistenceOperationRetryPolicy,
-		common.IsPersistenceTransientError,
+		persistence.IsTransientError,
 	)
 	switch err.(type) {
 	case nil:
@@ -1066,7 +1066,7 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 
 	err := backoff.Retry(
 		op, persistenceOperationRetryPolicy,
-		common.IsPersistenceTransientError,
+		persistence.IsTransientError,
 	)
 	switch err.(type) {
 	case nil:
