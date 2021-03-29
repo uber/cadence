@@ -326,7 +326,7 @@ var (
 	ActivityTaskScheduledEventAttributes = types.ActivityTaskScheduledEventAttributes{
 		ActivityID:                    ActivityID,
 		ActivityType:                  &ActivityType,
-		Domain:                        DomainName,
+		Domain:                        common.StringPtr(DomainName),
 		TaskList:                      &TaskList,
 		Input:                         Payload1,
 		ScheduleToCloseTimeoutSeconds: &Duration1,
