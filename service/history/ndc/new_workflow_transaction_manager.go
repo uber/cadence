@@ -235,6 +235,11 @@ func (r *transactionManagerForNewWorkflowImpl) createAsZombie(
 		return err
 	}
 
+	// release lock on current workflow, since current cluster maybe the active cluster
+	//  and events maybe reapplied to current workflow
+	currentWorkflow.GetReleaseFn()(nil)
+	currentWorkflow = nil
+
 	if err := targetWorkflow.GetContext().ReapplyEvents(
 		targetWorkflowEventsSeq,
 	); err != nil {
