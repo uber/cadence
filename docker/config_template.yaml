@@ -86,9 +86,9 @@ persistence:
                 password: {{ default .Env.ES_PWD "" }}
                 url:
                     scheme: "http"
-                    host: "{{ default .Env.ES_SEEDS "" }}:9200"
+                    host: "{{ default .Env.ES_SEEDS "" }}:{{ default .Env.ES_PORT "9200" }}"
                 indices:
-                    visibility: cadence-visibility-dev
+                    visibility: {{ default .Env.VISIBILITY_NAME "cadence-visibility-dev" }}
         {{- end }}
 
 ringpop:
@@ -101,17 +101,17 @@ ringpop:
     {{- end }}
     {{- else }}
     bootstrapHosts:
-        - {{ .Env.HOST_IP }}:7933
-        - {{ .Env.HOST_IP }}:7934
-        - {{ .Env.HOST_IP }}:7935
-        - {{ .Env.HOST_IP }}:7939
+        - {{ .Env.HOST_IP }}:{{ default .Env.FRONTEND_PORT "7933" }}
+        - {{ .Env.HOST_IP }}:{{ default .Env.HISTORY_PORT "7934" }}
+        - {{ .Env.HOST_IP }}:{{ default .Env.MATCHING_PORT "7935" }}
+        - {{ .Env.HOST_IP }}:{{ default .Env.WORKER_PORT "7939" }}
     {{- end }}
     maxJoinDuration: 30s
 
 services:
     frontend:
         rpc:
-            port: 7933
+            port: {{ default .Env.FRONTEND_PORT "7933" }}
             bindOnIP: {{ default .Env.BIND_ON_IP "127.0.0.1" }}
         {{- if .Env.STATSD_ENDPOINT }}
         metrics:
@@ -132,7 +132,7 @@ services:
 
     matching:
         rpc:
-            port: 7935
+            port: {{ default .Env.MATCHING_PORT "7935" }}
             bindOnIP: {{ default .Env.BIND_ON_IP "127.0.0.1" }}
         {{- if .Env.STATSD_ENDPOINT }}
         metrics:
@@ -153,7 +153,7 @@ services:
 
     history:
         rpc:
-            port: 7934
+            port: {{ default .Env.HISTORY_PORT "7934" }}
             bindOnIP: {{ default .Env.BIND_ON_IP "127.0.0.1" }}
         {{- if .Env.STATSD_ENDPOINT }}
         metrics:
@@ -174,7 +174,7 @@ services:
 
     worker:
         rpc:
-            port: 7939
+            port: {{ default .Env.WORKER_PORT "7939" }}
             bindOnIP: {{ default .Env.BIND_ON_IP "127.0.0.1" }}
         {{- if .Env.STATSD_ENDPOINT }}
         metrics:
@@ -207,13 +207,13 @@ clusterMetadata:
             enabled: true
             initialFailoverVersion: 0
             rpcName: "cadence-frontend"
-            rpcAddress: {{ default .Env.PRIMARY_SEEDS "cadence" }}:7933
+            rpcAddress: {{ default .Env.PRIMARY_SEEDS "cadence" }}:{{ default .Env.FRONTEND_PORT "7933" }}
         {{- if .Env.ENABLE_GLOBAL_DOMAIN }}
         secondary:
             enabled: true
             initialFailoverVersion: 2
             rpcName: "cadence-frontend"
-            rpcAddress: {{ default .Env.SECONDARY_SEEDS "cadence-secondary" }}:7933
+            rpcAddress: {{ default .Env.SECONDARY_SEEDS "cadence-secondary" }}:{{ default .Env.FRONTEND_PORT "7933" }}
         {{- end }}
 
 
@@ -252,19 +252,19 @@ kafka:
     clusters:
         test:
             brokers:
-                - {{ default .Env.KAFKA_SEEDS "" }}:9092
+                - {{ default .Env.KAFKA_SEEDS "" }}:{{ default .Env.KAFKA_PORT "9092" }}
     topics:
-        cadence-visibility-dev:
+        {{ default .Env.VISIBILITY_NAME "cadence-visibility-dev" }}:
             cluster: test
-        cadence-visibility-dev-dlq:
+        {{ default .Env.VISIBILITY_NAME "cadence-visibility-dev" }}-dlq:
             cluster: test
     applications:
         visibility:
-            topic: cadence-visibility-dev
-            dlq-topic: cadence-visibility-dev-dlq
+            topic: {{ default .Env.VISIBILITY_NAME "cadence-visibility-dev" }}
+            dlq-topic: {{ default .Env.VISIBILITY_NAME "cadence-visibility-dev" }}-dlq
 
 publicClient:
-    hostPort: {{ default .Env.BIND_ON_IP "127.0.0.1" }}:7933
+    hostPort: {{ default .Env.BIND_ON_IP "127.0.0.1" }}:{{ default .Env.FRONTEND_PORT "7933" }}
 
 dynamicConfigClient:
     filepath: {{ default .Env.DYNAMIC_CONFIG_FILE_PATH "/etc/cadence/config/dynamicconfig/development.yaml" }}
