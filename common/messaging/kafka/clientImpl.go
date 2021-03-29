@@ -86,10 +86,16 @@ func NewKafkaClient(
 // NewConsumer is used to create a Kafka consumer
 func (c *clientImpl) NewConsumer(app, consumerName string) (messaging.Consumer, error) {
 	topics := c.config.GetTopicsForApplication(app)
-	version, err := sarama.ParseKafkaVersion(c.config.GetKafkaVersionForApplication())
-	if err != nil {
-		version = sarama.V0_10_2_0
+	kafkaVersion := c.config.GetKafkaVersionForApplication()
+	if kafkaVersion == "" {
+		kafkaVersion = "0.10.2.0"
 	}
+
+	version, err := sarama.ParseKafkaVersion(kafkaVersion)
+	if err != nil {
+		return nil, err
+	}
+
 	saramaConfig := sarama.NewConfig()
 	// bellow config is copied from uber/kafka-clientImpl bo keep the same behavior
 	saramaConfig.Version = version
