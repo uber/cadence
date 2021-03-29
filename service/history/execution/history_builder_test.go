@@ -1042,7 +1042,7 @@ func (s *historyBuilderSuite) addActivityTaskScheduledEvent(
 		&types.ScheduleActivityTaskDecisionAttributes{
 			ActivityID:                    activityID,
 			ActivityType:                  &types.ActivityType{Name: activityType},
-			Domain:                        domain, // TODO: change to pointer
+			Domain:                        domain,
 			TaskList:                      &types.TaskList{Name: taskList},
 			Input:                         input,
 			ScheduleToCloseTimeoutSeconds: common.Int32Ptr(timeout),
@@ -1210,12 +1210,16 @@ func (s *historyBuilderSuite) validateActivityTaskScheduledEvent(
 	s.Equal(decisionID, attributes.DecisionTaskCompletedEventID)
 	s.Equal(activityID, attributes.ActivityID)
 	s.Equal(activityType, attributes.ActivityType.Name)
-	s.Equal(domain, attributes.Domain)
 	s.Equal(taskList, attributes.TaskList.Name)
 	s.Equal(input, attributes.Input)
 	s.Equal(timeout, *attributes.ScheduleToCloseTimeoutSeconds)
 	s.Equal(queueTimeout, *attributes.ScheduleToStartTimeoutSeconds)
 	s.Equal(hearbeatTimeout, *attributes.HeartbeatTimeoutSeconds)
+	if domain != "" {
+		s.Equal(domain, *attributes.Domain)
+	} else {
+		s.Nil(attributes.Domain)
+	}
 	if requestLocalDispatch {
 		s.NotNil(activityDispatchInfo)
 	} else {
