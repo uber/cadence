@@ -777,7 +777,10 @@ UpdateWorkflowLoop:
 		}
 
 		if signalWithStartRequest != nil {
-			startRequest = getStartRequest(domainID, signalWithStartRequest.SignalWithStartRequest)
+			startRequest, err = getStartRequest(domainID, signalWithStartRequest.SignalWithStartRequest)
+			if startRequest == nil {
+				return nil, err
+			}
 		}
 
 		err = e.addStartEventsAndTasks(
@@ -2284,7 +2287,11 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	}
 
 	// Start workflow and signal
-	startRequest := getStartRequest(domainID, sRequest)
+	startRequest, err := getStartRequest(domainID, sRequest)
+	if startRequest == nil {
+		return nil, err
+	}
+
 	sigWithStartArg := &signalWithStartArg{
 		signalWithStartRequest: signalWithStartRequest,
 		prevMutableState:       prevMutableState,
@@ -2758,7 +2765,7 @@ func getScheduleID(
 func getStartRequest(
 	domainID string,
 	request *types.SignalWithStartWorkflowExecutionRequest,
-) *types.HistoryStartWorkflowExecutionRequest {
+) (historyReq *types.HistoryStartWorkflowExecutionRequest, retError error) {
 
 	req := &types.StartWorkflowExecutionRequest{
 		Domain:                              request.Domain,
@@ -2778,8 +2785,12 @@ func getStartRequest(
 		Header:                              request.Header,
 	}
 
-	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
-	return startRequest
+	startRequest, err := common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
+	if startRequest == nil {
+		return nil, err
+	}
+
+	return startRequest, nil
 }
 
 func (e *historyEngineImpl) applyWorkflowIDReusePolicyForSigWithStart(
