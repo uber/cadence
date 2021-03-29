@@ -236,7 +236,8 @@ func (r *transactionManagerForNewWorkflowImpl) createAsZombie(
 	}
 
 	// release lock on current workflow, since current cluster maybe the active cluster
-	//  and events maybe reapplied to current workflow
+	// and events maybe reapplied to current workflow
+	// TODO: add functional test for this case.
 	currentWorkflow.GetReleaseFn()(nil)
 	currentWorkflow = nil
 
