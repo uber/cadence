@@ -1208,15 +1208,26 @@ func (s *integrationSuite) TestCronWorkflow() {
 	}
 	for i := 1; i != 4; i++ {
 		executionInfo := closedExecutions[i]
-		// Roundup to compare on the precision of seconds
-		expectedBackoff := executionInfo.GetExecutionTime()/1000000000 - lastExecution.GetExecutionTime()/1000000000
+		expectedBackoff := executionInfo.GetExecutionTime() - lastExecution.GetExecutionTime()
 		// The execution time calculate based on last execution close time
 		// However, the current execution time is based on the current start time
 		// This code is to remove the diff between current start time and last execution close time
 		// TODO: Remove this line once we unify the time source
-		executionTimeDiff := executionInfo.GetStartTime()/1000000000 - lastExecution.GetCloseTime()/1000000000
+		executionTimeDiff := executionInfo.GetStartTime() - lastExecution.GetCloseTime()
 		// The backoff between any two executions should be multiplier of the target backoff duration which is 3 in this test
-		s.Equal(int64(0), int64(expectedBackoff-executionTimeDiff)%(targetBackoffDuration.Nanoseconds()/1000000000))
+		backoffSeconds := int(time.Duration(expectedBackoff-executionTimeDiff).Round(time.Second).Seconds())
+		targetBackoffSeconds := int(targetBackoffDuration.Seconds())
+		s.Equal(
+			0,
+			backoffSeconds % targetBackoffSeconds,
+			"Still Flaky?: backoffSeconds: %v ((%v-%v) - (%v-%v)), targetBackoffSeconds: %v",
+			backoffSeconds,
+			executionInfo.GetExecutionTime(),
+			lastExecution.GetExecutionTime(),
+			executionInfo.GetStartTime(),
+			lastExecution.GetCloseTime(),
+			targetBackoffSeconds,
+		)
 		lastExecution = executionInfo
 	}
 }
