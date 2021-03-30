@@ -6,6 +6,11 @@ labels: ''
 assignees: ''
 
 ---
+**Version of Cadence server, and client(which language)**
+This is very important to root cause bugs.
+- Server version: 
+- Client version:
+- Client langauge:
 
 **Describe the bug**
 A clear and concise description of what the bug is.

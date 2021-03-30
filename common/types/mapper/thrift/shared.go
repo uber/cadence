@@ -186,7 +186,7 @@ func FromActivityTaskScheduledEventAttributes(t *types.ActivityTaskScheduledEven
 	return &shared.ActivityTaskScheduledEventAttributes{
 		ActivityId:                    &t.ActivityID,
 		ActivityType:                  FromActivityType(t.ActivityType),
-		Domain:                        &t.Domain,
+		Domain:                        t.Domain,
 		TaskList:                      FromTaskList(t.TaskList),
 		Input:                         t.Input,
 		ScheduleToCloseTimeoutSeconds: t.ScheduleToCloseTimeoutSeconds,
@@ -207,7 +207,7 @@ func ToActivityTaskScheduledEventAttributes(t *shared.ActivityTaskScheduledEvent
 	return &types.ActivityTaskScheduledEventAttributes{
 		ActivityID:                    t.GetActivityId(),
 		ActivityType:                  ToActivityType(t.ActivityType),
-		Domain:                        t.GetDomain(),
+		Domain:                        t.Domain,
 		TaskList:                      ToTaskList(t.TaskList),
 		Input:                         t.Input,
 		ScheduleToCloseTimeoutSeconds: t.ScheduleToCloseTimeoutSeconds,
