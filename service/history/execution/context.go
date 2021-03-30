@@ -990,10 +990,20 @@ func (c *contextImpl) createWorkflowExecutionWithRetry(
 		return err
 	}
 
+	isRetryable := func(err error) bool {
+		if _, ok := err.(*persistence.TimeoutError); ok {
+			// TODO: is timeout error retryable for create workflow?
+			// if we treat it as retryable, user may receive workflowAlreadyRunning error
+			// on the first start workflow execution request.
+			return false
+		}
+		return persistence.IsTransientError(err)
+	}
+
 	err := backoff.Retry(
 		op,
 		persistenceOperationRetryPolicy,
-		persistence.IsTransientError,
+		isRetryable,
 	)
 	switch err.(type) {
 	case nil:
