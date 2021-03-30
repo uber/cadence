@@ -33,7 +33,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func (s *integrationSuite) TestResetWorkflow() {
+func (s *IntegrationSuite) TestResetWorkflow() {
 	id := "integration-reset-workflow-test"
 	wt := "integration-reset-workflow-test-type"
 	tl := "integration-reset-workflow-test-taskqueue"
@@ -247,7 +247,7 @@ func (s *integrationSuite) TestResetWorkflow() {
 	s.NoError(err)
 }
 
-func (s *integrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
+func (s *IntegrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 	id := "integration-reset-workflow-test-no-decision-completed"
 	wt := "integration-reset-workflow-test-type--no-decision-completed"
 	tl := "integration-reset-workflow-test-taskqueue-no-decision-completed"

@@ -51,7 +51,7 @@ const (
 	waitForESToSettle = 4 * time.Second // wait es shards for some time ensure data consistent
 )
 
-type elasticsearchIntegrationSuite struct {
+type ElasticSearchIntegrationSuite struct {
 	// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
 	// not merely log an error
 	*require.Assertions
@@ -63,8 +63,8 @@ type elasticsearchIntegrationSuite struct {
 }
 
 // This cluster use customized threshold for history config
-func (s *elasticsearchIntegrationSuite) SetupSuite() {
-	s.setupSuite("testdata/integration_elasticsearch_" + environment.GetESVersion() + "_cluster.yaml")
+func (s *ElasticSearchIntegrationSuite) SetupSuite() {
+	s.setupSuite()
 	s.esClient = esutils.CreateESClient(s.Suite, s.testClusterConfig.ESConfig.URL.String(), environment.GetESVersion())
 	s.esClient.PutIndexTemplate(s.Suite, "testdata/es_"+environment.GetESVersion()+"_index_template.json", "test-visibility-template")
 	indexName := s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName]
@@ -72,12 +72,12 @@ func (s *elasticsearchIntegrationSuite) SetupSuite() {
 	s.putIndexSettings(indexName, defaultTestValueOfESIndexMaxResultWindow)
 }
 
-func (s *elasticsearchIntegrationSuite) TearDownSuite() {
+func (s *ElasticSearchIntegrationSuite) TearDownSuite() {
 	s.tearDownSuite()
 	s.esClient.DeleteIndex(s.Suite, s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName])
 }
 
-func (s *elasticsearchIntegrationSuite) SetupTest() {
+func (s *ElasticSearchIntegrationSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 	s.testSearchAttributeKey = definition.CustomStringField
@@ -86,10 +86,24 @@ func (s *elasticsearchIntegrationSuite) SetupTest() {
 
 func TestElasticsearchIntegrationSuite(t *testing.T) {
 	flag.Parse()
-	suite.Run(t, new(elasticsearchIntegrationSuite))
+
+	clusterConfig, err := GetTestClusterConfig("testdata/integration_elasticsearch_" + environment.GetESVersion() + "_cluster.yaml")
+	if err != nil {
+		panic(err)
+	}
+	testCluster := NewPersistenceTestCluster(clusterConfig)
+
+	s := new(ElasticSearchIntegrationSuite)
+	params := IntegrationBaseParams{
+		DefaultTestCluster:    testCluster,
+		VisibilityTestCluster: testCluster,
+		TestClusterConfig:     clusterConfig,
+	}
+	s.IntegrationBase = NewIntegrationBase(params)
+	suite.Run(t, s)
 }
 
-func (s *elasticsearchIntegrationSuite) TestListOpenWorkflow() {
+func (s *ElasticSearchIntegrationSuite) TestListOpenWorkflow() {
 	id := "es-integration-start-workflow-test"
 	wt := "es-integration-start-workflow-test-type"
 	tl := "es-integration-start-workflow-test-tasklist"
@@ -132,7 +146,7 @@ func (s *elasticsearchIntegrationSuite) TestListOpenWorkflow() {
 	s.Equal(attrValBytes, openExecution.SearchAttributes.GetIndexedFields()[s.testSearchAttributeKey])
 }
 
-func (s *elasticsearchIntegrationSuite) TestListWorkflow() {
+func (s *ElasticSearchIntegrationSuite) TestListWorkflow() {
 	id := "es-integration-list-workflow-test"
 	wt := "es-integration-list-workflow-test-type"
 	tl := "es-integration-list-workflow-test-tasklist"
@@ -145,7 +159,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow() {
 	s.testHelperForReadOnce(we.GetRunID(), query, false)
 }
 
-func (s *elasticsearchIntegrationSuite) TestListWorkflow_ExecutionTime() {
+func (s *ElasticSearchIntegrationSuite) TestListWorkflow_ExecutionTime() {
 	id := "es-integration-list-workflow-execution-time-test"
 	wt := "es-integration-list-workflow-execution-time-test-type"
 	tl := "es-integration-list-workflow-execution-time-test-tasklist"
@@ -168,7 +182,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_ExecutionTime() {
 	s.testHelperForReadOnce(we.GetRunID(), query, false)
 }
 
-func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
+func (s *ElasticSearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
 	id := "es-integration-list-workflow-by-search-attr-test"
 	wt := "es-integration-list-workflow-by-search-attr-test-type"
 	tl := "es-integration-list-workflow-by-search-attr-test-tasklist"
@@ -246,7 +260,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAttribute() {
 	s.Equal(expectedSearchAttributes, descResp.WorkflowExecutionInfo.GetSearchAttributes())
 }
 
-func (s *elasticsearchIntegrationSuite) TestListWorkflow_PageToken() {
+func (s *ElasticSearchIntegrationSuite) TestListWorkflow_PageToken() {
 	id := "es-integration-list-workflow-token-test"
 	wt := "es-integration-list-workflow-token-test-type"
 	tl := "es-integration-list-workflow-token-test-tasklist"
@@ -258,7 +272,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_PageToken() {
 	s.testListWorkflowHelper(numOfWorkflows, pageSize, request, id, wt, false)
 }
 
-func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAfter() {
+func (s *ElasticSearchIntegrationSuite) TestListWorkflow_SearchAfter() {
 	id := "es-integration-list-workflow-searchAfter-test"
 	wt := "es-integration-list-workflow-searchAfter-test-type"
 	tl := "es-integration-list-workflow-searchAfter-test-tasklist"
@@ -270,7 +284,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_SearchAfter() {
 	s.testListWorkflowHelper(numOfWorkflows, pageSize, request, id, wt, false)
 }
 
-func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrQuery() {
+func (s *ElasticSearchIntegrationSuite) TestListWorkflow_OrQuery() {
 	id := "es-integration-list-workflow-or-query-test"
 	wt := "es-integration-list-workflow-or-query-test-type"
 	tl := "es-integration-list-workflow-or-query-test-tasklist"
@@ -378,7 +392,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrQuery() {
 }
 
 // To test last page search trigger max window size error
-func (s *elasticsearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
+func (s *ElasticSearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 	id := "es-integration-list-workflow-max-window-size-test"
 	wt := "es-integration-list-workflow-max-window-size-test-type"
 	tl := "es-integration-list-workflow-max-window-size-test-tasklist"
@@ -423,7 +437,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 	s.True(len(resp.GetNextPageToken()) == 0)
 }
 
-func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrderBy() {
+func (s *ElasticSearchIntegrationSuite) TestListWorkflow_OrderBy() {
 	id := "es-integration-list-workflow-order-by-test"
 	wt := "es-integration-list-workflow-order-by-test-type"
 	tl := "es-integration-list-workflow-order-by-test-tasklist"
@@ -556,7 +570,7 @@ func (s *elasticsearchIntegrationSuite) TestListWorkflow_OrderBy() {
 	testHelper(query, field, t1, t2)
 }
 
-func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, pageSize int,
+func (s *ElasticSearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, pageSize int,
 	startRequest *types.StartWorkflowExecutionRequest, wid, wType string, isScan bool) {
 
 	// start enough number of workflows
@@ -626,7 +640,7 @@ func (s *elasticsearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 	s.Nil(nextPageToken)
 }
 
-func (s *elasticsearchIntegrationSuite) testHelperForReadOnce(runID, query string, isScan bool) {
+func (s *ElasticSearchIntegrationSuite) testHelperForReadOnce(runID, query string, isScan bool) {
 	var openExecution *types.WorkflowExecutionInfo
 	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   s.domainName,
@@ -661,7 +675,7 @@ func (s *elasticsearchIntegrationSuite) testHelperForReadOnce(runID, query strin
 	}
 }
 
-func (s *elasticsearchIntegrationSuite) TestScanWorkflow() {
+func (s *ElasticSearchIntegrationSuite) TestScanWorkflow() {
 	id := "es-integration-scan-workflow-test"
 	wt := "es-integration-scan-workflow-test-type"
 	tl := "es-integration-scan-workflow-test-tasklist"
@@ -691,7 +705,7 @@ func (s *elasticsearchIntegrationSuite) TestScanWorkflow() {
 	s.testHelperForReadOnce(we.GetRunID(), query, true)
 }
 
-func (s *elasticsearchIntegrationSuite) TestScanWorkflow_SearchAttribute() {
+func (s *ElasticSearchIntegrationSuite) TestScanWorkflow_SearchAttribute() {
 	id := "es-integration-scan-workflow-search-attr-test"
 	wt := "es-integration-scan-workflow-search-attr-test-type"
 	tl := "es-integration-scan-workflow-search-attr-test-tasklist"
@@ -711,7 +725,7 @@ func (s *elasticsearchIntegrationSuite) TestScanWorkflow_SearchAttribute() {
 	s.testHelperForReadOnce(we.GetRunID(), query, true)
 }
 
-func (s *elasticsearchIntegrationSuite) TestScanWorkflow_PageToken() {
+func (s *ElasticSearchIntegrationSuite) TestScanWorkflow_PageToken() {
 	id := "es-integration-scan-workflow-token-test"
 	wt := "es-integration-scan-workflow-token-test-type"
 	tl := "es-integration-scan-workflow-token-test-tasklist"
@@ -739,7 +753,7 @@ func (s *elasticsearchIntegrationSuite) TestScanWorkflow_PageToken() {
 	s.testListWorkflowHelper(numOfWorkflows, pageSize, request, id, wt, true)
 }
 
-func (s *elasticsearchIntegrationSuite) TestCountWorkflow() {
+func (s *ElasticSearchIntegrationSuite) TestCountWorkflow() {
 	id := "es-integration-count-workflow-test"
 	wt := "es-integration-count-workflow-test-type"
 	tl := "es-integration-count-workflow-test-tasklist"
@@ -779,7 +793,7 @@ func (s *elasticsearchIntegrationSuite) TestCountWorkflow() {
 	s.Equal(int64(0), resp.GetCount())
 }
 
-func (s *elasticsearchIntegrationSuite) createStartWorkflowExecutionRequest(id, wt, tl string) *types.StartWorkflowExecutionRequest {
+func (s *ElasticSearchIntegrationSuite) createStartWorkflowExecutionRequest(id, wt, tl string) *types.StartWorkflowExecutionRequest {
 	identity := "worker1"
 	workflowType := &types.WorkflowType{}
 	workflowType.Name = wt
@@ -801,7 +815,7 @@ func (s *elasticsearchIntegrationSuite) createStartWorkflowExecutionRequest(id, 
 	return request
 }
 
-func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution() {
+func (s *ElasticSearchIntegrationSuite) TestUpsertWorkflowExecution() {
 	id := "es-integration-upsert-workflow-test"
 	wt := "es-integration-upsert-workflow-test-type"
 	tl := "es-integration-upsert-workflow-test-tasklist"
@@ -951,7 +965,7 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution() {
 	s.testListResultForUpsertSearchAttributes(listRequest)
 }
 
-func (s *elasticsearchIntegrationSuite) testListResultForUpsertSearchAttributes(listRequest *types.ListWorkflowExecutionsRequest) {
+func (s *ElasticSearchIntegrationSuite) testListResultForUpsertSearchAttributes(listRequest *types.ListWorkflowExecutionsRequest) {
 	verified := false
 	for i := 0; i < numOfRetry; i++ {
 		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
@@ -1002,7 +1016,7 @@ func getUpsertSearchAttributes() *types.SearchAttributes {
 	return upsertSearchAttr
 }
 
-func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey() {
+func (s *ElasticSearchIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey() {
 	id := "es-integration-upsert-workflow-failed-test"
 	wt := "es-integration-upsert-workflow-failed-test-type"
 	tl := "es-integration-upsert-workflow-failed-test-tasklist"
@@ -1076,13 +1090,13 @@ func (s *elasticsearchIntegrationSuite) TestUpsertWorkflowExecution_InvalidKey()
 	s.True(len(failedDecisionAttr.GetDetails()) > 0)
 }
 
-func (s *elasticsearchIntegrationSuite) putIndexSettings(indexName string, maxResultWindowSize int) {
+func (s *ElasticSearchIntegrationSuite) putIndexSettings(indexName string, maxResultWindowSize int) {
 	err := s.esClient.PutMaxResultWindow(indexName, maxResultWindowSize)
 	s.Require().NoError(err)
 	s.verifyMaxResultWindowSize(indexName, maxResultWindowSize)
 }
 
-func (s *elasticsearchIntegrationSuite) verifyMaxResultWindowSize(indexName string, targetSize int) {
+func (s *ElasticSearchIntegrationSuite) verifyMaxResultWindowSize(indexName string, targetSize int) {
 	for i := 0; i < numOfRetry; i++ {
 		currentWindow, err := s.esClient.GetMaxResultWindow(indexName)
 		s.Require().NoError(err)
