@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/environment"
 )
@@ -58,17 +59,29 @@ type (
 		testRawHistoryDomainName string
 		foreignDomainName        string
 		archivalDomainName       string
+		defaultTestCluster       pt.PersistenceTestCluster
+		visibilityTestCluster    pt.PersistenceTestCluster
+	}
+
+	IntegrationBaseParams struct {
+		DefaultTestCluster    pt.PersistenceTestCluster
+		VisibilityTestCluster pt.PersistenceTestCluster
+		TestClusterConfig     *TestClusterConfig
 	}
 )
 
-func (s *IntegrationBase) setupSuite(defaultClusterConfigFile string) {
+func NewIntegrationBase(params IntegrationBaseParams) IntegrationBase {
+	return IntegrationBase{
+		defaultTestCluster:    params.DefaultTestCluster,
+		visibilityTestCluster: params.VisibilityTestCluster,
+		testClusterConfig:     params.TestClusterConfig,
+	}
+}
+
+func (s *IntegrationBase) setupSuite() {
 	s.setupLogger()
 
-	clusterConfig, err := GetTestClusterConfig(defaultClusterConfigFile)
-	s.Require().NoError(err)
-	s.testClusterConfig = clusterConfig
-
-	if clusterConfig.FrontendAddress != "" {
+	if s.testClusterConfig.FrontendAddress != "" {
 		s.Logger.Info("Running integration test against specified frontend", tag.Address(TestFlags.FrontendAddr))
 		channel, err := tchannel.NewChannelTransport(tchannel.ServiceName("cadence-frontend"))
 		s.Require().NoError(err)
@@ -89,7 +102,13 @@ func (s *IntegrationBase) setupSuite(defaultClusterConfigFile string) {
 		s.adminClient = NewAdminClient(dispatcher)
 	} else {
 		s.Logger.Info("Running integration test against test cluster")
-		cluster, err := NewCluster(clusterConfig, s.Logger)
+		clusterMetadata := NewClusterMetadata(s.testClusterConfig, s.Logger)
+		params := pt.TestBaseParams{
+			DefaultTestCluster:    s.defaultTestCluster,
+			VisibilityTestCluster: s.visibilityTestCluster,
+			ClusterMetadata:       clusterMetadata,
+		}
+		cluster, err := NewCluster(s.testClusterConfig, s.Logger, params)
 		s.Require().NoError(err)
 		s.testCluster = cluster
 		s.engine = s.testCluster.GetFrontendClient()
@@ -142,7 +161,32 @@ func GetTestClusterConfig(configFile string) (*TestClusterConfig, error) {
 	if options.ESConfig != nil {
 		options.ESConfig.Indices[common.VisibilityAppName] += uuid.New()
 	}
+	if options.Persistence.DBName == "" {
+		options.Persistence.DBName = "test_" + pt.GenerateRandomDBName(10)
+	}
 	return &options, nil
+}
+
+// GetTestClusterConfigs return test cluster configs
+func GetTestClusterConfigs(configFile string) ([]*TestClusterConfig, error) {
+	environment.SetupEnv()
+
+	fileName := configFile
+	if TestFlags.TestClusterConfigFile != "" {
+		fileName = TestFlags.TestClusterConfigFile
+	}
+
+	confContent, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read test cluster config file %v: %v", fileName, err)
+	}
+	confContent = []byte(os.ExpandEnv(string(confContent)))
+
+	var clusterConfigs []*TestClusterConfig
+	if err := yaml.Unmarshal(confContent, &clusterConfigs); err != nil {
+		return nil, fmt.Errorf("failed to decode test cluster config %v", tag.Error(err))
+	}
+	return clusterConfigs, nil
 }
 
 func (s *IntegrationBase) tearDownSuite() {

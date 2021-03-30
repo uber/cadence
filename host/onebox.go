@@ -93,10 +93,7 @@ type (
 		dispatcherProvider            client.DispatcherProvider
 		messagingClient               messaging.Client
 		metadataMgr                   persistence.MetadataManager
-		shardMgr                      persistence.ShardManager
 		historyV2Mgr                  persistence.HistoryManager
-		taskMgr                       persistence.TaskManager
-		visibilityMgr                 persistence.VisibilityManager
 		executionMgrFactory           persistence.ExecutionManagerFactory
 		domainReplicationQueue        domain.ReplicationQueue
 		shutdownCh                    chan struct{}
@@ -130,11 +127,8 @@ type (
 		DispatcherProvider            client.DispatcherProvider
 		MessagingClient               messaging.Client
 		MetadataMgr                   persistence.MetadataManager
-		ShardMgr                      persistence.ShardManager
 		HistoryV2Mgr                  persistence.HistoryManager
 		ExecutionMgrFactory           persistence.ExecutionManagerFactory
-		TaskMgr                       persistence.TaskManager
-		VisibilityMgr                 persistence.VisibilityManager
 		DomainReplicationQueue        domain.ReplicationQueue
 		Logger                        log.Logger
 		ClusterNo                     int
@@ -164,10 +158,7 @@ func NewCadence(params *CadenceParams) Cadence {
 		dispatcherProvider:            params.DispatcherProvider,
 		messagingClient:               params.MessagingClient,
 		metadataMgr:                   params.MetadataMgr,
-		visibilityMgr:                 params.VisibilityMgr,
-		shardMgr:                      params.ShardMgr,
 		historyV2Mgr:                  params.HistoryV2Mgr,
-		taskMgr:                       params.TaskMgr,
 		executionMgrFactory:           params.ExecutionMgrFactory,
 		domainReplicationQueue:        params.DomainReplicationQueue,
 		shutdownCh:                    make(chan struct{}),
